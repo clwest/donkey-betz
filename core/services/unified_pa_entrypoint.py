@@ -1321,6 +1321,16 @@ class UnifiedPAEntrypoint:
             payload['spider_name'] = 'coingecko'
             payload['days'] = 3  # recent data only
 
+        # Session 989: Execution history payload — default to 'recent' (valid: recent, by_agent, stats, failures)
+        elif intent == 'execution_history':
+            msg_lower = message.lower()
+            if any(w in msg_lower for w in ['fail', 'error', 'broken']):
+                payload['action'] = 'failures'
+            elif 'stats' in msg_lower or 'how many' in msg_lower:
+                payload['action'] = 'stats'
+            else:
+                payload['action'] = 'recent'
+
         # Session 979: Spider data default — override 'list' which is not a valid action
         elif intent == 'spider_data':
             payload['action'] = 'recent'
@@ -2594,26 +2604,30 @@ Address the user by name occasionally."""
                 else:
                     return str(tool_result)
 
-            # Session 948: Spider data results formatting
+            # Session 948/989: Spider data results formatting
+            # Session 989: Fixed field names to match actual SpiderData model
             elif intent == 'spider_data':
                 action = tool_result.get('action', '')
 
                 if action == 'recent':
                     items = tool_result.get('items', [])
                     count = tool_result.get('count', 0)
-                    period = tool_result.get('period_hours', 24)
+                    period = tool_result.get('days_back', 7)
 
                     if count == 0:
-                        return f"No spider data collected in the last {period} hours, {user_name}."
+                        return f"No spider data collected in the last {period} days, {user_name}."
 
-                    response = f"Spider intelligence from the last {period} hours ({count} items):\n\n"
+                    response = f"Spider intelligence from the last {period} days ({count} items):\n\n"
                     for item in items[:8]:
                         spider = item.get('spider_name', 'Unknown')
-                        title = item.get('title', item.get('url', 'No title'))[:50]
-                        category = item.get('category', '')
-                        response += f"- **{spider}**: {title}"
-                        if category:
-                            response += f" [{category}]"
+                        data_type = item.get('data_type', '')
+                        source_url = item.get('source_url', '')
+                        date = str(item.get('created_at', ''))[:16]
+                        response += f"- **{spider}** ({date})"
+                        if data_type:
+                            response += f" [{data_type}]"
+                        if source_url:
+                            response += f" — {source_url[:60]}"
                         response += "\n"
 
                     if count > 8:
@@ -2630,9 +2644,10 @@ Address the user by name occasionally."""
 
                     response = f"Data from **{spider}** spider ({count} items):\n\n"
                     for item in items[:6]:
-                        title = item.get('title', item.get('url', 'No title'))[:60]
-                        date = item.get('collected_at', '')[:10]
-                        response += f"- {title} ({date})\n"
+                        embed_text = item.get('embedding_text', '')
+                        summary = embed_text[:80] + '...' if len(embed_text) > 80 else embed_text
+                        date = str(item.get('created_at', ''))[:10]
+                        response += f"- {summary or item.get('source_url', 'No data')} ({date})\n"
 
                     return response
 
@@ -2647,13 +2662,14 @@ Address the user by name occasionally."""
                     response = f"**{category.title()}** intelligence ({count} items):\n\n"
                     for item in items[:6]:
                         spider = item.get('spider_name', 'Unknown')
-                        title = item.get('title', item.get('url', 'No title'))[:50]
-                        response += f"- {title} (via {spider})\n"
+                        source_url = item.get('source_url', '')
+                        date = str(item.get('created_at', ''))[:10]
+                        response += f"- **{spider}** ({date}) — {source_url[:60]}\n"
 
                     return response
 
                 elif action == 'search':
-                    query = tool_result.get('query', '')
+                    query = tool_result.get('keyword', tool_result.get('query', ''))
                     items = tool_result.get('items', [])
                     count = tool_result.get('count', 0)
 
@@ -2663,30 +2679,30 @@ Address the user by name occasionally."""
                     response = f"Found {count} items matching '{query}':\n\n"
                     for item in items[:6]:
                         spider = item.get('spider_name', 'Unknown')
-                        title = item.get('title', item.get('url', 'No title'))[:50]
-                        response += f"- **{spider}**: {title}\n"
+                        embed_text = item.get('embedding_text', '')
+                        summary = embed_text[:80] + '...' if len(embed_text) > 80 else embed_text
+                        response += f"- **{spider}**: {summary or item.get('source_url', 'No data')}\n"
 
                     return response
 
                 elif action == 'stats':
                     total = tool_result.get('total_items', 0)
+                    days = tool_result.get('days_back', 7)
                     by_spider = tool_result.get('by_spider', {})
-                    by_category = tool_result.get('by_category', {})
-                    recent = tool_result.get('items_last_24h', 0)
+                    by_data_type = tool_result.get('by_data_type', tool_result.get('by_category', {}))
 
-                    response = f"Spider Network Stats, {user_name}:\n\n"
-                    response += f"- **Total collected:** {total}\n"
-                    response += f"- **Last 24 hours:** {recent}\n\n"
+                    response = f"Spider Network Stats ({days}d), {user_name}:\n\n"
+                    response += f"- **Total collected:** {total}\n\n"
 
                     if by_spider:
                         response += "**Top spiders:**\n"
                         for spider, cnt in list(by_spider.items())[:5]:
                             response += f"- {spider}: {cnt} items\n"
 
-                    if by_category:
-                        response += "\n**By category:**\n"
-                        for cat, cnt in list(by_category.items())[:5]:
-                            response += f"- {cat}: {cnt} items\n"
+                    if by_data_type:
+                        response += "\n**By data type:**\n"
+                        for dt, cnt in list(by_data_type.items())[:5]:
+                            response += f"- {dt}: {cnt} items\n"
 
                     return response
 
@@ -2708,13 +2724,16 @@ Address the user by name occasionally."""
 
                 response = f"**{keyword.title()} Data** from spider network ({count} items):\n\n"
                 for item in items[:6]:
-                    title = item.get('title', 'No title')
+                    # Session 989: Use actual SpiderData fields
                     spider = item.get('spider_name', 'Unknown')
-                    url = item.get('url', '')
+                    source_url = item.get('source_url', '')
+                    embed_text = item.get('embedding_text', '')
                     date = str(item.get('created_at', ''))[:16]
-                    response += f"- **{title}** (via {spider}, {date})\n"
-                    if url:
-                        response += f"  {url}\n"
+                    # Extract a summary from embedding_text (first 120 chars)
+                    summary = embed_text[:120] + '...' if len(embed_text) > 120 else embed_text
+                    response += f"- **{spider}** ({date}): {summary}\n"
+                    if source_url:
+                        response += f"  {source_url}\n"
 
                 if count > 6:
                     response += f"\n...and {count - 6} more items."

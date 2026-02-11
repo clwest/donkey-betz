@@ -2631,16 +2631,17 @@ class ToolDispatcher:
 
         if action == 'recent':
             # Get recent spider data across all spiders
+            # Session 989: Use actual SpiderData fields (no title/url/category/content)
             qs = SpiderData.objects.filter(created_at__gte=cutoff)
 
             if spider_name:
                 qs = qs.filter(spider_name__icontains=spider_name)
             if category:
-                qs = qs.filter(category__icontains=category)
+                qs = qs.filter(data_type__icontains=category)
 
             items = list(
                 qs.order_by('-created_at')[:limit].values(
-                    'id', 'spider_name', 'category', 'title', 'url',
+                    'id', 'spider_name', 'data_type', 'source_url',
                     'relevance_score', 'created_at'
                 )
             )
@@ -2668,13 +2669,14 @@ class ToolDispatcher:
                     'message': 'Specify spider_name to get data from a specific spider'
                 }
 
+            # Session 989: Use actual SpiderData fields
             items = list(
                 SpiderData.objects.filter(
                     spider_name__icontains=spider_name,
                     created_at__gte=cutoff
                 ).order_by('-created_at')[:limit].values(
-                    'id', 'spider_name', 'category', 'title', 'url',
-                    'content', 'relevance_score', 'created_at'
+                    'id', 'spider_name', 'data_type', 'source_url',
+                    'embedding_text', 'relevance_score', 'created_at'
                 )
             )
 
@@ -2687,13 +2689,13 @@ class ToolDispatcher:
 
         elif action == 'by_category':
             if not category:
-                # List available categories
+                # Session 989: Use data_type (not category) — actual SpiderData field
                 category_counts = dict(
                     SpiderData.objects.filter(created_at__gte=cutoff)
-                    .values('category')
+                    .values('data_type')
                     .annotate(count=Count('id'))
                     .order_by('-count')[:20]
-                    .values_list('category', 'count')
+                    .values_list('data_type', 'count')
                 )
                 return {
                     'action': 'by_category',
@@ -2701,12 +2703,13 @@ class ToolDispatcher:
                     'message': 'Specify category to get data from that category'
                 }
 
+            # Session 989: Use data_type (not category)
             items = list(
                 SpiderData.objects.filter(
-                    category__icontains=category,
+                    data_type__icontains=category,
                     created_at__gte=cutoff
                 ).order_by('-created_at')[:limit].values(
-                    'id', 'spider_name', 'category', 'title', 'url',
+                    'id', 'spider_name', 'data_type', 'source_url',
                     'relevance_score', 'created_at'
                 )
             )
@@ -2725,14 +2728,21 @@ class ToolDispatcher:
                     'error': 'keyword is required for search',
                 }
 
+            # Session 989: Use actual SpiderData fields (embedding_text, raw_data)
             from django.db.models import Q
+            qs = SpiderData.objects.filter(
+                Q(embedding_text__icontains=keyword) |
+                Q(source_url__icontains=keyword),
+                created_at__gte=cutoff
+            )
+
+            if spider_name:
+                qs = qs.filter(spider_name__icontains=spider_name)
+
             items = list(
-                SpiderData.objects.filter(
-                    Q(title__icontains=keyword) | Q(content__icontains=keyword),
-                    created_at__gte=cutoff
-                ).order_by('-relevance_score', '-created_at')[:limit].values(
-                    'id', 'spider_name', 'category', 'title', 'url',
-                    'relevance_score', 'created_at'
+                qs.order_by('-relevance_score', '-created_at')[:limit].values(
+                    'id', 'spider_name', 'data_type', 'source_url',
+                    'embedding_text', 'relevance_score', 'created_at'
                 )
             )
 
@@ -2752,12 +2762,13 @@ class ToolDispatcher:
                 .order_by('-count')[:10]
                 .values_list('spider_name', 'count')
             )
-            by_category = dict(
+            # Session 989: Use data_type (not category)
+            by_data_type = dict(
                 SpiderData.objects.filter(created_at__gte=cutoff)
-                .values('category')
+                .values('data_type')
                 .annotate(count=Count('id'))
                 .order_by('-count')[:10]
-                .values_list('category', 'count')
+                .values_list('data_type', 'count')
             )
 
             return {
@@ -2765,7 +2776,7 @@ class ToolDispatcher:
                 'total_items': total,
                 'days_back': days,
                 'by_spider': by_spider,
-                'by_category': by_category,
+                'by_data_type': by_data_type,
             }
 
         else:
