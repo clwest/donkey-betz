@@ -2136,9 +2136,101 @@ class ToolDispatcher:
                     'total_sections': len(full_sections),
                 }
 
+        elif action == 'revise':
+            # Session 987: Revise blog using EditorAgent + re-score with PublishGate
+            blog_id = payload.get('id')
+            if not blog_id:
+                raise ValueError("Blog ID required for revise action")
+
+            blog = base_qs.filter(id=blog_id).first()
+            if not blog:
+                blog = SelfBlog.objects.filter(id=blog_id).first()
+            if not blog:
+                raise ValueError(f"Blog {blog_id} not found")
+
+            # Capture before scores
+            before = {
+                'quality': blog.quality_score,
+                'novelty': blog.novelty_score,
+                'structure': blog.structure_score,
+                'publish_ready': blog.publish_ready,
+            }
+
+            # If no gate_notes yet, run PublishGate first to generate editorial guidance
+            from core.services.publish_gate import PublishGate
+            gate = PublishGate()
+            if not blog.gate_notes:
+                gate.apply_to_blog(blog, save=True)
+                blog.refresh_from_db()
+                # Update before scores with freshly computed values
+                before = {
+                    'quality': blog.quality_score,
+                    'novelty': blog.novelty_score,
+                    'structure': blog.structure_score,
+                    'publish_ready': blog.publish_ready,
+                }
+
+            # Map gate_notes into EditorAgent focus_areas
+            notes_lower = (blog.gate_notes or '').lower()
+            focus_areas = []
+            if any(kw in notes_lower for kw in ['hook', 'opening', 'intro', 'engagement']):
+                focus_areas.append('hooks')
+            if any(kw in notes_lower for kw in ['header', 'heading', 'structure', 'section']):
+                focus_areas.append('headers')
+            if any(kw in notes_lower for kw in ['conclusion', 'cta', 'call to action', 'ending']):
+                focus_areas.append('conclusion')
+            if any(kw in notes_lower for kw in ['engagement', 'readability', 'audience']):
+                focus_areas.append('engagement')
+            if not focus_areas:
+                focus_areas = ['hooks', 'headers', 'engagement', 'structure', 'conclusion']
+
+            # Run EditorAgent
+            from core.agents.editor_agent import EditorAgent
+            editor = EditorAgent()
+            result = editor.execute(
+                task=f"Revise blog based on editorial feedback: {blog.gate_notes}",
+                context={
+                    'blog_id': str(blog.id),
+                    'focus_areas': focus_areas,
+                    'save': True,
+                },
+                scifi_context={},
+                spider_context={},
+            )
+
+            if not result.success:
+                return {
+                    'action': 'revise',
+                    'error': f"EditorAgent failed: {result.error}",
+                    'blog_id': str(blog.id),
+                    'title': blog.title,
+                }
+
+            # Re-score with PublishGate
+            blog.refresh_from_db()
+            gate.apply_to_blog(blog, save=True)
+            blog.refresh_from_db()
+
+            return {
+                'action': 'revise',
+                'blog_id': str(blog.id),
+                'title': blog.title,
+                'before': before,
+                'after': {
+                    'quality': blog.quality_score,
+                    'novelty': blog.novelty_score,
+                    'structure': blog.structure_score,
+                    'publish_ready': blog.publish_ready,
+                },
+                'changes_made': result.data.get('changes_made', []),
+                'focus_areas': focus_areas,
+                'gate_notes': blog.gate_notes,
+                'status': blog.status,
+            }
+
         else:
             raise ValueError(
-                f"Unknown action for blog query: {action}. Valid actions: list, recent, stats, details, related, read"
+                f"Unknown action for blog query: {action}. Valid actions: list, recent, stats, details, related, read, revise"
             )
 
     def _handle_initiative(
