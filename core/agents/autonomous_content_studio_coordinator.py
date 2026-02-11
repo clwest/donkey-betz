@@ -393,7 +393,8 @@ CRITICAL: Always use tools to interact with the system. Never simulate or make u
                 )
 
             else:
-                return {"error": f"Unknown tool: {tool_name}"}
+                # Session 988: Fall through to BaseAgent for web_search + delegation
+                return super()._execute_tool_call(tool_name, tool_input)
         except Exception as e:
             logger.error(f"Error executing tool {tool_name}: {e}", exc_info=True)
             return {"error": str(e)}

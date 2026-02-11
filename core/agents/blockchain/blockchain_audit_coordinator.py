@@ -553,7 +553,8 @@ You have access to:
                 context=arguments.get('context', ''),
                 delegation_context=getattr(self, '_current_delegation_context', {})
             )
-        return {"error": f"Unknown tool: {tool_name}"}
+        # Session 988: Fall through to BaseAgent for web_search + delegation
+        return super()._execute_tool_call(tool_name, arguments)
 
     def _route_to_agent(
         self,

@@ -725,7 +725,8 @@ IMPORTANT: You MUST use read_file and edit_file on these specific files. Do NOT 
                 max_results=arguments.get("max_results", 20)
             )
 
-        return {"error": f"Unknown tool: {tool_name}"}
+        # Session 988: Fall through to BaseAgent for web_search + delegation
+        return super()._execute_tool_call(tool_name, arguments)
 
     def _generate_code(
         self,
