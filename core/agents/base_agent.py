@@ -82,6 +82,31 @@ from core.agents.time_travel_mixin import TimeTravelMixin
 
 logger = logging.getLogger(__name__)
 
+# Session 988: Shared web_search tool definition — importable by any agent
+WEB_SEARCH_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "web_search",
+        "description": "Search the web for current information, news, and market data. Use when local data is unavailable or stale.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Search query (e.g., 'AAPL SEC 8-K filing 2026', 'CoreWeave class action lawsuit')"
+                },
+                "search_type": {
+                    "type": "string",
+                    "enum": ["search", "news"],
+                    "default": "search",
+                    "description": "Type of search: 'search' for general, 'news' for recent news"
+                }
+            },
+            "required": ["query"]
+        }
+    }
+}
+
 
 @dataclass
 class KnowledgeAttribution:
@@ -2520,6 +2545,22 @@ Consider these trends when crafting the response to maximize relevance and engag
                 context=arguments.get('context', ''),
                 delegation_context=getattr(self, '_current_delegation_context', {})
             )
+
+        # Session 988: Handle web_search tool for any agent that includes it
+        if tool_name == 'web_search':
+            try:
+                from core.tools.web_search import WebSearchTool
+                search_tool = WebSearchTool()
+                return search_tool.execute(
+                    query=arguments.get('query', ''),
+                    max_results=arguments.get('num_results', 10),
+                    search_type=arguments.get('search_type', 'text'),
+                )
+            except Exception as e:
+                return {
+                    'success': False,
+                    'error': f"Web search failed: {str(e)}"
+                }
 
         # Subclasses should override and handle their own tools
         raise NotImplementedError(

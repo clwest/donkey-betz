@@ -20,7 +20,7 @@ import logging
 from typing import Dict, Any, List
 from datetime import datetime, timedelta, timezone as dt_timezone
 
-from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.base_agent import BaseAgent, AgentResult, WEB_SEARCH_TOOL
 from core.agents.report_schemas import build_provenance, format_disclaimer
 from ml.auto_selection import TaskType
 
@@ -191,7 +191,9 @@ Focus on patterns that suggest informed trading or manipulation."""
                     "required": ["ticker"]
                 }
             }
-        }
+        },
+        # Session 988: Web search fallback when local data is unavailable
+        WEB_SEARCH_TOOL,
     ]
 
     # Pattern detection thresholds
@@ -605,22 +607,15 @@ Focus on patterns that suggest informed trading or manipulation."""
     def _execute_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
         Session 761: Execute tool calls for market anomaly detection.
+        Session 988: Updated to call super() for delegation + web_search.
 
         Tools:
         - detect_pump_dump: Identify pump & dump patterns
         - analyze_options_flow: Detect unusual options activity
         - flag_manipulation: Pattern match known manipulation tactics
         - detect_coordinated: Find coordinated trading patterns
+        - web_search: Web search fallback (handled by BaseAgent)
         """
-        # Session 744: Handle delegation tool
-        if tool_name == 'delegate_to_specialist':
-            return self._handle_delegate_to_specialist(
-                specialist_agent=arguments.get('specialist_agent', ''),
-                task=arguments.get('task', ''),
-                context=arguments.get('context', ''),
-                delegation_context=getattr(self, '_current_delegation_context', {})
-            )
-
         ticker = arguments.get('ticker', '')
 
         if tool_name == 'detect_pump_dump':
@@ -687,4 +682,5 @@ Focus on patterns that suggest informed trading or manipulation."""
                 'message': f"Analyzed coordinated trading patterns for {ticker} across {len(social_sources)} sources"
             }
 
-        return {'error': f'Unknown tool: {tool_name}'}
+        # Session 988: Fall through to BaseAgent for web_search + delegation
+        return super()._execute_tool_call(tool_name, arguments)
