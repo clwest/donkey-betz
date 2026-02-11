@@ -17,7 +17,7 @@ import logging
 from typing import Dict, Any, List
 from datetime import datetime, timedelta, timezone as dt_timezone
 
-from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.base_agent import BaseAgent, AgentResult, WEB_SEARCH_TOOL
 from core.agents.report_schemas import build_provenance, format_disclaimer
 from ml.auto_selection import TaskType
 
@@ -140,7 +140,9 @@ Focus on transactions that diverge from normal patterns."""
                     "required": ["ticker"]
                 }
             }
-        }
+        },
+        # Session 988: Web search fallback when local data is unavailable
+        WEB_SEARCH_TOOL,
     ]
 
     # Thresholds
@@ -370,7 +372,7 @@ Focus on transactions that diverge from normal patterns."""
 
             cutoff = timezone.now() - timedelta(days=30)
             query = SpiderData.objects.filter(
-                spider_name='sec_edgar',
+                spider_name__in=['sec', 'sec_edgar'],
                 created_at__gte=cutoff
             ).order_by('-created_at')[:100]
 
@@ -561,21 +563,20 @@ Focus on transactions that diverge from normal patterns."""
     def _execute_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
         Session 761: Execute tool calls for institutional activity monitoring.
+        Session 988: Updated to call super() for delegation + web_search.
 
         Tools:
         - monitor_insiders: Track Form 4 insider transactions
         - track_13f_filings: Monitor institutional 13F filings
         - alert_large_position: Detect significant position changes
         - analyze_sentiment: Analyze insider buying/selling patterns
+        - web_search: Web search fallback (handled by BaseAgent)
         """
-        # Session 744: Handle delegation tool
-        if tool_name == 'delegate_to_specialist':
-            return self._handle_delegate_to_specialist(
-                specialist_agent=arguments.get('specialist_agent', ''),
-                task=arguments.get('task', ''),
-                context=arguments.get('context', ''),
-                delegation_context=getattr(self, '_current_delegation_context', {})
-            )
+        # Session 988: Handle delegation + web_search via BaseAgent
+        try:
+            return super()._execute_tool_call(tool_name, arguments)
+        except NotImplementedError:
+            pass
 
         ticker = arguments.get('ticker', '')
 

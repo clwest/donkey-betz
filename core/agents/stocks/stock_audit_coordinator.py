@@ -152,11 +152,11 @@ Always prioritize:
             logger.info(f"StockAuditCoordinator executing: {task[:100]}...")
 
         try:
-            # Run all sub-agents
-            analyst_results = self._run_stock_analyst(context)
-            movement_results = self._run_movement_monitor(context)
-            institutional_results = self._run_institutional_watcher(context)
-            anomaly_results = self._run_anomaly_detector(context)
+            # Run all sub-agents (Session 988: forward spider_context)
+            analyst_results = self._run_stock_analyst(context, spider_context)
+            movement_results = self._run_movement_monitor(context, spider_context)
+            institutional_results = self._run_institutional_watcher(context, spider_context)
+            anomaly_results = self._run_anomaly_detector(context, spider_context)
 
             # Correlate findings
             correlated = self._correlate_findings(
@@ -289,7 +289,7 @@ Always prioritize:
 
             return result
 
-    def _run_stock_analyst(self, context: Dict) -> Dict[str, Any]:
+    def _run_stock_analyst(self, context: Dict, spider_context: Dict = None) -> Dict[str, Any]:
         """Run the StockAnalystAgent with timeout protection."""
         try:
             from .stock_analyst_agent import StockAnalystAgent
@@ -298,7 +298,8 @@ Always prioritize:
             def execute_agent():
                 return agent.execute(
                     task="Analyze recent SEC filings for material information",
-                    context=context
+                    context=context,
+                    spider_context=spider_context or {},
                 )
 
             # Session 895: Add timeout to prevent coordinator hangs
@@ -314,7 +315,7 @@ Always prioritize:
             logger.error(f"StockAnalystAgent error: {e}")
             return {'error': str(e)}
 
-    def _run_movement_monitor(self, context: Dict) -> Dict[str, Any]:
+    def _run_movement_monitor(self, context: Dict, spider_context: Dict = None) -> Dict[str, Any]:
         """Run the MarketMovementMonitorAgent with timeout protection."""
         try:
             from .market_movement_monitor_agent import MarketMovementMonitorAgent
@@ -323,7 +324,8 @@ Always prioritize:
             def execute_agent():
                 return agent.execute(
                     task="Scan for unusual price and volume movements",
-                    context=context
+                    context=context,
+                    spider_context=spider_context or {},
                 )
 
             # Session 895: Add timeout to prevent coordinator hangs
@@ -339,7 +341,7 @@ Always prioritize:
             logger.error(f"MarketMovementMonitorAgent error: {e}")
             return {'error': str(e)}
 
-    def _run_institutional_watcher(self, context: Dict) -> Dict[str, Any]:
+    def _run_institutional_watcher(self, context: Dict, spider_context: Dict = None) -> Dict[str, Any]:
         """Run the InstitutionalWatcherAgent with timeout protection."""
         try:
             from .institutional_watcher_agent import InstitutionalWatcherAgent
@@ -348,7 +350,8 @@ Always prioritize:
             def execute_agent():
                 return agent.execute(
                     task="Monitor insider trading and institutional activity",
-                    context=context
+                    context=context,
+                    spider_context=spider_context or {},
                 )
 
             # Session 895: Add timeout to prevent coordinator hangs
@@ -364,7 +367,7 @@ Always prioritize:
             logger.error(f"InstitutionalWatcherAgent error: {e}")
             return {'error': str(e)}
 
-    def _run_anomaly_detector(self, context: Dict) -> Dict[str, Any]:
+    def _run_anomaly_detector(self, context: Dict, spider_context: Dict = None) -> Dict[str, Any]:
         """Run the MarketAnomalyDetectorAgent with timeout protection."""
         try:
             from .market_anomaly_detector_agent import MarketAnomalyDetectorAgent
@@ -373,7 +376,8 @@ Always prioritize:
             def execute_agent():
                 return agent.execute(
                     task="Detect market anomalies and potential manipulation",
-                    context=context
+                    context=context,
+                    spider_context=spider_context or {},
                 )
 
             # Session 895: Add timeout to prevent coordinator hangs

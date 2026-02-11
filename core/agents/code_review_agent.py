@@ -563,7 +563,8 @@ Be constructive and brief."""
                 context=arguments.get('context', ''),
                 delegation_context=getattr(self, '_current_delegation_context', {})
             )
-        return {"error": f"Unknown tool: {tool_name}"}
+        # Session 988: Fall through to BaseAgent for web_search + delegation
+        return super()._execute_tool_call(tool_name, arguments)
 
     def _read_file(self, file_path: str) -> Dict[str, Any]:
         """Read a file from the project filesystem."""

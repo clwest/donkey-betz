@@ -269,7 +269,7 @@ You have access to:
             feature_vector.append(type_value)
 
             # Source encoding
-            sources = ['etherscan', 'coingecko', 'rekt_news', 'manual', 'other']
+            sources = ['etherscan', 'coingecko', 'securityweek', 'manual', 'other']
             source = alert.get('source', 'other').lower()
             source_value = sources.index(source) if source in sources else len(sources)
             feature_vector.append(source_value)
@@ -553,7 +553,8 @@ You have access to:
                 context=arguments.get('context', ''),
                 delegation_context=getattr(self, '_current_delegation_context', {})
             )
-        return {"error": f"Unknown tool: {tool_name}"}
+        # Session 988: Fall through to BaseAgent for web_search + delegation
+        return super()._execute_tool_call(tool_name, arguments)
 
     def _route_to_agent(
         self,
@@ -922,7 +923,7 @@ Given your experience with cryptocurrency markets and blockchain technology:
 
             recent_data = SpiderData.objects.filter(
                 created_at__gte=cutoff,
-                spider_name__in=['etherscan', 'coingecko', 'rekt_news']
+                spider_name__in=['etherscan', 'coingecko', 'securityweek']
             )[:10]
 
             alerts = []

@@ -817,7 +817,8 @@ Start by researching the topic to understand trends and audience preferences.
                     delegation_context=getattr(self, '_current_delegation_context', {})
                 )
             else:
-                return {"error": f"Unknown tool: {tool_name}"}
+                # Session 988: Fall through to BaseAgent for web_search + delegation
+                return super()._execute_tool_call(tool_name, arguments)
 
         except Exception as e:
             logger.error(f"Tool execution error ({tool_name}): {e}")
