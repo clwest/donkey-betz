@@ -116,6 +116,12 @@ class PublishGate:
         novelty_score = self._score_novelty(blog, full_text)
         structure_score = self._score_structure(blog, full_text)
 
+        # Check research backing — penalize quality if no claims
+        claims_count = self._check_research_backing(blog)
+        if claims_count == 0:
+            quality_score = max(0.0, quality_score - 0.20)
+            logger.info(f"PublishGate: No research claims found, quality penalized to {quality_score:.2f}")
+
         # Determine content type
         content_type, type_confidence = self._classify_content_type(blog, full_text)
 
@@ -453,6 +459,16 @@ class PublishGate:
 
         # Published content stays as-is
         return None
+
+    def _check_research_backing(self, blog) -> int:
+        """Check if blog has research claims in deliberation metadata.
+        Returns -1 if no deliberation metadata (non-pipeline blog), else claims count.
+        """
+        stats = getattr(blog, 'stats_snapshot', None)
+        if not stats or not isinstance(stats, dict):
+            return -1
+        deliberation = stats.get('deliberation', {})
+        return deliberation.get('claims_count', 0)
 
     def _check_envelope(self, blog) -> str:
         """
