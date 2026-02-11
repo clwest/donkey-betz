@@ -1,39 +1,34 @@
-# Session 987 - Start Here
+# Session 988 - Start Here
 
-**Previous Session:** 986 (Nervous System 60% Health Fix)
+**Previous Session:** 987 (PA Wiring Completion)
 **Date:** February 10, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** (down from 18) | **Bundle: 2,305 KB** | **26 Legacy Routes -> Redirects** | **Command Center "Now" Hub: ACTIVE** | **Page Telemetry: ACTIVE** | **Discord Docs: 112 COMMANDS** | **Risk-Aware RAG: COMPLETE** | **Unified PA: ANALYTICAL ADVISOR** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **PA Status Snapshot: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS** | **PA Conversation History: ACTIVE** | **PA Async Processing: CELERY** | **Stock Intelligence Dashboard: ACTIVE** | **Stock Intelligence PA: WIRED** | **Ticker Lookup: ACTIVE** | **SKIN Layer Output: GITIGNORED** | **PA Production: FAST (3-64s)** | **Market Brief Save Guard: ACTIVE** | **Prediction Dedup: CONSTRAINED** | **Alert Quality: DEDUPED** | **Brief Detail UI: CARDS** | **Celery Telemetry: ACTIVE** | **Skin Ephemeral FS: FIXED** | **Boardroom Feeders: WIDENED** | **Celery Prefork: ACTIVE** | **PA Boardroom: ACTIONABLE** | **Nervous System: FIXED**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** (down from 18) | **Bundle: 2,305 KB** | **26 Legacy Routes -> Redirects** | **Command Center "Now" Hub: ACTIVE** | **Page Telemetry: ACTIVE** | **Discord Docs: 112 COMMANDS** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 7 NEWLY WIRED** | **Blog Revision Loop: ACTIVE** | **Body Vitals Routing: FIXED** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **PA Status Snapshot: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS** | **PA Conversation History: ACTIVE** | **PA Async Processing: CELERY** | **Stock Intelligence Dashboard: ACTIVE** | **Stock Intelligence PA: WIRED** | **Ticker Lookup: ACTIVE** | **SKIN Layer Output: GITIGNORED** | **PA Production: FAST (3-64s)** | **Market Brief Save Guard: ACTIVE** | **Prediction Dedup: CONSTRAINED** | **Alert Quality: DEDUPED** | **Brief Detail UI: CARDS** | **Celery Telemetry: ACTIVE** | **Skin Ephemeral FS: FIXED** | **Boardroom Feeders: WIDENED** | **Celery Prefork: ACTIVE** | **PA Boardroom: ACTIONABLE** | **Nervous System: FIXED**
 
 ---
 
-## Session 986 Summary (Just Completed)
+## Session 987 Summary (Just Completed)
 
-### Nervous System 60% Health Fix
+### PA Wiring Completion
 
-**Problem:** Nervous system health was 60% on Railway but 100% locally. Two measurement bugs.
+Three PRs (#1061, #1062) connecting disconnected PA capabilities:
 
-**Root cause:**
-1. `_check_channel_layer()` assumed `CHANNEL_LAYERS.CONFIG.hosts` was `(host, port)` tuples, but `settings.py` provides URL strings. On Railway, fell back to `127.0.0.1:6379` (doesn't exist) -> Redis "disconnected" -> -40 points.
-2. `_get_message_stats()` was hardcoded to zeros with "not yet implemented" note. Activity level permanently "dormant".
+**Blog Revision Feedback Loop (PR #1061):** PA can now say "revise blog [uuid]" to run EditorAgent with PublishGate editorial notes as focus areas, then re-score and show before/after quality comparison. Keywords: revise, improve, enhance, fix this blog, edit this blog, rewrite.
 
-**Fix (1 file, 3 changes, no migrations):**
-1. **`core/services/nervous.py` `_check_channel_layer`**: Handle URL strings via `redis.from_url()`, keep tuple support, add `REDIS_URL` fallback
-2. **`core/services/nervous.py` `_get_message_stats`**: Wire to `CeleryTaskEvent` for real task throughput data
-3. **`core/services/nervous.py` `_calculate_health_score`**: Mild -10 penalty for genuinely zero activity (vs no penalty when tracking unavailable)
+**7 Unrouted Tool Handlers Wired (PR #1062):** Connected revenue_tracker, task_manager, workspace, check_budget, system_alerts, ml_analysis, pipeline_orchestrator -- each with intent detection, payload builder, and formatted output.
 
-**Expected:** Railway score 60% -> ~90-100%. Local stays ~100%.
+**Blog Enhancement Actions (PR #1062):** `needs_work` lists blogs with `status='needs_enhancement'`; `batch_enhance` triggers bulk EditorAgent runs. Keywords: needs work, batch enhance, enhance all.
+
+**Body Vitals Routing Fix (PR #1062):** Narrowed body vitals triggers from generic "health"/"status" to body-specific phrases. Generic "health" no longer hijacks system health queries.
+
+**human_decisions_tool:** Confirmed redundant with boardroom_tool (superset). Left registered for old PA compatibility.
+
+### Session 986 Summary (Prior)
+
+Nervous System 60% Health Fix -- Redis URL string parsing in `_check_channel_layer()`, wired `_get_message_stats()` to CeleryTaskEvent, mild activity penalty. Railway 60% -> ~90-100%.
 
 ### Session 985 Summary (Prior)
 
 PA Boardroom Response Improvement (top items inline, concise LLM directive) + Celery OOM Deep Fix (lazy ML imports). PRs #1049.
-
-### Session 984 Summary (Prior)
-
-Boardroom Feeder Fix (24h age gate, real spider data_types) + Celery Worker OOM Fix (prefork pool). PRs #1043-1044.
-
-### Session 983 Summary (Prior)
-
-Celery Observability Fix (CeleryTaskEvent model) + Skin Health Scoring Fix (Railway ephemeral FS). PR #1042.
 
 ---
 
@@ -51,7 +46,7 @@ Celery Observability Fix (CeleryTaskEvent model) + Skin Health Scoring Fix (Rail
 | Workspace Tabs | 9 (down from 18) |
 | Frontend Bundle | 2,305 KB |
 | Frontend Routes | 37 (15 standalone + 22 redirects) |
-| PA Tools | 92 |
+| PA Tools | 92 (7 newly wired in Session 987) |
 | Attention Sections | 7 |
 | LLM Providers | 6 (OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini) |
 | Standalone Pages | `/stocks`, `/advisors`, `/neural-orchestra`, `/conversation-contract`, `/mythology-lab`, `/billing`, `/analytics`, `/docs-index` |
@@ -100,6 +95,18 @@ The diagnostic pipeline (Session 856) has 0 records in production. May need acti
 
 ## What Could Come Next
 
+### Content Deliberation v2 via PA
+`POST /api/v1/research/self-blog/generate-v2/` exists but PA can't trigger it. Add intent for "create blog with full review" / "deliberated blog". Would connect the full ClaimsPack -> 3-reviewer panel -> DecisionEnforcer pipeline to natural language.
+
+### Auto-Revision Loop
+If deliberation pipeline returns REVISE verdict, loop back through EditorAgent automatically instead of requiring manual re-trigger.
+
+### Scheduled Task Visibility
+PA has no visibility into Celery Beat scheduled tasks. Add `scheduled_tasks_tool` with "what's scheduled?", "automation status" intents.
+
+### Agent Introspection
+PA can invoke agents but can't describe their capabilities. Add "what can [agent name] do?" intent that returns agent class methods and supported actions.
+
 ### Post-Deploy Monitoring
 - Verify celery-worker memory stays stable with prefork pool
 - Verify Boardroom shows fresh attention items from widened feeders
@@ -141,9 +148,6 @@ Use the ACTIVE/DORMANT audit in `DISCORD_INTEGRATION.md` to remove or fix non-fu
 ### ToolCallRecord Analytics
 Build dashboards: tool usage by agent, latency percentiles, error rates.
 
-### Auto-Revision Loop
-If deliberation pipeline returns REVISE verdict, loop automatically instead of requiring manual re-trigger.
-
 ---
 
 ## Critical Patterns & Gotchas
@@ -180,6 +184,11 @@ If deliberation pipeline returns REVISE verdict, loop automatically instead of r
 - `_format_tool_result` shows items inline under "Needs your attention now"
 - Boardroom LLM directive: "Max 3-5 bullets of INSIGHT only" -- do NOT restate counts
 - To improve other PA intents, follow same pattern: enrich tool data + constrain LLM directive
+
+**PA intent routing (Session 987):**
+- 7 newly wired tools: revenue, task_management, workspace, budget, system_alerts, ml_analysis, pipeline_status
+- Blog actions: `revise` (EditorAgent + PublishGate), `needs_work` (list needing enhancement), `batch_enhance` (bulk EditorAgent)
+- Body vitals routing narrowed to body-specific phrases -- generic "health"/"status" no longer hijacks
 
 **Workspace tab mapping (`types.ts`):**
 - `normalizeWorkspaceTab(tab)` -- maps any of the 18 legacy tab IDs to 9 canonical IDs
