@@ -143,22 +143,30 @@ Output ONLY valid JSON (no markdown fences) matching this schema:
 def _call_llm_reviewer(system_prompt: str, user_content: str, reviewer_name: str) -> dict:
     """Call LLM for a single reviewer, validate, return payload or synthetic FAIL."""
     try:
-        from core.llm_providers import get_llm_provider
+        from core.services.llm_provider_registry import get_llm_provider_registry, LLMRequest
 
-        provider = get_llm_provider('openai')
-        messages = [
-            {'role': 'system', 'content': system_prompt},
-            {'role': 'user', 'content': user_content},
-        ]
-
-        response = provider.chat_completion(
-            messages=messages,
-            model='gpt-4.1-mini',
+        registry = get_llm_provider_registry()
+        request = LLMRequest(
+            prompt=user_content,
+            system_prompt=system_prompt,
+            messages=[
+                {'role': 'system', 'content': system_prompt},
+                {'role': 'user', 'content': user_content},
+            ],
             temperature=0.3,
             max_tokens=1500,
         )
 
-        raw = response.get('content', '') if isinstance(response, dict) else str(response)
+        response = registry.complete(
+            provider='openai',
+            model_id='gpt-4.1-mini',
+            request=request,
+        )
+
+        if not response.success:
+            return _make_fail_payload(reviewer_name, f'LLM error: {response.error}')
+
+        raw = response.content
 
         # Strip markdown fences if present
         raw = raw.strip()
