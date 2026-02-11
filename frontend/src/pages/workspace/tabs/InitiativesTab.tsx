@@ -486,6 +486,8 @@ function DocumentViewerModal({
     enabled: !!documentId,
   })
 
+  const [contentExpanded, setContentExpanded] = useState(false)
+
   return (
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]"
@@ -513,7 +515,7 @@ function DocumentViewerModal({
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-1">
+        <div className="p-6 overflow-y-auto flex-1 min-h-0">
           {isLoading && (
             <div className="flex items-center justify-center py-16">
               <Loader2 size={24} className="animate-spin text-primary-400" />
@@ -588,10 +590,31 @@ function DocumentViewerModal({
               )}
 
               {/* Session 943: Unified prose styling */}
-              <div className="prose prose-invert prose-dark prose-sm max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {data.full_text || data.content || 'No content available'}
-                </ReactMarkdown>
+              <div className="relative">
+                <div className={`prose prose-invert prose-dark prose-sm max-w-none ${!contentExpanded ? 'max-h-[400px] overflow-hidden' : ''}`}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {data.full_text || data.content || 'No content available'}
+                  </ReactMarkdown>
+                </div>
+                {!contentExpanded && (
+                  <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-dark-card to-transparent pointer-events-none" />
+                )}
+                <button
+                  onClick={() => setContentExpanded(!contentExpanded)}
+                  className="mt-2 flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300 transition-colors"
+                >
+                  {contentExpanded ? (
+                    <>
+                      <ChevronUp size={14} />
+                      Collapse document
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown size={14} />
+                      Show full document
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           )}
@@ -1140,7 +1163,7 @@ function ComprehensiveInitiativeModal({
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto min-h-0 p-6 space-y-6">
 
           {/* ORIGIN SECTION */}
           <div className="border border-dark-border rounded-lg overflow-hidden">
