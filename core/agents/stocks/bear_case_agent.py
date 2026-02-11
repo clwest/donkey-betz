@@ -20,7 +20,7 @@ import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
 
-from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.base_agent import BaseAgent, AgentResult, WEB_SEARCH_TOOL
 from core.agents.report_schemas import build_provenance, format_disclaimer
 from ml.auto_selection import TaskType
 
@@ -211,7 +211,9 @@ Always acknowledge bull arguments but emphasize potential risks."""
                     "required": ["ticker"]
                 }
             }
-        }
+        },
+        # Session 988: Web search fallback when local data is unavailable
+        WEB_SEARCH_TOOL,
     ]
 
     def execute(self, task: str, context: Dict[str, Any] = None,

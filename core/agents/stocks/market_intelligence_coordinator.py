@@ -172,10 +172,10 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
             # 2. INCOMING SIGNALS: Get tickers to analyze
             tickers = self._select_tickers(context, spider_context)
 
-            # 3. INTERNAL DISAGREEMENT: Run bull vs bear debate
-            bull_results = self._run_bull_case(tickers, context)
-            bear_results = self._run_bear_case(tickers, context)
-            risk_results = self._run_risk_assessment(tickers, context)
+            # 3. INTERNAL DISAGREEMENT: Run bull vs bear debate (Session 988: forward spider_context)
+            bull_results = self._run_bull_case(tickers, context, spider_context)
+            bear_results = self._run_bear_case(tickers, context, spider_context)
+            risk_results = self._run_risk_assessment(tickers, context, spider_context)
 
             # Session 980: Log agent health for debugging 0-stock briefs
             bull_count = len(bull_results.get('bull_cases', []))
@@ -499,7 +499,7 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
         )
         return selected[:10]
 
-    def _run_bull_case(self, tickers: List[str], context: Dict) -> Dict[str, Any]:
+    def _run_bull_case(self, tickers: List[str], context: Dict, spider_context: Dict = None) -> Dict[str, Any]:
         """Run the Bull Case Agent with timeout protection."""
         try:
             from .bull_case_agent import BullCaseAgent
@@ -508,7 +508,8 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
             def execute_agent():
                 return agent.execute(
                     task="Build bull cases for today's watchlist",
-                    context={'tickers': tickers}
+                    context={'tickers': tickers},
+                    spider_context=spider_context or {},
                 )
 
             # Session 895: Add timeout to prevent coordinator hangs
@@ -524,7 +525,7 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
             logger.error(f"BullCaseAgent error: {e}")
             return {'error': str(e)}
 
-    def _run_bear_case(self, tickers: List[str], context: Dict) -> Dict[str, Any]:
+    def _run_bear_case(self, tickers: List[str], context: Dict, spider_context: Dict = None) -> Dict[str, Any]:
         """Run the Bear Case Agent with timeout protection."""
         try:
             from .bear_case_agent import BearCaseAgent
@@ -533,7 +534,8 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
             def execute_agent():
                 return agent.execute(
                     task="Build bear cases for today's watchlist",
-                    context={'tickers': tickers}
+                    context={'tickers': tickers},
+                    spider_context=spider_context or {},
                 )
 
             # Session 895: Add timeout to prevent coordinator hangs
@@ -549,7 +551,7 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
             logger.error(f"BearCaseAgent error: {e}")
             return {'error': str(e)}
 
-    def _run_risk_assessment(self, tickers: List[str], context: Dict) -> Dict[str, Any]:
+    def _run_risk_assessment(self, tickers: List[str], context: Dict, spider_context: Dict = None) -> Dict[str, Any]:
         """Run the Stock Audit Coordinator for risk signals with timeout protection."""
         # Session 895: Uses module-level COORDINATOR_TIMEOUT (8 min) for nested coordinator
         # StockAuditCoordinator runs 4 sub-agents, each with 5-min timeout
@@ -560,7 +562,8 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
             def execute_coordinator():
                 return coordinator.execute(
                     task="Assess risks and anomalies for watchlist",
-                    context={'tickers': tickers}
+                    context={'tickers': tickers},
+                    spider_context=spider_context or {},
                 )
 
             # Session 895: Add timeout to prevent coordinator hangs

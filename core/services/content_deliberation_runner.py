@@ -91,6 +91,13 @@ class ContentDeliberationRunner:
 
         # ── Step 4: Extract decision ──
         decision = self._extract_decision(mandate_dict, review_results)
+
+        # ── Step 4b: Block PUBLISH without research backing ──
+        claims_count = len(claims_pack.claims) if claims_pack else 0
+        if decision == 'PUBLISH' and claims_count == 0:
+            logger.info("[Phase 4] Downgrading PUBLISH → REVISE: no research claims backing content")
+            decision = 'REVISE'
+
         result['decision'] = decision
 
         # ── Step 5: If REVISE, one rewrite pass ──

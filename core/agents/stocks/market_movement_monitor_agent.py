@@ -17,7 +17,7 @@ import logging
 from typing import Dict, Any, List
 from datetime import datetime, timedelta, timezone as dt_timezone
 
-from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.base_agent import BaseAgent, AgentResult, WEB_SEARCH_TOOL
 from core.agents.report_schemas import build_provenance, format_disclaimer
 from ml.auto_selection import TaskType
 
@@ -143,7 +143,9 @@ Focus on stocks without corresponding news explanations for moves."""
                     }
                 }
             }
-        }
+        },
+        # Session 988: Web search fallback when local data is unavailable
+        WEB_SEARCH_TOOL,
     ]
 
     # Thresholds for alerts
@@ -469,22 +471,15 @@ Focus on stocks without corresponding news explanations for moves."""
     def _execute_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
         Session 761: Execute tool calls for market movement monitoring.
+        Session 988: Updated to call super() for delegation + web_search.
 
         Tools:
         - detect_volume_spike: Find unusual volume activity
         - track_momentum: Monitor price momentum
         - alert_breakout: Detect technical breakouts
         - scan_after_hours: Monitor pre/post market activity
+        - web_search: Web search fallback (handled by BaseAgent)
         """
-        # Session 744: Handle delegation tool
-        if tool_name == 'delegate_to_specialist':
-            return self._handle_delegate_to_specialist(
-                specialist_agent=arguments.get('specialist_agent', ''),
-                task=arguments.get('task', ''),
-                context=arguments.get('context', ''),
-                delegation_context=getattr(self, '_current_delegation_context', {})
-            )
-
         ticker = arguments.get('ticker', 'SPY')
 
         if tool_name == 'detect_volume_spike':
@@ -669,4 +664,5 @@ Focus on stocks without corresponding news explanations for moves."""
                 'message': f"After-hours scanning unavailable - requires extended hours data provider"
             }
 
-        return {'error': f'Unknown tool: {tool_name}'}
+        # Session 988: Fall through to BaseAgent for web_search + delegation
+        return super()._execute_tool_call(tool_name, arguments)

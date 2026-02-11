@@ -22,7 +22,7 @@ import logging
 from typing import Dict, Any, List
 from datetime import datetime, timedelta, timezone
 
-from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig
+from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig, WEB_SEARCH_TOOL
 from core.agents.report_schemas import (
     ReportProvenance, FinanceReportSchema, ScenarioAnalysis,
     Claim, Recommendation, RiskFlag, SourceInfo,
@@ -193,7 +193,9 @@ Alert on:
                     "required": []
                 }
             }
-        }
+        },
+        # Session 988: Web search fallback when local data is unavailable
+        WEB_SEARCH_TOOL,
     ]
 
     # Session 763: Mission Control configuration
@@ -521,7 +523,7 @@ Alert on:
 
             cutoff = dj_timezone.now() - timedelta(days=7)
             filings = SpiderData.objects.filter(
-                spider_name='sec_edgar',
+                spider_name__in=['sec', 'sec_edgar'],
                 created_at__gte=cutoff
             ).order_by('-created_at')[:10]
 
