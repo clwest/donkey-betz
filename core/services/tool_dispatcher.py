@@ -2792,6 +2792,7 @@ class ToolDispatcher:
         - failures: Get recent failures for debugging
         """
         from core.models import AgentExecution
+        from core.models_deliberation import DeliberationSession
         from django.db.models import Count, Avg
         from django.utils import timezone
         from datetime import timedelta
@@ -2816,10 +2817,21 @@ class ToolDispatcher:
                 )
             )
 
+            # Session 988: Also include agent conversations (DeliberationSessions)
+            conversations = list(
+                DeliberationSession.objects.filter(
+                    created_at__gte=cutoff
+                ).order_by('-created_at')[:limit].values(
+                    'id', 'objective', 'participants', 'status', 'created_at'
+                )
+            )
+
             return {
                 'action': 'recent',
                 'count': len(items),
                 'items': items,
+                'conversation_count': len(conversations),
+                'conversations': conversations,
                 'hours_back': hours,
             }
 
@@ -2885,12 +2897,22 @@ class ToolDispatcher:
                 .order_by('-count')[:15]
             )
 
+            # Session 988: Include deliberation session stats
+            conv_total = DeliberationSession.objects.filter(
+                created_at__gte=cutoff
+            ).count()
+            conv_completed = DeliberationSession.objects.filter(
+                created_at__gte=cutoff, status='completed'
+            ).count()
+
             return {
                 'action': 'stats',
                 'total_executions': total,
                 'successes': successes,
                 'failures': failures,
                 'success_rate': successes / total if total > 0 else 0,
+                'total_conversations': conv_total,
+                'completed_conversations': conv_completed,
                 'hours_back': hours,
                 'by_agent': by_agent,
             }
