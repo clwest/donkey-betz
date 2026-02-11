@@ -799,11 +799,14 @@ class UnifiedPAEntrypoint:
         ]):
             return ('spider_data', 'spider_data_tool')
 
-        # Session 948: Execution history patterns
+        # Session 948/988: Execution history patterns
         if any(word in message_lower for word in [
             'execution', 'executions', 'agent history', 'what agents did',
             'agent activity', 'recent activity', 'what has been running',
-            'agent failures', 'failed agents'
+            'agent failures', 'failed agents',
+            'agents been doing', 'agents doing', 'what are agents',
+            'what have agents', 'agents been up to', 'agent work',
+            'agent conversations', 'deliberations',
         ]):
             return ('execution_history', 'execution_history_tool')
 
@@ -2753,78 +2756,108 @@ Address the user by name occasionally."""
                 else:
                     return str(tool_result)
 
-            # Session 948: Execution history results formatting
+            # Session 948/988: Execution history results formatting
+            # Session 988: Fixed field name mismatches (items→executions, hours_back→period_hours)
             elif intent == 'execution_history':
                 action = tool_result.get('action', '')
 
                 if action == 'recent':
-                    executions = tool_result.get('executions', [])
+                    executions = tool_result.get('items', [])
                     count = tool_result.get('count', 0)
-                    period = tool_result.get('period_hours', 24)
+                    period = tool_result.get('hours_back', 24)
+                    conversations = tool_result.get('conversations', [])
+                    conv_count = tool_result.get('conversation_count', 0)
 
-                    if count == 0:
-                        return f"No agent executions in the last {period} hours, {user_name}."
+                    if count == 0 and conv_count == 0:
+                        return f"No agent executions or conversations in the last {period} hours, {user_name}. The system is standing by."
 
-                    response = f"Recent agent activity ({count} executions in {period}h):\n\n"
-                    for ex in executions[:8]:
-                        agent = ex.get('agent_name', 'Unknown')
-                        status = ex.get('status', 'unknown')
-                        status_icon = '✅' if status == 'completed' else ('❌' if status == 'failed' else '⏳')
-                        duration = ex.get('duration_seconds', 0)
-                        response += f"{status_icon} **{agent}**"
-                        if duration:
-                            response += f" ({duration:.1f}s)"
-                        response += "\n"
+                    response = ""
 
-                    if count > 8:
-                        response += f"\n...and {count - 8} more executions."
+                    if count > 0:
+                        response += f"**Agent Executions** ({count} in last {period}h):\n\n"
+                        for ex in executions[:8]:
+                            agent = ex.get('agent_name', 'Unknown')
+                            status = ex.get('status', 'unknown')
+                            success = ex.get('success', False)
+                            status_icon = '✅' if success else ('❌' if status == 'failed' else '⏳')
+                            duration_ms = ex.get('execution_time_ms', 0)
+                            response += f"{status_icon} **{agent}**"
+                            if duration_ms:
+                                response += f" ({duration_ms / 1000:.1f}s)"
+                            task_desc = ex.get('task', '')
+                            if task_desc:
+                                response += f" — {str(task_desc)[:50]}"
+                            response += "\n"
+                        if count > 8:
+                            response += f"\n...and {count - 8} more executions.\n"
+
+                    if conv_count > 0:
+                        response += f"\n**Agent Conversations** ({conv_count} in last {period}h):\n\n"
+                        for conv in conversations[:6]:
+                            objective = conv.get('objective', 'No topic')[:60]
+                            status = conv.get('status', 'unknown')
+                            participants = conv.get('participants', [])
+                            status_icon = '✅' if status == 'completed' else ('⏳' if status == 'active' else '📋')
+                            agent_names = ', '.join(participants[:3]) if isinstance(participants, list) else str(participants)
+                            response += f"{status_icon} **{objective}**\n"
+                            if agent_names:
+                                response += f"   └─ {agent_names}\n"
+                        if conv_count > 6:
+                            response += f"\n...and {conv_count - 6} more conversations.\n"
+
+                    if not response:
+                        response = f"No agent activity in the last {period} hours, {user_name}."
                     return response
 
                 elif action == 'by_agent':
                     agent = tool_result.get('agent_name', 'Unknown')
-                    executions = tool_result.get('executions', [])
+                    executions = tool_result.get('items', [])
                     count = tool_result.get('count', 0)
 
                     if count == 0:
                         return f"No recent executions from {agent}, {user_name}."
 
-                    response = f"**{agent}** execution history ({count} total):\n\n"
+                    success_rate = tool_result.get('success_rate', 0)
+                    response = f"**{agent}** execution history ({count} total, {success_rate:.0%} success):\n\n"
                     for ex in executions[:6]:
-                        status = ex.get('status', 'unknown')
-                        status_icon = '✅' if status == 'completed' else ('❌' if status == 'failed' else '⏳')
-                        date = ex.get('created_at', '')[:16]
-                        topic = ex.get('topic', '')[:40]
+                        success = ex.get('success', False)
+                        status_icon = '✅' if success else '❌'
+                        date = str(ex.get('created_at', ''))[:16]
+                        task_desc = str(ex.get('task', ''))[:40]
                         response += f"{status_icon} {date}"
-                        if topic:
-                            response += f" - {topic}"
+                        if task_desc:
+                            response += f" - {task_desc}"
                         response += "\n"
 
                     return response
 
                 elif action == 'stats':
                     total = tool_result.get('total_executions', 0)
-                    successful = tool_result.get('successful', 0)
-                    failed = tool_result.get('failed', 0)
+                    successes = tool_result.get('successes', 0)
+                    failures = tool_result.get('failures', 0)
                     success_rate = tool_result.get('success_rate', 0)
-                    by_agent = tool_result.get('by_agent', {})
-                    avg_duration = tool_result.get('avg_duration_seconds', 0)
+                    conv_total = tool_result.get('total_conversations', 0)
+                    conv_completed = tool_result.get('completed_conversations', 0)
+                    by_agent = tool_result.get('by_agent', [])
+                    period = tool_result.get('hours_back', 24)
 
-                    response = f"Agent Execution Stats, {user_name}:\n\n"
-                    response += f"- **Total executions:** {total}\n"
-                    response += f"- **Successful:** {successful} ✅\n"
-                    response += f"- **Failed:** {failed} ❌\n"
-                    response += f"- **Success rate:** {success_rate:.1f}%\n"
-                    response += f"- **Avg duration:** {avg_duration:.1f}s\n\n"
+                    response = f"Agent Activity Stats (last {period}h), {user_name}:\n\n"
+                    response += f"- **Executions:** {total} ({successes} ✅ / {failures} ❌)\n"
+                    if total > 0:
+                        response += f"- **Success rate:** {success_rate:.0%}\n"
+                    response += f"- **Conversations:** {conv_total} ({conv_completed} completed)\n\n"
 
                     if by_agent:
                         response += "**Most active agents:**\n"
-                        for agent, cnt in list(by_agent.items())[:5]:
-                            response += f"- {agent}: {cnt} executions\n"
+                        for entry in (by_agent[:5] if isinstance(by_agent, list) else []):
+                            name = entry.get('agent_name', 'Unknown')
+                            cnt = entry.get('count', 0)
+                            response += f"- {name}: {cnt} executions\n"
 
                     return response
 
                 elif action == 'failures':
-                    failures = tool_result.get('failures', [])
+                    failures = tool_result.get('items', [])
                     count = tool_result.get('count', 0)
 
                     if count == 0:
@@ -2833,8 +2866,8 @@ Address the user by name occasionally."""
                     response = f"Recent agent failures ({count}):\n\n"
                     for f in failures[:6]:
                         agent = f.get('agent_name', 'Unknown')
-                        error = f.get('error_message', 'Unknown error')[:60]
-                        date = f.get('created_at', '')[:16]
+                        error = str(f.get('error_message', 'Unknown error'))[:60]
+                        date = str(f.get('created_at', ''))[:16]
                         response += f"❌ **{agent}** ({date})\n"
                         response += f"   └─ {error}\n"
 
