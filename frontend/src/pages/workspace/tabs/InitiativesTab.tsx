@@ -664,6 +664,7 @@ function InitiativeDetailModal({
 }) {
   // Session 866: State for viewing stage documents
   const [viewingDocument, setViewingDocument] = useState<{ id: string; stageName: string } | null>(null)
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false)
 
   // Session 928: Start conversation about initiative
   const [isStartingConversation, setIsStartingConversation] = useState(false)
@@ -694,16 +695,49 @@ function InitiativeDetailModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b border-dark-border shrink-0">
-          <div>
-            <h3 className="text-lg font-semibold">{initiative.name}</h3>
-            <p className="text-sm text-gray-400">{initiative.description || 'No description'}</p>
+          <div className="flex-1 min-w-0 mr-4">
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold truncate">{initiative.name}</h3>
+              <span className={cn(
+                'px-2 py-0.5 rounded text-xs shrink-0',
+                initiative.status === 'active' ? 'bg-green-500/20 text-green-400' :
+                initiative.status === 'completed' ? 'bg-blue-500/20 text-blue-400' :
+                'bg-gray-500/20 text-gray-400'
+              )}>
+                {initiative.status}
+              </span>
+            </div>
+            <p className="text-sm text-gray-400 line-clamp-2 mt-1">
+              {initiative.description || 'No description'}
+            </p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white p-2 hover:bg-gray-800 rounded-lg transition-colors">
+          <button onClick={onClose} className="text-gray-400 hover:text-white p-2 hover:bg-gray-800 rounded-lg transition-colors shrink-0">
             &times;
           </button>
         </div>
 
-        <div className="p-4 space-y-4 overflow-y-auto flex-1">
+        <div className="p-4 space-y-4 overflow-y-auto flex-1 min-h-0">
+          {/* Collapsible full description for long content */}
+          {initiative.description && initiative.description.length > 200 && (
+            <div className="border border-dark-border rounded-lg p-3">
+              <button
+                onClick={() => setDescriptionExpanded(!descriptionExpanded)}
+                className="flex items-center justify-between w-full text-sm"
+              >
+                <span className="text-gray-400 flex items-center gap-2">
+                  <FileText size={14} />
+                  Full Description
+                </span>
+                {descriptionExpanded ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
+              </button>
+              {descriptionExpanded && (
+                <p className="text-sm text-gray-300 mt-2 whitespace-pre-wrap">
+                  {initiative.description}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Progress bar - Session 857: Show both progress and approved metrics */}
           <div>
             <div className="flex justify-between text-sm mb-2">
