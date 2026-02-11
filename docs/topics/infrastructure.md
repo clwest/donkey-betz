@@ -1,0 +1,59 @@
+# Infrastructure & Deployment
+
+Django web application deployed on Railway with Redis, PostgreSQL (pgvector), and Celery workers.
+
+## Stack
+
+- **Backend:** Django 4.2+ with Daphne (ASGI)
+- **Database:** PostgreSQL with pgvector extension (386+ models)
+- **Cache/Broker:** Redis (DB0: channels, DB1: cache, DB2: broker, DB3: results)
+- **Task Queue:** Celery with 7 worker types (see celery-workers.md)
+- **Frontend:** React + TypeScript + Vite + Tailwind
+- **LLM Providers:** OpenAI (GPT-5), Anthropic (Claude 4), Together AI, Ollama, DeepSeek, Gemini
+
+## Railway Deployment
+
+- **Environment detection:** `os.environ.get('RAILWAY_ENVIRONMENT')`
+- **Healthcheck:** 600s timeout (increased for migration-heavy deploys)
+- **Start command:** `sh -c` wrapper required for `$PORT` expansion
+- **Ephemeral filesystem:** Workspace file writes fail between deploys (expected, not a bug)
+- **Blue-green deploys:** Migrations can hang on lock during deploy; temporarily remove from start command if needed
+
+## Settings
+
+- **Module:** `core.settings` (NOT `config.settings`)
+- **Test with:** `DJANGO_SETTINGS_MODULE=core.settings`
+
+## Database Notes
+
+- Both `core/models.py` (file) AND `core/models/` (package) exist — Django uses the PACKAGE
+- New model imports go in `core/models/__init__.py` with `from ..models_xxx import ClassName`
+- New external models MUST have `app_label = 'core'` in Meta
+- DO NOT add imports to `core/models.py` — it's dead code
+
+## GPT-5-mini Configuration
+
+```python
+# Reasoning model — different parameters
+response = client.chat.completions.create(
+    model="gpt-5-mini",
+    messages=messages,
+    max_completion_tokens=6000  # NOT max_tokens, NO temperature
+)
+```
+
+## Troubleshooting
+
+```bash
+# Full restart
+pkill -f daphne; pkill -f redis; pkill -f celery
+rm -f .daphne.pid .celery.pid .celery-beat.pid
+make start && make celery
+
+# macOS Celery SIGSEGV fix
+OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=solo
+```
+
+## Discord Integration
+
+112 bot commands across 12 notification channels. See `docs/DISCORD_INTEGRATION.md` for full command list and ACTIVE/DORMANT status.
