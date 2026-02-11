@@ -314,7 +314,24 @@ class MuscularSystemService:
         """Get current muscular vitals (cached)."""
         pulse = self._get_cached_pulse()
         if not pulse:
-            return self.flex()
+            try:
+                return self.flex()
+            except Exception as e:
+                logger.warning(f"MUSCULAR full check failed, returning defaults: {e}")
+                return {
+                    'overall_status': 'unknown',
+                    'strength_score': 50,
+                    'is_strong': True,
+                    'success_rate_24h': 0,
+                    'total_executions_24h': 0,
+                    'active_agents': 0,
+                    'total_agents': 0,
+                    'fatigued_agents': [],
+                    'strained_agents': [],
+                    'weak_muscles': [],
+                    'overworked_muscles': [],
+                    'error': str(e),
+                }
 
         return {
             'timestamp': pulse.recorded_at.isoformat(),

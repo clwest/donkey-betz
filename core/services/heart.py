@@ -89,7 +89,10 @@ class HeartMonitorService:
         logger.info("❤️ HeartMonitorService initializing...")
 
         # Initialize component status records if they don't exist
-        self._ensure_component_records()
+        try:
+            self._ensure_component_records()
+        except Exception as e:
+            logger.warning(f"❤️ Could not initialize component records: {e}")
 
         self._initialized = True
         logger.info("❤️ HeartMonitorService ready - monitoring 6 body components")
