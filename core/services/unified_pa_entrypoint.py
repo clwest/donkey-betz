@@ -966,6 +966,12 @@ class UnifiedPAEntrypoint:
             ]):
                 payload['action'] = 'recent'
                 payload['days'] = 30  # Session 957: Default to 30 days for blog queries
+            elif any(kw in msg_lower for kw in ['revise', 'improve', 'enhance', 'fix this blog', 'edit this blog', 'rewrite']):
+                payload['action'] = 'revise'
+                import re
+                id_match = re.search(r'([a-f0-9-]{36}|[a-f0-9]{8,})', msg_lower)
+                if id_match:
+                    payload['id'] = id_match.group(1)
             elif 'publish' in msg_lower:
                 payload['action'] = 'publish'
                 # Try to extract ID if present
@@ -2092,6 +2098,41 @@ Address the user by name occasionally."""
 
                     blog_id = tool_result.get('blog_id', '')
                     response += f"\nView in browser: `/blog/{blog_id}`"
+                    return response
+
+                # Session 987: Blog revision before/after display
+                elif action == 'revise':
+                    error = tool_result.get('error')
+                    if error:
+                        return f"Revision failed: {error}"
+
+                    title = tool_result.get('title', 'Untitled')
+                    before = tool_result.get('before', {})
+                    after = tool_result.get('after', {})
+                    changes = tool_result.get('changes_made', [])
+                    gate_notes = tool_result.get('gate_notes', '')
+
+                    def _fmt_score(val):
+                        return f"{val:.0%}" if val is not None else "n/a"
+
+                    def _fmt_ready(val):
+                        return "Yes" if val else "No"
+
+                    response = f"Blog revised: **{title}**\n\n"
+                    response += "**Before → After:**\n"
+                    response += f"- Quality: {_fmt_score(before.get('quality'))} → {_fmt_score(after.get('quality'))}\n"
+                    response += f"- Novelty: {_fmt_score(before.get('novelty'))} → {_fmt_score(after.get('novelty'))}\n"
+                    response += f"- Structure: {_fmt_score(before.get('structure'))} → {_fmt_score(after.get('structure'))}\n"
+                    response += f"- Publish ready: {_fmt_ready(before.get('publish_ready'))} → {_fmt_ready(after.get('publish_ready'))}\n"
+
+                    if changes:
+                        response += "\n**Changes made:**\n"
+                        for change in changes[:8]:
+                            response += f"- {change}\n"
+
+                    if gate_notes:
+                        response += f"\n**Editorial notes:** {gate_notes}"
+
                     return response
 
                 else:
