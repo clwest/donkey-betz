@@ -599,6 +599,14 @@ class UnifiedPAEntrypoint:
         """
         message_lower = message.lower()
 
+        # Session 988: Initiative/project patterns — check BEFORE boardroom
+        # so "initiative" + "attention" routes to initiatives, not boardroom
+        if any(word in message_lower for word in [
+            'initiative', 'initiatives', 'project', 'projects',
+            'what are we working on', 'active projects', 'current projects'
+        ]):
+            return ('initiatives', 'initiative_tool')
+
         # Session 940: Boardroom patterns (takes precedence for boardroom-specific requests)
         if 'boardroom' in message_lower or any(word in message_lower for word in [
             'draft decision', 'promote decision', 'reject decision', 'canonical'
@@ -770,11 +778,9 @@ class UnifiedPAEntrypoint:
         ]):
             return ('agent_execution', 'universal_agent_tool')
 
-        # Session 943: Initiative/project patterns
+        # Session 943: Initiative-adjacent patterns (fallback for generic terms)
         if any(word in message_lower for word in [
-            'initiative', 'initiatives', 'project', 'projects',
             'pipeline', 'stage', 'action item', 'action items',
-            'what are we working on', 'active projects', 'current projects'
         ]):
             return ('initiatives', 'initiative_tool')
 
