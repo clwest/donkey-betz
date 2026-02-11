@@ -3717,7 +3717,7 @@ class ToolDispatcher:
         # 1. Initiatives
         try:
             from core.models import Initiative
-            active = Initiative.objects.filter(status='active').count()
+            active = Initiative.objects.filter(status='ACTIVE').count()
             updated_24h = Initiative.objects.filter(updated_at__gte=last_24h).count()
             snapshot['initiatives'] = {'active': active, 'updated_24h': updated_24h}
         except Exception as e:

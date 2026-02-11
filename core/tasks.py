@@ -20482,6 +20482,18 @@ and {spider_data_total:,} collected data points. Use this as credibility context
 
             logger.info(f"🤖 [SELF-BLOG] Successfully generated: {blog.id}")
 
+            # Session 987: Run PublishGate to score quality/novelty/structure
+            try:
+                from core.services.publish_gate import PublishGate
+                gate = PublishGate()
+                gate_result = gate.apply_to_blog(blog)
+                logger.info(
+                    f"🤖 [SELF-BLOG] PublishGate: decision={gate_result.decision}, "
+                    f"quality={gate_result.quality_score}, publish_ready={blog.publish_ready}"
+                )
+            except Exception as gate_error:
+                logger.warning(f"🤖 [SELF-BLOG] PublishGate failed (blog saved as draft): {gate_error}")
+
             # Session 759: Create attention item so blogs surface in Human Interface
             try:
                 from core.services.human_attention_bridge import HumanAttentionBridge
@@ -28000,6 +28012,54 @@ def enhance_all_blogs_task(limit: int = 10, save: bool = False):
         f"{results['successful']}/{results['processed']} successful"
     )
 
+    return results
+
+
+@shared_task(name='core.tasks.evaluate_unscored_blogs')
+def evaluate_unscored_blogs(limit: int = 20):
+    """
+    Session 987: Batch-evaluate draft blogs that have no quality_score through PublishGate.
+
+    The v1 blog pipeline (99.7% of blogs) never called PublishGate, leaving all
+    blogs at quality_score=None, publish_ready=False. This task retroactively
+    evaluates them so the system can identify publishable content.
+
+    Args:
+        limit: Maximum blogs to evaluate per run (default 20)
+    """
+    from core.models_unified_system import SelfBlog
+    from core.services.publish_gate import PublishGate
+
+    blogs = SelfBlog.objects.filter(
+        quality_score__isnull=True,
+        status='draft',
+    ).order_by('-created_at')[:limit]
+
+    total = blogs.count()
+    if total == 0:
+        return {'processed': 0, 'message': 'No unscored blogs found'}
+
+    gate = PublishGate()
+    results = {'processed': 0, 'publish_ready': 0, 'errors': 0}
+
+    for blog in blogs:
+        try:
+            gate_result = gate.apply_to_blog(blog)
+            results['processed'] += 1
+            if blog.publish_ready:
+                results['publish_ready'] += 1
+            logger.info(
+                f"📝 [PUBLISH-GATE] Blog {blog.id}: "
+                f"decision={gate_result.decision}, quality={gate_result.quality_score}"
+            )
+        except Exception as e:
+            results['errors'] += 1
+            logger.warning(f"📝 [PUBLISH-GATE] Blog {blog.id} failed: {e}")
+
+    logger.info(
+        f"📝 [PUBLISH-GATE] Batch complete: {results['processed']} evaluated, "
+        f"{results['publish_ready']} publish-ready"
+    )
     return results
 
 
