@@ -2815,15 +2815,18 @@ class ToolDispatcher:
 
         cutoff = timezone.now() - timedelta(hours=hours)
 
+        # Session 989: AgentExecution.agent is FK to Agent — use agent__name
+        # AgentExecution has no 'success' field — use status='completed'/'failed'
+
         if action == 'recent':
             qs = AgentExecution.objects.filter(created_at__gte=cutoff)
 
             if agent_name:
-                qs = qs.filter(agent_name__icontains=agent_name)
+                qs = qs.filter(agent__name__icontains=agent_name)
 
             items = list(
                 qs.order_by('-created_at')[:limit].values(
-                    'id', 'agent_name', 'task', 'status', 'success',
+                    'id', 'agent__name', 'task', 'status',
                     'execution_time_ms', 'created_at'
                 )
             )
@@ -2851,10 +2854,10 @@ class ToolDispatcher:
                 # List active agents with execution counts
                 agent_counts = dict(
                     AgentExecution.objects.filter(created_at__gte=cutoff)
-                    .values('agent_name')
+                    .values('agent__name')
                     .annotate(count=Count('id'))
                     .order_by('-count')[:30]
-                    .values_list('agent_name', 'count')
+                    .values_list('agent__name', 'count')
                 )
                 return {
                     'action': 'by_agent',
@@ -2864,23 +2867,23 @@ class ToolDispatcher:
 
             items = list(
                 AgentExecution.objects.filter(
-                    agent_name__icontains=agent_name,
+                    agent__name__icontains=agent_name,
                     created_at__gte=cutoff
                 ).order_by('-created_at')[:limit].values(
-                    'id', 'agent_name', 'task', 'status', 'success',
+                    'id', 'agent__name', 'task', 'status',
                     'execution_time_ms', 'error_message', 'created_at'
                 )
             )
 
             # Calculate success rate for this agent
             total = AgentExecution.objects.filter(
-                agent_name__icontains=agent_name,
+                agent__name__icontains=agent_name,
                 created_at__gte=cutoff
             ).count()
             successes = AgentExecution.objects.filter(
-                agent_name__icontains=agent_name,
+                agent__name__icontains=agent_name,
                 created_at__gte=cutoff,
-                success=True
+                status='completed'
             ).count()
 
             return {
@@ -2894,13 +2897,15 @@ class ToolDispatcher:
         elif action == 'stats':
             total = AgentExecution.objects.filter(created_at__gte=cutoff).count()
             successes = AgentExecution.objects.filter(
-                created_at__gte=cutoff, success=True
+                created_at__gte=cutoff, status='completed'
             ).count()
-            failures = total - successes
+            failures = AgentExecution.objects.filter(
+                created_at__gte=cutoff, status='failed'
+            ).count()
 
             by_agent = list(
                 AgentExecution.objects.filter(created_at__gte=cutoff)
-                .values('agent_name')
+                .values('agent__name')
                 .annotate(
                     count=Count('id'),
                     avg_time=Avg('execution_time_ms')
@@ -2932,9 +2937,9 @@ class ToolDispatcher:
             items = list(
                 AgentExecution.objects.filter(
                     created_at__gte=cutoff,
-                    success=False
+                    status='failed'
                 ).order_by('-created_at')[:limit].values(
-                    'id', 'agent_name', 'task', 'status', 'error_message',
+                    'id', 'agent__name', 'task', 'status', 'error_message',
                     'created_at'
                 )
             )

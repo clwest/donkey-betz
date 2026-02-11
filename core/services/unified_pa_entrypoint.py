@@ -2861,10 +2861,10 @@ Address the user by name occasionally."""
                     if count > 0:
                         response += f"**Agent Executions** ({count} in last {period}h):\n\n"
                         for ex in executions[:8]:
-                            agent = ex.get('agent_name', 'Unknown')
+                            # Session 989: AgentExecution.agent is FK — handler returns agent__name
+                            agent = ex.get('agent__name', ex.get('agent_name', 'Unknown'))
                             status = ex.get('status', 'unknown')
-                            success = ex.get('success', False)
-                            status_icon = '✅' if success else ('❌' if status == 'failed' else '⏳')
+                            status_icon = '✅' if status == 'completed' else ('❌' if status == 'failed' else '⏳')
                             duration_ms = ex.get('execution_time_ms', 0)
                             response += f"{status_icon} **{agent}**"
                             if duration_ms:
@@ -2905,8 +2905,8 @@ Address the user by name occasionally."""
                     success_rate = tool_result.get('success_rate', 0)
                     response = f"**{agent}** execution history ({count} total, {success_rate:.0%} success):\n\n"
                     for ex in executions[:6]:
-                        success = ex.get('success', False)
-                        status_icon = '✅' if success else '❌'
+                        status = ex.get('status', 'unknown')
+                        status_icon = '✅' if status == 'completed' else '❌'
                         date = str(ex.get('created_at', ''))[:16]
                         task_desc = str(ex.get('task', ''))[:40]
                         response += f"{status_icon} {date}"
@@ -2935,7 +2935,8 @@ Address the user by name occasionally."""
                     if by_agent:
                         response += "**Most active agents:**\n"
                         for entry in (by_agent[:5] if isinstance(by_agent, list) else []):
-                            name = entry.get('agent_name', 'Unknown')
+                            # Session 989: handler returns agent__name (FK traversal)
+                            name = entry.get('agent__name', entry.get('agent_name', 'Unknown'))
                             cnt = entry.get('count', 0)
                             response += f"- {name}: {cnt} executions\n"
 
@@ -2950,7 +2951,8 @@ Address the user by name occasionally."""
 
                     response = f"Recent agent failures ({count}):\n\n"
                     for f in failures[:6]:
-                        agent = f.get('agent_name', 'Unknown')
+                        # Session 989: handler returns agent__name (FK traversal)
+                        agent = f.get('agent__name', f.get('agent_name', 'Unknown'))
                         error = str(f.get('error_message', 'Unknown error'))[:60]
                         date = str(f.get('created_at', ''))[:16]
                         response += f"❌ **{agent}** ({date})\n"
