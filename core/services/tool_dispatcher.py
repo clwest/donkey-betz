@@ -2228,9 +2228,50 @@ class ToolDispatcher:
                 'status': blog.status,
             }
 
+        elif action == 'needs_work':
+            # Session 987: List blogs flagged as needing enhancement
+            qs = SelfBlog.objects.filter(status='needs_enhancement')
+            items = list(
+                qs.order_by('-created_at')[:limit].values(
+                    'id', 'title', 'status', 'created_at',
+                    'quality_score', 'novelty_score', 'structure_score',
+                    'gate_notes', 'word_count',
+                )
+            )
+            return {
+                'action': 'needs_work',
+                'source': 'SelfBlog',
+                'count': len(items),
+                'total': qs.count(),
+                'items': items,
+            }
+
+        elif action == 'batch_enhance':
+            # Session 987: Trigger batch enhancement on all needs_enhancement blogs
+            from core.agents.editor_agent import enhance_all_needing_enhancement
+            results = enhance_all_needing_enhancement(save=True)
+            succeeded = [r for r in results if r.get('success')]
+            failed = [r for r in results if not r.get('success')]
+            return {
+                'action': 'batch_enhance',
+                'total_processed': len(results),
+                'succeeded': len(succeeded),
+                'failed': len(failed),
+                'details': [
+                    {
+                        'title': r.get('title', 'Untitled'),
+                        'success': r.get('success', False),
+                        'changes': r.get('changes', []),
+                        'error': r.get('error'),
+                    }
+                    for r in results[:10]
+                ],
+            }
+
         else:
             raise ValueError(
-                f"Unknown action for blog query: {action}. Valid actions: list, recent, stats, details, related, read, revise"
+                f"Unknown action for blog query: {action}. "
+                f"Valid actions: list, recent, stats, details, related, read, revise, needs_work, batch_enhance"
             )
 
     def _handle_initiative(
