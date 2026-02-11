@@ -86,6 +86,7 @@ class UnifiedPAEntrypoint:
         'boardroom':         ['intelligence_enricher', 'strategic_memory'],
         'system_health':     ['intelligence_enricher'],
         'stock_intelligence': ['domain_context', 'spider_trends'],
+        'crypto_price':      ['domain_context'],
         'spider_data':       ['domain_context'],
         'execution_history': ['intelligence_enricher', 'strategic_memory'],
         'learning_patterns': ['spider_trends'],
@@ -134,7 +135,7 @@ class UnifiedPAEntrypoint:
 
     # Intents where spider_trends and domain_context always apply (no relevance gate)
     DIRECT_RELEVANCE_INTENTS = {
-        'content_review', 'opportunities', 'predictions', 'spider_data', 'stock_intelligence',
+        'content_review', 'opportunities', 'predictions', 'spider_data', 'stock_intelligence', 'crypto_price',
     }
 
     # Per-section character caps to prevent any one source dominating
@@ -784,6 +785,14 @@ class UnifiedPAEntrypoint:
         ]):
             return ('initiatives', 'initiative_tool')
 
+        # Session 988: Crypto / price lookup — route to spider_data (coingecko spider)
+        if any(phrase in message_lower for phrase in [
+            'btc', 'bitcoin', 'ethereum', 'eth ', 'crypto', 'solana', 'sol ',
+            'dogecoin', 'doge', 'xrp', 'bnb', 'cardano', 'ada ',
+            'coin price', 'token price', 'crypto price', 'how much is',
+        ]):
+            return ('crypto_price', 'spider_data_tool')
+
         # Session 979: Stock intelligence patterns (before spider_data to avoid overlap)
         if any(phrase in message_lower for phrase in [
             'stock', 'stocks', 'market brief', 'market briefs', 'sec filing',
@@ -1288,6 +1297,29 @@ class UnifiedPAEntrypoint:
             else:
                 payload['action'] = 'overview'
 
+        # Session 988: Crypto price lookup — search coingecko spider data
+        elif intent == 'crypto_price':
+            msg_lower = message.lower()
+            # Map common tickers/names to search keywords
+            crypto_map = {
+                'btc': 'bitcoin', 'eth': 'ethereum', 'sol': 'solana',
+                'doge': 'dogecoin', 'xrp': 'xrp', 'bnb': 'bnb',
+                'ada': 'cardano', 'dot': 'polkadot', 'avax': 'avalanche',
+                'matic': 'polygon', 'link': 'chainlink', 'uni': 'uniswap',
+            }
+            search_term = ''
+            for ticker, name in crypto_map.items():
+                if ticker in msg_lower or name in msg_lower:
+                    search_term = name
+                    break
+            if not search_term:
+                # Fall back to extracting any capitalized term or just "crypto"
+                search_term = 'bitcoin'  # safe default for "how much is" queries
+            payload['action'] = 'search'
+            payload['keyword'] = search_term
+            payload['spider_name'] = 'coingecko'
+            payload['days'] = 3  # recent data only
+
         # Session 979: Spider data default — override 'list' which is not a valid action
         elif intent == 'spider_data':
             payload['action'] = 'recent'
@@ -1490,6 +1522,11 @@ RULES:
                 "(check last_activity_at). Highlight at-risk initiatives and critical action items. "
                 "Recommend which initiatives need attention now."
             ),
+            'crypto_price': (
+                "FOCUS: Report the latest price data found. Include market cap, 24h change, "
+                "and volume if available. If data is stale (>24h), note the age. "
+                "Keep it concise — the user wants a quick price check, not a research report."
+            ),
             'spider_data': (
                 "FOCUS: Max 3-5 bullets of INSIGHT only — do NOT repeat the list. "
                 "Identify patterns and clusters. Highlight emerging trends. "
@@ -1668,7 +1705,7 @@ RULES:
                           'spider_data', 'stock_intelligence', 'execution_history',
                           'learning_patterns', 'feedback', 'system_overview',
                           'gates', 'pilots', 'predictions', 'reasoning',
-                          'system_health']:
+                          'system_health', 'crypto_price']:
             system_prompt = f"""You are a helpful AI assistant.
 The user asked: "{message}"
 You executed a tool and got this result:
@@ -2654,6 +2691,34 @@ Address the user by name occasionally."""
 
                 else:
                     return str(tool_result)
+
+            # Session 988: Crypto price results formatting
+            elif intent == 'crypto_price':
+                items = tool_result.get('items', [])
+                count = tool_result.get('count', 0)
+                keyword = tool_result.get('keyword', 'crypto')
+
+                if count == 0:
+                    return (
+                        f"No recent {keyword} data in the spider network, {user_name}. "
+                        f"The CoinGecko spider may not have run recently. "
+                        f"Try triggering a spider run or check CoinGecko directly."
+                    )
+
+                response = f"**{keyword.title()} Data** from spider network ({count} items):\n\n"
+                for item in items[:6]:
+                    title = item.get('title', 'No title')
+                    spider = item.get('spider_name', 'Unknown')
+                    url = item.get('url', '')
+                    date = str(item.get('created_at', ''))[:16]
+                    response += f"- **{title}** (via {spider}, {date})\n"
+                    if url:
+                        response += f"  {url}\n"
+
+                if count > 6:
+                    response += f"\n...and {count - 6} more items."
+
+                return response
 
             # Session 979: Stock intelligence results formatting
             elif intent == 'stock_intelligence':
