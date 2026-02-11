@@ -760,7 +760,7 @@ class UnifiedPAEntrypoint:
 
         # Research patterns
         if any(word in message_lower for word in [
-            'search', 'find', 'research', 'what is', 'trending'
+            'search', 'find', 'research', 'trending'
         ]):
             return ('research', 'web_search')
 
