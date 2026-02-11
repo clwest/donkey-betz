@@ -652,9 +652,14 @@ class UnifiedPAEntrypoint:
         ]):
             return ('system_overview', 'status_snapshot_tool')
 
-        # System health patterns (body vitals)
-        if any(word in message_lower for word in [
-            'health', 'status', 'vitals', 'body', 'system health'
+        # Session 987: Body vitals patterns — specific body-system queries only
+        # Generic "health" / "status" were too broad and caught system health queries
+        if any(phrase in message_lower for phrase in [
+            'body vitals', 'body systems', 'body health', 'organ health',
+            'vitals', 'heart system', 'lungs system', 'spine system',
+            'immune system', 'digestive system', 'muscular system',
+            'brain system', 'skin system', 'circulatory system',
+            'body status', 'all systems',
         ]):
             return ('system_health', 'get_body_vitals')
 
@@ -812,6 +817,59 @@ class UnifiedPAEntrypoint:
         ]):
             return ('feedback', 'feedback_tool')
 
+        # Session 987: Revenue / financial tracking
+        if any(phrase in message_lower for phrase in [
+            'revenue', 'earnings', 'income earned', 'financial performance',
+            'how much money', 'how much have', 'revenue stats',
+            'revenue breakdown', 'revenue by source',
+        ]):
+            return ('revenue', 'revenue_tracker_tool')
+
+        # Session 987: Task management
+        if any(phrase in message_lower for phrase in [
+            'my tasks', 'task list', 'open tasks', 'pending tasks',
+            'what tasks', 'task stats', 'show tasks', 'list tasks',
+            'what\'s on my plate', 'assigned to me',
+        ]):
+            return ('task_management', 'task_manager_tool')
+
+        # Session 987: Workspace management
+        if any(phrase in message_lower for phrase in [
+            'workspace', 'workspaces', 'workspace files', 'list workspaces',
+            'my workspace', 'workspace status',
+        ]):
+            return ('workspace', 'workspace_tool')
+
+        # Session 987: Budget / resource usage
+        if any(phrase in message_lower for phrase in [
+            'budget', 'resource budget', 'resource usage', 'cost tracking',
+            'token budget', 'token usage', 'api cost', 'api spend',
+        ]):
+            return ('budget', 'check_resource_budget')
+
+        # Session 987: System alerts (distinct from error_summary — alerts are body-system warnings)
+        if any(phrase in message_lower for phrase in [
+            'system alerts', 'active alerts', 'warning messages',
+            'show alerts', 'list alerts', 'any alerts',
+            'critical alerts', 'alert summary',
+        ]):
+            return ('system_alerts', 'get_system_alerts')
+
+        # Session 987: ML analysis
+        if any(phrase in message_lower for phrase in [
+            'ml status', 'ml engine', 'machine learning',
+            'ml analysis', 'ml health', 'decision pattern',
+            'detect opportunity', 'cross domain opportunity',
+        ]):
+            return ('ml_analysis', 'ml_analysis')
+
+        # Session 987: Pipeline orchestrator status
+        if any(phrase in message_lower for phrase in [
+            'pipeline status', 'pipeline stats', 'pipeline overview',
+            'initiative pipeline', 'stage breakdown', 'pipeline stages',
+        ]):
+            return ('pipeline_status', 'pipeline_orchestrator_tool')
+
         # Session 987: Self-awareness — PA knows its own capabilities
         if any(phrase in message_lower for phrase in [
             'what can you do', 'what do you do', 'what are you capable',
@@ -966,6 +1024,10 @@ class UnifiedPAEntrypoint:
             ]):
                 payload['action'] = 'recent'
                 payload['days'] = 30  # Session 957: Default to 30 days for blog queries
+            elif any(kw in msg_lower for kw in ['needs work', 'needs enhancement', 'needs_enhancement', 'needing enhancement', 'blogs to fix', 'blogs to improve']):
+                payload['action'] = 'needs_work'
+            elif any(kw in msg_lower for kw in ['batch enhance', 'enhance all', 'fix all blogs', 'improve all blogs', 'bulk enhance']):
+                payload['action'] = 'batch_enhance'
             elif any(kw in msg_lower for kw in ['revise', 'improve', 'enhance', 'fix this blog', 'edit this blog', 'rewrite']):
                 payload['action'] = 'revise'
                 import re
@@ -1145,6 +1207,63 @@ class UnifiedPAEntrypoint:
             )
             if uuid_match:
                 payload['session_id'] = uuid_match.group(0)
+
+        # Session 987: Revenue tracker payload
+        elif intent == 'revenue':
+            msg_lower = message.lower()
+            if any(w in msg_lower for w in ['list', 'recent', 'show', 'transactions']):
+                payload['action'] = 'list'
+            else:
+                payload['action'] = 'stats'
+
+        # Session 987: Task manager payload
+        elif intent == 'task_management':
+            msg_lower = message.lower()
+            if 'stats' in msg_lower or 'how many' in msg_lower:
+                payload['action'] = 'stats'
+            else:
+                payload['action'] = 'list'
+                if 'high' in msg_lower:
+                    payload['priority'] = 'high'
+                elif 'critical' in msg_lower:
+                    payload['priority'] = 'critical'
+                for status_kw in ['pending', 'in_progress', 'completed']:
+                    if status_kw.replace('_', ' ') in msg_lower or status_kw in msg_lower:
+                        payload['status'] = status_kw
+                        break
+
+        # Session 987: Workspace payload
+        elif intent == 'workspace':
+            msg_lower = message.lower()
+            payload['action'] = 'status' if 'status' in msg_lower else 'list'
+
+        # Session 987: Budget payload
+        elif intent == 'budget':
+            payload['action'] = 'check'
+
+        # Session 987: System alerts payload
+        elif intent == 'system_alerts':
+            msg_lower = message.lower()
+            if 'critical' in msg_lower:
+                payload['severity_threshold'] = 'critical'
+            elif 'warning' in msg_lower:
+                payload['severity_threshold'] = 'warning'
+            else:
+                payload['severity_threshold'] = 'info'
+
+        # Session 987: ML analysis payload
+        elif intent == 'ml_analysis':
+            msg_lower = message.lower()
+            if 'decision pattern' in msg_lower:
+                payload['action'] = 'decision_pattern'
+            elif any(w in msg_lower for w in ['detect opportunity', 'cross domain']):
+                payload['action'] = 'detect_opportunity'
+            else:
+                payload['action'] = 'status'
+
+        # Session 987: Pipeline orchestrator payload
+        elif intent == 'pipeline_status':
+            payload['action'] = 'status'
 
         # Session 979: Stock intelligence payload
         elif intent == 'stock_intelligence':
@@ -2135,6 +2254,54 @@ Address the user by name occasionally."""
 
                     return response
 
+                # Session 987: Blogs needing enhancement
+                elif action == 'needs_work':
+                    items = tool_result.get('items', [])
+                    count = tool_result.get('count', 0)
+                    total = tool_result.get('total', 0)
+
+                    if count == 0:
+                        return f"No blogs need enhancement right now, {user_name}."
+
+                    response = f"Blogs needing enhancement ({total} total):\n\n"
+                    for item in items[:10]:
+                        title = (item.get('title') or 'Untitled')[:60]
+                        q = item.get('quality_score')
+                        notes = (item.get('gate_notes') or '')[:80]
+                        q_str = f" (quality: {q:.0%})" if q is not None else ""
+                        response += f"- **{title}**{q_str}\n"
+                        if notes:
+                            response += f"  {notes}\n"
+
+                    response += f"\nSay 'batch enhance' to improve all, or 'revise [id]' for one."
+                    return response
+
+                # Session 987: Batch enhancement results
+                elif action == 'batch_enhance':
+                    total = tool_result.get('total_processed', 0)
+                    succeeded = tool_result.get('succeeded', 0)
+                    failed = tool_result.get('failed', 0)
+                    details = tool_result.get('details', [])
+
+                    if total == 0:
+                        return f"No blogs needed enhancement, {user_name}."
+
+                    response = f"Batch enhancement complete:\n\n"
+                    response += f"**Processed:** {total} | **Succeeded:** {succeeded} | **Failed:** {failed}\n"
+
+                    if details:
+                        response += "\n**Details:**\n"
+                        for d in details[:8]:
+                            title = (d.get('title') or 'Untitled')[:50]
+                            if d.get('success'):
+                                changes = d.get('changes', [])
+                                change_str = f" ({len(changes)} changes)" if changes else ""
+                                response += f"- {title}{change_str}\n"
+                            else:
+                                response += f"- {title} — FAILED: {d.get('error', 'unknown')}\n"
+
+                    return response
+
                 else:
                     return str(tool_result)
 
@@ -2873,6 +3040,214 @@ Address the user by name occasionally."""
 
                 else:
                     return str(tool_result)
+
+            # Session 987: Revenue tracker formatter
+            elif intent == 'revenue':
+                action = tool_result.get('action', '')
+
+                if action == 'stats':
+                    total = tool_result.get('total_revenue', '0')
+                    recent = tool_result.get('revenue_last_30_days', '0')
+                    by_source = tool_result.get('by_source', {})
+                    count = tool_result.get('record_count', 0)
+
+                    response = f"Revenue Summary, {user_name}:\n\n"
+                    response += f"**Total revenue:** ${total}\n"
+                    response += f"**Last 30 days:** ${recent}\n"
+                    response += f"**Records:** {count}\n"
+
+                    if by_source:
+                        response += "\n**By source:**\n"
+                        for source, amount in by_source.items():
+                            response += f"- {source}: ${amount}\n"
+
+                    return response
+
+                elif action == 'list':
+                    revenues = tool_result.get('revenues', [])
+                    count = tool_result.get('count', 0)
+
+                    if count == 0:
+                        return f"No revenue records found, {user_name}."
+
+                    response = f"Recent Revenue ({count} records):\n\n"
+                    for r in revenues[:10]:
+                        amount = r.get('amount', 0)
+                        source = r.get('source', 'unknown')
+                        desc = (r.get('description') or '')[:50]
+                        created = str(r.get('created_at', ''))[:10]
+                        response += f"- **${amount}** from {source} ({created}) {desc}\n"
+
+                    return response
+
+                else:
+                    return str(tool_result)
+
+            # Session 987: Task manager formatter
+            elif intent == 'task_management':
+                action = tool_result.get('action', '')
+
+                if action == 'list':
+                    tasks = tool_result.get('tasks', [])
+                    count = tool_result.get('count', 0)
+
+                    if count == 0:
+                        return f"No tasks found, {user_name}."
+
+                    response = f"Your Tasks ({count}):\n\n"
+                    for t in tasks[:15]:
+                        title = (t.get('title') or 'Untitled')[:60]
+                        status = t.get('status', 'unknown')
+                        priority = t.get('priority', '')
+                        priority_badge = f" [{priority.upper()}]" if priority else ""
+                        response += f"- **{title}**{priority_badge} — {status}\n"
+
+                    return response
+
+                elif action == 'stats':
+                    total = tool_result.get('total', 0)
+                    by_status = tool_result.get('by_status', {})
+                    by_priority = tool_result.get('by_priority', {})
+
+                    response = f"Task Stats, {user_name}:\n\n"
+                    response += f"**Total:** {total}\n"
+
+                    if by_status:
+                        response += "\n**By status:**\n"
+                        for s, c in by_status.items():
+                            response += f"- {s}: {c}\n"
+
+                    if by_priority:
+                        response += "\n**By priority:**\n"
+                        for p, c in by_priority.items():
+                            response += f"- {p}: {c}\n"
+
+                    return response
+
+                else:
+                    return str(tool_result)
+
+            # Session 987: Workspace formatter
+            elif intent == 'workspace':
+                action = tool_result.get('action', '')
+
+                if action == 'list':
+                    workspaces = tool_result.get('workspaces', [])
+                    if not workspaces:
+                        return f"No workspaces found, {user_name}."
+
+                    response = f"Workspaces ({len(workspaces)}):\n\n"
+                    for ws in workspaces[:10]:
+                        if isinstance(ws, dict):
+                            name = ws.get('name', 'Unknown')
+                            response += f"- {name}\n"
+                        else:
+                            response += f"- {ws}\n"
+                    return response
+
+                elif action == 'status':
+                    status = tool_result.get('status', {})
+                    response = f"Workspace Status, {user_name}:\n\n"
+                    if isinstance(status, dict):
+                        for key, val in status.items():
+                            response += f"- **{key}:** {val}\n"
+                    else:
+                        response += str(status)
+                    return response
+
+                else:
+                    return str(tool_result)
+
+            # Session 987: Budget formatter
+            elif intent == 'budget':
+                approved = tool_result.get('approved', False)
+                budget_status = tool_result.get('budget_status', 'unknown')
+                tokens = tool_result.get('estimated_tokens', 0)
+                cost = tool_result.get('estimated_cost', 0)
+
+                response = f"Budget Status, {user_name}:\n\n"
+                response += f"**Status:** {budget_status}\n"
+                response += f"**Approved:** {'Yes' if approved else 'No'}\n"
+                if tokens:
+                    response += f"**Estimated tokens:** {tokens:,}\n"
+                if cost:
+                    response += f"**Estimated cost:** ${cost}\n"
+                return response
+
+            # Session 987: System alerts formatter
+            elif intent == 'system_alerts':
+                alerts = tool_result.get('alerts', [])
+                count = tool_result.get('alert_count', 0)
+                threshold = tool_result.get('severity_threshold', 'info')
+
+                if count == 0:
+                    return f"No alerts above {threshold} severity, {user_name}. All clear."
+
+                response = f"System Alerts ({count}, threshold: {threshold}):\n\n"
+                for alert in alerts[:10]:
+                    severity = alert.get('severity', 'info').upper()
+                    msg = alert.get('message', '') or alert.get('description', '')
+                    system = alert.get('system', '')
+                    prefix = f"[{system}] " if system else ""
+                    response += f"- **{severity}:** {prefix}{msg}\n"
+
+                return response
+
+            # Session 987: ML analysis formatter
+            elif intent == 'ml_analysis':
+                action = tool_result.get('action', '')
+
+                if action == 'status':
+                    health = tool_result.get('health', {})
+                    response = f"ML Engine Status, {user_name}:\n\n"
+                    if isinstance(health, dict):
+                        for key, val in health.items():
+                            response += f"- **{key}:** {val}\n"
+                    else:
+                        response += str(health)
+                    return response
+
+                elif action == 'decision_pattern':
+                    confidence = tool_result.get('confidence', 0)
+                    return f"Decision pattern confidence: **{confidence:.1%}**"
+
+                elif action == 'detect_opportunity':
+                    opps = tool_result.get('opportunities', [])
+                    count = tool_result.get('count', 0)
+                    if count == 0:
+                        return f"No cross-domain opportunities detected, {user_name}."
+                    response = f"Found {count} cross-domain opportunities:\n\n"
+                    for opp in opps[:5]:
+                        response += f"- {opp}\n"
+                    return response
+
+                else:
+                    return str(tool_result)
+
+            # Session 987: Pipeline status formatter
+            elif intent == 'pipeline_status':
+                total = tool_result.get('initiatives_total', 0)
+                active = tool_result.get('initiatives_active', 0)
+                by_stage = tool_result.get('by_stage', {})
+
+                response = f"Pipeline Status, {user_name}:\n\n"
+                response += f"**Total initiatives:** {total}\n"
+                response += f"**Active:** {active}\n"
+
+                if by_stage:
+                    response += "\n**By stage:**\n"
+                    stage_names = {
+                        'stage_1': 'Research',
+                        'stage_2': 'Strategy',
+                        'stage_3': 'Execution',
+                        'stage_4': 'Review',
+                        'stage_5': 'Complete',
+                    }
+                    for stage_key, count in by_stage.items():
+                        name = stage_names.get(stage_key, stage_key)
+                        response += f"- {name}: {count}\n"
+
+                return response
 
             else:
                 return str(tool_result)
