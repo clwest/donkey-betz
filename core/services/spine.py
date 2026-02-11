@@ -244,7 +244,25 @@ class SpineRouterService:
         """Get current spine vitals (cached)."""
         status = self._get_cached_status()
         if not status:
-            return self.align()
+            try:
+                return self.align()
+            except Exception as e:
+                logger.warning(f"SPINE full check failed, returning defaults: {e}")
+                return {
+                    'overall_status': 'unknown',
+                    'health_score': 50,
+                    'is_aligned': True,
+                    'total_patterns': 0,
+                    'healthy_patterns': 0,
+                    'degraded_patterns': 0,
+                    'failed_patterns': 0,
+                    'routes_blocked': 0,
+                    'routes_rate_limited': 0,
+                    'fallbacks_active': 0,
+                    'integrations': {},
+                    'category_health': {},
+                    'error': str(e),
+                }
 
         return {
             'timestamp': status.last_check.isoformat(),
