@@ -2883,7 +2883,12 @@ Address the user by name occasionally."""
                             status = conv.get('status', 'unknown')
                             participants = conv.get('participants', [])
                             status_icon = '✅' if status == 'completed' else ('⏳' if status == 'active' else '📋')
-                            agent_names = ', '.join(participants[:3]) if isinstance(participants, list) else str(participants)
+                            # Session 989: participants is JSONField — may contain dicts or strings
+                            if isinstance(participants, list):
+                                names = [p.get('name', str(p)) if isinstance(p, dict) else str(p) for p in participants[:3]]
+                                agent_names = ', '.join(names)
+                            else:
+                                agent_names = str(participants)
                             response += f"{status_icon} **{objective}**\n"
                             if agent_names:
                                 response += f"   └─ {agent_names}\n"
