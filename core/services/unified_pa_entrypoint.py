@@ -1827,7 +1827,31 @@ Address the user by name occasionally."""
                 vitals = tool_result.get('vitals', {})
                 health = vitals.get('overall_health', 'unknown')
                 score = vitals.get('health_score', 0)
-                return f"System health: {health.upper()} ({score}%)"
+                systems = vitals.get('systems', {})
+
+                lines = [f"Body Health: {health.upper()} ({score}%)"]
+
+                if systems:
+                    lines.append("")
+                    for sys_name, sys_data in systems.items():
+                        emoji = sys_data.get('emoji', '?')
+                        status = sys_data.get('status', 'unknown')
+                        sys_score = sys_data.get('score', 0)
+                        error = sys_data.get('error', '')
+                        if isinstance(sys_score, float):
+                            sys_score = round(sys_score, 1)
+                        line = f"{emoji} {sys_name.upper()}: {status} ({sys_score}%)"
+                        if error:
+                            # Truncate long error messages
+                            error_short = error[:80] + '...' if len(error) > 80 else error
+                            line += f" — {error_short}"
+                        lines.append(line)
+
+                rec = vitals.get('recommendation', '')
+                if rec:
+                    lines.append(f"\n{rec}")
+
+                return "\n".join(lines)
 
             # Session 987: Predictions formatter
             elif intent == 'predictions':

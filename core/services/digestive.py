@@ -293,7 +293,20 @@ class DigestiveSystemService:
         """Get current digestion vitals (cached)."""
         pulse = self._get_cached_pulse()
         if not pulse:
-            return self.digest()
+            try:
+                return self.digest()
+            except Exception as e:
+                logger.warning(f"DIGESTIVE full check failed, returning defaults: {e}")
+                return {
+                    'overall_status': 'unknown',
+                    'digestion_score': 50,
+                    'is_digesting': True,
+                    'stages': {},
+                    'metabolism': {},
+                    'items_pending': 0,
+                    'bottlenecks': [],
+                    'error': str(e),
+                }
 
         return {
             'timestamp': pulse.recorded_at.isoformat(),
