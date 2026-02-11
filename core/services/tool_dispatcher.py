@@ -385,9 +385,17 @@ class ToolDispatcher:
         task_data = {'task': f"Search for: {query}"}
         result = registry.execute_agent('ResearchAgent', task_data)
 
+        if result:
+            return {
+                'query': query,
+                'results': f'Research task queued (execution ID: {result}). '
+                           f'The ResearchAgent will process this asynchronously.',
+                'execution_id': result,
+            }
         return {
             'query': query,
-            'results': result if result else 'No results found',
+            'results': 'ResearchAgent is not available. Try rephrasing your question '
+                       'for a direct answer.',
         }
 
     def _handle_opportunity_manager(
