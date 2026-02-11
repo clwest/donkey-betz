@@ -46,6 +46,8 @@ Each returns structured JSON: `{reviewer, verdict (PASS/REVISE/FAIL), top_issues
 
 **Failure handling:** Invalid reviewer output → synthetic FAIL verdict (never skipped). LLM exceptions → same synthetic FAIL. This ensures the DecisionEnforcer always sees issues.
 
+**LLM Provider (Session 988):** Reviewers use `core.services.llm_provider_registry` (`get_llm_provider_registry()` → `registry.complete(provider='openai', model_id='gpt-4.1-mini', request=LLMRequest(...))`). Do NOT use `core.llm_providers` (doesn't exist).
+
 ## DecisionEnforcer (Step 4)
 
 The "Prefrontal Cortex" — forces a decision after review. Checks `ExecutionMandate.chosen_path` for PUBLISH/REVISE/KILL. Fallback: all PASS → PUBLISH, any FAIL → REVISE. Default: REVISE.

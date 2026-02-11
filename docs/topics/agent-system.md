@@ -96,3 +96,14 @@ Assignment: explicit voice_id → keyword matching → category matching → def
 - **DecisionEnforcerAgent** ("Prefrontal Cortex"): Forces decisions after debate, forbids hedging
 - **Contracts:** ResearchContract, ExecutionMandate, SynthesisContract prevent vague outputs
 - **Prompt sharpening:** Transforms hedging language → decisive language
+
+## Agent Knowledge & Conversations (Session 988)
+
+**Knowledge freshness:** `_get_agent_knowledge()` in `ConversationOrchestrator` filters `AgentKnowledgeSource` and `AgentMemory` to 14-day window. Prevents agents grounding on stale records (e.g., "Oct 2023 Notion articles").
+
+**DATA GROUNDING REQUIREMENT:** Turn prompts inject current month/year and explicitly ban:
+- "Notion spider", "Notion data", data collection dates, dataset sizes
+- Citing dates older than 30 days as evidence
+- Any reference to 2023 or 2024 data
+
+**Conversation records:** Multi-agent conversations write to `DeliberationSession` (not `AgentExecution`). The PA execution_history tool queries both sources.
