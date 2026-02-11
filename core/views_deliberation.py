@@ -22,6 +22,28 @@ from core.models_deliberation import (
 logger = logging.getLogger(__name__)
 
 
+def _get_blog_for_session(session_id):
+    """Reverse-lookup SelfBlog linked to a deliberation session via stats_snapshot."""
+    try:
+        from core.models_unified_system import SelfBlog
+        blog = SelfBlog.objects.filter(
+            stats_snapshot__deliberation__session_id=str(session_id)
+        ).first()
+        if blog:
+            delib = (blog.stats_snapshot or {}).get('deliberation', {})
+            return {
+                'blog_title': blog.title,
+                'blog_id': str(blog.id),
+                'verdict': delib.get('decision'),
+                'quality_score': blog.quality_score,
+                'structure_score': blog.structure_score,
+                'publish_ready': blog.publish_ready,
+            }
+    except Exception:
+        pass
+    return None
+
+
 @require_GET
 def deliberation_sessions_list(request):
     """GET /api/deliberation/sessions/ - List deliberation sessions."""
@@ -57,6 +79,7 @@ def deliberation_sessions_list(request):
             'participant_count': len(s.participants) if s.participants else 0,
             'turn_count': s.turn_count,
             'contract_count': s.contract_count,
+            'blog': _get_blog_for_session(s.id),
         })
 
     return JsonResponse({'count': len(data), 'sessions': data})
@@ -526,6 +549,7 @@ def deliberation_verification_report(request, session_id):
             'completed_at': s.completed_at.isoformat() if s.completed_at else None,
             'participant_count': len(s.participants) if s.participants else 0,
         },
+        'blog': _get_blog_for_session(s.id),
         'turns': {
             'count': turn_count,
             'agents': agent_names,

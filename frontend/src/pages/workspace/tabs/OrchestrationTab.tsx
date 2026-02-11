@@ -838,7 +838,7 @@ function AutomationSubTab() {
   }
 
   // Session 924: Build stats from rich API data
-  const remediationData = remediationStatus || {}
+  const remediationData: RemediationStatus = remediationStatus || { success: false }
   const activeTasks = celeryState?.active_tasks || []
   const scheduledTasks = celeryState?.scheduled_tasks || []
   const workers = celeryState?.workers || []
@@ -857,13 +857,6 @@ function AutomationSubTab() {
   const formatTaskName = (taskName: string) => {
     const parts = taskName.split('.')
     return parts[parts.length - 1] || taskName
-  }
-
-  // Session 924: Format timestamp
-  const formatTime = (timestamp: number | string | null) => {
-    if (!timestamp) return 'Unknown'
-    const date = typeof timestamp === 'number' ? new Date(timestamp * 1000) : new Date(timestamp)
-    return date.toLocaleTimeString()
   }
 
   return (
@@ -1311,18 +1304,6 @@ function HiveMindSubTab() {
     },
   })
 
-  // Session 924: Fetch recent executions for activity preview
-  const { data: executionsData } = useQuery({
-    queryKey: ['hivemind-recent-executions'],
-    queryFn: async () => {
-      try {
-        const response = await agentsApi.executionHistory(5)
-        return response.data as { executions?: Array<{ agent_name: string; status: string; started_at: string }> }
-      } catch {
-        return { executions: [] }
-      }
-    },
-  })
 
   const { data: advisorsData, isLoading: loadingAdvisors } = useQuery({
     queryKey: ['hivemind-advisors-tab'],
@@ -1368,7 +1349,6 @@ function HiveMindSubTab() {
   const advisorCount = advisors.length || advisorsData?.count || 25
   const coordinators = coordinatorsData?.coordinators || []
   const coordinatorCount = coordinators.length || 5
-  const recentExecutions = executionsData?.executions || []
   const sessions = sessionsData?.sessions || []
   const sessionCount = sessionsData?.count || sessions.length
 
@@ -2016,6 +1996,14 @@ function SurgicalMovesPanel({ onSelectSession }: { onSelectSession: (id: string)
           created_at: string | null
           turn_count: number
           contract_count: number
+          blog?: {
+            blog_title: string
+            blog_id: string
+            verdict: string | null
+            quality_score: number | null
+            structure_score: number | null
+            publish_ready: boolean
+          } | null
         }>
       }>
     },
@@ -2044,10 +2032,28 @@ function SurgicalMovesPanel({ onSelectSession }: { onSelectSession: (id: string)
             onClick={() => onSelectSession(s.id)}
           >
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-gray-300 truncate">{s.objective || 'No objective'}</p>
-              <p className="text-xs text-gray-500">
-                {s.created_at ? new Date(s.created_at).toLocaleDateString() : ''}
+              <p className="text-sm text-gray-300 truncate">
+                {s.blog?.blog_title || s.objective || 'No objective'}
               </p>
+              <div className="flex items-center gap-2 mt-0.5">
+                {s.blog?.verdict && (
+                  <span className={cn(
+                    'text-xs px-1.5 py-0.5 rounded font-medium uppercase',
+                    s.blog.verdict === 'PUBLISH' && 'bg-green-500/20 text-green-400',
+                    s.blog.verdict === 'REVISE' && 'bg-yellow-500/20 text-yellow-400',
+                    s.blog.verdict === 'KILL' && 'bg-red-500/20 text-red-400',
+                    !['PUBLISH', 'REVISE', 'KILL'].includes(s.blog.verdict) && 'bg-gray-600 text-gray-300'
+                  )}>
+                    {s.blog.verdict}
+                  </span>
+                )}
+                {s.blog?.quality_score != null && (
+                  <span className="text-xs text-gray-500">Q: {s.blog.quality_score.toFixed(2)}</span>
+                )}
+                <span className="text-xs text-gray-500">
+                  {s.created_at ? new Date(s.created_at).toLocaleDateString() : ''}
+                </span>
+              </div>
             </div>
             <div className="flex items-center gap-2 ml-2 shrink-0">
               <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700 text-gray-300">
@@ -2082,6 +2088,14 @@ interface VerificationReport {
     completed_at: string | null
     participant_count: number
   }
+  blog?: {
+    blog_title: string
+    blog_id: string
+    verdict: string | null
+    quality_score: number | null
+    structure_score: number | null
+    publish_ready: boolean
+  } | null
   turns: { count: number; agents: string[] }
   contracts: Array<{ type: string; data_size: number; verdict_summary: string | null }>
   evidence_stats: {
@@ -2142,7 +2156,36 @@ function VerificationReportModal({ sessionId, onClose }: { sessionId: string; on
             <>
               {/* Session info */}
               <div className="bg-gray-800/50 rounded-lg p-3">
-                <p className="text-sm text-gray-300 mb-1">{data.session.objective || 'No objective'}</p>
+                {data.blog ? (
+                  <>
+                    <p className="text-sm font-medium text-gray-200 mb-1">{data.blog.blog_title}</p>
+                    <div className="flex items-center gap-2 mb-2">
+                      {data.blog.verdict && (
+                        <span className={cn(
+                          'text-xs px-2 py-0.5 rounded font-medium uppercase',
+                          data.blog.verdict === 'PUBLISH' && 'bg-green-500/20 text-green-400',
+                          data.blog.verdict === 'REVISE' && 'bg-yellow-500/20 text-yellow-400',
+                          data.blog.verdict === 'KILL' && 'bg-red-500/20 text-red-400',
+                          !['PUBLISH', 'REVISE', 'KILL'].includes(data.blog.verdict) && 'bg-gray-600 text-gray-300'
+                        )}>
+                          {data.blog.verdict}
+                        </span>
+                      )}
+                      {data.blog.quality_score != null && (
+                        <span className="text-xs text-gray-400">Quality: {data.blog.quality_score.toFixed(2)}</span>
+                      )}
+                      {data.blog.structure_score != null && (
+                        <span className="text-xs text-gray-400">Structure: {data.blog.structure_score.toFixed(2)}</span>
+                      )}
+                      {data.blog.publish_ready && (
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-400">Publish Ready</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mb-1">{data.session.objective}</p>
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-300 mb-1">{data.session.objective || 'No objective'}</p>
+                )}
                 <div className="flex items-center gap-3 text-xs text-gray-500">
                   <span className={cn(
                     'px-2 py-0.5 rounded capitalize',
@@ -2234,14 +2277,20 @@ function WorkflowDetailModal({ workflow, onClose }: { workflow: WorkflowItem; on
   // Session 924: Fetch workflow detail with steps
   const { data: detailData, isLoading: detailLoading } = useQuery({
     queryKey: ['workflow-detail', workflow.id],
-    queryFn: () => orchestrationApi.getWorkflowDetail(workflow.id),
+    queryFn: async () => {
+      const res = await orchestrationApi.getWorkflowDetail(workflow.id)
+      return res.data
+    },
     staleTime: 30000,
   })
 
   // Session 924: Fetch recent executions for this workflow
   const { data: executionsData } = useQuery({
     queryKey: ['workflow-executions', workflow.id],
-    queryFn: () => orchestrationApi.listExecutions({ workflow_id: workflow.id, limit: 5 }),
+    queryFn: async () => {
+      const res = await orchestrationApi.listExecutions({ workflow_id: workflow.id, limit: 5 })
+      return res.data
+    },
     staleTime: 30000,
   })
 
@@ -2254,7 +2303,7 @@ function WorkflowDetailModal({ workflow, onClose }: { workflow: WorkflowItem; on
     setExecuteMessage(null)
     try {
       const result = await orchestrationApi.execute(workflow.id, {}, true)
-      setExecuteMessage(result.message || 'Workflow started successfully')
+      setExecuteMessage(result.data.message || 'Workflow started successfully')
     } catch (error) {
       setExecuteMessage('Failed to start workflow')
     } finally {
