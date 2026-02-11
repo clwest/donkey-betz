@@ -276,7 +276,23 @@ class ImmuneSystemService:
         """Get current immune vitals (cached)."""
         status = self._get_cached_status()
         if not status:
-            return self.scan()
+            try:
+                return self.scan()
+            except Exception as e:
+                logger.warning(f"IMMUNE full check failed, returning defaults: {e}")
+                return {
+                    'overall_status': 'unknown',
+                    'health_score': 50,
+                    'is_healthy': True,
+                    'threat_level': 'unknown',
+                    'active_threats': 0,
+                    'threats_detected_24h': 0,
+                    'quarantine': {'total': 0, 'ips': [], 'users': []},
+                    'patterns': {'active': 0, 'triggered_24h': 0},
+                    'threats_by_category': {},
+                    'threats_by_severity': {},
+                    'error': str(e),
+                }
 
         return {
             'timestamp': status.last_scan.isoformat(),
