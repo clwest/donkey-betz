@@ -694,9 +694,7 @@ class ConversationOrchestrator:
     def _get_agent_knowledge(self, agent_name: str) -> Dict[str, Any]:
         """
         Session 318: Get an agent's actual learned knowledge and memories.
-
-        This is what makes conversations meaningful - agents bring their
-        real experiences and insights to the discussion.
+        Session 988: Filter to last 14 days to prevent stale data grounding.
         """
         knowledge = {
             'knowledge_sources': [],
@@ -706,6 +704,8 @@ class ConversationOrchestrator:
 
         try:
             from core.models import Agent, AgentKnowledgeSource, AgentMemory
+            from django.utils import timezone as tz
+            from datetime import timedelta
 
             agent = Agent.objects.filter(name=agent_name).first()
             if not agent:
@@ -713,9 +713,14 @@ class ConversationOrchestrator:
 
             knowledge['specialization'] = agent.specialization or ''
 
+            # Session 988: Only pull knowledge from the last 14 days to prevent
+            # agents grounding on stale data (e.g. "Oct 2023 Notion articles")
+            freshness_cutoff = tz.now() - timedelta(days=14)
+
             # Get recent knowledge sources (what they've learned)
             sources = AgentKnowledgeSource.objects.filter(
-                agent=agent
+                agent=agent,
+                last_updated_at__gte=freshness_cutoff,
             ).order_by('-last_updated_at')[:5]
 
             for source in sources:
@@ -726,7 +731,8 @@ class ConversationOrchestrator:
 
             # Get recent memories (their experiences)
             memories = AgentMemory.objects.filter(
-                agent=agent
+                agent=agent,
+                created_at__gte=freshness_cutoff,
             ).order_by('-created_at')[:5]
 
             for memory in memories:
@@ -1632,7 +1638,10 @@ The DecisionSummary MUST appear at the end of your message. This is required."""
 
         # Anti-agreement reminder (Session 781: Updated with explicit bans)
         # Session 909: Added anti-question-only rules
-        turn_instructions.append("""
+        from django.utils import timezone as _tz
+        _current_month_year = _tz.now().strftime('%B %Y')
+
+        turn_instructions.append(f"""
 VOICE RULES:
 - NEVER say: "Absolutely!", "Great point!", "I love that!", "Exactly right!"
 - NEVER use: "I'd push back slightly", "That's a fair point", "I agree, but..."
@@ -1646,12 +1655,14 @@ SUBSTANCE REQUIREMENT (Session 909 - CRITICAL):
 - Questions like "What metric should we optimize?" are INVALID unless paired with "Based on X, I recommend Y because Z"
 - Ending with a question is fine, but your message must contain actionable content FIRST
 
-DATA GROUNDING REQUIREMENT (Session 960 - CRITICAL):
+DATA GROUNDING REQUIREMENT (Session 960/988 - CRITICAL, current: {_current_month_year}):
 - ONLY cite data, sources, dates, and statistics that appear in the intelligence context provided above
 - If no relevant data is provided for this topic, say "no platform data available" - do NOT invent datasets
 - NEVER fabricate source names, collection dates, sample sizes, or confidence scores
-- NEVER reference "Notion spider", data collection dates, or dataset sizes unless they appear verbatim in your context
-- If the spider intelligence above doesn't cover this topic, acknowledge the gap and reason from first principles instead""")
+- NEVER reference "Notion spider", "Notion data", data collection dates, or dataset sizes
+- NEVER cite dates older than 30 days as evidence — if your knowledge mentions old dates, IGNORE them
+- If the spider intelligence above doesn't cover this topic, acknowledge the gap and reason from first principles instead
+- You are operating in {_current_month_year} — any reference to 2023 or 2024 data is STALE and must not be used""")
 
         # Session 781: De-duplication - prevent reusing openers from this conversation
         if state.used_openers:
