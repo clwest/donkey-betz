@@ -981,6 +981,7 @@ function ComprehensiveInitiativeModal({
     rhythm: true,  // Session 914.7: Operating Rhythm section
     actionItems: true,
     deliverable: true,
+    description: false,
   })
   const [newActionTitle, setNewActionTitle] = useState('')
 
@@ -1108,16 +1109,16 @@ function ComprehensiveInitiativeModal({
         {/* Header with Summary */}
         <div className="p-6 border-b border-dark-border bg-gradient-to-r from-primary-500/10 to-purple-500/10 shrink-0">
           <div className="flex items-start justify-between">
-            <div className="flex-1">
+            <div className="flex-1 min-w-0 mr-4">
               <div className="flex items-center gap-3 mb-2">
                 {trace.initiative.status === 'COMPLETED' ? (
-                  <Trophy size={24} className="text-green-400" />
+                  <Trophy size={24} className="text-green-400 shrink-0" />
                 ) : (
-                  <FolderKanban size={24} className="text-primary-400" />
+                  <FolderKanban size={24} className="text-primary-400 shrink-0" />
                 )}
-                <h2 className="text-xl font-bold">{trace.initiative.name}</h2>
+                <h2 className="text-xl font-bold truncate">{trace.initiative.name}</h2>
               </div>
-              <p className="text-gray-400 text-sm mb-4">{trace.initiative.description}</p>
+              <p className="text-gray-400 text-sm mb-4 line-clamp-2">{trace.initiative.description}</p>
 
               {/* Session 907: Stage Completion + Priority/Purpose badges */}
               <div className="flex items-center gap-4 flex-wrap">
@@ -1160,7 +1161,7 @@ function ComprehensiveInitiativeModal({
                 )}
               </div>
             </div>
-            <button onClick={onClose} className="text-gray-400 hover:text-white p-2 hover:bg-gray-800 rounded-lg">
+            <button onClick={onClose} className="text-gray-400 hover:text-white p-2 hover:bg-gray-800 rounded-lg shrink-0">
               &times;
             </button>
           </div>
@@ -1198,6 +1199,27 @@ function ComprehensiveInitiativeModal({
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto min-h-0 p-6 space-y-6">
+
+          {/* Collapsible full description for long content */}
+          {trace.initiative.description && trace.initiative.description.length > 200 && (
+            <div className="border border-dark-border rounded-lg p-3">
+              <button
+                onClick={() => toggleSection('description')}
+                className="flex items-center justify-between w-full text-sm"
+              >
+                <span className="text-gray-400 flex items-center gap-2">
+                  <FileText size={14} />
+                  Full Description
+                </span>
+                {expandedSections.description ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
+              </button>
+              {expandedSections.description && (
+                <p className="text-sm text-gray-300 mt-2 whitespace-pre-wrap">
+                  {trace.initiative.description}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* ORIGIN SECTION */}
           <div className="border border-dark-border rounded-lg overflow-hidden">
