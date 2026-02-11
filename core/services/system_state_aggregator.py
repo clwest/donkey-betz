@@ -372,19 +372,22 @@ class SystemStateAggregator:
             # 2. Unverified narrative shifts
             from core.models_narrative_drift import NarrativeShift
 
-            unverified_shifts = NarrativeShift.objects.filter(
+            unverified_shifts = NarrativeShift.objects.select_related(
+                'old_narrative'
+            ).filter(
                 verified=False,
                 detected_at__gte=now - timedelta(days=7)
             ).order_by('-confidence')[:limit]
 
             for shift in unverified_shifts:
+                old_title = shift.old_narrative.title[:30] if shift.old_narrative else 'Unknown'
                 items.append(AttentionItem(
                     id=f"shift_{shift.id}",
                     section='autonomous',
                     category='pending_decision',
                     priority=PRIORITY_SCORES['pending_decision'] + int(float(shift.confidence or 0) * 20),
-                    title=f"Narrative Shift: {shift.narrative.title[:30] if shift.narrative else 'Unknown'}",
-                    summary=f"From '{shift.old_status}' to '{shift.new_status}' ({int(float(shift.confidence or 0) * 100)}% confidence)",
+                    title=f"Narrative Shift: {old_title}",
+                    summary=f"From '{shift.old_narrative_summary[:40]}' to '{shift.new_narrative_summary[:40]}' ({int(float(shift.confidence or 0) * 100)}% confidence)",
                     action_url='/ai-studio/?tab=autonomous&subtab=narrative'
                 ))
 
