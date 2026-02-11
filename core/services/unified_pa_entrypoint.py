@@ -888,12 +888,13 @@ class UnifiedPAEntrypoint:
         ]):
             return ('pipeline_status', 'pipeline_orchestrator_tool')
 
-        # Session 987: Self-awareness — PA knows its own capabilities
+        # Session 987/988: Self-awareness — PA knows its own capabilities
+        # Note: removed 'have access to' (too broad, catches "access to internet")
         if any(phrase in message_lower for phrase in [
             'what can you do', 'what do you do', 'what are you capable',
-            'your capabilities', 'what tools', 'what areas',
-            'have access to', 'what can you access', 'help me with',
-            'your features', 'what do you have', 'what can i ask',
+            'your capabilities', 'what tools do you', 'what areas',
+            'what can you access', 'help me with',
+            'your features', 'what can i ask',
         ]):
             return ('capabilities', None)
 
@@ -3501,24 +3502,28 @@ The next session should review and address these items.
             return False
 
     def _generate_capabilities_response(self, user_name: str = 'there') -> str:
-        """Session 987: PA self-awareness — returns actual capabilities from real tool registry."""
+        """Session 987/988: PA self-awareness — returns actual capabilities from real tool registry."""
         return (
             f"Here's what I can help you with, {user_name}:\n\n"
+            "**Web & Internet Access**\n"
+            "Yes — I have 77 spiders crawling the internet (CoinGecko, Yahoo Finance, SEC Edgar, "
+            "TechCrunch, Reuters, and more), plus web search for real-time research.\n"
+            "Try: \"how much is BTC?\", \"search for AI trends\", \"what have spiders found?\"\n\n"
+            "**Crypto & Market Prices**\n"
+            "Live crypto data via CoinGecko spider, stock data via financial spiders\n"
+            "Try: \"how much is bitcoin?\", \"ethereum price\", \"stock overview\"\n\n"
             "**System Health & Monitoring**\n"
-            "Body vitals, system health checks, recent activity, error summaries, status snapshots\n"
+            "Body vitals, system health checks, recent activity, error summaries\n"
             "Try: \"how's the system?\", \"any errors?\", \"what's been happening?\"\n\n"
             "**Boardroom & Decisions**\n"
             "Attention queue, draft decisions, approve/reject items, triage\n"
             "Try: \"what needs my attention?\", \"show decisions\"\n\n"
             "**Initiatives & Projects**\n"
             "Pipeline overview, stages, action items, audit/cleanup\n"
-            "Try: \"show initiatives\", \"active projects\", \"audit initiatives\"\n\n"
+            "Try: \"show initiatives\", \"active projects\"\n\n"
             "**Content & Blogs**\n"
             "Review, publish, archive, quality stats, read blog posts\n"
             "Try: \"show blogs\", \"content stats\", \"publish-ready posts\"\n\n"
-            "**Spider Intelligence**\n"
-            "Recent spider data, filter by source or category, search findings\n"
-            "Try: \"what have spiders found?\", \"spider data on crypto\"\n\n"
             "**Stock Intelligence**\n"
             "Market briefs, alerts, predictions, SEC filings, accuracy stats\n"
             "Try: \"stock overview\", \"market alerts\", \"SEC filings\"\n\n"
@@ -3534,12 +3539,8 @@ The next session should review and address these items.
             "**Learning & Feedback**\n"
             "System learning patterns, feedback queue, experiment results\n"
             "Try: \"what has the system learned?\", \"show feedback\"\n\n"
-            "**Gates & Pilots**\n"
-            "Readiness gates, pilot experiments, prediction stats\n"
-            "Try: \"show gates\", \"running pilots\", \"prediction stats\"\n\n"
             "**What I can't do:** Read raw database tables not exposed via tools, "
-            "execute shell commands, access external services not wired in (email, drives), "
-            "or see API keys/credentials.\n\n"
+            "execute shell commands, or see API keys/credentials.\n\n"
             "Just ask naturally — I'll route to the right tool."
         )
 
