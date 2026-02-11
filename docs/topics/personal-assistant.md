@@ -1,6 +1,6 @@
 # Personal Assistant (PA) System
 
-The PA is the platform's conversational interface — a single `UnifiedPAEntrypoint` (3,846 lines) that routes user queries through 35 intents to 50 tools, enriches responses with 6 intelligence services, and returns structured data + LLM analysis.
+The PA is the platform's conversational interface — a single `UnifiedPAEntrypoint` that routes user queries through 36 intents to 50 tools, enriches responses with 6 intelligence services, and returns structured data + LLM analysis.
 
 ## Architecture
 
@@ -33,20 +33,21 @@ Two files handle everything:
 | 17 | research | web_search | search, find, research, trending |
 | 18 | agent_execution | universal_agent_tool | run agent, execute agent |
 | 19 | initiatives | initiative_tool | initiative, project, pipeline (runs BEFORE boardroom) |
-| 20 | stock_intelligence | stock_intelligence_tool | stock, market brief, SEC filing |
-| 21 | spider_data | spider_data_tool | spider, crawled, news feed |
-| 22 | execution_history | execution_history_tool | agent history, agents been doing, agent conversations, deliberations |
-| 23 | learning_patterns | learning_patterns_tool | learning, patterns |
-| 24 | feedback | feedback_tool | feedback queue, bug reports |
-| 25 | revenue | revenue_tracker_tool | revenue, earnings, financial |
-| 26 | task_management | task_manager_tool | my tasks, task list |
-| 27 | workspace | workspace_tool | workspace, workspace files |
-| 28 | budget | check_resource_budget | budget, token usage, api cost |
-| 29 | system_alerts | get_system_alerts | active alerts, warnings |
-| 30 | ml_analysis | ml_analysis | ml status, decision pattern |
-| 31 | pipeline_status | pipeline_orchestrator_tool | pipeline status, stage breakdown |
-| 32 | capabilities | (direct response) | what can you do, your capabilities |
-| 33 | general | (direct LLM response) | fallback for everything else |
+| 20 | crypto_price | spider_data_tool | btc, bitcoin, ethereum, crypto, coin price, how much is |
+| 21 | stock_intelligence | stock_intelligence_tool | stock, market brief, SEC filing |
+| 22 | spider_data | spider_data_tool | spider, crawled, news feed |
+| 23 | execution_history | execution_history_tool | agent history, agents been doing, agent conversations, deliberations |
+| 24 | learning_patterns | learning_patterns_tool | learning, patterns |
+| 25 | feedback | feedback_tool | feedback queue, bug reports |
+| 26 | revenue | revenue_tracker_tool | revenue, earnings, financial |
+| 27 | task_management | task_manager_tool | my tasks, task list |
+| 28 | workspace | workspace_tool | workspace, workspace files |
+| 29 | budget | check_resource_budget | budget, token usage, api cost |
+| 30 | system_alerts | get_system_alerts | active alerts, warnings |
+| 31 | ml_analysis | ml_analysis | ml status, decision pattern |
+| 32 | pipeline_status | pipeline_orchestrator_tool | pipeline status, stage breakdown |
+| 33 | capabilities | (direct response) | what can you do, your capabilities (narrowed in 988) |
+| 34 | general | (direct LLM response) | fallback for everything else |
 
 ## Enrichment Pipeline
 

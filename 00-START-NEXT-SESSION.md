@@ -2,7 +2,7 @@
 
 **Previous Session:** 988 (Stale Data, Modal Overflow, PA Routing Fixes)
 **Date:** February 11, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** | **Bundle: 2,305 KB** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 92** | **Content Deliberation Pipeline: ACTIVE** | **Agent Knowledge: 14-DAY FRESHNESS FILTER** | **Execution History: INCLUDES CONVERSATIONS** | **Initiative Modals: OVERFLOW FIXED** | **Content Reviewers: IMPORT FIXED** | **PA Intent Order: INITIATIVES BEFORE BOARDROOM**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** | **Bundle: 2,305 KB** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 92** | **PA Intents: 36** | **Content Deliberation Pipeline: ACTIVE** | **Agent Knowledge: 14-DAY FRESHNESS FILTER** | **Execution History: INCLUDES CONVERSATIONS** | **Crypto Price Intent: LIVE** | **Capabilities: NARROWED**
 
 ---
 
@@ -19,6 +19,10 @@
 **Agent Stale Data Grounding:** All agents in multi-agent conversations referenced "Oct 23, 2023 Notion data" because `_get_agent_knowledge()` had no date filter. Added 14-day freshness cutoff + strengthened DATA GROUNDING REQUIREMENT prompt with dynamic current month/year injection.
 
 **Execution History Formatter:** "What have agents been doing?" fell through to generic LLM because: (a) intent patterns didn't cover natural phrases, (b) formatter used wrong field names (`executions` vs `items`, `period_hours` vs `hours_back`), (c) `DeliberationSession` (agent conversations) was invisible. All three fixed.
+
+**Crypto Price Intent:** "How much is BTC today?" fell through to generic LLM which told user to check CoinGecko manually — despite having a CoinGecko spider. Added new `crypto_price` intent with ticker-to-name mapping, routes to `spider_data_tool` with `action='search'`, `spider_name='coingecko'`.
+
+**Capabilities Intent Narrowing:** "Don't you have access to the internet?" matched `'have access to'` → capabilities dump instead of answering. Removed broad patterns, updated capabilities response to lead with Web/Internet and Crypto sections.
 
 ### Session 987 Summary (Prior)
 
@@ -45,7 +49,7 @@ Nervous System 60% Health Fix — Redis URL parsing, CeleryTaskEvent wiring, mil
 | Frontend Bundle | 2,305 KB |
 | Frontend Routes | 37 (15 standalone + 22 redirects) |
 | PA Tools | 92 |
-| PA Intents | 35+ (execution_history expanded) |
+| PA Intents | 36 (added crypto_price, narrowed capabilities) |
 | Attention Sections | 7 |
 | LLM Providers | 6 (OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini) |
 | Standalone Pages | `/stocks`, `/advisors`, `/neural-orchestra`, `/conversation-contract`, `/mythology-lab`, `/billing`, `/analytics`, `/docs-index` |
@@ -71,6 +75,9 @@ After the import fix, SkepticReviewer and FactCheckReviewer should now produce r
 
 ### DeliberationSession in Execution History — Verify on Railway
 New `DeliberationSession` queries in `execution_history_tool` need verification. Ask PA "What have agents been doing?" and confirm it shows both executions and conversations.
+
+### Crypto Price Intent — Verify on Railway
+Ask PA "How much is BTC today?" and confirm it routes to `crypto_price` intent, queries CoinGecko spider data, and returns actual price data instead of telling user to check manually.
 
 ### Railway Deploy: Verify Celery Prefork
 Monitor celery-worker memory over 4+ hours. Look for "child process exiting" messages confirming child recycling is working.
@@ -180,6 +187,15 @@ Support `?tab=system&sub=monitor` for direct deep-linking.
 - Handler returns `items` (not `executions`), `hours_back` (not `period_hours`)
 - Now includes `DeliberationSession` data (agent conversations) alongside `AgentExecution`
 - Formatter fixed to match handler field names
+
+**Crypto price intent (Session 988):**
+- Routes to `spider_data_tool` with `action='search'`, `spider_name='coingecko'`
+- Ticker-to-name mapping: btc→bitcoin, eth→ethereum, sol→solana, etc.
+- Placed before `stock_intelligence` in routing order
+
+**Capabilities intent patterns (Session 988):**
+- Removed broad patterns (`'have access to'`, `'what do you have'`) that hijacked unrelated questions
+- Always test new intent patterns against likely user questions containing the same words
 
 **Boardroom auto-approve (Session 984):**
 - Items have 24h age gate before auto-approval

@@ -57,6 +57,27 @@
 
 **DeliberationSession data added:** The `execution_history_tool` now also queries `DeliberationSession` (agent conversations), which is the primary agent activity but was previously invisible. Both `recent` and `stats` actions include conversation counts.
 
+### 6. Crypto Price Intent
+**Files:** `core/services/unified_pa_entrypoint.py`
+
+- New `crypto_price` intent with patterns: `btc`, `bitcoin`, `ethereum`, `eth`, `crypto`, `solana`, `coin price`, `how much is`, etc.
+- Smart payload builder with ticker-to-name mapping (btc→bitcoin, eth→ethereum, sol→solana, etc.)
+- Routes to `spider_data_tool` with `action='search'`, `spider_name='coingecko'`
+- Added enrichment mapping, LLM directive, formatter, and skip list entry
+
+**Root cause:** "How much is BTC today?" fell through to generic LLM, which told user to check CoinGecko manually — despite the platform having a CoinGecko spider.
+
+### 7. Capabilities Intent Pattern Narrowing
+**Files:** `core/services/unified_pa_entrypoint.py`
+
+- Removed `'have access to'` from capabilities intent patterns (too broad)
+- Removed `'what do you have'` (too broad)
+- Narrowed `'what tools'` to `'what tools do you'`
+- Updated `_generate_capabilities_response()` to lead with "Web & Internet Access" (77 spiders) and "Crypto & Market Prices" sections
+- Removed misleading "access external services not wired in" from can't-do list
+
+**Root cause:** "Don't you have access to the internet?" matched `'have access to'` → capabilities dump instead of answering the question.
+
 ---
 
 ## Gotchas Discovered
@@ -66,6 +87,8 @@
 3. **PA intent routing order:** More specific patterns (initiative + attention) must come BEFORE generic catch-alls (boardroom matches "attention").
 4. **AgentExecution vs DeliberationSession:** `AgentExecution` only records direct agent dispatches. Multi-agent conversations write to `DeliberationSession` — the execution_history tool was missing this entirely.
 5. **Formatter-handler field mismatch:** The execution_history formatter was written with different field names than the handler returns, causing empty results even when data exists.
+6. **Broad capabilities patterns hijack questions:** `'have access to'` matched "Don't you have access to the internet?" — always test new intent patterns against likely user questions that contain the same words.
+7. **CoinGecko spider existed but wasn't routed:** The platform had a working crypto spider but no PA intent to use it — users were told to check CoinGecko manually.
 
 ---
 
@@ -86,3 +109,5 @@
 3. `f65c9a18` — fix: route initiative queries before boardroom catch-all in PA
 4. `157194ae` — fix: prevent agents from grounding on stale 2023/2024 data
 5. `9698b30d` — fix: execution history intent routing + formatter field mismatches
+6. `865b6f0f` — feat: add crypto price intent for PA with coingecko spider routing
+7. `5d406d68` — fix: narrow capabilities intent patterns to avoid hijacking internet questions
