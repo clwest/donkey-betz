@@ -39,7 +39,7 @@ Deterministic dictionary lookup — no LLM involved in routing:
 
 **Optional semantic routing:** Embeddings-based for natural language queries (cosine similarity threshold 0.35, falls back to keyword matching).
 
-## Context Injection (10 Layers)
+## Context Injection (11 Layers)
 
 Every agent receives contextual data before execution:
 1. **scifi_context** — Platform state
@@ -52,6 +52,7 @@ Every agent receives contextual data before execution:
 8. **docs_context** — Documentation/session awareness
 9. **user_context** — Personalized user data (skills, goals, preferences)
 10. **risk_context** — Critical docs, incidents, audit findings
+11. **platform_tools_directive** — "Use internal tools, not external services" prompt from `PlatformIntegration` (Session 992)
 
 `feedback_context` now includes `pa_review_feedback` (last 5 PA publish/archive/revise decisions) and `pa_review_summary`, extracted into `spider_context['pa_content_feedback']` and `spider_context['pa_review_summary']` by `gather_context()` (Session 990).
 
@@ -111,3 +112,5 @@ Assignment: explicit voice_id → keyword matching → category matching → def
 - Any reference to 2023 or 2024 data
 
 **Conversation records:** Multi-agent conversations write to `DeliberationSession` (not `AgentExecution`). The PA execution_history tool queries both sources.
+
+**Dynamic team selection:** `_select_agents_for_topic()` in `ConversationOrchestrator` tries `DynamicTeamBuilder` first (embedding similarity + synergy scoring), falling back to `AgentRegistry` text matching on failure (Session 992).
