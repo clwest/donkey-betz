@@ -505,68 +505,82 @@ def auto_approve_boardroom_items():
 
     try:
         now = timezone.now()
-        # Session 984: Only auto-approve items that have been pending for 24+ hours.
-        # This ensures items stay visible in the Boardroom for a full day before clearing.
-        age_cutoff = now - timedelta(hours=24)
+        # Session 988: Aggressive auto-approve to keep Boardroom focused.
+        # Insights clear immediately (informational). Spider actions clear immediately
+        # (non-critical) or at 48h (critical). Reviews clear at 6h (non-critical) or
+        # 24h (critical). Everything else has a 48h hard ceiling.
+        age_6h = now - timedelta(hours=6)
+        age_24h = now - timedelta(hours=24)
+        age_48h = now - timedelta(hours=48)
         stats = {
             'insights_approved': 0,
             'reviews_approved': 0,
+            'reviews_critical_approved': 0,
             'opportunities_approved': 0,
             'spider_actions_approved': 0,
             'spider_actions_stale_resolved': 0,
+            'stale_catchall_resolved': 0,
             'experiments_promoted': 0,
             'pipelines_promoted': 0,
             'research_promoted': 0,
             'guidelines_promoted': 0,
         }
 
-        # 1. Auto-approve insight items older than 24h (informational)
+        # 1. Auto-approve ALL insight items immediately (informational, no action needed)
         insights = HumanAttentionItem.objects.filter(
             status='pending',
             item_type='insight',
-            created_at__lt=age_cutoff
         )
         stats['insights_approved'] = insights.update(status='acted', decided_at=now)
 
-        # 2. Auto-approve non-critical review items older than 24h
+        # 2. Auto-approve non-critical review items older than 6h
         reviews = HumanAttentionItem.objects.filter(
             status='pending',
             item_type='review',
-            created_at__lt=age_cutoff
+            created_at__lt=age_6h,
         ).exclude(urgency='critical')
         stats['reviews_approved'] = reviews.update(status='acted', decided_at=now)
 
-        # 3. Session 977: Auto-approve non-critical opportunity items older than 24h
+        # 2b. Auto-approve critical review items older than 24h
+        reviews_critical = HumanAttentionItem.objects.filter(
+            status='pending',
+            item_type='review',
+            urgency='critical',
+            created_at__lt=age_24h,
+        )
+        stats['reviews_critical_approved'] = reviews_critical.update(status='acted', decided_at=now)
+
+        # 3. Auto-approve non-critical opportunity items older than 6h
         opportunities = HumanAttentionItem.objects.filter(
             status='pending',
             item_type='opportunity',
-            created_at__lt=age_cutoff
+            created_at__lt=age_6h,
         ).exclude(urgency='critical')
         stats['opportunities_approved'] = opportunities.update(status='acted', decided_at=now)
 
-        # 4. Session 977: Auto-approve low/medium urgency spider_action items older than 24h
-        # (high/critical spider_actions still need human review)
-        spider_low = HumanAttentionItem.objects.filter(
+        # 4. Auto-approve ALL non-critical spider_action items immediately
+        spider_actions = HumanAttentionItem.objects.filter(
             status='pending',
             item_type='spider_action',
-            urgency__in=['low', 'medium'],
-            created_at__lt=age_cutoff
-        )
-        stats['spider_actions_approved'] = spider_low.update(status='acted', decided_at=now)
+        ).exclude(urgency='critical')
+        stats['spider_actions_approved'] = spider_actions.update(status='acted', decided_at=now)
 
-        # 4b. Session 988: Hard ceiling — auto-resolve ALL spider_actions older than 48h
-        # regardless of urgency. Prevents high/critical spider_actions from accumulating
-        # indefinitely and burying genuinely new items.
-        stale_cutoff = now - timedelta(hours=48)
+        # 4b. Hard ceiling: auto-resolve ALL spider_actions older than 48h (incl critical)
         stale_spider_actions = HumanAttentionItem.objects.filter(
             item_type='spider_action',
             status='pending',
-            created_at__lt=stale_cutoff,
+            created_at__lt=age_48h,
         )
         stale_count = stale_spider_actions.update(status='auto_resolved', decided_at=now)
         stats['spider_actions_stale_resolved'] = stale_count
-        if stale_count:
-            logger.info(f"Auto-resolved {stale_count} stale spider_actions (>48h, all urgencies)")
+
+        # 5. Hard ceiling: auto-resolve ANY remaining pending items older than 48h
+        # Catches alerts, arbitrage, opportunity_approval, etc.
+        stale_any = HumanAttentionItem.objects.filter(
+            status='pending',
+            created_at__lt=age_48h,
+        )
+        stats['stale_catchall_resolved'] = stale_any.update(status='auto_resolved', decided_at=now)
 
         # 5. Auto-promote experiment decisions
         stats['experiments_promoted'] = AgentDecisionSummary.objects.filter(
@@ -596,9 +610,11 @@ def auto_approve_boardroom_items():
         logger.info(f"✅ [BOARDROOM-AUTO-APPROVE] Complete - processed {total} items "
                    f"(insights: {stats['insights_approved']}, "
                    f"reviews: {stats['reviews_approved']}, "
+                   f"reviews_critical: {stats['reviews_critical_approved']}, "
                    f"opportunities: {stats['opportunities_approved']}, "
                    f"spider_actions: {stats['spider_actions_approved']}, "
                    f"spider_stale_48h: {stats['spider_actions_stale_resolved']}, "
+                   f"stale_catchall: {stats['stale_catchall_resolved']}, "
                    f"experiments: {stats['experiments_promoted']}, "
                    f"pipelines: {stats['pipelines_promoted']}, "
                    f"research: {stats['research_promoted']}, "
