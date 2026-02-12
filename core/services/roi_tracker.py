@@ -185,13 +185,13 @@ class ROITracker:
 
             # Auto-detect attribution source from spider data
             if not attribution_source and spider_data:
-                attribution_source = spider_data.source
+                attribution_source = spider_data.source_url
 
             if not attribution_source and opportunity:
                 # Try to get from opportunity's first spider data
                 first_spider = opportunity.spider_data.first()
                 if first_spider:
-                    attribution_source = first_spider.source
+                    attribution_source = first_spider.source_url
 
             # Create the conversion event
             with transaction.atomic():

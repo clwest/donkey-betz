@@ -8422,7 +8422,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             production_section = []
             try:
                 from core.models_autonomous_studio import ContentChannel, ChannelEpisode
-                from ai_core.models import SpiderData
+                from core.models_unified_system import SpiderData
 
                 # Content channel status
                 active_channels = ContentChannel.objects.filter(status='active').count()

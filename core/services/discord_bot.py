@@ -923,14 +923,14 @@ class SpiderCommands(commands.Cog):
                 today = timezone.now().date()
                 week_ago = timezone.now() - timedelta(days=7)
 
-                categories = list(SpiderData.objects.values('category').annotate(
+                categories = list(SpiderData.objects.values('data_type').annotate(
                     count=Count('id')
                 ).order_by('-count')[:10])
 
                 return {
                     'total': SpiderData.objects.count(),
-                    'today': SpiderData.objects.filter(crawled_at__date=today).count(),
-                    'week': SpiderData.objects.filter(crawled_at__gte=week_ago).count(),
+                    'today': SpiderData.objects.filter(created_at__date=today).count(),
+                    'week': SpiderData.objects.filter(created_at__gte=week_ago).count(),
                     'categories': categories,
                 }
 
@@ -949,7 +949,7 @@ class SpiderCommands(commands.Cog):
             # Category breakdown
             if stats['categories']:
                 cat_text = "\n".join(
-                    f" {c['category'] or 'Unknown'}: {c['count']:,}"
+                    f" {c['data_type'] or 'Unknown'}: {c['count']:,}"
                     for c in stats['categories']
                 )
                 embed.add_field(
@@ -1784,13 +1784,13 @@ class SpiderCommands(commands.Cog):
 
             if not futures_data:
                 # Fallback to SpiderData if live API doesn't have futures
-                from ai_core.models import SpiderData
+                from core.models_unified_system import SpiderData
 
                 @sync_to_async
                 def get_cached_futures():
                     return list(SpiderData.objects.filter(
                         spider_name='theodds',
-                        category='futures'
+                        data_type='futures'
                     ).order_by('-created_at')[:10])
 
                 cached = await get_cached_futures()
