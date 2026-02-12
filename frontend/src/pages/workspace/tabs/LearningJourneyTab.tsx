@@ -160,7 +160,7 @@ export function LearningJourneyTab() {
       {/* Sub-tab Content */}
       {activeSubTab === 'dashboard' && <DashboardSubTab />}
       {activeSubTab === 'journeys' && <JourneysSubTab />}
-      {activeSubTab === 'templates' && <TemplatesSubTab />}
+      {activeSubTab === 'templates' && <TemplatesSubTab onNavigate={setActiveSubTab} />}
       {activeSubTab === 'effectiveness' && <EffectivenessSubTab />}
     </div>
   )
@@ -475,10 +475,11 @@ function JourneysSubTab() {
 
 // ============ Templates Sub-Tab ============
 
-function TemplatesSubTab() {
+function TemplatesSubTab({ onNavigate }: { onNavigate: (tab: LearningSubTab) => void }) {
   const [selectedTemplate, setSelectedTemplate] = useState<LearningTemplate | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<string>('')
   const [difficultyFilter, setDifficultyFilter] = useState<string>('')
+  const [mutationError, setMutationError] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   const { data: templatesData, isLoading, isError, refetch } = useQuery({
@@ -496,8 +497,15 @@ function TemplatesSubTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['learning-journeys'] })
+      queryClient.invalidateQueries({ queryKey: ['learning-journeys-active'] })
       queryClient.invalidateQueries({ queryKey: ['learning-analytics'] })
       setSelectedTemplate(null)
+      setMutationError(null)
+      onNavigate('journeys')
+    },
+    onError: (error: unknown) => {
+      const msg = error instanceof Error ? error.message : 'Failed to start journey'
+      setMutationError(msg)
     },
   })
 
@@ -538,6 +546,19 @@ function TemplatesSubTab() {
 
   return (
     <div className="space-y-4">
+      {/* Error banner */}
+      {mutationError && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-red-400 text-sm">
+            <AlertTriangle size={16} />
+            {mutationError}
+          </div>
+          <button onClick={() => setMutationError(null)} className="text-red-400 hover:text-red-300">
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
