@@ -17837,23 +17837,33 @@ def run_stock_market_intelligence():
                     description = item.get('description', '') or ''
                     text = f"{title} {description}".lower()
 
-                    # Market-moving keywords (same set as business_news + finance-specific)
-                    keywords = ['crash', 'surge', 'plunge', 'soar', 'collapse', 'breakout',
+                    # Session 989: Tightened keywords — removed "surge" (too broad, caught politics)
+                    # and require financial context for ambiguous terms
+                    keywords = ['crash', 'plunge', 'soar', 'collapse', 'breakout',
                                 'earnings beat', 'earnings miss', 'guidance raised', 'guidance cut',
                                 'layoffs', 'bankruptcy', 'merger', 'acquisition', 'ipo',
                                 'fed rate', 'inflation', 'recession']
                     if not any(kw in text for kw in keywords):
                         continue
 
-                    # Try to extract ticker from tags (e.g. "NCM:ARKO" or plain "AAPL")
+                    # Session 989: Extract ticker from title/description text
+                    # Look for $AAPL, (AAPL), or "TICKER:" patterns
                     import re
                     symbol = 'MARKET'
-                    for tag in (item.get('tags', []) or []):
-                        if isinstance(tag, str):
-                            ticker_match = re.match(r'^(?:[A-Z]+:)?([A-Z]{1,5})$', tag)
-                            if ticker_match:
-                                symbol = ticker_match.group(1)
-                                break
+                    ticker_patterns = re.findall(r'(?:\$([A-Z]{1,5})|\(([A-Z]{1,5})\))', f"{title} {description}")
+                    for match in ticker_patterns:
+                        found = match[0] or match[1]
+                        if found and found not in ('CEO', 'IPO', 'SEC', 'NYSE', 'ETF', 'GDP', 'CPI', 'FBI', 'FDA'):
+                            symbol = found
+                            break
+                    # Fallback: check tags for exchange:ticker format
+                    if symbol == 'MARKET':
+                        for tag in (item.get('tags', []) or []):
+                            if isinstance(tag, str):
+                                ticker_match = re.match(r'^(?:[A-Z]+:)?([A-Z]{1,5})$', tag)
+                                if ticker_match and ticker_match.group(1) not in ('CEO', 'IPO', 'SEC', 'NYSE', 'ETF'):
+                                    symbol = ticker_match.group(1)
+                                    break
 
                     alert_title = f"📰 {title[:60]}..."
                     if alert_title in seen_titles or alert_title in recent_titles:
@@ -17913,26 +17923,32 @@ def run_stock_market_intelligence():
                     title = item.get('title', '') or item.get('headline', '')
                     description = item.get('description', '') or ''
                     text = f"{title} {description}".lower()
-                    # Look for market-moving keywords in both title and description
-                    keywords = ['crash', 'surge', 'plunge', 'soar', 'collapse', 'breakout',
+                    # Session 989: Tightened keywords — removed "surge" (caught non-market news)
+                    keywords = ['crash', 'plunge', 'soar', 'collapse', 'breakout',
                                 'earnings beat', 'earnings miss', 'ipo', 'merger', 'acquisition',
                                 'layoffs', 'bankruptcy', 'guidance']
-                    # Session 980: Removed 'rally' — too common, was generating 90%+ of all alerts
                     if not any(kw in text for kw in keywords):
                         continue
 
-                    # Try to extract ticker from tags (e.g. "NCM:ARKO")
+                    # Session 989: Extract ticker from title/description first, then tags
                     import re
                     symbol = 'MARKET'
-                    for tag in (item.get('tags', []) or []):
-                        if isinstance(tag, str):
-                            ticker_match = re.match(r'^(?:[A-Z]+:)?([A-Z]{1,5})$', tag)
-                            if ticker_match:
-                                symbol = ticker_match.group(1)
-                                break
+                    ticker_patterns = re.findall(r'(?:\$([A-Z]{1,5})|\(([A-Z]{1,5})\))', f"{title} {description}")
+                    for match in ticker_patterns:
+                        found = match[0] or match[1]
+                        if found and found not in ('CEO', 'IPO', 'SEC', 'NYSE', 'ETF', 'GDP', 'CPI', 'FBI', 'FDA'):
+                            symbol = found
+                            break
+                    # Fallback: check tags for exchange:ticker format (e.g. "NCM:ARKO")
+                    if symbol == 'MARKET':
+                        for tag in (item.get('tags', []) or []):
+                            if isinstance(tag, str):
+                                ticker_match = re.match(r'^(?:[A-Z]+:)?([A-Z]{1,5})$', tag)
+                                if ticker_match and ticker_match.group(1) not in ('CEO', 'IPO', 'SEC', 'NYSE', 'ETF'):
+                                    symbol = ticker_match.group(1)
+                                    break
 
                     alert_title = f"📰 {title[:60]}..."
-                    # Session 980: Dedup — skip duplicate headlines
                     if alert_title in seen_titles or alert_title in recent_titles:
                         continue
                     seen_titles.add(alert_title)
