@@ -1,12 +1,26 @@
-# Session 990 - Start Here
+# Session 991 - Start Here
 
-**Previous Session:** 989 (Production Verification & Field Name Fixes)
-**Date:** February 11, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** | **Bundle: 2,305 KB** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 92** | **PA Intents: 36** | **Content Deliberation Pipeline: VERIFIED** | **Execution History: VERIFIED** | **Crypto Price: VERIFIED** | **Reviewers: REAL VERDICTS**
+**Previous Session:** 990 (PA-to-Agent Content Feedback Loop)
+**Date:** February 12, 2026
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** | **Bundle: 2,305 KB** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 93** | **PA Intents: 36** | **Content Feedback Loop: CLOSED** | **Reviewers: REAL VERDICTS**
 
 ---
 
-## Session 989 Summary (Just Completed)
+## Session 990 Summary (Just Completed)
+
+### PA-to-Agent Content Feedback Loop
+
+Closed the feedback loop between PA content review decisions and originating agents. When the PA publishes, archives, or revises content, the decision is now recorded back to the originating agent via 3 mechanisms:
+
+1. **AgentMemory** (type='feedback', tags=['pa_review']) -- agents see PA decisions in multi-agent conversations and future executions
+2. **UserAgentLearning** -- per-user personalization (publish=success, archive=failure)
+3. **FeedbackLoopEngine** -- `pa_review_feedback` and `pa_review_summary` in feedback context, extracted into `spider_context` by agent_router
+
+**Files changed:** `tool_dispatcher.py` (new `_record_content_feedback()` + 3 call sites), `feedback_loop_engine.py` (PA review query), `agent_router.py` (context extraction)
+
+No new models, no migrations, no new Celery tasks. Uses existing AgentMemory, UserAgentLearning, and context injection pipeline.
+
+### Session 989 Summary (Prior)
 
 ### Production Verification (5 open items from Session 988)
 
