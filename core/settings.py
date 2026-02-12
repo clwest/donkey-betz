@@ -986,7 +986,7 @@ CELERY_TASK_ROUTES = {
     'core.tasks.agent_category_rotation': {'queue': 'content'},
     'core.tasks.full_agent_rotation': {'queue': 'content'},
     'autonomous.blockchain_security_monitor': {'queue': 'long_running'},
-    'autonomous.stock_market_intelligence': {'queue': 'long_running'},
+    # Session 989: Removed phantom autonomous.stock_market_intelligence routing (task didn't exist)
 
     # Session 976: PA chat — dedicated queue so user isn't blocked by spider/body-system traffic
     'core.tasks.process_pa_chat_task': {'queue': 'pa'},
