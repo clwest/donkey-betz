@@ -294,6 +294,8 @@ class ConversationOrchestrator:
         self._spider_context = None
         self._advisor_context = None
         self._learning_context = None
+        # Session 992: DynamicTeamBuilder for smarter agent selection
+        self._team_builder = None
 
     @property
     def client(self):
@@ -327,6 +329,14 @@ class ConversationOrchestrator:
             from core.services.learning_pattern_engine import get_learning_pattern_engine
             self._learning_context = get_learning_pattern_engine()
         return self._learning_context
+
+    @property
+    def team_builder(self):
+        """Session 992: Lazy-load DynamicTeamBuilder for smarter agent selection."""
+        if self._team_builder is None:
+            from core.services.dynamic_team_builder import get_dynamic_team_builder
+            self._team_builder = get_dynamic_team_builder()
+        return self._team_builder
 
     def _get_rich_context(self, agent_name: str, topic: str) -> str:
         """
@@ -517,9 +527,8 @@ class ConversationOrchestrator:
     ) -> List[Dict[str, Any]]:
         """
         Session 826: Select agents best suited for the conversation topic.
-
-        Uses the AgentRegistry's scoring system to find agents whose capabilities
-        match the topic, then ensures diversity by selecting different specializations.
+        Session 992: Upgraded to try DynamicTeamBuilder first (embedding + synergy),
+        falling back to AgentRegistry text matching on failure.
 
         Args:
             topic: The conversation topic to match agents against
@@ -532,26 +541,49 @@ class ConversationOrchestrator:
         if not ENABLE_AUTO_AGENT_SELECTION:
             return []
 
+        # Session 992: Try DynamicTeamBuilder first (embeddings + synergy scoring)
+        try:
+            team = self.team_builder.build_team(
+                task=topic,
+                min_size=num_agents,
+                max_size=num_agents,
+            )
+            if team and team.members:
+                selected = [
+                    {
+                        'name': m.agent_name,
+                        'type': m.category,
+                        'specialization': m.role,
+                    }
+                    for m in team.members
+                ]
+                agent_names = [a['name'] for a in selected]
+                logger.info(
+                    f"🎯 [Session 992] DynamicTeamBuilder selected agents "
+                    f"(synergy={team.total_synergy:.2f}): {agent_names}"
+                )
+                return selected
+        except Exception as e:
+            logger.debug(f"DynamicTeamBuilder unavailable, falling back to AgentRegistry: {e}")
+
+        # Fallback: original AgentRegistry text-matching logic
         try:
             from core.models.agents_registry.models import AgentRegistry
 
-            # Get or create the registry
             registry, _ = AgentRegistry.objects.get_or_create(
                 registry_name='unified_agent_registry'
             )
 
-            # Find agents best suited for this topic
             candidates = registry.find_agents_for_task(
                 task_description=topic,
                 required_capabilities=required_capabilities,
-                limit=num_agents * 3  # Get extras for diversity selection
+                limit=num_agents * 3
             )
 
             if not candidates or len(candidates) < num_agents:
                 logger.debug(f"Not enough candidates found for topic '{topic[:50]}...'")
                 return []
 
-            # Select diverse agents (different specializations)
             selected = []
             seen_specializations = set()
 
@@ -562,7 +594,6 @@ class ConversationOrchestrator:
 
                 spec = getattr(agent, 'specialization', '') or 'general'
 
-                # Skip if we already have this specialization
                 if spec in seen_specializations:
                     continue
 
