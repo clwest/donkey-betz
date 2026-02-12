@@ -129,6 +129,12 @@ class LearningJourneyStep(models.Model):
         ('skipped', 'Skipped'),
     ]
 
+    STEP_TYPE_CHOICES = [
+        ('lesson', 'Lesson'),
+        ('exercise', 'Exercise'),
+        ('explore', 'Explore'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     journey = models.ForeignKey(
         LearningJourney,
@@ -138,6 +144,9 @@ class LearningJourneyStep(models.Model):
     step_number = models.IntegerField()
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
+    step_type = models.CharField(max_length=20, choices=STEP_TYPE_CHOICES, default='lesson')
+    content = models.TextField(blank=True)
+    content_meta = models.JSONField(default=dict, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     duration_minutes = models.IntegerField(null=True, blank=True)
     notes = models.TextField(blank=True)
@@ -157,6 +166,9 @@ class LearningJourneyStep(models.Model):
             'step_number': self.step_number,
             'title': self.title,
             'description': self.description,
+            'step_type': self.step_type,
+            'content': self.content,
+            'content_meta': self.content_meta,
             'status': self.status,
             'started_at': self.started_at.isoformat() if self.started_at else None,
             'completed_at': self.completed_at.isoformat() if self.completed_at else None,

@@ -1,6 +1,7 @@
 """
 Seed learning journey templates and achievements.
 Session 990: Populate production database with learning content.
+Session 988: Added step_type and content_meta to templates.
 """
 from django.core.management.base import BaseCommand
 
@@ -14,11 +15,41 @@ TEMPLATES = [
         'steps_count': 5,
         'tags': ['beginner', 'agents', 'basics'],
         'steps_data': [
-            {'title': 'Understanding AI Agents', 'description': 'Learn what AI agents are and how they can help you.'},
-            {'title': 'Navigating the Agent List', 'description': 'Explore the 72 available agents and their specialties.'},
-            {'title': 'Starting Your First Conversation', 'description': 'Have your first conversation with an agent.'},
-            {'title': 'Understanding Agent Responses', 'description': 'Learn how to interpret and act on agent recommendations.'},
-            {'title': 'Best Practices for Agent Interactions', 'description': 'Tips and tricks for getting the most from your agents.'},
+            {
+                'title': 'Understanding AI Agents',
+                'description': 'Learn what AI agents are and how they can help you.',
+                'step_type': 'lesson',
+            },
+            {
+                'title': 'Navigating the Agent List',
+                'description': 'Explore the 72 available agents and their specialties.',
+                'step_type': 'explore',
+                'content_meta': {
+                    'navigation_hints': ['/workspace?tab=agents', '/workspace?tab=overview'],
+                },
+            },
+            {
+                'title': 'Starting Your First Conversation',
+                'description': 'Have your first conversation with an agent.',
+                'step_type': 'exercise',
+                'content_meta': {
+                    'suggested_prompts': [
+                        'What agents are available to help me?',
+                        'Summarize today\'s top tech news',
+                        'Help me brainstorm content ideas for my blog',
+                    ],
+                },
+            },
+            {
+                'title': 'Understanding Agent Responses',
+                'description': 'Learn how to interpret and act on agent recommendations.',
+                'step_type': 'lesson',
+            },
+            {
+                'title': 'Best Practices for Agent Interactions',
+                'description': 'Tips and tricks for getting the most from your agents.',
+                'step_type': 'lesson',
+            },
         ],
     },
     {
@@ -30,12 +61,64 @@ TEMPLATES = [
         'steps_count': 6,
         'tags': ['content', 'images', 'video', 'audio', 'writing'],
         'steps_data': [
-            {'title': 'Overview of Content Agents', 'description': 'Meet the content creation team: Image, Video, Audio, and Content Writer agents.'},
-            {'title': 'Creating AI Images', 'description': 'Learn to generate stunning images with the Image Agent.'},
-            {'title': 'Video Generation Basics', 'description': 'Create engaging videos with the Video Agent.'},
-            {'title': 'Audio and Voice Content', 'description': 'Generate podcasts, voiceovers, and audio content.'},
-            {'title': 'Writing Compelling Content', 'description': 'Create articles, blogs, and copy with the Content Writer Agent.'},
-            {'title': 'Content Strategy Integration', 'description': 'Combine all content types into a cohesive strategy.'},
+            {
+                'title': 'Overview of Content Agents',
+                'description': 'Meet the content creation team: Image, Video, Audio, and Content Writer agents.',
+                'step_type': 'lesson',
+            },
+            {
+                'title': 'Creating AI Images',
+                'description': 'Learn to generate stunning images with the Image Agent.',
+                'step_type': 'exercise',
+                'content_meta': {
+                    'suggested_prompts': [
+                        'Generate a futuristic city skyline at sunset',
+                        'Create a logo concept for a tech startup called NovaMind',
+                        'Design a social media banner for a podcast about AI',
+                    ],
+                },
+            },
+            {
+                'title': 'Video Generation Basics',
+                'description': 'Create engaging videos with the Video Agent.',
+                'step_type': 'exercise',
+                'content_meta': {
+                    'suggested_prompts': [
+                        'Create a short explainer video about machine learning',
+                        'Generate a product demo animation',
+                        'Make a 15-second social media clip about AI tools',
+                    ],
+                },
+            },
+            {
+                'title': 'Audio and Voice Content',
+                'description': 'Generate podcasts, voiceovers, and audio content.',
+                'step_type': 'exercise',
+                'content_meta': {
+                    'suggested_prompts': [
+                        'Generate a podcast intro script about technology trends',
+                        'Create a voiceover for a product walkthrough',
+                        'Write and narrate a 2-minute news summary',
+                    ],
+                },
+            },
+            {
+                'title': 'Writing Compelling Content',
+                'description': 'Create articles, blogs, and copy with the Content Writer Agent.',
+                'step_type': 'exercise',
+                'content_meta': {
+                    'suggested_prompts': [
+                        'Write a blog post about the future of AI assistants',
+                        'Create social media copy for a product launch',
+                        'Draft an email newsletter about this week\'s AI news',
+                    ],
+                },
+            },
+            {
+                'title': 'Content Strategy Integration',
+                'description': 'Combine all content types into a cohesive strategy.',
+                'step_type': 'lesson',
+            },
         ],
     },
     {
@@ -47,11 +130,41 @@ TEMPLATES = [
         'steps_count': 5,
         'tags': ['automation', 'workflows', 'autonomous'],
         'steps_data': [
-            {'title': 'Understanding Automation Concepts', 'description': 'Learn the fundamentals of AI automation.'},
-            {'title': 'Creating Your First Workflow', 'description': 'Build a simple automated workflow.'},
-            {'title': 'Autonomous Agent Configuration', 'description': 'Set up agents to work autonomously.'},
-            {'title': 'Monitoring and Adjusting', 'description': 'Learn to monitor and optimize your automations.'},
-            {'title': 'Advanced Workflow Patterns', 'description': 'Master complex multi-agent workflows.'},
+            {
+                'title': 'Understanding Automation Concepts',
+                'description': 'Learn the fundamentals of AI automation.',
+                'step_type': 'lesson',
+            },
+            {
+                'title': 'Creating Your First Workflow',
+                'description': 'Build a simple automated workflow.',
+                'step_type': 'lesson',
+            },
+            {
+                'title': 'Autonomous Agent Configuration',
+                'description': 'Set up agents to work autonomously.',
+                'step_type': 'exercise',
+                'content_meta': {
+                    'suggested_prompts': [
+                        'Show me how to set up a daily news monitoring workflow',
+                        'Configure an agent to track competitor pricing',
+                        'Create an automated content pipeline for my blog',
+                    ],
+                },
+            },
+            {
+                'title': 'Monitoring and Adjusting',
+                'description': 'Learn to monitor and optimize your automations.',
+                'step_type': 'explore',
+                'content_meta': {
+                    'navigation_hints': ['/workspace?tab=health', '/workspace?tab=overview'],
+                },
+            },
+            {
+                'title': 'Advanced Workflow Patterns',
+                'description': 'Master complex multi-agent workflows.',
+                'step_type': 'lesson',
+            },
         ],
     },
     {
@@ -63,12 +176,53 @@ TEMPLATES = [
         'steps_count': 6,
         'tags': ['analytics', 'data', 'intelligence', 'insights'],
         'steps_data': [
-            {'title': 'Introduction to AI Analytics', 'description': 'Understand how AI transforms raw data into actionable insights.'},
-            {'title': 'Working with Spider Data', 'description': 'Learn how spiders gather and process data from multiple sources.'},
-            {'title': 'Trend Analysis Deep Dive', 'description': 'Use the Trend Analysis Agent to identify patterns.'},
-            {'title': 'Market Intelligence', 'description': 'Leverage market data for business insights.'},
-            {'title': 'Building Custom Dashboards', 'description': 'Create personalized analytics views.'},
-            {'title': 'Predictive Analytics', 'description': 'Use AI predictions to anticipate future trends.'},
+            {
+                'title': 'Introduction to AI Analytics',
+                'description': 'Understand how AI transforms raw data into actionable insights.',
+                'step_type': 'lesson',
+            },
+            {
+                'title': 'Working with Spider Data',
+                'description': 'Learn how spiders gather and process data from multiple sources.',
+                'step_type': 'explore',
+                'content_meta': {
+                    'navigation_hints': ['/workspace?tab=spiders', '/workspace?tab=overview'],
+                },
+            },
+            {
+                'title': 'Trend Analysis Deep Dive',
+                'description': 'Use the Trend Analysis Agent to identify patterns.',
+                'step_type': 'exercise',
+                'content_meta': {
+                    'suggested_prompts': [
+                        'What are the trending topics in AI this week?',
+                        'Analyze recent tech industry trends',
+                        'Show me emerging patterns in cryptocurrency markets',
+                    ],
+                },
+            },
+            {
+                'title': 'Market Intelligence',
+                'description': 'Leverage market data for business insights.',
+                'step_type': 'exercise',
+                'content_meta': {
+                    'suggested_prompts': [
+                        'Give me a market overview for the AI industry',
+                        'What are the top-performing tech stocks this month?',
+                        'Analyze competitive landscape for SaaS startups',
+                    ],
+                },
+            },
+            {
+                'title': 'Building Custom Dashboards',
+                'description': 'Create personalized analytics views.',
+                'step_type': 'lesson',
+            },
+            {
+                'title': 'Predictive Analytics',
+                'description': 'Use AI predictions to anticipate future trends.',
+                'step_type': 'lesson',
+            },
         ],
     },
     {
@@ -80,11 +234,48 @@ TEMPLATES = [
         'steps_count': 5,
         'tags': ['integration', 'api', 'advanced', 'systems'],
         'steps_data': [
-            {'title': 'Integration Architecture Overview', 'description': 'Understand how agents connect with external systems.'},
-            {'title': 'Spider Network Integration', 'description': 'Connect agents with real-time data sources.'},
-            {'title': 'Cross-Agent Communication', 'description': 'Enable agents to collaborate on complex tasks.'},
-            {'title': 'Custom Tool Development', 'description': 'Create custom tools for specialized tasks.'},
-            {'title': 'Production Deployment', 'description': 'Deploy integrated solutions to production.'},
+            {
+                'title': 'Integration Architecture Overview',
+                'description': 'Understand how agents connect with external systems.',
+                'step_type': 'lesson',
+            },
+            {
+                'title': 'Spider Network Integration',
+                'description': 'Connect agents with real-time data sources.',
+                'step_type': 'explore',
+                'content_meta': {
+                    'navigation_hints': ['/workspace?tab=spiders', '/workspace?tab=agents'],
+                },
+            },
+            {
+                'title': 'Cross-Agent Communication',
+                'description': 'Enable agents to collaborate on complex tasks.',
+                'step_type': 'exercise',
+                'content_meta': {
+                    'suggested_prompts': [
+                        'Research AI trends and then write a blog post about the findings',
+                        'Analyze this topic from multiple agent perspectives',
+                        'Start a multi-agent deliberation on the future of remote work',
+                    ],
+                },
+            },
+            {
+                'title': 'Custom Tool Development',
+                'description': 'Create custom tools for specialized tasks.',
+                'step_type': 'exercise',
+                'content_meta': {
+                    'suggested_prompts': [
+                        'What tools are available in the platform?',
+                        'Show me how agents use tools to complete tasks',
+                        'Explain the tool calling workflow',
+                    ],
+                },
+            },
+            {
+                'title': 'Production Deployment',
+                'description': 'Deploy integrated solutions to production.',
+                'step_type': 'lesson',
+            },
         ],
     },
 ]
@@ -102,18 +293,32 @@ ACHIEVEMENTS = [
 class Command(BaseCommand):
     help = 'Seed learning journey templates and achievements'
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--force',
+            action='store_true',
+            help='Update existing templates with new step_type/content_meta data',
+        )
+
     def handle(self, *args, **options):
         from core.models_learning_journey import LearningJourneyTemplate, LearningAchievement
 
+        force = options.get('force', False)
+
         # Seed templates
         created_t = 0
+        updated_t = 0
         for data in TEMPLATES:
-            _, was_created = LearningJourneyTemplate.objects.get_or_create(
+            template, was_created = LearningJourneyTemplate.objects.get_or_create(
                 name=data['name'],
                 defaults=data,
             )
             if was_created:
                 created_t += 1
+            elif force:
+                template.steps_data = data['steps_data']
+                template.save(update_fields=['steps_data'])
+                updated_t += 1
 
         # Seed achievements
         created_a = 0
@@ -125,6 +330,8 @@ class Command(BaseCommand):
             if was_created:
                 created_a += 1
 
-        self.stdout.write(self.style.SUCCESS(
-            f'Seeded {created_t} templates (of {len(TEMPLATES)}) and {created_a} achievements (of {len(ACHIEVEMENTS)})'
-        ))
+        msg = f'Seeded {created_t} templates (of {len(TEMPLATES)})'
+        if updated_t:
+            msg += f', updated {updated_t} existing'
+        msg += f' and {created_a} achievements (of {len(ACHIEVEMENTS)})'
+        self.stdout.write(self.style.SUCCESS(msg))

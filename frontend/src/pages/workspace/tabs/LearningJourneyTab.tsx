@@ -1,8 +1,11 @@
 // Session 870: Learning Journey Dashboard Tab
 // Session 956: Added Learning Loop Effectiveness sub-tab
 // Shows user's learning journeys, progress, achievements, and available templates
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
+import { ChatMarkdown } from '@/components/ChatMarkdown'
+import { usePAStore } from '@/stores/paStore'
 import {
   GraduationCap,
   Trophy,
@@ -29,6 +32,8 @@ import {
   ThumbsUp,
   ThumbsDown,
   Sparkles,
+  Compass,
+  MessageSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { api } from '@/lib/api'
@@ -64,6 +69,9 @@ interface LearningStep {
   step_number: number
   title: string
   description: string
+  step_type: 'lesson' | 'exercise' | 'explore'
+  content: string
+  content_meta: Record<string, unknown>
   status: 'pending' | 'in_progress' | 'completed' | 'skipped'
   started_at: string | null
   completed_at: string | null
@@ -893,6 +901,137 @@ function TemplateCard({
 
 // ============ Modals ============
 
+// Step type icons and labels
+const STEP_TYPE_CONFIG = {
+  lesson: { icon: BookOpen, label: 'Lesson', color: 'text-blue-400 bg-blue-500/20' },
+  exercise: { icon: MessageSquare, label: 'Exercise', color: 'text-purple-400 bg-purple-500/20' },
+  explore: { icon: Compass, label: 'Explore', color: 'text-emerald-400 bg-emerald-500/20' },
+} as const
+
+function StepTypeBadge({ type }: { type: string }) {
+  const config = STEP_TYPE_CONFIG[type as keyof typeof STEP_TYPE_CONFIG] || STEP_TYPE_CONFIG.lesson
+  const Icon = config.icon
+  return (
+    <span className={cn('inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded', config.color)}>
+      <Icon size={10} />
+      {config.label}
+    </span>
+  )
+}
+
+function StepContent({
+  journeyId,
+  step,
+}: {
+  journeyId: string
+  step: LearningStep
+}) {
+  const navigate = useNavigate()
+  const { openDock, setCurrentInput } = usePAStore()
+  const [polledStep, setPolledStep] = useState<LearningStep>(step)
+  const hasContent = !!polledStep.content
+
+  // Poll for content while it's being generated
+  useEffect(() => {
+    if (hasContent) return
+    if (step.status !== 'in_progress' && step.status !== 'completed') return
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await api.get(
+          `/learning/journeys/${journeyId}/step/${step.step_number}/content/`
+        )
+        if (res.data?.has_content && res.data?.step) {
+          setPolledStep(res.data.step)
+        }
+      } catch {
+        // silently retry
+      }
+    }, 2000)
+
+    return () => clearInterval(interval)
+  }, [journeyId, step.step_number, step.status, hasContent])
+
+  // Sync when parent step changes
+  useEffect(() => {
+    if (step.content) setPolledStep(step)
+  }, [step])
+
+  const meta = polledStep.content_meta || {}
+  const suggestedPrompts = (meta.suggested_prompts || []) as string[]
+  const navigationHints = (meta.navigation_hints || []) as string[]
+
+  const handlePromptClick = useCallback((prompt: string) => {
+    setCurrentInput(prompt)
+    openDock()
+  }, [setCurrentInput, openDock])
+
+  const handleNavigate = useCallback((path: string) => {
+    navigate(path)
+  }, [navigate])
+
+  if (!hasContent) {
+    return (
+      <div className="mt-3 flex items-center gap-2 text-sm text-gray-400 animate-pulse">
+        <Loader2 size={14} className="animate-spin" />
+        Preparing your {polledStep.step_type || 'lesson'}...
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-3 space-y-3">
+      {/* AI-generated markdown content */}
+      <div className="bg-dark-bg/50 rounded-lg p-3 text-sm">
+        <ChatMarkdown content={polledStep.content} />
+      </div>
+
+      {/* Exercise: prompt chips */}
+      {polledStep.step_type === 'exercise' && suggestedPrompts.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs text-gray-400 font-medium">Try these prompts:</p>
+          <div className="flex flex-wrap gap-2">
+            {suggestedPrompts.map((prompt, i) => (
+              <button
+                key={i}
+                onClick={() => handlePromptClick(prompt)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-purple-500/10 text-purple-300 border border-purple-500/30 rounded-lg hover:bg-purple-500/20 transition-colors text-left"
+              >
+                <MessageSquare size={12} className="shrink-0" />
+                <span className="line-clamp-1">{prompt}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Explore: navigation buttons */}
+      {polledStep.step_type === 'explore' && navigationHints.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs text-gray-400 font-medium">Explore these areas:</p>
+          <div className="flex flex-wrap gap-2">
+            {navigationHints.map((path, i) => {
+              const label = path.includes('tab=')
+                ? path.split('tab=')[1].replace(/[&?].*/, '').replace(/^\w/, c => c.toUpperCase())
+                : path.replace(/^\//, '').replace(/[/?].*/, '') || 'Home'
+              return (
+                <button
+                  key={i}
+                  onClick={() => handleNavigate(path)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 rounded-lg hover:bg-emerald-500/20 transition-colors"
+                >
+                  <Compass size={12} />
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function JourneyDetailModal({
   journey,
   onClose,
@@ -901,6 +1040,19 @@ function JourneyDetailModal({
   onClose: () => void
 }) {
   const queryClient = useQueryClient()
+
+  // Refetch journey data so we get latest step content
+  const { data: freshJourney } = useQuery({
+    queryKey: ['learning-journey-detail', journey.id],
+    queryFn: async () => {
+      const res = await api.get(`/learning/journeys/${journey.id}/`)
+      return res.data?.journey as LearningJourney | undefined
+    },
+    initialData: journey,
+    refetchInterval: 3000,
+  })
+
+  const displayJourney = freshJourney || journey
 
   const completeStepMutation = useMutation({
     mutationFn: async (stepNumber: number) => {
@@ -911,6 +1063,7 @@ function JourneyDetailModal({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['learning-journeys'] })
+      queryClient.invalidateQueries({ queryKey: ['learning-journey-detail', journey.id] })
       queryClient.invalidateQueries({ queryKey: ['learning-analytics'] })
     },
   })
@@ -924,6 +1077,7 @@ function JourneyDetailModal({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['learning-journeys'] })
+      queryClient.invalidateQueries({ queryKey: ['learning-journey-detail', journey.id] })
     },
   })
 
@@ -943,8 +1097,8 @@ function JourneyDetailModal({
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-dark-border">
           <div>
-            <h3 className="font-semibold text-lg">{journey.title}</h3>
-            <p className="text-sm text-gray-400">{journey.topic}</p>
+            <h3 className="font-semibold text-lg">{displayJourney.title}</h3>
+            <p className="text-sm text-gray-400">{displayJourney.topic}</p>
           </div>
           <button onClick={onClose} className="p-1 hover:bg-gray-700 rounded transition-colors">
             <X size={20} className="text-gray-400" />
@@ -957,22 +1111,22 @@ function JourneyDetailModal({
           <div className="bg-dark-bg rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-gray-400">Overall Progress</span>
-              <span className="text-lg font-bold text-primary-400">{journey.progress}%</span>
+              <span className="text-lg font-bold text-primary-400">{displayJourney.progress}%</span>
             </div>
             <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-primary-500 to-primary-400 transition-all duration-300"
-                style={{ width: `${journey.progress}%` }}
+                style={{ width: `${displayJourney.progress}%` }}
               />
             </div>
           </div>
 
           {/* Goals */}
-          {journey.goals.length > 0 && (
+          {displayJourney.goals.length > 0 && (
             <div>
               <h4 className="text-sm font-medium text-gray-400 mb-2">Goals</h4>
               <ul className="space-y-1">
-                {journey.goals.map((goal, i) => (
+                {displayJourney.goals.map((goal, i) => (
                   <li key={i} className="flex items-center gap-2 text-sm">
                     <Target size={12} className="text-primary-400" />
                     {goal}
@@ -986,7 +1140,7 @@ function JourneyDetailModal({
           <div>
             <h4 className="text-sm font-medium text-gray-400 mb-3">Steps</h4>
             <div className="space-y-2">
-              {journey.steps.map((step) => (
+              {displayJourney.steps.map((step) => (
                 <div
                   key={step.step_number}
                   className={cn(
@@ -999,6 +1153,7 @@ function JourneyDetailModal({
                       <span className="text-xs font-medium px-2 py-0.5 bg-gray-800 rounded">
                         Step {step.step_number}
                       </span>
+                      <StepTypeBadge type={step.step_type || 'lesson'} />
                       <span className="font-medium">{step.title}</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -1027,8 +1182,12 @@ function JourneyDetailModal({
                       )}
                     </div>
                   </div>
-                  {step.description && (
+                  {step.description && step.status === 'pending' && (
                     <p className="text-xs text-gray-400 mt-2">{step.description}</p>
+                  )}
+                  {/* Show interactive content for active/completed steps */}
+                  {(step.status === 'in_progress' || step.status === 'completed') && (
+                    <StepContent journeyId={journey.id} step={step} />
                   )}
                 </div>
               ))}

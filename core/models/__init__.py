@@ -163,6 +163,16 @@ from ..models_deliberation import (
 # Import Celery telemetry models (Session 983 - Celery Observability)
 from ..models_celery_telemetry import CeleryTaskEvent
 
+# Import learning journey models (Session 773 - Learning Journeys)
+from ..models_learning_journey import (
+    LearningJourneyTemplate,
+    LearningJourney,
+    LearningJourneyStep,
+    LearningAchievement,
+    UserLearningAchievement,
+    UserLearningStreak,
+)
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -351,4 +361,12 @@ __all__ = [
 
     # Celery Telemetry - Celery Observability (Session 983)
     'CeleryTaskEvent',
+
+    # Learning Journeys (Session 773)
+    'LearningJourneyTemplate',
+    'LearningJourney',
+    'LearningJourneyStep',
+    'LearningAchievement',
+    'UserLearningAchievement',
+    'UserLearningStreak',
 ]

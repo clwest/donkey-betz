@@ -110,7 +110,9 @@ def learning_journey_start(request):
                     step_number=i,
                     title=step_data.get('title', f'Step {i}'),
                     description=step_data.get('description', ''),
-                    status='pending' if i > 1 else 'pending',
+                    step_type=step_data.get('step_type', 'lesson'),
+                    content_meta=step_data.get('content_meta', {}),
+                    status='pending',
                 )
         else:
             # Create custom journey
@@ -267,10 +269,21 @@ def learning_step_start(request, journey_id, step_number):
         streak, _ = UserLearningStreak.objects.get_or_create(user=request.user)
         streak.record_activity()
 
+        # Fire content generation if step has no content yet
+        generating = False
+        if not step.content:
+            try:
+                from core.tasks import generate_step_content
+                generate_step_content.delay(str(step.id))
+                generating = True
+            except Exception as gen_err:
+                logger.warning(f"Failed to queue content generation: {gen_err}")
+
         return Response({
             'success': True,
             'message': f'Started: {step.title}',
-            'step': step.to_dict()
+            'step': step.to_dict(),
+            'generating_content': generating,
         })
     except (LearningJourney.DoesNotExist, LearningJourneyStep.DoesNotExist):
         return Response({'success': False, 'error': 'Journey or step not found'}, status=404)
@@ -355,6 +368,25 @@ def learning_step_skip(request, journey_id, step_number):
         return Response({'success': False, 'error': 'Journey or step not found'}, status=404)
     except Exception as e:
         logger.error(f"Error skipping step: {e}")
+        return Response({'success': False, 'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def learning_step_content(request, journey_id, step_number):
+    """GET /api/learning/journeys/<id>/step/<n>/content/ - Get step content (polled by frontend)"""
+    try:
+        journey = LearningJourney.objects.get(id=journey_id, user=request.user)
+        step = LearningJourneyStep.objects.get(journey=journey, step_number=step_number)
+        return Response({
+            'success': True,
+            'has_content': bool(step.content),
+            'step': step.to_dict(),
+        })
+    except (LearningJourney.DoesNotExist, LearningJourneyStep.DoesNotExist):
+        return Response({'success': False, 'error': 'Journey or step not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error getting step content: {e}")
         return Response({'success': False, 'error': str(e)}, status=500)
 
 
