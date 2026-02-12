@@ -193,7 +193,6 @@ class ProactiveIntelligenceService:
             # Query trigger events
             events = TriggerEvent.objects.filter(
                 fired_at__gte=cutoff,
-                status='completed'
             ).select_related('trigger').order_by('-fired_at')[:limit]
 
             return list(events)
@@ -253,8 +252,8 @@ class ProactiveIntelligenceService:
             # Market intelligence briefs
             from core.models_unified_system import MarketIntelligenceBrief
             briefs = MarketIntelligenceBrief.objects.filter(
-                created_at__gte=cutoff
-            ).order_by('-created_at')[:1]
+                generated_at__gte=cutoff
+            ).order_by('-generated_at')[:1]
 
             for brief in briefs:
                 if brief.high_conviction_opportunities:
@@ -280,7 +279,7 @@ class ProactiveIntelligenceService:
             jobs = Opportunity.objects.filter(
                 created_at__gte=cutoff,
                 status='active',
-                source__in=['remoteok', 'weworkremotely', 'adzuna']
+                source__in=['RemoteOK', 'WeWorkRemotely', 'Adzuna', 'Remotive']
             ).order_by('-score')[:5]
 
             for job in jobs:
