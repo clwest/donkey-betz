@@ -661,6 +661,15 @@ class UnifiedPAEntrypoint:
         ]):
             return ('system_overview', 'status_snapshot_tool')
 
+        # Session 989: "Tell me about" / "Tell me more about" — conversational lookup
+        # These come from frontend buttons on attention items, decisions, agent outputs.
+        # MUST be checked before content_writing to prevent "draft"/"write" in titles
+        # from hijacking to content creation.
+        if any(phrase in message_lower for phrase in [
+            'tell me about', 'tell me more about',
+        ]):
+            return ('conversational', None)
+
         # Session 987: Body vitals patterns — specific body-system queries only
         # Generic "health" / "status" were too broad and caught system health queries
         if any(phrase in message_lower for phrase in [
@@ -760,10 +769,13 @@ class UnifiedPAEntrypoint:
             return ('video_creation', 'video_generation_agent')
 
         # Content writing - only for actual creation requests
-        # Note: "blog" alone could mean viewing OR creating, so we check for creation verbs
+        # Session 989: tightened — bare 'write'/'draft' matched inside item titles
         if any(phrase in message_lower for phrase in [
-            'write', 'create content', 'create a blog', 'write a blog',
-            'draft', 'compose', 'generate article'
+            'write a ', 'write me ', 'write an ', 'write about ',
+            'create content', 'create a blog', 'write a blog',
+            'draft a ', 'draft an ', 'draft me ',
+            'compose a ', 'compose an ',
+            'generate article', 'generate a ',
         ]):
             return ('content_writing', 'content_writer_agent')
 
