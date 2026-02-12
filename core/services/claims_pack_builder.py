@@ -78,6 +78,12 @@ class ClaimsPackBuilder:
         except Exception as e:
             logger.warning(f"[Phase 4] SignalCluster claim extraction failed: {e}")
 
+        # Source 3: User-uploaded documents (RAG semantic search)
+        try:
+            claims.extend(self._from_user_documents(topic, seen_urls))
+        except Exception as e:
+            logger.warning(f"[Phase 4] User document claim extraction failed: {e}")
+
         # Sort by freshness (newest first) then cap
         claims.sort(key=lambda c: c.retrieved_at or '', reverse=True)
         claims = claims[:max_claims]
@@ -92,6 +98,7 @@ class ClaimsPackBuilder:
                 'factual': sum(1 for c in claims if c.claim_type == 'factual'),
                 'speculative': sum(1 for c in claims if c.claim_type == 'speculative'),
                 'analytical': sum(1 for c in claims if c.claim_type == 'analytical'),
+                'user_sourced': sum(1 for c in claims if c.spider_name == 'user_document'),
             },
         )
         logger.info(
@@ -211,6 +218,64 @@ class ClaimsPackBuilder:
                     confidence=0.4,
                     claim_type='speculative',
                 ))
+
+        return claims
+
+    def _from_user_documents(
+        self, topic: str, seen_urls: Set[str]
+    ) -> List[SpiderClaim]:
+        """Extract claims from user-uploaded RAG documents via semantic search."""
+        from core.services.embedding_service import get_embedding_service
+
+        embedding_service = get_embedding_service()
+        try:
+            result = embedding_service.create_embedding(
+                text=topic[:8000],
+                model="text-embedding-3-small",
+                agent_name='ClaimsPackBuilder'
+            )
+            query_vector = result.embedding
+        except Exception as e:
+            logger.warning(f"[Phase 4] Embedding for user doc search failed: {e}")
+            return []
+
+        from content.models import DocumentEmbedding
+
+        try:
+            results = DocumentEmbedding.cosine_similarity_search(
+                query_vector=query_vector, limit=10, min_similarity=0.4
+            )
+        except Exception:
+            return []
+
+        claims: List[SpiderClaim] = []
+        for chunk in results:
+            doc = chunk.document
+            url = doc.source_url or ''
+            norm_url = url.strip().lower().rstrip('/')
+            if norm_url and norm_url in seen_urls:
+                continue
+            if norm_url:
+                seen_urls.add(norm_url)
+
+            claim_id = make_claim_id(url or str(doc.id), doc.title)
+
+            freshness_hours = 0.0
+            if doc.created_at:
+                delta = timezone.now() - doc.created_at
+                freshness_hours = round(delta.total_seconds() / 3600, 1)
+
+            claims.append(SpiderClaim(
+                claim_id=claim_id,
+                claim_text=chunk.chunk_text[:300],
+                source_url=url,
+                source_title=doc.title[:100],
+                spider_name='user_document',
+                freshness_hours=freshness_hours,
+                evidence_excerpt=chunk.chunk_text[:150],
+                confidence=0.8,
+                claim_type='factual',
+            ))
 
         return claims
 
