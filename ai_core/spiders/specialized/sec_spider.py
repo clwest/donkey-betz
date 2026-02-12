@@ -26,7 +26,7 @@ class SECSpider:
     BASE_URL = "https://www.sec.gov/cgi-bin/browse-edgar"
 
     # Required User-Agent for SEC (they block requests without proper identification)
-    USER_AGENT = "DonkeyBetz/1.0 (AI Content Studio Research Tool; contact@example.com)"
+    USER_AGENT = "DonkeyBetz/1.0 (AI Content Studio Research Tool; admin@donkeybetz.com)"
 
     # Filing types and their market significance
     FILING_TYPES = {
