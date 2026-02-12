@@ -764,7 +764,7 @@ function AlertsTab() {
                 <div className="bg-red-500 h-full" style={{ width: `${alert.bear_score}%` }} />
               </div>
               <span className="text-xs text-gray-500 w-24 text-right">
-                {alert.confidence_score.toFixed(0)}% conf
+                {(alert.confidence_score * 100).toFixed(0)}% conf
               </span>
             </div>
 
