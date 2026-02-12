@@ -166,7 +166,9 @@ class PlatformIntelligenceBriefingService:
 
             transfers = KnowledgeTransfer.objects.filter(
                 created_at__gte=since
-            ).select_related('connection', 'source_knowledge').order_by('-created_at')[:10]
+            ).select_related(
+                'connection__teacher_agent', 'connection__student_agent', 'source_knowledge'
+            ).order_by('-created_at')[:10]
 
             briefing.total_transfers_24h = KnowledgeTransfer.objects.filter(
                 created_at__gte=since
@@ -174,11 +176,12 @@ class PlatformIntelligenceBriefingService:
 
             for transfer in transfers:
                 # Get agent names from connection
+                # Fields are teacher_agent/student_agent (FK to Agent)
                 from_name = 'Unknown'
                 to_name = 'Unknown'
                 if transfer.connection:
-                    from_name = transfer.connection.teacher.name if hasattr(transfer.connection, 'teacher') and transfer.connection.teacher else 'Unknown'
-                    to_name = transfer.connection.student.name if hasattr(transfer.connection, 'student') and transfer.connection.student else 'Unknown'
+                    from_name = transfer.connection.teacher_agent.name if transfer.connection.teacher_agent_id else 'Unknown'
+                    to_name = transfer.connection.student_agent.name if transfer.connection.student_agent_id else 'Unknown'
 
                 topic = transfer.source_knowledge.title[:50] if transfer.source_knowledge else transfer.transfer_summary[:50] if transfer.transfer_summary else 'Unknown topic'
 
