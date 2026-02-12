@@ -361,18 +361,18 @@ CRITICAL: Use research tools to find real evidence. Never fabricate statistics o
 
         try:
             spider_results = SpiderData.objects.filter(
-                created_at__gte=recent_date
-            ).filter(
-                title__icontains=topic
+                created_at__gte=recent_date,
+                embedding_text__icontains=topic,
             )[:10]
 
             research_findings = []
             for result in spider_results:
+                raw = result.raw_data if isinstance(result.raw_data, dict) else {}
                 research_findings.append({
-                    "title": result.title,
-                    "source": result.source,
-                    "summary": result.description[:200] if result.description else "",
-                    "url": result.url
+                    "title": raw.get('title', result.spider_name),
+                    "source": result.source_url,
+                    "summary": (result.embedding_text or "")[:200],
+                    "url": result.source_url,
                 })
 
         except Exception as e:

@@ -787,13 +787,12 @@ class SpiderRegistry:
         # SESSION 343: HIGH-VALUE API SPIDERS (3 new)
         # ============================================================
 
-        # SEC EDGAR - Company filings for competitor research (SEC_API_KEY required)
+        # SEC EDGAR - Company filings via free public RSS feeds (no API key needed)
         self.register_spider('sec_edgar', SECSpider, {
             'category': 'financial',
             'priority': 1,
             'rate_limit': 2.0,
-            'requires_auth': True,
-            'api_key_env': 'SEC_API_KEY',
+            'requires_auth': False,
             'targets': ['sec.gov/edgar']
         })
 
