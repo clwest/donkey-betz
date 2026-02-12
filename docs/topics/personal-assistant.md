@@ -93,7 +93,7 @@ PA queries run asynchronously to avoid Railway's ~30s proxy timeout:
 ## Key Tool Actions
 
 **boardroom_tool:** stats (top 10 critical/high items), list_attention, list_decisions, approve/ignore/promote/reject
-**content_review_tool:** list (by status/type), read (full blog + accuracy analysis)
+**content_review_tool:** list (by status/type), read (full blog + accuracy analysis), publish, archive, revise (blog revision via EditorAgent + PublishGate re-score). Publish/archive/revise actions record feedback to the originating agent via `_record_content_feedback()` → AgentMemory + UserAgentLearning (Session 990).
 **initiative_tool:** list, stats, detail, audit (Jaccard similarity clustering), create
 **stock_intelligence_tool:** overview, briefs, alerts, predictions, sec_filings
 **spider_data_tool:** recent, by_type, summary

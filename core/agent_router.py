@@ -640,6 +640,10 @@ class AgentRouter:
             spider_context['performance_recommendations'] = feedback_context.get('recommendations', [])
             spider_context['feedback_summary'] = feedback_context.get('summary', '')
 
+        if feedback_context and feedback_context.get('pa_review_feedback'):
+            spider_context['pa_content_feedback'] = feedback_context['pa_review_feedback']
+            spider_context['pa_review_summary'] = feedback_context.get('pa_review_summary', '')
+
         if knowledge_context and knowledge_context.get('has_knowledge'):
             spider_context['knowledge_state'] = knowledge_context
             spider_context['knowledge_decision'] = knowledge_context.get('knowledge_decision', 'unknown')
