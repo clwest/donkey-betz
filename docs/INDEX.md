@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,172 |
+| Total cross-references | 2,173 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 138 | CLAUDE - AI Session Entry Point |
-| `docs/topics/README.md` | 60 | Topic Files — Embedding-Optimized |
+| `docs/archive/old-structure/capabilities/10_Integration_APIs/README.md` | 60 | 🔌 INTEGRATION APIS - The Nervous System of AI |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 42 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 34 | Platform Capabilities |
@@ -206,9 +206,9 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| personal-assistant.md | topics | 103 | 2026-02-11 15:23 |
-| SESSION_988_STALE_DATA_AND_PA_FIXES.md | handoffs | 113 | 2026-02-11 15:22 |
-| INDEX.md | docs | 349 | 2026-02-11 14:55 |
+| personal-assistant.md | topics | 103 | 2026-02-11 15:24 |
+| SESSION_988_STALE_DATA_AND_PA_FIXES.md | handoffs | 113 | 2026-02-11 15:24 |
+| INDEX.md | docs | 349 | 2026-02-11 15:24 |
 | content-pipeline.md | topics | 119 | 2026-02-11 14:55 |
 | agent-system.md | topics | 109 | 2026-02-11 14:55 |
 | stock-intelligence.md | topics | 36 | 2026-02-10 19:28 |

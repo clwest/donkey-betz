@@ -1,36 +1,44 @@
-# Session 989 - Start Here
+# Session 990 - Start Here
 
-**Previous Session:** 988 (Stale Data, Modal Overflow, PA Routing Fixes)
+**Previous Session:** 989 (Production Verification & Field Name Fixes)
 **Date:** February 11, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** | **Bundle: 2,305 KB** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 92** | **PA Intents: 36** | **Content Deliberation Pipeline: ACTIVE** | **Agent Knowledge: 14-DAY FRESHNESS FILTER** | **Execution History: INCLUDES CONVERSATIONS** | **Crypto Price Intent: LIVE** | **Capabilities: NARROWED**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** | **Bundle: 2,305 KB** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 92** | **PA Intents: 36** | **Content Deliberation Pipeline: VERIFIED** | **Execution History: VERIFIED** | **Crypto Price: VERIFIED** | **Reviewers: REAL VERDICTS**
 
 ---
 
-## Session 988 Summary (Just Completed)
+## Session 989 Summary (Just Completed)
 
-### Production Bug Fixes (5 commits)
+### Production Verification (5 open items from Session 988)
 
-**Initiative Modal Overflow:** Both `InitiativeDetailModal` and `ComprehensiveInitiativeModal` had unbounded `initiative.description` in fixed headers, pushing scrollable content off-screen. Fixed with `line-clamp-2`, `truncate`, `min-h-0`, collapsible "Full Description" toggle.
+All 5 items verified on Railway production (`donkey-betz-platform-production.up.railway.app`):
 
-**Content Reviewer Broken Import:** `core/services/content_review_panel_v2.py` imported from non-existent `core.llm_providers`. SkepticReviewer and FactCheckReviewer were returning synthetic FAIL for every blog. Fixed to use `core.services.llm_provider_registry`.
+1. **Content Reviewers: VERIFIED** - SkepticReviewer returned real REVISE verdict (not synthetic FAIL). FactCheckReviewer ran. 14 claims, 14 sources, 1 revision pass. Import fix confirmed working.
 
-**PA Initiative Routing:** "What initiatives need attention?" matched "attention" → boardroom intent (1,462 items) before reaching initiative patterns. Moved initiative patterns before boardroom catch-all.
+2. **Execution History: VERIFIED** - "What have agents been doing?" returns 20 executions + 20 conversations. Required 3 additional fixes (see below).
 
-**Agent Stale Data Grounding:** All agents in multi-agent conversations referenced "Oct 23, 2023 Notion data" because `_get_agent_knowledge()` had no date filter. Added 14-day freshness cutoff + strengthened DATA GROUNDING REQUIREMENT prompt with dynamic current month/year injection.
+3. **Crypto Price: VERIFIED** - "How much is BTC?" routes correctly to spider_data_tool. Query succeeds (0 items — CoinGecko spider not crawled recently). No field errors.
 
-**Execution History Formatter:** "What have agents been doing?" fell through to generic LLM because: (a) intent patterns didn't cover natural phrases, (b) formatter used wrong field names (`executions` vs `items`, `period_hours` vs `hours_back`), (c) `DeliberationSession` (agent conversations) was invisible. All three fixed.
+4. **Celery Prefork: INCONCLUSIVE** - Config correct (`--max-tasks-per-child=50`), but workers only processed ~15 tasks since deploy. Recycling threshold not yet reached.
 
-**Crypto Price Intent:** "How much is BTC today?" fell through to generic LLM which told user to check CoinGecko manually — despite having a CoinGecko spider. Added new `crypto_price` intent with ticker-to-name mapping, routes to `spider_data_tool` with `action='search'`, `spider_name='coingecko'`.
+5. **Muscular System: VERIFIED** - Status is "fit" (not 60.5%). Some groups paralyzed due to low volume.
 
-**Capabilities Intent Narrowing:** "Don't you have access to the internet?" matched `'have access to'` → capabilities dump instead of answering. Removed broad patterns, updated capabilities response to lead with Web/Internet and Crypto sections.
+### Production Bug Fixes (3 commits)
 
-### Session 987 Summary (Prior)
+**SpiderData Wrong Field Names:** `_handle_spider_data` in tool_dispatcher.py referenced `title`, `url`, `category`, `content` which don't exist on SpiderData. Fixed to use `source_url`, `data_type`, `embedding_text`.
 
-PA Wiring Completion: Blog revision feedback loop, 7 unrouted tool handlers wired, body vitals routing narrowed.
+**Execution History Missing Payload:** `_build_tool_payload()` had no `execution_history` case — default `action='list'` was sent (invalid). Added payload builder with action detection.
 
-### Session 986 Summary (Prior)
+**AgentExecution FK Field Names:** `AgentExecution.agent` is a FK to Agent, not a CharField. Handler used `agent_name` and `success` (both non-existent). Fixed to `agent__name` (FK traversal) and `status='completed'`/`'failed'`.
 
-Nervous System 60% Health Fix — Redis URL parsing, CeleryTaskEvent wiring, mild activity penalty.
+**DeliberationSession Participants:** `participants` JSONField contains dicts, not strings. `', '.join()` on dicts threw TypeError. Fixed to extract `name` key before joining.
+
+### Railway Deployment Gotcha Discovered
+
+Each Procfile process (`web`, `celery-pa`, `celery-worker`, etc.) is a **SEPARATE Railway service**. `railway up` only deploys the linked service. `railway redeploy` re-runs the last build (old code if new build was in progress). GitHub push auto-deploys ALL services. Always verify celery-pa has the latest code.
+
+### Session 988 Summary (Prior)
+
+Initiative modal overflow, content reviewer import fix, PA initiative routing, agent stale data grounding, execution history formatter, crypto price intent, capabilities narrowing.
 
 ---
 
@@ -54,84 +62,71 @@ Nervous System 60% Health Fix — Redis URL parsing, CeleryTaskEvent wiring, mil
 | LLM Providers | 6 (OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini) |
 | Standalone Pages | `/stocks`, `/advisors`, `/neural-orchestra`, `/conversation-contract`, `/mythology-lab`, `/billing`, `/analytics`, `/docs-index` |
 
-### 9-Tab Model
-
-| Group | Tabs | Sub-tabs |
-|-------|------|----------|
-| Core | Command, Initiatives, Boardroom | -- |
-| Content | Content Studio | gallery, channels, blogs, documents, podcast, distribution, dossiers, voices, files |
-| System | System, Ops | health, services, llm, integration, monitor, workflows, hivemind, triggers |
-| Data | Data & Intel, Knowledge, Learn | spiders, feed, learning, reasoning, safety, collective |
-
 ---
 
 ## Known Issues / Open Items
 
-### Content Reviewers — Verify on Railway
-After the import fix, SkepticReviewer and FactCheckReviewer should now produce real verdicts. Trigger a blog generation and verify reviewer output shows actual PASS/FAIL with substantive feedback instead of synthetic FAIL from import errors.
+### chat_conversations.platform Column Missing
+`Failed to persist PA conversation: column chat_conversations.platform does not exist` — ChatConversation model has a `platform` field that hasn't been migrated. Create and run migration.
+
+### Profile Loading in Async Context
+`Failed to load profile: You cannot call this from an async context` — Profile loading fails in Celery PA worker. Need `sync_to_async` wrapper or thread-based approach.
+
+### docs/USER_FEEDBACK_QUEUE.md Missing
+Referenced by `docs_context_builder` as a critical doc but doesn't exist. Create it or remove from critical docs list.
 
 ### Agent Knowledge Freshness — Monitor Impact
-14-day cutoff may be too aggressive if agents have genuinely useful older knowledge. Monitor agent conversation quality — if agents seem "uninformed", consider widening to 30 days or making freshness configurable per agent.
+14-day cutoff may be too aggressive. Monitor agent conversation quality.
 
-### DeliberationSession in Execution History — Verify on Railway
-New `DeliberationSession` queries in `execution_history_tool` need verification. Ask PA "What have agents been doing?" and confirm it shows both executions and conversations.
-
-### Crypto Price Intent — Verify on Railway
-Ask PA "How much is BTC today?" and confirm it routes to `crypto_price` intent, queries CoinGecko spider data, and returns actual price data instead of telling user to check manually.
-
-### Railway Deploy: Verify Celery Prefork
-Monitor celery-worker memory over 4+ hours. Look for "child process exiting" messages confirming child recycling is working.
+### CoinGecko Spider Not Crawling
+Crypto price intent works but returns 0 items. CoinGecko spider may need manual trigger or schedule check.
 
 ### Railway Deploy: Migration Lock Risk
-`AddConstraint` during blue-green deploy can hang on lock. For future migrations with exclusive locks, run manually before deploy.
-
-### Muscular System Score (60.5%) — Agent Performance
-Muscular health reflects actual agent execution success rates. Investigate `AgentExecution` records for underperforming groups.
+`AddConstraint` during blue-green deploy can hang on lock.
 
 ### Legacy Routes Expire in ~2-4 Weeks
-26 legacy routes redirect to workspace tabs. Telemetry tracks traffic. Remove redirect routes after transition period.
+26 legacy routes redirect to workspace tabs. Remove after transition period.
 
 ### Billing + Analytics Orphaned
-`/billing` and `/analytics` standalone pages need an Admin tab or absorption into existing tab.
+`/billing` and `/analytics` need an Admin tab.
 
-### ToolCallRecord Now Populating
-Data is flowing but no analytics dashboard exists yet.
+### ToolCallRecord Analytics Dashboard
+Data is flowing but no dashboard exists yet.
 
 ### FailureSignature Table Empty
-The diagnostic pipeline (Session 856) has 0 records in production. May need activation.
+Diagnostic pipeline (Session 856) has 0 records. May need activation.
 
 ---
 
 ## What Could Come Next
 
+### Fix chat_conversations.platform Migration
+Create migration for the missing `platform` column to fix PA conversation persistence.
+
+### Fix Profile Loading Async Issue
+Wrap profile loading in `sync_to_async` or use thread pool to avoid async context errors.
+
 ### Content Deliberation v2 via PA
 `POST /api/v1/research/self-blog/generate-v2/` exists but PA can't trigger it. Add intent for "create blog with full review" / "deliberated blog".
 
 ### Auto-Revision Loop
-If deliberation pipeline returns REVISE verdict, loop back through EditorAgent automatically instead of requiring manual re-trigger.
+If deliberation pipeline returns REVISE verdict, loop back through EditorAgent automatically.
 
 ### Scheduled Task Visibility
-PA has no visibility into Celery Beat scheduled tasks. Add `scheduled_tasks_tool` with "what's scheduled?", "automation status" intents.
+PA has no visibility into Celery Beat scheduled tasks. Add `scheduled_tasks_tool`.
 
 ### Agent Introspection
 PA can invoke agents but can't describe their capabilities. Add "what can [agent name] do?" intent.
 
-### AgentExecution from ConversationOrchestrator
-Multi-agent conversations don't write `AgentExecution` records. The `DeliberationSession` workaround helps but a proper `AgentExecution` per agent turn would give full visibility.
+### CoinGecko Spider Schedule
+Ensure CoinGecko spider runs on schedule so crypto price queries return data.
 
 ### Ticker Lookup Enhancements
 - Wire ticker lookup to PA: "look up AAPL"
 - Historical price chart (sparkline)
-- Watchlist feature
-- Compare mode
-
-### Stock Intelligence v2
-- PATCH endpoint for bookmark toggle and user notes
-- Prediction accuracy dashboard with charts
 
 ### CeleryTaskEvent Analytics
-- Dashboard showing task stats, success rates, queue utilization
-- Integrate with ToolCallRecord for end-to-end tracing
+Dashboard showing task stats, success rates, queue utilization.
 
 ### Admin Tab
 Dedicated workspace tab for Billing, Analytics, system configuration.
@@ -139,122 +134,46 @@ Dedicated workspace tab for Billing, Analytics, system configuration.
 ### Code-Splitting
 `React.lazy()` for workspace tabs — all 9 are in the main bundle.
 
-### Deep Sub-tab URLs
-Support `?tab=system&sub=monitor` for direct deep-linking.
-
 ---
 
 ## Critical Patterns & Gotchas
 
-**Django settings module:** `core.settings` (NOT `config.settings`). Always use `DJANGO_SETTINGS_MODULE=core.settings`.
+**Django settings module:** `core.settings` (NOT `config.settings`).
 
-**Model registration:** Both `core/models.py` (file) and `core/models/` (package) exist. Django uses the **package** (`core/models/__init__.py`). New model imports must use `from ..models_xxx import ClassName` pattern with `app_label = 'core'` in Meta.
+**SpiderData actual fields (Session 989):**
+- `spider_name`, `source_url`, `data_type`, `raw_data`, `processed_data`, `embedding_text`, `relevance_score`, `insights`, `is_processed`, `is_actionable`, `created_at`, `processed_at`
+- DO NOT use `title`, `url`, `category`, `content` (don't exist)
 
-**Celery task counting:** DO NOT query `django_celery_results.TaskResult` -- it's empty when `CELERY_RESULT_BACKEND=redis`. Use `CeleryTaskEvent` from `core.models_celery_telemetry` instead.
+**AgentExecution fields (Session 989):**
+- `agent` is FK to Agent — use `agent__name` in `.values()` and `agent__name__icontains` in filters
+- No `success` field — use `status='completed'` / `status='failed'`
+- No `agent_name` field
 
-**Celery pool on Railway (Sessions 984-985):**
-- Procfile uses `--pool=prefork -c 1` (Linux-safe, enables child recycling via `max_tasks_per_child`)
-- `--pool=threads` makes `max_tasks_per_child` a NO-OP (threads share one process)
-- macOS local dev MUST use `--pool=threads` via Makefile (prefork causes SIGSEGV)
-- `--max-memory-per-child=200000` (200MB) kills bloated children (300MB for long_running)
+**DeliberationSession.participants (Session 989):**
+- JSONField containing dicts (not strings)
+- Extract `.get('name')` before `', '.join()`
 
-**ML imports MUST be lazy (Session 985):**
-- NEVER `import torch`, `from sklearn`, `from transformers` at module level
-- These load ~800MB into Celery parent process
-- Always use `try/except ImportError` or import inside the method that uses them
+**Railway multi-service deployment (Session 989):**
+- Each Procfile process is a SEPARATE Railway service
+- `railway up` deploys only the linked service
+- `railway redeploy` during a build cancels build and redeploys OLD code
+- GitHub push auto-deploys ALL services
+- To check a specific worker: `railway service link celery-pa` then `railway logs`
 
-**Spider data_type values (Session 984):**
-- Real types: `opportunity`, `job_posting`, `market_data`, `competitor_info`, `trend_data`, `user_feedback`, `product_info`, `pricing_data`, `content_idea`, `collaboration`, `news`, `research`, `tool_discovery`, `learning_resource`
-- DO NOT use `market_alert`, `security_alert`, `price_alert`, `breaking_news`
+**Model registration:** Use `core/models/__init__.py` (NOT `core/models.py`). New model imports: `from ..models_xxx import ClassName` with `app_label = 'core'`.
 
-**LLM Provider Registry (Session 988):**
-- Correct import: `from core.services.llm_provider_registry import get_llm_provider_registry, LLMRequest`
-- Usage: `registry = get_llm_provider_registry(); response = registry.complete(provider='openai', model_id='gpt-4.1-mini', request=LLMRequest(...))`
-- `LLMResponse` has `.success`, `.content`, `.error`
-- Do NOT use `from core.llm_providers import ...` (module doesn't exist)
+**Celery pool on Railway:** `--pool=prefork -c 1` (Linux), `--pool=threads` (macOS).
 
-**PA intent routing order (Session 988):**
-- More specific patterns MUST come before generic catch-alls
-- Initiative patterns run before boardroom (both match "attention")
-- When adding new intents, check for keyword overlap with existing intents above
+**ML imports:** Always lazy (inside methods). Module-level loads ~800MB.
 
-**Agent knowledge freshness (Session 988):**
-- `_get_agent_knowledge()` filters to 14-day window
-- Prevents agents grounding on stale data (e.g., "Oct 2023 Notion articles")
-- DATA GROUNDING REQUIREMENT prompt injects current month/year dynamically
+**LLM Provider Registry:** `from core.services.llm_provider_registry import get_llm_provider_registry, LLMRequest`
 
-**Execution history tool (Session 988):**
-- Handler returns `items` (not `executions`), `hours_back` (not `period_hours`)
-- Now includes `DeliberationSession` data (agent conversations) alongside `AgentExecution`
-- Formatter fixed to match handler field names
-
-**Crypto price intent (Session 988):**
-- Routes to `spider_data_tool` with `action='search'`, `spider_name='coingecko'`
-- Ticker-to-name mapping: btc→bitcoin, eth→ethereum, sol→solana, etc.
-- Placed before `stock_intelligence` in routing order
-
-**Capabilities intent patterns (Session 988):**
-- Removed broad patterns (`'have access to'`, `'what do you have'`) that hijacked unrelated questions
-- Always test new intent patterns against likely user questions containing the same words
-
-**Boardroom auto-approve (Session 984):**
-- Items have 24h age gate before auto-approval
-- `create_attention_item` has built-in dedup (source_type + item_type + title)
-
-**PA boardroom response quality (Session 985):**
-- `_handle_boardroom` stats action returns `top_items` (top 10 critical/high by priority_score)
-- Boardroom LLM directive: "Max 3-5 bullets of INSIGHT only" — do NOT restate counts
-
-**PA intent routing (Session 987):**
-- 7 wired tools: revenue, task_management, workspace, budget, system_alerts, ml_analysis, pipeline_status
-- Blog actions: `revise`, `needs_work`, `batch_enhance`
-- Body vitals routing narrowed to body-specific phrases
-
-**Workspace tab mapping (`types.ts`):**
-- `normalizeWorkspaceTab(tab)` — maps 18 legacy tab IDs to 9 canonical IDs
-- `legacyTabToSubTab(tab)` — returns sub-tab to pre-select
-
-**controlledSubTab pattern:**
-- Parent tab passes `controlledSubTab` to child → child hides its own nav
-- Without the prop, children work standalone (backwards compatible)
-
-**PA entrypoint (`unified_pa_entrypoint.py`):**
-- Intent routing: `_detect_intent_and_route(message)` returns `(intent, tool_name)` tuple
-- Order matters: new intent blocks must go BEFORE existing ones that share keywords
-
-**PA async processing (Session 974b):**
-- `unified_pa_chat` dispatches `process_pa_chat_task.delay()` → returns `task_id`
-- Frontend polls `GET /api/pa/chat/status/<task_id>/` every 2s
-
-**ToolDispatcher handler signature (Session 973):**
-- Must be `def handler(self, tool_name: str, payload: Dict, user_id: Optional[int], trace_id: str)` — sync, not async
+**PA intent routing:** More specific patterns BEFORE generic catch-alls. Always test new patterns against likely user questions.
 
 **Model import paths:**
-- `HeartBeat`: `core.models_heart` (NOT `core.models`)
-- `SpiderData`: `core.models_unified_system` (NOT `ai_core.models`)
-- `FailureDetection`: `core.models_diagnostic_pipeline`
-- `HeartBeat` uses `recorded_at` (NOT `created_at`) and `overall_status` (NOT `status`)
-- `CeleryTaskEvent`: `core.models_celery_telemetry` (Session 983)
-- `DeliberationSession`: `core.models_deliberation` (Session 988)
+- `HeartBeat`: `core.models_heart` — `recorded_at`, `overall_status`
+- `SpiderData`: `core.models_unified_system`
+- `CeleryTaskEvent`: `core.models_celery_telemetry`
+- `DeliberationSession`: `core.models_deliberation`
 
-**Stock models (Session 975):**
-- `MarketIntelligenceBrief`: `core.models_unified_system` — timestamp is `generated_at`
-- `StockMarketAlert`: `core.models_autonomous_alerts` — timestamp is `detected_at`
-- `PredictionOutcome`: `core.models_unified_system` — `was_correct_7_days`/`was_correct_30_days` are nullable booleans
-
-**Ticker Lookup (Session 982):**
-- `ticker_lookup` view: `core.views_stock_intelligence` — aggregates 6 sources with per-section try/except
-- `FINANCIAL_SPIDERS = ['yahoo_finance', 'polygon', 'coingecko', 'sec_edgar']`
-
-**Railway deploy (Session 980):**
-- Start command is in Railway GraphQL API (`serviceInstanceUpdate` mutation), NOT `entrypoint.sh`
-- Must use `sh -c '...'` wrapper for `$PORT` expansion
-- Migrations with exclusive locks can hang during blue-green deploy
-
-**SKIN Layer (Sessions 976, 983):**
-- `_get_workspace_for_skin_layer()` returns "System Autonomous Workspace" at `generated_content/`
-- `generated_content/` is gitignored
-- On Railway, SKIN health uses 70-point baseline
-
-**BaseAgent `__init_subclass__` (Session 970):**
-- Auto-wraps `_execute_tool_call` in subclasses with ToolCallRecord recording
+**Auth for production API:** `Token 0cdc1c72dba99ea637485076ee952d571440aa30` (User: Donkeyking)
