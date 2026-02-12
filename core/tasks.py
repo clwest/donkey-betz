@@ -17829,126 +17829,125 @@ def run_stock_market_intelligence():
         for data in spider_data[:50]:
             raw = data.raw_data or {}
 
-            # Yahoo Finance analysis
+            # Yahoo Finance analysis — spider returns news articles (title, link, description)
             if data.spider_name == 'yahoo_finance':
                 items = raw.get('items', []) if isinstance(raw, dict) else []
                 for item in items[:10]:
-                    symbol = item.get('symbol', '')
-                    price_change = item.get('regularMarketChangePercent', 0) or 0
+                    title = item.get('title', '') or ''
+                    description = item.get('description', '') or ''
+                    text = f"{title} {description}".lower()
 
-                    # Session 980: Lowered from 5% to 2% — 5% was too rare,
-                    # resulting in zero bull/bear/debate alerts
-                    if abs(price_change) > 2:
-                        # Run Bull vs Bear analysis (Property #3: Internal Disagreement)
-                        is_bullish = price_change > 0
+                    # Market-moving keywords (same set as business_news + finance-specific)
+                    keywords = ['crash', 'surge', 'plunge', 'soar', 'collapse', 'breakout',
+                                'earnings beat', 'earnings miss', 'guidance raised', 'guidance cut',
+                                'layoffs', 'bankruptcy', 'merger', 'acquisition', 'ipo',
+                                'fed rate', 'inflation', 'recession']
+                    if not any(kw in text for kw in keywords):
+                        continue
 
-                        # Bull case
-                        bull_score = 70 if is_bullish else 30
-                        bull_case = f"{'Strong momentum with ' if is_bullish else 'Potential reversal opportunity. '}"
-                        bull_case += f"Price moved {price_change:+.1f}%. {'Bulls in control.' if is_bullish else 'May be oversold.'}"
+                    # Try to extract ticker from tags (e.g. "NCM:ARKO" or plain "AAPL")
+                    import re
+                    symbol = 'MARKET'
+                    for tag in (item.get('tags', []) or []):
+                        if isinstance(tag, str):
+                            ticker_match = re.match(r'^(?:[A-Z]+:)?([A-Z]{1,5})$', tag)
+                            if ticker_match:
+                                symbol = ticker_match.group(1)
+                                break
 
-                        # Bear case
-                        bear_score = 30 if is_bullish else 70
-                        bear_case = f"{'Extended move may see pullback.' if is_bullish else 'Weakness confirmed. '}"
-                        bear_case += f"{'Watch for profit taking.' if is_bullish else 'Further downside possible.'}"
+                    alert_title = f"📰 {title[:60]}..."
+                    if alert_title in seen_titles or alert_title in recent_titles:
+                        continue
+                    seen_titles.add(alert_title)
 
-                        # Determine disagreement level
-                        score_diff = abs(bull_score - bear_score)
-                        if score_diff < 20:
-                            disagreement = 'extreme'  # Very close = high uncertainty
-                        elif score_diff < 40:
-                            disagreement = 'strong'
-                        elif score_diff < 60:
-                            disagreement = 'mild'
-                        else:
-                            disagreement = 'consensus'
+                    alert = StockMarketAlert.objects.create(
+                        alert_type='momentum_shift',
+                        symbol=symbol,
+                        title=alert_title,
+                        summary=f"Financial news: {title}. Source: yahoo_finance",
+                        disagreement_level='mild',
+                        confidence_score=Decimal('0.55'),
+                        source_data={'spider': data.spider_name, 'item': item},
+                        recommended_action='watch'
+                    )
+                    alerts_generated.append(alert)
 
-                        alert_type = 'high_conviction_bull' if bull_score > 60 else 'high_conviction_bear' if bear_score > 60 else 'debate_zone'
-
-                        alert_title = f"{'📈' if is_bullish else '📉'} {symbol}: {price_change:+.1f}%"
-                        # Session 980: Dedup — skip if we already created an alert for this symbol+type recently
-                        if alert_title in seen_titles or alert_title in recent_titles:
-                            continue
-                        seen_titles.add(alert_title)
-
-                        alert = StockMarketAlert.objects.create(
-                            alert_type=alert_type,
-                            symbol=symbol,
-                            company_name=item.get('shortName', symbol),
-                            title=alert_title,
-                            summary=f"{item.get('shortName', symbol)} moved {price_change:+.1f}% today. Current price: ${item.get('regularMarketPrice', 0):.2f}",
-                            bull_case=bull_case,
-                            bear_case=bear_case,
-                            disagreement_level=disagreement,
-                            confidence_score=Decimal(str(max(bull_score, bear_score) / 100)),
-                            bull_score=bull_score,
-                            bear_score=bear_score,
-                            current_price=Decimal(str(item.get('regularMarketPrice', 0) or 0)),
-                            price_change_24h=Decimal(str(price_change)),
-                            source_data={'spider': data.spider_name, 'item': item},
-                            recommended_action='research' if disagreement in ['extreme', 'strong'] else 'watch'
-                        )
-                        alerts_generated.append(alert)
-                        session.stocks_analyzed += 1
-
-                        if alert_type == 'debate_zone':
-                            session.debate_zone_count += 1
-                        else:
-                            session.high_conviction_count += 1
-
-            # SEC EDGAR analysis - institutional filings
+            # SEC EDGAR analysis - institutional/company filings
             if data.spider_name == 'sec_edgar':
                 items = raw.get('items', []) if isinstance(raw, dict) else []
                 for item in items[:5]:
-                    form_type = item.get('form', '')
-                    if form_type in ['13F', '13D', '13G', '4']:  # Institutional/insider filings
-                        sec_title = f"🏛️ SEC Filing: {form_type} - {item.get('company', 'Unknown')[:30]}"
+                    form_type = item.get('form_type', '') or item.get('form', '')
+                    # Institutional filings + key company filings
+                    if form_type in ['13F', '13D', '13G', '4', '10-K', '10-Q', '8-K',
+                                     'SC 13D', 'SC 13G', 'S-1']:
+                        company = item.get('company', 'Unknown')
+                        sec_title = f"🏛️ SEC Filing: {form_type} - {company[:30]}"
                         # Session 980: Dedup
                         if sec_title in seen_titles or sec_title in recent_titles:
                             continue
                         seen_titles.add(sec_title)
 
+                        # Determine alert significance
+                        high_impact = form_type in ['13D', '13G', 'SC 13D', 'SC 13G', '8-K', 'S-1']
+                        form_desc = item.get('form_description', f'{form_type} Filing')
+
                         alert = StockMarketAlert.objects.create(
                             alert_type='institutional_activity',
-                            symbol=item.get('ticker', 'UNKNOWN'),
-                            company_name=item.get('company', 'Unknown'),
+                            symbol=item.get('ticker', item.get('cik', 'UNKNOWN')),
+                            company_name=company,
                             title=sec_title,
-                            summary=f"New {form_type} filing detected. Company: {item.get('company', 'Unknown')}. Filed by: {item.get('filer', 'Unknown')}",
-                            bull_case="Institutional interest often precedes price movement",
-                            bear_case="Filing may indicate selling or position reduction",
-                            disagreement_level='mild',
-                            confidence_score=Decimal('0.60'),
+                            summary=f"{form_desc}: {company}. Filed: {item.get('filed_at', 'Unknown')}",
+                            bull_case="Institutional interest often precedes price movement" if high_impact else "Regular filing shows ongoing operations",
+                            bear_case="Filing may indicate selling or position reduction" if high_impact else "Routine disclosure, limited signal",
+                            disagreement_level='strong' if high_impact else 'mild',
+                            confidence_score=Decimal('0.70') if high_impact else Decimal('0.55'),
                             source_data={'spider': data.spider_name, 'item': item},
-                            recommended_action='research'
+                            recommended_action='research' if high_impact else 'watch'
                         )
                         alerts_generated.append(alert)
 
             # Business news sentiment
             if data.spider_name in ['business_news', 'bloomberg']:
                 items = raw.get('items', []) if isinstance(raw, dict) else []
-                for item in items[:3]:  # Session 980: Reduced from 5 to 3 to limit noise
+                for item in items[:5]:
                     title = item.get('title', '') or item.get('headline', '')
-                    # Look for market-moving keywords
-                    keywords = ['crash', 'surge', 'plunge', 'soar', 'collapse', 'breakout']
+                    description = item.get('description', '') or ''
+                    text = f"{title} {description}".lower()
+                    # Look for market-moving keywords in both title and description
+                    keywords = ['crash', 'surge', 'plunge', 'soar', 'collapse', 'breakout',
+                                'earnings beat', 'earnings miss', 'ipo', 'merger', 'acquisition',
+                                'layoffs', 'bankruptcy', 'guidance']
                     # Session 980: Removed 'rally' — too common, was generating 90%+ of all alerts
-                    if any(kw in title.lower() for kw in keywords):
-                        alert_title = f"📰 {title[:60]}..."
-                        # Session 980: Dedup — skip duplicate headlines
-                        if alert_title in seen_titles or alert_title in recent_titles:
-                            continue
-                        seen_titles.add(alert_title)
+                    if not any(kw in text for kw in keywords):
+                        continue
 
-                        alert = StockMarketAlert.objects.create(
-                            alert_type='momentum_shift',
-                            symbol='MARKET',
-                            title=alert_title,
-                            summary=f"Market-moving news: {title}. Source: {data.spider_name}",
-                            disagreement_level='mild',
-                            confidence_score=Decimal('0.55'),
-                            source_data={'spider': data.spider_name, 'item': item},
-                            recommended_action='watch'
-                        )
-                        alerts_generated.append(alert)
+                    # Try to extract ticker from tags (e.g. "NCM:ARKO")
+                    import re
+                    symbol = 'MARKET'
+                    for tag in (item.get('tags', []) or []):
+                        if isinstance(tag, str):
+                            ticker_match = re.match(r'^(?:[A-Z]+:)?([A-Z]{1,5})$', tag)
+                            if ticker_match:
+                                symbol = ticker_match.group(1)
+                                break
+
+                    alert_title = f"📰 {title[:60]}..."
+                    # Session 980: Dedup — skip duplicate headlines
+                    if alert_title in seen_titles or alert_title in recent_titles:
+                        continue
+                    seen_titles.add(alert_title)
+
+                    alert = StockMarketAlert.objects.create(
+                        alert_type='momentum_shift',
+                        symbol=symbol,
+                        title=alert_title,
+                        summary=f"Market-moving news: {title}. Source: {data.spider_name}",
+                        disagreement_level='mild',
+                        confidence_score=Decimal('0.55'),
+                        source_data={'spider': data.spider_name, 'item': item},
+                        recommended_action='watch'
+                    )
+                    alerts_generated.append(alert)
 
         # Update session
         session.alerts_generated = len(alerts_generated)
