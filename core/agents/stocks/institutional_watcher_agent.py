@@ -312,6 +312,7 @@ Focus on transactions that diverge from normal patterns."""
                         'ticker': ticker,
                         'tool_calls': tool_calls_made,
                         'collected_data': collected_data,
+                        'alerts': self._extract_institutional_alerts(collected_data),
                         'provenance': provenance.to_dict(),
                         'publishable': provenance.publishable,
                         'validation_status': provenance.validation_status,
@@ -559,6 +560,60 @@ Focus on transactions that diverge from normal patterns."""
                 'value_weighted_score': round(blended_score, 1)
             }
         }
+
+    def _extract_institutional_alerts(self, collected_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Extract structured alerts from tool call results for the coordinator."""
+        alerts = []
+
+        for tool_name, result in collected_data.items():
+            if not isinstance(result, dict):
+                continue
+
+            # Extract from insider transaction lists
+            for tx in result.get('transactions', []):
+                if not isinstance(tx, dict):
+                    continue
+                value = float(tx.get('value', 0) or 0)
+                if value >= self.LARGE_TRANSACTION_VALUE:
+                    tx_type = str(tx.get('transaction_type', '')).upper()
+                    is_sell = 'SELL' in tx_type or 'SALE' in tx_type or 'S' == tx_type
+                    alerts.append({
+                        'ticker': tx.get('company', result.get('ticker', '')),
+                        'severity': 'HIGH' if is_sell else 'MEDIUM',
+                        'type': 'LARGE_INSIDER_TRANSACTION',
+                        'message': f"{'Large insider sale' if is_sell else 'Large insider purchase'}: ${value:,.0f} by {tx.get('insider_name', 'Unknown')}",
+                    })
+
+            # Extract from large_positions lists
+            for pos in result.get('large_positions', []):
+                if not isinstance(pos, dict):
+                    continue
+                value = float(pos.get('value', 0) or 0)
+                if value >= self.LARGE_TRANSACTION_VALUE:
+                    alerts.append({
+                        'ticker': pos.get('company', result.get('ticker', '')),
+                        'severity': 'HIGH',
+                        'type': 'LARGE_POSITION_CHANGE',
+                        'message': f"Large position change: ${value:,.0f} at {pos.get('company', 'Unknown')}",
+                    })
+
+            # Extract sentiment-based alerts
+            sentiment = result.get('sentiment', {})
+            if isinstance(sentiment, dict) and sentiment.get('sentiment') in ('STRONGLY_BEARISH',):
+                alerts.append({
+                    'ticker': result.get('ticker', ''),
+                    'severity': 'HIGH',
+                    'type': 'BEARISH_INSIDER_SENTIMENT',
+                    'message': sentiment.get('description', 'Heavy insider selling detected'),
+                })
+
+        # Fallback: if tools produced nothing, try direct data analysis
+        if not alerts:
+            insider_data = self._get_insider_data()
+            patterns = self._analyze_patterns(insider_data)
+            alerts = self._generate_alerts(insider_data, patterns)
+
+        return alerts
 
     def _execute_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
