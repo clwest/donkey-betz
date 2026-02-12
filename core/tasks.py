@@ -22994,7 +22994,7 @@ def auto_promote_low_risk_decisions(dry_run: bool = False):
         result = run_auto_promotion(dry_run=dry_run)
 
         # Log results
-        promoted_or_would = result.get('promoted', 0) or result.get('would_promote', 0)
+        promoted_or_would = (result or {}).get('promoted', 0) or (result or {}).get('would_promote', 0) or 0
         if promoted_or_would > 0:
             logger.info(
                 f"🏛️ [SESSION 589] {'Would promote' if dry_run else 'Promoted'} "
