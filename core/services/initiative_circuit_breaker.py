@@ -27,8 +27,7 @@ Usage:
 import os
 import logging
 from typing import Dict, Any, Optional
-from functools import lru_cache
-from datetime import datetime, timedelta
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -66,14 +65,14 @@ def is_creation_paused_by_db() -> bool:
 def get_backlog_threshold() -> int:
     """Get the max allowed pending initiatives before auto-pause."""
     try:
-        threshold = int(os.environ.get('INITIATIVE_BACKLOG_THRESHOLD', '100'))
+        threshold = int(os.environ.get('INITIATIVE_BACKLOG_THRESHOLD', '50'))
         return max(10, threshold)  # Minimum 10
     except (ValueError, TypeError):
-        return 100
+        return 50
 
 
 def get_pending_initiative_count() -> int:
-    """Get count of initiatives at 0% completion (never started)."""
+    """Get count of ACTIVE initiatives with no meaningful activity."""
     global _backlog_cache
 
     now = datetime.now()
@@ -84,15 +83,14 @@ def get_pending_initiative_count() -> int:
         if age < CACHE_TTL_SECONDS:
             return _backlog_cache['count']
 
-    # Query DB
     try:
         from core.models_document_registry import Initiative
 
-        # Count initiatives that are ACTIVE but have no stage work
-        count = 0
-        for initiative in Initiative.objects.filter(status='ACTIVE', current_stage=1):
-            if initiative.stages_with_work == 0:
-                count += 1
+        # Count ACTIVE initiatives that have never had meaningful activity
+        count = Initiative.objects.filter(
+            status='ACTIVE',
+            last_activity_at__isnull=True,
+        ).count()
 
         _backlog_cache['count'] = count
         _backlog_cache['checked_at'] = now
@@ -100,6 +98,21 @@ def get_pending_initiative_count() -> int:
 
     except Exception as e:
         logger.warning(f"[circuit_breaker] Error checking backlog: {e}")
+        return 0
+
+
+def get_stage1_no_work_count() -> int:
+    """Legacy metric: count stage-1 ACTIVE initiatives with no stage work."""
+    try:
+        from core.models_document_registry import Initiative
+
+        count = 0
+        for initiative in Initiative.objects.filter(status='ACTIVE', current_stage=1):
+            if initiative.stages_with_work == 0:
+                count += 1
+        return count
+    except Exception as e:
+        logger.warning(f"[circuit_breaker] Error checking stage1 count: {e}")
         return 0
 
 
@@ -153,12 +166,61 @@ def get_backlog_status() -> Dict[str, Any]:
     return {
         'can_create': can_create_initiative(),
         'pending_count': pending,
+        'never_active_count': pending,  # last_activity_at IS NULL
+        'stage1_no_work_count': get_stage1_no_work_count(),  # legacy metric
         'threshold': threshold,
         'utilization_pct': int((pending / threshold) * 100) if threshold > 0 else 0,
         'paused_by_env': is_creation_paused_by_env(),
         'paused_by_db': is_creation_paused_by_db(),
         'paused_by_backlog': is_backlog_too_high(),
     }
+
+
+def find_similar_initiative(name: str, threshold: float = 0.6) -> Optional[Any]:
+    """
+    Check if a similar ACTIVE initiative already exists.
+
+    Uses Jaccard keyword similarity (same algorithm as consolidate_duplicate_initiatives).
+    Returns the matching initiative if found, None otherwise.
+    """
+    try:
+        from core.models_document_registry import Initiative
+        from core.management.commands.consolidate_duplicate_initiatives import (
+            extract_keywords,
+            calculate_similarity,
+        )
+
+        new_keywords = extract_keywords(name)
+        if not new_keywords:
+            return None
+
+        # Only check active, low-stage initiatives (the ones that would be duplicated)
+        candidates = Initiative.objects.filter(
+            status='ACTIVE',
+            current_stage__lte=2,
+        ).values_list('id', 'name')[:200]  # Cap scan for performance
+
+        best_match = None
+        best_score = 0.0
+
+        for init_id, init_name in candidates:
+            score = calculate_similarity(name, init_name)
+            if score >= threshold and score > best_score:
+                best_score = score
+                best_match = init_id
+
+        if best_match:
+            match = Initiative.objects.get(id=best_match)
+            logger.info(
+                f"[circuit_breaker] Dedup match: '{name[:50]}' ~ '{match.name[:50]}' "
+                f"(score={best_score:.2f})"
+            )
+            return match
+
+    except Exception as e:
+        logger.warning(f"[circuit_breaker] Dedup check failed: {e}")
+
+    return None
 
 
 def clear_cache():
