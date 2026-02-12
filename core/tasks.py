@@ -34395,3 +34395,91 @@ def process_pa_chat_task(self, user_id, message, context=None, generate_audio=Fa
         'error': response.error,
         'conversation_id': conversation_id,
     }
+
+
+# =============================================================================
+# Learning Journey Content Generation (Session 988)
+# =============================================================================
+
+@shared_task(bind=True, time_limit=120, soft_time_limit=100)
+def generate_step_content(self, step_id):
+    """Generate AI content for a learning journey step."""
+    from core.models_learning_journey import LearningJourneyStep
+    from core.llm_enforcer import LLMEnforcer
+
+    try:
+        step = LearningJourneyStep.objects.select_related('journey').get(id=step_id)
+    except LearningJourneyStep.DoesNotExist:
+        logger.error(f"generate_step_content: step {step_id} not found")
+        return {'success': False, 'error': 'Step not found'}
+
+    if step.content:
+        return {'success': True, 'already_generated': True}
+
+    journey = step.journey
+    step_type = step.step_type or 'lesson'
+    meta = step.content_meta or {}
+
+    # Build prompt based on step type
+    base_context = (
+        f"Journey: {journey.title}\n"
+        f"Journey description: {journey.description}\n"
+        f"Step {step.step_number} of {journey.total_steps}: {step.title}\n"
+        f"Step description: {step.description}\n"
+    )
+
+    if step_type == 'lesson':
+        prompt = (
+            f"You are a helpful AI tutor inside an AI platform called AI Studio. "
+            f"Write a concise, engaging lesson in markdown.\n\n"
+            f"{base_context}\n"
+            f"Write 3-5 paragraphs explaining the key concepts. "
+            f"Use headers (##), bullet points, and bold text for emphasis. "
+            f"Include a 'Key Takeaways' section at the end with 3 bullet points. "
+            f"Keep the tone friendly and practical."
+        )
+    elif step_type == 'exercise':
+        suggested = meta.get('suggested_prompts', [])
+        prompts_text = '\n'.join(f'- {p}' for p in suggested) if suggested else ''
+        prompt = (
+            f"You are a helpful AI tutor inside an AI platform called AI Studio. "
+            f"Write a brief exercise introduction in markdown.\n\n"
+            f"{base_context}\n"
+            f"Write 2-3 paragraphs explaining what the user will practice. "
+            f"If these prompts are provided, reference them naturally:\n{prompts_text}\n\n"
+            f"End with a '## Try It Out' section encouraging the user to click the prompt chips below "
+            f"to open the Personal Assistant and try each prompt. "
+            f"Keep it brief and action-oriented."
+        )
+    else:  # explore
+        nav_hints = meta.get('navigation_hints', [])
+        hints_text = '\n'.join(f'- {h}' for h in nav_hints) if nav_hints else ''
+        prompt = (
+            f"You are a helpful AI tutor inside an AI platform called AI Studio. "
+            f"Write a brief exploration guide in markdown.\n\n"
+            f"{base_context}\n"
+            f"Write 2-3 paragraphs explaining what the user should explore and what to look for. "
+            f"Reference these platform areas if provided:\n{hints_text}\n\n"
+            f"End with a '## Explore Now' section encouraging the user to click the navigation buttons below. "
+            f"Keep it brief and discovery-oriented."
+        )
+
+    try:
+        enforcer = LLMEnforcer()
+        result = enforcer.enforce_real_ai(
+            prompt=prompt,
+            agent_name='LearningContentGenerator',
+            max_tokens=1500,
+        )
+        content = result.get('content', '') or result.get('response', '')
+        if content:
+            step.content = content
+            step.save(update_fields=['content'])
+            logger.info(f"Generated content for step {step_id} ({step_type})")
+            return {'success': True, 'step_id': str(step_id)}
+        else:
+            logger.warning(f"Empty content for step {step_id}: {result}")
+            return {'success': False, 'error': 'Empty content from LLM'}
+    except Exception as e:
+        logger.error(f"generate_step_content failed for {step_id}: {e}")
+        return {'success': False, 'error': str(e)}

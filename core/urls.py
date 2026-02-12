@@ -165,6 +165,7 @@ from core.views_learning_journey_api import (
     learning_journey_start, learning_journey_pause, learning_journey_resume,
     learning_journey_complete, learning_journey_abandon,
     learning_step_start, learning_step_complete, learning_step_skip,
+    learning_step_content,
     learning_templates, learning_template_detail,
     learning_journey_analytics, learning_achievements,
 )
@@ -3602,6 +3603,7 @@ urlpatterns = [
     path('api/learning/journeys/<str:journey_id>/step/<int:step_number>/start/', learning_step_start, name='learning-step-start'),
     path('api/learning/journeys/<str:journey_id>/step/<int:step_number>/complete/', learning_step_complete, name='learning-step-complete'),
     path('api/learning/journeys/<str:journey_id>/step/<int:step_number>/skip/', learning_step_skip, name='learning-step-skip'),
+    path('api/learning/journeys/<str:journey_id>/step/<int:step_number>/content/', learning_step_content, name='learning-step-content'),
     path('api/learning/templates/', learning_templates, name='learning-templates'),
     path('api/learning/templates/<str:template_id>/', learning_template_detail, name='learning-template-detail'),
     path('api/learning/achievements/', learning_achievements, name='learning-achievements'),
