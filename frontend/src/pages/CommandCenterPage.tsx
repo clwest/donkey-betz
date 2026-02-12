@@ -450,6 +450,8 @@ export default function CommandCenterPage() {
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const chatContainerRef = useRef<HTMLDivElement>(null)
+  const isNearBottomRef = useRef(true)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -787,8 +789,23 @@ export default function CommandCenterPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  // Track whether user is near the bottom of the chat
   useEffect(() => {
-    scrollToBottom()
+    const container = chatContainerRef.current
+    if (!container) return
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container
+      isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 80
+    }
+    container.addEventListener('scroll', handleScroll, { passive: true })
+    return () => container.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // Only auto-scroll when user is already near the bottom
+  useEffect(() => {
+    if (isNearBottomRef.current) {
+      scrollToBottom()
+    }
   }, [messages])
 
   useEffect(() => {
@@ -1054,7 +1071,7 @@ export default function CommandCenterPage() {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-auto space-y-3 pb-3">
+          <div ref={chatContainerRef} className="flex-1 overflow-auto space-y-3 pb-3">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-400">
                 <Bot size={40} className="mb-3 opacity-50" />
