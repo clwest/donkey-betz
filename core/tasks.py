@@ -526,12 +526,13 @@ def auto_approve_boardroom_items():
             'guidelines_promoted': 0,
         }
 
-        # 1. Auto-approve ALL insight items immediately (informational, no action needed)
-        insights = HumanAttentionItem.objects.filter(
+        # 1. Auto-approve ALL insight/error_review/arbitrage items immediately
+        # These are informational or automated — no human action needed
+        noise_types = HumanAttentionItem.objects.filter(
             status='pending',
-            item_type='insight',
+            item_type__in=['insight', 'error_review', 'arbitrage'],
         )
-        stats['insights_approved'] = insights.update(status='acted', decided_at=now)
+        stats['insights_approved'] = noise_types.update(status='acted', decided_at=now)
 
         # 2. Auto-approve non-critical review items older than 6h
         reviews = HumanAttentionItem.objects.filter(
