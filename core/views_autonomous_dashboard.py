@@ -151,8 +151,8 @@ SITUATION_CATALOG = {
         'name': 'Stock Market Intelligence',
         'domain': 'financial',
         'description': 'Analyzes stock market with Bull vs Bear debate',
-        'schedule': 'Every hour',  # Session 539: Updated from 4h to 1h
-        'celery_task': 'autonomous.stock_market_intelligence',
+        'schedule': '3x daily (9,12,16 M-F)',
+        'celery_task': 'core.tasks.run_stock_market_intelligence',
         'model': 'StockMarketAlert',
     },
 

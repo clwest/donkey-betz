@@ -1161,16 +1161,10 @@ app.conf.beat_schedule = {
         }
     },
 
-    # Stock Market Intelligence - Session 539: increased to hourly
-    # Analyzes yahoo_finance/finnhub/sec_edgar data with Bull vs Bear debate
-    # Sends alerts to #stock-alerts Discord channel
-    'autonomous-stock-market-intelligence': {
-        'task': 'autonomous.stock_market_intelligence',
-        'schedule': crontab(minute=10),  # Every hour at :10
-        'options': {
-            'expires': 3600,  # 1 hour
-        }
-    },
+    # Session 989: Removed phantom 'autonomous.stock_market_intelligence' schedule.
+    # That task name has no registered @shared_task — celery rejected it every hour.
+    # Real task is 'core.tasks.run_stock_market_intelligence' scheduled below as
+    # 'run-stock-market-intelligence' at 9,12,16 M-F.
 
     # =========================================================================
     # Session 487: ENABLING ALL 14 DORMANT AUTONOMOUS SITUATIONS
