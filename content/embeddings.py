@@ -30,9 +30,9 @@ except ImportError:
     HAS_OPENAI = False
 
 try:
-    from sentence_transformers import SentenceTransformer
-    HAS_SENTENCE_TRANSFORMERS = True
-except ImportError:
+    import importlib.util
+    HAS_SENTENCE_TRANSFORMERS = importlib.util.find_spec('sentence_transformers') is not None
+except Exception:
     HAS_SENTENCE_TRANSFORMERS = False
 
 try:
@@ -176,7 +176,8 @@ class SentenceTransformerProvider(BaseEmbeddingProvider):
         
         if not HAS_SENTENCE_TRANSFORMERS:
             raise ImportError("sentence-transformers library not installed")
-        
+
+        from sentence_transformers import SentenceTransformer
         self.model_name = model
         self.model = SentenceTransformer(model)
         self.dimension = self.model.get_sentence_embedding_dimension()
