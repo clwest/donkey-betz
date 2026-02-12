@@ -316,6 +316,7 @@ Focus on stocks without corresponding news explanations for moves."""
                     'ticker': ticker,
                     'tool_calls': tool_calls_made,
                     'collected_data': collected_data,
+                    'alerts': self._extract_alerts_from_collected(collected_data),
                     'provenance': provenance.to_dict(),
                     'publishable': provenance.publishable,
                     'validation_status': provenance.validation_status,
@@ -467,6 +468,58 @@ Focus on stocks without corresponding news explanations for moves."""
             return f"MEDIUM: {ticker} at {change:.1f}% with elevated volume ({vol_ratio:.1f}x)"
         else:
             return f"LOW: Notable activity in {ticker}: {change:.1f}% change"
+
+    def _extract_alerts_from_collected(self, collected_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Extract structured alerts from tool call results for the coordinator."""
+        alerts = []
+
+        for tool_name, result in collected_data.items():
+            if not isinstance(result, dict):
+                continue
+
+            # Extract from volume spike results
+            for spike in result.get('spikes', []):
+                ticker = spike.get('ticker', result.get('ticker', ''))
+                if not ticker:
+                    continue
+                volume_ratio = float(spike.get('volume_ratio', 0) or 0)
+                change_pct = abs(float(spike.get('change_pct', 0) or 0))
+                if volume_ratio >= self.VOLUME_SPIKE_THRESHOLD or change_pct >= self.PRICE_CHANGE_MEDIUM:
+                    severity = 'HIGH' if volume_ratio >= 5 or change_pct >= self.PRICE_CHANGE_HIGH else 'MEDIUM'
+                    alerts.append({
+                        'ticker': ticker,
+                        'severity': severity,
+                        'type': 'VOLUME_SPIKE',
+                        'message': f"Volume spike: {ticker} at {volume_ratio:.1f}x avg volume, {change_pct*100:.1f}% change",
+                    })
+
+            # Extract from breakout results
+            for breakout in result.get('breakouts', []):
+                ticker = result.get('ticker', '')
+                if ticker:
+                    alerts.append({
+                        'ticker': ticker,
+                        'severity': 'HIGH',
+                        'type': 'BREAKOUT',
+                        'message': f"Breakout: {ticker} {breakout.get('type', 'level')} at ${breakout.get('level', 0)}",
+                    })
+
+            # Extract items that already have a severity key
+            if result.get('severity'):
+                alerts.append({
+                    'ticker': result.get('ticker', ''),
+                    'severity': result['severity'],
+                    'type': result.get('type', 'MARKET_MOVEMENT'),
+                    'message': result.get('message', ''),
+                })
+
+        # Fallback: if tools produced nothing, try direct data analysis
+        if not alerts:
+            market_data = self._get_market_data()
+            movements = self._analyze_movements(market_data)
+            alerts = self._generate_alerts(movements)
+
+        return alerts
 
     def _execute_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
