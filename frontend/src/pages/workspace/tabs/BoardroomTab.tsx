@@ -2,7 +2,7 @@
 // Session 942: Added bulk selection and bulk actions
 // Session 956: Enhanced ML prediction display with confidence, reasoning, similar items
 // Displays HumanAttentionItems and AgentDecisionSummary for review/action
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Gavel,
@@ -94,6 +94,9 @@ export function BoardroomTab() {
   const [selectedAttention, setSelectedAttention] = useState<Set<string>>(new Set())
   const [selectedDecisions, setSelectedDecisions] = useState<Set<string>>(new Set())
 
+  // Session 988: Track last visit for "NEW" badges
+  const visitMarked = useRef(false)
+
   // Fetch attention items
   const {
     data: attentionData,
@@ -177,6 +180,26 @@ export function BoardroomTab() {
   const decisions: Decision[] = (decisionsData?.decisions || []).filter(
     (d: Decision) => d.status === 'draft'
   )
+
+  // Session 988: "NEW" badge support
+  const lastVisitedAt = attentionData?.last_visited_at as string | null | undefined
+  const isNewItem = (createdAt: string) => {
+    if (!lastVisitedAt) return false
+    return new Date(createdAt) > new Date(lastVisitedAt)
+  }
+  const newAttentionCount = attentionItems.filter(i => isNewItem(i.created_at)).length
+  const newDecisionCount = decisions.filter(d => isNewItem(d.created_at)).length
+  const totalNewCount = newAttentionCount + newDecisionCount
+
+  // Session 988: Mark visit after 3s delay so badges show briefly
+  useEffect(() => {
+    if (visitMarked.current) return
+    const timer = setTimeout(() => {
+      visitMarked.current = true
+      humanApi.markBoardroomVisited().catch(() => {})
+    }, 3000)
+    return () => clearTimeout(timer)
+  }, [])
 
   // Filter items
   const filteredAttention = attentionItems.filter((item) => {
@@ -591,6 +614,14 @@ export function BoardroomTab() {
         </button>
       </div>
 
+      {/* Session 988: New items banner */}
+      {totalNewCount > 0 && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-blue-500/10 border border-blue-500/30 rounded-lg text-sm text-blue-400">
+          <span className="px-1.5 py-0.5 text-xs font-bold bg-blue-500 text-white rounded">NEW</span>
+          {totalNewCount} new item{totalNewCount !== 1 ? 's' : ''} since your last visit
+        </div>
+      )}
+
       {/* View Toggle */}
       <div className="flex gap-2 border-b border-dark-border pb-2">
         <button
@@ -759,6 +790,12 @@ export function BoardroomTab() {
                         </span>
                         {item.source_agent && (
                           <span className="text-xs text-gray-500">{item.source_agent}</span>
+                        )}
+                        {/* Session 988: NEW badge */}
+                        {isNewItem(item.created_at) && (
+                          <span className="px-1.5 py-0.5 text-[10px] font-bold bg-blue-500 text-white rounded">
+                            NEW
+                          </span>
                         )}
                         {/* Session 956: ML prediction indicator badge */}
                         {(item.ml_recommendation || item.ml_prediction) && (
@@ -934,6 +971,12 @@ export function BoardroomTab() {
                         <span className="px-2 py-0.5 text-xs rounded bg-dark-border text-gray-400">
                           {decision.impact_area_display || decision.impact_area}
                         </span>
+                        {/* Session 988: NEW badge */}
+                        {isNewItem(decision.created_at) && (
+                          <span className="px-1.5 py-0.5 text-[10px] font-bold bg-blue-500 text-white rounded">
+                            NEW
+                          </span>
+                        )}
                       </div>
                       <h4 className="font-medium text-sm line-clamp-2">{decision.topic}</h4>
                       <p className="text-xs text-gray-500 mt-1">

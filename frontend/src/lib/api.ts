@@ -1410,6 +1410,8 @@ export const humanApi = {
   // Session 763: Mission Control execute action
   executeAction: (itemId: string, action: string, feedback?: string, extraData?: Record<string, unknown>) =>
     api.post(`/human/attention/${itemId}/execute/`, { action, feedback, extra_data: extraData }),
+  // Session 988: Record boardroom visit for "NEW" badge tracking
+  markBoardroomVisited: () => api.post('/human/attention/', {}),
 
   // Control Panel
   control: () => api.get('/human/control/'),

@@ -513,6 +513,7 @@ def auto_approve_boardroom_items():
             'reviews_approved': 0,
             'opportunities_approved': 0,
             'spider_actions_approved': 0,
+            'spider_actions_stale_resolved': 0,
             'experiments_promoted': 0,
             'pipelines_promoted': 0,
             'research_promoted': 0,
@@ -553,6 +554,20 @@ def auto_approve_boardroom_items():
         )
         stats['spider_actions_approved'] = spider_low.update(status='acted', decided_at=now)
 
+        # 4b. Session 988: Hard ceiling — auto-resolve ALL spider_actions older than 48h
+        # regardless of urgency. Prevents high/critical spider_actions from accumulating
+        # indefinitely and burying genuinely new items.
+        stale_cutoff = now - timedelta(hours=48)
+        stale_spider_actions = HumanAttentionItem.objects.filter(
+            item_type='spider_action',
+            status='pending',
+            created_at__lt=stale_cutoff,
+        )
+        stale_count = stale_spider_actions.update(status='auto_resolved', decided_at=now)
+        stats['spider_actions_stale_resolved'] = stale_count
+        if stale_count:
+            logger.info(f"Auto-resolved {stale_count} stale spider_actions (>48h, all urgencies)")
+
         # 5. Auto-promote experiment decisions
         stats['experiments_promoted'] = AgentDecisionSummary.objects.filter(
             status='draft',
@@ -583,6 +598,7 @@ def auto_approve_boardroom_items():
                    f"reviews: {stats['reviews_approved']}, "
                    f"opportunities: {stats['opportunities_approved']}, "
                    f"spider_actions: {stats['spider_actions_approved']}, "
+                   f"spider_stale_48h: {stats['spider_actions_stale_resolved']}, "
                    f"experiments: {stats['experiments_promoted']}, "
                    f"pipelines: {stats['pipelines_promoted']}, "
                    f"research: {stats['research_promoted']}, "
