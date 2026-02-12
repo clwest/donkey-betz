@@ -336,21 +336,21 @@ CRITICAL: Use tools to check actual saturation data. Don't just assume."""
 
         # Last 3 days
         recent_count = SpiderData.objects.filter(
-            title__icontains=topic,
-            discovered_at__gte=now - timedelta(days=3)
+            embedding_text__icontains=topic,
+            created_at__gte=now - timedelta(days=3)
         ).count()
 
         # Previous 3 days (for comparison)
         previous_count = SpiderData.objects.filter(
-            title__icontains=topic,
-            discovered_at__gte=now - timedelta(days=6),
-            discovered_at__lt=now - timedelta(days=3)
+            embedding_text__icontains=topic,
+            created_at__gte=now - timedelta(days=6),
+            created_at__lt=now - timedelta(days=3)
         ).count()
 
         # Total in period
         total_count = SpiderData.objects.filter(
-            title__icontains=topic,
-            discovered_at__gte=now - timedelta(days=days_back)
+            embedding_text__icontains=topic,
+            created_at__gte=now - timedelta(days=days_back)
         ).count()
 
         # Calculate saturation metrics
@@ -467,25 +467,26 @@ CRITICAL: Use tools to check actual saturation data. Don't just assume."""
         # Build domain query
         keyword_query = Q()
         for keyword in domain_keywords:
-            keyword_query |= Q(title__icontains=keyword)
+            keyword_query |= Q(embedding_text__icontains=keyword)
 
         # Get items from both periods
         recent_items = SpiderData.objects.filter(
             keyword_query,
-            discovered_at__gte=recent_start
+            created_at__gte=recent_start
         )
 
         previous_items = SpiderData.objects.filter(
             keyword_query,
-            discovered_at__gte=previous_start,
-            discovered_at__lt=previous_end
+            created_at__gte=previous_start,
+            created_at__lt=previous_end
         )
 
-        # Extract topics (simple: split titles into 2-word phrases)
+        # Extract topics (simple: split embedding_text into 2-word phrases)
         def extract_topics(items):
             topics = {}
             for item in items:
-                words = item.title.split()
+                text = item.embedding_text or ''
+                words = text.split()
                 for i in range(len(words) - 1):
                     phrase = f"{words[i]} {words[i+1]}"
                     if len(phrase) > 5:

@@ -1171,9 +1171,9 @@ Your job is to keep this system running smoothly and surfacing valuable narrativ
         # Get recent spider data
         recent = timezone.now() - timedelta(days=7)
         spider_data = SpiderData.objects.filter(
-            spider_category__in=categories,
+            data_type__in=categories,
             created_at__gte=recent
-        ).values('title').annotate(
+        ).values('embedding_text').annotate(
             count=models.Count('id')
         ).order_by('-count')[:count * 2]
 
@@ -1182,7 +1182,7 @@ Your job is to keep this system running smoothly and surfacing valuable narrativ
             if len(created) >= count:
                 break
 
-            title = item['title']
+            title = item['embedding_text']
             if not title or len(title) < 10:
                 continue
 

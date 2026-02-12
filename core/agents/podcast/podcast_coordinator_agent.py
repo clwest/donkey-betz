@@ -1006,7 +1006,7 @@ Provide your perspective in 2-4 sentences. Be direct, engaging, and draw on your
 
         # 3. Fetch spider activity
         try:
-            from ai_core.models import SpiderData
+            from core.models_unified_system import SpiderData
 
             spider_data = SpiderData.objects.filter(
                 created_at__gte=cutoff

@@ -344,30 +344,31 @@ CRITICAL: Always use tools to get real spider data. Never make up trends or fake
         # Query spider data from last N days
         since_date = timezone.now() - timedelta(days=days_back)
 
-        # Build query - search for any domain keyword in title or content
+        # Build query - search for any domain keyword in embedding_text
         query = SpiderData.objects.filter(
-            discovered_at__gte=since_date
+            created_at__gte=since_date
         )
 
-        # Filter by keywords (case-insensitive search in title/content)
+        # Filter by keywords (case-insensitive search in embedding_text)
         if domain_keywords:
             from django.db.models import Q
             keyword_query = Q()
             for keyword in domain_keywords:
-                keyword_query |= Q(title__icontains=keyword) | Q(content__icontains=keyword)
+                keyword_query |= Q(embedding_text__icontains=keyword)
             query = query.filter(keyword_query)
 
         # Get most recent results
-        results = query.order_by('-discovered_at')[:limit]
+        results = query.order_by('-created_at')[:limit]
 
         trends = []
         for item in results:
+            raw = item.raw_data if isinstance(item.raw_data, dict) else {}
             trends.append({
-                "title": item.title,
-                "source": item.source,
-                "url": item.url,
-                "discovered_at": item.discovered_at.isoformat(),
-                "content_preview": item.content[:200] if item.content else ""
+                "title": raw.get('title', item.spider_name),
+                "source": item.source_url,
+                "url": item.source_url,
+                "discovered_at": item.created_at.isoformat(),
+                "content_preview": (item.embedding_text or "")[:200],
             })
 
         return {
@@ -387,8 +388,8 @@ CRITICAL: Always use tools to get real spider data. Never make up trends or fake
         # Count mentions in spider data (last 7 days)
         since_date = timezone.now() - timedelta(days=7)
         mention_count = SpiderData.objects.filter(
-            title__icontains=topic,
-            discovered_at__gte=since_date
+            embedding_text__icontains=topic,
+            created_at__gte=since_date
         ).count()
 
         # Calculate scores
@@ -397,8 +398,8 @@ CRITICAL: Always use tools to get real spider data. Never make up trends or fake
 
         # Recency score (0-100) - higher if mentioned in last 24 hours
         recent_count = SpiderData.objects.filter(
-            title__icontains=topic,
-            discovered_at__gte=timezone.now() - timedelta(days=1)
+            embedding_text__icontains=topic,
+            created_at__gte=timezone.now() - timedelta(days=1)
         ).count()
         recency_score = min(recent_count * 20, 100)
 
@@ -441,18 +442,19 @@ CRITICAL: Always use tools to get real spider data. Never make up trends or fake
         from django.db.models import Q
         keyword_query = Q()
         for keyword in domain_keywords:
-            keyword_query |= Q(title__icontains=keyword)
+            keyword_query |= Q(embedding_text__icontains=keyword)
 
         recent_items = SpiderData.objects.filter(
             keyword_query,
-            discovered_at__gte=since_date
-        ).order_by('-discovered_at')[:50]
+            created_at__gte=since_date
+        ).order_by('-created_at')[:50]
 
-        # Extract potential topics from titles
+        # Extract potential topics from embedding text
         topics = {}
         for item in recent_items:
-            # Simple topic extraction - split title into words and find 2-3 word phrases
-            words = item.title.split()
+            # Simple topic extraction - split text into words and find 2-3 word phrases
+            text = item.embedding_text or ''
+            words = text.split()
             for i in range(len(words) - 1):
                 # Get 2-word phrase
                 phrase = f"{words[i]} {words[i+1]}"

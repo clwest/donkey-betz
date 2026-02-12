@@ -611,7 +611,7 @@ Alert on:
 
             # Query for market spider data
             market_data = SpiderData.objects.filter(
-                spider_name__in=['market', 'market_data', 'yahoo_finance', 'bloomberg'],
+                spider_name__in=['yahoo_finance', 'finnhub', 'polygon_finance'],
                 created_at__gte=cutoff
             ).order_by('-created_at')[:max_items]
 
