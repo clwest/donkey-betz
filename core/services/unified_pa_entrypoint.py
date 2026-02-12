@@ -1528,13 +1528,14 @@ class UnifiedPAEntrypoint:
                             sections['proactive_intelligence'] = text
 
                 # Session 992: Platform Intelligence Briefing
+                # Skip relevance gate — only fires for system_overview/execution_history
+                # where platform activity is inherently relevant
                 elif service_key == 'platform_briefing' and self.platform_briefing_service:
                     text = await asyncio.to_thread(
                         self.platform_briefing_service.get_formatted_briefing
                     )
                     if text:
-                        if is_direct or self._passes_relevance_gate(message, text):
-                            sections['platform_briefing'] = text
+                        sections['platform_briefing'] = text
 
             except Exception as e:
                 logger.warning(f"[{trace_id}] Enrichment '{service_key}' failed: {e}")
