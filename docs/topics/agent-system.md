@@ -46,12 +46,14 @@ Every agent receives contextual data before execution:
 2. **spider_context** — Real-time spider data
 3. **learning_context** — Past learning patterns
 4. **advisor_context** — 25 legendary advisor wisdom
-5. **feedback_context** — Performance metrics
+5. **feedback_context** — Performance metrics + PA content review history
 6. **knowledge_context** — Existing knowledge (check before external queries)
 7. **workspace_context** — File operations awareness
 8. **docs_context** — Documentation/session awareness
 9. **user_context** — Personalized user data (skills, goals, preferences)
 10. **risk_context** — Critical docs, incidents, audit findings
+
+`feedback_context` now includes `pa_review_feedback` (last 5 PA publish/archive/revise decisions) and `pa_review_summary`, extracted into `spider_context['pa_content_feedback']` and `spider_context['pa_review_summary']` by `gather_context()` (Session 990).
 
 Context can be pre-gathered before timeout starts via `gather_context()` + `pre_gathered_context` param.
 

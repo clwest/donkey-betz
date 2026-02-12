@@ -97,6 +97,17 @@ Three quality dimensions with thresholds:
 
 This creates a feedback loop where the agent learns from its own past performance.
 
+### PA-to-Agent Content Feedback (Session 990)
+
+When the PA publishes, archives, or revises agent-created content, that decision is now recorded back to the originating agent:
+
+1. **AgentMemory** (`memory_type='feedback'`, `tags=['pa_review']`) — valence mapped from action (publish→positive, archive→negative, revise→neutral). Surfaced to agents via `_get_agent_knowledge()` in multi-agent conversations.
+2. **UserAgentLearning** — `record_success()` on publish, `record_failure()` on archive, per-user personalization.
+3. **FeedbackLoopEngine** — `get_feedback_for_agent()` queries recent PA reviews → `pa_review_feedback` and `pa_review_summary` added to feedback context.
+4. **Agent Router** — `gather_context()` extracts `pa_content_feedback` and `pa_review_summary` into `spider_context`, making PA decisions a first-class context field for every agent execution.
+
+Data flow: `PA action → _record_content_feedback() → AgentMemory + UserAgentLearning → FeedbackLoopEngine → agent_router.gather_context() → spider_context`.
+
 ## Domain Content Context (Session 891)
 
 9 domains auto-detected by keyword matching. Each injects real platform data:

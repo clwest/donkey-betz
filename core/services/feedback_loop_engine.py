@@ -142,6 +142,39 @@ class FeedbackLoopEngine:
                 if memory_stats.get('task_type_performance'):
                     feedback['task_type_performance'] = memory_stats['task_type_performance']
 
+            # 2b. Get PA content review feedback from AgentMemory
+            try:
+                from core.models_unified_system import AgentMemory
+                agent_obj = self.Agent.objects.filter(name=agent_name).first()
+                if agent_obj:
+                    pa_reviews = list(
+                        AgentMemory.objects.filter(
+                            agent=agent_obj,
+                            memory_type='feedback',
+                            tags__contains=['pa_review'],
+                            created_at__gte=since,
+                        ).order_by('-created_at')[:5].values(
+                            'title', 'content', 'valence', 'created_at'
+                        )
+                    )
+                    if pa_reviews:
+                        feedback['pa_review_feedback'] = pa_reviews
+                        counts = defaultdict(int)
+                        for r in pa_reviews:
+                            counts[r['valence']] += 1
+                        parts = []
+                        if counts['positive']:
+                            parts.append(f"{counts['positive']} published")
+                        if counts['negative']:
+                            parts.append(f"{counts['negative']} archived")
+                        if counts['neutral']:
+                            parts.append(f"{counts['neutral']} revised")
+                        feedback['pa_review_summary'] = (
+                            f"{len(pa_reviews)} PA reviews: {', '.join(parts)}"
+                        )
+            except Exception as e:
+                logger.debug(f"PA review feedback lookup failed for {agent_name}: {e}")
+
             # 3. Calculate performance rating
             feedback['performance_rating'] = self._calculate_performance_rating(
                 feedback['success_rate'],

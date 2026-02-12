@@ -1569,6 +1569,57 @@ class ToolDispatcher:
                 f"Unknown action: {action}. Valid actions: search, recent, details, by_category, stats"
             )
 
+    def _record_content_feedback(self, agent_name, action, details, user_id=None):
+        """Record PA review outcome as agent feedback for the content feedback loop.
+
+        Creates AgentMemory (type='feedback') so agents see PA decisions
+        in future executions, and updates UserAgentLearning for per-user
+        personalization.
+        """
+        try:
+            from core.models_unified_system import AgentMemory, Agent, UserAgentLearning
+            from django.contrib.auth import get_user_model
+
+            agent = Agent.objects.filter(name=agent_name).first()
+            if not agent:
+                return
+
+            valence_map = {'publish': 'positive', 'archive': 'negative', 'revise': 'neutral'}
+            valence = valence_map.get(action, 'neutral')
+
+            outcome_map = {'publish': 'success', 'archive': 'failure', 'revise': 'partial'}
+            outcome = outcome_map.get(action, 'unknown')
+
+            AgentMemory.objects.create(
+                agent=agent,
+                title=f"PA review: {action} — {details.get('title', 'content')}"[:200],
+                content=details.get('feedback_summary', f"Content was {action}ed by the PA."),
+                memory_type='feedback',
+                valence=valence,
+                memory_outcome=outcome,
+                importance_score=0.7,
+                source_type='task',
+                tags=['pa_review', f'action_{action}'],
+                safety_class='approved',
+            )
+
+            if user_id and action in ('publish', 'archive'):
+                User = get_user_model()
+                user = User.objects.filter(id=user_id).first()
+                if user:
+                    learning, _ = UserAgentLearning.objects.get_or_create(
+                        user=user,
+                        agent_name=agent_name,
+                        learning_domain='content_creation',
+                    )
+                    if action == 'publish':
+                        learning.record_success()
+                    else:
+                        learning.record_failure()
+
+        except Exception as e:
+            logger.warning(f"Failed to record content feedback for {agent_name}: {e}")
+
     def _handle_content_review(
         self,
         tool_name: str,
@@ -1737,6 +1788,16 @@ class ToolDispatcher:
             deliverable.status = 'published'
             deliverable.save(update_fields=['status', 'updated_at'])
 
+            self._record_content_feedback(
+                agent_name=deliverable.agent_name,
+                action='publish',
+                details={
+                    'title': deliverable.title,
+                    'feedback_summary': 'Content published — quality met standards.',
+                },
+                user_id=user_id,
+            )
+
             return {
                 'action': 'publish',
                 'id': str(deliverable_id),
@@ -1761,6 +1822,16 @@ class ToolDispatcher:
                 deliverable.metadata = {}
             deliverable.metadata['archive_reason'] = feedback
             deliverable.save(update_fields=['status', 'metadata', 'updated_at'])
+
+            self._record_content_feedback(
+                agent_name=deliverable.agent_name,
+                action='archive',
+                details={
+                    'title': deliverable.title,
+                    'feedback_summary': f'Content archived — reason: {feedback}',
+                },
+                user_id=user_id,
+            )
 
             return {
                 'action': 'archive',
@@ -2219,17 +2290,35 @@ class ToolDispatcher:
             gate.apply_to_blog(blog, save=True)
             blog.refresh_from_db()
 
+            after = {
+                'quality': blog.quality_score,
+                'novelty': blog.novelty_score,
+                'structure': blog.structure_score,
+                'publish_ready': blog.publish_ready,
+            }
+
+            self._record_content_feedback(
+                agent_name='ContentWriterAgent',
+                action='revise',
+                details={
+                    'title': blog.title,
+                    'feedback_summary': (
+                        f"Blog revised — before: quality={before.get('quality')}, "
+                        f"structure={before.get('structure')}; "
+                        f"after: quality={after.get('quality')}, "
+                        f"structure={after.get('structure')}. "
+                        f"Focus areas: {', '.join(focus_areas)}."
+                    ),
+                },
+                user_id=user_id,
+            )
+
             return {
                 'action': 'revise',
                 'blog_id': str(blog.id),
                 'title': blog.title,
                 'before': before,
-                'after': {
-                    'quality': blog.quality_score,
-                    'novelty': blog.novelty_score,
-                    'structure': blog.structure_score,
-                    'publish_ready': blog.publish_ready,
-                },
+                'after': after,
                 'changes_made': result.data.get('changes_made', []),
                 'focus_areas': focus_areas,
                 'gate_notes': blog.gate_notes,
