@@ -23,6 +23,7 @@ import BillingPage from '@/pages/BillingPage'  // Session 745: Billing & subscri
 import AnalyticsDashboardPage from '@/pages/AnalyticsDashboardPage'  // Session 745: Analytics dashboard
 import DocsIndexPage from '@/pages/DocsIndexPage'  // Session 784: Documentation Index Browser
 import StockIntelligencePage from '@/pages/StockIntelligencePage'
+import DocumentsPage from '@/pages/DocumentsPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -96,7 +97,7 @@ function App() {
         <Route path="podcast" element={<Navigate to="/workspace?tab=content" replace />} />
         <Route path="content-channels" element={<Navigate to="/workspace?tab=content" replace />} />
         <Route path="distribution" element={<Navigate to="/workspace?tab=content" replace />} />
-        <Route path="documents" element={<Navigate to="/workspace?tab=content" replace />} />
+        <Route path="documents" element={<DocumentsPage />} />
         <Route path="voice-marketplace" element={<Navigate to="/workspace?tab=content" replace />} />
         <Route path="blogs" element={<Navigate to="/workspace?tab=content" replace />} />
 

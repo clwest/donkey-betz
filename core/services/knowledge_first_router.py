@@ -128,6 +128,7 @@ class KnowledgeFirstRouter:
         'learning': 168,       # Learning patterns half-fresh after 1 week
         'embedding': 720,      # Embeddings half-fresh after 30 days
         'research': 72,        # Research results half-fresh after 3 days
+        'user_document': 2160, # User docs half-fresh after 90 days (long-lived reference)
     }
 
     def __init__(self):
@@ -372,6 +373,46 @@ class KnowledgeFirstRouter:
 
         return matches
 
+    def _query_user_documents(self, query: str, limit: int = 10) -> List[KnowledgeMatch]:
+        """Query user-uploaded RAG documents for relevant knowledge."""
+        matches = []
+        try:
+            query_embedding = self._get_embedding(query)
+            if not query_embedding:
+                return matches
+
+            from content.models import DocumentEmbedding
+
+            results = DocumentEmbedding.cosine_similarity_search(
+                query_vector=query_embedding,
+                limit=limit,
+                min_similarity=0.35
+            )
+
+            for result in results:
+                similarity = 1 - result.distance
+                doc = result.document
+                freshness = self._calculate_freshness(doc.created_at, 'user_document')
+
+                matches.append(KnowledgeMatch(
+                    source='user_document',
+                    content=result.chunk_text[:500],
+                    relevance_score=similarity,
+                    freshness_score=freshness,
+                    timestamp=doc.created_at,
+                    metadata={
+                        'document_id': doc.id,
+                        'document_title': doc.title,
+                        'document_type': doc.document_type,
+                        'chunk_index': result.chunk_index,
+                        'source_url': doc.source_url or '',
+                    }
+                ))
+        except Exception as e:
+            logger.warning(f"User document query failed: {e}")
+
+        return matches
+
     # ==================== Embedding Utilities ====================
 
     def _get_embedding(self, text: str) -> Optional[List[float]]:
@@ -419,7 +460,8 @@ class KnowledgeFirstRouter:
         agent_name: Optional[str] = None,
         check_spiders: bool = True,
         check_learnings: bool = True,
-        check_embeddings: bool = True
+        check_embeddings: bool = True,
+        check_user_documents: bool = True
     ) -> KnowledgeRoutingResult:
         """
         Route a task using knowledge-first approach.
@@ -464,7 +506,14 @@ class KnowledgeFirstRouter:
             sources_checked.append('agent_knowledge_sources')
             logger.debug(f"Found {len(shared_matches) + len(source_matches)} embedding matches")
 
-        # 4. Analyze matches and make decision
+        # 4. Query user-uploaded documents (RAG)
+        if check_user_documents:
+            doc_matches = self._query_user_documents(task)
+            all_matches.extend(doc_matches)
+            sources_checked.append('user_documents')
+            logger.debug(f"Found {len(doc_matches)} user document matches")
+
+        # 5. Analyze matches and make decision
         return self._make_routing_decision(
             task=task,
             matches=all_matches,
@@ -503,7 +552,7 @@ class KnowledgeFirstRouter:
 
         # Determine knowledge coverage
         # High coverage = many relevant, diverse sources
-        source_diversity = len(set(m.source for m in top_matches)) / 4  # Max 4 source types
+        source_diversity = len(set(m.source for m in top_matches)) / 5  # Max 5 source types
         knowledge_coverage = min(1.0, avg_relevance * (0.5 + 0.5 * source_diversity))
 
         # Generate knowledge summary
