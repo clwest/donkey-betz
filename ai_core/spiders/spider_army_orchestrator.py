@@ -108,9 +108,8 @@ class SpiderArmyOrchestrator:
         """Initialize configurations for all spider swarms"""
 
         # Financial Intelligence Spiders (500 spiders)
-        # NOTE: SEC.gov temporarily disabled - will be re-enabled soon
         financial_targets = [
-            # SpiderTarget("https://www.sec.gov/edgar/search/", rate_limit=0.5, priority=1),  # DISABLED
+            SpiderTarget("https://www.sec.gov/edgar/search/", rate_limit=0.5, priority=1),
             SpiderTarget("https://finance.yahoo.com/", rate_limit=2.0, priority=2),
             SpiderTarget("https://api.polygon.io/", rate_limit=5.0, priority=1),
             SpiderTarget("https://www.alphavantage.co/", rate_limit=1.0, priority=2),
@@ -248,9 +247,8 @@ class SpiderArmyOrchestrator:
         )
 
         # Regulatory Tracking Spiders (70 spiders)
-        # NOTE: SEC.gov temporarily disabled - will be re-enabled soon
         regulatory_targets = [
-            # SpiderTarget("https://www.sec.gov/", rate_limit=0.5, priority=1),  # DISABLED
+            SpiderTarget("https://www.sec.gov/", rate_limit=0.5, priority=1),
             SpiderTarget("https://www.federalregister.gov/", rate_limit=1.0, priority=2),
             SpiderTarget("https://www.cftc.gov/", rate_limit=0.5, priority=2),
             SpiderTarget("https://www.finra.org/", rate_limit=0.5, priority=3),

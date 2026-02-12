@@ -372,6 +372,7 @@ Focus on patterns that suggest informed trading or manipulation."""
                         'ticker': ticker,
                         'tool_calls': tool_calls_made,
                         'collected_data': collected_data,
+                        'anomalies': self._extract_anomalies_from_collected(collected_data),
                         'provenance': provenance.to_dict(),
                         'publishable': provenance.publishable,
                         'validation_status': provenance.validation_status,
@@ -603,6 +604,32 @@ Focus on patterns that suggest informed trading or manipulation."""
             return 'MEDIUM'
         else:
             return 'LOW'
+
+    def _extract_anomalies_from_collected(self, collected_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Extract structured anomalies from tool call results for the coordinator."""
+        anomalies = []
+
+        for tool_name, result in collected_data.items():
+            if not isinstance(result, dict):
+                continue
+
+            # Extract from flags lists (pump_dump, manipulation, coordinated all use 'flags')
+            for flag in result.get('flags', []):
+                if isinstance(flag, dict) and flag.get('severity'):
+                    anomalies.append({
+                        'ticker': flag.get('ticker', result.get('ticker', '')),
+                        'severity': flag['severity'],
+                        'type': flag.get('type', 'ANOMALY'),
+                        'message': flag.get('message', ''),
+                    })
+
+        # Fallback: if tools produced nothing, try direct data analysis
+        if not anomalies:
+            market_data = self._get_market_data()
+            anomalies.extend(self._detect_pump_dump(market_data))
+            anomalies.extend(self._detect_manipulation(market_data))
+
+        return anomalies
 
     def _execute_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
