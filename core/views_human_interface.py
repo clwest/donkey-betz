@@ -56,11 +56,28 @@ class AttentionStreamView(View):
             status_filter=status_filter if status_filter else None,
         )
 
+        # Session 988: Include last_visited_at for "NEW" badge support
+        from core.models.users.models import UserPreference
+        last_visited_pref = UserPreference.objects.filter(
+            user=request.user, key='boardroom_last_visited'
+        ).first()
+        last_visited_at = last_visited_pref.value if last_visited_pref else None
+
         return JsonResponse({
             'success': True,
             'items': items,
             'count': len(items),
+            'last_visited_at': last_visited_at,
         })
+
+    def post(self, request):
+        """POST /api/human/attention/ — Session 988: Record boardroom visit timestamp."""
+        from core.models.users.models import UserPreference
+        UserPreference.objects.update_or_create(
+            user=request.user, key='boardroom_last_visited',
+            defaults={'value': timezone.now().isoformat()}
+        )
+        return JsonResponse({'success': True})
 
 
 @method_decorator([csrf_exempt, login_required], name='dispatch')
