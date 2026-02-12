@@ -1,58 +1,40 @@
-# Session 991 - Start Here
+# Session 992 - Start Here
 
-**Previous Session:** 990 (PA-to-Agent Content Feedback Loop)
+**Previous Session:** 991 (Wire ProactiveIntelligenceService + AgentLearningService)
 **Date:** February 12, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** | **Bundle: 2,305 KB** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 93** | **PA Intents: 36** | **Content Feedback Loop: CLOSED** | **Reviewers: REAL VERDICTS**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** | **Bundle: 2,305 KB** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 93** | **PA Intents: 36** | **Enrichment Services: 7** | **Content Feedback Loop: CLOSED** | **Reviewers: REAL VERDICTS**
 
 ---
 
-## Session 990 Summary (Just Completed)
+## Session 991 Summary (Just Completed)
 
-### PA-to-Agent Content Feedback Loop
+### Wire ProactiveIntelligenceService + AgentLearningService
 
-Closed the feedback loop between PA content review decisions and originating agents. When the PA publishes, archives, or revises content, the decision is now recorded back to the originating agent via 3 mechanisms:
+Connected two fully-built but uncalled services (~1,300 lines combined) into the main execution paths:
 
-1. **AgentMemory** (type='feedback', tags=['pa_review']) -- agents see PA decisions in multi-agent conversations and future executions
-2. **UserAgentLearning** -- per-user personalization (publish=success, archive=failure)
-3. **FeedbackLoopEngine** -- `pa_review_feedback` and `pa_review_summary` in feedback context, extracted into `spider_context` by agent_router
+**ProactiveIntelligenceService** (545 lines) — now wired into the PA enrichment pipeline:
+- Added `proactive_intelligence` enrichment to 4 intents: `opportunities`, `stock_intelligence`, `content_review`, `system_overview`
+- Queries SpiderData, TriggerEvent, BlockchainSecurityAlert, Opportunity, MarketIntelligenceBrief
+- Formatted as `=== PROACTIVE INTELLIGENCE ===` section in analytical prompts
+- Capped at 500 chars, respects relevance gate for non-direct intents
 
-**Files changed:** `tool_dispatcher.py` (new `_record_content_feedback()` + 3 call sites), `feedback_loop_engine.py` (PA review query), `agent_router.py` (context extraction)
+**AgentLearningService** (778 lines) — now wired into the agent router:
+- Records every `route()` execution via `record_interaction()` (Redis-based, success or failure)
+- Injects adaptive preferences via `get_adaptive_context()` into `user_context['agent_learned_preferences']`
+- Surfaced through `gather_context()` into `spider_context` so agents see learned preferences
+- All calls wrapped in try/except — never breaks execution
 
-No new models, no migrations, no new Celery tasks. Uses existing AgentMemory, UserAgentLearning, and context injection pipeline.
+**Files changed:** `unified_pa_entrypoint.py` (6 edits), `agent_router.py` (4 edits)
+
+No new models, no migrations, no new Celery tasks, no frontend changes.
+
+### Session 990 Summary (Prior)
+
+Closed PA-to-Agent content feedback loop. When PA publishes/archives/revises content, the decision is recorded back to the originating agent via AgentMemory, UserAgentLearning, and FeedbackLoopEngine.
 
 ### Session 989 Summary (Prior)
 
-### Production Verification (5 open items from Session 988)
-
-All 5 items verified on Railway production (`donkey-betz-platform-production.up.railway.app`):
-
-1. **Content Reviewers: VERIFIED** - SkepticReviewer returned real REVISE verdict (not synthetic FAIL). FactCheckReviewer ran. 14 claims, 14 sources, 1 revision pass. Import fix confirmed working.
-
-2. **Execution History: VERIFIED** - "What have agents been doing?" returns 20 executions + 20 conversations. Required 3 additional fixes (see below).
-
-3. **Crypto Price: VERIFIED** - "How much is BTC?" routes correctly to spider_data_tool. Query succeeds (0 items — CoinGecko spider not crawled recently). No field errors.
-
-4. **Celery Prefork: INCONCLUSIVE** - Config correct (`--max-tasks-per-child=50`), but workers only processed ~15 tasks since deploy. Recycling threshold not yet reached.
-
-5. **Muscular System: VERIFIED** - Status is "fit" (not 60.5%). Some groups paralyzed due to low volume.
-
-### Production Bug Fixes (3 commits)
-
-**SpiderData Wrong Field Names:** `_handle_spider_data` in tool_dispatcher.py referenced `title`, `url`, `category`, `content` which don't exist on SpiderData. Fixed to use `source_url`, `data_type`, `embedding_text`.
-
-**Execution History Missing Payload:** `_build_tool_payload()` had no `execution_history` case — default `action='list'` was sent (invalid). Added payload builder with action detection.
-
-**AgentExecution FK Field Names:** `AgentExecution.agent` is a FK to Agent, not a CharField. Handler used `agent_name` and `success` (both non-existent). Fixed to `agent__name` (FK traversal) and `status='completed'`/`'failed'`.
-
-**DeliberationSession Participants:** `participants` JSONField contains dicts, not strings. `', '.join()` on dicts threw TypeError. Fixed to extract `name` key before joining.
-
-### Railway Deployment Gotcha Discovered
-
-Each Procfile process (`web`, `celery-pa`, `celery-worker`, etc.) is a **SEPARATE Railway service**. `railway up` only deploys the linked service. `railway redeploy` re-runs the last build (old code if new build was in progress). GitHub push auto-deploys ALL services. Always verify celery-pa has the latest code.
-
-### Session 988 Summary (Prior)
-
-Initiative modal overflow, content reviewer import fix, PA initiative routing, agent stale data grounding, execution history formatter, crypto price intent, capabilities narrowing.
+Production verification of 5 open items. Fixed SpiderData field names, execution history payload, AgentExecution FK traversal, DeliberationSession participants extraction. Discovered Railway multi-service deployment gotcha.
 
 ---
 
@@ -70,8 +52,9 @@ Initiative modal overflow, content reviewer import fix, PA initiative routing, a
 | Workspace Tabs | 9 (down from 18) |
 | Frontend Bundle | 2,305 KB |
 | Frontend Routes | 37 (15 standalone + 22 redirects) |
-| PA Tools | 92 |
-| PA Intents | 36 (added crypto_price, narrowed capabilities) |
+| PA Tools | 93 |
+| PA Intents | 36 |
+| Enrichment Services | 7 (was 6, added proactive_intelligence) |
 | Attention Sections | 7 |
 | LLM Providers | 6 (OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini) |
 | Standalone Pages | `/stocks`, `/advisors`, `/neural-orchestra`, `/conversation-contract`, `/mythology-lab`, `/billing`, `/analytics`, `/docs-index` |

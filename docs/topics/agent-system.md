@@ -55,6 +55,8 @@ Every agent receives contextual data before execution:
 
 `feedback_context` now includes `pa_review_feedback` (last 5 PA publish/archive/revise decisions) and `pa_review_summary`, extracted into `spider_context['pa_content_feedback']` and `spider_context['pa_review_summary']` by `gather_context()` (Session 990).
 
+`AgentLearningService` (`core/services/agent_learning_service.py`) records every `route()` execution via `record_interaction()` and builds per-user, per-agent preference models in Redis. `_get_user_context()` injects the adaptive context string into `user_context['agent_learned_preferences']`, which `gather_context()` surfaces into `spider_context['agent_learned_preferences']` (Session 991).
+
 Context can be pre-gathered before timeout starts via `gather_context()` + `pre_gathered_context` param.
 
 ## ToolCallRecord (Session 970)
