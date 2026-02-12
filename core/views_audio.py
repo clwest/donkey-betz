@@ -1,8 +1,12 @@
 """
 Audio API Views (Session 48: Phase 3 - Audio UI)
 Provides REST API endpoints for Runway ML audio features.
+
+Session 990: Added _execute_generate_voice, _execute_add_voiceover (moved from views_image.py)
 """
 
+import os
+import uuid
 import logging
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -13,6 +17,158 @@ from django.core.files.base import ContentFile
 from content.video_provider import runway_provider
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Session 990: Agent-facing audio functions (moved from views_image.py)
+# =============================================================================
+
+def _execute_generate_voice(user, parameters, session=None):
+    """
+    Internal function for text-to-speech generation.
+    Called by AudioAgent.
+
+    Session 794: Use system user for autonomous operations (Celery tasks)
+    Session 990: Moved from views_image.py to views_audio.py
+
+    Args:
+        user: Django user object
+        parameters: Dict with text, voice, stability, similarity_boost
+        session: Optional session for tracking
+
+    Returns:
+        Dict with success, audio_url
+    """
+    try:
+        from core.views_image import get_system_user
+
+        is_autonomous = user is None
+        if is_autonomous:
+            user = get_system_user()
+            logger.info("Using system_autonomous user for voice generation")
+
+        text = parameters.get('text')
+        voice = parameters.get('voice', 'Rachel')
+        stability = parameters.get('stability', 0.5)
+        similarity_boost = parameters.get('similarity_boost', 0.75)
+
+        if not text:
+            return {'success': False, 'error': 'text required'}
+
+        logger.info(f"Agent generating voice: '{text[:50]}...' with voice {voice}")
+
+        from core.services.elevenlabs_tts_service import (
+            generate_speech_with_retry, get_voice_id
+        )
+
+        voice_id = get_voice_id(voice)
+
+        tts_result = generate_speech_with_retry(
+            text=text,
+            voice_id=voice_id,
+            stability=stability,
+            similarity_boost=similarity_boost,
+            max_retries=3,
+            base_timeout=60
+        )
+
+        if not tts_result['success']:
+            logger.error(f"ElevenLabs TTS failed: {tts_result.get('error')}")
+            return {'success': False, 'error': tts_result.get('error')}
+
+        audio_data = tts_result['audio_data']
+
+        filename = f'voice_{uuid.uuid4().hex[:8]}.mp3'
+        username = user.username if user else 'system'
+        filepath = os.path.join('generated_audio', username, filename)
+        saved_path = default_storage.save(filepath, ContentFile(audio_data))
+        audio_url = default_storage.url(saved_path)
+
+        logger.info(f"Agent generated voice: {saved_path}")
+
+        audio_id = None
+        from content.models import AudioHistory
+        audio_record = AudioHistory.objects.create(
+            user=user,
+            session=session,
+            filename=filename,
+            file_path=saved_path,
+            audio_type='tts',
+            prompt=text,
+            parameters={
+                'stability': stability,
+                'similarity_boost': similarity_boost,
+                'model_id': 'eleven_monolingual_v1',
+                'autonomous': is_autonomous
+            },
+            voice_id=voice_id,
+            voice_name=voice,
+            model_used='eleven_monolingual_v1',
+            file_size_bytes=len(audio_data),
+            status='completed'
+        )
+        audio_id = audio_record.id
+
+        return {
+            'success': True,
+            'audio_url': audio_url,
+            'audio_id': audio_id,
+            'voice': voice,
+            'voice_id': voice_id,
+            'filename': filename,
+            'file_path': saved_path,
+            'message': f"Voice generated with {voice}"
+        }
+
+    except Exception as e:
+        logger.error(f"Agent TTS error: {e}")
+        return {'success': False, 'error': str(e)}
+
+
+def _execute_add_voiceover(user, parameters, session=None):
+    """
+    Internal function for adding voiceover to video.
+    Called by AudioAgent.
+
+    Session 990: Moved from views_image.py to views_audio.py
+
+    Args:
+        user: Django user object
+        parameters: Dict with video_id, text, voice, background_volume
+        session: Optional session for tracking
+
+    Returns:
+        Dict with success, video_url
+    """
+    try:
+        video_id = parameters.get('video_id')
+        text = parameters.get('text')
+        voice = parameters.get('voice', 'Rachel')
+
+        if not video_id or not text:
+            return {'success': False, 'error': 'video_id and text required'}
+
+        logger.info(f"Agent adding voiceover to video {video_id}")
+
+        # First generate the voice
+        voice_result = _execute_generate_voice(user, {
+            'text': text,
+            'voice': voice
+        }, session)
+
+        if not voice_result.get('success'):
+            return voice_result
+
+        # Video/audio mixing requires FFmpeg integration
+        return {
+            'success': False,
+            'error': 'Video voiceover mixing not yet implemented',
+            'audio_url': voice_result.get('audio_url')
+        }
+
+    except Exception as e:
+        logger.error(f"Agent voiceover error: {e}")
+        return {'success': False, 'error': str(e)}
 
 
 @csrf_exempt

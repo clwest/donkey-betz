@@ -579,6 +579,14 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                                 'source': tool_name,
                                 'data': tool_result.get('data', tool_result)
                             })
+                        elif tool_result.get('data'):
+                            # Session 990: Include partial results even on failure
+                            all_results.append({
+                                'source': tool_name,
+                                'data': tool_result.get('data'),
+                                'partial': True,
+                                'error': tool_result.get('error', 'Unknown error')
+                            })
 
                         self.mark_decision_outcome(
                             success=tool_result.get('success', False),
@@ -787,9 +795,16 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
 
                         return result
                     else:
+                        # Session 990: Include tool errors in failure message
+                        tool_errors = []
+                        for tc in tool_calls_made:
+                            err = tc.get('result', {}).get('error')
+                            if err:
+                                tool_errors.append(f"{tc['tool']}: {err}")
+                        error_detail = "; ".join(tool_errors) if tool_errors else "No tools returned results"
                         result = AgentResult(
                             success=False,
-                            error="Research returned no results",
+                            error=f"Research returned no results ({error_detail})",
                             agent_name=self.name,
                             execution_time_ms=execution_time,
                             tool_calls=tool_calls_made
@@ -1968,10 +1983,40 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                         record['outcome_notes'] = decision.outcome_notes[:300] if decision.outcome_notes else None
                     results.append(record)
 
+            elif data_type == 'agents':
+                # Session 990: Support querying agent registry
+                from core.models_unified_system import Agent
+
+                queryset = Agent.objects.all()
+
+                if filter_type == 'active':
+                    queryset = queryset.filter(is_active=True)
+                elif filter_type == 'recent':
+                    queryset = queryset.filter(created_at__gte=recent_cutoff)
+
+                queryset = queryset.order_by('name')[:limit]
+
+                all_agents = Agent.objects.all()
+                summary = {
+                    'total_agents': all_agents.count(),
+                    'active_count': all_agents.filter(is_active=True).count(),
+                }
+
+                for agent in queryset:
+                    record = {
+                        'id': str(agent.id),
+                        'name': agent.name,
+                        'is_active': agent.is_active,
+                    }
+                    if include_details:
+                        record['description'] = (agent.description[:300] if agent.description else None)
+                        record['agent_type'] = getattr(agent, 'agent_type', None)
+                    results.append(record)
+
             else:
                 return {
                     'success': False,
-                    'error': f"Unknown data_type: {data_type}. Supported: experiments, agent_executions, initiatives, agent_learnings, deliverables, spider_data_stats, decision_records"
+                    'error': f"Unknown data_type: {data_type}. Supported: experiments, agent_executions, initiatives, agent_learnings, deliverables, spider_data_stats, decision_records, agents"
                 }
 
             logger.info(f"[Session 884] Internal data query: {data_type} filter={filter_type} returned {len(results)} records")

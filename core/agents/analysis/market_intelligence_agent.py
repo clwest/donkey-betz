@@ -37,11 +37,15 @@ import time
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone as dt_timezone
 from dataclasses import dataclass, field
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 from core.agents.base_agent import BaseAgent, AgentResult
 from core.agents.report_schemas import build_provenance, format_disclaimer
 
 logger = logging.getLogger(__name__)
+
+# Session 990: Per-call timeout for external data fetches (spider calls)
+SPIDER_FETCH_TIMEOUT = 60  # 60 seconds per spider fetch
 
 
 @dataclass
@@ -505,7 +509,14 @@ You analyze and report - you do NOT give trading advice or recommendations."""
             from ai_core.spiders.specialized.sec_spider import SECSpider
 
             spider = SECSpider()
-            all_filings = spider.fetch_data(max_results=limit * 2)  # Fetch extra for filtering
+            # Session 990: Wrap spider call with timeout to prevent hangs
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(spider.fetch_data, max_results=limit * 2)
+                try:
+                    all_filings = future.result(timeout=SPIDER_FETCH_TIMEOUT)
+                except FuturesTimeoutError:
+                    logger.warning(f"SEC spider timed out after {SPIDER_FETCH_TIMEOUT}s")
+                    return {'error': 'SEC data fetch timed out', 'items': [], 'filings': []}
 
             # Filter by form type if specified
             if form_types:
@@ -554,7 +565,14 @@ You analyze and report - you do NOT give trading advice or recommendations."""
             try:
                 from ai_core.spiders.specialized.coingecko_spider import CoinGeckoSpider
                 spider = CoinGeckoSpider()
-                crypto_data = spider.fetch_data(max_results=crypto_limit)
+                # Session 990: Wrap with timeout — CoinGecko makes 3 sequential calls (30s each)
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(spider.fetch_data, max_results=crypto_limit)
+                    try:
+                        crypto_data = future.result(timeout=SPIDER_FETCH_TIMEOUT)
+                    except FuturesTimeoutError:
+                        logger.warning(f"CoinGecko spider timed out after {SPIDER_FETCH_TIMEOUT}s")
+                        crypto_data = []
 
                 result['crypto']['assets'] = crypto_data
 
@@ -584,7 +602,14 @@ You analyze and report - you do NOT give trading advice or recommendations."""
             try:
                 from ai_core.spiders.specialized.yahoo_finance_spider import YahooFinanceSpider
                 spider = YahooFinanceSpider()
-                stock_data = spider.fetch_data(max_results=stock_limit)
+                # Session 990: Wrap with timeout — yfinance has NO built-in timeout
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(spider.fetch_data, max_results=stock_limit)
+                    try:
+                        stock_data = future.result(timeout=SPIDER_FETCH_TIMEOUT)
+                    except FuturesTimeoutError:
+                        logger.warning(f"Yahoo Finance spider timed out after {SPIDER_FETCH_TIMEOUT}s")
+                        stock_data = []
 
                 result['stocks']['assets'] = stock_data
 
