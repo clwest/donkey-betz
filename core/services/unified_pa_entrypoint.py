@@ -79,13 +79,13 @@ class UnifiedPAEntrypoint:
     # Session 959: Intent-to-enrichment mapping
     # Determines which intelligence services fire for each intent
     INTENT_ENRICHMENT_MAP = {
-        'content_review':    ['blog_performance', 'domain_context', 'spider_trends', 'strategic_memory'],
-        'opportunities':     ['spider_trends', 'domain_context', 'advisor'],
+        'content_review':    ['blog_performance', 'domain_context', 'spider_trends', 'strategic_memory', 'proactive_intelligence'],
+        'opportunities':     ['spider_trends', 'domain_context', 'advisor', 'proactive_intelligence'],
         'predictions':       ['spider_trends', 'domain_context'],
         'initiatives':       ['intelligence_enricher', 'strategic_memory'],
         'boardroom':         ['intelligence_enricher', 'strategic_memory'],
         'system_health':     ['intelligence_enricher'],
-        'stock_intelligence': ['domain_context', 'spider_trends'],
+        'stock_intelligence': ['domain_context', 'spider_trends', 'proactive_intelligence'],
         'crypto_price':      ['domain_context'],
         'spider_data':       ['domain_context'],
         'execution_history': ['intelligence_enricher', 'strategic_memory'],
@@ -100,7 +100,7 @@ class UnifiedPAEntrypoint:
         # Session 970: Surgical moves verification — pure data
         'surgical_moves_status': [],
         # Session 973: Broad system overview — light enrichment
-        'system_overview': ['intelligence_enricher'],
+        'system_overview': ['intelligence_enricher', 'proactive_intelligence'],
     }
 
     # Alias map: normalize variant intent names to canonical names
@@ -147,6 +147,7 @@ class UnifiedPAEntrypoint:
         'advisor':          300,
         'strategic_memory':  400,
         'learning_insights': 600,  # Session 972: Explicit cap for learning insights
+        'proactive_intelligence': 500,
     }
 
     # Stop words for relevance gating
@@ -176,6 +177,7 @@ class UnifiedPAEntrypoint:
         self._domain_context_builder = None
         self._spider_context_builder = None
         self._advisor_context_builder = None
+        self._proactive_intelligence_service = None
 
         # Session 940: Triage mode state
         self._triage_mode = False
@@ -310,6 +312,18 @@ class UnifiedPAEntrypoint:
                 logger.warning("AdvisorContextBuilder not available")
                 self._advisor_context_builder = None
         return self._advisor_context_builder
+
+    @property
+    def proactive_intelligence_service(self):
+        """Lazy load ProactiveIntelligenceService."""
+        if self._proactive_intelligence_service is None:
+            try:
+                from core.services.proactive_intelligence import get_proactive_intelligence_service
+                self._proactive_intelligence_service = get_proactive_intelligence_service(self.user)
+            except ImportError:
+                logger.warning("ProactiveIntelligenceService not available")
+                self._proactive_intelligence_service = None
+        return self._proactive_intelligence_service
 
     async def process_message(
         self,
@@ -1488,6 +1502,16 @@ class UnifiedPAEntrypoint:
                     except ImportError:
                         pass
 
+                elif service_key == 'proactive_intelligence' and self.proactive_intelligence_service:
+                    pi_result = await asyncio.to_thread(
+                        self.proactive_intelligence_service.get_relevant_intelligence,
+                        message, None, 3, 24
+                    )
+                    text = self.proactive_intelligence_service.format_for_prompt(pi_result)
+                    if text:
+                        if is_direct or self._passes_relevance_gate(message, text):
+                            sections['proactive_intelligence'] = text
+
             except Exception as e:
                 logger.warning(f"[{trace_id}] Enrichment '{service_key}' failed: {e}")
 
@@ -1643,6 +1667,7 @@ RULES:
             'domain_context': 'DOMAIN CONTEXT',
             'advisor': 'ADVISOR PRINCIPLES',
             'strategic_memory': 'STRATEGIC MEMORY',
+            'proactive_intelligence': 'PROACTIVE INTELLIGENCE',
         }
         for key, label in section_labels.items():
             text = enrichment_sections.get(key, '')

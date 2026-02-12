@@ -678,6 +678,10 @@ class AgentRouter:
             spider_context['incident_docs_text'] = risk_context.get('incident_docs_text', '')
             spider_context['audit_findings_text'] = risk_context.get('audit_findings_text', '')
 
+        # Session 990: Surface agent learned preferences from AgentLearningService
+        if user_context and user_context.get('agent_learned_preferences'):
+            spider_context['agent_learned_preferences'] = user_context['agent_learned_preferences']
+
         return {
             'scifi_context': scifi_context,
             'spider_context': spider_context,
@@ -1077,6 +1081,9 @@ class AgentRouter:
             # Session 858: Record success for user learning feedback loop
             if result.success:
                 self._record_user_learning(agent_name, task, result, context.get('user', {}))
+
+            # Session 990: Record interaction for AgentLearningService (Redis-based preferences)
+            self._record_agent_learning_interaction(agent_name, task, result, context)
 
             return result
 
@@ -1687,6 +1694,11 @@ class AgentRouter:
             # Session 930: Enhance context with agent-specific learning
             user_context = self._apply_agent_learning(agent_name, user_context)
 
+            # Session 990: Inject AgentLearningService adaptive preferences
+            adaptive_text = self._get_agent_learning_adaptive_context(agent_name)
+            if adaptive_text:
+                user_context['agent_learned_preferences'] = adaptive_text
+
             user_context['has_user_context'] = True
 
             logger.debug(
@@ -1882,6 +1894,49 @@ class AgentRouter:
 
         except Exception as e:
             logger.debug(f"Could not record user learning (non-critical): {e}")
+
+    def _record_agent_learning_interaction(
+        self,
+        agent_name: str,
+        task: str,
+        result: AgentResult,
+        context: Dict[str, Any]
+    ):
+        """
+        Session 990: Record interaction for AgentLearningService (Redis-based preferences).
+
+        Fires on every execution (success or failure) so the learning service
+        can build preference models from usage patterns.
+        """
+        try:
+            from core.services.agent_learning_service import get_learning_service, InteractionType
+
+            get_learning_service().record_interaction(
+                user_id=self.user.id,
+                agent_name=agent_name,
+                interaction_type=InteractionType.CREATED,
+                input_data={'task': task[:500]},
+                output_data={
+                    'success': result.success,
+                    'execution_time_ms': result.execution_time_ms,
+                    'message_preview': str(result.message or '')[:200],
+                },
+            )
+        except Exception as e:
+            logger.debug(f"AgentLearningService record_interaction failed (non-critical): {e}")
+
+    def _get_agent_learning_adaptive_context(self, agent_name: str) -> str:
+        """
+        Session 990: Get adaptive context string from AgentLearningService.
+
+        Returns a short preference summary built from Redis-tracked signals,
+        or empty string on any error.
+        """
+        try:
+            from core.services.agent_learning_service import get_learning_service
+            return get_learning_service().get_adaptive_context(self.user.id, agent_name)
+        except Exception:
+            return ''
 
     def _create_execution_record(self, agent_name: str, task: str, context_summary: dict = None, experiment_id=None):
         """
