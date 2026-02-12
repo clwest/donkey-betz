@@ -33,8 +33,9 @@ from core.agents.base_agent import BaseAgent, AgentResult
 from ml.auto_selection import TaskType
 
 # Session 895: Timeout for sub-agent executions to prevent coordinator hangs
-# Extended to 5 min to accommodate thinking models (GPT-5.1, o1, o3)
-SUB_AGENT_TIMEOUT = 300  # 5 minutes per agent perspective
+# Session 990: Reduced from 300s to 180s — 5 min was too generous and caused
+# 30-min overall timeouts when 3+ agents each consumed the full timeout
+SUB_AGENT_TIMEOUT = 180  # 3 minutes per agent perspective
 
 logger = logging.getLogger(__name__)
 
@@ -365,11 +366,19 @@ You facilitate but don't make decisions - you synthesize and document."""
         """Start a meeting between agents - ACTUALLY calls each agent."""
         logger.info(f"Starting {meeting_type} meeting on: {topic}")
 
-        # Session 836: Actually call each participant agent to get real perspectives
+        # Session 990: Parallelize sub-agent calls to avoid sequential 5-min timeouts
+        # Previously: sequential loop → N agents × 5 min = 15+ min
+        # Now: parallel with max 3 workers → max(agent times) ≈ 3 min
         perspectives = []
-        for participant in participants:
-            perspective = self._get_agent_perspective(participant, topic, meeting_type)
-            perspectives.append(perspective)
+        with ThreadPoolExecutor(max_workers=min(len(participants), 3)) as executor:
+            futures = {
+                executor.submit(
+                    self._get_agent_perspective, participant, topic, meeting_type
+                ): participant
+                for participant in participants
+            }
+            for future in futures:
+                perspectives.append(future.result())
 
         # Determine status based on whether we got real perspectives
         has_real_content = any(

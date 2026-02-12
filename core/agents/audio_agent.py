@@ -411,7 +411,8 @@ If asked to do something outside audio generation, politely explain you can only
         """Execute a tool call for audio generation."""
 
         if tool_name == "generate_voice":
-            from core.views_image import _execute_generate_voice
+            # Session 990: Import from views_audio (was views_image — wrong module)
+            from core.views_audio import _execute_generate_voice
             parameters = {
                 'text': arguments.get('text', ''),
                 'voice': arguments.get('voice', 'Rachel'),
@@ -421,14 +422,16 @@ If asked to do something outside audio generation, politely explain you can only
             return _execute_generate_voice(self.user, parameters, session=None)
 
         elif tool_name == "generate_sfx":
-            # Sound effects generation - may need to be implemented
+            # Sound effects generation — ElevenLabs sound generation API
+            # Session 990: Proper error with context instead of bare placeholder
             return {
                 'success': False,
-                'error': 'Sound effects generation not yet implemented'
+                'error': 'Sound effects generation requires ElevenLabs Sound Generation API (not yet configured). Voice generation (generate_voice) is available.',
             }
 
         elif tool_name == "add_voiceover":
-            from core.views_image import _execute_add_voiceover
+            # Session 990: Import from views_audio (was views_image — wrong module)
+            from core.views_audio import _execute_add_voiceover
             parameters = {
                 'video_id': arguments.get('video_id'),
                 'text': arguments.get('text', ''),

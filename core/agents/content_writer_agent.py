@@ -402,31 +402,48 @@ Current trending topics from spider network:
 Consider these trends when crafting the content to maximize relevance and engagement.""")
 
         # Session 886: Add performance context for feedback loop
+        # Session 990: Wrapped with timeout to prevent context builders from hanging
         if PERFORMANCE_CONTEXT_AVAILABLE and get_blog_performance_context:
             try:
-                performance_context = get_blog_performance_context(
-                    limit=10,
-                    include_learning_rules=True,
-                    include_engagement=True
-                )
+                from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(
+                        get_blog_performance_context,
+                        limit=10,
+                        include_learning_rules=True,
+                        include_engagement=True
+                    )
+                    try:
+                        performance_context = future.result(timeout=15)
+                    except FuturesTimeoutError:
+                        logger.warning("Blog performance context timed out after 15s — skipping")
+                        performance_context = None
                 if performance_context:
                     prompt_parts.append(f"\n\n{performance_context}")
-                    logger.info(f"📊 Session 886: Injected performance context ({len(performance_context)} chars)")
+                    logger.info(f"Session 886: Injected performance context ({len(performance_context)} chars)")
             except Exception as e:
                 logger.warning(f"Could not inject performance context: {e}")
 
         # Session 891: Add domain-specific content context (finance, sports, AI, crypto, etc.)
+        # Session 990: Wrapped with timeout
         if DOMAIN_CONTEXT_AVAILABLE and get_domain_content_context:
             try:
-                # Get domain context for any topic - auto-detects relevant domains
-                domain_context = get_domain_content_context(
-                    topic=topic or "",
-                    max_domains=2  # Include up to 2 relevant domain contexts
-                )
+                from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(
+                        get_domain_content_context,
+                        topic=topic or "",
+                        max_domains=2
+                    )
+                    try:
+                        domain_context = future.result(timeout=15)
+                    except FuturesTimeoutError:
+                        logger.warning("Domain content context timed out after 15s — skipping")
+                        domain_context = None
                 if domain_context and len(domain_context) > 100:  # Skip if only generic
                     prompt_parts.append(f"\n\n{domain_context}")
                     domain, confidence = detect_content_domain(topic or "") if detect_content_domain else ("unknown", 0)
-                    logger.info(f"📚 Session 891: Injected {domain} domain context ({len(domain_context)} chars, {confidence:.0%} confidence)")
+                    logger.info(f"Session 891: Injected {domain} domain context ({len(domain_context)} chars, {confidence:.0%} confidence)")
             except Exception as e:
                 logger.warning(f"Could not inject domain context: {e}")
 
@@ -571,13 +588,24 @@ For this {content_type}, ensure:
                 if use_flagship and content_type in ['blog_post', 'article', 'newsletter']:
                     try:
                         from core.services.content_voice_system import generate_flagship_injection
-                        flagship_injection = generate_flagship_injection(
-                            topic=topic or task[:50],
-                            audience=target_audience,
-                            cta_type=cta_type
-                        )
-                        prompt = prompt + "\n\n" + flagship_injection
-                        logger.info(f"📝 Session 854: Added flagship template injection ({len(flagship_injection)} chars)")
+                        from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+                        # Session 990: Wrap flagship injection with timeout — it runs
+                        # multiple DB queries (agent recoveries, dreams, learnings, decisions)
+                        with ThreadPoolExecutor(max_workers=1) as executor:
+                            future = executor.submit(
+                                generate_flagship_injection,
+                                topic=topic or task[:50],
+                                audience=target_audience,
+                                cta_type=cta_type
+                            )
+                            try:
+                                flagship_injection = future.result(timeout=15)
+                            except FuturesTimeoutError:
+                                logger.warning("Flagship injection timed out after 15s — skipping")
+                                flagship_injection = None
+                        if flagship_injection:
+                            prompt = prompt + "\n\n" + flagship_injection
+                            logger.info(f"Session 854: Added flagship template injection ({len(flagship_injection)} chars)")
                     except Exception as e:
                         logger.warning(f"Could not add flagship injection: {e}")
 
