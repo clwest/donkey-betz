@@ -1090,121 +1090,128 @@ class AutonomousActionExecutor:
             initiative_stage = None
             hive_session = None
 
-            # First try to find existing initiative by topic
+            # First try to find existing similar initiative (dedup)
             try:
-                initiative = Initiative.objects.filter(
-                    name__icontains=topic[:100]
-                ).order_by('-created_at').first()
+                from core.services.initiative_circuit_breaker import find_similar_initiative
+                from core.services.initiative_title_generator import generate_initiative_title
+                initiative_name = generate_initiative_title(
+                    content=reasoning[:1000] if reasoning else '',
+                    topic_hint=topic,
+                    max_length=80,
+                    use_llm=True
+                )
+                initiative = find_similar_initiative(initiative_name)
             except Exception as e:
-                logger.warning(f"Initiative lookup failed for topic: {e}")
+                logger.warning(f"Initiative dedup lookup failed for topic: {e}")
+                initiative_name = topic[:80]
 
             if not initiative:
-                # Create new initiative
-                try:
-                    # Session 916: Use title generator for clean initiative names
-                    from core.services.initiative_title_generator import generate_initiative_title
-                    initiative_name = generate_initiative_title(
-                        content=reasoning[:1000] if reasoning else '',
-                        topic_hint=topic,
-                        max_length=80,
-                        use_llm=True
+                # Circuit breaker check
+                from core.services.initiative_circuit_breaker import can_create_initiative
+                if not can_create_initiative():
+                    logger.warning(
+                        f"[circuit_breaker] Blocked initiative creation from autonomous executor "
+                        f"for: {topic[:50]}"
                     )
-
-                    initiative = Initiative.objects.create(
-                        name=initiative_name,
-                        description=f"Auto-created from blocked research. {reasoning[:500]}",
-                        status='ACTIVE',
-                        purpose='learning',
-                        current_stage=1,
-                        created_by='ResearchAgent'
-                    )
-                    logger.info(f"[Session 906] Created new Initiative: {initiative.id}")
-
-                    # Create all 5 stages
-                    for stage_num in range(1, 6):
-                        InitiativeStage.objects.create(
-                            initiative=initiative,
-                            stage=stage_num,
-                            status='PENDING' if stage_num > 1 else 'BLOCKED'
-                        )
-
-                    # Session 906: Create HiveMindSession for tracking
+                    # Skip initiative creation — research result is still valuable
+                else:
+                    # Create new initiative
                     try:
-                        # Get ResearchAgent template for participant tracking
-                        research_agent = UnifiedAgentTemplate.objects.filter(
-                            name__icontains='Research'
-                        ).first()
-                        participant_ids = [str(research_agent.id)] if research_agent else []
-
-                        hive_session = HiveMindSession.objects.create(
-                            session_mode='autonomous',
-                            question=f"Research blocked: {topic[:200]}",
-                            context=reasoning[:1000] if reasoning else '',
-                            conversation_topic=topic[:200],
-                            conversation_type='analytical',
-                            objective=f"Gather data for: {topic[:150]}",
-                            success_criteria=['Sufficient data collected', 'Research unblocked'],
-                            auto_selected_agents=True,
-                            status='completed',
-                            participant_ids=participant_ids,
-                            synthesis=f"Research blocked due to insufficient data. Trigger: {unblock_result.get('unblock_type', 'unknown')}. {findings[:500] if findings else 'Awaiting data.'}",
-                            synthesis_summary=f"Blocked research - awaiting spider data for: {topic[:100]}",
-                            contribution_count=1,
+                        initiative = Initiative.objects.create(
+                            name=initiative_name,
+                            description=f"Auto-created from blocked research. {reasoning[:500]}",
+                            status='ACTIVE',
+                            purpose='learning',
+                            current_stage=1,
+                            created_by='ResearchAgent'
                         )
-                        logger.info(f"[Session 906] Created HiveMindSession: {hive_session.id}")
+                        logger.info(f"[Session 906] Created new Initiative: {initiative.id}")
 
-                        # Create a contribution record
-                        if research_agent:
-                            HiveMindContribution.objects.create(
-                                session=hive_session,
-                                agent_id=str(research_agent.id),
-                                agent_name=research_agent.name,
-                                content=f"Attempted research on '{topic[:100]}' but encountered insufficient data. Triggered self-unblock: {unblock_result.get('unblock_type', 'unknown')}",
-                                confidence_score=0.3,
-                                thinking_time=1.0,
+                        # Create all 5 stages
+                        for stage_num in range(1, 6):
+                            InitiativeStage.objects.create(
+                                initiative=initiative,
+                                stage=stage_num,
+                                status='PENDING' if stage_num > 1 else 'BLOCKED'
                             )
 
-                        # Session 906: Create AgentExecution record
-                        if research_agent:
-                            AgentExecution.objects.create(
-                                template=research_agent,
-                                execution_id=f"blocked-research-{uuid.uuid4().hex[:8]}",
-                                task_description=f"Research: {topic[:200]}",
-                                task_type='research',
-                                context={
-                                    'initiative_id': str(initiative.id),
-                                    'topic': topic[:200],
-                                    'blocked_reason': 'insufficient_data',
-                                },
+                        # Session 906: Create HiveMindSession for tracking
+                        try:
+                            # Get ResearchAgent template for participant tracking
+                            research_agent = UnifiedAgentTemplate.objects.filter(
+                                name__icontains='Research'
+                            ).first()
+                            participant_ids = [str(research_agent.id)] if research_agent else []
+
+                            hive_session = HiveMindSession.objects.create(
+                                session_mode='autonomous',
+                                question=f"Research blocked: {topic[:200]}",
+                                context=reasoning[:1000] if reasoning else '',
+                                conversation_topic=topic[:200],
+                                conversation_type='analytical',
+                                objective=f"Gather data for: {topic[:150]}",
+                                success_criteria=['Sufficient data collected', 'Research unblocked'],
+                                auto_selected_agents=True,
                                 status='completed',
-                                progress_percentage=100,
-                                current_step='Blocked - awaiting data',
-                                steps_completed=[
-                                    'Research initiated',
-                                    'Data sources queried',
-                                    'Insufficient data detected',
-                                    'Self-unblock triggered',
-                                ],
-                                result={
-                                    'success': False,
-                                    'blocked': True,
-                                    'unblock_type': unblock_result.get('unblock_type'),
-                                    'initiative_id': str(initiative.id),
-                                },
-                                metadata={
-                                    'initiative_id': str(initiative.id),
-                                    'hive_session_id': str(hive_session.id) if hive_session else None,
-                                    'auto_created': True,
-                                    'session': 906,
-                                },
+                                participant_ids=participant_ids,
+                                synthesis=f"Research blocked due to insufficient data. Trigger: {unblock_result.get('unblock_type', 'unknown')}. {findings[:500] if findings else 'Awaiting data.'}",
+                                synthesis_summary=f"Blocked research - awaiting spider data for: {topic[:100]}",
+                                contribution_count=1,
                             )
-                            logger.info(f"[Session 906] Created AgentExecution for {research_agent.name}")
+                            logger.info(f"[Session 906] Created HiveMindSession: {hive_session.id}")
 
-                    except Exception as session_error:
-                        logger.warning(f"[Session 906] Could not create tracking records: {session_error}")
+                            # Create a contribution record
+                            if research_agent:
+                                HiveMindContribution.objects.create(
+                                    session=hive_session,
+                                    agent_id=str(research_agent.id),
+                                    agent_name=research_agent.name,
+                                    content=f"Attempted research on '{topic[:100]}' but encountered insufficient data. Triggered self-unblock: {unblock_result.get('unblock_type', 'unknown')}",
+                                    confidence_score=0.3,
+                                    thinking_time=1.0,
+                                )
 
-                except Exception as init_error:
-                    logger.warning(f"[Session 906] Could not create Initiative: {init_error}")
+                            # Session 906: Create AgentExecution record
+                            if research_agent:
+                                AgentExecution.objects.create(
+                                    template=research_agent,
+                                    execution_id=f"blocked-research-{uuid.uuid4().hex[:8]}",
+                                    task_description=f"Research: {topic[:200]}",
+                                    task_type='research',
+                                    context={
+                                        'initiative_id': str(initiative.id),
+                                        'topic': topic[:200],
+                                        'blocked_reason': 'insufficient_data',
+                                    },
+                                    status='completed',
+                                    progress_percentage=100,
+                                    current_step='Blocked - awaiting data',
+                                    steps_completed=[
+                                        'Research initiated',
+                                        'Data sources queried',
+                                        'Insufficient data detected',
+                                        'Self-unblock triggered',
+                                    ],
+                                    result={
+                                        'success': False,
+                                        'blocked': True,
+                                        'unblock_type': unblock_result.get('unblock_type'),
+                                        'initiative_id': str(initiative.id),
+                                    },
+                                    metadata={
+                                        'initiative_id': str(initiative.id),
+                                        'hive_session_id': str(hive_session.id) if hive_session else None,
+                                        'auto_created': True,
+                                        'session': 906,
+                                    },
+                                )
+                                logger.info(f"[Session 906] Created AgentExecution for {research_agent.name}")
+
+                        except Exception as session_error:
+                            logger.warning(f"[Session 906] Could not create tracking records: {session_error}")
+
+                    except Exception as init_error:
+                        logger.warning(f"[Session 906] Could not create Initiative: {init_error}")
 
             # Get Stage 1 if initiative exists
             if initiative:

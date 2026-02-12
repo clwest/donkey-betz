@@ -458,6 +458,13 @@ class HiveMindExecutionPipeline:
             use_llm=True
         )
 
+        # Dedup check: reuse existing similar initiative instead of creating duplicate
+        from core.services.initiative_circuit_breaker import find_similar_initiative
+        existing = find_similar_initiative(initiative_name)
+        if existing:
+            logger.info(f"[hivemind] Reusing similar initiative '{existing.name}' instead of creating duplicate")
+            return existing
+
         # Create the initiative
         # Session 913: Include signal_cluster and auto_topic from HiveMind session
         initiative = Initiative.objects.create(
