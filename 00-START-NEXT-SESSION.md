@@ -1,12 +1,37 @@
-# Session 992 - Start Here
+# Session 993 - Start Here
 
-**Previous Session:** 991 (Wire ProactiveIntelligenceService + AgentLearningService)
+**Previous Session:** 992 (Wire 3 Remaining Unwired Services)
 **Date:** February 12, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** | **Bundle: 2,305 KB** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 93** | **PA Intents: 36** | **Enrichment Services: 7** | **Content Feedback Loop: CLOSED** | **Reviewers: REAL VERDICTS**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** | **Bundle: 2,305 KB** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 93** | **PA Intents: 36** | **Enrichment Services: 8** | **Context Layers: 11** | **Content Feedback Loop: CLOSED** | **Reviewers: REAL VERDICTS**
 
 ---
 
-## Session 991 Summary (Just Completed)
+## Session 992 Summary (Just Completed)
+
+### Wire 3 Remaining Unwired Services
+
+Connected three fully-built but unwired services (~1,330 lines combined) into the main execution paths:
+
+**DynamicTeamBuilder** (610 lines) — now wired into ConversationOrchestrator:
+- `_select_agents_for_topic()` tries `DynamicTeamBuilder.build_team()` first (embedding similarity + synergy scoring)
+- Falls back to original `AgentRegistry` text matching on any exception
+- Only fires for multi-agent conversations (`auto_select_agents=True`), not every `route()` call
+
+**PlatformIntelligenceBriefingService** (472 lines) — now wired into PA enrichment pipeline:
+- Added `platform_briefing` enrichment to 2 intents: `system_overview`, `execution_history`
+- Aggregates 6 sources: knowledge transfers, conversations, dreams, boardroom, spider highlights, platform health
+- Formatted as `=== PLATFORM ACTIVITY ===` section in analytical prompts
+- Capped at 500 chars, respects relevance gate
+
+**PlatformIntegration** (248 lines) — now wired into agent_router:
+- `gather_context()` injects `platform_tools_directive` into `spider_context`
+- "Use internal tools, not external services" prompt now reaches router-executed agents (previously only Celery-executed)
+
+**Files changed:** `conversation_orchestrator.py` (3 edits), `unified_pa_entrypoint.py` (6 edits), `agent_router.py` (3 edits)
+
+No new models, no migrations, no new Celery tasks, no frontend changes.
+
+### Session 991 Summary (Prior)
 
 ### Wire ProactiveIntelligenceService + AgentLearningService
 
@@ -54,7 +79,7 @@ Production verification of 5 open items. Fixed SpiderData field names, execution
 | Frontend Routes | 37 (15 standalone + 22 redirects) |
 | PA Tools | 93 |
 | PA Intents | 36 |
-| Enrichment Services | 7 (was 6, added proactive_intelligence) |
+| Enrichment Services | 8 (added platform_briefing in Session 992) |
 | Attention Sections | 7 |
 | LLM Providers | 6 (OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini) |
 | Standalone Pages | `/stocks`, `/advisors`, `/neural-orchestra`, `/conversation-contract`, `/mythology-lab`, `/billing`, `/analytics`, `/docs-index` |

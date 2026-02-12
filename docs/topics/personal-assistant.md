@@ -51,7 +51,7 @@ Two files handle everything:
 
 ## Enrichment Pipeline
 
-Seven intelligence services inject context before the LLM generates analysis. Each intent maps to specific services:
+Eight intelligence services inject context before the LLM generates analysis. Each intent maps to specific services:
 
 | Service | Source | Fires For |
 |---------|--------|-----------|
@@ -62,10 +62,11 @@ Seven intelligence services inject context before the LLM generates analysis. Ea
 | advisor | AdvisorContextBuilder (25 advisors) | opportunities, reasoning |
 | strategic_memory | StrategicMemoryService | initiatives, boardroom, execution_history, reasoning |
 | proactive_intelligence | ProactiveIntelligenceService | content_review, opportunities, stock_intelligence, system_overview |
+| platform_briefing | PlatformIntelligenceBriefingService | system_overview, execution_history |
 
 **Relevance gating:** Content-related intents skip the gate. All others require 15% keyword overlap to avoid irrelevant injection.
 
-**Enrichment caps:** Each section is truncated (300-600 chars) to control token usage. `proactive_intelligence` capped at 500 chars.
+**Enrichment caps:** Each section is truncated (300-600 chars) to control token usage. `proactive_intelligence` and `platform_briefing` capped at 500 chars.
 
 ## Async Processing (Celery)
 
