@@ -88,7 +88,7 @@ class UnifiedPAEntrypoint:
         'stock_intelligence': ['domain_context', 'spider_trends', 'proactive_intelligence'],
         'crypto_price':      ['domain_context'],
         'spider_data':       ['domain_context'],
-        'execution_history': ['intelligence_enricher', 'strategic_memory'],
+        'execution_history': ['intelligence_enricher', 'strategic_memory', 'platform_briefing'],
         'learning_patterns': ['spider_trends'],
         'pilots':            ['intelligence_enricher'],
         'gates':             ['intelligence_enricher'],
@@ -100,7 +100,7 @@ class UnifiedPAEntrypoint:
         # Session 970: Surgical moves verification — pure data
         'surgical_moves_status': [],
         # Session 973: Broad system overview — light enrichment
-        'system_overview': ['intelligence_enricher', 'proactive_intelligence'],
+        'system_overview': ['intelligence_enricher', 'proactive_intelligence', 'platform_briefing'],
     }
 
     # Alias map: normalize variant intent names to canonical names
@@ -148,6 +148,7 @@ class UnifiedPAEntrypoint:
         'strategic_memory':  400,
         'learning_insights': 600,  # Session 972: Explicit cap for learning insights
         'proactive_intelligence': 500,
+        'platform_briefing': 500,
     }
 
     # Stop words for relevance gating
@@ -178,6 +179,8 @@ class UnifiedPAEntrypoint:
         self._spider_context_builder = None
         self._advisor_context_builder = None
         self._proactive_intelligence_service = None
+        # Session 992: Platform Intelligence Briefing
+        self._platform_briefing_service = None
 
         # Session 940: Triage mode state
         self._triage_mode = False
@@ -324,6 +327,18 @@ class UnifiedPAEntrypoint:
                 logger.warning("ProactiveIntelligenceService not available")
                 self._proactive_intelligence_service = None
         return self._proactive_intelligence_service
+
+    @property
+    def platform_briefing_service(self):
+        """Session 992: Lazy load PlatformIntelligenceBriefingService."""
+        if self._platform_briefing_service is None:
+            try:
+                from core.services.platform_intelligence_briefing import get_platform_intelligence_service
+                self._platform_briefing_service = get_platform_intelligence_service()
+            except ImportError:
+                logger.warning("PlatformIntelligenceBriefingService not available")
+                self._platform_briefing_service = None
+        return self._platform_briefing_service
 
     async def process_message(
         self,
@@ -1512,6 +1527,15 @@ class UnifiedPAEntrypoint:
                         if is_direct or self._passes_relevance_gate(message, text):
                             sections['proactive_intelligence'] = text
 
+                # Session 992: Platform Intelligence Briefing
+                elif service_key == 'platform_briefing' and self.platform_briefing_service:
+                    text = await asyncio.to_thread(
+                        self.platform_briefing_service.get_formatted_briefing
+                    )
+                    if text:
+                        if is_direct or self._passes_relevance_gate(message, text):
+                            sections['platform_briefing'] = text
+
             except Exception as e:
                 logger.warning(f"[{trace_id}] Enrichment '{service_key}' failed: {e}")
 
@@ -1668,6 +1692,7 @@ RULES:
             'advisor': 'ADVISOR PRINCIPLES',
             'strategic_memory': 'STRATEGIC MEMORY',
             'proactive_intelligence': 'PROACTIVE INTELLIGENCE',
+            'platform_briefing': 'PLATFORM ACTIVITY',
         }
         for key, label in section_labels.items():
             text = enrichment_sections.get(key, '')

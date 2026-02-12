@@ -619,6 +619,7 @@ class AgentRouter:
         docs_context = self._get_docs_context(agent_name, task)  # Session 798
         user_context = self._get_user_context(agent_name, task)  # Session 858
         risk_context = self._get_risk_aware_context(task)  # Session 949
+        platform_tools_context = self._get_platform_tools_context()  # Session 992
 
         # Merge contexts (same logic as in route())
         if learning_context and learning_context.get('has_patterns'):
@@ -681,6 +682,10 @@ class AgentRouter:
         # Session 990: Surface agent learned preferences from AgentLearningService
         if user_context and user_context.get('agent_learned_preferences'):
             spider_context['agent_learned_preferences'] = user_context['agent_learned_preferences']
+
+        # Session 992: Platform tools directive for router-executed agents
+        if platform_tools_context:
+            spider_context['platform_tools_directive'] = platform_tools_context
 
         return {
             'scifi_context': scifi_context,
@@ -1572,6 +1577,22 @@ class AgentRouter:
                 'incident_docs': [],
                 'audit_findings': [],
             }
+
+    # ==================== Session 992: Platform Tools Context ====================
+
+    def _get_platform_tools_context(self) -> str:
+        """
+        Session 992: Get platform integration tools prompt.
+
+        Injects a directive telling agents to use internal platform tools
+        (image generation, agent network, etc.) instead of external services.
+        Previously only injected in tasks_agents.py for Celery-executed agents.
+        """
+        try:
+            from core.services.platform_integration import inject_platform_tools_prompt
+            return inject_platform_tools_prompt()
+        except Exception:
+            return ''
 
     # ==================== Session 858: User Context Injection ====================
     # Session 877: Added 'personal_assistant' category for full user context
