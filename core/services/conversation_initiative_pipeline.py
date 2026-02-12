@@ -353,37 +353,46 @@ class ConversationInitiativePipeline:
                     result.errors.append(f"Could not generate valid initiative name from content")
                     return result
 
-            # Ensure unique name
-            base_name = initiative_name
-            counter = 1
-            while Initiative.objects.filter(name=initiative_name).exists():
-                initiative_name = f"{base_name} ({counter})"
-                counter += 1
+            # Dedup check: reuse existing similar initiative instead of creating duplicate
+            from core.services.initiative_circuit_breaker import find_similar_initiative
+            existing = find_similar_initiative(initiative_name)
+            if existing:
+                logger.info(f"[pipeline] Found similar initiative '{existing.name}' — reusing instead of creating duplicate")
+                initiative = existing
+                result.initiative_id = str(initiative.id)
+                result.initiative_name = initiative.name
+            else:
+                # Ensure unique name
+                base_name = initiative_name
+                counter = 1
+                while Initiative.objects.filter(name=initiative_name).exists():
+                    initiative_name = f"{base_name} ({counter})"
+                    counter += 1
 
-            # Session 908/909/910: Get workspace for initiative
-            # Session 910: Use centralized platform_config for configurable workspace
-            workspace = None
-            try:
-                from core.services.platform_config import get_primary_workspace
-                workspace = get_primary_workspace()
+                # Session 908/909/910: Get workspace for initiative
+                # Session 910: Use centralized platform_config for configurable workspace
+                workspace = None
+                try:
+                    from core.services.platform_config import get_primary_workspace
+                    workspace = get_primary_workspace()
 
-            except Exception as ws_error:
-                logger.warning(f"Could not get workspace for initiative: {ws_error}")
+                except Exception as ws_error:
+                    logger.warning(f"Could not get workspace for initiative: {ws_error}")
 
-            initiative = Initiative.objects.create(
-                name=initiative_name,
-                description=f"Auto-created from conversation about: {topic}",
-                status='ACTIVE',
-                current_stage=1,
-                created_by='ConversationInitiativePipeline',
-                parent_topic=topic[:200] if topic else '',
-                target_workspace=workspace,  # Session 908: Link to workspace
-            )
+                initiative = Initiative.objects.create(
+                    name=initiative_name,
+                    description=f"Auto-created from conversation about: {topic}",
+                    status='ACTIVE',
+                    current_stage=1,
+                    created_by='ConversationInitiativePipeline',
+                    parent_topic=topic[:200] if topic else '',
+                    target_workspace=workspace,  # Session 908: Link to workspace
+                )
 
-            result.initiative_id = str(initiative.id)
-            result.initiative_name = initiative_name
+                result.initiative_id = str(initiative.id)
+                result.initiative_name = initiative_name
 
-            logger.info(f"📋 Created Initiative: {initiative_name} (id={initiative.id})")
+                logger.info(f"Created Initiative: {initiative_name} (id={initiative.id})")
 
             # 2. Create Deliverable linked to Initiative
             deliverable_title = f"{content_type.title()}: {topic[:100]}" if topic else f"{content_type.title()} Output"
