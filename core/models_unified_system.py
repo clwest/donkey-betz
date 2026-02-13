@@ -9092,6 +9092,7 @@ class AgentDream(models.Model):
             current_stage=1,
             created_by=self.agent.name if self.agent else 'system',
             parent_topic=self.title[:200] if self.title else '',  # Original dream title for reference
+            owner_agent=self.agent.name if self.agent else '',  # Session 996: Auto-assign from dream's agent
         )
 
         # Create Stage 1 (Research Brief) as DRAFT

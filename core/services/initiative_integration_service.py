@@ -28,6 +28,18 @@ from django.db import transaction
 
 logger = logging.getLogger(__name__)
 
+# Session 996: Map programs to default owner agents for auto-assignment
+PROGRAM_OWNER_MAP = {
+    'content_pipeline': 'ContentStrategyAgent',
+    'growth_intelligence': 'MarketIntelligenceAgent',
+    'monetization': 'OpportunityScoringAgent',
+    'platform_health': 'SystemIntelligenceAgent',
+    'ai_capabilities': 'ThinkingAgent',
+    'infrastructure': 'DevOpsAgent',
+    'research': 'ResearchAgent',
+    'experiments': 'ResearchAgent',
+}
+
 
 class InitiativeCreationBlocked(Exception):
     """Session 994: Raised when circuit breaker blocks initiative creation."""
@@ -152,6 +164,8 @@ class InitiativeIntegrationService:
             self.logger.info(f"[Session 847] Created new Initiative: {normalized_topic}")
             # Initialize all 5 stages
             self._initialize_stages(initiative)
+            # Session 996: Auto-assign owner
+            self._auto_assign_owner(initiative)
 
             return initiative, True
 
@@ -188,6 +202,38 @@ class InitiativeIntegrationService:
             normalized = normalized[:147] + '...'
 
         return normalized.strip()
+
+    def _auto_assign_owner(self, initiative) -> None:
+        """
+        Session 996: Auto-assign owner_agent based on program or created_by.
+
+        Rules:
+        1. If program is set and not 'uncategorized' → use PROGRAM_OWNER_MAP
+        2. Else if created_by looks like an agent name → use created_by
+        3. Otherwise leave unowned
+        """
+        if initiative.owner_id or initiative.owner_agent:
+            return  # Already has an owner
+
+        program = getattr(initiative, 'program', '') or ''
+        if program and program != 'uncategorized' and program in PROGRAM_OWNER_MAP:
+            initiative.owner_agent = PROGRAM_OWNER_MAP[program]
+            initiative.save(update_fields=['owner_agent'])
+            self.logger.info(
+                f"[Session 996] Auto-assigned owner_agent={initiative.owner_agent} "
+                f"for initiative '{initiative.name}' (program={program})"
+            )
+            return
+
+        created_by = getattr(initiative, 'created_by', '') or ''
+        skip_names = {'system', 'pa', 'human', 'admin', ''}
+        if created_by.lower() not in skip_names and not created_by.startswith('HiveMind:'):
+            initiative.owner_agent = created_by
+            initiative.save(update_fields=['owner_agent'])
+            self.logger.info(
+                f"[Session 996] Auto-assigned owner_agent={created_by} "
+                f"for initiative '{initiative.name}' (from created_by)"
+            )
 
     def _initialize_stages(self, initiative: 'Initiative') -> None:
         """

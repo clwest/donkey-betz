@@ -1,39 +1,44 @@
-# Session 996 - Start Here
+# Session 997 - Start Here
 
-**Previous Session:** 995B (Sports Betting Intelligence System)
+**Previous Session:** 996 (Initiative Ownership System)
 **Date:** February 12, 2026
-**Status:** 79 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **Workspace: 9 TABS** | **Bundle: 2,305 KB** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 96** | **PA Intents: 38** | **Enrichment Services: 8** | **Context Layers: 11** | **Content Feedback Loop: CLOSED** | **Celery Tasks: 264**
+**Status:** 79 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **Workspace: 9 TABS** | **Bundle: 2,305 KB** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 97** | **PA Intents: 38** | **Enrichment Services: 8** | **Context Layers: 11** | **Content Feedback Loop: CLOSED** | **Celery Tasks: 264**
 
 ---
 
-## Session 995B Summary (Just Completed)
+## Session 996 Summary (Just Completed)
+
+### Initiative Ownership System
+
+Added accountability to the initiative pipeline. Previously ~169 initiatives had no owner and the PA couldn't answer "who owns this?" or "show me my initiatives."
+
+**Model Changes:**
+- Added `owner` FK to UnifiedUser + `owner_agent` CharField on Initiative model
+- Migration `0239_session_996_initiative_ownership` applied locally + Railway
+
+**PA Actions (3 new):**
+- `assign_owner` — set owner to agent or user ("assign X to ResearchAgent", "take ownership of X")
+- Owner filter on `list` — "show my initiatives", "unowned initiatives"
+- Owner in `details` — "who owns X?"
+
+**Auto-Ownership Rules:**
+- `PROGRAM_OWNER_MAP` maps 8 programs to default owner agents
+- `_auto_assign_owner()` called at all 4 initiative creation paths
+- Rules: program map → created_by agent name → leave unowned
+
+**Files changed:** 8 files (1 new migration). See `docs/handoffs/SESSION_996_INITIATIVE_OWNERSHIP.md`.
+
+## Session 995B Summary (Prior)
 
 ### Sports Betting Intelligence System — 3 Phases
 
-Built out the full sports betting intelligence pipeline across 3 phases.
-
-**Phase 1 — PA Integration:**
-- Added `sports_betting` intent (38th intent) + `sports_betting_tool` handler (52nd handler)
-- 8 actions: overview, arbs, predictions, sharp_action, line_movements, wagers, live_odds, brief
-- Full result formatter for natural language PA responses
-
-**Phase 2 — 3 New Agents:**
-- **GamePredictor** — Predicts game outcomes from odds consensus, stores in MLPrediction
-- **LineMovementAnalyzer** — Compares odds snapshots, detects STEAM/SHARP/DRIFT moves
-- **SharpActionDetector** — Compares sharp (Pinnacle) vs soft (DraftKings) books for divergence
-
-**Phase 3 — Intelligence Pipeline:**
-- **SportsBettingCoordinator** — Orchestrates 5 agents into unified briefs with top plays
-- **`generate_daily_betting_brief`** — Celery task at 9 AM + 7 PM
-- **`evaluate_ml_predictions`** — Checks prediction accuracy every 6h
-
-**Files changed:** 10 files (4 new). No models, no migrations. See `docs/handoffs/SESSION_995B_SPORTS_BETTING_INTELLIGENCE.md`.
+Built full sports betting intelligence pipeline: PA integration (8 actions), 3 new agents (GamePredictor, LineMovementAnalyzer, SharpActionDetector), SportsBettingCoordinator, daily betting briefs. See `docs/handoffs/SESSION_995B_SPORTS_BETTING_INTELLIGENCE.md`.
 
 ## Session 995 Summary (Prior)
 
 ### Betting Outcome Verification + Learning Loop
 
-Closed the feedback loop: BettingOutcomeVerifier settles pending wagers, verifies watched arb items, feeds learning bridge. Runs every 2h. See `docs/handoffs/SESSION_995_BETTING_OUTCOME_VERIFICATION.md`.
+BettingOutcomeVerifier settles pending wagers, verifies watched arb items, feeds learning bridge. Runs every 2h. See `docs/handoffs/SESSION_995_BETTING_OUTCOME_VERIFICATION.md`.
 
 ## Session 994B Summary (Prior)
 
@@ -41,37 +46,25 @@ Closed the feedback loop: BettingOutcomeVerifier settles pending wagers, verifie
 
 6 fixes: circuit breaker enforcement, quality gate, TRIAGE status, intent-aware spawning, activity tracking, PA flow_metrics. See `docs/handoffs/SESSION_994B_INITIATIVE_PIPELINE_FIXES.md`.
 
-## Session 994 Summary (Prior)
-
-### Fix Stock Prediction Pipeline + Podcast User Context
-
-Fixed `_parse_target_move()` type safety + per-iteration error handling. Added `PodcastCoordinatorAgent(user=episode.user)`.
-
-## Session 993 Summary (Prior)
-
-### PA Capability Gaps: Write Actions + Blog Triage + V2 Generation
-
-11 new write actions across PA tools, bulk blog triage, V2 blog generation via deliberation pipeline.
-
 ---
 
 ## Current System State
 
 | Metric | Count |
 |--------|-------|
-| Agents | 76 (49 routable, 25 non-routable, 26+ provenance-tracked) |
+| Agents | 79 (52 routable, 25 non-routable, 26+ provenance-tracked) |
 | Spiders | 77 (72 working, 5 need API keys) |
 | Advisors | 25 |
-| Active Initiatives | 52 (cleaned from 568 in Session 961c) |
-| Database Models | 391+ (added CeleryTaskEvent) |
+| Active Initiatives | ~169 (all unowned — assign via PA or wait for auto-assignment on new ones) |
+| Database Models | 391+ |
 | Services | 134 |
-| Celery Tasks | 262 |
-| Workspace Tabs | 9 (down from 18) |
+| Celery Tasks | 264 |
+| Workspace Tabs | 9 |
 | Frontend Bundle | 2,305 KB |
 | Frontend Routes | 37 (15 standalone + 22 redirects) |
-| PA Tools | 94 |
-| PA Intents | 37 |
-| Enrichment Services | 8 (added platform_briefing in Session 992) |
+| PA Tools | 97 (+1: assign_owner) |
+| PA Intents | 38 |
+| Enrichment Services | 8 |
 | Attention Sections | 7 |
 | LLM Providers | 6 (OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini) |
 | Standalone Pages | `/stocks`, `/advisors`, `/neural-orchestra`, `/conversation-contract`, `/mythology-lab`, `/billing`, `/analytics`, `/docs-index` |
@@ -113,15 +106,15 @@ Diagnostic pipeline (Session 856) has 0 records. May need activation.
 ### Disconnected Dots Audit (Session 972) — Ongoing
 Many items remain from the audit: agent output persistence, orphan endpoints, enrichment data loss. Podcast user context fixed in 994. Stock predictions fixed in 994. Continue working through the list.
 
+### Backfill Initiative Ownership
+169 existing initiatives have no owner. Could run a management command to auto-assign based on PROGRAM_OWNER_MAP, or let the PA handle it manually.
+
 ---
 
 ## What Could Come Next
 
-### Verify Stock Prediction Fix on Railway
-After deploy, check PredictionOutcome records from the next MarketIntelligenceCoordinator run to confirm non-zero `predicted_move` values.
-
-### Verify Podcast Fix on Railway
-Trigger a podcast generation and confirm user attribution in PodcastEpisode and agent execution records.
+### Backfill Existing Initiative Owners
+Run `_auto_assign_owner()` on all 169 existing initiatives to retroactively assign owners based on program/created_by.
 
 ### Continue Disconnected Dots Audit
 Session 972 identified ~200+ items. High-impact remaining items:
@@ -179,6 +172,11 @@ Dedicated workspace tab for Billing, Analytics, system configuration.
 **DeliberationSession.participants (Session 989):**
 - JSONField containing dicts (not strings)
 - Extract `.get('name')` before `', '.join()`
+
+**Initiative ownership (Session 996):**
+- `owner` = FK to User (nullable), `owner_agent` = CharField (agent name)
+- Only one should be set at a time (assign_owner clears the other)
+- Auto-assigned via `PROGRAM_OWNER_MAP` or `created_by` at creation time
 
 **_parse_target_move() (Session 994):**
 - GPT may return numeric types — always handled via isinstance check

@@ -98,7 +98,7 @@ PA queries run asynchronously to avoid Railway's ~30s proxy timeout:
 **boardroom_tool:** stats (top 10 critical/high items), list_attention, list_decisions, approve/ignore/promote/reject
 **content_review_tool:** list (by status/type), read (full blog + accuracy analysis), publish, archive, revise (blog revision via EditorAgent + PublishGate re-score), triage (3-tier quality summary), batch_publish, batch_archive. Publish/archive/revise actions record feedback to the originating agent via `_record_content_feedback()` → AgentMemory + UserAgentLearning (Session 990).
 **generate_blog_tool:** Triggers V2 deliberation pipeline — with topic runs `ContentDeliberationRunner.run_blog()` synchronously, without topic dispatches Celery task (Session 993).
-**initiative_tool:** list, stats, detail, audit (Jaccard similarity clustering), create, update_status (ACTIVE/ON_HOLD/COMPLETED/ARCHIVED), advance (next pipeline stage), complete_action_item
+**initiative_tool:** list (with owner filter: me/unowned/agent), stats, detail (includes owner), audit (Jaccard similarity clustering), create, update_status (ACTIVE/ON_HOLD/COMPLETED/ARCHIVED), advance (next pipeline stage), complete_action_item, assign_owner (set owner agent or user)
 **opportunity_manager_tool:** list, get, stats, update_status (active/pending/applied/accepted/rejected/expired)
 **stock_intelligence_tool:** overview, briefs, alerts, predictions, sec_filings
 **spider_data_tool:** recent, by_type, summary, trigger (dispatch spider run by category via Celery)
