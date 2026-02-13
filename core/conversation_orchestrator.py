@@ -435,9 +435,9 @@ class ConversationOrchestrator:
             },
             'TrendAnalysisAgent': {
                 'model_path': 'core.models_unified_system.SpiderData',
-                'filters': {'data_type': 'trend_data', 'is_actionable': True},
-                'order': '-relevance_score',
-                'fields': ['spider_name', 'relevance_score', 'data_type'],
+                'filters': {'data_type__in': ['tech', 'news', 'ai_ml', 'social', 'financial']},
+                'order': '-created_at',
+                'fields': ['spider_name', 'data_type', 'created_at'],
                 'label': 'trend signals',
                 'rewrite': (
                     'Analyze recent spider data to identify emerging trends and '
@@ -957,6 +957,16 @@ class ConversationOrchestrator:
                 objective = str(preflight['rewritten_objective'])
                 topic = objective  # topic is also used in prompts
                 logger.info(f"[Session 987] Objective rewritten: '{str(original_objective)[:80]}' → '{objective[:80]}'")
+            # Session 1000C: Inject hard no-data block so agents cannot hallucinate
+            missing = ', '.join(preflight['missing_sources'])
+            preflight['no_data_block'] = (
+                f"\n\n=== NO UPSTREAM DATA AVAILABLE ===\n"
+                f"The following data sources returned ZERO results: {missing}.\n"
+                f"You MUST NOT invent sample sizes, collection dates, dataset counts, "
+                f"or confidence scores. Instead, reason from first principles and "
+                f"state clearly what data would be needed.\n"
+                f"=== END NO-DATA NOTICE ===\n"
+            )
 
         # Session 786: Store topic for retry prompts in _generate_message
         self._current_topic = topic
@@ -1034,6 +1044,10 @@ class ConversationOrchestrator:
             preflight_block = f"\n**Available Data (pre-fetched):**\n{preflight['injected_context']}"
             agent1_rich_context = (agent1_rich_context or "") + preflight_block
             agent2_rich_context = (agent2_rich_context or "") + preflight_block
+        # Session 1000C: Inject hard no-data notice so agents can't hallucinate
+        if preflight.get('no_data_block'):
+            agent1_rich_context = (agent1_rich_context or "") + preflight['no_data_block']
+            agent2_rich_context = (agent2_rich_context or "") + preflight['no_data_block']
 
         for turn in range(num_turns):
             # Alternate between agents
@@ -1686,13 +1700,14 @@ SUBSTANCE REQUIREMENT (Session 909 - CRITICAL):
 - Questions like "What metric should we optimize?" are INVALID unless paired with "Based on X, I recommend Y because Z"
 - Ending with a question is fine, but your message must contain actionable content FIRST
 
-DATA GROUNDING REQUIREMENT (Session 960/988 - CRITICAL, current: {_current_month_year}):
+DATA GROUNDING REQUIREMENT (Session 960/988/1000C - CRITICAL, current: {_current_month_year}):
 - ONLY cite data, sources, dates, and statistics that appear in the intelligence context provided above
 - If no relevant data is provided for this topic, say "no platform data available" - do NOT invent datasets
 - NEVER fabricate source names, collection dates, sample sizes, or confidence scores
+- NEVER invent dataset descriptions like "15-point sample" or "Oct 2023 data" — if you did not receive data above, it does not exist
 - NEVER reference "Notion spider", "Notion data", data collection dates, or dataset sizes
 - NEVER cite dates older than 30 days as evidence — if your knowledge mentions old dates, IGNORE them
-- If the spider intelligence above doesn't cover this topic, acknowledge the gap and reason from first principles instead
+- If a "NO UPSTREAM DATA AVAILABLE" notice appears above, you MUST acknowledge the data gap and reason from first principles only
 - You are operating in {_current_month_year} — any reference to 2023 or 2024 data is STALE and must not be used""")
 
         # Session 781: De-duplication - prevent reusing openers from this conversation
