@@ -141,6 +141,9 @@ class ToolDispatcher:
         # Session 943: Content review tool for accessing Deliverables awaiting human review
         self.register("content_review_tool", self._handle_content_review)
 
+        # Session 993: Blog generation via deliberation pipeline
+        self.register("generate_blog_tool", self._handle_generate_blog)
+
         # Session 943: Initiative tool for PA access to project pipeline
         self.register("initiative_tool", self._handle_initiative)
 
@@ -465,8 +468,38 @@ class ToolDispatcher:
                 'total_potential_revenue': str(total_potential),
             }
 
+        # Session 993: Update opportunity status
+        elif action == 'update_status':
+            opp_id = payload.get('id') or payload.get('opportunity_id')
+            new_status = payload.get('status', '')
+            valid_statuses = ['active', 'pending', 'applied', 'accepted', 'rejected', 'expired']
+
+            if not opp_id:
+                raise ValueError("id is required for update_status action")
+            if new_status not in valid_statuses:
+                raise ValueError(f"Invalid status '{new_status}'. Valid: {', '.join(valid_statuses)}")
+
+            opp = base_qs.filter(id=opp_id).first()
+            if not opp:
+                raise ValueError(f"Opportunity {opp_id} not found")
+
+            old_status = opp.status
+            opp.status = new_status
+            opp.save(update_fields=['status'])
+
+            return {
+                'action': 'update_status',
+                'id': str(opp.id),
+                'title': opp.title,
+                'old_status': old_status,
+                'new_status': new_status,
+                'success': True,
+            }
+
         else:
-            raise ValueError(f"Unknown action: {action}")
+            raise ValueError(
+                f"Unknown action: {action}. Valid actions: list, get, stats, update_status"
+            )
 
     def _handle_task_manager(
         self,
@@ -2365,11 +2398,250 @@ class ToolDispatcher:
                 ],
             }
 
+        # Session 993: Bulk blog triage — summarize ALL blogs grouped by quality tier
+        elif action == 'triage':
+            from django.utils import timezone
+            from datetime import timedelta
+
+            thirty_days_ago = timezone.now() - timedelta(days=30)
+
+            # Tier 1: Publish-ready — passed gate AND in reviewable status
+            tier1_qs = base_qs.filter(
+                publish_ready=True,
+                status__in=['approved', 'pending_review'],
+            ).order_by('-quality_score')
+            tier1 = list(tier1_qs.values(
+                'id', 'title', 'status', 'quality_score', 'publish_ready',
+                'created_at', 'tone', 'word_count',
+            ))
+
+            # Tier 2: Needs revision — draft/needs_enhancement, not publish-ready
+            tier2_qs = base_qs.filter(
+                status__in=['needs_enhancement', 'draft'],
+                publish_ready=False,
+            ).order_by('-quality_score')
+            tier2 = list(tier2_qs.values(
+                'id', 'title', 'status', 'quality_score', 'publish_ready',
+                'created_at', 'tone', 'word_count',
+            ))
+
+            # Tier 3: Archive candidates — old drafts with low quality
+            from django.db.models import Q as _Q
+            tier3_qs = base_qs.filter(
+                status='draft',
+                created_at__lt=thirty_days_ago,
+            ).filter(
+                _Q(quality_score__lt=0.4) | _Q(quality_score__isnull=True)
+            ).order_by('quality_score')
+            tier3 = list(tier3_qs.values(
+                'id', 'title', 'status', 'quality_score', 'publish_ready',
+                'created_at', 'tone', 'word_count',
+            ))
+
+            # Serialize UUIDs / datetimes
+            for tier_list in (tier1, tier2, tier3):
+                for item in tier_list:
+                    item['id'] = str(item['id'])
+                    if item.get('created_at'):
+                        item['created_at'] = item['created_at'].isoformat()
+
+            from django.db.models import Avg
+            avg_q = base_qs.filter(quality_score__isnull=False).aggregate(avg=Avg('quality_score'))
+
+            return {
+                'action': 'triage',
+                'source': 'SelfBlog',
+                'publish_ready': {'count': len(tier1), 'items': tier1},
+                'needs_revision': {'count': len(tier2), 'items': tier2},
+                'archive_candidates': {'count': len(tier3), 'items': tier3},
+                'avg_quality': round(avg_q['avg'] or 0, 3),
+            }
+
+        # Session 993: Publish a single SelfBlog
+        elif action == 'publish':
+            blog_id = payload.get('id') or payload.get('blog_id')
+            if not blog_id:
+                raise ValueError("id is required for publish action")
+
+            blog = base_qs.filter(id=blog_id, status__in=['approved', 'pending_review']).first()
+            if not blog:
+                raise ValueError(f"Blog {blog_id} not found or not in approved/pending_review status")
+
+            blog.status = 'published'
+            blog.save(update_fields=['status'])
+
+            self._record_content_feedback(
+                agent_name='BlogWriter',
+                action='publish',
+                details={
+                    'title': blog.title,
+                    'feedback_summary': 'Blog published via PA — quality met standards.',
+                },
+                user_id=user_id,
+            )
+
+            return {
+                'action': 'publish',
+                'id': str(blog.id),
+                'title': blog.title,
+                'new_status': 'published',
+                'success': True,
+            }
+
+        # Session 993: Archive a single SelfBlog (sets to draft — safe, reversible)
+        elif action == 'archive':
+            blog_id = payload.get('id') or payload.get('blog_id')
+            feedback = payload.get('feedback', 'Archived via PA')
+            if not blog_id:
+                raise ValueError("id is required for archive action")
+
+            blog = base_qs.filter(id=blog_id).first()
+            if not blog:
+                raise ValueError(f"Blog {blog_id} not found")
+
+            blog.status = 'draft'
+            blog.publish_ready = False
+            blog.save(update_fields=['status', 'publish_ready'])
+
+            self._record_content_feedback(
+                agent_name='BlogWriter',
+                action='archive',
+                details={
+                    'title': blog.title,
+                    'feedback_summary': f'Blog archived (→draft) via PA — reason: {feedback}',
+                },
+                user_id=user_id,
+            )
+
+            return {
+                'action': 'archive',
+                'id': str(blog.id),
+                'title': blog.title,
+                'new_status': 'draft',
+                'success': True,
+            }
+
+        # Session 993: Batch publish all publish-ready blogs
+        elif action == 'batch_publish':
+            publish_qs = base_qs.filter(
+                publish_ready=True,
+                status__in=['approved', 'pending_review'],
+            )[:50]
+
+            published = []
+            for blog in publish_qs:
+                blog.status = 'published'
+                blog.save(update_fields=['status'])
+                self._record_content_feedback(
+                    agent_name='BlogWriter',
+                    action='publish',
+                    details={
+                        'title': blog.title,
+                        'feedback_summary': 'Batch-published via PA.',
+                    },
+                    user_id=user_id,
+                )
+                published.append({'id': str(blog.id), 'title': blog.title})
+
+            return {
+                'action': 'batch_publish',
+                'published_count': len(published),
+                'items': published,
+                'success': True,
+            }
+
+        # Session 993: Batch archive old low-quality drafts
+        elif action == 'batch_archive':
+            from django.utils import timezone
+            from datetime import timedelta
+
+            days_old = payload.get('days_old', 30)
+            max_quality = payload.get('max_quality', 0.4)
+            cutoff = timezone.now() - timedelta(days=days_old)
+
+            from django.db.models import Q as _Q2
+            archive_qs = base_qs.filter(
+                status='draft',
+                created_at__lt=cutoff,
+            ).filter(
+                _Q2(quality_score__lt=max_quality) | _Q2(quality_score__isnull=True)
+            )[:50]
+
+            archived = []
+            for blog in archive_qs:
+                blog.publish_ready = False
+                blog.save(update_fields=['publish_ready'])
+                self._record_content_feedback(
+                    agent_name='BlogWriter',
+                    action='archive',
+                    details={
+                        'title': blog.title,
+                        'feedback_summary': f'Batch-archived via PA (age>{days_old}d, quality<{max_quality}).',
+                    },
+                    user_id=user_id,
+                )
+                archived.append({'id': str(blog.id), 'title': blog.title})
+
+            return {
+                'action': 'batch_archive',
+                'archived_count': len(archived),
+                'criteria': {'days_old': days_old, 'max_quality': max_quality},
+                'items': archived,
+                'success': True,
+            }
+
         else:
             raise ValueError(
                 f"Unknown action for blog query: {action}. "
-                f"Valid actions: list, recent, stats, details, related, read, revise, needs_work, batch_enhance"
+                f"Valid actions: list, recent, stats, details, related, read, revise, "
+                f"needs_work, batch_enhance, triage, publish, archive, batch_publish, batch_archive"
             )
+
+    def _handle_generate_blog(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Session 993: Generate a blog through the V2 deliberation pipeline.
+
+        If a topic is provided, runs ContentDeliberationRunner.run_blog() synchronously.
+        If no topic, dispatches the Celery task for background generation.
+        """
+        topic = payload.get('topic')
+        tone = payload.get('tone', 'enthusiastic')
+
+        if topic:
+            # Synchronous — run the full deliberation pipeline
+            from core.services.content_deliberation_runner import ContentDeliberationRunner
+            runner = ContentDeliberationRunner()
+            result = runner.run_blog(topic, voice=tone)
+
+            return {
+                'action': 'generate_blog',
+                'mode': 'synchronous',
+                'topic': topic,
+                'tone': tone,
+                'status': result.get('status', 'unknown'),
+                'decision': result.get('decision', 'unknown'),
+                'selfblog_id': str(result['selfblog_id']) if result.get('selfblog_id') else None,
+                'deliberation_session_id': str(result['deliberation_session_id']) if result.get('deliberation_session_id') else None,
+                'summary': result.get('summary', {}),
+            }
+        else:
+            # Async — dispatch to Celery for background generation
+            from core.tasks import generate_self_blog_deliberation_task
+            task = generate_self_blog_deliberation_task.delay(tone=tone)
+
+            return {
+                'action': 'generate_blog',
+                'mode': 'async',
+                'tone': tone,
+                'task_id': str(task.id),
+                'message': 'Blog generation queued via deliberation pipeline. Check back shortly.',
+            }
 
     def _handle_initiative(
         self,
@@ -2676,9 +2948,86 @@ class ToolDispatcher:
                 }
             }
 
+        # Session 993: Write actions for initiatives
+        elif action == 'update_status':
+            initiative_id = payload.get('id') or payload.get('initiative_id')
+            new_status = payload.get('status', '').upper()
+            valid_statuses = ['ACTIVE', 'ON_HOLD', 'COMPLETED', 'ARCHIVED']
+
+            if not initiative_id:
+                raise ValueError("id is required for update_status action")
+            if new_status not in valid_statuses:
+                raise ValueError(f"Invalid status '{new_status}'. Valid: {', '.join(valid_statuses)}")
+
+            initiative = Initiative.objects.filter(id=initiative_id).first()
+            if not initiative:
+                raise ValueError(f"Initiative {initiative_id} not found")
+
+            old_status = initiative.status
+            initiative.status = new_status
+            initiative.save(update_fields=['status'])
+
+            return {
+                'action': 'update_status',
+                'id': str(initiative.id),
+                'name': initiative.name,
+                'old_status': old_status,
+                'new_status': new_status,
+                'success': True,
+            }
+
+        elif action == 'advance':
+            initiative_id = payload.get('id') or payload.get('initiative_id')
+            if not initiative_id:
+                raise ValueError("id is required for advance action")
+
+            initiative = Initiative.objects.filter(id=initiative_id).first()
+            if not initiative:
+                raise ValueError(f"Initiative {initiative_id} not found")
+
+            old_stage = initiative.current_stage
+            initiative.advance_stage()
+            initiative.refresh_from_db()
+
+            return {
+                'action': 'advance',
+                'id': str(initiative.id),
+                'name': initiative.name,
+                'old_stage': old_stage,
+                'new_stage': initiative.current_stage,
+                'success': initiative.current_stage != old_stage,
+                'message': (
+                    f"Advanced from stage {old_stage} to {initiative.current_stage}"
+                    if initiative.current_stage != old_stage
+                    else f"Cannot advance — stage {old_stage} is not approved or already at stage 5"
+                ),
+            }
+
+        elif action == 'complete_action_item':
+            item_id = payload.get('item_id') or payload.get('id')
+            notes = payload.get('notes', '')
+            if not item_id:
+                raise ValueError("item_id is required for complete_action_item action")
+
+            item = InitiativeActionItem.objects.filter(id=item_id).first()
+            if not item:
+                raise ValueError(f"Action item {item_id} not found")
+
+            item.complete(by='PA', notes=notes)
+
+            return {
+                'action': 'complete_action_item',
+                'id': str(item.id),
+                'title': item.title,
+                'new_status': 'completed',
+                'initiative_name': item.initiative.name if item.initiative else 'Unknown',
+                'success': True,
+            }
+
         else:
             raise ValueError(
-                f"Unknown action: {action}. Valid actions: list, stats, details, action_items"
+                f"Unknown action: {action}. Valid actions: list, stats, details, "
+                f"action_items, update_status, advance, complete_action_item"
             )
 
     # =========================================================================
@@ -2866,6 +3215,26 @@ class ToolDispatcher:
                 'days_back': days,
                 'by_spider': by_spider,
                 'by_data_type': by_data_type,
+            }
+
+        # Session 993: Trigger spider run by category or name
+        elif action == 'trigger':
+            category = payload.get('category')
+            spider_name = payload.get('spider_name')
+
+            if not category and not spider_name:
+                raise ValueError("category or spider_name is required for trigger action")
+
+            from core.tasks import run_spider_by_category
+            target = category or spider_name
+            task = run_spider_by_category.delay(category=target)
+
+            return {
+                'action': 'trigger',
+                'target': target,
+                'task_id': str(task.id),
+                'message': f'Spider run queued for "{target}". Check execution history for results.',
+                'success': True,
             }
 
         else:

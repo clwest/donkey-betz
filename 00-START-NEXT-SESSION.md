@@ -1,12 +1,37 @@
-# Session 993 - Start Here
+# Session 994 - Start Here
 
-**Previous Session:** 992 (Wire 3 Remaining Unwired Services)
+**Previous Session:** 993 (PA Capability Gaps: Write Actions + Blog Triage + V2 Generation)
 **Date:** February 12, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** | **Bundle: 2,305 KB** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 93** | **PA Intents: 36** | **Enrichment Services: 8** | **Context Layers: 11** | **Content Feedback Loop: CLOSED** | **Reviewers: REAL VERDICTS**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** | **Bundle: 2,305 KB** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 94** | **PA Intents: 37** | **Enrichment Services: 8** | **Context Layers: 11** | **Content Feedback Loop: CLOSED** | **Reviewers: REAL VERDICTS**
 
 ---
 
-## Session 992 Summary (Just Completed)
+## Session 993 Summary (Just Completed)
+
+### PA Capability Gaps: Write Actions + Blog Triage + V2 Generation
+
+Added 11 new write actions across PA tools — the PA can now modify data, not just read it.
+
+**Bulk Blog Triage + Publish/Archive** (5 new actions in `_handle_blog_query`):
+- `triage` — groups ALL blogs into 3 quality tiers (publish-ready, needs-revision, archive-candidates)
+- `publish` / `archive` — single blog publish/archive with content feedback recording
+- `batch_publish` / `batch_archive` — bulk operations capped at 50 per call
+
+**V2 Blog Generation** (new `generate_blog_tool` handler):
+- With topic: runs `ContentDeliberationRunner.run_blog()` synchronously (full deliberation pipeline)
+- Without topic: dispatches `generate_self_blog_deliberation_task` to Celery
+- New intent: "generate a blog", "v2 blog", "deliberated blog", "generate content"
+
+**Write Actions for Read-Only Tools** (5 new actions):
+- `initiative_tool`: update_status, advance (next pipeline stage), complete_action_item
+- `opportunity_manager_tool`: update_status
+- `spider_data_tool`: trigger (dispatch spider run by category)
+
+**Files changed:** `tool_dispatcher.py` (~200 lines added), `unified_pa_entrypoint.py` (12 lines added)
+
+No new models, no migrations, no new Celery tasks, no frontend changes.
+
+## Session 992 Summary (Prior)
 
 ### Wire 3 Remaining Unwired Services
 
@@ -77,8 +102,8 @@ Production verification of 5 open items. Fixed SpiderData field names, execution
 | Workspace Tabs | 9 (down from 18) |
 | Frontend Bundle | 2,305 KB |
 | Frontend Routes | 37 (15 standalone + 22 redirects) |
-| PA Tools | 93 |
-| PA Intents | 36 |
+| PA Tools | 94 |
+| PA Intents | 37 |
 | Enrichment Services | 8 (added platform_briefing in Session 992) |
 | Attention Sections | 7 |
 | LLM Providers | 6 (OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini) |
