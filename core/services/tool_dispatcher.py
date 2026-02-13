@@ -2694,6 +2694,16 @@ class ToolDispatcher:
             if program_filter:
                 qs = qs.filter(program=program_filter.lower())
 
+            # Session 996: Filter by owner
+            owner_filter = payload.get('owner')
+            if owner_filter:
+                if owner_filter == 'me':
+                    qs = qs.filter(owner_id=user_id)
+                elif owner_filter == 'unowned':
+                    qs = qs.filter(owner__isnull=True, owner_agent='')
+                else:
+                    qs = qs.filter(owner_agent__icontains=owner_filter)
+
             # Order by priority score (impact*0.4 + urgency*0.2 + confidence*0.2 + revenue*0.2)
             total_count = qs.count()
             items = list(
@@ -2701,9 +2711,20 @@ class ToolDispatcher:
                     'id', 'name', 'description', 'status', 'current_stage',
                     'purpose', 'program', 'impact_score', 'urgency',
                     'confidence', 'revenue_potential', 'created_at',
-                    'updated_at', 'last_activity_at'
+                    'updated_at', 'last_activity_at',
+                    'owner_id', 'owner_agent',
                 )
             )
+
+            # Session 996: Resolve owner_ids to usernames in bulk
+            owner_ids = [i['owner_id'] for i in items if i.get('owner_id')]
+            owner_map = {}
+            if owner_ids:
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                owner_map = dict(
+                    User.objects.filter(id__in=owner_ids).values_list('id', 'username')
+                )
 
             # Add action item counts (including critical) + serialize
             for item in items:
@@ -2716,6 +2737,12 @@ class ToolDispatcher:
                     status='pending',
                     priority='critical'
                 ).count()
+                # Session 996: Resolve owner to display name
+                item['owner'] = (
+                    owner_map.get(item.pop('owner_id'))
+                    or item.pop('owner_agent', '')
+                    or None
+                )
                 # Session 987: Serialize UUIDs and datetimes
                 item['id'] = str(item['id'])
                 for dt_field in ('created_at', 'updated_at', 'last_activity_at'):
@@ -2732,6 +2759,7 @@ class ToolDispatcher:
                     'stage': stage_filter,
                     'purpose': purpose_filter,
                     'program': program_filter,
+                    'owner': owner_filter,
                 }
             }
 
@@ -2898,6 +2926,11 @@ class ToolDispatcher:
                 if s.get('completed_at'):
                     s['completed_at'] = s['completed_at'].isoformat()
 
+            # Session 996: Resolve owner
+            owner_display = initiative.owner_agent or None
+            if initiative.owner_id:
+                owner_display = initiative.owner.username if initiative.owner else None
+
             return {
                 'action': 'details',
                 'id': str(initiative.id),
@@ -2912,6 +2945,8 @@ class ToolDispatcher:
                 'confidence': initiative.confidence,
                 'revenue_potential': initiative.revenue_potential,
                 'created_at': initiative.created_at.isoformat() if initiative.created_at else None,
+                'owner': owner_display,
+                'owner_agent': initiative.owner_agent,
                 'stages': stages,
                 'action_items': action_items,
                 'action_item_count': len(action_items),
@@ -3029,6 +3064,51 @@ class ToolDispatcher:
                 'success': True,
             }
 
+        elif action == 'assign_owner':
+            # Session 996: Assign ownership of an initiative
+            initiative_id = payload.get('id') or payload.get('initiative_id')
+            agent_name = payload.get('agent_name', '')
+            user_name = payload.get('user_name', '')
+
+            if not initiative_id:
+                raise ValueError("id is required for assign_owner action")
+
+            initiative = Initiative.objects.filter(id=initiative_id).first()
+            if not initiative:
+                raise ValueError(f"Initiative {initiative_id} not found")
+
+            old_owner = initiative.owner_agent or (initiative.owner.username if initiative.owner else None) or 'unowned'
+
+            if agent_name:
+                initiative.owner_agent = agent_name
+                initiative.owner = None
+                initiative.save(update_fields=['owner_agent', 'owner'])
+                new_owner = agent_name
+            elif user_name:
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                if user_name == 'me':
+                    user = User.objects.filter(id=user_id).first() if user_id else None
+                else:
+                    user = User.objects.filter(username__iexact=user_name).first()
+                if not user:
+                    raise ValueError(f"User '{user_name}' not found")
+                initiative.owner = user
+                initiative.owner_agent = ''
+                initiative.save(update_fields=['owner', 'owner_agent'])
+                new_owner = user.username
+            else:
+                raise ValueError("agent_name or user_name is required for assign_owner")
+
+            return {
+                'action': 'assign_owner',
+                'id': str(initiative.id),
+                'name': initiative.name,
+                'old_owner': old_owner,
+                'new_owner': new_owner,
+                'success': True,
+            }
+
         elif action == 'flow_metrics':
             # Session 994: Initiative pipeline health metrics
             from django.utils import timezone
@@ -3093,7 +3173,7 @@ class ToolDispatcher:
         else:
             raise ValueError(
                 f"Unknown action: {action}. Valid actions: list, stats, details, "
-                f"action_items, flow_metrics, update_status, advance, complete_action_item"
+                f"action_items, flow_metrics, update_status, advance, complete_action_item, assign_owner"
             )
 
     # =========================================================================
