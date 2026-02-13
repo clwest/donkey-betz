@@ -193,6 +193,10 @@ class UnifiedPAEntrypoint:
         self._triage_type = None  # 'attention' or 'decisions'
         self._triage_stats = {'approved': 0, 'ignored': 0, 'skipped': 0, 'promoted': 0, 'rejected': 0}
 
+        # Session 1000B: Map #N display numbers to item UUIDs so users
+        # can say "approve item #2" instead of pasting hex IDs.
+        self._last_boardroom_items: Dict[int, str] = {}
+
         logger.info(f"UnifiedPA initialized for user {user.username}")
 
     def _generate_trace_id(self) -> str:
@@ -1067,10 +1071,20 @@ class UnifiedPAEntrypoint:
             if limit_match:
                 payload['limit'] = int(limit_match.group(1))
 
-            # Extract ID if present (e.g., "approve attention item abc123")
-            id_match = re.search(r'(?:item|decision|id)\s+([a-f0-9-]{36}|[a-f0-9]{8,})', msg_lower)
-            if id_match:
-                payload['id'] = id_match.group(1)
+            # Session 1000B: Support "#N" references (e.g., "approve item #2")
+            # that map to the UUID from the last boardroom listing.
+            num_match = re.search(r'(?:item|decision)\s*#?(\d{1,2})\b', msg_lower)
+            if num_match:
+                ref_num = int(num_match.group(1))
+                mapped_id = self._last_boardroom_items.get(ref_num)
+                if mapped_id:
+                    payload['id'] = mapped_id
+
+            # Fallback: extract raw UUID if present (e.g., "approve attention item abc123def0")
+            if 'id' not in payload:
+                id_match = re.search(r'(?:item|decision|id)\s+([a-f0-9-]{36}|[a-f0-9]{8,})', msg_lower)
+                if id_match:
+                    payload['id'] = id_match.group(1)
 
         elif intent == 'decision_management':
             if 'approve' in message.lower():
@@ -1961,10 +1975,14 @@ Address the user by name occasionally."""
 
                     # Session 985: Show top critical/high items inline
                     # Session 997B: Added summary preview so users know WHY items need attention
+                    # Session 1000B: Use #N numbering instead of UUID snippets
                     top_items = tool_result.get('top_items', [])
                     if top_items:
+                        self._last_boardroom_items = {}
                         response += f"\n**Needs your attention now:**\n"
-                        for item in top_items[:8]:
+                        for idx, item in enumerate(top_items[:8], 1):
+                            item_uuid = str(item.get('id', ''))
+                            self._last_boardroom_items[idx] = item_uuid
                             raw_title = str(item.get('title', 'Untitled'))
                             source = item.get('source_agent', '')
                             # Strip redundant agent prefix from title
@@ -1974,12 +1992,10 @@ Address the user by name occasionally."""
                             if len(raw_title) > 70:
                                 raw_title = raw_title[:67].rsplit(' ', 1)[0] + '...'
                             urgency = item.get('urgency', '')
-                            item_id = str(item.get('id', ''))[:8]
                             tag = urgency.upper() if urgency == 'critical' else urgency
-                            line = f"  • **{raw_title}** [{tag}]"
+                            line = f"  {idx}. **{raw_title}** [{tag}]"
                             if source:
                                 line += f" from {source}"
-                            line += f" `{item_id}`"
                             # Session 997B: Show summary preview if available
                             summary = str(item.get('summary', '') or '')
                             if summary:
@@ -1995,7 +2011,7 @@ Address the user by name occasionally."""
                         for dtype, dcount in sorted(by_type.items(), key=lambda x: x[1], reverse=True):
                             response += f"  - {dcount} {dtype}\n"
 
-                    response += "\nSay 'list critical' or 'list high' to see more, or 'approve item [id]' to act."
+                    response += "\nSay 'list critical' or 'list high' to see more, or 'approve item #1' to act."
                     return response
 
                 elif action in ['list_attention', 'list_decisions']:
@@ -2009,11 +2025,14 @@ Address the user by name occasionally."""
                             filter_desc = f" with {filters_applied['urgency'].upper()} urgency"
                         return f"No items found{filter_desc}, {user_name}."
 
-                    # Session 947/959: Show items with IDs + new ML/priority fields
+                    # Session 947/959: Show items with ML/priority fields
                     # Session 997B: Added summary preview
+                    # Session 1000B: Use #N numbering instead of UUID snippets
+                    self._last_boardroom_items = {}
                     item_lines = []
-                    for item in items[:15]:
-                        item_id = str(item.get('id', ''))[:8]  # Short ID for reference
+                    for idx, item in enumerate(items[:15], 1):
+                        item_uuid = str(item.get('id', ''))
+                        self._last_boardroom_items[idx] = item_uuid
                         title = item.get('title', item.get('topic', 'Untitled'))[:60]
                         urgency = item.get('urgency', item.get('decision_type', ''))
                         source = item.get('source_agent', '')
@@ -2022,7 +2041,7 @@ Address the user by name occasionally."""
                         confidence = item.get('ml_confidence')
                         impact = item.get('impact_estimate', '')
 
-                        line = f"• **{title}**"
+                        line = f"{idx}. **{title}**"
                         if urgency:
                             line += f" [{urgency}]"
                         if priority:
@@ -2035,7 +2054,6 @@ Address the user by name occasionally."""
                             line += f" (conf: {confidence:.0%})"
                         if impact:
                             line += f" | Impact: {impact}"
-                        line += f" `{item_id}`"
                         # Session 997B: Show summary preview
                         summary = str(item.get('summary', '') or '')
                         if summary:
@@ -2053,7 +2071,7 @@ Address the user by name occasionally."""
                     remaining = count - len(items[:15])
                     more_text = f"\n\n*Showing {min(count, 15)} of {count} items.*" if remaining > 0 else ""
 
-                    return f"Found {count}{filter_desc} items:\n\n{item_list}{more_text}\n\nTo act on an item, say 'approve item [id]' or 'ignore item [id]'."
+                    return f"Found {count}{filter_desc} items:\n\n{item_list}{more_text}\n\nTo act on an item, say 'approve item #1' or 'ignore item #3'."
 
                 elif action in ['approve_attention', 'ignore_attention', 'promote_decision', 'reject_decision']:
                     if tool_result.get('success'):
@@ -2119,15 +2137,14 @@ Address the user by name occasionally."""
                         return f"No readiness gates found, {user_name}."
 
                     response = f"Readiness Gates ({count}):\n\n"
-                    for gate in gates[:10]:
+                    for idx, gate in enumerate(gates[:10], 1):
                         summary = (gate.get('summary') or 'No summary')[:50]
                         status = gate.get('status', 'unknown')
                         risk = gate.get('risk_level', '')
                         topic = gate.get('topic', '')[:30]
-                        gate_id = str(gate.get('id', ''))[:8]
                         risk_badge = f" [{risk}]" if risk else ""
                         topic_str = f" — {topic}" if topic else ""
-                        response += f"- **{summary}**{topic_str} ({status}{risk_badge}) `{gate_id}`\n"
+                        response += f"{idx}. **{summary}**{topic_str} ({status}{risk_badge})\n"
 
                     if count > 10:
                         response += f"\n...and {count - 10} more gates."
@@ -2164,13 +2181,12 @@ Address the user by name occasionally."""
                         return f"No {'running ' if action == 'running' else ''}pilots found, {user_name}."
 
                     response = f"{label} Pilots ({count}):\n\n"
-                    for pilot in pilots[:10]:
+                    for idx, pilot in enumerate(pilots[:10], 1):
                         name = (pilot.get('name') or 'Unnamed')[:40]
                         status = pilot.get('status', 'unknown')
                         outcome = pilot.get('outcome', '')
-                        pilot_id = str(pilot.get('id', ''))[:8]
                         outcome_str = f" — {outcome}" if outcome else ""
-                        response += f"- **{name}** ({status}{outcome_str}) `{pilot_id}`\n"
+                        response += f"{idx}. **{name}** ({status}{outcome_str})\n"
 
                     if count > 10:
                         response += f"\n...and {count - 10} more pilots."
@@ -2408,7 +2424,7 @@ Address the user by name occasionally."""
                     response += f"\n**Preview:**\n{preview}..."
 
                     if status == 'ready':
-                        response += f"\n\nSay 'publish {item_id[:8]}' to publish or 'archive {item_id[:8]}' to reject."
+                        response += f"\n\nSay 'publish this' to publish or 'archive this' to reject."
 
                     return response
 
@@ -2598,12 +2614,11 @@ Address the user by name occasionally."""
                             unique_items.append(item)
 
                     response = f"Found {count} opportunities ({len(unique_items)} unique):\n\n"
-                    for item in unique_items[:10]:
+                    for idx, item in enumerate(unique_items[:10], 1):
                         title = item.get('title', 'Untitled')[:55]
                         opp_type = (item.get('opportunity_type') or 'unknown').replace('_', ' ')
                         score = item.get('match_score', 0)
-                        item_id = str(item.get('id', ''))[:8]
-                        response += f"- **{title}** ({opp_type}, match: {score}%) `{item_id}`\n"
+                        response += f"{idx}. **{title}** ({opp_type}, match: {score}%)\n"
 
                     if len(unique_items) > 10:
                         response += f"\n...and {len(unique_items) - 10} more unique opportunities."
