@@ -113,12 +113,18 @@ def home_boot(request):
         created_at__gte=now - timedelta(days=7),
     ).count()
 
+    # Session 1000: Intelligence desks ready count
+    from django.core.cache import cache as _cache
+    desk_keys = ['desk:stocks:latest', 'desk:sports:latest', 'desk:blockchain:latest', 'desk:narrative:latest']
+    intelligence_desks_ready = sum(1 for k in desk_keys if _cache.get(k))
+
     while_away = {
         'spider_findings': spider_findings,
         'high_score_dreams': high_score_dreams,
         'initiatives_progressed': initiatives_progressed,
         'pending_decisions': pending_decisions,
         'hours_since_visit': round(hours_since_visit, 1),
+        'intelligence_desks_ready': intelligence_desks_ready,
     }
 
     # --- Active Projects ---
@@ -174,4 +180,59 @@ def home_boot(request):
         'while_away': while_away,
         'active_projects': active_projects,
         'quick_stats': quick_stats,
+    })
+
+
+# =============================================================================
+# Session 1000: Intelligence Desks API
+# =============================================================================
+
+DESK_CACHE_KEYS = {
+    'stocks': 'desk:stocks:latest',
+    'sports': 'desk:sports:latest',
+    'blockchain': 'desk:blockchain:latest',
+    'narrative': 'desk:narrative:latest',
+}
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def intelligence_desks(request):
+    """
+    GET /api/home/intelligence-desks/
+
+    Returns cached intelligence desk briefs from the 4 coordinators.
+    """
+    from django.core.cache import cache
+
+    desks = {}
+    for desk_name, cache_key in DESK_CACHE_KEYS.items():
+        cached = cache.get(cache_key)
+        if cached and isinstance(cached, dict):
+            desks[desk_name] = {
+                'status': 'ready',
+                **cached,
+            }
+        else:
+            desks[desk_name] = {'status': 'no_data'}
+
+    return Response({
+        'desks': desks,
+        'total_agents_activated': 21,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def trigger_desks(request):
+    """
+    POST /api/home/trigger-desks/
+
+    Triggers an on-demand run of all intelligence desks via Celery.
+    """
+    from core.tasks import run_all_desks_intelligence
+    result = run_all_desks_intelligence.delay()
+    return Response({
+        'success': True,
+        'task_id': str(result.id),
     })

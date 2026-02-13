@@ -66,6 +66,8 @@ api.interceptors.response.use(
 // Session 884: Home Page Boot API
 export const homeApi = {
   boot: () => api.get('/home/boot/'),
+  intelligenceDesks: () => api.get('/home/intelligence-desks/'),
+  triggerDesks: () => api.post('/home/trigger-desks/'),
 }
 
 export const authApi = {

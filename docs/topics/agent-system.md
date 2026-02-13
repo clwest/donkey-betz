@@ -1,8 +1,8 @@
 # Agent System
 
-76 agents organized by category, routed deterministically via dictionary lookup, with automatic tool call recording and provenance tracking.
+82 agents organized by category, routed deterministically via dictionary lookup, with automatic tool call recording and provenance tracking. Session 1000: 4 Intelligence Desks run 21 agents daily.
 
-## Agent Categories (76 Total)
+## Agent Categories (82 Total)
 
 | Category | Count | Agents |
 |----------|-------|--------|
@@ -18,16 +18,30 @@
 | Orchestration | 6 | AISeriesWorkflowAgent, AutonomousContentStudioCoordinator, ContentDiversityOrchestrator, ResolveAgent, WorkflowAgent, CampaignOrchestrator |
 | Podcast | 4 | PodcastCoordinatorAgent, DebateAdvocateAgent, DebateSkepticAgent, ModeratorAgent |
 | Narrative | 4 | NarrativeDriftCoordinator, NarrativeHistorianAgent, TrendBreakDetector, CulturalImpactAgent |
-| Markets | 6 | PredictionMarketAnalyst, SportsOddsAnalyst, ArbitrageDetector, GamePredictor, LineMovementAnalyzer, SharpActionDetector (Session 995B: 3 new agents + SportsBettingCoordinator pipeline) |
+| Markets | 7 | PredictionMarketAnalyst, SportsOddsAnalyst, ArbitrageDetector, GamePredictor, LineMovementAnalyzer, SharpActionDetector, BookmakerAgent (Session 1000) |
 | Development | 5 | CodeGeneratorAgent, FullStackDeveloperAgent, CodeReviewAgent, DevOpsAgent, PromptEngineeringAgent |
 | Legal | 1 | LegalDocDrafterAgent |
 | Training | 2 | CharacterTrainingAgent, TrainedCreationAgent |
 | Security | 2 | MemoryIsolationAgent, ContentAuditAgent |
 | Business Research | 4 | CompetitorAnalysisAgent, CustomerResearchAgent, BrandStrategyAgent, MarketingStrategyAgent |
-| System | 2 | SystemIntelligenceAgent, PersonalAssistantAgent |
+| System | 3 | SystemIntelligenceAgent, DecisionEnforcerAgent (Session 1000), PersonalAssistantAgent |
 | Utility | 5 | OpportunityPipelineAgent, ContentExecutorAgent, WorkflowOrchestrationAgent, ThinkingAgent, TechnicalDocumentAgent |
 
-**49 routable** (can be invoked directly) | **25 non-routable** (sub-agents/coordinators) | **26 provenance-tracked**
+**54 routable** (can be invoked directly) | **25 non-routable** (sub-agents/coordinators) | **26 provenance-tracked**
+
+## Intelligence Desks (Session 1000)
+
+4 desk coordinators run daily at 6 AM via `run_all_desks_intelligence` Celery task. Each desk orchestrates sub-agents and caches briefs for 6 hours.
+
+| Desk | Coordinator | Agents Activated |
+|------|------------|-----------------|
+| Stocks | MarketIntelligenceCoordinator | 9 agents (bull/bear/audit/monitor/anomaly/scanner) |
+| Sports | SportsBettingCoordinator | 5 agents (predictor/odds/arbitrage/line/sharp) |
+| Blockchain | BlockchainAuditCoordinator | 5 agents (contract/transaction/whale/exploit) |
+| Narrative | NarrativeDriftCoordinator | 4 agents (historian/trend/cultural) |
+
+API: `GET /api/home/intelligence-desks/`, `POST /api/home/trigger-desks/`
+Cache keys: `desk:{stocks|sports|blockchain|narrative}:latest`
 
 ## Routing (core/agent_router.py)
 

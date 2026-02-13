@@ -1,6 +1,6 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** February 12, 2026 - Session 999
+**Last Updated:** February 12, 2026 - Session 1000
 
 ## Quick Start
 
@@ -19,12 +19,12 @@ open http://localhost:8000/ai-studio/
 
 | Component | Count | Details |
 |-----------|-------|---------|
-| **Agents** | 79 | 52 routable, 25 non-routable, 26 provenance-tracked |
+| **Agents** | 82 | 54 routable, 25 non-routable, 26 provenance-tracked |
 | **Spiders** | 79 | 74 working, 5 need API keys |
 | **PA Tools** | 97 | 38 intents, 53 tool handlers, 8 enrichment services |
 | **LLM Providers** | 6 | OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini |
 | **Database Models** | 386+ | PostgreSQL + pgvector |
-| **Celery Tasks** | 264 | 7 workers, dedicated PA queue |
+| **Celery Tasks** | 265 | 7 workers, dedicated PA queue |
 | **Services** | 134 | Signal aggregation, content deliberation, auto-spawning |
 | **Body Systems** | 9 | HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR, BRAIN, SKIN |
 | **Advisors** | 25 | Famous figures + domain experts |
@@ -33,11 +33,11 @@ open http://localhost:8000/ai-studio/
 ## Project Structure
 
 ### Key Directories
-- `core/agents/` - 76 agents with learning hooks
+- `core/agents/` - 82 agents with learning hooks
 - `core/services/` - 134 service classes
 - `ai_core/spiders/` - 77 spiders
 - `docs/topics/` - Embedding-optimized subsystem docs (current state)
-- `docs/handoffs/` - 614 session handoff documents (build history)
+- `docs/handoffs/` - 615 session handoff documents (build history)
 
 ### Key Files
 | File | Purpose |

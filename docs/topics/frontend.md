@@ -1,6 +1,6 @@
 # Frontend & UI
 
-React + TypeScript single-page application with 9 workspace tabs, collapsible sidebar, Command Center hub, and PA chat integration. Bundle: 2,253 KB.
+React + TypeScript single-page application with 9 workspace tabs, collapsible sidebar, Command Center hub, and PA chat integration. Bundle: 2,376 KB.
 
 ## Workspace Architecture
 
@@ -39,6 +39,15 @@ React + TypeScript single-page application with 9 workspace tabs, collapsible si
 - **System Pulse** — Body system health summary
 
 Each panel is clickable → navigates to relevant workspace tab.
+
+## Intelligence Desks Panel (Session 1000)
+
+Collapsible 4-card grid below Now Hub showing intelligence desk status:
+- **Stocks** (green) | **Sports** (amber) | **Blockchain** (cyan) | **Narrative** (purple)
+- Each card: icon, status badge (Ready/No Data), executive summary, agent count, timestamp
+- "Run All Desks" button triggers on-demand `POST /api/home/trigger-desks/`
+- Auto-expands when desks have fresh data
+- While Away section shows "intel desks ready" pill (purple, Brain icon)
 
 ## PA Integration
 

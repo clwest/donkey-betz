@@ -2429,6 +2429,15 @@ app.conf.beat_schedule = {
             'expires': 3600,  # 1 hour
         }
     },
+    # Session 1000: Intelligence Desks — run all 4 desk coordinators daily at 6 AM
+    'run-all-desks-intelligence': {
+        'task': 'core.tasks.run_all_desks_intelligence',
+        'schedule': crontab(minute=0, hour=6),
+        'options': {
+            'expires': 3600,
+            'queue': 'long_running',
+        },
+    },
 }
 
 # Task routing configuration
