@@ -231,7 +231,7 @@ def trigger_desks(request):
     Triggers an on-demand run of all intelligence desks via Celery.
     """
     from core.tasks import run_all_desks_intelligence
-    result = run_all_desks_intelligence.delay()
+    result = run_all_desks_intelligence.apply_async(queue='long_running')
     return Response({
         'success': True,
         'task_id': str(result.id),
