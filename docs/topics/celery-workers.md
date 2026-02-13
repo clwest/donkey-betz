@@ -1,6 +1,6 @@
 # Celery & Workers
 
-264 Celery tasks across 7 worker types with queue-based routing, memory management, and observability via CeleryTaskEvent signals.
+265 Celery tasks across 7 worker types with queue-based routing, memory management, and observability via CeleryTaskEvent signals. Session 1000: Added `run_all_desks_intelligence` (daily 6 AM, long_running queue).
 
 ## Worker Types (7)
 

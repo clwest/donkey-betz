@@ -1,46 +1,44 @@
-# Session 1000 - Start Here
+# Session 1001 - Start Here
 
-**Previous Session:** 999 (Stock Intelligence Hub)
+**Previous Session:** 1000 (Intelligence Desks)
 **Date:** February 12, 2026
-**Status:** 79 Agents | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **LIVE SCORES + AI PICKS** | **BETTING HUB: LIVE** | **STOCK HUB: LIVE** | **Workspace: 9 TABS** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 97** | **PA Intents: 38** | **Enrichment Services: 8** | **Content Feedback Loop: CLOSED** | **Celery Tasks: 264** | **GOVERNANCE: HARDENED**
+**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **LIVE SCORES + AI PICKS** | **BETTING HUB: LIVE** | **STOCK HUB: LIVE** | **INTELLIGENCE DESKS: 4 ACTIVE** | **Workspace: 9 TABS** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 97** | **PA Intents: 38** | **Enrichment Services: 8** | **Content Feedback Loop: CLOSED** | **Celery Tasks: 265** | **GOVERNANCE: HARDENED**
 
 ---
 
-## Session 999 Summary (Just Completed)
+## Session 1000 Summary (Just Completed)
+
+### Activate All Intelligence Desks
+
+Added a unified intelligence desk system running 4 desk coordinators daily at 6 AM via Celery beat. Each desk orchestrates 3-9 sub-agents, producing cached intelligence briefs. 23 agents went from idle to daily production.
+
+**4 Intelligence Desks:**
+- **Stocks** (9 agents) - MarketIntelligenceCoordinator + bull/bear/audit agents
+- **Sports** (5 agents) - SportsBettingCoordinator + predictor/odds/arbitrage agents
+- **Blockchain** (5 agents) - BlockchainAuditCoordinator + contract/transaction/whale agents
+- **Narrative** (4 agents) - NarrativeDriftCoordinator + historian/trend/cultural agents
+
+**Also:** Wired BookmakerAgent + DecisionEnforcerAgent to router (82 routable agents). New API endpoints: `GET /api/home/intelligence-desks/`, `POST /api/home/trigger-desks/`. New Intelligence Desks panel in Command Center with 4-card grid and "Run All Desks" button.
+
+**Files changed:** 7 files. See `docs/handoffs/SESSION_1000_INTELLIGENCE_DESKS.md`.
+
+## Session 999 Summary (Prior)
 
 ### Stock Intelligence Hub
 
-Added a "Hub" tab as the default landing view on the Stock Intelligence page (`/stocks/`). Single Bloomberg-terminal-inspired view consolidating latest brief, top alerts, prediction scorecard, market news from financial spiders, and SEC filings.
-
-**Backend:** New `stock_hub()` endpoint at `/api/stocks/hub/` consolidating data from MarketIntelligenceBrief, StockMarketAlert, PredictionOutcome, and SpiderData (financial + SEC). Uses raw_data.items[] expansion pattern from sports hub.
-
-**Frontend:** New `HubTab` component with stats row, 2-column grid (brief + predictions | alerts + news), full-width SEC section. Each section has "View all" links to navigate to the relevant sub-tab.
-
-**Files changed:** 4 files. See `docs/handoffs/SESSION_999_STOCK_INTELLIGENCE_HUB.md`.
+Added "Hub" tab as default landing on Stock Intelligence page. Bloomberg-terminal-inspired view with brief, alerts, predictions, news, SEC. See `docs/handoffs/SESSION_999_STOCK_INTELLIGENCE_HUB.md`.
 
 ## Session 998B Summary (Prior)
 
-### Live Scores + AI Predictions on Today's Games
+### Live Scores + AI Predictions
 
-Today's Games tab now shows live scores for in-progress games and odds-consensus AI predictions with W/L outcome tracking. See `docs/handoffs/SESSION_998B_BETTING_HUB_LIVE_SCORES.md`.
+Today's Games tab shows live scores + odds-consensus AI predictions with W/L tracking. See `docs/handoffs/SESSION_998B_BETTING_HUB_LIVE_SCORES.md`.
 
 ## Session 998 Summary (Prior)
 
 ### System Governance Hardening
 
-PublishGate now blocks publishing when `publish_ready=False`. SelfBlog.author tracks creation source. New 'reviewer' platform_role with read-only middleware enforcement. Migration `0240`. See `docs/handoffs/SESSION_998_GOVERNANCE_HARDENING.md`.
-
-## Session 997B Summary (Prior)
-
-### Podcast Cleanup + Boardroom Preview + Betting Sidebar
-
-See `docs/handoffs/SESSION_997B_PODCAST_BOARDROOM_BETTING_SIDEBAR.md`.
-
-## Session 997 Summary (Prior)
-
-### Mythology Validation for PA Responses + PublishGate Scoring
-
-See `docs/handoffs/SESSION_997_MYTHOLOGY_PUBLISHGATE.md`.
+PublishGate blocks publishing when `publish_ready=False`. SelfBlog.author tracks creation source. New 'reviewer' platform_role. See `docs/handoffs/SESSION_998_GOVERNANCE_HARDENING.md`.
 
 ---
 
@@ -48,12 +46,13 @@ See `docs/handoffs/SESSION_997_MYTHOLOGY_PUBLISHGATE.md`.
 
 | Metric | Count |
 |--------|-------|
-| Agents | 79 (52 routable, 25 non-routable, 26+ provenance-tracked) |
+| Agents | 82 routable, 25 non-routable, 26+ provenance-tracked |
 | Spiders | 79 (74 working, 5 need API keys) |
 | Advisors | 25 |
 | Database Models | 391+ |
 | Services | 134 |
-| Celery Tasks | 264 |
+| Celery Tasks | 265 |
+| Intelligence Desks | 4 (Stocks, Sports, Blockchain, Narrative) |
 | Workspace Tabs | 9 |
 | Frontend Routes | 37 (15 standalone + 22 redirects) |
 | PA Tools | 97 |
@@ -69,15 +68,15 @@ See `docs/handoffs/SESSION_997_MYTHOLOGY_PUBLISHGATE.md`.
 ## Known Issues / Open Items
 
 ### chat_conversations.platform Column Missing
-`Failed to persist PA conversation: column chat_conversations.platform does not exist` — ChatConversation model has a `platform` field that hasn't been migrated. Create and run migration.
+`Failed to persist PA conversation: column chat_conversations.platform does not exist` -- ChatConversation model has a `platform` field that hasn't been migrated. Create and run migration.
 
 ### Profile Loading in Async Context
-`Failed to load profile: You cannot call this from an async context` — Profile loading fails in Celery PA worker. Need `sync_to_async` wrapper or thread-based approach.
+`Failed to load profile: You cannot call this from an async context` -- Profile loading fails in Celery PA worker. Need `sync_to_async` wrapper or thread-based approach.
 
 ### docs/USER_FEEDBACK_QUEUE.md Missing
 Referenced by `docs_context_builder` as a critical doc but doesn't exist. Create it or remove from critical docs list.
 
-### Agent Knowledge Freshness — Monitor Impact
+### Agent Knowledge Freshness -- Monitor Impact
 14-day cutoff may be too aggressive. Monitor agent conversation quality.
 
 ### CoinGecko Spider Not Crawling
@@ -98,12 +97,18 @@ Data is flowing but no dashboard exists yet.
 ### FailureSignature Table Empty
 Diagnostic pipeline (Session 856) has 0 records. May need activation.
 
-### Disconnected Dots Audit (Session 972) — Ongoing
+### Disconnected Dots Audit (Session 972) -- Ongoing
 Many items remain from the audit: agent output persistence, orphan endpoints, enrichment data loss.
 
 ---
 
 ## What Could Come Next
+
+### Intelligence Desk Enhancements
+- Add desk-specific detail pages (click a desk card -> full brief view)
+- Historical desk briefs (compare today vs yesterday)
+- Desk-specific alert thresholds (e.g., whale alert > $1M)
+- PA integration: "What did the blockchain desk find today?"
 
 ### Continue Disconnected Dots Audit
 Session 972 identified ~200+ items. High-impact remaining items:
@@ -141,7 +146,7 @@ Dashboard showing task stats, success rates, queue utilization.
 Dedicated workspace tab for Billing, Analytics, system configuration.
 
 ### Code-Splitting
-`React.lazy()` for workspace tabs — all 9 are in the main bundle.
+`React.lazy()` for workspace tabs -- all 9 are in the main bundle.
 
 ### Betting Prediction Tracking
 Track AI pick accuracy over time. Dashboard showing hit rate by sport, confidence band performance.
@@ -157,8 +162,8 @@ Track AI pick accuracy over time. Dashboard showing hit rate by sport, confidenc
 - DO NOT use `title`, `url`, `category`, `content` (don't exist)
 
 **AgentExecution fields (Session 989):**
-- `agent` is FK to Agent — use `agent__name` in `.values()` and `agent__name__icontains` in filters
-- No `success` field — use `status='completed'` / `status='failed'`
+- `agent` is FK to Agent -- use `agent__name` in `.values()` and `agent__name__icontains` in filters
+- No `success` field -- use `status='completed'` / `status='failed'`
 - No `agent_name` field
 
 **DeliberationSession.participants (Session 989):**
@@ -171,13 +176,13 @@ Track AI pick accuracy over time. Dashboard showing hit rate by sport, confidenc
 - Auto-assigned via `PROGRAM_OWNER_MAP` or `created_by` at creation time
 
 **Odds-consensus predictions (Session 998B):**
-- `_american_to_probability()` in `views_odds_sports.py` — converts American odds to implied probability
+- `_american_to_probability()` in `views_odds_sports.py` -- converts American odds to implied probability
 - Only predicts when implied prob > 55%
 - `prediction_correct` field: `True`/`False` for completed, `None` for pending
 
-**_parse_target_move() (Session 994):**
-- GPT may return numeric types — always handled via isinstance check
-- Per-iteration error handling in prediction recording loops
+**Intelligence desk cache keys (Session 1000):**
+- `desk:stocks:latest`, `desk:sports:latest`, `desk:blockchain:latest`, `desk:narrative:latest`
+- 6-hour TTL, regenerated daily at 6 AM or on-demand via `/api/home/trigger-desks/`
 
 **Railway multi-service deployment (Session 989):**
 - Each Procfile process is a SEPARATE Railway service
@@ -197,7 +202,7 @@ Track AI pick accuracy over time. Dashboard showing hit rate by sport, confidenc
 **PA intent routing:** More specific patterns BEFORE generic catch-alls. Always test new patterns against likely user questions.
 
 **Model import paths:**
-- `HeartBeat`: `core.models_heart` — `recorded_at`, `overall_status`
+- `HeartBeat`: `core.models_heart` -- `recorded_at`, `overall_status`
 - `SpiderData`: `core.models_unified_system`
 - `CeleryTaskEvent`: `core.models_celery_telemetry`
 - `DeliberationSession`: `core.models_deliberation`

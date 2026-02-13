@@ -34755,3 +34755,169 @@ def generate_step_content(self, step_id):
     except Exception as e:
         logger.error(f"generate_step_content failed for {step_id}: {e}")
         return {'success': False, 'error': str(e)}
+
+
+# =============================================================================
+# Session 1000: Intelligence Desks — run all 4 desk coordinators daily
+# =============================================================================
+
+@shared_task(name='core.tasks.run_all_desks_intelligence')
+def run_all_desks_intelligence():
+    """
+    Session 1000: Run all 4 intelligence desk coordinators sequentially.
+
+    Desks:
+      1. Stocks  — MarketIntelligenceCoordinator (saves to MarketIntelligenceBrief + cache)
+      2. Sports  — SportsBettingCoordinator.generate_brief()
+      3. Blockchain — BlockchainAuditCoordinator.execute()
+      4. Narrative — NarrativeDriftCoordinator.execute()
+
+    Each desk result is cached with a 6-hour TTL for the API to serve.
+    Returns summary dict with timing and success counts.
+    """
+    import time as _time
+    from django.core.cache import cache
+
+    CACHE_TTL = 6 * 3600  # 6 hours
+
+    desks_completed = 0
+    desks_failed = 0
+    timing = {}
+
+    # --- Desk 1: Stocks ---
+    try:
+        t0 = _time.time()
+        logger.info("[SESSION 1000] Running Stocks desk ...")
+        from core.agents.stocks.market_intelligence_coordinator import MarketIntelligenceCoordinator
+        coordinator = MarketIntelligenceCoordinator(user=None)
+        result = coordinator.execute(
+            task="Daily stock intelligence brief",
+            context={},
+            scifi_context={},
+            spider_context={},
+        )
+        elapsed = round(_time.time() - t0, 1)
+        timing['stocks'] = elapsed
+
+        summary = ''
+        if hasattr(result, 'data') and isinstance(result.data, dict):
+            summary = result.data.get('executive_summary', '') or result.data.get('summary', '')
+        elif result.message:
+            summary = str(result.message)[:500]
+
+        cache.set('desk:stocks:latest', {
+            'generated_at': timezone.now().isoformat(),
+            'executive_summary': summary[:500],
+            'agents_run': [
+                'MarketIntelligenceCoordinator', 'BullCaseAgent', 'BearCaseAgent',
+                'StockAuditCoordinator', 'StockAnalystAgent', 'MarketMovementMonitorAgent',
+                'InstitutionalWatcherAgent', 'MarketAnomalyDetectorAgent', 'SignalScannerAgent',
+            ],
+            'elapsed_seconds': elapsed,
+        }, CACHE_TTL)
+        desks_completed += 1
+        logger.info(f"[SESSION 1000] Stocks desk done in {elapsed}s")
+    except Exception as e:
+        desks_failed += 1
+        timing['stocks'] = -1
+        logger.error(f"[SESSION 1000] Stocks desk failed: {e}")
+
+    # --- Desk 2: Sports ---
+    try:
+        t0 = _time.time()
+        logger.info("[SESSION 1000] Running Sports desk ...")
+        from core.services.sports_betting_coordinator import SportsBettingCoordinator
+        brief = SportsBettingCoordinator().generate_brief()
+        elapsed = round(_time.time() - t0, 1)
+        timing['sports'] = elapsed
+
+        cache.set('desk:sports:latest', {
+            'generated_at': timezone.now().isoformat(),
+            'executive_summary': (brief.get('executive_summary', '') or '')[:500],
+            'top_plays': brief.get('top_plays', [])[:5],
+            'agents_run': [
+                'GamePredictor', 'SportsOddsAnalyst', 'ArbitrageDetector',
+                'LineMovementAnalyzer', 'SharpActionDetector',
+            ],
+            'elapsed_seconds': elapsed,
+        }, CACHE_TTL)
+        desks_completed += 1
+        logger.info(f"[SESSION 1000] Sports desk done in {elapsed}s")
+    except Exception as e:
+        desks_failed += 1
+        timing['sports'] = -1
+        logger.error(f"[SESSION 1000] Sports desk failed: {e}")
+
+    # --- Desk 3: Blockchain ---
+    try:
+        t0 = _time.time()
+        logger.info("[SESSION 1000] Running Blockchain desk ...")
+        from core.agents.blockchain.blockchain_audit_coordinator import BlockchainAuditCoordinator
+        coordinator = BlockchainAuditCoordinator(user=None)
+        result = coordinator.execute(
+            task="Daily blockchain intelligence scan",
+            context={},
+            scifi_context={},
+            spider_context={},
+        )
+        elapsed = round(_time.time() - t0, 1)
+        timing['blockchain'] = elapsed
+
+        data = result.data if hasattr(result, 'data') and isinstance(result.data, dict) else {}
+        cache.set('desk:blockchain:latest', {
+            'generated_at': timezone.now().isoformat(),
+            'summary': (data.get('summary', '') or data.get('executive_summary', '') or result.message[:500])[:500],
+            'agents_run': [
+                'BlockchainAuditCoordinator', 'SmartContractAuditorAgent',
+                'TransactionMonitorAgent', 'WhaleWatcherAgent', 'ExploitDetectorAgent',
+            ],
+            'elapsed_seconds': elapsed,
+        }, CACHE_TTL)
+        desks_completed += 1
+        logger.info(f"[SESSION 1000] Blockchain desk done in {elapsed}s")
+    except Exception as e:
+        desks_failed += 1
+        timing['blockchain'] = -1
+        logger.error(f"[SESSION 1000] Blockchain desk failed: {e}")
+
+    # --- Desk 4: Narrative ---
+    try:
+        t0 = _time.time()
+        logger.info("[SESSION 1000] Running Narrative desk ...")
+        from core.agents.narrative.narrative_drift_coordinator import NarrativeDriftCoordinator
+        coordinator = NarrativeDriftCoordinator(user=None)
+        result = coordinator.execute(
+            task="Daily narrative drift scan — detect emerging trends and cultural shifts",
+            context={},
+            scifi_context={},
+            spider_context={},
+        )
+        elapsed = round(_time.time() - t0, 1)
+        timing['narrative'] = elapsed
+
+        data = result.data if hasattr(result, 'data') and isinstance(result.data, dict) else {}
+        cache.set('desk:narrative:latest', {
+            'generated_at': timezone.now().isoformat(),
+            'summary': (data.get('summary', '') or data.get('executive_summary', '') or result.message[:500])[:500],
+            'agents_run': [
+                'NarrativeDriftCoordinator', 'NarrativeHistorianAgent',
+                'TrendBreakDetectorAgent', 'CulturalImpactAgent',
+            ],
+            'elapsed_seconds': elapsed,
+        }, CACHE_TTL)
+        desks_completed += 1
+        logger.info(f"[SESSION 1000] Narrative desk done in {elapsed}s")
+    except Exception as e:
+        desks_failed += 1
+        timing['narrative'] = -1
+        logger.error(f"[SESSION 1000] Narrative desk failed: {e}")
+
+    logger.info(
+        f"[SESSION 1000] Intelligence desks complete: "
+        f"{desks_completed} succeeded, {desks_failed} failed, timing={timing}"
+    )
+    return {
+        'desks_completed': desks_completed,
+        'desks_failed': desks_failed,
+        'timing': timing,
+    }
