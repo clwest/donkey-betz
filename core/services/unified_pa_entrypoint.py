@@ -677,10 +677,17 @@ class UnifiedPAEntrypoint:
             return ('boardroom', 'boardroom_tool')
 
         # Decision/attention patterns
+        # Session 997B: "review" alone is too greedy — matches "review this system" etc.
+        # Use phrase-level patterns so we only route when intent is clearly boardroom-related.
         if any(word in message_lower for word in [
-            'decision', 'pending', 'attention', 'approve', 'reject', 'review'
+            'decision', 'pending', 'attention', 'approve', 'reject',
         ]):
-            return ('boardroom', 'boardroom_tool')  # Session 940: Route to boardroom_tool
+            return ('boardroom', 'boardroom_tool')
+        if any(phrase in message_lower for phrase in [
+            'review item', 'review decision', 'review alert', 'needs review',
+            'pending review', 'review attention', 'for review', 'items to review',
+        ]):
+            return ('boardroom', 'boardroom_tool')
 
         # Session 969: Recent activity patterns — "what's been going on?"
         if any(phrase in message_lower for phrase in [
