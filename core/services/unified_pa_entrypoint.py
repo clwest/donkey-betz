@@ -2325,8 +2325,8 @@ Address the user by name occasionally."""
                     for item in items[:5]:
                         title = item.get('title', 'Untitled')[:50]
                         content_type = item.get('deliverable_type', 'document')
-                        quality = item.get('quality_score', 0)
-                        response += f"- **{title}** ({content_type}, quality: {quality:.0%})\n"
+                        quality = item.get('quality_score') or 0
+                        response += f"- {title} ({content_type}, quality: {quality:.0%})\n"
 
                     if count > 5:
                         response += f"\n...and {count - 5} more."
@@ -2351,7 +2351,7 @@ Address the user by name occasionally."""
                         content_type = item.get('deliverable_type', 'document')
                         status = item.get('status', 'unknown')
                         agent = item.get('agent_name', '')
-                        quality = item.get('quality_score', 0)
+                        quality = item.get('quality_score') or 0
 
                         status_icon = '✅' if status == 'published' else ('🟢' if status == 'ready' else '📝')
                         response += f"{status_icon} **{title}**\n"
@@ -2411,11 +2411,11 @@ Address the user by name occasionally."""
                     title = blog.get('title', 'Untitled')
                     content_type = blog.get('content_type', blog.get('type', 'document'))
                     status = blog.get('status', 'unknown')
-                    quality = blog.get('quality_score', 0)
+                    quality = blog.get('quality_score') or 0
                     preview = blog.get('content_preview', '')[:300]
                     item_id = blog.get('id', '')
 
-                    response = f"**{title}**\n\n"
+                    response = f"{title}\n\n"
                     response += f"- Type: {content_type}\n"
                     response += f"- Status: {status}\n"
                     response += f"- Quality: {quality:.0%}\n"
@@ -3266,8 +3266,8 @@ Address the user by name occasionally."""
                     if count == 0:
                         return f"No recent executions from {agent}, {user_name}."
 
-                    success_rate = tool_result.get('success_rate', 0)
-                    response = f"**{agent}** execution history ({count} total, {success_rate:.0%} success):\n\n"
+                    success_rate = tool_result.get('success_rate') or 0
+                    response = f"{agent} execution history ({count} total, {success_rate:.0%} success):\n\n"
                     for ex in executions[:6]:
                         status = ex.get('status', 'unknown')
                         status_icon = '✅' if status == 'completed' else '❌'
@@ -3284,7 +3284,7 @@ Address the user by name occasionally."""
                     total = tool_result.get('total_executions', 0)
                     successes = tool_result.get('successes', 0)
                     failures = tool_result.get('failures', 0)
-                    success_rate = tool_result.get('success_rate', 0)
+                    success_rate = tool_result.get('success_rate') or 0
                     conv_total = tool_result.get('total_conversations', 0)
                     conv_completed = tool_result.get('completed_conversations', 0)
                     by_agent = tool_result.get('by_agent', [])
@@ -3342,8 +3342,8 @@ Address the user by name occasionally."""
                     for p in patterns[:8]:
                         pattern_type = p.get('pattern_type', 'unknown')
                         description = p.get('description', '')[:60]
-                        confidence = p.get('confidence', 0)
-                        response += f"- **{pattern_type}** ({confidence:.0%}): {description}\n"
+                        confidence = p.get('confidence') or 0
+                        response += f"- {pattern_type} ({confidence:.0%}): {description}\n"
 
                     if count > 8:
                         response += f"\n...and {count - 8} more patterns."
@@ -3360,7 +3360,7 @@ Address the user by name occasionally."""
                     response = f"**{pattern_type.title()}** Learning Patterns ({count}):\n\n"
                     for p in patterns[:6]:
                         description = p.get('description', '')[:70]
-                        confidence = p.get('confidence', 0)
+                        confidence = p.get('confidence') or 0
                         response += f"- {description} ({confidence:.0%})\n"
 
                     return response
@@ -3722,8 +3722,8 @@ Address the user by name occasionally."""
                     return response
 
                 elif action == 'decision_pattern':
-                    confidence = tool_result.get('confidence', 0)
-                    return f"Decision pattern confidence: **{confidence:.1%}**"
+                    confidence = tool_result.get('confidence') or 0
+                    return f"Decision pattern confidence: {confidence:.1%}"
 
                 elif action == 'detect_opportunity':
                     opps = tool_result.get('opportunities', [])
