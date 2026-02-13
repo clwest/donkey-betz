@@ -498,6 +498,10 @@ Initiative created from HiveMind brainstorm session.
             auto_topic=getattr(session, 'auto_topic', None),
         )
 
+        # Session 996: Auto-assign owner
+        from core.services.initiative_integration_service import InitiativeIntegrationService
+        InitiativeIntegrationService()._auto_assign_owner(initiative)
+
         # Create the 5 stages in PENDING status
         stage_names = {
             1: 'Research Brief',

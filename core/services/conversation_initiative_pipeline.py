@@ -464,6 +464,10 @@ class ConversationInitiativePipeline:
                     target_workspace=workspace,  # Session 908: Link to workspace
                 )
 
+                # Session 996: Auto-assign owner
+                from core.services.initiative_integration_service import InitiativeIntegrationService
+                InitiativeIntegrationService()._auto_assign_owner(initiative)
+
                 result.initiative_id = str(initiative.id)
                 result.initiative_name = initiative_name
 
