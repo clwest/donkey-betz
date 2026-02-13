@@ -1038,7 +1038,8 @@ from core.views_dashboard_stats import (
 from core.views_public_stats import public_system_stats
 
 # Session 884: Home Page Boot API
-from core.views_home import home_boot
+# Session 1000: Intelligence Desks API
+from core.views_home import home_boot, intelligence_desks, trigger_desks
 # Import agent instance views
 from agents.views_instances import (
     list_instances, get_instance_status, delete_instance, delete_multiple_instances
@@ -2242,6 +2243,9 @@ urlpatterns = [
 
     # Session 884: Home Page Boot API - AI OS boot experience
     path('api/home/boot/', home_boot, name='home-boot'),
+    # Session 1000: Intelligence Desks API
+    path('api/home/intelligence-desks/', intelligence_desks, name='intelligence-desks'),
+    path('api/home/trigger-desks/', trigger_desks, name='trigger-desks'),
 
     # Dashboard Statistics - The Heart of Everything!
     path('api/dashboard/stats/', dashboard_stats, name='dashboard-stats'),

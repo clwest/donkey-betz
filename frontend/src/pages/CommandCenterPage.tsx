@@ -26,7 +26,8 @@ import {
   Volume2, VolumeX, Settings, Moon, Eye, Pause, Sliders,
   Bug, AlertTriangle, Wrench, ChevronDown, ChevronUp,
   ExternalLink, Workflow, Database, Sparkles as SparklesIcon,
-  PanelLeftClose, PanelLeftOpen, Plus,
+  PanelLeftClose, PanelLeftOpen, Plus, Brain,
+  BarChart3, Shield, BookOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -60,6 +61,7 @@ interface BootData {
     initiatives_progressed: number
     pending_decisions: number
     hours_since_visit: number
+    intelligence_desks_ready: number
   }
   quick_stats: {
     agents_active: number
@@ -249,6 +251,13 @@ function CommandHeader({
               <span className="text-gray-400 text-sm">initiatives moved</span>
             </div>
           )}
+          {whileAway.intelligence_desks_ready > 0 && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-400/10">
+              <Brain size={14} className="text-purple-400" />
+              <span className="text-purple-400 font-medium">{whileAway.intelligence_desks_ready}</span>
+              <span className="text-gray-400 text-sm">intel desks ready</span>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -399,6 +408,148 @@ function NowHub({ pendingDecisions, runningExecutions, bodyHealthScore, agentsAc
           </div>
         </div>
       </button>
+    </div>
+  )
+}
+
+// ============================================================================
+// Session 1000: Intelligence Desks Panel
+// ============================================================================
+
+interface DeskData {
+  status: 'ready' | 'no_data'
+  generated_at?: string
+  executive_summary?: string
+  summary?: string
+  top_plays?: Array<Record<string, unknown>>
+  agents_run?: string[]
+  elapsed_seconds?: number
+}
+
+interface DesksResponse {
+  desks: Record<string, DeskData>
+  total_agents_activated: number
+}
+
+const DESK_CONFIG = [
+  { key: 'stocks', label: 'Stocks', icon: TrendingUp, color: 'green' },
+  { key: 'sports', label: 'Sports', icon: BarChart3, color: 'amber' },
+  { key: 'blockchain', label: 'Blockchain', icon: Shield, color: 'cyan' },
+  { key: 'narrative', label: 'Narrative', icon: BookOpen, color: 'purple' },
+] as const
+
+const colorMap: Record<string, { bg: string; text: string; border: string; badge: string }> = {
+  green:  { bg: 'bg-green-400/5',  text: 'text-green-400',  border: 'border-green-500/20',  badge: 'bg-green-500/20 text-green-400' },
+  amber:  { bg: 'bg-amber-400/5',  text: 'text-amber-400',  border: 'border-amber-500/20',  badge: 'bg-amber-500/20 text-amber-400' },
+  cyan:   { bg: 'bg-cyan-400/5',   text: 'text-cyan-400',   border: 'border-cyan-500/20',   badge: 'bg-cyan-500/20 text-cyan-400' },
+  purple: { bg: 'bg-purple-400/5', text: 'text-purple-400', border: 'border-purple-500/20', badge: 'bg-purple-500/20 text-purple-400' },
+}
+
+function IntelligenceDesksPanel({
+  desksData,
+  onTrigger,
+  isTriggerPending,
+}: {
+  desksData?: DesksResponse
+  onTrigger: () => void
+  isTriggerPending: boolean
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const desks = desksData?.desks || {}
+  const readyCount = Object.values(desks).filter(d => d.status === 'ready').length
+
+  // Auto-expand when desks have fresh data
+  useEffect(() => {
+    if (readyCount > 0) setExpanded(true)
+  }, [readyCount])
+
+  return (
+    <div className="mb-4">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center justify-between w-full text-left group"
+      >
+        <div className="flex items-center gap-2">
+          <Brain size={14} className="text-purple-400" />
+          <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+            Intelligence Desks
+          </span>
+          {readyCount > 0 && (
+            <span className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-500/20 text-purple-400">
+              {readyCount}/4
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); onTrigger() }}
+            disabled={isTriggerPending}
+            className="px-2 py-1 text-xs rounded bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 transition-colors disabled:opacity-50"
+          >
+            {isTriggerPending ? (
+              <Loader2 size={12} className="animate-spin" />
+            ) : (
+              'Run All Desks'
+            )}
+          </button>
+          {expanded ? <ChevronUp size={14} className="text-gray-500" /> : <ChevronDown size={14} className="text-gray-500" />}
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="grid grid-cols-4 gap-3 mt-3">
+          {DESK_CONFIG.map(({ key, label, icon: Icon, color }) => {
+            const desk = desks[key]
+            const colors = colorMap[color]
+            const isReady = desk?.status === 'ready'
+            const summaryText = desk?.executive_summary || desk?.summary || ''
+            const agentCount = desk?.agents_run?.length || 0
+            const generatedAt = desk?.generated_at ? new Date(desk.generated_at) : null
+
+            return (
+              <div
+                key={key}
+                className={cn(
+                  'rounded-lg border p-3 transition-colors',
+                  isReady ? `${colors.bg} ${colors.border}` : 'bg-dark-card border-dark-border opacity-60'
+                )}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Icon size={14} className={isReady ? colors.text : 'text-gray-500'} />
+                    <span className={cn('text-sm font-medium', isReady ? colors.text : 'text-gray-500')}>
+                      {label}
+                    </span>
+                  </div>
+                  <span className={cn(
+                    'px-1.5 py-0.5 rounded text-[10px] font-medium',
+                    isReady ? colors.badge : 'bg-gray-700/50 text-gray-500'
+                  )}>
+                    {isReady ? 'Ready' : 'No Data'}
+                  </span>
+                </div>
+
+                {isReady && summaryText && (
+                  <p className="text-xs text-gray-400 line-clamp-3 mb-2">
+                    {summaryText.slice(0, 150)}{summaryText.length > 150 ? '...' : ''}
+                  </p>
+                )}
+
+                <div className="flex items-center justify-between">
+                  {agentCount > 0 && (
+                    <span className="text-[10px] text-gray-500">{agentCount} agents</span>
+                  )}
+                  {generatedAt && (
+                    <span className="text-[10px] text-gray-500" title={generatedAt.toLocaleString()}>
+                      {generatedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -585,6 +736,26 @@ export default function CommandCenterPage() {
     queryKey: ['attention-items'],
     queryFn: () => assistantApi.getAttentionItems(),
     enabled: isAuthenticated,
+  })
+
+  // Session 1000: Intelligence Desks
+  const { data: desksData } = useQuery({
+    queryKey: ['intelligence-desks'],
+    queryFn: async () => {
+      const res = await homeApi.intelligenceDesks()
+      return res.data as DesksResponse
+    },
+    refetchInterval: 300000,
+  })
+
+  const triggerDesksMutation = useMutation({
+    mutationFn: () => homeApi.triggerDesks(),
+    onSuccess: () => {
+      setActionResult({ type: 'success', message: 'Intelligence desks triggered — results in a few minutes' })
+    },
+    onError: () => {
+      setActionResult({ type: 'error', message: 'Failed to trigger intelligence desks' })
+    },
   })
 
   // ============================================================================
@@ -942,6 +1113,13 @@ export default function CommandCenterPage() {
         agentsActive={bootData?.quick_stats?.agents_active || 0}
         systemHealth={bootData?.quick_stats?.system_health || 'healthy'}
         onNavigate={goToWorkspace}
+      />
+
+      {/* Session 1000: Intelligence Desks Panel */}
+      <IntelligenceDesksPanel
+        desksData={desksData}
+        onTrigger={() => triggerDesksMutation.mutate()}
+        isTriggerPending={triggerDesksMutation.isPending}
       />
 
       <div className="flex flex-1 gap-4 overflow-hidden">
