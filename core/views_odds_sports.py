@@ -2937,3 +2937,195 @@ def get_games_with_movement(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# =============================================================================
+# Session 995B: Sports Betting Intelligence Endpoints
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_todays_games(request):
+    """
+    Session 995B: Today's games with predictions, odds, and scores.
+    Combines TheOddsSpider odds with GamePredictor predictions.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    try:
+        sport_key = request.GET.get('sport')
+
+        # Fetch live odds
+        from ai_core.spiders.specialized.theodds_spider import TheOddsSpider
+        spider = TheOddsSpider()
+
+        if sport_key:
+            events = spider.fetch_data(sports=[sport_key], max_results=50)
+        else:
+            events = spider.fetch_data(max_results=60, max_priority=1)
+
+        odds_events = [e for e in events if e.get('data_type') == 'sports_odds']
+
+        # Fetch scores for completed games
+        scores_by_event = {}
+        sport_keys_seen = set()
+        for e in odds_events:
+            sk = e.get('sport_key')
+            if sk:
+                sport_keys_seen.add(sk)
+
+        for sk in list(sport_keys_seen)[:5]:
+            try:
+                scores = spider.fetch_scores(sport_key=sk, days_from=1)
+                for s in scores:
+                    scores_by_event[s['event_id']] = s
+            except Exception:
+                pass
+
+        # Fetch predictions from DB
+        predictions_by_event = {}
+        try:
+            from sports.models import MLPrediction
+            from django.utils import timezone
+            cutoff = timezone.now() - timedelta(hours=48)
+            preds = MLPrediction.objects.filter(created_at__gte=cutoff)
+            for p in preds:
+                eid = p.event_id if hasattr(p, 'event_id') else None
+                if eid:
+                    predictions_by_event[eid] = {
+                        'predicted_winner': p.predicted_winner if hasattr(p, 'predicted_winner') else '',
+                        'confidence': p.confidence if hasattr(p, 'confidence') else 0,
+                        'predicted_home_score': p.predicted_home_score if hasattr(p, 'predicted_home_score') else None,
+                        'predicted_away_score': p.predicted_away_score if hasattr(p, 'predicted_away_score') else None,
+                    }
+        except Exception as e:
+            logger.warning(f"Could not load MLPredictions: {e}")
+
+        # Build response
+        games = []
+        for event in odds_events:
+            eid = event.get('event_id', '')
+            score = scores_by_event.get(eid, {})
+            prediction = predictions_by_event.get(eid, {})
+
+            game = {
+                'event_id': eid,
+                'sport_key': event.get('sport_key', ''),
+                'sport_name': event.get('sport_name', ''),
+                'home_team': event.get('home_team', ''),
+                'away_team': event.get('away_team', ''),
+                'commence_time': event.get('commence_time', ''),
+                'home_odds': event.get('home_odds'),
+                'away_odds': event.get('away_odds'),
+                'home_spread': event.get('home_spread'),
+                'away_spread': event.get('away_spread'),
+                'total_line': event.get('total_line'),
+                # Score (if completed)
+                'completed': score.get('completed', False),
+                'home_score': score.get('home_score'),
+                'away_score': score.get('away_score'),
+                # Prediction
+                'predicted_winner': prediction.get('predicted_winner', ''),
+                'confidence': prediction.get('confidence', 0),
+                'predicted_home_score': prediction.get('predicted_home_score'),
+                'predicted_away_score': prediction.get('predicted_away_score'),
+            }
+            games.append(game)
+
+        # Sort: live/upcoming first, completed last
+        games.sort(key=lambda g: (g['completed'], g.get('commence_time', '')))
+
+        # Get unique sports for filter
+        sports = sorted(set(g['sport_key'] for g in games if g['sport_key']))
+
+        return Response({
+            'success': True,
+            'games': games,
+            'total': len(games),
+            'sports': sports,
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting today's games: {e}", exc_info=True)
+        return Response({'success': False, 'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_betting_brief(request):
+    """
+    Session 995B: Full betting brief from SportsBettingCoordinator.
+    Returns top plays, executive summary, and per-agent results.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    try:
+        sport_key = request.GET.get('sport')
+
+        from core.services.sports_betting_coordinator import SportsBettingCoordinator
+        coordinator = SportsBettingCoordinator(sport_key=sport_key)
+        brief = coordinator.generate_brief()
+
+        return Response({
+            'success': True,
+            'brief': {
+                'generated_at': brief.get('generated_at'),
+                'executive_summary': brief.get('executive_summary', ''),
+                'top_plays': brief.get('top_plays', []),
+                'agents_run': brief.get('agents_run', []),
+                'generation_time_seconds': brief.get('generation_time_seconds', 0),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error generating betting brief: {e}", exc_info=True)
+        return Response({'success': False, 'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_sharp_action(request):
+    """
+    Session 995B: Sharp action signals from SharpActionDetector.
+    Returns divergence signals between sharp and soft bookmakers.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    try:
+        sport_key = request.GET.get('sport')
+        context = {}
+        if sport_key:
+            context['sport_key'] = sport_key
+
+        from core.agents.markets.sharp_action_detector import SharpActionDetector
+        agent = SharpActionDetector()
+        result = agent.execute(
+            task="Identify sharp betting action and stale lines",
+            context=context
+        )
+
+        if result.success:
+            signals = result.data.get('signals', [])
+            return Response({
+                'success': True,
+                'signals': signals,
+                'total': len(signals),
+                'hot_count': result.data.get('hot_signals', 0),
+                'warm_count': result.data.get('warm_signals', 0),
+                'events_scanned': result.data.get('total_events_scanned', 0),
+                'llm_analysis': result.data.get('llm_analysis', ''),
+            })
+        else:
+            return Response({
+                'success': True,
+                'signals': [],
+                'total': 0,
+                'error': result.error,
+            })
+
+    except Exception as e:
+        logger.error(f"Error getting sharp action: {e}", exc_info=True)
+        return Response({'success': False, 'error': str(e)}, status=500)

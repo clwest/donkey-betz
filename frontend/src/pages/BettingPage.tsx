@@ -5,17 +5,20 @@ import {
   TrendingUp, TrendingDown, DollarSign, Target, Zap, AlertTriangle,
   RefreshCw, Loader2, Trophy, Activity, PieChart, BarChart3,
   Clock, CheckCircle, Flame, Search, Eye, XCircle, CircleDot,
-  Award, Layers, ChevronDown, ChevronUp, History
+  Award, Layers, ChevronDown, ChevronUp, History, Crosshair,
+  Star, Swords, Brain
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
-type BettingTab = 'overview' | 'arbitrage' | 'markets' | 'odds' | 'bankroll' | 'wagers' | 'watching'
+type BettingTab = 'overview' | 'games' | 'top_plays' | 'sharp' | 'arbitrage' | 'markets' | 'odds' | 'bankroll' | 'wagers' | 'watching'
 
 const tabs = [
   { id: 'overview' as BettingTab, label: 'Overview', icon: PieChart },
+  { id: 'games' as BettingTab, label: "Today's Games", icon: Swords },
+  { id: 'top_plays' as BettingTab, label: 'Top Plays', icon: Star },
+  { id: 'sharp' as BettingTab, label: 'Sharp Action', icon: Crosshair },
   { id: 'arbitrage' as BettingTab, label: 'Arbitrage', icon: Flame },
   { id: 'watching' as BettingTab, label: 'Watching', icon: Eye },
-  { id: 'markets' as BettingTab, label: 'Markets', icon: BarChart3 },
   { id: 'odds' as BettingTab, label: 'Live Odds', icon: Activity },
   { id: 'bankroll' as BettingTab, label: 'Bankroll', icon: DollarSign },
   { id: 'wagers' as BettingTab, label: 'My Wagers', icon: Trophy },
@@ -630,6 +633,28 @@ export default function BettingPage() {
     refetchInterval: 60000, // Refresh every minute
   })
 
+  // Session 995B: Today's games with predictions + scores
+  const { data: gamesData, isLoading: gamesLoading, refetch: refetchGames } = useQuery({
+    queryKey: ['betting-todays-games', sportFilter],
+    queryFn: () => bettingApi.todaysGames(sportFilter !== 'all' ? sportFilter : undefined),
+    enabled: activeTab === 'games',
+    refetchInterval: 60000,
+  })
+
+  // Session 995B: Betting brief from coordinator
+  const { data: briefData, isLoading: briefLoading, refetch: refetchBrief } = useQuery({
+    queryKey: ['betting-brief'],
+    queryFn: () => bettingApi.bettingBrief(),
+    enabled: activeTab === 'top_plays',
+  })
+
+  // Session 995B: Sharp action signals
+  const { data: sharpData, isLoading: sharpLoading, refetch: refetchSharp } = useQuery({
+    queryKey: ['betting-sharp-action', sportFilter],
+    queryFn: () => bettingApi.sharpAction(sportFilter !== 'all' ? sportFilter : undefined),
+    enabled: activeTab === 'sharp',
+  })
+
   const stats: Partial<BettingStatsData> = statsData?.data?.stats || statsData?.data || {}
   const wagers = wagersData?.data?.wagers || []
   const singlesRecord = stats.singles_record || { wins: 0, losses: 0, profit: 0 }
@@ -641,6 +666,13 @@ export default function BettingPage() {
   const markets = marketsData?.data?.markets || []
   // Session 745: Line movement data
   const lineMovement = lineMovementData?.data?.games || []
+
+  // Session 995B: New intelligence data
+  const todaysGames = gamesData?.data?.games || []
+  const gameSports = gamesData?.data?.sports || []
+  const briefResult = briefData?.data?.brief || {}
+  const topPlays = briefResult.top_plays || []
+  const sharpSignals = sharpData?.data?.signals || []
 
   return (
     <div className="space-y-6">
@@ -968,6 +1000,411 @@ export default function BettingPage() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Session 995B: Today's Games Tab */}
+      {activeTab === 'games' && (
+        <div className="space-y-6">
+          {/* Sport Filter + Refresh */}
+          <div className="flex items-center gap-4">
+            <select
+              value={sportFilter}
+              onChange={(e) => setSportFilter(e.target.value)}
+              className="bg-dark-card border border-dark-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary-500"
+            >
+              <option value="all">All Sports</option>
+              {gameSports.map((sk: string) => (
+                <option key={sk} value={sk}>
+                  {sk.replace('americanfootball_', 'NFL: ').replace('basketball_', 'NBA: ').replace('icehockey_', 'NHL: ').replace('baseball_', 'MLB: ').replace('soccer_', 'Soccer: ').replace('_', ' ')}
+                </option>
+              ))}
+            </select>
+            <button className="btn btn-primary flex items-center gap-2" onClick={() => refetchGames()}>
+              <RefreshCw size={16} />
+              Refresh
+            </button>
+            <span className="text-sm text-gray-400">{todaysGames.length} games</span>
+          </div>
+
+          {/* Stats Row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <StatCard label="Total Games" value={todaysGames.length} icon={Swords} color="bg-primary-600" />
+            <StatCard label="With Predictions" value={todaysGames.filter((g: any) => g.predicted_winner).length} icon={Brain} color="bg-accent-purple" />
+            <StatCard label="Completed" value={todaysGames.filter((g: any) => g.completed).length} icon={CheckCircle} color="bg-accent-green" />
+            <StatCard label="Upcoming" value={todaysGames.filter((g: any) => !g.completed).length} icon={Clock} color="bg-accent-amber" />
+          </div>
+
+          {/* Games List */}
+          {gamesLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 size={32} className="animate-spin text-primary-400" />
+            </div>
+          ) : todaysGames.length > 0 ? (
+            <div className="space-y-3">
+              {todaysGames.map((game: any, i: number) => {
+                const hasScore = game.completed && game.home_score != null
+                const hasPrediction = !!game.predicted_winner
+                const gameTime = game.commence_time ? new Date(game.commence_time) : null
+                const isLive = gameTime && gameTime <= new Date() && !game.completed
+
+                return (
+                  <div key={game.event_id || i} className={cn(
+                    'card p-4 border-l-4',
+                    game.completed ? 'border-l-gray-500' :
+                    isLive ? 'border-l-accent-red' :
+                    hasPrediction ? 'border-l-accent-purple' : 'border-l-primary-500'
+                  )}>
+                    {/* Header: sport + time + status */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs px-2 py-0.5 rounded bg-primary-600/20 text-primary-400">
+                          {(game.sport_name || game.sport_key || '').replace(/_/g, ' ')}
+                        </span>
+                        {isLive && (
+                          <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-accent-red/20 text-accent-red animate-pulse">
+                            <Activity size={10} /> LIVE
+                          </span>
+                        )}
+                        {game.completed && (
+                          <span className="text-xs px-2 py-0.5 rounded bg-gray-500/20 text-gray-400">FINAL</span>
+                        )}
+                      </div>
+                      <span className="text-xs text-gray-500">
+                        {gameTime ? gameTime.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                      </span>
+                    </div>
+
+                    {/* Matchup + Odds + Score */}
+                    <div className="grid grid-cols-7 gap-2 items-center">
+                      {/* Away Team */}
+                      <div className="col-span-2">
+                        <p className="font-medium">{game.away_team}</p>
+                        {game.away_odds && (
+                          <span className={cn('text-sm font-mono', game.away_odds > 0 ? 'text-accent-green' : 'text-accent-red')}>
+                            {game.away_odds > 0 ? '+' : ''}{game.away_odds}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Score / VS */}
+                      <div className="col-span-3 text-center">
+                        {hasScore ? (
+                          <div>
+                            <span className={cn('text-2xl font-bold', game.away_score > game.home_score ? 'text-accent-green' : 'text-gray-300')}>
+                              {game.away_score}
+                            </span>
+                            <span className="text-gray-500 mx-3">-</span>
+                            <span className={cn('text-2xl font-bold', game.home_score > game.away_score ? 'text-accent-green' : 'text-gray-300')}>
+                              {game.home_score}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="space-y-1">
+                            {game.home_spread && (
+                              <p className="text-xs text-gray-400">Spread: {game.home_spread > 0 ? '+' : ''}{game.home_spread}</p>
+                            )}
+                            {game.total_line && (
+                              <p className="text-xs text-gray-400">O/U: {game.total_line}</p>
+                            )}
+                            {!game.home_spread && !game.total_line && (
+                              <span className="text-gray-500 text-sm">vs</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Home Team */}
+                      <div className="col-span-2 text-right">
+                        <p className="font-medium">{game.home_team}</p>
+                        {game.home_odds && (
+                          <span className={cn('text-sm font-mono', game.home_odds > 0 ? 'text-accent-green' : 'text-accent-red')}>
+                            {game.home_odds > 0 ? '+' : ''}{game.home_odds}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Prediction Banner */}
+                    {hasPrediction && (
+                      <div className="mt-3 p-2 rounded-lg bg-accent-purple/10 border border-accent-purple/20 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Brain size={14} className="text-accent-purple" />
+                          <span className="text-sm">
+                            AI Pick: <span className="font-medium text-accent-purple">{game.predicted_winner}</span>
+                          </span>
+                        </div>
+                        <span className="text-sm font-medium text-accent-purple">{game.confidence}%</span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="card p-12 text-center">
+              <Swords size={48} className="mx-auto mb-4 text-gray-500" />
+              <h3 className="text-lg font-medium mb-2">No Games Today</h3>
+              <p className="text-gray-400">Check back later or try a different sport filter</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Session 995B: Top Plays Tab */}
+      {activeTab === 'top_plays' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-400">
+              <Brain size={14} className="inline mr-1" />
+              AI-ranked plays from 5 agents: GamePredictor, SportsOddsAnalyst, ArbitrageDetector, LineMovementAnalyzer, SharpActionDetector
+            </p>
+            <button className="btn btn-primary flex items-center gap-2" onClick={() => refetchBrief()}>
+              <RefreshCw size={16} />
+              Generate Brief
+            </button>
+          </div>
+
+          {briefLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 size={32} className="animate-spin text-primary-400" />
+              <span className="ml-3 text-gray-400">Running 5 agents... this may take a moment</span>
+            </div>
+          ) : (
+            <>
+              {/* Executive Summary */}
+              {briefResult.executive_summary && (
+                <div className="card p-5 border-l-4 border-l-accent-amber">
+                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    <Star size={18} className="text-accent-amber" />
+                    Executive Summary
+                  </h3>
+                  <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">
+                    {briefResult.executive_summary}
+                  </pre>
+                  {briefResult.agents_run && (
+                    <div className="mt-3 flex items-center gap-2 flex-wrap">
+                      <span className="text-xs text-gray-500">Agents:</span>
+                      {briefResult.agents_run.map((agent: string) => (
+                        <span key={agent} className="text-xs px-2 py-0.5 rounded bg-primary-600/20 text-primary-400">
+                          {agent}
+                        </span>
+                      ))}
+                      {briefResult.generation_time_seconds && (
+                        <span className="text-xs text-gray-500 ml-auto">
+                          Generated in {briefResult.generation_time_seconds}s
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Top Plays Cards */}
+              {topPlays.length > 0 ? (
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Trophy size={18} className="text-accent-amber" />
+                    Top Plays ({topPlays.length})
+                  </h3>
+                  {topPlays.map((play: any, i: number) => {
+                    const sourceColors: Record<string, string> = {
+                      GamePredictor: 'bg-accent-purple/20 text-accent-purple',
+                      ArbitrageDetector: 'bg-accent-red/20 text-accent-red',
+                      LineMovementAnalyzer: 'bg-accent-cyan/20 text-cyan-400',
+                      SharpActionDetector: 'bg-accent-amber/20 text-accent-amber',
+                      SportsOddsAnalyst: 'bg-accent-green/20 text-accent-green',
+                    }
+                    return (
+                      <div key={i} className="card p-4 flex items-center gap-4">
+                        {/* Rank */}
+                        <div className={cn(
+                          'h-10 w-10 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0',
+                          i === 0 ? 'bg-accent-amber/20 text-accent-amber' :
+                          i === 1 ? 'bg-gray-400/20 text-gray-300' :
+                          i === 2 ? 'bg-amber-700/20 text-amber-600' :
+                          'bg-dark-bg text-gray-400'
+                        )}>
+                          {i + 1}
+                        </div>
+
+                        {/* Details */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={cn('text-xs px-2 py-0.5 rounded', sourceColors[play.source] || 'bg-dark-bg text-gray-400')}>
+                              {play.source}
+                            </span>
+                            <span className="text-xs px-2 py-0.5 rounded bg-dark-bg text-gray-400">
+                              {play.type}
+                            </span>
+                            {play.sport && (
+                              <span className="text-xs text-gray-500">{play.sport}</span>
+                            )}
+                          </div>
+                          <p className="font-medium">{play.matchup}</p>
+                          <p className="text-sm text-primary-400">{play.pick}</p>
+                          {play.detail && (
+                            <p className="text-xs text-gray-500 mt-1">{play.detail}</p>
+                          )}
+                        </div>
+
+                        {/* Confidence */}
+                        <div className="text-right flex-shrink-0">
+                          <p className={cn(
+                            'text-2xl font-bold',
+                            play.confidence >= 85 ? 'text-accent-green' :
+                            play.confidence >= 70 ? 'text-accent-amber' : 'text-gray-400'
+                          )}>
+                            {play.confidence}%
+                          </p>
+                          <p className="text-xs text-gray-500">confidence</p>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : !briefResult.executive_summary ? (
+                <div className="card p-12 text-center">
+                  <Star size={48} className="mx-auto mb-4 text-gray-500" />
+                  <h3 className="text-lg font-medium mb-2">No Brief Generated Yet</h3>
+                  <p className="text-gray-400">Click "Generate Brief" to run all 5 betting intelligence agents</p>
+                </div>
+              ) : null}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Session 995B: Sharp Action Tab */}
+      {activeTab === 'sharp' && (
+        <div className="space-y-6">
+          <div className="flex items-center gap-4">
+            <select
+              value={sportFilter}
+              onChange={(e) => setSportFilter(e.target.value)}
+              className="bg-dark-card border border-dark-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary-500"
+            >
+              <option value="all">All Sports</option>
+              <option value="americanfootball_nfl">NFL</option>
+              <option value="basketball_nba">NBA</option>
+              <option value="baseball_mlb">MLB</option>
+              <option value="icehockey_nhl">NHL</option>
+            </select>
+            <button className="btn btn-primary flex items-center gap-2" onClick={() => refetchSharp()}>
+              <Crosshair size={16} />
+              Scan Sharp Action
+            </button>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <StatCard label="Total Signals" value={sharpSignals.length} icon={Crosshair} color="bg-primary-600" />
+            <StatCard label="HOT" value={sharpSignals.filter((s: any) => s.rating === 'HOT').length} icon={Flame} color="bg-accent-red" />
+            <StatCard label="WARM" value={sharpSignals.filter((s: any) => s.rating === 'WARM').length} icon={Zap} color="bg-accent-amber" />
+            <StatCard label="Events Scanned" value={sharpData?.data?.events_scanned || 0} icon={Search} color="bg-accent-green" />
+          </div>
+
+          {/* LLM Analysis */}
+          {sharpData?.data?.llm_analysis && (
+            <div className="card p-4 border-l-4 border-l-accent-amber">
+              <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                <Brain size={14} className="text-accent-amber" />
+                AI Analysis
+              </h4>
+              <p className="text-sm text-gray-300 whitespace-pre-wrap">{sharpData.data.llm_analysis}</p>
+            </div>
+          )}
+
+          {/* Signals */}
+          {sharpLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 size={32} className="animate-spin text-primary-400" />
+            </div>
+          ) : sharpSignals.length > 0 ? (
+            <div className="space-y-3">
+              {sharpSignals.map((signal: any, i: number) => {
+                const isHot = signal.rating === 'HOT'
+                const svs = signal.sharp_vs_soft || {}
+
+                return (
+                  <div key={i} className={cn(
+                    'card p-4 border-l-4',
+                    isHot ? 'border-l-accent-red' : 'border-l-accent-amber'
+                  )}>
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium">{signal.matchup}</h4>
+                          <span className={cn(
+                            'text-xs px-2 py-0.5 rounded',
+                            isHot ? 'bg-accent-red/20 text-accent-red' : 'bg-accent-amber/20 text-accent-amber'
+                          )}>
+                            {signal.rating}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-400">{signal.sport_name}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-gray-400">Max Divergence</p>
+                        <p className={cn('text-xl font-bold', isHot ? 'text-accent-red' : 'text-accent-amber')}>
+                          {signal.max_divergence} pts
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Odds Ranges */}
+                    <div className="grid grid-cols-2 gap-4 mb-3 text-sm">
+                      <div>
+                        <span className="text-gray-400">Home Range: </span>
+                        <span className="font-mono">{signal.home_odds_range}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400">Away Range: </span>
+                        <span className="font-mono">{signal.away_odds_range}</span>
+                      </div>
+                    </div>
+
+                    {/* Sharp vs Soft */}
+                    {svs.sharp_favors && (
+                      <div className="p-3 rounded-lg bg-dark-bg flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Crosshair size={14} className="text-accent-amber" />
+                          <span className="text-sm">
+                            Sharp books favor <span className="font-medium text-accent-amber">{svs.sharp_favors}</span>
+                          </span>
+                        </div>
+                        <div className="text-right text-sm">
+                          <span className="text-gray-400">Sharp avg: </span>
+                          <span className="font-mono">{svs.sharp_avg_home}</span>
+                          <span className="text-gray-500 mx-2">|</span>
+                          <span className="text-gray-400">Soft avg: </span>
+                          <span className="font-mono">{svs.soft_avg_home}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Stale Lines */}
+                    {signal.stale_lines && signal.stale_lines.length > 0 && (
+                      <div className="mt-2 flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-gray-500">Stale lines at:</span>
+                        {signal.stale_lines.slice(0, 3).map((sl: any, j: number) => (
+                          <span key={j} className="text-xs px-2 py-0.5 rounded bg-accent-red/10 text-accent-red">
+                            {sl.bookmaker} ({sl.better_side})
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="card p-12 text-center">
+              <Crosshair size={48} className="mx-auto mb-4 text-gray-500" />
+              <h3 className="text-lg font-medium mb-2">No Sharp Action Detected</h3>
+              <p className="text-gray-400">Click "Scan Sharp Action" to analyze bookmaker divergence</p>
+            </div>
+          )}
         </div>
       )}
 
