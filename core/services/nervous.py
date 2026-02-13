@@ -398,7 +398,7 @@ class NervousService:
 
             now = timezone.now()
             day_ago = now - timedelta(hours=24)
-            count_24h = CeleryTaskEvent.objects.filter(timestamp__gte=day_ago).count()
+            count_24h = CeleryTaskEvent.objects.filter(started_at__gte=day_ago).count()
             mps = round(count_24h / 86400, 4) if count_24h > 0 else 0
 
             return {
