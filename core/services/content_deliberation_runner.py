@@ -144,7 +144,8 @@ class ContentDeliberationRunner:
                 if gate_result.decision == 'publish':
                     blog.status = 'pending_review'
                     blog.content_type = 'public'
-                    blog.save(update_fields=['status', 'content_type'])
+                    blog.publish_ready = True  # Session 998: Gate passed → mark publish-ready
+                    blog.save(update_fields=['status', 'content_type', 'publish_ready'])
                     result['status'] = 'published'
                 else:
                     blog.gate_notes = gate_result.notes
@@ -379,6 +380,7 @@ class ContentDeliberationRunner:
 
         blog = SelfBlog.objects.create(
             title=title[:255],
+            author='ContentDeliberation',  # Session 998: Author tracking
             category='blog',
             content_type=content_type,
             status=status,

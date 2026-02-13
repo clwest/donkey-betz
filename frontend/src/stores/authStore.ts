@@ -5,6 +5,7 @@ interface User {
   id: number
   username: string
   email: string
+  platform_role?: string
 }
 
 interface AuthState {

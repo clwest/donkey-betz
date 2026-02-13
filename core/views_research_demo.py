@@ -955,6 +955,14 @@ def publish_self_blog_api(request, blog_id):
                     'error': 'Blog is already published'
                 }, status=400)
 
+            # Session 998: PublishGate enforcement — block publishing unless gate passed
+            if not force and not blog.publish_ready:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Blog has not passed PublishGate quality checks. Use force=true to override.',
+                    'gate_notes': blog.gate_notes or 'Not yet evaluated',
+                }, status=400)
+
             if blog.status == 'draft' and not force:
                 return JsonResponse({
                     'success': False,

@@ -20518,6 +20518,7 @@ and {spider_data_total:,} collected data points. Use this as credibility context
 
             blog = SelfBlog.objects.create(
                 title=content_data.get('title', blog_topic or 'AI Insights'),  # Session 572: Use topic as fallback
+                author='ScheduledTask',  # Session 998: Author tracking
                 meta_description=content_data.get('meta_description', ''),
                 intro=content_data.get('intro', ''),
                 sections=content_data.get('sections', []),
@@ -33182,6 +33183,7 @@ Previous stage context:
             blog = SelfBlog.objects.create(
                 id=uuid.uuid4(),
                 title=doc_title,
+                author='InitiativePipeline',  # Session 998: Author tracking
                 category='internal',  # Stage documents are internal
                 intro=f"Stage {stage_num} ({stage_name}) document for initiative: {init.name}",
                 full_text=content,
@@ -34286,6 +34288,7 @@ Stage {stage_num} ({config['template']}) should include:
         }
         document = SelfBlog.objects.create(
             title=f"{initiative.name} - Stage {stage_num}: {config['template']}",
+            author='InitiativePipeline',  # Session 998: Author tracking
             intro=document_content[:500],  # First 500 chars as intro
             full_text=document_content,
             category=stage_category.get(stage_num, 'technical_document'),
