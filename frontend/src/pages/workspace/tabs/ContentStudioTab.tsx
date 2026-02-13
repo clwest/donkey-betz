@@ -1079,12 +1079,31 @@ function PodcastSubTab() {
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
   const [visibleCount, setVisibleCount] = useState(10)
   const [showVoiceModal, setShowVoiceModal] = useState(false)
+  const [showNewForm, setShowNewForm] = useState(false)
+  const [newTopic, setNewTopic] = useState('')
+  const [newFormat, setNewFormat] = useState('debate')
+  const [newAudio, setNewAudio] = useState(false)
+  const [createSuccess, setCreateSuccess] = useState('')
+
+  const queryClient = useQueryClient()
 
   const { data: podcastData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['podcast-tab'],
     queryFn: async () => {
       const res = await podcastApi.list()
       return res.data
+    },
+  })
+
+  const createMutation = useMutation({
+    mutationFn: () => podcastApi.create({ topic: newTopic, format_type: newFormat, generate_audio: newAudio }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['podcast-tab'] })
+      setCreateSuccess('Episode queued — generation takes 1-2 minutes')
+      setNewTopic('')
+      setNewFormat('debate')
+      setNewAudio(false)
+      setTimeout(() => { setShowNewForm(false); setCreateSuccess('') }, 3000)
     },
   })
 
@@ -1097,7 +1116,7 @@ function PodcastSubTab() {
   }
 
   const episodes = podcastData?.episodes || podcastData?.results || []
-  const stats = podcastData?.stats || podcastData?.status_counts || { total: 3, published: 0, draft: 3 }
+  const stats = podcastData?.status_counts || podcastData?.stats || {}
   // Session 862: Backend uses 'complete' not 'published', and various in-progress statuses not 'draft'
   const publishedEpisodes = episodes.filter((e: PodcastEpisode) => e.status === 'complete' || e.status === 'published')
   const draftEpisodes = episodes.filter((e: PodcastEpisode) =>
@@ -1110,7 +1129,87 @@ function PodcastSubTab() {
 
   return (
     <div className="space-y-4">
-      <InlineHeaderRow title="Podcast Studio" onRefresh={refetch} isFetching={isFetching} />
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Podcast Studio</h3>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowNewForm(!showNewForm)}
+            className="text-xs px-3 py-1.5 rounded-lg bg-accent-purple/20 text-accent-purple hover:bg-accent-purple/30 transition-colors flex items-center gap-1"
+          >
+            <Mic size={12} />
+            + New Episode
+          </button>
+          <button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="p-2 hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50"
+            title="Refresh data"
+          >
+            <RefreshCw size={14} className={cn('text-gray-400', isFetching && 'animate-spin')} />
+          </button>
+        </div>
+      </div>
+
+      {/* New Episode Form */}
+      {showNewForm && (
+        <div className="card border-accent-purple/30">
+          {createSuccess ? (
+            <div className="flex items-center gap-2 text-accent-green text-sm">
+              <CheckCircle size={14} />
+              {createSuccess}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <textarea
+                value={newTopic}
+                onChange={(e) => setNewTopic(e.target.value)}
+                placeholder="Episode topic — e.g. 'AI regulation in 2026' or 'Bitcoin vs Ethereum'"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-accent-purple/50"
+                rows={2}
+              />
+              <div className="flex items-center gap-3">
+                <select
+                  value={newFormat}
+                  onChange={(e) => setNewFormat(e.target.value)}
+                  className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-accent-purple/50"
+                >
+                  <option value="debate">Debate</option>
+                  <option value="interview">Interview</option>
+                  <option value="panel">Panel</option>
+                  <option value="solo">Solo</option>
+                </select>
+                <label className="flex items-center gap-1.5 text-xs text-gray-400 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newAudio}
+                    onChange={(e) => setNewAudio(e.target.checked)}
+                    className="rounded border-gray-600"
+                  />
+                  Generate Audio
+                </label>
+                <div className="flex-1" />
+                <button
+                  onClick={() => setShowNewForm(false)}
+                  className="text-xs text-gray-500 hover:text-gray-300 px-2 py-1"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => createMutation.mutate()}
+                  disabled={!newTopic.trim() || createMutation.isPending}
+                  className="text-xs px-4 py-1.5 rounded-lg bg-accent-purple text-white hover:bg-accent-purple/80 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                >
+                  {createMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} />}
+                  Create
+                </button>
+              </div>
+              {createMutation.isError && (
+                <p className="text-xs text-red-400">Failed to create episode. Please try again.</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Stats - Expandable */}
       <div className="grid grid-cols-3 gap-3">
@@ -1123,7 +1222,7 @@ function PodcastSubTab() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-2xl font-bold text-primary-400">{stats.total || episodes.length || 3}</div>
+              <div className="text-2xl font-bold text-primary-400">{stats.total || episodes.length}</div>
               <div className="text-xs text-gray-500">Total Episodes</div>
             </div>
             {expandedSection === 'all' ? (
@@ -1161,8 +1260,8 @@ function PodcastSubTab() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-2xl font-bold text-accent-amber">{stats.draft || draftEpisodes.length}</div>
-              <div className="text-xs text-gray-500">Drafts</div>
+              <div className="text-2xl font-bold text-accent-amber">{draftEpisodes.length}</div>
+              <div className="text-xs text-gray-500">In Progress / Failed</div>
             </div>
             {expandedSection === 'drafts' ? (
               <ChevronUp size={14} className="text-gray-400" />
@@ -1761,11 +1860,16 @@ function BlogRow({ blog, onClick, onEnhance, isEnhancing, showEnhanceButton }: B
 // Session 840: Episode row with click handler
 function EpisodeRow({ episode, onClick }: { episode: PodcastEpisode; onClick: () => void }) {
   const statusColors: Record<string, { color: string; bg: string }> = {
+    complete: { color: 'text-green-400', bg: 'bg-green-500/20' },
     published: { color: 'text-green-400', bg: 'bg-green-500/20' },
-    draft: { color: 'text-amber-400', bg: 'bg-amber-500/20' },
-    generating: { color: 'text-blue-400', bg: 'bg-blue-500/20' },
+    pending: { color: 'text-gray-400', bg: 'bg-gray-500/20' },
+    researching: { color: 'text-cyan-400', bg: 'bg-cyan-500/20' },
+    debating: { color: 'text-purple-400', bg: 'bg-purple-500/20' },
+    scripting: { color: 'text-blue-400', bg: 'bg-blue-500/20' },
+    generating_audio: { color: 'text-amber-400', bg: 'bg-amber-500/20' },
+    failed: { color: 'text-red-400', bg: 'bg-red-500/20' },
   }
-  const status = statusColors[episode.status] || statusColors.draft
+  const status = statusColors[episode.status] || { color: 'text-gray-400', bg: 'bg-gray-500/20' }
 
   return (
     <div
@@ -1779,12 +1883,12 @@ function EpisodeRow({ episode, onClick }: { episode: PodcastEpisode; onClick: ()
         <div>
           <div className="text-sm font-medium">{episode.title || episode.topic}</div>
           <div className="text-xs text-gray-500">
-            {episode.duration ? `${Math.round(episode.duration / 60)}min` : 'Processing...'}
+            {episode.duration_seconds ? `${Math.round(episode.duration_seconds / 60)}min` : episode.status === 'complete' ? 'No audio' : 'Processing...'}
           </div>
         </div>
       </div>
       <span className={cn('text-xs px-2 py-0.5 rounded capitalize', status.bg, status.color)}>
-        {episode.status}
+        {episode.status === 'generating_audio' ? 'Audio Gen' : episode.status}
       </span>
     </div>
   )
