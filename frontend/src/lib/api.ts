@@ -1120,6 +1120,9 @@ export const bettingApi = {
 
   // Intelligence
   intelligence: () => api.get('/v1/sports/betting-intelligence/'),
+  todaysGames: (sport?: string) => api.get(sport ? `/v1/betting/todays-games/?sport=${sport}` : '/v1/betting/todays-games/'),
+  bettingBrief: (sport?: string) => api.get(sport ? `/v1/betting/brief/?sport=${sport}` : '/v1/betting/brief/'),
+  sharpAction: (sport?: string) => api.get(sport ? `/v1/betting/sharp-action/?sport=${sport}` : '/v1/betting/sharp-action/'),
 
   // Wager Management
   placeBet: (data: { game_id: string; bet_type: string; pick: string; odds: number; stake: number }) =>

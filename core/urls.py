@@ -1364,7 +1364,8 @@ from core.views_odds_sports import (
     get_player_props, get_weather_data, get_injury_data,
     get_betting_intelligence, orchestrate_agent_analysis, get_orchestration_status, get_game_details,
     get_bookmaker_analysis, get_game_spider_insights, scan_arbitrage_opportunities, get_futures_odds,
-    log_wager, get_line_movement, get_games_with_movement
+    log_wager, get_line_movement, get_games_with_movement,
+    get_todays_games, get_betting_brief, get_sharp_action,
 )
 # Session 562: Push Notification APIs
 from core.views_push_notifications import (
@@ -2898,6 +2899,10 @@ urlpatterns = [
     path('api/v1/betting/wagers/<uuid:wager_id>/cancel/', cancel_wager, name='betting-wager-cancel'),
     path('api/v1/betting/stats/', get_betting_stats, name='betting-stats'),
     path('api/v1/betting/recent/', get_recent_activity, name='betting-recent'),
+    # Session 995B: Sports betting intelligence endpoints
+    path('api/v1/betting/todays-games/', get_todays_games, name='betting-todays-games'),
+    path('api/v1/betting/brief/', get_betting_brief, name='betting-brief'),
+    path('api/v1/betting/sharp-action/', get_sharp_action, name='betting-sharp-action'),
 
     # Session 562: Push Notifications for Arb Alerts
     path('api/v1/push/vapid-key/', get_vapid_public_key, name='push-vapid-key'),
