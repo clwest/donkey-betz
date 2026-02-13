@@ -1911,7 +1911,7 @@ class ToolDispatcher:
             qs = base_qs.filter(status__in=['pending_review', 'approved'])
             items = list(
                 qs.order_by('-created_at')[:limit].values(
-                    'id', 'title', 'category', 'status', 'created_at',
+                    'id', 'title', 'author', 'category', 'status', 'created_at',
                     'quality_score', 'novelty_score', 'structure_score',
                     'content_type', 'publish_ready', 'word_count', 'tone'
                 )
@@ -1939,7 +1939,7 @@ class ToolDispatcher:
             qs = base_qs.filter(created_at__gte=since)
             items = list(
                 qs.order_by('-created_at')[:limit].values(
-                    'id', 'title', 'category', 'status', 'created_at',
+                    'id', 'title', 'author', 'category', 'status', 'created_at',
                     'quality_score', 'novelty_score', 'structure_score',
                     'content_type', 'publish_ready', 'word_count', 'tone'
                 )
@@ -2032,6 +2032,7 @@ class ToolDispatcher:
                 'blog': {
                     'id': str(blog.id),
                     'title': blog.title,
+                    'author': blog.author,
                     'status': blog.status,
                     'category': blog.category,
                     'content_type': blog.content_type,
@@ -2466,8 +2467,21 @@ class ToolDispatcher:
             if not blog_id:
                 raise ValueError("id is required for publish action")
 
-            blog = base_qs.filter(id=blog_id, status__in=['approved', 'pending_review']).first()
+            # Session 998: Enforce PublishGate — only publish_ready blogs
+            blog = base_qs.filter(id=blog_id, status__in=['approved', 'pending_review'], publish_ready=True).first()
             if not blog:
+                # Check if blog exists but isn't publish-ready
+                unpublishable = base_qs.filter(id=blog_id).first()
+                if unpublishable and not unpublishable.publish_ready:
+                    return {
+                        'action': 'publish',
+                        'success': False,
+                        'error': 'Blog has not passed PublishGate quality checks.',
+                        'gate_notes': unpublishable.gate_notes or 'Not yet evaluated',
+                        'id': str(unpublishable.id),
+                        'title': unpublishable.title,
+                        'status': unpublishable.status,
+                    }
                 raise ValueError(f"Blog {blog_id} not found or not in approved/pending_review status")
 
             blog.status = 'published'

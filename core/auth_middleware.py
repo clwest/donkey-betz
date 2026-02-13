@@ -490,6 +490,22 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/v1/system/',
         '/api/v1/metrics/admin/',
     ]
+
+    # Session 998: Paths blocked for read-only reviewers
+    REVIEWER_BLOCKED_PATHS = [
+        '/api/v1/spiders/create/', '/api/v1/spiders/execute/',
+        '/api/v1/betting/execute/', '/api/v1/betting/place/',
+        '/api/platform/actions/', '/api/platform/triggers/',
+        '/api/v1/admin/',
+        '/api/initiatives/create/', '/api/action-items/create/',
+        '/api/v1/research/self-blog/publish/', '/api/content/publish/',
+        '/api/podcasts/create/',
+    ]
+
+    # Session 998: Auth endpoints that reviewers can still use
+    REVIEWER_ALLOWED_PATHS = [
+        '/api/v1/auth/',
+    ]
     
     def process_request(self, request):
         """Process incoming request for authentication"""
@@ -537,6 +553,16 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
                     logger.warning(f"Staff access required for {request.path}, user: {request.user.username}")
                     return api_forbidden("Staff access required")
 
+            # Session 998: Block write paths for read-only reviewers
+            if hasattr(request.user, 'is_reviewer') and request.user.is_reviewer:
+                if any(request.path.startswith(p) for p in self.REVIEWER_BLOCKED_PATHS):
+                    return api_forbidden("Read-only reviewer access — this action is restricted")
+                # Block non-GET methods on /api/ paths (except auth endpoints)
+                if (request.method not in ('GET', 'HEAD', 'OPTIONS')
+                        and request.path.startswith('/api/')
+                        and not any(request.path.startswith(p) for p in self.REVIEWER_ALLOWED_PATHS)):
+                    return api_forbidden("Read-only reviewer access — write operations are restricted")
+
             return None
 
         # Extract token from request
@@ -559,6 +585,15 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
             if not user.is_staff:
                 logger.warning(f"Staff access required for {request.path}, user: {user.username}")
                 return api_forbidden("Staff access required")
+
+        # Session 998: Block write paths for read-only reviewers (token auth path)
+        if hasattr(user, 'is_reviewer') and user.is_reviewer:
+            if any(request.path.startswith(p) for p in self.REVIEWER_BLOCKED_PATHS):
+                return api_forbidden("Read-only reviewer access — this action is restricted")
+            if (request.method not in ('GET', 'HEAD', 'OPTIONS')
+                    and request.path.startswith('/api/')
+                    and not any(request.path.startswith(p) for p in self.REVIEWER_ALLOWED_PATHS)):
+                return api_forbidden("Read-only reviewer access — write operations are restricted")
 
         # Attach user to request
         request.user = user
