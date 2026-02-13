@@ -63,7 +63,8 @@ def login_view(request):
                 'username': user.username,
                 'email': user.email,
                 'credits': credits,
-                'subscription': subscription
+                'subscription': subscription,
+                'platform_role': getattr(user, 'platform_role', 'unified_user'),  # Session 998
             }
         })
     else:
@@ -107,7 +108,8 @@ def current_user(request):
                 'username': request.user.username,
                 'email': request.user.email,
                 'credits': credits,
-                'subscription': subscription
+                'subscription': subscription,
+                'platform_role': getattr(request.user, 'platform_role', 'unified_user'),  # Session 998
             }
         })
     else:

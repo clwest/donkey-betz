@@ -106,6 +106,7 @@ class UnifiedUser(AbstractUser):
             ('content_creator', 'Content Generation User'),
             ('agent_manager', 'Agent Orchestration Manager'),
             ('unified_user', 'Full Platform Access'),
+            ('reviewer', 'Read-Only Reviewer'),  # Session 998: Governance hardening
         ],
         default='unified_user',
         help_text="Primary role/access level on the platform"
@@ -180,6 +181,11 @@ class UnifiedUser(AbstractUser):
         """Set a user preference value."""
         self.preferences[key] = value
         self.save(update_fields=['preferences'])
+
+    @property
+    def is_reviewer(self) -> bool:
+        """Session 998: Read-only reviewer role check."""
+        return self.platform_role == 'reviewer'
 
     def can_make_api_call(self):
         """Check if user can make another API call this month."""
