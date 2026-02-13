@@ -139,6 +139,7 @@ class ContentDeliberationRunner:
                     'quality_score': gate_result.quality_score,
                     'novelty_score': gate_result.novelty_score,
                     'structure_score': gate_result.structure_score,
+                    'mythology_score': gate_result.mythology_score,
                 }
                 if gate_result.decision == 'publish':
                     blog.status = 'pending_review'
