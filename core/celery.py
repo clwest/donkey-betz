@@ -1663,7 +1663,7 @@ app.conf.beat_schedule = {
         'schedule': 60.0,  # Every 60 seconds
         'options': {
             'expires': 55,  # Expire before next run
-            'queue': 'broadcast',  # High-frequency status task
+            'queue': 'long_running',  # Session 1000B: Loads LLM registry + SentenceTransformer
         }
     },
     # Session 702: LUNGS Service - Resource & Capacity Management
