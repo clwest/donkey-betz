@@ -20,6 +20,7 @@ class GateResult:
     structure_score: float
     content_type: str  # 'public', 'internal', 'strategic'
     notes: str
+    mythology_score: float = 1.0  # 1.0 = clean, 0.0 = high mythology risk
     suggested_category: Optional[str] = None
 
 
@@ -115,6 +116,7 @@ class PublishGate:
         quality_score = self._score_quality(blog, full_text)
         novelty_score = self._score_novelty(blog, full_text)
         structure_score = self._score_structure(blog, full_text)
+        mythology_score = self._score_mythology(blog, full_text)
 
         # Check research backing — penalize quality if no claims
         claims_count = self._check_research_backing(blog)
@@ -128,7 +130,7 @@ class PublishGate:
         # Make decision
         decision, notes = self._make_decision(
             quality_score, novelty_score, structure_score,
-            content_type, type_confidence
+            content_type, type_confidence, mythology_score
         )
 
         # Suggest category if needed
@@ -141,10 +143,11 @@ class PublishGate:
             structure_score=structure_score,
             content_type=content_type,
             notes=notes,
+            mythology_score=mythology_score,
             suggested_category=suggested_category,
         )
 
-        logger.info(f"PublishGate: {blog.title[:50]}... -> {decision} (Q:{quality_score:.2f}, N:{novelty_score:.2f}, S:{structure_score:.2f})")
+        logger.info(f"PublishGate: {blog.title[:50]}... -> {decision} (Q:{quality_score:.2f}, N:{novelty_score:.2f}, S:{structure_score:.2f}, M:{mythology_score:.2f})")
 
         return result
 
@@ -398,7 +401,8 @@ class PublishGate:
         novelty: float,
         structure: float,
         content_type: str,
-        type_confidence: float
+        type_confidence: float,
+        mythology_score: float = 1.0
     ) -> Tuple[str, str]:
         """
         Make final publish decision.
@@ -407,6 +411,13 @@ class PublishGate:
             (decision, notes)
         """
         notes_parts = []
+
+        # Session 997: Mythology check — high risk caps decision at 'enhance'
+        if mythology_score < 0.5:
+            notes_parts.append(
+                f"Mythology score {mythology_score:.2f} indicates fabricated claims; "
+                f"capped at 'enhance'"
+            )
 
         # Internal content should not be published publicly
         if content_type == 'internal' and type_confidence > 0.6:
@@ -428,6 +439,9 @@ class PublishGate:
 
         # All thresholds passed
         if passed_quality and passed_novelty and passed_structure:
+            if mythology_score < 0.5:
+                notes_parts.append("All quality checks passed but mythology risk too high")
+                return ('enhance', '; '.join(notes_parts))
             notes_parts.append("All quality checks passed")
             return ('publish', '; '.join(notes_parts))
 
@@ -469,6 +483,29 @@ class PublishGate:
             return -1
         deliberation = stats.get('deliberation', {})
         return deliberation.get('claims_count', 0)
+
+    def _score_mythology(self, blog, full_text: str) -> float:
+        """
+        Session 997: Score mythology risk (0-1, where 1.0 = clean).
+
+        Uses MythologyDetectionService to find fabricated claims.
+        Returns 1.0 on failure so mythology never blocks on error.
+        """
+        try:
+            from mythology.services import MythologyDetectionService
+            detection = MythologyDetectionService().detect_mythologies(
+                full_text, source_type='publish_gate'
+            )
+            risk = detection.get('risk_score', 0.0)
+            if risk > 0.1:
+                logger.info(
+                    f"PublishGate mythology: risk={risk:.2f} "
+                    f"patterns={detection.get('patterns_found', [])}"
+                )
+            return max(0.0, min(1.0, 1.0 - risk))
+        except Exception as e:
+            logger.debug(f"Mythology scoring skipped: {e}")
+            return 1.0
 
     def _check_envelope(self, blog) -> str:
         """

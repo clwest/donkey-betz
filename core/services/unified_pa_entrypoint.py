@@ -182,6 +182,10 @@ class UnifiedPAEntrypoint:
         # Session 992: Platform Intelligence Briefing
         self._platform_briefing_service = None
 
+        # Session 997: Mythology validation services
+        self._mythology_prevention_service = None
+        self._hallucination_flagging_service = None
+
         # Session 940: Triage mode state
         self._triage_mode = False
         self._triage_items: List[Dict[str, Any]] = []
@@ -340,6 +344,24 @@ class UnifiedPAEntrypoint:
                 self._platform_briefing_service = None
         return self._platform_briefing_service
 
+    # --- Session 997: Mythology validation properties ---
+
+    @property
+    def mythology_prevention(self):
+        """Lazy load MythologyPreventionService."""
+        if self._mythology_prevention_service is None:
+            from mythology.services import MythologyPreventionService
+            self._mythology_prevention_service = MythologyPreventionService()
+        return self._mythology_prevention_service
+
+    @property
+    def hallucination_flagging(self):
+        """Lazy load HallucinationFlaggingService."""
+        if self._hallucination_flagging_service is None:
+            from mythology.services import HallucinationFlaggingService
+            self._hallucination_flagging_service = HallucinationFlaggingService()
+        return self._hallucination_flagging_service
+
     async def process_message(
         self,
         message: str,
@@ -462,6 +484,9 @@ class UnifiedPAEntrypoint:
                     content = self._generate_capabilities_response(full_context.get('user_name', 'there'))
                 else:
                     content = await self._generate_direct_response(message, full_context, trace_id)
+
+            # Session 997: Validate response for mythology/hallucinations
+            content = self._validate_mythology(content, message, trace_id)
 
             # 4. Generate audio if requested
             audio_url = None
@@ -1659,7 +1684,8 @@ RULES:
 - Reference item IDs when discussing specific items
 - Highlight risks, opportunities, and anomalies
 - Be direct and decisive, not hedging
-- Do NOT reuse the same trend/incident across unrelated answers - only cite trends if they materially affect the user's question"""
+- Do NOT reuse the same trend/incident across unrelated answers - only cite trends if they materially affect the user's question
+- Only describe features, integrations, and capabilities that actually exist. Never fabricate connections between subsystems."""
 
         intent_directives = {
             'content_review': (
@@ -3966,6 +3992,9 @@ USER PROFILE:
 - Skills: {profile.get('skills', 'Not specified')}
 - Goals: {profile.get('goals', 'Not specified')}
 
+IMPORTANT: Only describe features and connections that actually exist in the system.
+If you don't have verified data about a subsystem, say so. Never fabricate integrations or capabilities.
+
 Be concise, conversational, and personalized. Address the user by name."""
 
         # Session 943: Add docs context so PA knows about system architecture and recent work
@@ -4015,6 +4044,46 @@ Be concise, conversational, and personalized. Address the user by name."""
         except Exception as e:
             logger.error(f"[{trace_id}] Direct response failed: {e}")
             return f"Hi {user_name}! I'm here to help. What would you like to know?"
+
+    def _validate_mythology(self, content: str, message: str, trace_id: str) -> str:
+        """
+        Session 997: Validate PA response for mythology/hallucinations.
+
+        Mirrors views_assistant_intelligent.py:175-217.
+        Never blocks on failure — returns original content on any error.
+        """
+        try:
+            validation = self.mythology_prevention.validate_response(
+                content, message, user=self.user
+            )
+
+            if validation.get('mythology_risk', 0) > 0.3:
+                logger.warning(
+                    f"[{trace_id}] Mythology detected in PA response: "
+                    f"risk={validation['mythology_risk']:.2f} patterns={validation.get('patterns_found', [])}"
+                )
+                try:
+                    self.hallucination_flagging.flag_suspicious_response(
+                        original_prompt=message,
+                        response=content,
+                        risk_score=validation['mythology_risk'],
+                        patterns=validation.get('patterns_found', []),
+                        user=self.user,
+                        session_id=trace_id,
+                    )
+                except Exception as flag_err:
+                    logger.warning(f"[{trace_id}] Hallucination flagging failed: {flag_err}")
+
+            if validation.get('needs_regeneration'):
+                content += (
+                    "\n\n---\n*Note: This response may contain unverified claims. "
+                    "Please verify details independently.*"
+                )
+
+            return content
+        except Exception as e:
+            logger.warning(f"[{trace_id}] Mythology validation skipped: {e}")
+            return content
 
     async def _generate_audio(self, text: str, trace_id: str) -> Optional[str]:
         """Generate TTS audio for response."""
