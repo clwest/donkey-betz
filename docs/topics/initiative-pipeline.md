@@ -93,3 +93,43 @@ Methods: `start()`, `complete()`, `block(reason)`. Properties: `is_overdue`, `da
 **InitiativeActionItem:** status, priority, timeline_text, due_date, assigned_agent, assigned_user, source_conversation (FK to HiveMindSession)
 
 **ResearchResult:** Tracks Stage 1 research with data_sufficient, blocked_reason, retry_count, findings (JSON), confidence_score. Methods: mark_complete(), mark_blocked(), create_research_brief().
+
+## Circuit Breaker (Session 884/994)
+
+Prevents initiative creation when the system is overloaded. Config: `INITIATIVE_BACKLOG_THRESHOLD=50` (env) or `SystemConfiguration` key `initiative_creation_paused`.
+
+**Enforcement points (Session 994):** ALL 5 creation paths check the circuit breaker:
+- `InitiativeIntegrationService.get_or_create_initiative()` — raises `InitiativeCreationBlocked`
+- `ConversationInitiativePipeline.process()` — quality gate + circuit breaker
+- `HiveMindExecutionPipeline` — circuit breaker check
+- `DecisionExtractor.auto_link_initiative_for_decision()` — catches `InitiativeCreationBlocked`
+- `AgentDream.promote_to_initiative()` — circuit breaker check
+
+**Backlog count:** ACTIVE + TRIAGE initiatives with `last_activity_at IS NULL`. Cached 60s.
+
+## Quality Gate (Session 994)
+
+Pre-creation filter in `ConversationInitiativePipeline._quality_gate()`:
+1. Reject exploratory topics (2+ explore patterns like "explore", "trending", "brainstorm")
+2. Require action verb in decision summary ("build", "create", "implement", etc.)
+3. Require substantive conversation (1000+ chars minimum)
+4. Single-pattern explore check on topic prefix
+
+## TRIAGE Status (Session 994)
+
+Auto-created initiatives start as `TRIAGE`, not `ACTIVE`. The PA can promote TRIAGE → ACTIVE via `update_status` action. This prevents auto-generated initiatives from polluting the active pipeline.
+
+## Activity Tracking (Session 994)
+
+`last_activity_at` is updated via `initiative.update_activity()` from:
+- `InitiativeStage.approve()` — on every stage approval
+- `generate_initiative_stage_document` task — when stage docs are created
+- `handle_stage_task_completion()` — when any stage work completes
+- `process_initiative_auto_progression` task — when stages auto-progress
+- HiveMind session completion (original 2 call sites)
+
+## PA Flow Metrics (Session 994)
+
+`initiative_tool` actions: list, stats, details, action_items, **flow_metrics**, update_status, advance, complete_action_item.
+
+`flow_metrics` returns: creation_rate (24h/7d), backlog (triage/active/no_activity), stage_distribution, circuit_breaker status, completed_last_7d.

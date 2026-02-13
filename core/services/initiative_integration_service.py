@@ -28,6 +28,12 @@ from django.db import transaction
 
 logger = logging.getLogger(__name__)
 
+
+class InitiativeCreationBlocked(Exception):
+    """Session 994: Raised when circuit breaker blocks initiative creation."""
+    pass
+
+
 # Stage mapping based on document category/type
 CATEGORY_TO_STAGE = {
     # Stage 1 - Research Brief
@@ -93,6 +99,8 @@ class InitiativeIntegrationService:
         This is the core method that ensures every autonomous action
         has an associated Initiative to track its lifecycle.
 
+        Session 994: Circuit breaker enforced at this layer so no caller can bypass it.
+
         Args:
             topic: The topic/name for the initiative
             description: Optional description
@@ -101,6 +109,9 @@ class InitiativeIntegrationService:
 
         Returns:
             Tuple of (Initiative, created_bool)
+
+        Raises:
+            InitiativeCreationBlocked: When circuit breaker is tripped
         """
         from core.models_document_registry import Initiative
 
@@ -108,27 +119,44 @@ class InitiativeIntegrationService:
         normalized_topic = self._normalize_topic(topic)
 
         try:
-            initiative, created = Initiative.objects.get_or_create(
+            # Check if initiative already exists (always allowed — no creation)
+            existing = Initiative.objects.filter(name=normalized_topic).first()
+            if existing:
+                self.logger.info(f"[Session 847] Found existing Initiative: {normalized_topic}")
+                return existing, False
+
+            # Session 994: Circuit breaker at the lowest creation layer.
+            # No caller can bypass this — if the breaker is tripped, we block.
+            from core.services.initiative_circuit_breaker import can_create_initiative
+            if not can_create_initiative():
+                self.logger.warning(
+                    f"[Session 994] Circuit breaker BLOCKED initiative creation: "
+                    f"'{normalized_topic[:60]}' (source: {created_by})"
+                )
+                raise InitiativeCreationBlocked(
+                    f"Initiative creation blocked by circuit breaker (source: {created_by})"
+                )
+
+            # Session 994: Auto-created initiatives land in TRIAGE, not ACTIVE.
+            # Only human-confirmed or manually promoted initiatives become ACTIVE.
+            initiative = Initiative.objects.create(
                 name=normalized_topic,
-                defaults={
-                    'description': description or f"Auto-created initiative for: {topic}",
-                    'created_by': created_by,
-                    'parent_topic': topic,  # Keep original topic
-                    'source_decision_id': source_decision_id,
-                    'status': Initiative.Status.ACTIVE,
-                    'current_stage': 1,
-                }
+                description=description or f"Auto-created initiative for: {topic}",
+                created_by=created_by,
+                parent_topic=topic,
+                source_decision_id=source_decision_id,
+                status=Initiative.Status.TRIAGE,
+                current_stage=1,
             )
 
-            if created:
-                self.logger.info(f"[Session 847] Created new Initiative: {normalized_topic}")
-                # Initialize all 5 stages
-                self._initialize_stages(initiative)
-            else:
-                self.logger.info(f"[Session 847] Found existing Initiative: {normalized_topic}")
+            self.logger.info(f"[Session 847] Created new Initiative: {normalized_topic}")
+            # Initialize all 5 stages
+            self._initialize_stages(initiative)
 
-            return initiative, created
+            return initiative, True
 
+        except InitiativeCreationBlocked:
+            raise
         except Exception as e:
             self.logger.error(f"[Session 847] Error creating initiative for '{topic}': {e}")
             raise
@@ -569,12 +597,17 @@ class InitiativeIntegrationService:
             return None
 
         # Create/get the initiative
+        # Session 994: Handle circuit breaker block gracefully
         description = f"Auto-created from {action_type} action. {reasoning[:200]}"
-        initiative, created = self.get_or_create_initiative(
-            topic=topic,
-            description=description,
-            created_by="ThinkingAgent"
-        )
+        try:
+            initiative, created = self.get_or_create_initiative(
+                topic=topic,
+                description=description,
+                created_by="ThinkingAgent"
+            )
+        except InitiativeCreationBlocked:
+            self.logger.info(f"[Session 994] Circuit breaker blocked initiative for action {action_type}")
+            return None
 
         # If a blog/document was created, link it
         blog_id = result.get('blog_id') or result.get('report_id') or result.get('research_blog_id')
