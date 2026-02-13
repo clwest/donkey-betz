@@ -437,11 +437,11 @@ def spider_feed_vote(request, item_id):
 def sports_hub_feed(request):
     """
     Session 998B: Lightweight feed for Sports Betting Hub.
-    Returns SpiderData items without requiring annotations.
+    Expands raw_data.items so each RSS entry becomes a separate result.
 
     Query params:
         category: Filter by data_type (sports_news, sports_injuries, etc.)
-        limit: Max items (default: 20, max: 50)
+        limit: Max expanded items (default: 20, max: 50)
     """
     try:
         category = request.GET.get('category', '')
@@ -454,22 +454,34 @@ def sports_hub_feed(request):
         if category:
             qs = qs.filter(data_type=category)
         else:
-            # Default: all sports-related categories
             qs = qs.filter(data_type__in=[
                 'sports_news', 'sports_injuries', 'sports', 'betting_odds', 'sports_odds',
             ])
 
-        items = list(qs[:limit].values(
-            'id', 'spider_name', 'data_type', 'raw_data',
-            'processed_data', 'created_at', 'source_url',
-        ))
+        # Expand raw_data items into individual entries
+        expanded = []
+        for row in qs[:20]:  # Check up to 20 SpiderData rows
+            raw = row.raw_data or {}
+            entries = raw.get('items', [])
+            spider_ts = row.created_at.isoformat() if row.created_at else None
+            for entry in entries:
+                expanded.append({
+                    'id': str(row.id),
+                    'spider_name': row.spider_name,
+                    'data_type': row.data_type,
+                    'source_url': entry.get('link') or row.source_url,
+                    'created_at': entry.get('published') or spider_ts,
+                    'title': entry.get('title', ''),
+                    'description': (entry.get('description') or entry.get('summary') or '')[:300],
+                    'author': entry.get('author', ''),
+                    'tags': entry.get('tags', []),
+                })
+                if len(expanded) >= limit:
+                    break
+            if len(expanded) >= limit:
+                break
 
-        # Serialize datetimes
-        for item in items:
-            if item.get('created_at'):
-                item['created_at'] = item['created_at'].isoformat()
-
-        return JsonResponse({'items': items, 'count': len(items)})
+        return JsonResponse({'items': expanded, 'count': len(expanded)})
 
     except Exception as e:
         logger.exception("Error in sports_hub_feed")

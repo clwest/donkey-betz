@@ -753,17 +753,14 @@ export default function BettingPage() {
               ) : (hubNewsData?.items || []).length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {(hubNewsData?.items || []).map((item: any, i: number) => {
-                    const raw = item.raw_data || {}
-                    const entries = raw.items || raw.entries || []
-                    const first = entries[0] || {}
-                    const title = first.title || item.spider_name || 'Sports Update'
-                    const summary = (first.description || first.summary || '').replace(/<[^>]*>/g, '').slice(0, 140)
-                    const link = first.link || item.source_url || '#'
+                    const title = item.title || item.spider_name || 'Sports Update'
+                    const summary = (item.description || '').replace(/<[^>]*>/g, '').slice(0, 140)
+                    const link = item.source_url || '#'
                     const timeAgo = item.created_at ? new Date(item.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''
 
                     return (
                       <a
-                        key={item.id || i}
+                        key={`${item.id}-${i}`}
                         href={link}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -812,14 +809,11 @@ export default function BettingPage() {
                 ) : (hubInjuryData?.items || []).length > 0 ? (
                   <div className="space-y-2 max-h-[300px] overflow-y-auto">
                     {(hubInjuryData?.items || []).map((item: any, i: number) => {
-                      const raw = item.raw_data || {}
-                      const entries = raw.items || raw.entries || []
-                      const first = entries[0] || {}
-                      const title = first.title || 'Injury Update'
+                      const title = item.title || 'Injury Update'
                       const timeAgo = item.created_at ? new Date(item.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''
 
                       return (
-                        <div key={item.id || i} className="p-2 rounded bg-dark-bg text-sm">
+                        <div key={`${item.id}-${i}`} className="p-2 rounded bg-dark-bg text-sm">
                           <div className="flex items-center justify-between">
                             <span className="font-medium text-gray-200 line-clamp-1">{title}</span>
                             <span className="text-xs text-gray-500 flex-shrink-0 ml-2">{timeAgo}</span>
