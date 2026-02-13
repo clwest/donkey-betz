@@ -774,9 +774,21 @@ class UnifiedPAEntrypoint:
             'reading the blog', 'the blog titled', 'blog titled',
             'about the blog', 'blog called', 'read the blog',
             'blog accuracy', 'accurate is the blog', 'accurate is that',
-            'about this blog', 'about that blog'
+            'about this blog', 'about that blog',
+            # Session 993: Triage, batch publish/archive patterns
+            'triage content', 'triage blogs', 'summarize all blogs',
+            'blog triage', 'review all blogs', 'publish all',
+            'batch publish', 'batch archive',
         ]):
             return ('content_review', 'content_review_tool')
+
+        # Session 993: Deliberation blog generation
+        if any(phrase in message_lower for phrase in [
+            'generate a blog', 'generate blog', 'create a deliberated blog',
+            'deliberated blog', 'write a blog with review', 'blog with deliberation',
+            'full review blog', 'v2 blog', 'generate content',
+        ]):
+            return ('generate_blog', 'generate_blog_tool')
 
         # Session 943: Brainstorming/Discussion/Panel search patterns
         if any(word in message_lower for word in [
