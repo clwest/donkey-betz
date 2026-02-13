@@ -702,10 +702,12 @@ class UnifiedPAEntrypoint:
             return ('recent_activity', 'recent_activity_tool')
 
         # Session 969: System health check patterns — "how's the system?"
+        # Session 1000B: Added "system status", "current status"
         if any(phrase in message_lower for phrase in [
             'how\'s the system', 'system ok', 'anything down', 'is everything working',
             'platform health', 'system check', 'are things running', 'is the system',
             'everything ok', 'how is the platform',
+            'system status', 'current status', 'current system',
         ]):
             return ('system_health_check', 'system_health_tool')
 
@@ -734,14 +736,15 @@ class UnifiedPAEntrypoint:
         ]):
             return ('system_overview', 'status_snapshot_tool')
 
-        # Session 989: "Tell me about" / "Tell me more about" — conversational lookup
+        # Session 989: "Tell me about" / "Tell me more about" — item lookup
         # These come from frontend buttons on attention items, decisions, agent outputs.
+        # Session 1000B: Route to boardroom lookup instead of LLM hallucination.
         # MUST be checked before content_writing to prevent "draft"/"write" in titles
         # from hijacking to content creation.
         if any(phrase in message_lower for phrase in [
             'tell me about', 'tell me more about',
         ]):
-            return ('conversational', None)
+            return ('item_lookup', 'boardroom_tool')
 
         # Session 987: Body vitals patterns — specific body-system queries only
         # Generic "health" / "status" were too broad and caught system health queries
@@ -1023,9 +1026,21 @@ class UnifiedPAEntrypoint:
         }
 
         # Intent-specific payload adjustments
+        # Session 1000B: "Tell me more about" → lookup attention item by title
+        if intent == 'item_lookup':
+            import re
+            # Extract the subject after "tell me (more) about:" or similar
+            subject_match = re.search(
+                r'(?:tell me (?:more )?about[:\s]+)(.*)',
+                message, re.IGNORECASE
+            )
+            title_query = subject_match.group(1).strip() if subject_match else message
+            payload['action'] = 'lookup'
+            payload['title_query'] = title_query
+
         # Session 940: Boardroom tool actions
         # Session 947: Enhanced to extract urgency filters and handle "list critical" patterns
-        if intent == 'boardroom':
+        elif intent == 'boardroom':
             msg_lower = message.lower()
             import re
 
@@ -1948,6 +1963,61 @@ Address the user by name occasionally."""
     ) -> str:
         """Simple formatting fallback for tool results."""
         if isinstance(tool_result, dict):
+            # Session 1000B: "Tell me more about" item lookup
+            if intent == 'item_lookup':
+                if not tool_result.get('found'):
+                    query = tool_result.get('query', 'that item')
+                    return f"I couldn't find a matching item for \"{query}\", {user_name}. It may have been resolved or archived."
+
+                item_type = tool_result.get('item_type', '')
+                title = tool_result.get('title', 'Untitled')
+                summary = tool_result.get('summary', '')
+                source = tool_result.get('source_agent', '')
+                urgency = tool_result.get('urgency', '')
+                status = tool_result.get('status', '')
+                created = tool_result.get('created_at', '')
+                ml_rec = tool_result.get('ml_recommendation', '')
+                impact = tool_result.get('impact_estimate', '')
+
+                response = f"**{title}**\n\n"
+
+                if summary:
+                    response += f"{summary}\n\n"
+
+                details = []
+                if urgency:
+                    details.append(f"Urgency: {urgency}")
+                if status:
+                    details.append(f"Status: {status}")
+                if source:
+                    details.append(f"Source: {source}")
+                category = tool_result.get('item_category', '')
+                if category:
+                    details.append(f"Type: {category}")
+                if ml_rec:
+                    details.append(f"ML recommendation: {ml_rec}")
+                if impact:
+                    details.append(f"Impact: {impact}")
+
+                # Decision-specific fields
+                rec_stance = tool_result.get('recommended_stance', '')
+                if rec_stance:
+                    details.append(f"Recommended stance: {rec_stance}")
+                impact_area = tool_result.get('impact_area', '')
+                if impact_area:
+                    details.append(f"Impact area: {impact_area}")
+
+                if details:
+                    response += "\n".join(f"- {d}" for d in details)
+
+                # Actionable hint
+                if item_type == 'attention' and status == 'pending':
+                    response += f"\n\nSay 'approve this' or 'ignore this' to act on it."
+                elif item_type == 'decision' and status == 'draft':
+                    response += f"\n\nSay 'promote this' or 'reject this' to act on it."
+
+                return response
+
             # Session 940: Boardroom results
             if intent == 'boardroom':
                 action = tool_result.get('action', '')
