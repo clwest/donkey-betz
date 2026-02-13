@@ -19970,6 +19970,10 @@ class SelfBlog(models.Model):
     )
 
     title = models.CharField(max_length=255)
+    author = models.CharField(
+        max_length=100, blank=True, default='',
+        help_text='Session 998: Author — agent name or "human"'
+    )
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='blog', db_index=True)
     content_type = models.CharField(
         max_length=20,

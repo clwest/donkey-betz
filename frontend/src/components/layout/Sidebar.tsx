@@ -140,7 +140,9 @@ export default function Sidebar() {
 
       {/* Navigation - scrollable area */}
       <nav className={cn('flex-1 overflow-y-auto space-y-1', isCollapsed ? 'p-2' : 'p-4')}>
-        {navItems.map(({ path, label, icon: Icon }) => {
+        {navItems
+          .filter(({ path }) => !(path === '/admin' && user?.platform_role === 'reviewer'))
+          .map(({ path, label, icon: Icon }) => {
           const badge = getBadgeCount(path)
           return (
             <NavLink
