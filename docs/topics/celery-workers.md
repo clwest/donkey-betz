@@ -1,17 +1,17 @@
 # Celery & Workers
 
-265 Celery tasks across 7 worker types with queue-based routing, memory management, and observability via CeleryTaskEvent signals. Session 1000: Added `run_all_desks_intelligence` (daily 6 AM, long_running queue).
+331 Celery tasks across 7 worker types with queue-based routing, memory management, and observability via CeleryTaskEvent signals. Session 1000C: Routed 60+ heavy tasks off default queue to prevent OOM.
 
 ## Worker Types (7)
 
 | Worker | Queue(s) | Pool | Memory Limit | Task Recycling | Purpose |
 |--------|----------|------|-------------|----------------|---------|
-| celery-worker | default, agents, sports, ml | prefork (Railway) / threads (macOS) | 200MB | 50 tasks | General tasks |
+| celery-worker | default, agents, sports | prefork (Railway) / threads (macOS) | 200MB | 10 tasks | Lightweight DB-query tasks only (~28 tasks) |
 | celery-pa | pa | prefork | 200MB | 50 tasks | PA chat queries (dedicated to prevent queue starvation) |
-| celery-content | content | prefork | 200MB | 30 tasks | Blog generation, podcasts, initiative stages |
-| celery-long-running | long_running | prefork | 300MB | 10 tasks | Spider network, agent conversations, dreams |
-| celery-broadcast | broadcast | prefork | 200MB | 50 tasks | High-frequency status updates (60-180s) |
-| celery-beat | (scheduler) | — | — | — | DatabaseScheduler, dispatches scheduled tasks |
+| celery-content | content | prefork | 200MB | 30 tasks | Blog generation, podcasts, initiative stages (~19 tasks) |
+| celery-long-running | long_running, ml | prefork | 300MB | 10 tasks | Agent exercises, LLM calls, embeddings, spiders (~52 tasks) |
+| celery-broadcast | broadcast | threads | 200MB | 50 tasks | High-frequency status updates (60-180s, ~4 tasks) |
+| celery-beat | (scheduler) | — | — | — | Drives 108 beat schedule entries from settings.py |
 
 ## Pool Configuration
 
@@ -19,18 +19,23 @@
 
 **macOS Local:** MUST use `--pool=threads` (prefork causes SIGSEGV on Darwin). `max_tasks_per_child` is a NO-OP with threads. Set `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`.
 
-**Memory budget:** Parent ~200MB + 1 child at 200MB = ~400MB (safe for Railway). Previously with `-c 2` + 300MB children = 800MB (OOM).
+**Memory budget:** Parent ~200MB + 1 child at 200MB = ~400MB (safe for Railway 512MB limit).
 
-## Task Routing (settings.py)
+## Task Routing (settings.py CELERY_TASK_ROUTES)
 
-Tasks routed by module and explicit name:
-- `core.tasks.process_pa_chat_task` → `pa` queue
-- `agents.*` → `agents` queue
-- `sports.*` → `sports` queue
-- Content/blog tasks → `content` queue
-- Spider/conversation tasks → `long_running` queue
-- Status update tasks → `broadcast` queue
-- Default: `default` queue
+108 beat schedule entries in `CELERY_BEAT_SCHEDULE` (settings.py) have NO explicit `options.queue` — routing is entirely driven by `CELERY_TASK_ROUTES`:
+
+| Queue | # Tasks | Categories |
+|-------|---------|------------|
+| default | ~28 | Light DB queries, body system checks, attention lifecycle |
+| long_running | ~49 | Agent exercises (18), autonomous situations (14), pipeline execution, spider network, intelligence desks |
+| content | ~19 | Blog generation, podcasts, initiative stages, content deliberation |
+| sports | ~5 | Odds snapshots, arb scans, outcome verification, betting briefs |
+| broadcast | ~4 | Status snapshots, heartbeat, nervous system |
+| ml | ~3 | Embedding backfills, ML model training/scoring |
+| pa | 1 | process_pa_chat_task |
+
+**Important:** `CELERY_BEAT_SCHEDULE` in settings.py overrides `app.conf.beat_schedule` in celery.py (lazy `config_from_object`). The celery.py beat schedule is effectively dead code — all beat entries live in settings.py.
 
 ## Key Task Categories
 
