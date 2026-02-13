@@ -19867,7 +19867,8 @@ def generate_podcast_episode(self, episode_id: str, topic: str, format_type: str
         episode.save()
 
         # Create the coordinator agent
-        coordinator = PodcastCoordinatorAgent()
+        # Session 994: Pass episode user for user-scoped operations (learning, memory, feedback)
+        coordinator = PodcastCoordinatorAgent(user=episode.user)
 
         # Build the task prompt
         task_prompt = f"""Create a {format_type} podcast episode about: "{topic}"

@@ -18,7 +18,7 @@ Dedicated dashboard surfacing stock market data from spiders and agents, with PA
 
 - **MarketIntelligenceBrief:** Daily market analysis with full JSON fields (total_stocks_analyzed, recommendations)
 - **StockMarketAlert:** Type/symbol/action with bookmarking. Yahoo Finance threshold 2% (lowered from 5%), title-based dedup
-- **PredictionOutcome:** Bull/bear targets with `UniqueConstraint(brief, ticker, prediction_type)`. `_parse_target_move()` regex for "25%+", "-25% or more"
+- **PredictionOutcome:** Bull/bear targets with `UniqueConstraint(brief, ticker, prediction_type)`. `_parse_target_move()` regex for "25%+", "-25% or more". Session 994: handles numeric types from GPT JSON (int/float returned directly). Per-iteration error handling in `_record_predictions_for_learning()` — one bad ticker doesn't kill the batch.
 - **SpiderData:** Source data from financial spiders
 
 ## Brief Save Guard
