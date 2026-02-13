@@ -1106,7 +1106,7 @@ Focus on the Debate Zone - genuine uncertainty creates opportunity."""
             logger.error(f"Failed to save brief: {e}")
 
     @staticmethod
-    def _parse_target_move(target_str: str) -> float:
+    def _parse_target_move(target_str) -> float:
         """
         Parse predicted move from bull/bear agent target strings.
 
@@ -1116,10 +1116,19 @@ Focus on the Debate Zone - genuine uncertainty creates opportunity."""
 
         For ranges like '15-20%', returns the midpoint (17.5).
         For '25%+' / '-25% or more', returns the base number.
+
+        Session 994: GPT may return numeric types (int/float) instead of strings.
+        Coerce to str before regex operations.
         """
         import re
-        if not target_str:
+        if not target_str and target_str != 0:
             return 0.0
+
+        # Session 994: Handle numeric types from GPT JSON responses
+        if isinstance(target_str, (int, float)):
+            return float(target_str)
+
+        target_str = str(target_str)
 
         # Strip non-numeric suffixes: "(recovery play)", "or more", etc.
         cleaned = re.sub(r'\(.*?\)', '', target_str).strip()
@@ -1162,76 +1171,83 @@ Focus on the Debate Zone - genuine uncertainty creates opportunity."""
             updated_count = 0
 
             # Record bull predictions
+            # Session 994: Per-iteration error handling — one bad ticker shouldn't kill the batch
             for analysis in bull_analyses:
-                ticker = analysis.get('ticker')
-                if not ticker:
-                    continue
+                try:
+                    ticker = analysis.get('ticker')
+                    if not ticker:
+                        continue
 
-                stock_data = market_service.get_stock_details(ticker)
-                if not stock_data or 'current_price' not in stock_data:
-                    continue
+                    stock_data = market_service.get_stock_details(ticker)
+                    if not stock_data or 'current_price' not in stock_data:
+                        continue
 
-                current_price = float(stock_data['current_price'])
-                predicted_move = self._parse_target_move(analysis.get('target_upside', ''))
+                    current_price = float(stock_data['current_price'])
+                    predicted_move = self._parse_target_move(analysis.get('target_upside', ''))
 
-                bear_analysis = next((b for b in bear_analyses if b.get('ticker') == ticker), None)
-                opposite_conviction = bear_analysis.get('conviction', 'LOW') if bear_analysis else 'LOW'
+                    bear_analysis = next((b for b in bear_analyses if b.get('ticker') == ticker), None)
+                    opposite_conviction = bear_analysis.get('conviction', 'LOW') if bear_analysis else 'LOW'
 
-                _, created = PredictionOutcome.objects.update_or_create(
-                    brief=brief_obj,
-                    ticker=ticker,
-                    prediction_type='BULL',
-                    defaults={
-                        'conviction_level': analysis.get('conviction', 'LOW'),
-                        'predicted_move': predicted_move,
-                        'price_at_prediction': current_price,
-                        'prediction_date': today,
-                        'was_in_debate_zone': (ticker in debate_zone_tickers),
-                        'opposite_conviction': opposite_conviction,
-                        'market_regime': stock_data.get('market_regime'),
-                        'volatility_level': stock_data.get('volatility'),
-                    },
-                )
-                if created:
-                    created_count += 1
-                else:
-                    updated_count += 1
+                    _, created = PredictionOutcome.objects.update_or_create(
+                        brief=brief_obj,
+                        ticker=ticker,
+                        prediction_type='BULL',
+                        defaults={
+                            'conviction_level': analysis.get('conviction', 'LOW'),
+                            'predicted_move': predicted_move,
+                            'price_at_prediction': current_price,
+                            'prediction_date': today,
+                            'was_in_debate_zone': (ticker in debate_zone_tickers),
+                            'opposite_conviction': opposite_conviction,
+                            'market_regime': stock_data.get('market_regime'),
+                            'volatility_level': stock_data.get('volatility'),
+                        },
+                    )
+                    if created:
+                        created_count += 1
+                    else:
+                        updated_count += 1
+                except Exception as e:
+                    logger.warning(f"Failed to record BULL prediction for {analysis.get('ticker', '?')}: {e}")
 
             # Record bear predictions
             for analysis in bear_analyses:
-                ticker = analysis.get('ticker')
-                if not ticker:
-                    continue
+                try:
+                    ticker = analysis.get('ticker')
+                    if not ticker:
+                        continue
 
-                stock_data = market_service.get_stock_details(ticker)
-                if not stock_data or 'current_price' not in stock_data:
-                    continue
+                    stock_data = market_service.get_stock_details(ticker)
+                    if not stock_data or 'current_price' not in stock_data:
+                        continue
 
-                current_price = float(stock_data['current_price'])
-                predicted_move = self._parse_target_move(analysis.get('target_downside', ''))
+                    current_price = float(stock_data['current_price'])
+                    predicted_move = self._parse_target_move(analysis.get('target_downside', ''))
 
-                bull_analysis = next((b for b in bull_analyses if b.get('ticker') == ticker), None)
-                opposite_conviction = bull_analysis.get('conviction', 'LOW') if bull_analysis else 'LOW'
+                    bull_analysis = next((b for b in bull_analyses if b.get('ticker') == ticker), None)
+                    opposite_conviction = bull_analysis.get('conviction', 'LOW') if bull_analysis else 'LOW'
 
-                _, created = PredictionOutcome.objects.update_or_create(
-                    brief=brief_obj,
-                    ticker=ticker,
-                    prediction_type='BEAR',
-                    defaults={
-                        'conviction_level': analysis.get('conviction', 'LOW'),
-                        'predicted_move': predicted_move,
-                        'price_at_prediction': current_price,
-                        'prediction_date': today,
-                        'was_in_debate_zone': (ticker in debate_zone_tickers),
-                        'opposite_conviction': opposite_conviction,
-                        'market_regime': stock_data.get('market_regime'),
-                        'volatility_level': stock_data.get('volatility'),
-                    },
-                )
-                if created:
-                    created_count += 1
-                else:
-                    updated_count += 1
+                    _, created = PredictionOutcome.objects.update_or_create(
+                        brief=brief_obj,
+                        ticker=ticker,
+                        prediction_type='BEAR',
+                        defaults={
+                            'conviction_level': analysis.get('conviction', 'LOW'),
+                            'predicted_move': predicted_move,
+                            'price_at_prediction': current_price,
+                            'prediction_date': today,
+                            'was_in_debate_zone': (ticker in debate_zone_tickers),
+                            'opposite_conviction': opposite_conviction,
+                            'market_regime': stock_data.get('market_regime'),
+                            'volatility_level': stock_data.get('volatility'),
+                        },
+                    )
+                    if created:
+                        created_count += 1
+                    else:
+                        updated_count += 1
+                except Exception as e:
+                    logger.warning(f"Failed to record BEAR prediction for {analysis.get('ticker', '?')}: {e}")
 
             logger.info(
                 f"Predictions recorded: {created_count} created, {updated_count} updated "

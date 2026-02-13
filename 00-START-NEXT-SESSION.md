@@ -1,12 +1,31 @@
-# Session 994 - Start Here
+# Session 995 - Start Here
 
-**Previous Session:** 993 (PA Capability Gaps: Write Actions + Blog Triage + V2 Generation)
+**Previous Session:** 994 (Fix Stock Prediction Pipeline + Podcast User Context)
 **Date:** February 12, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** | **Bundle: 2,305 KB** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 94** | **PA Intents: 37** | **Enrichment Services: 8** | **Context Layers: 11** | **Content Feedback Loop: CLOSED** | **Reviewers: REAL VERDICTS**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** | **Bundle: 2,305 KB** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 94** | **PA Intents: 37** | **Enrichment Services: 8** | **Context Layers: 11** | **Content Feedback Loop: CLOSED** | **Reviewers: REAL VERDICTS** | **Stock Predictions: FIXED** | **Podcast User Context: FIXED**
 
 ---
 
-## Session 993 Summary (Just Completed)
+## Session 994 Summary (Just Completed)
+
+### Fix Stock Prediction Pipeline + Podcast User Context
+
+Fixed two broken subsystem pipelines discovered via PA conversations on Railway production.
+
+**Stock Prediction Pipeline** (`market_intelligence_coordinator.py`):
+- `_parse_target_move()` crashed on numeric types from GPT JSON — added type safety for int/float inputs
+- `_record_predictions_for_learning()` had single try/except around entire loop — one bad ticker killed ALL predictions for the brief. Added per-iteration error handling.
+- Root cause: GPT-5-mini returns `target_upside: 25` (number) instead of `"25%+"` (string). `re.sub()` on a number throws TypeError.
+
+**Podcast Pipeline** (`tasks.py`):
+- `PodcastCoordinatorAgent()` instantiated without user despite `episode.user` being available
+- Fixed: `PodcastCoordinatorAgent(user=episode.user)` — enables learning hooks, memory attribution, feedback recording
+
+**Files changed:** `market_intelligence_coordinator.py` (~20 lines changed), `tasks.py` (1 line changed)
+
+No new models, no migrations, no new Celery tasks, no frontend changes.
+
+## Session 993 Summary (Prior)
 
 ### PA Capability Gaps: Write Actions + Blog Triage + V2 Generation
 
@@ -31,60 +50,17 @@ Added 11 new write actions across PA tools — the PA can now modify data, not j
 
 No new models, no migrations, no new Celery tasks, no frontend changes.
 
-## Session 992 Summary (Prior)
+### Session 992 Summary (Prior)
 
-### Wire 3 Remaining Unwired Services
-
-Connected three fully-built but unwired services (~1,330 lines combined) into the main execution paths:
-
-**DynamicTeamBuilder** (610 lines) — now wired into ConversationOrchestrator:
-- `_select_agents_for_topic()` tries `DynamicTeamBuilder.build_team()` first (embedding similarity + synergy scoring)
-- Falls back to original `AgentRegistry` text matching on any exception
-- Only fires for multi-agent conversations (`auto_select_agents=True`), not every `route()` call
-
-**PlatformIntelligenceBriefingService** (472 lines) — now wired into PA enrichment pipeline:
-- Added `platform_briefing` enrichment to 2 intents: `system_overview`, `execution_history`
-- Aggregates 6 sources: knowledge transfers, conversations, dreams, boardroom, spider highlights, platform health
-- Formatted as `=== PLATFORM ACTIVITY ===` section in analytical prompts
-- Capped at 500 chars, respects relevance gate
-
-**PlatformIntegration** (248 lines) — now wired into agent_router:
-- `gather_context()` injects `platform_tools_directive` into `spider_context`
-- "Use internal tools, not external services" prompt now reaches router-executed agents (previously only Celery-executed)
-
-**Files changed:** `conversation_orchestrator.py` (3 edits), `unified_pa_entrypoint.py` (6 edits), `agent_router.py` (3 edits)
-
-No new models, no migrations, no new Celery tasks, no frontend changes.
+Wire 3 Remaining Unwired Services — DynamicTeamBuilder, PlatformIntelligenceBriefingService, PlatformIntegration.
 
 ### Session 991 Summary (Prior)
 
-### Wire ProactiveIntelligenceService + AgentLearningService
-
-Connected two fully-built but uncalled services (~1,300 lines combined) into the main execution paths:
-
-**ProactiveIntelligenceService** (545 lines) — now wired into the PA enrichment pipeline:
-- Added `proactive_intelligence` enrichment to 4 intents: `opportunities`, `stock_intelligence`, `content_review`, `system_overview`
-- Queries SpiderData, TriggerEvent, BlockchainSecurityAlert, Opportunity, MarketIntelligenceBrief
-- Formatted as `=== PROACTIVE INTELLIGENCE ===` section in analytical prompts
-- Capped at 500 chars, respects relevance gate for non-direct intents
-
-**AgentLearningService** (778 lines) — now wired into the agent router:
-- Records every `route()` execution via `record_interaction()` (Redis-based, success or failure)
-- Injects adaptive preferences via `get_adaptive_context()` into `user_context['agent_learned_preferences']`
-- Surfaced through `gather_context()` into `spider_context` so agents see learned preferences
-- All calls wrapped in try/except — never breaks execution
-
-**Files changed:** `unified_pa_entrypoint.py` (6 edits), `agent_router.py` (4 edits)
-
-No new models, no migrations, no new Celery tasks, no frontend changes.
+Wire ProactiveIntelligenceService + AgentLearningService into execution paths.
 
 ### Session 990 Summary (Prior)
 
 Closed PA-to-Agent content feedback loop. When PA publishes/archives/revises content, the decision is recorded back to the originating agent via AgentMemory, UserAgentLearning, and FeedbackLoopEngine.
-
-### Session 989 Summary (Prior)
-
-Production verification of 5 open items. Fixed SpiderData field names, execution history payload, AgentExecution FK traversal, DeliberationSession participants extraction. Discovered Railway multi-service deployment gotcha.
 
 ---
 
@@ -143,18 +119,31 @@ Data is flowing but no dashboard exists yet.
 ### FailureSignature Table Empty
 Diagnostic pipeline (Session 856) has 0 records. May need activation.
 
+### Disconnected Dots Audit (Session 972) — Ongoing
+Many items remain from the audit: agent output persistence, orphan endpoints, enrichment data loss. Podcast user context fixed in 994. Stock predictions fixed in 994. Continue working through the list.
+
 ---
 
 ## What Could Come Next
+
+### Verify Stock Prediction Fix on Railway
+After deploy, check PredictionOutcome records from the next MarketIntelligenceCoordinator run to confirm non-zero `predicted_move` values.
+
+### Verify Podcast Fix on Railway
+Trigger a podcast generation and confirm user attribution in PodcastEpisode and agent execution records.
+
+### Continue Disconnected Dots Audit
+Session 972 identified ~200+ items. High-impact remaining items:
+- Agent output persistence (ResearchAgent, ImageAgent, TrendAnalysisAgent outputs vanish)
+- DecisionEnforcerAgent has `DecisionRecord` model but wiring incomplete
+- 85-95% enrichment data loss from truncation
+- Orphan API endpoints with no frontend consumers
 
 ### Fix chat_conversations.platform Migration
 Create migration for the missing `platform` column to fix PA conversation persistence.
 
 ### Fix Profile Loading Async Issue
 Wrap profile loading in `sync_to_async` or use thread pool to avoid async context errors.
-
-### Content Deliberation v2 via PA
-`POST /api/v1/research/self-blog/generate-v2/` exists but PA can't trigger it. Add intent for "create blog with full review" / "deliberated blog".
 
 ### Auto-Revision Loop
 If deliberation pipeline returns REVISE verdict, loop back through EditorAgent automatically.
@@ -199,6 +188,10 @@ Dedicated workspace tab for Billing, Analytics, system configuration.
 **DeliberationSession.participants (Session 989):**
 - JSONField containing dicts (not strings)
 - Extract `.get('name')` before `', '.join()`
+
+**_parse_target_move() (Session 994):**
+- GPT may return numeric types — always handled via isinstance check
+- Per-iteration error handling in prediction recording loops
 
 **Railway multi-service deployment (Session 989):**
 - Each Procfile process is a SEPARATE Railway service
