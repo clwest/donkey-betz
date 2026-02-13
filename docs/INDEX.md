@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-02-12 23:11
+**Generated:** 2026-02-12 23:12
 **Current Session:** 1001
 **Total Documentation:** 1747 files | 611,618 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,187 |
+| Total cross-references | 2,186 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 139 | CLAUDE - AI Session Entry Point |
-| `docs/archive/superseded-docs/README.md` | 60 | 📚 Unified Donkey Betz - Documentation Index |
+| `docs/topics/README.md` | 60 | Topic Files — Embedding-Optimized |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 42 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 34 | Platform Capabilities |
@@ -206,13 +206,13 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
+| INDEX.md | docs | 349 | 2026-02-12 23:11 |
 | frontend.md | topics | 71 | 2026-02-12 23:11 |
 | celery-workers.md | topics | 69 | 2026-02-12 23:11 |
 | agent-system.md | topics | 130 | 2026-02-12 23:11 |
 | SESSION_1000_INTELLIGENCE_DESKS.md | handoffs | 98 | 2026-02-12 23:08 |
 | stock-intelligence.md | topics | 38 | 2026-02-12 22:06 |
 | SESSION_999_STOCK_INTELLIGENCE_HUB.md | handoffs | 67 | 2026-02-12 22:06 |
-| INDEX.md | docs | 349 | 2026-02-12 22:06 |
 | spider-network.md | topics | 92 | 2026-02-12 21:42 |
 | SESSION_998_GOVERNANCE_HARDENING.md | handoffs | 46 | 2026-02-12 21:42 |
 | SESSION_998B_BETTING_HUB_LIVE_SCORES.md | handoffs | 80 | 2026-02-12 21:42 |

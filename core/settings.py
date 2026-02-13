@@ -964,6 +964,8 @@ CELERY_TASK_ROUTES = {
     'core.tasks.agent_think_and_synthesize': {'queue': 'long_running'},
     'core.tasks.score_and_promote_dreams': {'queue': 'long_running'},
     'core.tasks.process_approved_dreams': {'queue': 'long_running'},
+    # Session 1000: Intelligence desks — 4 coordinators, heavy memory
+    'core.tasks.run_all_desks_intelligence': {'queue': 'long_running'},
     # Session 885: Content generation tasks - dedicated content worker
     'core.tasks.generate_self_blog_task': {'queue': 'content'},
     'core.tasks.generate_self_blog_deliberation_task': {'queue': 'content'},
