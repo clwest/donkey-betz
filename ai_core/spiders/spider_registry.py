@@ -919,7 +919,7 @@ class SpiderRegistry:
         # ============================================================
 
         # Sports News - ESPN, NYT Sports, CBS Sports, Yahoo Sports, SI
-        self.register_spider('sports_news_rss', BaseIntelligenceSpider, {
+        self.register_spider('sports_news', BaseIntelligenceSpider, {
             'category': 'sports_news',
             'priority': 1,
             'rate_limit': 1.0,
@@ -929,7 +929,7 @@ class SpiderRegistry:
         })
 
         # Sports Injuries - RotoWire, CBS Injuries, RotoGrinders
-        self.register_spider('sports_injuries_rss', BaseIntelligenceSpider, {
+        self.register_spider('sports_injuries', BaseIntelligenceSpider, {
             'category': 'sports_injuries',
             'priority': 1,
             'rate_limit': 1.0,
