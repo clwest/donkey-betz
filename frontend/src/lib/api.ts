@@ -1132,6 +1132,12 @@ export const bettingApi = {
   cancelWager: (wagerId: string) => api.post(`/v1/betting/wagers/${wagerId}/cancel/`),
 }
 
+// Session 998B: Sports Betting Hub Feed
+export const sportsHubApi = {
+  getFeed: (category?: string, limit = 20) =>
+    api.get('/sports-hub/feed/', { params: { category, limit } }).then(r => r.data),
+}
+
 // Stock Intelligence Dashboard
 export interface StockDashboard {
   success: boolean

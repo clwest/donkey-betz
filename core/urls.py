@@ -317,6 +317,7 @@ from core.views_spider_feed import (
     spider_feed_annotate,
     spider_feed_vote,
     spider_feed_stats,
+    sports_hub_feed,
 )
 
 # Session 784: Documentation index API
@@ -3157,6 +3158,9 @@ urlpatterns = [
     path('api/spider-feed/<uuid:item_id>/annotate/', spider_feed_annotate, name='spider-feed-annotate'),
     path('api/spider-feed/<uuid:item_id>/vote/', spider_feed_vote, name='spider-feed-vote'),
     path('api/spider-feed/stats/', spider_feed_stats, name='spider-feed-stats'),
+
+    # Session 998B: Sports Betting Hub Feed
+    path('api/sports-hub/feed/', sports_hub_feed, name='sports-hub-feed'),
 
     # Session 784: Documentation Index API
     path('api/docs/index/', docs_index, name='docs-index'),
