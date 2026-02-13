@@ -1953,6 +1953,7 @@ Address the user by name occasionally."""
                                 response += f"  - {val} {label} urgency\n"
 
                     # Session 985: Show top critical/high items inline
+                    # Session 997B: Added summary preview so users know WHY items need attention
                     top_items = tool_result.get('top_items', [])
                     if top_items:
                         response += f"\n**Needs your attention now:**\n"
@@ -1972,6 +1973,11 @@ Address the user by name occasionally."""
                             if source:
                                 line += f" from {source}"
                             line += f" `{item_id}`"
+                            # Session 997B: Show summary preview if available
+                            summary = str(item.get('summary', '') or '')
+                            if summary:
+                                preview = summary[:120].rsplit(' ', 1)[0] + ('...' if len(summary) > 120 else '')
+                                line += f"\n    _{preview}_"
                             response += line + "\n"
 
                     if decisions.get('count', 0) > 0:
@@ -1997,6 +2003,7 @@ Address the user by name occasionally."""
                         return f"No items found{filter_desc}, {user_name}."
 
                     # Session 947/959: Show items with IDs + new ML/priority fields
+                    # Session 997B: Added summary preview
                     item_lines = []
                     for item in items[:15]:
                         item_id = str(item.get('id', ''))[:8]  # Short ID for reference
@@ -2022,6 +2029,11 @@ Address the user by name occasionally."""
                         if impact:
                             line += f" | Impact: {impact}"
                         line += f" `{item_id}`"
+                        # Session 997B: Show summary preview
+                        summary = str(item.get('summary', '') or '')
+                        if summary:
+                            preview = summary[:120].rsplit(' ', 1)[0] + ('...' if len(summary) > 120 else '')
+                            line += f"\n  _{preview}_"
                         item_lines.append(line)
 
                     item_list = "\n".join(item_lines)

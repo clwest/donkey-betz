@@ -53,8 +53,8 @@ const navItems = [
   { path: '/agents', label: 'Agents', icon: Bot },
   { path: '/stocks', label: 'Stock Intelligence', icon: TrendingUp },
 
-  // Domain Features - Session 899: Commented out for YouTube demo focus
-  // { path: '/betting', label: 'Betting', icon: TrendingUp },
+  // Domain Features - Session 899/997B: Betting re-enabled
+  { path: '/betting', label: 'Betting', icon: DollarSign },
   // { path: '/legal', label: 'Legal', icon: Scale },
   // { path: '/portfolio', label: 'Portfolio', icon: DollarSign },
 
