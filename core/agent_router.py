@@ -218,7 +218,11 @@ from core.agents.podcast import (
 from core.agents.campaign_orchestrator_agent import CampaignOrchestratorAgent
 
 # Session 558: Markets Agents
-from core.agents.markets import PredictionMarketAnalyst, SportsOddsAnalyst, ArbitrageDetector
+# Session 995B: Added GamePredictor, LineMovementAnalyzer, SharpActionDetector
+from core.agents.markets import (
+    PredictionMarketAnalyst, SportsOddsAnalyst, ArbitrageDetector,
+    GamePredictor, LineMovementAnalyzer, SharpActionDetector,
+)
 
 # Session 637: Missing agents from root directory
 from core.agents.opportunity_pipeline_agent import OpportunityPipelineAgent
@@ -383,10 +387,13 @@ class AgentRouter:
         # Campaign Orchestrator (Session 513)
         "CampaignOrchestratorAgent": CampaignOrchestratorAgent,
 
-        # Markets Agents (Session 558)
+        # Markets Agents (Session 558, 995B)
         "PredictionMarketAnalyst": PredictionMarketAnalyst,
         "SportsOddsAnalyst": SportsOddsAnalyst,
         "ArbitrageDetector": ArbitrageDetector,
+        "GamePredictor": GamePredictor,
+        "LineMovementAnalyzer": LineMovementAnalyzer,
+        "SharpActionDetector": SharpActionDetector,
 
         # Session 637: Orchestration & Utility Agents
         "OpportunityPipelineAgent": OpportunityPipelineAgent,

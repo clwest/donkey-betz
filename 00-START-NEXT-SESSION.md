@@ -1,25 +1,39 @@
 # Session 996 - Start Here
 
-**Previous Session:** 995 (Betting Outcome Verification + Learning Loop)
+**Previous Session:** 995B (Sports Betting Intelligence System)
 **Date:** February 12, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **BETTING OUTCOME VERIFICATION: LIVE** | **Workspace: 9 TABS** | **Bundle: 2,305 KB** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 95** | **PA Intents: 37** | **Enrichment Services: 8** | **Context Layers: 11** | **Content Feedback Loop: CLOSED** | **Celery Tasks: 262**
+**Status:** 79 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **Workspace: 9 TABS** | **Bundle: 2,305 KB** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 96** | **PA Intents: 38** | **Enrichment Services: 8** | **Context Layers: 11** | **Content Feedback Loop: CLOSED** | **Celery Tasks: 264**
 
 ---
 
-## Session 995 Summary (Just Completed)
+## Session 995B Summary (Just Completed)
+
+### Sports Betting Intelligence System — 3 Phases
+
+Built out the full sports betting intelligence pipeline across 3 phases.
+
+**Phase 1 — PA Integration:**
+- Added `sports_betting` intent (38th intent) + `sports_betting_tool` handler (52nd handler)
+- 8 actions: overview, arbs, predictions, sharp_action, line_movements, wagers, live_odds, brief
+- Full result formatter for natural language PA responses
+
+**Phase 2 — 3 New Agents:**
+- **GamePredictor** — Predicts game outcomes from odds consensus, stores in MLPrediction
+- **LineMovementAnalyzer** — Compares odds snapshots, detects STEAM/SHARP/DRIFT moves
+- **SharpActionDetector** — Compares sharp (Pinnacle) vs soft (DraftKings) books for divergence
+
+**Phase 3 — Intelligence Pipeline:**
+- **SportsBettingCoordinator** — Orchestrates 5 agents into unified briefs with top plays
+- **`generate_daily_betting_brief`** — Celery task at 9 AM + 7 PM
+- **`evaluate_ml_predictions`** — Checks prediction accuracy every 6h
+
+**Files changed:** 10 files (4 new). No models, no migrations. See `docs/handoffs/SESSION_995B_SPORTS_BETTING_INTELLIGENCE.md`.
+
+## Session 995 Summary (Prior)
 
 ### Betting Outcome Verification + Learning Loop
 
-Closed the feedback loop for sports betting. Previously, PlacedWagers sat in `pending` forever, watched HumanAttentionItems never got verified, and no outcomes fed into learning.
-
-**5 changes:**
-1. **TheOddsSpider `fetch_scores()`** — Fetches completed game scores from `/v4/sports/{sport}/scores`. Same event_id as odds data.
-2. **BettingOutcomeVerifier** (NEW service) — Finds pending wager legs (3h+ after commence), watched arb items. Batch-fetches scores per sport. Settles wagers (single + parlay), verifies arb items, creates learning records.
-3. **`verify_betting_outcomes` task** — Celery task with retry, also recalculates BettingStats.
-4. **Beat schedule** — Every 2h at :15 via `crontab(hour='*/2', minute='15')`.
-5. **Learning bridge** — `record_wager_outcome()` (SportsOddsAnalyst → UserAgentLearning + AgentMemory) and `record_arbitrage_outcome()` (ArbitrageDetector → UserAgentLearning + AgentMemory).
-
-**Files changed:** 5 files (1 new). No models, no migrations. See `docs/handoffs/SESSION_995_BETTING_OUTCOME_VERIFICATION.md`.
+Closed the feedback loop: BettingOutcomeVerifier settles pending wagers, verifies watched arb items, feeds learning bridge. Runs every 2h. See `docs/handoffs/SESSION_995_BETTING_OUTCOME_VERIFICATION.md`.
 
 ## Session 994B Summary (Prior)
 
