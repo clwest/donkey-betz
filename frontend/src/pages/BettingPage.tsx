@@ -1,18 +1,19 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { bettingApi, humanApi } from '@/lib/api'
+import { bettingApi, humanApi, sportsHubApi } from '@/lib/api'
 import {
   TrendingUp, TrendingDown, DollarSign, Target, Zap, AlertTriangle,
   RefreshCw, Loader2, Trophy, Activity, PieChart, BarChart3,
   Clock, CheckCircle, Flame, Search, Eye, XCircle, CircleDot,
   Award, Layers, ChevronDown, ChevronUp, History, Crosshair,
-  Star, Swords, Brain
+  Star, Swords, Brain, Newspaper, HeartPulse
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
-type BettingTab = 'overview' | 'games' | 'top_plays' | 'sharp' | 'arbitrage' | 'markets' | 'odds' | 'bankroll' | 'wagers' | 'watching'
+type BettingTab = 'hub' | 'overview' | 'games' | 'top_plays' | 'sharp' | 'arbitrage' | 'markets' | 'odds' | 'bankroll' | 'wagers' | 'watching'
 
 const tabs = [
+  { id: 'hub' as BettingTab, label: 'Hub', icon: Newspaper },
   { id: 'overview' as BettingTab, label: 'Overview', icon: PieChart },
   { id: 'games' as BettingTab, label: "Today's Games", icon: Swords },
   { id: 'top_plays' as BettingTab, label: 'Top Plays', icon: Star },
@@ -540,7 +541,7 @@ function WatchedItemCard({ item, onVerify, isVerifying }: WatchedItemCardProps) 
 }
 
 export default function BettingPage() {
-  const [activeTab, setActiveTab] = useState<BettingTab>('overview')
+  const [activeTab, setActiveTab] = useState<BettingTab>('hub')
   const [sportFilter, setSportFilter] = useState('all')
   const [watchingFilter, setWatchingFilter] = useState<'all' | 'pending' | 'verified'>('all')
   const [expandedWagers, setExpandedWagers] = useState<Set<string>>(new Set())
@@ -655,6 +656,18 @@ export default function BettingPage() {
     enabled: activeTab === 'sharp',
   })
 
+  // Session 998B: Hub feed queries
+  const { data: hubNewsData, isLoading: hubNewsLoading } = useQuery({
+    queryKey: ['hub-sports-news'],
+    queryFn: () => sportsHubApi.getFeed('sports_news', 8),
+    enabled: activeTab === 'hub',
+  })
+  const { data: hubInjuryData, isLoading: hubInjuryLoading } = useQuery({
+    queryKey: ['hub-sports-injuries'],
+    queryFn: () => sportsHubApi.getFeed('sports_injuries', 10),
+    enabled: activeTab === 'hub',
+  })
+
   const stats: Partial<BettingStatsData> = statsData?.data?.stats || statsData?.data || {}
   const wagers = wagersData?.data?.wagers || []
   const singlesRecord = stats.singles_record || { wins: 0, losses: 0, profit: 0 }
@@ -713,6 +726,143 @@ export default function BettingPage() {
           </button>
         ))}
       </div>
+
+      {/* Session 998B: Hub Tab — Magazine-style sports betting landing */}
+      {activeTab === 'hub' && (
+        <div className="space-y-6">
+          {/* Quick Stats Strip — reuse existing stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <StatCard label="Win Rate" value={`${(stats.win_rate || 0).toFixed(1)}%`} icon={Target} color="bg-accent-green" />
+            <StatCard label="ROI" value={`${(stats.roi || 0) >= 0 ? '+' : ''}${(stats.roi || 0).toFixed(1)}%`} icon={TrendingUp} color="bg-primary-600" />
+            <StatCard label="Total P/L" value={`$${(stats.total_profit_loss || 0).toFixed(2)}`} icon={DollarSign} color="bg-accent-amber" />
+            <StatCard label="Pending" value={stats.pending || 0} icon={Clock} color="bg-accent-purple" />
+          </div>
+
+          {/* Two-column layout: News + Sidebar */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* News Feed — 2/3 width */}
+            <div className="lg:col-span-2 space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Newspaper size={18} className="text-primary-400" />
+                Sports News
+              </h3>
+              {hubNewsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 size={24} className="animate-spin text-primary-400" />
+                </div>
+              ) : (hubNewsData?.items || []).length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {(hubNewsData?.items || []).map((item: any, i: number) => {
+                    const raw = item.raw_data || {}
+                    const entries = raw.items || raw.entries || []
+                    const first = entries[0] || {}
+                    const title = first.title || item.spider_name || 'Sports Update'
+                    const summary = (first.description || first.summary || '').replace(/<[^>]*>/g, '').slice(0, 140)
+                    const link = first.link || item.source_url || '#'
+                    const timeAgo = item.created_at ? new Date(item.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''
+
+                    return (
+                      <a
+                        key={item.id || i}
+                        href={link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={cn(
+                          'card p-4 hover:border-primary-500 transition-colors block',
+                          i === 0 && 'md:col-span-2 border-l-4 border-l-primary-500'
+                        )}
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xs px-2 py-0.5 rounded bg-primary-600/20 text-primary-400">
+                            {item.spider_name || 'news'}
+                          </span>
+                          <span className="text-xs text-gray-500">{timeAgo}</span>
+                        </div>
+                        <h4 className={cn('font-medium mb-1', i === 0 ? 'text-lg' : 'text-sm')}>
+                          {title}
+                        </h4>
+                        {summary && (
+                          <p className="text-sm text-gray-400 line-clamp-2">{summary}</p>
+                        )}
+                      </a>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="card p-8 text-center">
+                  <Newspaper size={32} className="mx-auto mb-2 text-gray-500" />
+                  <p className="text-sm text-gray-400">No sports news yet</p>
+                  <p className="text-xs text-gray-500 mt-1">News will appear after the next spider run</p>
+                </div>
+              )}
+            </div>
+
+            {/* Sidebar — 1/3 width */}
+            <div className="space-y-6">
+              {/* Injury Report */}
+              <div className="card">
+                <h3 className="text-base font-semibold flex items-center gap-2 mb-3">
+                  <HeartPulse size={16} className="text-accent-red" />
+                  Injury Report
+                </h3>
+                {hubInjuryLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 size={20} className="animate-spin text-primary-400" />
+                  </div>
+                ) : (hubInjuryData?.items || []).length > 0 ? (
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    {(hubInjuryData?.items || []).map((item: any, i: number) => {
+                      const raw = item.raw_data || {}
+                      const entries = raw.items || raw.entries || []
+                      const first = entries[0] || {}
+                      const title = first.title || 'Injury Update'
+                      const timeAgo = item.created_at ? new Date(item.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''
+
+                      return (
+                        <div key={item.id || i} className="p-2 rounded bg-dark-bg text-sm">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-gray-200 line-clamp-1">{title}</span>
+                            <span className="text-xs text-gray-500 flex-shrink-0 ml-2">{timeAgo}</span>
+                          </div>
+                          <span className="text-xs text-gray-500">{item.spider_name}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <HeartPulse size={24} className="mx-auto mb-2 text-gray-500 opacity-50" />
+                    <p className="text-xs text-gray-400">No injury data yet</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Quick Links to other tabs */}
+              <div className="card">
+                <h3 className="text-base font-semibold mb-3">Quick Access</h3>
+                <div className="space-y-2">
+                  {[
+                    { tab: 'top_plays' as BettingTab, label: 'Top Plays', icon: Star, color: 'text-accent-amber' },
+                    { tab: 'games' as BettingTab, label: "Today's Games", icon: Swords, color: 'text-primary-400' },
+                    { tab: 'sharp' as BettingTab, label: 'Sharp Action', icon: Crosshair, color: 'text-accent-red' },
+                    { tab: 'arbitrage' as BettingTab, label: 'Arbitrage', icon: Flame, color: 'text-accent-amber' },
+                  ].map(({ tab, label, icon: Icon, color }) => (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className="w-full flex items-center gap-3 p-2 rounded hover:bg-dark-bg transition-colors text-sm text-left"
+                    >
+                      <Icon size={16} className={color} />
+                      <span>{label}</span>
+                      <ChevronDown size={14} className="ml-auto text-gray-500 -rotate-90" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Overview Tab */}
       {activeTab === 'overview' && (
