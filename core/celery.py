@@ -23,6 +23,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/15'),  # Every 15 minutes
         'options': {
             'expires': 900,  # Expire after 15 minutes if not executed
+            'queue': 'long_running',  # Session 1000C: scrapes external sites
         }
     },
     'refresh-ai-opportunities': {
@@ -30,6 +31,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/30'),  # Every 30 minutes
         'options': {
             'expires': 1800,
+            'queue': 'long_running',  # Session 1000C: imports generator, heavy
         }
     },
     'sync-revenue-metrics': {
@@ -37,6 +39,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0),  # Every hour
         'options': {
             'expires': 3600,
+            'queue': 'default',  # Session 1000C: light DB queries
         }
     },
     'sync-shared-memory': {
@@ -44,6 +47,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/10'),  # Every 10 minutes
         'options': {
             'expires': 600,
+            'queue': 'long_running',  # Session 1000C: matches intelligence.* route
         }
     },
     'clean-stale-data': {
@@ -51,6 +55,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=2, minute=0),  # Daily at 2 AM
         'options': {
             'expires': 7200,
+            'queue': 'default',  # Session 1000C: light DB cleanup
         }
     },
     'warm-up-spiders': {
@@ -58,6 +63,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours
         'options': {
             'expires': 14400,
+            'queue': 'long_running',  # Session 1000C: initializes 74+ spiders
         }
     },
     # ML Model Training & Prediction Tasks (Session 24: Updated retraining pipeline)
@@ -81,6 +87,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(day_of_week=0, hour=10, minute=0),  # Sunday 10 AM
         'options': {
             'expires': 3600,
+            'queue': 'content',  # Session 1000C: content generation
         }
     },
     'cleanup-old-model-files': {
@@ -88,6 +95,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(day_of_week=1, hour=1, minute=0),  # Monday 1 AM
         'options': {
             'expires': 3600,
+            'queue': 'ml',  # Session 1000C: matches ml.* route
         }
     },
     # Session 616: Clean up old spider item hashes
@@ -96,6 +104,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=3, minute=30),  # Daily at 3:30 AM
         'options': {
             'expires': 3600,
+            'queue': 'default',  # Session 1000C: light DB cleanup
         }
     },
     # Session 687: Human Interface attention items from system events
@@ -104,6 +113,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/15'),  # Every 15 minutes
         'options': {
             'expires': 900,
+            'queue': 'default',  # Session 1000C: DB queries only
         }
     },
     # Session 766: Human Attention lifecycle (auto-expire, auto-approve, escalation)
@@ -112,6 +122,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/10'),  # Every 10 minutes
         'options': {
             'expires': 600,
+            'queue': 'default',  # Session 1000C: DB lifecycle updates
         }
     },
     # Session 954: Boardroom ML predictions - enrich pending items with content-aware predictions
@@ -120,6 +131,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/15'),  # Every 15 minutes
         'options': {
             'expires': 900,
+            'queue': 'ml',  # Session 1000C: calls OpenAI embedding API
         }
     },
     # Session 766: HiveMind synthesis to Orchestration
@@ -128,6 +140,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/30'),  # Every 30 minutes
         'options': {
             'expires': 1800,
+            'queue': 'long_running',  # Session 1000C: triggers agent workflows
         }
     },
     # Session 766: High-scoring opportunities to Orchestration
@@ -136,6 +149,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/20'),  # Every 20 minutes
         'options': {
             'expires': 1200,
+            'queue': 'long_running',  # Session 1000C: triggers execution pipelines
         }
     },
     # Session 766: Spider Action Pipeline - convert spider data to actions
@@ -144,6 +158,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/30'),  # Every 30 minutes
         'options': {
             'expires': 1800,
+            'queue': 'long_running',  # Session 1000C: triggers agent pipelines
         }
     },
     # Session 766: Gate Progression Pipeline - auto-progress gates and start pilots
@@ -152,6 +167,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/15'),  # Every 15 minutes
         'options': {
             'expires': 900,
+            'queue': 'default',  # Session 1000C: DB updates only
         }
     },
     # Session 766: Content Idea Pipeline - mine Dreams/Conversations for content ideas
@@ -160,6 +176,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour='*/6'),  # Every 6 hours
         'options': {
             'expires': 21600,
+            'queue': 'content',  # Session 1000C: content generation
         }
     },
     # Session 794: Self-Blog Generation - was in settings.py but overwritten by celery.py
@@ -169,6 +186,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0, hour='*/6'),  # Every 6 hours at :00
         'options': {
             'expires': 21600,  # 6 hours
+            'queue': 'content',  # Session 1000C: matches content route
         }
     },
     # Sports Prediction Evaluation & Bet Settlement
@@ -220,7 +238,11 @@ app.conf.beat_schedule = {
     'cleanup-opportunities-daily': {
         'task': 'intelligence.tasks.cleanup_old_opportunities',
         'schedule': crontab(minute=0, hour=3),  # 3 AM daily
-        'args': (30,)  # Days before expiring
+        'args': (30,),  # Days before expiring
+        'options': {
+            'expires': 7200,  # Session 1000C: was missing expires entirely
+            'queue': 'long_running',  # Session 1000C: matches intelligence.* route
+        }
     },
     # Session 727: Missing Intelligence Tasks (found in deep system audit)
     # Session 799: Changed to process_pending_action_plans which finds and executes pending plans
@@ -265,6 +287,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/5'),  # Every 5 minutes
         'options': {
             'expires': 300,  # Expire after 5 minutes if not executed
+            'queue': 'default',  # Session 1000C: light DB processing
         }
     },
     # Session 707: Core Spider Data Processing (core.models_unified_system.SpiderData)
@@ -274,6 +297,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/2'),  # Every 2 minutes (faster to catch up backlog)
         'options': {
             'expires': 120,  # Expire after 2 minutes if not executed
+            'queue': 'default',  # Session 1000C: light DB processing
         }
     },
     # Session 139: Background 3D Model Status Polling
@@ -282,6 +306,7 @@ app.conf.beat_schedule = {
         'schedule': 30.0,  # Every 30 seconds
         'options': {
             'expires': 25,  # Expire after 25 seconds if not executed (just before next run)
+            'queue': 'default',  # Session 1000C: light API polling
         }
     },
     # Session 207: Spider Network Execution (Updated Session 293: 15 min interval)
@@ -290,6 +315,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/15'),  # Every 15 minutes (was 30)
         'options': {
             'expires': 900,  # Expire after 15 minutes
+            'queue': 'long_running',  # Session 1000C: matches long_running route
         }
     },
     # Session 293: Spider Embedding Backfill
@@ -299,6 +325,7 @@ app.conf.beat_schedule = {
         'kwargs': {'batch_size': 500},  # Session 604: Increased from 200 to 500
         'options': {
             'expires': 600,  # Expire after 10 minutes
+            'queue': 'ml',  # Session 1000C: calls OpenAI embedding API
         }
     },
     # Session 490: Memory Embedding Backfill
@@ -307,6 +334,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/30'),  # Every 30 minutes
         'options': {
             'expires': 1800,  # Expire after 30 minutes
+            'queue': 'ml',  # Session 1000C: calls OpenAI embedding API
         }
     },
     # Session 729: Conversation Memory Embedding Backfill
@@ -315,6 +343,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/30'),  # Every 30 minutes
         'options': {
             'expires': 1800,  # Expire after 30 minutes
+            'queue': 'ml',  # Session 1000C: calls OpenAI embedding API
         }
     },
     # Session 915: Stage Document Backfill - Generate missing stage documents
@@ -1952,7 +1981,7 @@ app.conf.beat_schedule = {
         'schedule': 120.0,  # Every 2 minutes
         'options': {
             'expires': 110,  # Expire before next run
-            'queue': 'celery',  # Use default queue
+            'queue': 'default',  # Session 1000C: was 'celery' (dead queue, no worker consumes it)
         }
     },
     # ==========================================================================
@@ -1964,6 +1993,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/5'),  # Every 5 minutes
         'options': {
             'expires': 300,  # 5 minutes
+            'queue': 'default',  # Session 1000C: light DB timeout checks
         }
     },
     # Check for auto-approvals on expired approval gates
@@ -1972,6 +2002,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/5'),  # Every 5 minutes
         'options': {
             'expires': 300,  # 5 minutes
+            'queue': 'default',  # Session 1000C: light DB checks
         }
     },
     # Session 766: Execute approved dreams through orchestration layer
@@ -1980,6 +2011,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/10'),  # Every 10 minutes
         'options': {
             'expires': 600,  # 10 minutes
+            'queue': 'long_running',  # Session 1000C: triggers full agent execution
         }
     },
     # ==========================================================================
