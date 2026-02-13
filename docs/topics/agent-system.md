@@ -18,7 +18,7 @@
 | Orchestration | 6 | AISeriesWorkflowAgent, AutonomousContentStudioCoordinator, ContentDiversityOrchestrator, ResolveAgent, WorkflowAgent, CampaignOrchestrator |
 | Podcast | 4 | PodcastCoordinatorAgent, DebateAdvocateAgent, DebateSkepticAgent, ModeratorAgent |
 | Narrative | 4 | NarrativeDriftCoordinator, NarrativeHistorianAgent, TrendBreakDetector, CulturalImpactAgent |
-| Markets | 3 | PredictionMarketAnalyst, SportsOddsAnalyst, ArbitrageDetector |
+| Markets | 3 | PredictionMarketAnalyst, SportsOddsAnalyst, ArbitrageDetector (outcome verification → learning loop, Session 995) |
 | Development | 5 | CodeGeneratorAgent, FullStackDeveloperAgent, CodeReviewAgent, DevOpsAgent, PromptEngineeringAgent |
 | Legal | 1 | LegalDocDrafterAgent |
 | Training | 2 | CharacterTrainingAgent, TrainedCreationAgent |

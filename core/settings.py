@@ -1284,6 +1284,13 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(minute='*/5'),  # Every 5 minutes
     },
     # =========================================================================
+    # Session 995: Betting Outcome Verification + Learning Loop
+    # =========================================================================
+    'verify-betting-outcomes': {
+        'task': 'core.tasks.verify_betting_outcomes',
+        'schedule': crontab(hour='*/2', minute='15'),  # Every 2 hours at :15
+    },
+    # =========================================================================
     # Session 563: Self-Blog Generation
     # Session 766: Fixed crontab - was missing minute=0, causing 240 blogs/day
     # Session 987: Swapped v1 → v2 deliberation pipeline (ClaimsPack + 3 reviewers)

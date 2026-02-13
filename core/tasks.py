@@ -22546,6 +22546,56 @@ def scan_arbs_and_notify():
         }
 
 
+@shared_task(bind=True, max_retries=2, default_retry_delay=300, queue='default')
+def verify_betting_outcomes(self):
+    """
+    Session 995: Verify betting outcomes, settle wagers, feed learning loop.
+
+    Fetches completed game scores from The Odds API, settles pending wagers,
+    verifies watched arbitrage items, and creates learning records.
+
+    Runs every 2 hours via Celery Beat. Idempotent — skips already-settled
+    wagers and already-verified items.
+    """
+    from core.services.betting_outcome_verifier import BettingOutcomeVerifier
+
+    logger.info("[OUTCOME-VERIFY] Starting betting outcome verification...")
+
+    try:
+        verifier = BettingOutcomeVerifier()
+        results = verifier.verify_all_pending()
+
+        # Update BettingStats for affected users if wagers were settled
+        if results.get('wagers_settled', 0) > 0:
+            try:
+                from core.models_betting import PlacedWager, BettingStats
+                # Get users with recently settled wagers
+                recently_settled = PlacedWager.objects.filter(
+                    settled_at__isnull=False,
+                    status__in=['won', 'lost', 'push'],
+                ).exclude(user__isnull=True).values_list('user_id', flat=True).distinct()
+
+                for user_id in recently_settled:
+                    stats, _ = BettingStats.objects.get_or_create(user_id=user_id)
+                    stats.recalculate()
+
+                logger.info(f"[OUTCOME-VERIFY] Updated BettingStats for {len(recently_settled)} users")
+            except Exception as e:
+                logger.warning(f"[OUTCOME-VERIFY] Could not update BettingStats: {e}")
+
+        logger.info(
+            f"[OUTCOME-VERIFY] Complete: "
+            f"{results.get('wagers_settled', 0)} settled, "
+            f"{results.get('arb_items_verified', 0)} verified, "
+            f"{results.get('learning_records', 0)} learning records"
+        )
+        return results
+
+    except Exception as e:
+        logger.error(f"[OUTCOME-VERIFY] Failed: {e}", exc_info=True)
+        raise self.retry(exc=e)
+
+
 @shared_task(name='core.tasks.maintain_dream_backlog')
 def maintain_dream_backlog():
     """
