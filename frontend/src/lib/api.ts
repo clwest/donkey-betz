@@ -1130,6 +1130,7 @@ export const bettingApi = {
   logWager: (data: Record<string, unknown>) => api.post('/v1/betting/wager/', data),
   settleWager: (wagerId: string, result: string) => api.post(`/v1/betting/wagers/${wagerId}/settle/`, { result }),
   cancelWager: (wagerId: string) => api.post(`/v1/betting/wagers/${wagerId}/cancel/`),
+  quickPick: (data: Record<string, unknown>) => api.post('/v1/betting/quick-pick/', data),
 }
 
 // Session 998B: Sports Betting Hub Feed

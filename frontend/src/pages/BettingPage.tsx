@@ -580,6 +580,18 @@ export default function BettingPage() {
     },
   })
 
+  const [pickedId, setPickedId] = useState<string | null>(null)
+  const quickPickMutation = useMutation({
+    mutationFn: (data: Record<string, unknown>) => bettingApi.quickPick(data),
+    onSuccess: (_resp, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['betting-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['betting-wagers'] })
+      const id = String(vars.event_id || vars.pick || '')
+      setPickedId(id)
+      setTimeout(() => setPickedId(null), 2000)
+    },
+  })
+
   const watchedItems: WatchedItem[] = (watchedData?.data?.items || []).filter(
     (item: WatchedItem) => item.item_type === 'arbitrage'
   )
@@ -1308,6 +1320,47 @@ export default function BettingPage() {
                         </div>
                       </div>
                     )}
+
+                    {/* Session 999B: Quick Pick buttons */}
+                    {!game.completed && (
+                      <div className="mt-3 flex items-center gap-2">
+                        {[
+                          { team: game.away_team, odds: game.away_odds },
+                          { team: game.home_team, odds: game.home_odds },
+                        ].map(({ team, odds }) => {
+                          const pickKey = `${game.event_id}-${team}`
+                          const isPicking = quickPickMutation.isPending && pickedId === null
+                          const justPicked = pickedId === pickKey
+                          return (
+                            <button
+                              key={team}
+                              className={cn(
+                                'flex-1 text-xs py-1.5 px-3 rounded-lg font-medium transition-all',
+                                justPicked
+                                  ? 'bg-accent-green/20 text-accent-green border border-accent-green/30'
+                                  : 'bg-dark-bg hover:bg-primary-600/20 text-gray-300 hover:text-primary-400 border border-dark-border hover:border-primary-500/30'
+                              )}
+                              disabled={isPicking}
+                              onClick={() => {
+                                setPickedId(pickKey)
+                                quickPickMutation.mutate({
+                                  event_id: game.event_id || '',
+                                  matchup: `${game.away_team} @ ${game.home_team}`,
+                                  pick: team,
+                                  odds: odds || -110,
+                                  stake: 10,
+                                  sport: game.sport_key || '',
+                                  commence_time: game.commence_time || '',
+                                  source: 'todays_games',
+                                })
+                              }}
+                            >
+                              {justPicked ? 'Picked!' : isPicking ? '...' : `Pick ${team}`}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -1419,8 +1472,8 @@ export default function BettingPage() {
                           )}
                         </div>
 
-                        {/* Confidence */}
-                        <div className="text-right flex-shrink-0">
+                        {/* Confidence + Log Pick */}
+                        <div className="text-right flex-shrink-0 space-y-2">
                           <p className={cn(
                             'text-2xl font-bold',
                             play.confidence >= 85 ? 'text-accent-green' :
@@ -1429,6 +1482,28 @@ export default function BettingPage() {
                             {play.confidence}%
                           </p>
                           <p className="text-xs text-gray-500">confidence</p>
+                          <button
+                            className={cn(
+                              'text-xs py-1 px-3 rounded-lg font-medium transition-all',
+                              pickedId === `play-${i}`
+                                ? 'bg-accent-green/20 text-accent-green'
+                                : 'bg-primary-600/20 text-primary-400 hover:bg-primary-600/30'
+                            )}
+                            disabled={quickPickMutation.isPending}
+                            onClick={() => {
+                              setPickedId(`play-${i}`)
+                              quickPickMutation.mutate({
+                                matchup: play.matchup || '',
+                                pick: play.pick || '',
+                                odds: play.odds || -110,
+                                stake: 10,
+                                sport: play.sport || '',
+                                source: 'top_plays',
+                              })
+                            }}
+                          >
+                            {pickedId === `play-${i}` ? 'Logged!' : quickPickMutation.isPending ? '...' : 'Log Pick'}
+                          </button>
                         </div>
                       </div>
                     )

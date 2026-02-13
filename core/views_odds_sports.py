@@ -500,173 +500,239 @@ def scan_arbitrage_opportunities(request):
 @permission_classes([IsAuthenticated])
 def sports_game_analysis(request):
     """
-    Comprehensive game analysis with betting insights - migrated from DBAO
+    Session 999B: Game analysis from GameLineHistory + OddsSnapshot data.
+    Replaces mock data with real line movement & implied-probability analytics.
     """
+    from django.core.cache import cache
+    from core.models_odds_history import GameLineHistory, OddsSnapshot
+
     data = request.data
-    
     game_id = data.get('game_id', '')
-    sport = data.get('sport', 'football')
-    include_weather = data.get('include_weather', False)
-    analysis_depth = data.get('analysis_depth', 'basic')
-    
-    # Mock comprehensive game analysis
+
+    if not game_id:
+        return Response({'success': False, 'message': 'game_id required'}, status=400)
+
+    cache_key = f"game_analysis:{game_id}"
+    cached = cache.get(cache_key)
+    if cached:
+        return Response(cached)
+
+    try:
+        glh = GameLineHistory.objects.get(game_id=game_id)
+    except GameLineHistory.DoesNotExist:
+        return Response({'success': False, 'message': 'Game not found'}, status=404)
+
+    # Build team analytics from odds
+    home_prob = _american_to_probability(glh.current_ml_home) if glh.current_ml_home else None
+    away_prob = _american_to_probability(glh.current_ml_away) if glh.current_ml_away else None
+
+    # Recent snapshots for trend data
+    snapshots = list(
+        OddsSnapshot.objects.filter(game_id=game_id, market='h2h')
+        .order_by('captured_at')
+        .values('outcome_name', 'price', 'captured_at', 'bookmaker')[:50]
+    )
+
     analysis = {
         'game_data': {
-            'id': game_id,
-            'sport': sport,
-            'home_team': 'Team A',
-            'away_team': 'Team B',
-            'scheduled_time': '2025-09-15T20:00:00Z',
-            'venue': 'Stadium XYZ',
-            'league': 'NFL' if sport == 'football' else 'NBA'
+            'id': glh.game_id,
+            'sport': glh.sport_key,
+            'home_team': glh.home_team,
+            'away_team': glh.away_team,
+            'scheduled_time': glh.commence_time.isoformat(),
         },
         'team_analytics': {
             'home_team': {
-                'recent_form': '3W-1L-1D',
-                'home_record': '8-2',
-                'avg_points_scored': 24.5,
-                'avg_points_allowed': 18.3,
-                'key_players': ['Player A', 'Player B'],
-                'injuries': ['Player C (questionable)']
+                'current_ml': glh.current_ml_home,
+                'implied_win_pct': round(home_prob * 100, 1) if home_prob else None,
+                'spread': float(glh.current_spread_home) if glh.current_spread_home is not None else None,
             },
             'away_team': {
-                'recent_form': '2W-2L-1D',
-                'away_record': '6-4',
-                'avg_points_scored': 21.8,
-                'avg_points_allowed': 20.1,
-                'key_players': ['Player X', 'Player Y'],
-                'injuries': ['Player Z (out)']
-            }
-        },
-        'weather_impact': {
-            'temperature': 45,
-            'wind_speed': 12,
-            'precipitation': 'light_rain',
-            'impact_score': 0.7
-        } if include_weather else None,
-        'betting_recommendations': [
-            {
-                'market': 'moneyline',
-                'recommendation': 'home_team',
-                'confidence': 0.68,
-                'reasoning': 'Strong home record and better recent form'
+                'current_ml': glh.current_ml_away,
+                'implied_win_pct': round(away_prob * 100, 1) if away_prob else None,
             },
+        },
+        'lines': {
+            'current_spread': float(glh.current_spread_home) if glh.current_spread_home is not None else None,
+            'current_total': float(glh.current_total) if glh.current_total is not None else None,
+            'spread_movement': float(glh.spread_movement),
+            'total_movement': float(glh.total_movement),
+            'snapshot_count': glh.snapshot_count,
+        },
+        'odds_history': [
             {
-                'market': 'total_points',
-                'recommendation': 'over',
-                'line': 42.5,
-                'confidence': 0.72,
-                'reasoning': 'Both teams averaging high scoring games'
+                'outcome': s['outcome_name'],
+                'price': s['price'],
+                'bookmaker': s['bookmaker'],
+                'captured_at': s['captured_at'].isoformat(),
             }
-        ]
+            for s in snapshots
+        ],
     }
-    
-    return Response({
-        'success': True,
-        'analysis': analysis
-    })
+
+    result = {'success': True, 'analysis': analysis}
+    cache.set(cache_key, result, 20 * 60)  # 20 min
+    return Response(result)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def live_betting_opportunities(request):
     """
-    Real-time live betting opportunities detection - migrated from DBAO
+    Session 999B: Detect cross-book value edges from SpiderData(data_type='sports_odds').
+    Finds bookmaker-level odds divergence without making new API calls.
     """
+    from django.core.cache import cache
+    from persistence.models import SpiderData
+
     sport = request.GET.get('sport', 'all')
     min_edge = float(request.GET.get('min_edge', 0.04))
     max_opportunities = int(request.GET.get('max_opportunities', 10))
-    
-    # Mock live opportunities data
+
+    cache_key = f"live_opps:{sport}:{min_edge}"
+    cached = cache.get(cache_key)
+    if cached:
+        return Response(cached)
+
+    # Get recent sports_odds spider data (last 2 hours)
+    cutoff = datetime.now() - timedelta(hours=2)
+    rows = SpiderData.objects.filter(
+        data_type='sports_odds',
+        created_at__gte=cutoff,
+    ).order_by('-created_at')[:20]
+
     opportunities = []
-    
-    for i in range(min(max_opportunities, 8)):
-        edge = random.uniform(min_edge, 0.15)
-        opportunity = {
-            'game_id': f'game_{i + 1}',
-            'sport': random.choice(['football', 'basketball', 'baseball']),
-            'bet_type': random.choice(['moneyline', 'spread', 'total', 'player_props']),
-            'edge': round(edge, 4),
-            'recommended_stake': round(random.uniform(50, 200), 2),
-            'bookmaker': random.choice(['DraftKings', 'FanDuel', 'BetMGM', 'Caesars']),
-            'odds': round(random.uniform(1.8, 3.5), 2),
-            'expires_at': (datetime.now() + timedelta(minutes=random.randint(5, 30))).isoformat(),
-            'confidence': round(random.uniform(0.7, 0.95), 2)
-        }
-        opportunities.append(opportunity)
-    
-    # Filter by sport if specified
-    if sport != 'all':
-        opportunities = [opp for opp in opportunities if opp['sport'] == sport]
-    
-    return Response({
+    seen_games = set()
+
+    for row in rows:
+        raw = row.raw_data or {}
+        events = raw.get('items', raw.get('events', []))
+        if not isinstance(events, list):
+            continue
+
+        for event in events:
+            game_id = event.get('id', event.get('game_id', ''))
+            if game_id in seen_games:
+                continue
+
+            bookmakers = event.get('bookmakers', [])
+            if len(bookmakers) < 2:
+                continue
+
+            sport_key = event.get('sport_key', '')
+            if sport != 'all' and sport not in sport_key:
+                continue
+
+            # Collect h2h prices across books for each outcome
+            outcome_prices = {}
+            for bk in bookmakers:
+                bk_name = bk.get('title', bk.get('key', ''))
+                for mkt in bk.get('markets', []):
+                    if mkt.get('key') != 'h2h':
+                        continue
+                    for outcome in mkt.get('outcomes', []):
+                        name = outcome.get('name', '')
+                        price = outcome.get('price', 0)
+                        if name and price:
+                            outcome_prices.setdefault(name, []).append((bk_name, price))
+
+            # Find best price divergence
+            for name, prices in outcome_prices.items():
+                if len(prices) < 2:
+                    continue
+                prices_sorted = sorted(prices, key=lambda x: x[1], reverse=True)
+                best_bk, best_price = prices_sorted[0]
+                worst_bk, worst_price = prices_sorted[-1]
+                if worst_price <= 0:
+                    continue
+                best_prob = _american_to_probability(int(best_price)) if isinstance(best_price, int) else (1 / best_price if best_price > 0 else 0.5)
+                worst_prob = _american_to_probability(int(worst_price)) if isinstance(worst_price, int) else (1 / worst_price if worst_price > 0 else 0.5)
+                edge = round(worst_prob - best_prob, 4)
+                if edge >= min_edge:
+                    seen_games.add(game_id)
+                    opportunities.append({
+                        'game_id': game_id,
+                        'sport': sport_key,
+                        'bet_type': 'moneyline',
+                        'edge': edge,
+                        'recommended_stake': round(edge * 1000, 2),
+                        'bookmaker': best_bk,
+                        'odds': best_price,
+                        'pick': name,
+                        'matchup': f"{event.get('away_team', '')} @ {event.get('home_team', '')}",
+                        'confidence': round(min(0.95, 0.6 + edge * 3), 2),
+                    })
+                    break  # one opp per game
+
+            if len(opportunities) >= max_opportunities:
+                break
+        if len(opportunities) >= max_opportunities:
+            break
+
+    opportunities.sort(key=lambda x: x['edge'], reverse=True)
+    result = {
         'success': True,
-        'opportunities': opportunities,
+        'opportunities': opportunities[:max_opportunities],
         'last_updated': datetime.now().isoformat(),
-        'total_found': len(opportunities)
-    })
+        'total_found': len(opportunities),
+    }
+    cache.set(cache_key, result, 5 * 60)  # 5 min
+    return Response(result)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])  # Session 688: Allow public access for React frontend
 def list_betting_markets(request):
     """
-    List available betting markets with filtering - migrated from DBAO
+    Session 999B: List upcoming betting markets from GameLineHistory.
+    Frontend reads marketsData.data.markets — must return {markets: [...]}.
     """
+    from django.utils import timezone as tz
+    from core.models_odds_history import GameLineHistory
+
     sport = request.GET.get('sport', 'all')
-    league = request.GET.get('league', 'all') 
     search = request.GET.get('search', '')
-    
-    # Mock betting markets data
-    markets = [
-        {
-            'id': 'game_1',
-            'name': 'Chiefs vs Bills',
-            'sport': 'football',
-            'league': 'NFL',
-            'home_team': 'Kansas City Chiefs',
-            'away_team': 'Buffalo Bills',
-            'game_time': '2025-09-15T17:00:00Z',
-            'markets_available': ['moneyline', 'spread', 'total', 'player_props']
-        },
-        {
-            'id': 'game_2',
-            'name': 'Lakers vs Warriors',
-            'sport': 'basketball',
-            'league': 'NBA',
-            'home_team': 'Los Angeles Lakers',
-            'away_team': 'Golden State Warriors',
-            'game_time': '2025-09-15T22:00:00Z',
-            'markets_available': ['moneyline', 'spread', 'total', 'player_props']
-        },
-        {
-            'id': 'game_3',
-            'name': 'Yankees vs Red Sox',
-            'sport': 'baseball',
-            'league': 'MLB',
-            'home_team': 'New York Yankees',
-            'away_team': 'Boston Red Sox',
-            'game_time': '2025-09-15T19:00:00Z',
-            'markets_available': ['moneyline', 'run_line', 'total', 'player_props']
-        }
-    ]
-    
-    # Apply filters
-    filtered_markets = markets
-    
-    if sport != 'all':
-        filtered_markets = [m for m in filtered_markets if m['sport'] == sport]
-    
-    if league != 'all':
-        filtered_markets = [m for m in filtered_markets if m['league'] == league]
-    
+
+    now = tz.now()
+    qs = GameLineHistory.objects.filter(commence_time__gte=now).order_by('commence_time')
+
+    if sport and sport != 'all':
+        qs = qs.filter(sport_key__icontains=sport)
+
     if search:
-        filtered_markets = [m for m in filtered_markets 
-                          if search.lower() in m['name'].lower() 
-                          or search.lower() in m['home_team'].lower()
-                          or search.lower() in m['away_team'].lower()]
-    
+        from django.db.models import Q
+        qs = qs.filter(
+            Q(home_team__icontains=search) |
+            Q(away_team__icontains=search)
+        )
+
+    # Build sport_key → league mapping
+    SPORT_LEAGUE = {
+        'americanfootball_nfl': 'NFL', 'americanfootball_ncaaf': 'NCAAF',
+        'basketball_nba': 'NBA', 'basketball_ncaab': 'NCAAB',
+        'baseball_mlb': 'MLB', 'icehockey_nhl': 'NHL',
+        'soccer_epl': 'EPL', 'soccer_mls': 'MLS',
+    }
+
+    markets = []
+    for g in qs[:30]:
+        available = ['moneyline']
+        if g.current_spread_home is not None:
+            available.append('spread')
+        if g.current_total is not None:
+            available.append('total')
+        markets.append({
+            'id': g.game_id,
+            'name': f"{g.away_team} @ {g.home_team}",
+            'sport': g.sport_key,
+            'league': SPORT_LEAGUE.get(g.sport_key, g.sport_key.split('_')[-1].upper()),
+            'home_team': g.home_team,
+            'away_team': g.away_team,
+            'game_time': g.commence_time.isoformat(),
+            'markets_available': available,
+            'event_count': len(available),
+        })
+
     return Response({
-        'count': len(filtered_markets),
-        'results': filtered_markets
+        'markets': markets,
     })
 
 @api_view(['GET'])
@@ -1849,96 +1915,101 @@ def get_weather_data(request):
 @permission_classes([IsAuthenticated])
 def get_injury_data(request):
     """
-    Get injury report data for teams
-    Query params: home_team, away_team (both required)
+    Session 999B: Injury data from SpiderData(data_type='sports_injuries').
+    Expands raw_data.items[], filters by team name, extracts status/impact.
     """
     try:
+        from persistence.models import SpiderData
+
         home_team = request.GET.get('home_team')
         away_team = request.GET.get('away_team')
-        
+
         if not home_team or not away_team:
             return Response({
                 'success': False,
                 'message': 'Both home_team and away_team parameters required'
             }, status=400)
-        
-        # Generate realistic injury data based on team names
-        # This could be enhanced with real SportRadar API later
-        def generate_team_injuries(team_name):
-            import hashlib
-            import random
-            
-            # Create consistent seed from team name for reproducible results
-            seed = int(hashlib.md5(team_name.encode()).hexdigest()[:8], 16)
-            random.seed(seed)
-            
-            # Football positions and common injuries
-            positions = ['QB', 'RB', 'WR', 'TE', 'OL', 'DE', 'LB', 'CB', 'S', 'K']
-            injury_types = ['Ankle', 'Knee', 'Shoulder', 'Hamstring', 'Concussion', 'Back', 'Wrist', 'Hip', 'Groin']
-            statuses = ['Questionable', 'Probable', 'Doubtful', 'Out']
-            
-            # Generate 2-5 injuries per team (more realistic than 1-4)
-            num_injuries = random.randint(2, 5)
-            injuries = []
-            
-            for i in range(num_injuries):
-                # Generate realistic player names based on team
-                first_names = ['Marcus', 'Tyler', 'Jordan', 'Alex', 'Ryan', 'Jake', 'Chris', 'Michael', 'David', 'Antonio']
-                last_names = ['Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez']
-                
-                player_first = random.choice(first_names)
-                player_last = random.choice(last_names)
-                position = random.choice(positions)
-                injury_type = random.choice(injury_types)
-                status = random.choice(statuses)
-                jersey_num = random.randint(1, 99)
-                
-                # Make QB injuries more impactful (more likely to be Out/Doubtful)
-                if position == 'QB' and random.random() < 0.4:
-                    status = random.choice(['Out', 'Doubtful'])
-                
-                injuries.append({
-                    'team': team_name,
-                    'player': f"{player_first} {player_last}",
-                    'jersey_number': jersey_num,
-                    'position': position,
-                    'injury': injury_type,
+
+        # Last word of team name for flexible matching (e.g. "Chiefs", "Bills")
+        home_words = home_team.lower().split()
+        away_words = away_team.lower().split()
+
+        def _extract_injury_status(text):
+            t = (text or '').lower()
+            for s in ['out', 'doubtful', 'questionable', 'probable', 'ir', 'day-to-day']:
+                if s in t:
+                    return s.capitalize().replace('Ir', 'IR').replace('Day-to-day', 'Day-to-Day')
+            return 'Unknown'
+
+        def _extract_impact_level(item):
+            pos = (item.get('position') or '').upper()
+            status = _extract_injury_status(item.get('status') or item.get('description') or '')
+            if pos in ('QB', 'RB', 'WR', 'PG', 'SG', 'C', 'P', 'SP'):
+                return 'High'
+            if status in ('Out', 'IR', 'Doubtful'):
+                return 'High'
+            if status == 'Questionable':
+                return 'Medium'
+            return 'Low'
+
+        # Fetch recent injury spider data
+        rows = SpiderData.objects.filter(
+            data_type='sports_injuries',
+        ).order_by('-created_at')[:10]
+
+        all_injuries = []
+        for row in rows:
+            raw = row.raw_data or {}
+            items = raw.get('items', [])
+            for item in items:
+                title = (item.get('title') or item.get('name') or '').lower()
+                desc = (item.get('description') or item.get('summary') or '').lower()
+                text = f"{title} {desc}"
+
+                # Check if this injury relates to either team
+                matched_team = None
+                for w in home_words:
+                    if len(w) > 2 and w in text:
+                        matched_team = home_team
+                        break
+                if not matched_team:
+                    for w in away_words:
+                        if len(w) > 2 and w in text:
+                            matched_team = away_team
+                            break
+                if not matched_team:
+                    continue
+
+                status = _extract_injury_status(item.get('status') or item.get('description') or title)
+                all_injuries.append({
+                    'team': matched_team,
+                    'player': item.get('title') or item.get('name') or 'Unknown',
+                    'position': item.get('position') or '',
+                    'injury': item.get('injury') or item.get('category') or '',
                     'status': status,
-                    'impact_level': 'High' if position in ['QB', 'RB', 'WR'] else random.choice(['Low', 'Medium', 'High'])
+                    'impact_level': _extract_impact_level(item),
+                    'source': row.spider_name,
                 })
-            
-            return injuries
-        
-        # Generate injuries for both teams
-        home_injuries = generate_team_injuries(home_team)
-        away_injuries = generate_team_injuries(away_team)
-        
-        all_injuries = home_injuries + away_injuries
-        
-        # Calculate summary stats
-        total_injuries = len(all_injuries)
-        out_count = len([inj for inj in all_injuries if inj['status'] == 'Out'])
-        questionable_count = len([inj for inj in all_injuries if inj['status'] == 'Questionable'])
-        
-        formatted_injuries = {
+
+        home_injuries = [i for i in all_injuries if i['team'] == home_team]
+        away_injuries = [i for i in all_injuries if i['team'] == away_team]
+        out_count = len([i for i in all_injuries if i['status'] == 'Out'])
+        questionable_count = len([i for i in all_injuries if i['status'] == 'Questionable'])
+
+        return Response({
             'success': True,
             'injuries': all_injuries,
             'summary': {
-                'total_injuries': total_injuries,
+                'total_injuries': len(all_injuries),
                 'players_out': out_count,
                 'questionable': questionable_count,
-                'last_updated': 'Live Feed',
+                'last_updated': rows[0].created_at.isoformat() if rows else None,
                 'home_team_injuries': len(home_injuries),
-                'away_team_injuries': len(away_injuries)
+                'away_team_injuries': len(away_injuries),
             },
-            'teams': {
-                'home_team': home_team,
-                'away_team': away_team
-            }
-        }
-        
-        return Response(formatted_injuries)
-        
+            'teams': {'home_team': home_team, 'away_team': away_team},
+        })
+
     except Exception as e:
         return Response({
             'success': False,
@@ -1950,178 +2021,139 @@ def get_injury_data(request):
 @permission_classes([IsAuthenticated])
 def get_betting_intelligence(request):
     """
-    Get betting intelligence data for teams
-    Query params: home_team, away_team (both required)
+    Session 999B: Betting intelligence from GameLineHistory + OddsSnapshot.
+    Builds real trends from spread/total movement, moneyline implied probability,
+    and price direction from snapshot history.
     """
     try:
+        from django.core.cache import cache
+        from core.models_odds_history import GameLineHistory, OddsSnapshot
+
         home_team = request.GET.get('home_team')
         away_team = request.GET.get('away_team')
-        
+
         if not home_team or not away_team:
             return Response({
                 'success': False,
                 'message': 'Both home_team and away_team parameters required'
             }, status=400)
-        
-        # Generate realistic betting intelligence based on team names
-        # This could be enhanced with real statistical data later
-        def generate_betting_trends(team_name):
-            import hashlib
-            import random
-            
-            # Create consistent seed from team name for reproducible results
-            seed = int(hashlib.md5(team_name.encode()).hexdigest()[:8], 16)
-            random.seed(seed)
-            
-            # Generate realistic ATS records and statistics
-            home_wins = random.randint(3, 9)
-            home_losses = random.randint(1, 5)
-            away_wins = random.randint(2, 8)
-            away_losses = random.randint(2, 6)
-            
-            over_hits = random.randint(4, 8)
-            total_games = random.randint(8, 12)
-            under_hits = total_games - over_hits
-            
-            home_ppg = random.randint(21, 35) + random.random()
-            away_ppg_allowed = random.randint(18, 32) + random.random()
-            
-            return {
-                'home_ats': f"{home_wins}-{home_losses}",
-                'away_ats': f"{away_wins}-{away_losses}",
-                'over_under_trend': 'Over' if over_hits > under_hits else 'Under',
-                'over_hits': over_hits,
-                'total_meetings': total_games,
-                'home_ppg': round(home_ppg, 1),
-                'away_ppg_allowed': round(away_ppg_allowed, 1)
-            }
-        
-        home_stats = generate_betting_trends(home_team)
-        away_stats = generate_betting_trends(away_team)
-        
-        # Generate more sophisticated betting intelligence
-        import random
-        
-        # Calculate advanced metrics
-        home_ats_percentage = int(home_stats['home_ats'].split('-')[0]) / (int(home_stats['home_ats'].split('-')[0]) + int(home_stats['home_ats'].split('-')[1]))
-        away_ats_percentage = int(away_stats['away_ats'].split('-')[0]) / (int(away_stats['away_ats'].split('-')[0]) + int(away_stats['away_ats'].split('-')[1]))
-        
-        # Generate Kelly Criterion and value analysis
-        implied_prob_home = random.uniform(0.45, 0.65)
-        market_line = random.uniform(-7.5, 7.5)
-        total_line = random.uniform(45.5, 65.5)
-        
-        trends = [
-            {
-                'type': 'ATS_ANALYSIS',
-                'category': 'Against The Spread Performance',
-                'text': f"{home_team} covers {home_ats_percentage:.1%} at home vs {away_team} covers {away_ats_percentage:.1%} on road",
-                'confidence': 'High',
-                'impact': 'Positive' if home_ats_percentage > away_ats_percentage else 'Negative',
-                'value': f"{home_ats_percentage:.1%}",
-                'kelly_suggestion': 'Strong' if abs(home_ats_percentage - away_ats_percentage) > 0.2 else 'Moderate'
-            },
-            {
-                'type': 'TOTALS_ANALYSIS',
+
+        cache_key = f"intelligence:{home_team}:{away_team}"
+        cached = cache.get(cache_key)
+        if cached:
+            return Response(cached)
+
+        # Fuzzy match: use last word of team name
+        home_last = home_team.strip().split()[-1]
+        away_last = away_team.strip().split()[-1]
+
+        from django.db.models import Q
+        glh = GameLineHistory.objects.filter(
+            Q(home_team__icontains=home_last) & Q(away_team__icontains=away_last)
+        ).order_by('-commence_time').first()
+
+        if not glh:
+            # Return empty but valid response
+            return Response({
+                'success': True,
+                'trends': [],
+                'summary': {'total_insights': 0, 'overall_recommendation': 'No Data'},
+                'teams': {'home_team': home_team, 'away_team': away_team},
+            })
+
+        # Build trends from real data
+        trends = []
+
+        # Spread analysis
+        if glh.current_spread_home is not None and glh.open_spread_home is not None:
+            mvmt = float(glh.spread_movement)
+            direction = 'toward home' if mvmt < 0 else 'toward away' if mvmt > 0 else 'stable'
+            trends.append({
+                'type': 'SPREAD_MOVEMENT',
+                'category': 'Spread Analysis',
+                'text': f"Spread moved {abs(mvmt):.1f} pts {direction}: opened {float(glh.open_spread_home):+.1f}, now {float(glh.current_spread_home):+.1f}",
+                'confidence': 'High' if abs(mvmt) >= 1 else 'Medium',
+                'impact': 'Significant' if abs(mvmt) >= 1.5 else 'Minor',
+                'value': f"{mvmt:+.1f}",
+            })
+
+        # Total movement
+        if glh.current_total is not None and glh.open_total is not None:
+            tmvmt = float(glh.total_movement)
+            trends.append({
+                'type': 'TOTALS_MOVEMENT',
                 'category': 'Over/Under Intelligence',
-                'text': f"{home_stats['over_under_trend']} trending {home_stats['over_hits']}/{home_stats['total_meetings']} with average total of {total_line}",
-                'confidence': 'Medium',
-                'impact': 'Bullish' if home_stats['over_under_trend'] == 'Over' else 'Bearish',
-                'value': f"{(home_stats['over_hits']/home_stats['total_meetings']):.1%}",
-                'line_value': f"O/U {total_line}"
-            },
-            {
-                'type': 'SCORING_EDGE',
-                'category': 'Offensive vs Defensive Matchup',
-                'text': f"{home_team} {home_stats['home_ppg']} PPG offense vs {away_team} {away_stats['away_ppg_allowed']} PPG defense allowed",
-                'confidence': 'High', 
-                'impact': 'Positive' if home_stats['home_ppg'] > away_stats['away_ppg_allowed'] + 3 else 'Negative' if home_stats['home_ppg'] < away_stats['away_ppg_allowed'] - 3 else 'Even',
-                'value': f"+{(home_stats['home_ppg'] - away_stats['away_ppg_allowed']):.1f} edge",
-                'kelly_suggestion': 'Strong' if abs(home_stats['home_ppg'] - away_stats['away_ppg_allowed']) > 7 else 'Weak'
-            },
-            {
-                'type': 'MARKET_VALUE',
-                'category': 'Line Value Assessment',
-                'text': f"Current spread {market_line:+.1f} vs calculated edge suggests {implied_prob_home:.1%} home win probability",
-                'confidence': 'Medium',
-                'impact': 'Value' if abs(market_line) < 3.5 else 'Overpriced',
-                'value': f"{implied_prob_home:.1%}",
-                'line_movement': 'Stable' if random.random() > 0.5 else 'Moving',
-                'sharp_money': 'Home' if random.random() > 0.6 else 'Away'
-            },
-            {
-                'type': 'SITUATIONAL_EDGE',
-                'category': 'Advanced Situational Analysis',
-                'text': f"Home field advantage worth ~2.5pts, {home_team} historically strong in similar spots",
-                'confidence': 'Medium',
-                'impact': 'Positive',
-                'value': '+2.5pts',
-                'situational_factors': ['Home field', 'Rest advantage', 'Weather neutral']
-            },
-            {
-                'type': 'KELLY_RECOMMENDATION',
-                'category': 'Bankroll Management',
-                'text': f"Kelly Criterion suggests 2-4% bankroll allocation based on {home_ats_percentage:.1%} edge",
+                'text': f"Total moved {abs(tmvmt):.1f} pts: opened {float(glh.open_total)}, now {float(glh.current_total)}",
+                'confidence': 'High' if abs(tmvmt) >= 1 else 'Medium',
+                'impact': 'Over signal' if tmvmt > 0.5 else 'Under signal' if tmvmt < -0.5 else 'Stable',
+                'value': f"O/U {float(glh.current_total)}",
+            })
+
+        # Moneyline implied probability
+        if glh.current_ml_home and glh.current_ml_away:
+            hp = _american_to_probability(glh.current_ml_home)
+            ap = _american_to_probability(glh.current_ml_away)
+            vig = (hp + ap - 1) * 100
+            trends.append({
+                'type': 'MONEYLINE_VALUE',
+                'category': 'Implied Probability',
+                'text': f"{home_team} {hp:.1%} implied vs {away_team} {ap:.1%} implied (vig {vig:.1f}%)",
                 'confidence': 'High',
-                'impact': 'Recommended',
-                'kelly_percentage': f"{random.uniform(2.1, 4.8):.1f}%",
-                'risk_level': 'Moderate',
-                'expected_value': f"+{random.uniform(3.2, 8.7):.1f}%"
-            },
-            {
-                'type': 'MARKET_SENTIMENT',
-                'category': 'Public vs Sharp Money',
-                'text': f"65% public backing home, but sharp money showing {random.choice(['contrarian', 'aligned'])} action",
-                'confidence': 'Medium',
-                'impact': 'Fade Public' if random.random() > 0.5 else 'Follow Sharp',
-                'public_percentage': '65%',
-                'sharp_indicator': 'Contrarian',
-                'reverse_line_movement': random.choice([True, False])
-            }
-        ]
-        
-        # Calculate advanced summary insights
-        value_trends = len([t for t in trends if 'Value' in str(t.get('impact', ''))])
-        recommended_trends = len([t for t in trends if 'Recommended' in str(t.get('impact', ''))])
-        
-        # Calculate overall Kelly percentage recommendation
-        avg_kelly = sum([float(t.get('kelly_percentage', '0%').replace('%', '')) for t in trends if 'kelly_percentage' in t]) / max(1, len([t for t in trends if 'kelly_percentage' in t]))
-        
-        # Determine market efficiency
-        market_efficiency = 'Efficient' if value_trends < 2 else 'Inefficient' if value_trends > 3 else 'Semi-Efficient'
-        
-        betting_intelligence = {
+                'impact': 'Home Favored' if hp > ap else 'Away Favored',
+                'value': f"{hp:.1%} / {ap:.1%}",
+            })
+
+        # Price direction from snapshots
+        snapshots = list(
+            OddsSnapshot.objects.filter(game_id=glh.game_id, market='h2h')
+            .order_by('captured_at')
+            .values('outcome_name', 'price', 'captured_at')
+        )
+        if len(snapshots) >= 2:
+            # Group by outcome and check direction
+            outcomes = {}
+            for s in snapshots:
+                outcomes.setdefault(s['outcome_name'], []).append(s['price'])
+            for name, prices in outcomes.items():
+                if len(prices) >= 2:
+                    first, last = prices[0], prices[-1]
+                    direction = 'shortened' if last < first else 'drifted' if last > first else 'stable'
+                    trends.append({
+                        'type': 'PRICE_DIRECTION',
+                        'category': 'Line Movement',
+                        'text': f"{name} ML has {direction}: {first:+d} -> {last:+d} across {len(prices)} snapshots",
+                        'confidence': 'Medium',
+                        'impact': direction.capitalize(),
+                        'value': f"{first:+d} -> {last:+d}",
+                    })
+
+        # Summary
+        sig_trends = len([t for t in trends if t.get('confidence') == 'High'])
+        recommendation = 'Strong Data' if sig_trends >= 2 else 'Moderate Data' if sig_trends >= 1 else 'Limited Data'
+
+        result = {
             'success': True,
             'trends': trends,
             'summary': {
                 'total_insights': len(trends),
-                'value_opportunities': value_trends,
-                'kelly_recommendations': recommended_trends,
-                'market_efficiency': market_efficiency,
-                'suggested_kelly_allocation': f"{avg_kelly:.1f}%",
-                'risk_assessment': 'Moderate' if avg_kelly < 5 else 'High',
-                'edge_confidence': 'High' if home_ats_percentage > 0.6 else 'Medium',
-                'overall_recommendation': 'Strong Play' if value_trends > 2 and avg_kelly > 3 else 'Moderate Play' if value_trends > 1 else 'Pass',
-                'expected_roi': f"+{random.uniform(4.2, 12.8):.1f}%",
-                'last_updated': 'Real-Time Intelligence'
+                'snapshot_count': glh.snapshot_count,
+                'overall_recommendation': recommendation,
+                'last_updated': glh.updated_at.isoformat() if glh.updated_at else None,
             },
-            'teams': {
-                'home_team': home_team,
-                'away_team': away_team
-            },
+            'teams': {'home_team': home_team, 'away_team': away_team},
             'advanced_metrics': {
-                'home_ats_percentage': f"{home_ats_percentage:.1%}",
-                'away_ats_percentage': f"{away_ats_percentage:.1%}",
-                'ats_edge': f"{abs(home_ats_percentage - away_ats_percentage):.1%}",
-                'market_line': f"{market_line:+.1f}",
-                'total_line': f"{total_line}",
-                'implied_probability': f"{implied_prob_home:.1%}",
-                'value_rating': 'Strong' if value_trends > 2 else 'Moderate' if value_trends > 0 else 'Weak'
-            }
+                'current_spread': float(glh.current_spread_home) if glh.current_spread_home is not None else None,
+                'current_total': float(glh.current_total) if glh.current_total is not None else None,
+                'spread_movement': float(glh.spread_movement),
+                'total_movement': float(glh.total_movement),
+                'home_ml': glh.current_ml_home,
+                'away_ml': glh.current_ml_away,
+            },
         }
-        
-        return Response(betting_intelligence)
-        
+
+        cache.set(cache_key, result, 10 * 60)  # 10 min
+        return Response(result)
+
     except Exception as e:
         return Response({
             'success': False,
