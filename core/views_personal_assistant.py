@@ -954,15 +954,21 @@ def list_pa_conversations(request):
                 conversation_id=conv['conversation_id']
             ).order_by('created_at').first()
 
+            # Session 998B: Guard against None user_message
+            user_msg = (first_row.user_message or '') if first_row else ''
+            title = 'Untitled'
+            if first_row:
+                if first_row.session_title:
+                    title = first_row.session_title
+                elif user_msg:
+                    title = user_msg[:50] + ('...' if len(user_msg) > 50 else '')
+
             results.append({
                 'conversation_id': conv['conversation_id'],
-                'title': first_row.session_title if first_row and first_row.session_title else (
-                    first_row.user_message[:50] + ('...' if first_row and len(first_row.user_message) > 50 else '')
-                    if first_row else 'Untitled'
-                ),
+                'title': title,
                 'message_count': conv['message_count'],
                 'last_message_at': conv['last_message_at'].isoformat() if conv['last_message_at'] else None,
-                'preview': first_row.user_message[:80] if first_row else '',
+                'preview': user_msg[:80],
             })
 
         return Response({
