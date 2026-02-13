@@ -1253,6 +1253,7 @@ export interface TickerLookupResult {
 }
 
 export const stockApi = {
+  hub: () => api.get('/stocks/hub/'),
   dashboard: () => api.get('/stocks/dashboard/'),
   briefs: (params?: { limit?: number; offset?: number }) =>
     api.get('/stocks/briefs/', { params }),

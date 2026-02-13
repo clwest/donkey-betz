@@ -13,13 +13,18 @@ import {
   Bookmark,
   Search,
   X,
+  Activity,
+  Newspaper,
+  ExternalLink,
+  ArrowUpRight,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { stockApi, type StockDashboard, type MarketBrief, type MarketBriefDetail, type StockAlert, type PredictionOutcome, type TickerLookupResult } from '@/lib/api'
 
 // Sub-tab config
-type SubTab = 'ticker' | 'overview' | 'briefs' | 'alerts' | 'sec' | 'predictions'
+type SubTab = 'hub' | 'ticker' | 'overview' | 'briefs' | 'alerts' | 'sec' | 'predictions'
 const subTabs: Array<{ id: SubTab; label: string; icon: typeof TrendingUp }> = [
+  { id: 'hub', label: 'Hub', icon: Activity },
   { id: 'ticker', label: 'Ticker Lookup', icon: Search },
   { id: 'overview', label: 'Overview', icon: BarChart2 },
   { id: 'briefs', label: 'Market Briefs', icon: FileText },
@@ -50,7 +55,7 @@ const actionConfig: Record<string, { label: string; color: string }> = {
 }
 
 export default function StockIntelligencePage() {
-  const [activeTab, setActiveTab] = useState<SubTab>('ticker')
+  const [activeTab, setActiveTab] = useState<SubTab>('hub')
 
   return (
     <div className="space-y-4 p-6">
@@ -79,12 +84,288 @@ export default function StockIntelligencePage() {
       </div>
 
       {/* Tab Content */}
+      {activeTab === 'hub' && <HubTab setActiveTab={setActiveTab} />}
       {activeTab === 'ticker' && <TickerLookupTab />}
       {activeTab === 'overview' && <OverviewTab />}
       {activeTab === 'briefs' && <BriefsTab />}
       {activeTab === 'alerts' && <AlertsTab />}
       {activeTab === 'sec' && <SECFilingsTab />}
       {activeTab === 'predictions' && <PredictionsTab />}
+    </div>
+  )
+}
+
+// =============================================================================
+// Hub Tab
+// =============================================================================
+
+interface StockHubData {
+  success: boolean
+  stats: {
+    total_briefs: number
+    total_alerts: number
+    total_predictions: number
+    accuracy_7d: number | null
+    accuracy_30d: number | null
+    sec_filings_count: number
+  }
+  latest_brief: {
+    id: string
+    brief_date: string
+    executive_summary: string
+    total_stocks_analyzed: number
+    debate_zone_count: number
+    situation_health: string
+  } | null
+  top_alerts: Array<{
+    id: string
+    alert_type: string
+    symbol: string
+    company_name: string
+    title: string
+    summary: string
+    confidence_score: number
+    bull_score: number
+    bear_score: number
+    recommended_action: string
+    detected_at: string | null
+  }>
+  top_predictions: Array<{
+    id: string
+    ticker: string
+    prediction_type: string
+    predicted_move: number
+    actual_move_7_days: number | null
+    was_correct_7_days: boolean | null
+    prediction_date: string
+  }>
+  market_news: Array<{
+    spider_name: string
+    title: string
+    description: string
+    link: string
+    published: string | null
+  }>
+  sec_recent: Array<{
+    title: string
+    description: string
+    link: string
+    published: string | null
+  }>
+}
+
+function HubTab({ setActiveTab }: { setActiveTab: (tab: SubTab) => void }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['stock-hub'],
+    queryFn: () => stockApi.hub().then(r => r.data as StockHubData),
+  })
+
+  if (isLoading) return <LoadingSpinner />
+  if (!data?.success) return <div className="text-gray-400 text-center py-12">No data available yet.</div>
+
+  const s = data.stats
+
+  return (
+    <div className="space-y-4">
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard label="Market Briefs" value={s.total_briefs} icon={<FileText size={18} />} />
+        <StatCard label="Active Alerts" value={s.total_alerts} icon={<AlertTriangle size={18} />} />
+        <StatCard
+          label="7D Accuracy"
+          value={s.accuracy_7d != null ? `${s.accuracy_7d}%` : 'N/A'}
+          icon={<Target size={18} />}
+          color={s.accuracy_7d != null && s.accuracy_7d >= 60 ? 'text-green-400' : undefined}
+        />
+        <StatCard label="SEC Filings" value={s.sec_filings_count} icon={<FileText size={18} />} />
+      </div>
+
+      {/* Two-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Latest Market Brief */}
+        <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Latest Market Brief</h3>
+            <button onClick={() => setActiveTab('briefs')} className="text-xs text-primary-400 hover:text-primary-300">
+              View all <ArrowUpRight size={10} className="inline" />
+            </button>
+          </div>
+          {data.latest_brief ? (
+            <>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm font-medium text-white">{data.latest_brief.brief_date}</span>
+                <HealthBadge health={data.latest_brief.situation_health} />
+              </div>
+              <p className="text-sm text-gray-400 leading-relaxed line-clamp-4">{data.latest_brief.executive_summary}</p>
+              <div className="flex gap-4 mt-3 text-xs text-gray-500">
+                <span>{data.latest_brief.total_stocks_analyzed} stocks analyzed</span>
+                <span>{data.latest_brief.debate_zone_count} in debate zone</span>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-gray-500">No briefs yet.</p>
+          )}
+        </div>
+
+        {/* Prediction Scorecard */}
+        <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Prediction Scorecard</h3>
+            <button onClick={() => setActiveTab('predictions')} className="text-xs text-primary-400 hover:text-primary-300">
+              View all <ArrowUpRight size={10} className="inline" />
+            </button>
+          </div>
+          {data.top_predictions.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-dark-border text-left text-gray-500">
+                    <th className="pb-1.5 pr-2">Ticker</th>
+                    <th className="pb-1.5 pr-2">Type</th>
+                    <th className="pb-1.5 pr-2">Predicted</th>
+                    <th className="pb-1.5 pr-2">Actual</th>
+                    <th className="pb-1.5">Result</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.top_predictions.map((p) => (
+                    <tr key={p.id} className="border-b border-dark-border/30">
+                      <td className="py-1.5 pr-2 font-mono font-bold text-white">{p.ticker}</td>
+                      <td className="py-1.5 pr-2">
+                        <span className={cn(
+                          'px-1.5 py-0.5 rounded',
+                          p.prediction_type === 'BULL' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                        )}>
+                          {p.prediction_type}
+                        </span>
+                      </td>
+                      <td className={cn('py-1.5 pr-2', p.predicted_move >= 0 ? 'text-green-400' : 'text-red-400')}>
+                        {p.predicted_move >= 0 ? '+' : ''}{p.predicted_move.toFixed(1)}%
+                      </td>
+                      <td className={cn('py-1.5 pr-2', p.actual_move_7_days != null ? (p.actual_move_7_days >= 0 ? 'text-green-400' : 'text-red-400') : 'text-gray-600')}>
+                        {p.actual_move_7_days != null ? `${p.actual_move_7_days >= 0 ? '+' : ''}${p.actual_move_7_days.toFixed(1)}%` : '--'}
+                      </td>
+                      <td className="py-1.5">
+                        {p.was_correct_7_days === true
+                          ? <span className="text-green-400 font-medium">W</span>
+                          : p.was_correct_7_days === false
+                            ? <span className="text-red-400 font-medium">L</span>
+                            : <span className="text-gray-600">--</span>
+                        }
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">No evaluated predictions yet.</p>
+          )}
+        </div>
+
+        {/* Top Alerts */}
+        <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Top Alerts</h3>
+            <button onClick={() => setActiveTab('alerts')} className="text-xs text-primary-400 hover:text-primary-300">
+              View all <ArrowUpRight size={10} className="inline" />
+            </button>
+          </div>
+          {data.top_alerts.length > 0 ? (
+            <div className="space-y-2">
+              {data.top_alerts.map((a) => {
+                const typeConf = alertTypeConfig[a.alert_type] || { label: a.alert_type, color: 'bg-gray-500/20 text-gray-400' }
+                return (
+                  <div key={a.id} className="bg-gray-800/50 rounded p-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={cn('px-1.5 py-0.5 rounded text-xs', typeConf.color)}>{typeConf.label}</span>
+                      <span className="text-xs font-mono font-bold text-white">{a.symbol}</span>
+                      <span className="text-xs text-gray-500 ml-auto">{a.confidence_score.toFixed(0)}%</span>
+                    </div>
+                    <p className="text-xs text-gray-400 truncate">{a.title}</p>
+                    <div className="mt-1 flex items-center gap-1">
+                      <div className="flex-1 h-1 bg-gray-700 rounded-full overflow-hidden flex">
+                        <div className="bg-green-500 h-full" style={{ width: `${a.bull_score}%` }} />
+                        <div className="bg-red-500 h-full" style={{ width: `${a.bear_score}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">No alerts yet.</p>
+          )}
+        </div>
+
+        {/* Market News */}
+        <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+              <Newspaper size={12} /> Market News
+            </h3>
+          </div>
+          {data.market_news.length > 0 ? (
+            <div className="space-y-2">
+              {data.market_news.map((item, idx) => (
+                <div key={idx} className="flex items-start gap-2 group">
+                  <div className="flex-1 min-w-0">
+                    <a
+                      href={item.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-gray-300 hover:text-white line-clamp-1 group-hover:underline"
+                    >
+                      {item.title || 'Untitled'}
+                      <ExternalLink size={9} className="inline ml-1 opacity-0 group-hover:opacity-100" />
+                    </a>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs text-cyan-400/70">{item.spider_name}</span>
+                      {item.published && (
+                        <span className="text-xs text-gray-600">{new Date(item.published).toLocaleDateString()}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">No market news yet.</p>
+          )}
+        </div>
+      </div>
+
+      {/* SEC Filings — full width */}
+      <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Recent SEC Filings</h3>
+          <button onClick={() => setActiveTab('sec')} className="text-xs text-primary-400 hover:text-primary-300">
+            View all <ArrowUpRight size={10} className="inline" />
+          </button>
+        </div>
+        {data.sec_recent.length > 0 ? (
+          <div className="space-y-1.5">
+            {data.sec_recent.map((f, idx) => (
+              <div key={idx} className="flex items-center gap-3 text-xs">
+                <a
+                  href={f.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-300 hover:text-white hover:underline truncate flex-1"
+                >
+                  {f.title || 'SEC Filing'}
+                  <ExternalLink size={9} className="inline ml-1 opacity-50" />
+                </a>
+                {f.published && (
+                  <span className="text-gray-600 flex-shrink-0">{new Date(f.published).toLocaleDateString()}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">No SEC filings yet.</p>
+        )}
+      </div>
     </div>
   )
 }

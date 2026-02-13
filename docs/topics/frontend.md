@@ -16,7 +16,7 @@ React + TypeScript single-page application with 9 workspace tabs, collapsible si
 | **Memory** | Palace, Learning, Evolution | Memory system and learning patterns |
 | **Operations** | Reports, Audits, Experiments | Operational reports and audit results |
 | **System** | Infrastructure, Orchestration, Triggers | Body systems health and Celery tasks |
-| **Stocks** | Overview, Briefs, Alerts, SEC, Predictions | Stock intelligence dashboard |
+| **Stocks** | Hub, Ticker Lookup, Overview, Briefs, Alerts, SEC, Predictions | Stock intelligence dashboard (Hub default) |
 
 ## Tab Normalization
 
