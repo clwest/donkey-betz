@@ -1319,7 +1319,7 @@ export const legalApi = {
 export const podcastApi = {
   // Episodes list
   list: () => api.get('/podcasts/list/'),
-  create: (data: { topic: string; style?: string; generate_audio?: boolean }) =>
+  create: (data: { topic: string; format_type?: string; generate_audio?: boolean }) =>
     api.post('/podcasts/create/', data),
 
   // Episode details
