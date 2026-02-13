@@ -2943,6 +2943,14 @@ def get_games_with_movement(request):
 # Session 995B: Sports Betting Intelligence Endpoints
 # =============================================================================
 
+
+def _american_to_probability(odds: int) -> float:
+    """Convert American odds to implied probability (0-1)."""
+    if odds > 0:
+        return 100 / (odds + 100)
+    else:
+        return abs(odds) / (abs(odds) + 100)
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_todays_games(request):
@@ -2983,24 +2991,27 @@ def get_todays_games(request):
             except Exception:
                 pass
 
-        # Fetch predictions from DB
+        # Generate predictions from moneyline odds consensus
         predictions_by_event = {}
-        try:
-            from sports.models import MLPrediction
-            from django.utils import timezone
-            cutoff = timezone.now() - timedelta(hours=48)
-            preds = MLPrediction.objects.filter(created_at__gte=cutoff)
-            for p in preds:
-                eid = p.event_id if hasattr(p, 'event_id') else None
-                if eid:
+        for event in odds_events:
+            eid = event.get('event_id', '')
+            home_odds = event.get('home_odds')
+            away_odds = event.get('away_odds')
+            if home_odds and away_odds:
+                home_prob = _american_to_probability(home_odds)
+                away_prob = _american_to_probability(away_odds)
+                if home_prob > away_prob:
+                    winner = event.get('home_team', '')
+                    confidence = round(home_prob * 100)
+                else:
+                    winner = event.get('away_team', '')
+                    confidence = round(away_prob * 100)
+                # Only predict if there's meaningful edge (>55%)
+                if max(home_prob, away_prob) > 0.55:
                     predictions_by_event[eid] = {
-                        'predicted_winner': p.predicted_winner if hasattr(p, 'predicted_winner') else '',
-                        'confidence': p.confidence if hasattr(p, 'confidence') else 0,
-                        'predicted_home_score': p.predicted_home_score if hasattr(p, 'predicted_home_score') else None,
-                        'predicted_away_score': p.predicted_away_score if hasattr(p, 'predicted_away_score') else None,
+                        'predicted_winner': winner,
+                        'confidence': confidence,
                     }
-        except Exception as e:
-            logger.warning(f"Could not load MLPredictions: {e}")
 
         # Build response
         games = []
@@ -3021,16 +3032,23 @@ def get_todays_games(request):
                 'home_spread': event.get('home_spread'),
                 'away_spread': event.get('away_spread'),
                 'total_line': event.get('total_line'),
-                # Score (if completed)
+                # Score (completed or live)
                 'completed': score.get('completed', False),
                 'home_score': score.get('home_score'),
                 'away_score': score.get('away_score'),
-                # Prediction
+                # Prediction from odds consensus
                 'predicted_winner': prediction.get('predicted_winner', ''),
                 'confidence': prediction.get('confidence', 0),
-                'predicted_home_score': prediction.get('predicted_home_score'),
-                'predicted_away_score': prediction.get('predicted_away_score'),
             }
+
+            # Determine prediction outcome for completed games
+            if (game['completed'] and game['home_score'] is not None
+                    and game['away_score'] is not None and game['predicted_winner']):
+                actual_winner = game['home_team'] if game['home_score'] > game['away_score'] else game['away_team']
+                game['prediction_correct'] = (game['predicted_winner'] == actual_winner)
+            else:
+                game['prediction_correct'] = None
+
             games.append(game)
 
         # Sort: live/upcoming first, completed last

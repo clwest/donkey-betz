@@ -1179,10 +1179,16 @@ export default function BettingPage() {
 
           {/* Stats Row */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatCard label="Total Games" value={todaysGames.length} icon={Swords} color="bg-primary-600" />
-            <StatCard label="With Predictions" value={todaysGames.filter((g: any) => g.predicted_winner).length} icon={Brain} color="bg-accent-purple" />
+            <StatCard label="Live" value={todaysGames.filter((g: any) => {
+              const gt = g.commence_time ? new Date(g.commence_time) : null
+              return gt && gt <= new Date() && !g.completed
+            }).length} icon={Activity} color="bg-accent-red" />
+            <StatCard label="AI Picks" value={todaysGames.filter((g: any) => g.predicted_winner).length} icon={Brain} color="bg-accent-purple" />
             <StatCard label="Completed" value={todaysGames.filter((g: any) => g.completed).length} icon={CheckCircle} color="bg-accent-green" />
-            <StatCard label="Upcoming" value={todaysGames.filter((g: any) => !g.completed).length} icon={Clock} color="bg-accent-amber" />
+            <StatCard label="Upcoming" value={todaysGames.filter((g: any) => {
+              const gt = g.commence_time ? new Date(g.commence_time) : null
+              return !g.completed && (!gt || gt > new Date())
+            }).length} icon={Clock} color="bg-accent-amber" />
           </div>
 
           {/* Games List */}
@@ -1193,7 +1199,7 @@ export default function BettingPage() {
           ) : todaysGames.length > 0 ? (
             <div className="space-y-3">
               {todaysGames.map((game: any, i: number) => {
-                const hasScore = game.completed && game.home_score != null
+                const hasScore = game.home_score != null && game.away_score != null
                 const hasPrediction = !!game.predicted_winner
                 const gameTime = game.commence_time ? new Date(game.commence_time) : null
                 const isLive = gameTime && gameTime <= new Date() && !game.completed
@@ -1277,14 +1283,35 @@ export default function BettingPage() {
 
                     {/* Prediction Banner */}
                     {hasPrediction && (
-                      <div className="mt-3 p-2 rounded-lg bg-accent-purple/10 border border-accent-purple/20 flex items-center justify-between">
+                      <div className={cn(
+                        'mt-3 p-2 rounded-lg flex items-center justify-between',
+                        game.prediction_correct === true ? 'bg-accent-green/10 border border-accent-green/20' :
+                        game.prediction_correct === false ? 'bg-accent-red/10 border border-accent-red/20' :
+                        'bg-accent-purple/10 border border-accent-purple/20'
+                      )}>
                         <div className="flex items-center gap-2">
-                          <Brain size={14} className="text-accent-purple" />
+                          <Brain size={14} className={cn(
+                            game.prediction_correct === true ? 'text-accent-green' :
+                            game.prediction_correct === false ? 'text-accent-red' :
+                            'text-accent-purple'
+                          )} />
                           <span className="text-sm">
-                            AI Pick: <span className="font-medium text-accent-purple">{game.predicted_winner}</span>
+                            AI Pick: <span className={cn('font-medium',
+                              game.prediction_correct === true ? 'text-accent-green' :
+                              game.prediction_correct === false ? 'text-accent-red' :
+                              'text-accent-purple'
+                            )}>{game.predicted_winner}</span>
                           </span>
                         </div>
-                        <span className="text-sm font-medium text-accent-purple">{game.confidence}%</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-accent-purple">{game.confidence}%</span>
+                          {game.prediction_correct === true && (
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-accent-green/20 text-accent-green font-bold">W</span>
+                          )}
+                          {game.prediction_correct === false && (
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-accent-red/20 text-accent-red font-bold">L</span>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
