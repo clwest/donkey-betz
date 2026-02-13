@@ -2806,6 +2806,7 @@ class ToolDispatcher:
             # Get pipeline overview
             total = Initiative.objects.count()
             active = Initiative.objects.filter(status='ACTIVE').count()
+            triage = Initiative.objects.filter(status='TRIAGE').count()
             completed = Initiative.objects.filter(status='COMPLETED').count()
             on_hold = Initiative.objects.filter(status='ON_HOLD').count()
 
@@ -2845,6 +2846,7 @@ class ToolDispatcher:
                 'action': 'stats',
                 'total': total,
                 'active': active,
+                'triage': triage,
                 'completed': completed,
                 'on_hold': on_hold,
                 'by_stage': by_stage,
@@ -2952,7 +2954,7 @@ class ToolDispatcher:
         elif action == 'update_status':
             initiative_id = payload.get('id') or payload.get('initiative_id')
             new_status = payload.get('status', '').upper()
-            valid_statuses = ['ACTIVE', 'ON_HOLD', 'COMPLETED', 'ARCHIVED']
+            valid_statuses = ['ACTIVE', 'TRIAGE', 'ON_HOLD', 'COMPLETED', 'ARCHIVED']
 
             if not initiative_id:
                 raise ValueError("id is required for update_status action")
@@ -3024,10 +3026,71 @@ class ToolDispatcher:
                 'success': True,
             }
 
+        elif action == 'flow_metrics':
+            # Session 994: Initiative pipeline health metrics
+            from django.utils import timezone
+            from datetime import timedelta
+            now = timezone.now()
+            last_24h = now - timedelta(hours=24)
+            last_7d = now - timedelta(days=7)
+
+            # Creation rate
+            created_24h = Initiative.objects.filter(created_at__gte=last_24h).count()
+            created_7d = Initiative.objects.filter(created_at__gte=last_7d).count()
+
+            # Triage backlog
+            triage_count = Initiative.objects.filter(status='TRIAGE').count()
+            active_count = Initiative.objects.filter(status='ACTIVE').count()
+
+            # No-activity count (created but never worked on)
+            no_activity = Initiative.objects.filter(
+                status__in=['ACTIVE', 'TRIAGE'],
+                last_activity_at__isnull=True,
+            ).count()
+
+            # Stage progression (active initiatives by stage)
+            stage_dist = {}
+            for stage in range(1, 6):
+                stage_dist[f'stage_{stage}'] = Initiative.objects.filter(
+                    status='ACTIVE', current_stage=stage
+                ).count()
+
+            # Circuit breaker status
+            from core.services.initiative_circuit_breaker import get_backlog_status
+            breaker = get_backlog_status()
+
+            # Completion rate
+            completed_7d = Initiative.objects.filter(
+                status='COMPLETED',
+                updated_at__gte=last_7d,
+            ).count()
+
+            return {
+                'action': 'flow_metrics',
+                'creation_rate': {
+                    'last_24h': created_24h,
+                    'last_7d': created_7d,
+                },
+                'backlog': {
+                    'triage': triage_count,
+                    'active': active_count,
+                    'no_activity': no_activity,
+                },
+                'stage_distribution': stage_dist,
+                'circuit_breaker': {
+                    'can_create': breaker['can_create'],
+                    'pending': breaker['pending_count'],
+                    'threshold': breaker['threshold'],
+                    'utilization_pct': breaker['utilization_pct'],
+                    'paused': breaker['paused_by_env'] or breaker['paused_by_db'] or breaker['paused_by_backlog'],
+                },
+                'completed_last_7d': completed_7d,
+            }
+
         else:
             raise ValueError(
                 f"Unknown action: {action}. Valid actions: list, stats, details, "
-                f"action_items, update_status, advance, complete_action_item"
+                f"action_items, flow_metrics, update_status, advance, complete_action_item"
             )
 
     # =========================================================================

@@ -488,7 +488,7 @@ Initiative created from HiveMind brainstorm session.
 ## Integration Points
 {chr(10).join('- ' + p for p in proposed_feature.get('integration_points', [])[:10])}
             """.strip(),
-            status='ACTIVE',
+            status='TRIAGE',  # Session 994: Auto-created → TRIAGE, not ACTIVE
             current_stage=1,
             created_by=f"HiveMind:{str(session.id)[:8]}",
             parent_topic=session.question[:200] if session.question else '',

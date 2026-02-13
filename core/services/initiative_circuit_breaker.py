@@ -86,9 +86,10 @@ def get_pending_initiative_count() -> int:
     try:
         from core.models_document_registry import Initiative
 
-        # Count ACTIVE initiatives that have never had meaningful activity
+        # Count ACTIVE or TRIAGE initiatives that have never had meaningful activity
+        # Session 994: Include TRIAGE status in backlog count
         count = Initiative.objects.filter(
-            status='ACTIVE',
+            status__in=['ACTIVE', 'TRIAGE'],
             last_activity_at__isnull=True,
         ).count()
 

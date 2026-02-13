@@ -714,12 +714,18 @@ def auto_link_initiative_for_decision(decision) -> Optional['Initiative']:
             return None
 
         # Create/get the initiative
-        initiative, created = service.get_or_create_initiative(
-            topic=feature_name,
-            description=f"Auto-created from conversation decision.\n\nSuggested Feature:\n{feature_text}\n\nRationale:\n{decision.rationale}",
-            source_decision_id=str(decision.id),
-            created_by="DecisionExtractor"
-        )
+        # Session 994: InitiativeCreationBlocked is raised if circuit breaker is tripped
+        from core.services.initiative_integration_service import InitiativeCreationBlocked
+        try:
+            initiative, created = service.get_or_create_initiative(
+                topic=feature_name,
+                description=f"Auto-created from conversation decision.\n\nSuggested Feature:\n{feature_text}\n\nRationale:\n{decision.rationale}",
+                source_decision_id=str(decision.id),
+                created_by="DecisionExtractor"
+            )
+        except InitiativeCreationBlocked:
+            logger.info(f"Session 994: Circuit breaker blocked initiative for decision '{decision.topic[:50]}...'")
+            return None
 
         # Link the decision to the initiative
         decision.initiative = initiative
