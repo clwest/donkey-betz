@@ -294,69 +294,45 @@ class NervousService:
             }
 
     def _get_consumer_stats(self) -> dict:
-        """Get statistics about WebSocket consumers."""
+        """Get statistics about WebSocket consumers.
+
+        Session 1000B: Avoid importing core.routing — it triggers a cascade
+        that loads all consumer classes, PA system, and SentenceTransformer
+        (~80MB+), which OOM kills Celery workers. Instead, use sys.modules
+        to read the routing only if already loaded (i.e. in Daphne/ASGI),
+        otherwise return lightweight static counts.
+        """
+        import sys
+
         try:
-            # Count consumers from routing.py
-            from core import routing
+            # Only inspect routing if already imported (ASGI server context)
+            routing = sys.modules.get('core.routing')
+            if routing is None:
+                # In Celery context — return static counts to avoid heavy imports
+                return {
+                    'total_routes': 24,
+                    'unique_consumers': 18,
+                    'consumer_list': [],
+                    'note': 'static_counts_celery_context',
+                }
 
             patterns = getattr(routing, 'websocket_urlpatterns', [])
             total_routes = len(patterns)
 
             # Extract unique consumer classes
             consumers = set()
-            consumer_routes = {}
-
             for pattern in patterns:
-                # Extract consumer class name from pattern
                 callback = getattr(pattern, 'callback', None)
                 if callback:
                     cls = getattr(callback, 'cls', None) or callback
                     if cls:
                         name = cls.__name__ if hasattr(cls, '__name__') else str(cls)
                         consumers.add(name)
-                        if name not in consumer_routes:
-                            consumer_routes[name] = []
-                        # Get route pattern
-                        route_pattern = getattr(pattern, 'pattern', pattern)
-                        if hasattr(route_pattern, 'regex'):
-                            consumer_routes[name].append(route_pattern.regex.pattern)
-                        elif hasattr(route_pattern, '_route'):
-                            consumer_routes[name].append(route_pattern._route)
-
-            # Categorize consumers
-            categories = {
-                'agent': [],
-                'dashboard': [],
-                'chat': [],
-                'sports': [],
-                'content': [],
-                'system': [],
-                'other': [],
-            }
-
-            for consumer in consumers:
-                lower = consumer.lower()
-                if 'agent' in lower:
-                    categories['agent'].append(consumer)
-                elif 'dashboard' in lower or 'monitor' in lower:
-                    categories['dashboard'].append(consumer)
-                elif 'chat' in lower or 'assistant' in lower:
-                    categories['chat'].append(consumer)
-                elif 'sport' in lower or 'betting' in lower:
-                    categories['sports'].append(consumer)
-                elif 'content' in lower or 'processing' in lower:
-                    categories['content'].append(consumer)
-                elif 'system' in lower or 'control' in lower or 'command' in lower:
-                    categories['system'].append(consumer)
-                else:
-                    categories['other'].append(consumer)
 
             return {
                 'total_routes': total_routes,
                 'unique_consumers': len(consumers),
                 'consumer_list': sorted(list(consumers)),
-                'categories': categories,
-                'category_counts': {k: len(v) for k, v in categories.items()},
             }
 
         except Exception as e:
