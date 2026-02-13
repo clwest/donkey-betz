@@ -1223,6 +1223,75 @@ class ToolDispatcher:
                 'top_items': top_items,
             }
 
+        # Session 1000B: Lookup item by title (for "tell me more about" clicks)
+        elif action == 'lookup':
+            title_query = payload.get('title_query', '')
+            if not title_query:
+                return {'action': 'lookup', 'found': False, 'error': 'No title provided'}
+
+            # Search attention items first (most common source of "tell me more")
+            item = (
+                HumanAttentionItem.objects
+                .filter(title__icontains=title_query[:80])
+                .order_by('-created_at')
+                .first()
+            )
+            if not item:
+                # Broaden: try first few significant words
+                words = [w for w in title_query.split() if len(w) > 3][:4]
+                if words:
+                    from django.db.models import Q
+                    q = Q()
+                    for w in words:
+                        q &= Q(title__icontains=w)
+                    item = (
+                        HumanAttentionItem.objects
+                        .filter(q)
+                        .order_by('-created_at')
+                        .first()
+                    )
+
+            if item:
+                return {
+                    'action': 'lookup',
+                    'found': True,
+                    'item_type': 'attention',
+                    'title': item.title,
+                    'summary': item.summary or '',
+                    'urgency': item.urgency or 'medium',
+                    'status': item.status,
+                    'source_agent': item.source_agent or '',
+                    'item_category': item.item_type or '',
+                    'created_at': item.created_at.isoformat() if item.created_at else '',
+                    'priority_score': item.priority_score,
+                    'ml_recommendation': getattr(item, 'ml_recommendation', '') or '',
+                    'impact_estimate': getattr(item, 'impact_estimate', '') or '',
+                    'payload': item.payload if isinstance(item.payload, dict) else {},
+                }
+
+            # Try decisions
+            decision = (
+                AgentDecisionSummary.objects
+                .filter(topic__icontains=title_query[:80])
+                .order_by('-created_at')
+                .first()
+            )
+            if decision:
+                return {
+                    'action': 'lookup',
+                    'found': True,
+                    'item_type': 'decision',
+                    'title': decision.topic,
+                    'summary': decision.key_insights or '',
+                    'decision_type': decision.decision_type or '',
+                    'recommended_stance': decision.recommended_stance or '',
+                    'impact_area': decision.impact_area or '',
+                    'status': decision.status,
+                    'created_at': decision.created_at.isoformat() if decision.created_at else '',
+                }
+
+            return {'action': 'lookup', 'found': False, 'query': title_query}
+
         elif action == 'list_attention':
             # Apply filters
             qs = attention_qs
@@ -1513,7 +1582,7 @@ class ToolDispatcher:
                 raise ValueError(f"Invalid triage_type: {triage_type}. Use 'attention' or 'decisions'")
 
         else:
-            raise ValueError(f"Unknown action: {action}. Valid actions: stats, list_attention, list_decisions, approve_attention, ignore_attention, promote_decision, reject_decision, get_triage_batch")
+            raise ValueError(f"Unknown action: {action}. Valid actions: stats, lookup, list_attention, list_decisions, approve_attention, ignore_attention, promote_decision, reject_decision, get_triage_batch")
 
     def _handle_brainstorm(
         self,
