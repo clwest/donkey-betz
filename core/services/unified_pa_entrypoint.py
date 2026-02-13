@@ -680,6 +680,16 @@ class UnifiedPAEntrypoint:
         ]):
             return ('boardroom', 'boardroom_tool')
 
+        # Session 1000C: Content-specific review patterns must check BEFORE generic
+        # boardroom "review" patterns (which catch "for review", "pending review", etc.)
+        content_review_words = ['blog', 'blogs', 'content', 'article', 'articles', 'post', 'posts']
+        if any(cw in message_lower for cw in content_review_words):
+            review_phrases = ['for review', 'waiting for review', 'needs review',
+                              'pending review', 'ready for review', 'to review',
+                              'ready to publish', 'review']
+            if any(rp in message_lower for rp in review_phrases):
+                return ('content_review', 'content_review_tool')
+
         # Decision/attention patterns
         # Session 997B: "review" alone is too greedy — matches "review this system" etc.
         # Use phrase-level patterns so we only route when intent is clearly boardroom-related.
@@ -1702,113 +1712,36 @@ class UnifiedPAEntrypoint:
         context: Dict[str, Any]
     ) -> str:
         """Session 959: Build analytical system prompt with enrichment context."""
-        base = f"""You are {user_name}'s intelligent personal assistant on a unified AI platform with \
-74 AI agents, 77 data spiders, and 25 legendary advisors.
+        # Session 1000C: Concise analytical prompt — no walls of text
+        base = f"""You are {user_name}'s personal assistant on a unified AI platform.
 
-You are NOT a data listing tool. You are an analytical advisor.
+The structured data is already shown to the user above your response.
+Add 2-4 sentences of insight: the most important pattern, risk, or next step.
+Do NOT repeat numbers, counts, or item lists — the user already sees them.
+Do NOT use section headers like KEY INSIGHT, ANALYSIS, or RECOMMENDED ACTIONS.
+Be conversational and direct. Use plain text without markdown formatting.
+If the answer is straightforward, one sentence is enough.
+Only describe features and capabilities that actually exist. Never fabricate connections between subsystems."""
 
-RESPONSE FORMAT:
-1. Start with 1-2 sentences of KEY INSIGHT (the most important finding)
-2. Then your ANALYSIS with patterns, risks, and opportunities - reference specific item IDs
-3. End with RECOMMENDED ACTIONS (1-3 concrete next steps)
-
-IMPORTANT: The raw data listing with IDs is already shown to the user separately.
-Do NOT repeat the full list. Only reference items by ID when analyzing them.
-
-RULES:
-- Lead with insight, not counts
-- Reference item IDs when discussing specific items
-- Highlight risks, opportunities, and anomalies
-- Be direct and decisive, not hedging
-- Do NOT reuse the same trend/incident across unrelated answers - only cite trends if they materially affect the user's question
-- Only describe features, integrations, and capabilities that actually exist. Never fabricate connections between subsystems."""
-
+        # Session 1000C: One-liner directives — no multi-line blocks
         intent_directives = {
-            'content_review': (
-                "FOCUS: Evaluate content quality. Scores >0.8 are publish-ready, <0.5 need work. "
-                "Compare novelty vs structure scores. Identify best and weakest topics. "
-                "Flag any that need fact-checking against spider data. Recommend a publishing strategy."
-            ),
-            'opportunities': (
-                "FOCUS: Max 3-5 bullets of INSIGHT only — do NOT repeat the list. "
-                "Group by viability tier (quick wins vs stretch). Note duplicates. "
-                "Flag time-sensitive items. Recommend 2-3 to apply to first."
-            ),
-            'initiatives': (
-                "FOCUS: Assess pipeline health. Identify bottlenecks, blockers, and stale items "
-                "(check last_activity_at). Highlight at-risk initiatives and critical action items. "
-                "Recommend which initiatives need attention now."
-            ),
-            'crypto_price': (
-                "FOCUS: Report the latest price data found. Include market cap, 24h change, "
-                "and volume if available. If data is stale (>24h), note the age. "
-                "Keep it concise — the user wants a quick price check, not a research report."
-            ),
-            'spider_data': (
-                "FOCUS: Max 3-5 bullets of INSIGHT only — do NOT repeat the list. "
-                "Identify patterns and clusters. Highlight emerging trends. "
-                "Suggest actionable next steps based on the data."
-            ),
-            'execution_history': (
-                "FOCUS: Identify declining agents and systemic failures. "
-                "Compare performance to averages. Highlight outliers."
-            ),
-            'system_health': (
-                "FOCUS: Lead with critical issues. Assess trajectory (improving/declining). "
-                "Recommend preventive actions before problems escalate."
-            ),
-            'boardroom': (
-                "FOCUS: The user's pending items are already listed above.\n"
-                "- Max 3-5 bullets of INSIGHT only — do NOT restate counts or item lists\n"
-                "- Lead with critical/high items: what they are and why they matter\n"
-                "- Identify patterns (e.g., most items from one source, or a spike)\n"
-                "- Recommend a triage strategy (what to handle first, what to bulk-dismiss)\n"
-                "- If item volume is high, suggest bulk actions to reduce noise"
-            ),
-            'stock_intelligence': (
-                "FOCUS: Max 3-5 bullets of INSIGHT only — do NOT repeat the list. "
-                "Highlight bull/bear consensus, significant alerts, and prediction accuracy. "
-                "Flag any contrarian signals. Recommend 1-2 actionable next steps."
-            ),
-            'system_overview': (
-                "Broad system overview. COO-level pulse check.\n"
-                "- Max 3-5 bullet points of insight\n"
-                "- Lead with most important observation (anomaly, risk, or positive trend)\n"
-                "- Compare numbers to expectations\n"
-                "- Separate OBSERVED (from data above) vs EXPECTED (design intent)\n"
-                "- End with: Want me to drill into any of these?\n"
-                "- Do NOT restate every number — user already sees the structured data"
-            ),
-            # Session 987: Added missing directives
-            'learning_patterns': (
-                "FOCUS: Max 3-5 bullets. Highlight highest-confidence patterns and "
-                "what they mean for strategy. Note any declining patterns. "
-                "Recommend how to apply the top learnings."
-            ),
-            'feedback': (
-                "FOCUS: Max 3-5 bullets. Prioritize bugs over feature requests. "
-                "Identify recurring themes. Recommend which items to address first."
-            ),
-            'gates': (
-                "FOCUS: Max 3-5 bullets. Highlight blocked or high-risk gates. "
-                "Assess readiness trajectory. Recommend which gates need action."
-            ),
-            'pilots': (
-                "FOCUS: Max 3-5 bullets. Assess active pilot performance. "
-                "Highlight failing or stuck pilots. Recommend next steps."
-            ),
-            'reasoning': (
-                "FOCUS: Max 3-5 bullets. Summarize thinking cycle outcomes. "
-                "Highlight any noteworthy insights generated."
-            ),
-            'recent_activity': (
-                "FOCUS: Max 3-5 bullets. Highlight the most significant activity. "
-                "Note any unusual patterns or spikes. Keep it brief."
-            ),
-            'error_summary': (
-                "FOCUS: Max 3-5 bullets. Lead with highest-severity issues. "
-                "Group related errors. Recommend fixes for recurring failures."
-            ),
+            'content_review': "Note which items are publish-ready and flag any quality concerns.",
+            'opportunities': "Highlight the top 2-3 opportunities worth pursuing first.",
+            'initiatives': "Flag any bottlenecks or stale items that need attention.",
+            'crypto_price': "Report the price and note if data is stale. One sentence is fine.",
+            'spider_data': "Identify the most notable pattern or trend in the data.",
+            'execution_history': "Highlight any declining agents or systemic failures.",
+            'system_health': "Lead with critical issues and whether things are improving or declining.",
+            'boardroom': "Highlight the most urgent item and suggest what to handle first.",
+            'stock_intelligence': "Highlight the key bull/bear signal and one actionable step.",
+            'system_overview': "Summarize the single most important observation and one action. End with: Want me to drill into any of these?",
+            'learning_patterns': "Highlight the highest-confidence pattern and what it means.",
+            'feedback': "Prioritize bugs over feature requests. Note recurring themes.",
+            'gates': "Highlight blocked or high-risk gates that need action.",
+            'pilots': "Assess active pilot performance and flag any stuck ones.",
+            'reasoning': "Summarize the key insight from thinking cycles.",
+            'recent_activity': "Highlight the most significant recent activity.",
+            'error_summary': "Lead with highest-severity issues and recommend fixes.",
         }
 
         canonical_intent = self.INTENT_ALIASES.get(intent, intent)
@@ -1882,6 +1815,8 @@ RULES:
 
         # Always generate the compact structured list (users need IDs to act)
         structured_output = self._format_tool_result(tool_result, intent, user_name)
+        # Session 1000C: Strip markdown for clean plain-text display
+        structured_output = self._strip_markdown(structured_output)
 
         # If we have enrichment, get LLM analysis and APPEND it to structured output
         # Session 977: Cap LLM call at 60s to prevent pipeline stalls
@@ -1901,14 +1836,14 @@ RULES:
                         # "conversation" (low reasoning, fast). The structured data is already
                         # computed; the LLM just needs to summarize, not deep-reason.
                         task_type="conversation",
-                        # Session 977: Reduced from 8000 to 4000. Analytical prompt already
-                        # says "max 3-5 bullets" — 4000 tokens is plenty.
-                        max_tokens=4000
+                        # Session 1000C: Reduced from 4000 to 800 — prompt says
+                        # 2-4 sentences, 800 tokens (~600 words) is plenty.
+                        max_tokens=800
                     ),
                     timeout=60.0
                 )
                 if result.get('success'):
-                    llm_analysis = result.get('response', '')
+                    llm_analysis = self._strip_markdown(result.get('response', ''))
                     if llm_analysis:
                         return f"{structured_output}\n\n---\n\n{llm_analysis}"
             except asyncio.TimeoutError:
@@ -1954,6 +1889,15 @@ Address the user by name occasionally."""
                 logger.warning(f"[{trace_id}] LLM synthesis fallback failed: {e}")
 
         return structured_output
+
+    @staticmethod
+    def _strip_markdown(text: str) -> str:
+        """Session 1000C: Strip markdown formatting for clean plain-text display."""
+        import re
+        text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+        text = re.sub(r'(?<!\w)_(.+?)_(?!\w)', r'\1', text)
+        text = re.sub(r'^#{1,3}\s+', '', text, flags=re.MULTILINE)
+        return text
 
     def _format_tool_result(
         self,
