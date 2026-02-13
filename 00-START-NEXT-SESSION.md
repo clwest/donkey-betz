@@ -1,50 +1,48 @@
-# Session 997 - Start Here
+# Session 999 - Start Here
 
-**Previous Session:** 996 (Initiative Ownership System)
+**Previous Session:** 998B (Live Scores + AI Predictions)
 **Date:** February 12, 2026
-**Status:** 79 Agents | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **BETTING HUB: LIVE** | **Workspace: 9 TABS** | **Bundle: 2,305 KB** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 97** | **PA Intents: 38** | **Enrichment Services: 8** | **Context Layers: 11** | **Content Feedback Loop: CLOSED** | **Celery Tasks: 264**
+**Status:** 79 Agents | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **LIVE SCORES + AI PICKS** | **BETTING HUB: LIVE** | **Workspace: 9 TABS** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 97** | **PA Intents: 38** | **Enrichment Services: 8** | **Content Feedback Loop: CLOSED** | **Celery Tasks: 264** | **GOVERNANCE: HARDENED**
 
 ---
 
-## Session 996 Summary (Just Completed)
+## Session 998B Summary (Just Completed)
 
-### Initiative Ownership System
+### Live Scores + AI Predictions on Today's Games
 
-Added accountability to the initiative pipeline. Previously ~169 initiatives had no owner and the PA couldn't answer "who owns this?" or "show me my initiatives."
+Today's Games tab now shows live scores for in-progress games and odds-consensus AI predictions with W/L outcome tracking.
 
-**Model Changes:**
-- Added `owner` FK to UnifiedUser + `owner_agent` CharField on Initiative model
-- Migration `0239_session_996_initiative_ownership` applied locally + Railway
+**Spider fix:** `TheOddsSpider.fetch_scores()` no longer filters out in-progress games — returns both completed and live games with scores.
 
-**PA Actions (3 new):**
-- `assign_owner` — set owner to agent or user ("assign X to ResearchAgent", "take ownership of X")
-- Owner filter on `list` — "show my initiatives", "unowned initiatives"
-- Owner in `details` — "who owns X?"
+**AI Predictions:** Replaced broken `MLPrediction` DB lookup with inline odds-implied probability calculation. `_american_to_probability()` converts American moneyline odds → picks favorite > 55%. Completed games track `prediction_correct: True/False`.
 
-**Auto-Ownership Rules:**
-- `PROGRAM_OWNER_MAP` maps 8 programs to default owner agents
-- `_auto_assign_owner()` called at all 4 initiative creation paths
-- Rules: program map → created_by agent name → leave unowned
+**Frontend:** Live games show scores, AI Pick banners change color (green W / red L / purple pending), stats row shows Live / AI Picks / Completed / Upcoming.
 
-**Files changed:** 8 files (1 new migration). See `docs/handoffs/SESSION_996_INITIATIVE_OWNERSHIP.md`.
+**Files changed:** 3 files. See `docs/handoffs/SESSION_998B_BETTING_HUB_LIVE_SCORES.md`.
 
-## Session 995B Summary (Prior)
+### Earlier in 998B: Betting Hub + Odds Table Fix
 
-### Sports Betting Intelligence System — 3 Phases
+- Sports Betting Hub tab with news/injury feed (2 new spiders: SportsNewsSpider, SportsInjurySpider)
+- Migration `0241` recreated missing odds tables on Railway
+- Guarded PA conversations against None values
 
-Built full sports betting intelligence pipeline: PA integration (8 actions), 3 new agents (GamePredictor, LineMovementAnalyzer, SharpActionDetector), SportsBettingCoordinator, daily betting briefs. See `docs/handoffs/SESSION_995B_SPORTS_BETTING_INTELLIGENCE.md`.
+## Session 998 Summary (Prior)
 
-## Session 995 Summary (Prior)
+### System Governance Hardening
 
-### Betting Outcome Verification + Learning Loop
+PublishGate now blocks publishing when `publish_ready=False`. SelfBlog.author tracks creation source. New 'reviewer' platform_role with read-only middleware enforcement. Migration `0240`. See `docs/handoffs/SESSION_998_GOVERNANCE_HARDENING.md`.
 
-BettingOutcomeVerifier settles pending wagers, verifies watched arb items, feeds learning bridge. Runs every 2h. See `docs/handoffs/SESSION_995_BETTING_OUTCOME_VERIFICATION.md`.
+## Session 997B Summary (Prior)
 
-## Session 994B Summary (Prior)
+### Podcast Cleanup + Boardroom Preview + Betting Sidebar
 
-### Initiative Pipeline Fixes — Stop the Bleeding
+Podcast tab cleaned up (removed ChannelEpisode noise, inline generation). Boardroom summary preview + betting sidebar. Backfill initiative owners management command. PA 'review' keyword routing fix. See `docs/handoffs/SESSION_997B_PODCAST_BOARDROOM_BETTING_SIDEBAR.md`.
 
-6 fixes: circuit breaker enforcement, quality gate, TRIAGE status, intent-aware spawning, activity tracking, PA flow_metrics. See `docs/handoffs/SESSION_994B_INITIATIVE_PIPELINE_FIXES.md`.
+## Session 997 Summary (Prior)
+
+### Mythology Validation for PA Responses + PublishGate Scoring
+
+Wired mythology services into PA responses (risk flagging + disclaimers) and PublishGate (new mythology_score dimension). See `docs/handoffs/SESSION_997_MYTHOLOGY_PUBLISHGATE.md`.
 
 ---
 
@@ -53,21 +51,20 @@ BettingOutcomeVerifier settles pending wagers, verifies watched arb items, feeds
 | Metric | Count |
 |--------|-------|
 | Agents | 79 (52 routable, 25 non-routable, 26+ provenance-tracked) |
-| Spiders | 77 (72 working, 5 need API keys) |
+| Spiders | 79 (74 working, 5 need API keys) |
 | Advisors | 25 |
-| Active Initiatives | ~169 (all unowned — assign via PA or wait for auto-assignment on new ones) |
 | Database Models | 391+ |
 | Services | 134 |
 | Celery Tasks | 264 |
 | Workspace Tabs | 9 |
-| Frontend Bundle | 2,305 KB |
 | Frontend Routes | 37 (15 standalone + 22 redirects) |
-| PA Tools | 97 (+1: assign_owner) |
+| PA Tools | 97 |
 | PA Intents | 38 |
 | Enrichment Services | 8 |
 | Attention Sections | 7 |
 | LLM Providers | 6 (OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini) |
-| Standalone Pages | `/stocks`, `/advisors`, `/neural-orchestra`, `/conversation-contract`, `/mythology-lab`, `/billing`, `/analytics`, `/docs-index` |
+| Migrations | Through 0241 |
+| Standalone Pages | `/stocks`, `/advisors`, `/betting`, `/neural-orchestra`, `/conversation-contract`, `/mythology-lab`, `/billing`, `/analytics`, `/docs-index` |
 
 ---
 
@@ -104,17 +101,11 @@ Data is flowing but no dashboard exists yet.
 Diagnostic pipeline (Session 856) has 0 records. May need activation.
 
 ### Disconnected Dots Audit (Session 972) — Ongoing
-Many items remain from the audit: agent output persistence, orphan endpoints, enrichment data loss. Podcast user context fixed in 994. Stock predictions fixed in 994. Continue working through the list.
-
-### Backfill Initiative Ownership
-169 existing initiatives have no owner. Could run a management command to auto-assign based on PROGRAM_OWNER_MAP, or let the PA handle it manually.
+Many items remain from the audit: agent output persistence, orphan endpoints, enrichment data loss.
 
 ---
 
 ## What Could Come Next
-
-### Backfill Existing Initiative Owners
-Run `_auto_assign_owner()` on all 169 existing initiatives to retroactively assign owners based on program/created_by.
 
 ### Continue Disconnected Dots Audit
 Session 972 identified ~200+ items. High-impact remaining items:
@@ -154,6 +145,9 @@ Dedicated workspace tab for Billing, Analytics, system configuration.
 ### Code-Splitting
 `React.lazy()` for workspace tabs — all 9 are in the main bundle.
 
+### Betting Prediction Tracking
+Track AI pick accuracy over time. Dashboard showing hit rate by sport, confidence band performance.
+
 ---
 
 ## Critical Patterns & Gotchas
@@ -177,6 +171,11 @@ Dedicated workspace tab for Billing, Analytics, system configuration.
 - `owner` = FK to User (nullable), `owner_agent` = CharField (agent name)
 - Only one should be set at a time (assign_owner clears the other)
 - Auto-assigned via `PROGRAM_OWNER_MAP` or `created_by` at creation time
+
+**Odds-consensus predictions (Session 998B):**
+- `_american_to_probability()` in `views_odds_sports.py` — converts American odds to implied probability
+- Only predicts when implied prob > 55%
+- `prediction_correct` field: `True`/`False` for completed, `None` for pending
 
 **_parse_target_move() (Session 994):**
 - GPT may return numeric types — always handled via isinstance check

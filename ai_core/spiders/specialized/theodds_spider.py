@@ -712,7 +712,7 @@ class TheOddsSpider:
 
     def fetch_scores(self, sport_key: str, days_from: int = 3) -> List[Dict]:
         """
-        Fetch completed game scores from The Odds API.
+        Fetch game scores (completed and in-progress) from The Odds API.
 
         Uses the /v4/sports/{sport}/scores endpoint which returns the same
         event_id as odds data — no fuzzy team matching needed for joining.
@@ -722,7 +722,7 @@ class TheOddsSpider:
             days_from: How many days back to fetch (max 3)
 
         Returns:
-            List of completed events with scores:
+            List of events with scores (completed + live):
             [{event_id, home_team, away_team, home_score, away_score, completed}, ...]
         """
         params = {
@@ -736,9 +736,6 @@ class TheOddsSpider:
 
         results = []
         for event in data:
-            if not event.get('completed', False):
-                continue
-
             scores = event.get('scores', [])
             if not scores or len(scores) < 2:
                 continue
@@ -761,11 +758,13 @@ class TheOddsSpider:
                 'away_team': away_team,
                 'home_score': home_score,
                 'away_score': away_score,
-                'completed': True,
+                'completed': event.get('completed', False),
                 'commence_time': event.get('commence_time', ''),
             })
 
-        logger.info(f"TheOddsSpider fetched {len(results)} completed scores for {sport_key}")
+        completed = sum(1 for r in results if r['completed'])
+        live = len(results) - completed
+        logger.info(f"TheOddsSpider fetched {len(results)} scores for {sport_key} ({completed} final, {live} live)")
         return results
 
     def get_sport_odds(self, sport_key: str) -> List[Dict]:
