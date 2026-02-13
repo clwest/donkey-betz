@@ -913,6 +913,31 @@ class SpiderRegistry:
             'description': 'Sports betting odds: NFL, NBA, MLB, NHL, Soccer, UFC, Tennis'
         })
 
+        # ============================================================
+        # SESSION 998B: SPORTS NEWS & INJURY RSS SPIDERS
+        # Feeds the Sports Betting Hub with news and injury reports
+        # ============================================================
+
+        # Sports News - ESPN, NYT Sports, CBS Sports, Yahoo Sports, SI
+        self.register_spider('sports_news_rss', BaseIntelligenceSpider, {
+            'category': 'sports_news',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'requires_auth': False,
+            'targets': ['espn.com/rss', 'nytimes.com/sports', 'cbssports.com', 'sports.yahoo.com', 'si.com'],
+            'description': 'Sports news from ESPN, NYT, CBS Sports, Yahoo Sports, SI'
+        })
+
+        # Sports Injuries - RotoWire, CBS Injuries, RotoGrinders
+        self.register_spider('sports_injuries_rss', BaseIntelligenceSpider, {
+            'category': 'sports_injuries',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'requires_auth': False,
+            'targets': ['rotowire.com/injuries', 'cbssports.com/injuries', 'rotogrinders.com/injury-report'],
+            'description': 'Injury reports from RotoWire, CBS Sports, RotoGrinders'
+        })
+
         logger.info(f"Registered {len(self.spider_classes)} spider classes")
 
     def register_spider(self, spider_name: str, spider_class: Type[BaseIntelligenceSpider], config: Dict[str, Any]):

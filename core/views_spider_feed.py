@@ -434,6 +434,50 @@ def spider_feed_vote(request, item_id):
 
 @csrf_exempt
 @require_http_methods(["GET"])
+def sports_hub_feed(request):
+    """
+    Session 998B: Lightweight feed for Sports Betting Hub.
+    Returns SpiderData items without requiring annotations.
+
+    Query params:
+        category: Filter by data_type (sports_news, sports_injuries, etc.)
+        limit: Max items (default: 20, max: 50)
+    """
+    try:
+        category = request.GET.get('category', '')
+        limit = min(int(request.GET.get('limit', 20)), 50)
+
+        qs = SpiderData.objects.defer(
+            'embedding', 'item_embeddings', 'embedding_text'
+        ).order_by('-created_at')
+
+        if category:
+            qs = qs.filter(data_type=category)
+        else:
+            # Default: all sports-related categories
+            qs = qs.filter(data_type__in=[
+                'sports_news', 'sports_injuries', 'sports', 'betting_odds', 'sports_odds',
+            ])
+
+        items = list(qs[:limit].values(
+            'id', 'spider_name', 'data_type', 'raw_data',
+            'processed_data', 'created_at', 'source_url',
+        ))
+
+        # Serialize datetimes
+        for item in items:
+            if item.get('created_at'):
+                item['created_at'] = item['created_at'].isoformat()
+
+        return JsonResponse({'items': items, 'count': len(items)})
+
+    except Exception as e:
+        logger.exception("Error in sports_hub_feed")
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
 def spider_feed_stats(request):
     """
     Get statistics about the spider feed.
