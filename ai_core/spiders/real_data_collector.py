@@ -279,6 +279,20 @@ SPIDER_TARGET_URLS = {
     'courtlistener': [
         'COURTLISTENER_API',  # Marker for custom handler - uses public API
     ],
+
+    # === SESSION 998B: SPORTS NEWS & INJURY SPIDERS ===
+    'sports_news': [
+        'https://www.espn.com/espn/rss/news',
+        'https://rss.nytimes.com/services/xml/rss/nyt/Sports.xml',
+        'https://www.cbssports.com/rss/headlines/',
+        'https://sports.yahoo.com/rss/',
+        'https://www.si.com/rss/si_topstories.rss',
+    ],
+    'sports_injuries': [
+        'https://www.rotowire.com/rss/injuries.xml',
+        'https://www.cbssports.com/rss/headlines/injuries/',
+        'https://rotogrinders.com/feeds/injury-report.xml',
+    ],
 }
 
 # User agent to avoid blocks

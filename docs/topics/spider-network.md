@@ -1,6 +1,6 @@
 # Spider Network
 
-77 spiders across 16 categories collect real-time data that feeds agents, signals, and content. 72 working, 5 need API keys.
+79 spiders across 18 categories collect real-time data that feeds agents, signals, and content. 74 working, 5 need API keys.
 
 ## Spider Categories
 
@@ -21,6 +21,8 @@
 | Entertainment | 4 | Spotify, Giphy, YouTube, Polygon Gaming | API |
 | Lifestyle | 4 | Lifehacker, Travel, Parenting, Food | RSS |
 | Weather | 2 | OpenMeteo, NOAA | API |
+| Sports News | 1 | ESPN, NYT Sports, CBS Sports, Yahoo Sports, SI | RSS |
+| Sports Injuries | 1 | RotoWire, CBS Injuries, RotoGrinders | RSS |
 | Science & Health | 3 | Nature/ScienceDaily, WebMD/Healthline, arXiv | RSS |
 
 **Needs API keys:** SEC Edgar, Bluesky, Discord, Spotify, YouTube
@@ -33,7 +35,7 @@ Stored in `core.models_unified_system`. Key fields:
 - `embedding` (1536-dim vector via pgvector), `item_embeddings` (per-item vectors)
 - `is_processed`, `is_actionable`
 
-**Valid data_type values:** opportunity, job_posting, market_data, competitor_info, trend_data, user_feedback, product_info, pricing_data, content_idea, collaboration, news, research, tool_discovery, learning_resource. Default: `'research'`.
+**Valid data_type values:** opportunity, job_posting, market_data, competitor_info, trend_data, user_feedback, product_info, pricing_data, content_idea, collaboration, news, research, tool_discovery, learning_resource, sports_news, sports_injuries, sports_odds. Default: `'research'`.
 
 Do NOT use: market_alert, security_alert, price_alert, breaking_news (these don't exist).
 
