@@ -224,6 +224,9 @@ from core.agents.markets import (
     GamePredictor, LineMovementAnalyzer, SharpActionDetector,
 )
 
+# Session 1000: BookmakerAgent
+from core.agents.bookmaker_agent import BookmakerAgent
+
 # Session 637: Missing agents from root directory
 from core.agents.opportunity_pipeline_agent import OpportunityPipelineAgent
 from core.agents.content_executor_agent import ContentExecutorAgent
@@ -233,6 +236,9 @@ from core.agents.technical_document_agent import TechnicalDocumentAgent
 
 # Session 663: System Intelligence Agent
 from core.agents.system_intelligence_agent import SystemIntelligenceAgent
+
+# Session 1000: DecisionEnforcerAgent
+from core.agents.decision_enforcer_agent import DecisionEnforcerAgent
 
 # Session 857: Platform Audit Agent
 from core.agents.platform_audit_agent import PlatformAuditAgent
@@ -394,6 +400,7 @@ class AgentRouter:
         "GamePredictor": GamePredictor,
         "LineMovementAnalyzer": LineMovementAnalyzer,
         "SharpActionDetector": SharpActionDetector,
+        "BookmakerAgent": BookmakerAgent,
 
         # Session 637: Orchestration & Utility Agents
         "OpportunityPipelineAgent": OpportunityPipelineAgent,
@@ -404,6 +411,9 @@ class AgentRouter:
 
         # Session 663: System Intelligence Agent
         "SystemIntelligenceAgent": SystemIntelligenceAgent,
+
+        # Session 1000: Decision Enforcement Agent
+        "DecisionEnforcerAgent": DecisionEnforcerAgent,
 
         # Entry Point Agent
         "PersonalAssistantAgent": PersonalAssistantAgent,
