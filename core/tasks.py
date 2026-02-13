@@ -33782,6 +33782,12 @@ def process_initiative_auto_progression(self):
             result = progress_initiative_stage(initiative_id, auto_generate_next=True)
             if result.get('success'):
                 progressed_count += 1
+                # Session 994: Record activity on progression
+                try:
+                    from core.models_document_registry import Initiative
+                    Initiative.objects.get(id=initiative_id).update_activity()
+                except Exception:
+                    pass
                 logger.info(
                     f"📊 [AUTO-PROGRESSION] ✅ Progressed {item['initiative_name']} "
                     f"from Stage {result.get('previous_stage')} to Stage {result.get('new_stage')}"
@@ -34082,6 +34088,9 @@ Stage {stage_num} ({config['template']}) should include:
         stage.document = document
         stage.status = 'DRAFT'
         stage.save()
+
+        # Session 994: Record activity when stage document is created
+        initiative.update_activity()
 
         logger.info(f"📝 [STAGE-GEN] ✅ Created document {document.id} for Stage {stage_num}")
 

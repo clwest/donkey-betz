@@ -49,6 +49,7 @@ class Initiative(models.Model):
         COMPLETED = 'COMPLETED', 'Completed'
         ARCHIVED = 'ARCHIVED', 'Archived'
         ON_HOLD = 'ON_HOLD', 'On Hold'
+        TRIAGE = 'TRIAGE', 'Queued for Triage'  # Session 994: Auto-created, not yet reviewed
 
     # Session 901: Purpose categories for strategic grouping
     class Purpose(models.TextChoices):
@@ -1432,6 +1433,12 @@ class InitiativeStage(models.Model):
                 checks_passed=checks_passed or {},
                 notes=notes
             )
+
+            # Session 994: Record activity on approval
+            try:
+                self.initiative.update_activity()
+            except Exception:
+                pass  # Don't let activity tracking block approval
 
             # Try to advance the initiative (inside transaction for consistency)
             self.initiative.advance_stage()

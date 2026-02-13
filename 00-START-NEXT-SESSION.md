@@ -1,12 +1,28 @@
 # Session 995 - Start Here
 
-**Previous Session:** 994 (Fix Stock Prediction Pipeline + Podcast User Context)
+**Previous Session:** 994B (Initiative Pipeline Fixes — Stop the Bleeding)
 **Date:** February 12, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** | **Bundle: 2,305 KB** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 94** | **PA Intents: 37** | **Enrichment Services: 8** | **Context Layers: 11** | **Content Feedback Loop: CLOSED** | **Reviewers: REAL VERDICTS** | **Stock Predictions: FIXED** | **Podcast User Context: FIXED**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **INITIATIVE PIPELINE: CIRCUIT BREAKER ENFORCED + TRIAGE STATUS + QUALITY GATE** | **Workspace: 9 TABS** | **Bundle: 2,305 KB** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 95 (added flow_metrics)** | **PA Intents: 37** | **Enrichment Services: 8** | **Context Layers: 11** | **Content Feedback Loop: CLOSED** | **Stock Predictions: FIXED** | **Podcast User Context: FIXED**
 
 ---
 
-## Session 994 Summary (Just Completed)
+## Session 994B Summary (Just Completed)
+
+### Initiative Pipeline Fixes — Stop the Bleeding
+
+Production showed 158 active initiatives, ALL with `last_activity_at=None`, 64 created in 24h despite circuit breaker threshold of 50. Root cause: `InitiativeIntegrationService` bypassed the circuit breaker entirely.
+
+**6 fixes implemented:**
+1. **Circuit breaker enforcement** — `InitiativeIntegrationService.get_or_create_initiative()` now checks circuit breaker. Added `InitiativeCreationBlocked` exception caught by `DecisionExtractor` and `link_action_to_initiative`.
+2. **Quality gate** — `_quality_gate()` in `ConversationInitiativePipeline` rejects exploratory conversations (20 explore patterns) and requires action verbs + substantive content (1000+ chars).
+3. **TRIAGE status** — ALL auto-created initiatives start as TRIAGE, not ACTIVE. Migration `0238`. PA can update TRIAGE status.
+4. **Intent-aware spawning** — Exploratory topics filtered by quality gate.
+5. **Activity tracking** — `update_activity()` now called from `stage.approve()`, `generate_initiative_stage_document`, `handle_stage_task_completion`, and `process_initiative_auto_progression`. Previously only called from conversations.
+6. **PA flow_metrics** — New `flow_metrics` action on `initiative_tool` shows creation rate, backlog, stage distribution, circuit breaker status.
+
+**Files changed:** 10 files, 1 migration. See `docs/handoffs/SESSION_994B_INITIATIVE_PIPELINE_FIXES.md`.
+
+## Session 994 Summary (Prior)
 
 ### Fix Stock Prediction Pipeline + Podcast User Context
 
@@ -15,15 +31,9 @@ Fixed two broken subsystem pipelines discovered via PA conversations on Railway 
 **Stock Prediction Pipeline** (`market_intelligence_coordinator.py`):
 - `_parse_target_move()` crashed on numeric types from GPT JSON — added type safety for int/float inputs
 - `_record_predictions_for_learning()` had single try/except around entire loop — one bad ticker killed ALL predictions for the brief. Added per-iteration error handling.
-- Root cause: GPT-5-mini returns `target_upside: 25` (number) instead of `"25%+"` (string). `re.sub()` on a number throws TypeError.
 
 **Podcast Pipeline** (`tasks.py`):
-- `PodcastCoordinatorAgent()` instantiated without user despite `episode.user` being available
-- Fixed: `PodcastCoordinatorAgent(user=episode.user)` — enables learning hooks, memory attribution, feedback recording
-
-**Files changed:** `market_intelligence_coordinator.py` (~20 lines changed), `tasks.py` (1 line changed)
-
-No new models, no migrations, no new Celery tasks, no frontend changes.
+- `PodcastCoordinatorAgent(user=episode.user)` — enables learning hooks, memory attribution, feedback recording
 
 ## Session 993 Summary (Prior)
 
