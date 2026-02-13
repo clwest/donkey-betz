@@ -1,30 +1,28 @@
-# Session 999 - Start Here
+# Session 1000 - Start Here
 
-**Previous Session:** 998B (Live Scores + AI Predictions)
+**Previous Session:** 999 (Stock Intelligence Hub)
 **Date:** February 12, 2026
-**Status:** 79 Agents | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **LIVE SCORES + AI PICKS** | **BETTING HUB: LIVE** | **Workspace: 9 TABS** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 97** | **PA Intents: 38** | **Enrichment Services: 8** | **Content Feedback Loop: CLOSED** | **Celery Tasks: 264** | **GOVERNANCE: HARDENED**
+**Status:** 79 Agents | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **LIVE SCORES + AI PICKS** | **BETTING HUB: LIVE** | **STOCK HUB: LIVE** | **Workspace: 9 TABS** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 97** | **PA Intents: 38** | **Enrichment Services: 8** | **Content Feedback Loop: CLOSED** | **Celery Tasks: 264** | **GOVERNANCE: HARDENED**
 
 ---
 
-## Session 998B Summary (Just Completed)
+## Session 999 Summary (Just Completed)
+
+### Stock Intelligence Hub
+
+Added a "Hub" tab as the default landing view on the Stock Intelligence page (`/stocks/`). Single Bloomberg-terminal-inspired view consolidating latest brief, top alerts, prediction scorecard, market news from financial spiders, and SEC filings.
+
+**Backend:** New `stock_hub()` endpoint at `/api/stocks/hub/` consolidating data from MarketIntelligenceBrief, StockMarketAlert, PredictionOutcome, and SpiderData (financial + SEC). Uses raw_data.items[] expansion pattern from sports hub.
+
+**Frontend:** New `HubTab` component with stats row, 2-column grid (brief + predictions | alerts + news), full-width SEC section. Each section has "View all" links to navigate to the relevant sub-tab.
+
+**Files changed:** 4 files. See `docs/handoffs/SESSION_999_STOCK_INTELLIGENCE_HUB.md`.
+
+## Session 998B Summary (Prior)
 
 ### Live Scores + AI Predictions on Today's Games
 
-Today's Games tab now shows live scores for in-progress games and odds-consensus AI predictions with W/L outcome tracking.
-
-**Spider fix:** `TheOddsSpider.fetch_scores()` no longer filters out in-progress games — returns both completed and live games with scores.
-
-**AI Predictions:** Replaced broken `MLPrediction` DB lookup with inline odds-implied probability calculation. `_american_to_probability()` converts American moneyline odds → picks favorite > 55%. Completed games track `prediction_correct: True/False`.
-
-**Frontend:** Live games show scores, AI Pick banners change color (green W / red L / purple pending), stats row shows Live / AI Picks / Completed / Upcoming.
-
-**Files changed:** 3 files. See `docs/handoffs/SESSION_998B_BETTING_HUB_LIVE_SCORES.md`.
-
-### Earlier in 998B: Betting Hub + Odds Table Fix
-
-- Sports Betting Hub tab with news/injury feed (2 new spiders: SportsNewsSpider, SportsInjurySpider)
-- Migration `0241` recreated missing odds tables on Railway
-- Guarded PA conversations against None values
+Today's Games tab now shows live scores for in-progress games and odds-consensus AI predictions with W/L outcome tracking. See `docs/handoffs/SESSION_998B_BETTING_HUB_LIVE_SCORES.md`.
 
 ## Session 998 Summary (Prior)
 
@@ -36,13 +34,13 @@ PublishGate now blocks publishing when `publish_ready=False`. SelfBlog.author tr
 
 ### Podcast Cleanup + Boardroom Preview + Betting Sidebar
 
-Podcast tab cleaned up (removed ChannelEpisode noise, inline generation). Boardroom summary preview + betting sidebar. Backfill initiative owners management command. PA 'review' keyword routing fix. See `docs/handoffs/SESSION_997B_PODCAST_BOARDROOM_BETTING_SIDEBAR.md`.
+See `docs/handoffs/SESSION_997B_PODCAST_BOARDROOM_BETTING_SIDEBAR.md`.
 
 ## Session 997 Summary (Prior)
 
 ### Mythology Validation for PA Responses + PublishGate Scoring
 
-Wired mythology services into PA responses (risk flagging + disclaimers) and PublishGate (new mythology_score dimension). See `docs/handoffs/SESSION_997_MYTHOLOGY_PUBLISHGATE.md`.
+See `docs/handoffs/SESSION_997_MYTHOLOGY_PUBLISHGATE.md`.
 
 ---
 

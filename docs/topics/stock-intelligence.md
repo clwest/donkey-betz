@@ -4,10 +4,12 @@ Dedicated dashboard surfacing stock market data from spiders and agents, with PA
 
 ## Dashboard (/stocks)
 
-5 sub-tabs with 6 read-only API endpoints:
+7 sub-tabs with 7 read-only API endpoints. Hub is the default landing tab.
 
 | Sub-tab | Endpoint | Content |
 |---------|----------|---------|
+| **Hub** (default) | GET /api/stocks/hub/ | Consolidated view: latest brief, top alerts, prediction scorecard, market news, SEC filings |
+| **Ticker Lookup** | GET /api/stocks/ticker/:symbol/ | Unified single-ticker intelligence |
 | **Overview** | GET /api/stocks/dashboard/ | Latest brief, alert counts, prediction accuracy, SEC count |
 | **Market Briefs** | GET /api/stocks/briefs/ | Paginated briefs with detail view |
 | **Alerts** | GET /api/stocks/alerts/ | Filterable by type/symbol/action/bookmarked |
