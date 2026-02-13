@@ -21,6 +21,142 @@ from core.models_autonomous_alerts import StockMarketAlert
 
 logger = logging.getLogger(__name__)
 
+FINANCIAL_NEWS_SPIDERS = [
+    'yahoo_finance', 'polygon', 'coingecko', 'finnhub', 'financial',
+]
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def stock_hub(request):
+    """Consolidated hub view — latest brief, top alerts, movers, predictions, news, SEC."""
+    try:
+        # Latest brief
+        latest_brief = MarketIntelligenceBrief.objects.first()
+        latest_brief_data = None
+        if latest_brief:
+            latest_brief_data = {
+                'id': str(latest_brief.id),
+                'brief_date': latest_brief.brief_date.isoformat(),
+                'executive_summary': latest_brief.executive_summary,
+                'total_stocks_analyzed': latest_brief.total_stocks_analyzed,
+                'debate_zone_count': latest_brief.debate_zone_count,
+                'situation_health': latest_brief.situation_health,
+            }
+
+        # Stats
+        total_briefs = MarketIntelligenceBrief.objects.count()
+        total_alerts = StockMarketAlert.objects.count()
+
+        predictions_with_7d = PredictionOutcome.objects.filter(
+            was_correct_7_days__isnull=False
+        )
+        total_predictions = predictions_with_7d.count()
+        correct_7d = predictions_with_7d.filter(was_correct_7_days=True).count()
+        accuracy_7d = round((correct_7d / total_predictions) * 100, 1) if total_predictions > 0 else None
+
+        predictions_with_30d = PredictionOutcome.objects.filter(
+            was_correct_30_days__isnull=False
+        )
+        total_30d = predictions_with_30d.count()
+        correct_30d = predictions_with_30d.filter(was_correct_30_days=True).count()
+        accuracy_30d = round((correct_30d / total_30d) * 100, 1) if total_30d > 0 else None
+
+        sec_filings_count = SpiderData.objects.filter(spider_name='sec_edgar').count()
+
+        # Top alerts (6 most recent)
+        top_alerts = []
+        for a in StockMarketAlert.objects.all()[:6]:
+            top_alerts.append({
+                'id': str(a.id),
+                'alert_type': a.alert_type,
+                'symbol': a.symbol,
+                'company_name': a.company_name,
+                'title': a.title,
+                'summary': (a.summary or '')[:200],
+                'confidence_score': float(a.confidence_score),
+                'bull_score': a.bull_score,
+                'bear_score': a.bear_score,
+                'recommended_action': a.recommended_action,
+                'detected_at': a.detected_at.isoformat() if a.detected_at else None,
+            })
+
+        # Top predictions (8 most recent with results)
+        top_predictions = []
+        for p in PredictionOutcome.objects.filter(
+            was_correct_7_days__isnull=False
+        ).order_by('-prediction_date')[:8]:
+            top_predictions.append({
+                'id': str(p.id),
+                'ticker': p.ticker,
+                'prediction_type': p.prediction_type,
+                'predicted_move': float(p.predicted_move),
+                'actual_move_7_days': float(p.actual_move_7_days) if p.actual_move_7_days else None,
+                'was_correct_7_days': p.was_correct_7_days,
+                'prediction_date': p.prediction_date.isoformat(),
+            })
+
+        # Market news — expand raw_data.items from financial spiders
+        market_news = []
+        for row in SpiderData.objects.filter(
+            spider_name__in=FINANCIAL_NEWS_SPIDERS
+        ).order_by('-created_at')[:20]:
+            raw = row.raw_data or {}
+            entries = raw.get('items', [])
+            spider_ts = row.created_at.isoformat() if row.created_at else None
+            for entry in entries:
+                market_news.append({
+                    'spider_name': row.spider_name,
+                    'title': entry.get('title', ''),
+                    'description': (entry.get('description') or entry.get('summary') or '')[:200],
+                    'link': entry.get('link') or row.source_url,
+                    'published': entry.get('published') or spider_ts,
+                })
+                if len(market_news) >= 10:
+                    break
+            if len(market_news) >= 10:
+                break
+
+        # SEC recent — expand raw_data.items
+        sec_recent = []
+        for row in SpiderData.objects.filter(
+            spider_name='sec_edgar'
+        ).order_by('-created_at')[:10]:
+            raw = row.raw_data or {}
+            entries = raw.get('items', [])
+            spider_ts = row.created_at.isoformat() if row.created_at else None
+            for entry in entries:
+                sec_recent.append({
+                    'title': entry.get('title') or entry.get('name', ''),
+                    'description': (entry.get('description') or '')[:200],
+                    'link': entry.get('link') or row.source_url,
+                    'published': entry.get('published') or spider_ts,
+                })
+                if len(sec_recent) >= 5:
+                    break
+            if len(sec_recent) >= 5:
+                break
+
+        return Response({
+            'success': True,
+            'stats': {
+                'total_briefs': total_briefs,
+                'total_alerts': total_alerts,
+                'total_predictions': total_predictions,
+                'accuracy_7d': accuracy_7d,
+                'accuracy_30d': accuracy_30d,
+                'sec_filings_count': sec_filings_count,
+            },
+            'latest_brief': latest_brief_data,
+            'top_alerts': top_alerts,
+            'top_predictions': top_predictions,
+            'market_news': market_news,
+            'sec_recent': sec_recent,
+        })
+    except Exception as e:
+        logger.exception("Error fetching stock hub")
+        return Response({'success': False, 'error': str(e)}, status=500)
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
