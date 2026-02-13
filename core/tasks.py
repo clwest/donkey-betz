@@ -34775,6 +34775,7 @@ def run_all_desks_intelligence():
     Each desk result is cached with a 6-hour TTL for the API to serve.
     Returns summary dict with timing and success counts.
     """
+    import gc
     import time as _time
     from django.core.cache import cache
 
@@ -34822,6 +34823,8 @@ def run_all_desks_intelligence():
         timing['stocks'] = -1
         logger.error(f"[SESSION 1000] Stocks desk failed: {e}")
 
+    gc.collect()
+
     # --- Desk 2: Sports ---
     try:
         t0 = _time.time()
@@ -34847,6 +34850,8 @@ def run_all_desks_intelligence():
         desks_failed += 1
         timing['sports'] = -1
         logger.error(f"[SESSION 1000] Sports desk failed: {e}")
+
+    gc.collect()
 
     # --- Desk 3: Blockchain ---
     try:
@@ -34879,6 +34884,8 @@ def run_all_desks_intelligence():
         desks_failed += 1
         timing['blockchain'] = -1
         logger.error(f"[SESSION 1000] Blockchain desk failed: {e}")
+
+    gc.collect()
 
     # --- Desk 4: Narrative ---
     try:
