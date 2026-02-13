@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-02-12 20:05
+**Generated:** 2026-02-12 20:16
 **Current Session:** 997
 **Total Documentation:** 1741 files | 611,214 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,182 |
+| Total cross-references | 2,185 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 138 | CLAUDE - AI Session Entry Point |
-| `docs/agents/README.md` | 60 | Agent Documentation |
+| `docs/archive/SYSTEM_CAPABILITIES-original/05_Spider_Networks/README.md` | 60 | 🕷️ SPIDER NETWORKS - Intelligent Data Gathering Ar |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 42 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 34 | Platform Capabilities |
@@ -206,10 +206,10 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
+| INDEX.md | docs | 349 | 2026-02-12 20:06 |
 | personal-assistant.md | topics | 108 | 2026-02-12 19:32 |
 | initiative-pipeline.md | topics | 148 | 2026-02-12 19:32 |
 | SESSION_996_INITIATIVE_OWNERSHIP.md | handoffs | 66 | 2026-02-12 19:32 |
-| INDEX.md | docs | 349 | 2026-02-12 19:32 |
 | spider-network.md | topics | 84 | 2026-02-12 18:46 |
 | celery-workers.md | topics | 69 | 2026-02-12 18:46 |
 | agent-system.md | topics | 116 | 2026-02-12 18:46 |

@@ -1194,7 +1194,7 @@ class ToolDispatcher:
                 attention_qs.filter(urgency__in=['critical', 'high'])
                 .order_by('-priority_score', '-created_at')[:10]
                 .values(
-                    'id', 'title', 'urgency', 'item_type',
+                    'id', 'title', 'summary', 'urgency', 'item_type',
                     'source_agent', 'priority_score', 'created_at'
                 )
             )
