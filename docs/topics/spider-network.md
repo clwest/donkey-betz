@@ -81,6 +81,12 @@ Feeds into Boardroom with dedup on `source_type + item_type + title`. Auto-appro
 - ~88% of SpiderData records have embeddings
 - Query: `SpiderIntelligenceService.query_by_text(query)` for semantic search
 
-## TheOddsSpider Score Fetching (Session 995)
+## TheOddsSpider Score Fetching (Session 995, updated 998B)
 
-`TheOddsSpider.fetch_scores(sport_key, days_from=3)` fetches completed game scores from `/v4/sports/{sport}/scores`. Returns same `event_id` as odds data for direct joining. Used by `BettingOutcomeVerifier` to settle placed wagers and verify arbitrage items.
+`TheOddsSpider.fetch_scores(sport_key, days_from=3)` fetches game scores (completed + live) from `/v4/sports/{sport}/scores`. Returns same `event_id` as odds data for direct joining. Used by `BettingOutcomeVerifier` to settle placed wagers and verify arbitrage items.
+
+As of Session 998B, `fetch_scores()` returns both completed (`completed: True`) and in-progress (`completed: False`) games. Previously it filtered out live games.
+
+## Odds-Consensus Predictions (Session 998B)
+
+`get_todays_games()` in `views_odds_sports.py` generates AI predictions from moneyline odds consensus rather than the `MLPrediction` model (which lacked `event_id`). `_american_to_probability()` converts American odds to implied probability; favorites > 55% implied probability get a prediction. Completed games include `prediction_correct: True/False`.

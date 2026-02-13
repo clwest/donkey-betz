@@ -28,7 +28,7 @@ React + TypeScript single-page application with 9 workspace tabs, collapsible si
 - `/` — AI OS Boot (home page)
 - `/ai-studio/` — Main workspace
 - `/stocks/` — Stock Intelligence dashboard
-- `/betting/` — Betting Dashboard (11 tabs: Hub, Overview, Games, Top Plays, Sharp, Arbitrage, Watching, Odds, Bankroll, Wagers, Markets)
+- `/betting/` — Betting Dashboard (11 tabs: Hub, Overview, Games, Top Plays, Sharp, Arbitrage, Watching, Odds, Bankroll, Wagers, Markets). Games tab shows live scores, odds-consensus AI picks with W/L outcome badges.
 - `/command-center/` — Command Center with PA
 
 ## Command Center "Now" Hub
