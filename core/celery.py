@@ -1769,7 +1769,7 @@ app.conf.beat_schedule = {
         'schedule': 60.0,  # Every 60 seconds
         'options': {
             'expires': 55,  # Expire before next check
-            'queue': 'broadcast',  # Status monitoring task
+            'queue': 'long_running',  # Session 1000B: imports routing → consumers → SentenceTransformer
         }
     },
     # Session 711: BODY COORDINATOR - Autonomic Nervous System
