@@ -1,6 +1,6 @@
 # Personal Assistant (PA) System
 
-The PA is the platform's conversational interface — a single `UnifiedPAEntrypoint` that routes user queries through 36 intents to 50 tools, enriches responses with 6 intelligence services, and returns structured data + LLM analysis.
+The PA is the platform's conversational interface — a single `UnifiedPAEntrypoint` that routes user queries through 37 intents to 51 tools, enriches responses with 8 intelligence services, and returns structured data + LLM analysis.
 
 ## Architecture
 
@@ -26,8 +26,9 @@ Two files handle everything:
 | 10 | user_feedback | (direct response) | not working, broken, bug |
 | 11 | reasoning | reasoning_engine_tool | analyze deeply, reflect on |
 | 12 | opportunities | opportunity_manager_tool | opportunity, job, gig, income |
-| 13 | content_review | content_review_tool | show blogs, blog titled, blog accuracy |
-| 14 | brainstorming | brainstorm_tool | brainstorm, panel, think tank |
+| 13 | content_review | content_review_tool | show blogs, blog titled, blog accuracy, triage blogs, batch publish |
+| 14 | generate_blog | generate_blog_tool | generate a blog, v2 blog, deliberated blog, generate content |
+| 15 | brainstorming | brainstorm_tool | brainstorm, panel, think tank |
 | 15 | image/video creation | agent tools | create image, generate video |
 | 16 | content_writing | content_writer_agent | write, draft, compose |
 | 17 | research | web_search | search, find, research, trending |
@@ -95,10 +96,12 @@ PA queries run asynchronously to avoid Railway's ~30s proxy timeout:
 ## Key Tool Actions
 
 **boardroom_tool:** stats (top 10 critical/high items), list_attention, list_decisions, approve/ignore/promote/reject
-**content_review_tool:** list (by status/type), read (full blog + accuracy analysis), publish, archive, revise (blog revision via EditorAgent + PublishGate re-score). Publish/archive/revise actions record feedback to the originating agent via `_record_content_feedback()` → AgentMemory + UserAgentLearning (Session 990).
-**initiative_tool:** list, stats, detail, audit (Jaccard similarity clustering), create
+**content_review_tool:** list (by status/type), read (full blog + accuracy analysis), publish, archive, revise (blog revision via EditorAgent + PublishGate re-score), triage (3-tier quality summary), batch_publish, batch_archive. Publish/archive/revise actions record feedback to the originating agent via `_record_content_feedback()` → AgentMemory + UserAgentLearning (Session 990).
+**generate_blog_tool:** Triggers V2 deliberation pipeline — with topic runs `ContentDeliberationRunner.run_blog()` synchronously, without topic dispatches Celery task (Session 993).
+**initiative_tool:** list, stats, detail, audit (Jaccard similarity clustering), create, update_status (ACTIVE/ON_HOLD/COMPLETED/ARCHIVED), advance (next pipeline stage), complete_action_item
+**opportunity_manager_tool:** list, get, stats, update_status (active/pending/applied/accepted/rejected/expired)
 **stock_intelligence_tool:** overview, briefs, alerts, predictions, sec_filings
-**spider_data_tool:** recent, by_type, summary
+**spider_data_tool:** recent, by_type, summary, trigger (dispatch spider run by category via Celery)
 
 ## Triage Mode
 
