@@ -17,6 +17,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useUnifiedStore } from '@/stores/unifiedStore'
 import { usePAStore } from '@/stores/paStore'
 import PAConversationSidebar from '@/components/PAConversationSidebar'
+import { ChatMarkdown } from '@/components/ChatMarkdown'
 import {
   Send, Mic, MicOff, Loader2, Bot, User, Copy, RefreshCw, Activity,
   ThumbsUp, ThumbsDown, Trash2, Sparkles, AlertCircle,
@@ -1302,7 +1303,11 @@ export default function CommandCenterPage() {
                         ? 'bg-primary-600 text-white'
                         : 'bg-dark-card border border-dark-border'
                     )}>
-                      <p className="whitespace-pre-wrap">{message.content}</p>
+                      {message.role === 'assistant' ? (
+                        <ChatMarkdown content={message.content} />
+                      ) : (
+                        <p className="whitespace-pre-wrap">{message.content}</p>
+                      )}
                       {message.tools_used && message.tools_used.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-dark-border/50">
                           {message.tools_used.map((tool) => (
