@@ -22596,6 +22596,167 @@ def verify_betting_outcomes(self):
         raise self.retry(exc=e)
 
 
+@shared_task(bind=True, max_retries=1, default_retry_delay=300, queue='default')
+def generate_daily_betting_brief(self):
+    """
+    Session 995B: Generate a comprehensive sports betting brief.
+
+    Orchestrates GamePredictor + SportsOddsAnalyst + ArbitrageDetector +
+    LineMovementAnalyzer + SharpActionDetector via SportsBettingCoordinator.
+
+    Runs twice daily (morning + evening) for pre-game analysis.
+    """
+    from core.services.sports_betting_coordinator import SportsBettingCoordinator
+
+    logger.info("[BETTING-BRIEF] Starting daily betting brief generation...")
+
+    try:
+        coordinator = SportsBettingCoordinator()
+        brief = coordinator.generate_brief()
+
+        agents_run = brief.get('agents_run', [])
+        top_plays = brief.get('top_plays', [])
+        gen_time = brief.get('generation_time_seconds', 0)
+
+        logger.info(
+            f"[BETTING-BRIEF] Complete: {len(agents_run)} agents, "
+            f"{len(top_plays)} top plays, {gen_time}s"
+        )
+
+        # Store brief as SpiderData for historical analysis
+        try:
+            from core.models_unified_system import SpiderData
+            SpiderData.objects.create(
+                spider_name='betting_coordinator',
+                source_url='internal://sports-betting-brief',
+                data_type='sports_odds',
+                raw_data=brief,
+                processed_data={
+                    'agents_run': agents_run,
+                    'top_plays_count': len(top_plays),
+                    'generation_time': gen_time,
+                },
+                embedding_text=brief.get('executive_summary', '')[:2000],
+            )
+        except Exception as e:
+            logger.warning(f"[BETTING-BRIEF] Could not store brief: {e}")
+
+        return {
+            'status': 'success',
+            'agents_run': agents_run,
+            'top_plays_count': len(top_plays),
+            'generation_time': gen_time,
+        }
+
+    except Exception as e:
+        logger.error(f"[BETTING-BRIEF] Failed: {e}", exc_info=True)
+        raise self.retry(exc=e)
+
+
+@shared_task(bind=True, max_retries=1, default_retry_delay=600, queue='default')
+def evaluate_ml_predictions(self):
+    """
+    Session 995B: Evaluate past ML predictions against actual outcomes.
+
+    Checks stored MLPrediction records where the game has completed,
+    compares predicted winner to actual winner, and records accuracy.
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+
+    logger.info("[ML-EVAL] Starting ML prediction evaluation...")
+
+    try:
+        from sports.models import MLPrediction
+        from ai_core.spiders.specialized.theodds_spider import TheOddsSpider
+
+        spider = TheOddsSpider()
+        now = timezone.now()
+        cutoff = now - timedelta(hours=72)
+
+        # Find unevaluated predictions from last 3 days
+        pending = MLPrediction.objects.filter(
+            evaluated=False,
+            created_at__gte=cutoff,
+        ) if hasattr(MLPrediction, 'evaluated') else MLPrediction.objects.none()
+
+        if not pending.exists():
+            logger.info("[ML-EVAL] No pending predictions to evaluate")
+            return {'status': 'success', 'evaluated': 0}
+
+        # Group by sport for batch score fetching
+        sport_keys = set()
+        for pred in pending:
+            if hasattr(pred, 'sport_key') and pred.sport_key:
+                sport_keys.add(pred.sport_key)
+
+        # Fetch scores for each sport
+        all_scores = {}
+        for sport_key in sport_keys:
+            try:
+                scores = spider.fetch_scores(sport_key=sport_key, days_from=3)
+                for s in scores:
+                    all_scores[s['event_id']] = s
+            except Exception as e:
+                logger.warning(f"[ML-EVAL] Score fetch failed for {sport_key}: {e}")
+
+        # Evaluate each prediction
+        evaluated = 0
+        correct = 0
+        for pred in pending:
+            event_id = pred.event_id if hasattr(pred, 'event_id') else None
+            if not event_id or event_id not in all_scores:
+                continue
+
+            score = all_scores[event_id]
+            home_score = score.get('home_score', 0)
+            away_score = score.get('away_score', 0)
+
+            actual_winner = 'home' if home_score > away_score else 'away'
+            predicted = pred.predicted_winner if hasattr(pred, 'predicted_winner') else ''
+
+            # Normalize: check if predicted team matches home or away
+            is_correct = False
+            home_team = score.get('home_team', '')
+            away_team = score.get('away_team', '')
+
+            if predicted.lower() in home_team.lower() and actual_winner == 'home':
+                is_correct = True
+            elif predicted.lower() in away_team.lower() and actual_winner == 'away':
+                is_correct = True
+
+            if hasattr(pred, 'evaluated'):
+                pred.evaluated = True
+            if hasattr(pred, 'was_correct'):
+                pred.was_correct = is_correct
+            if hasattr(pred, 'actual_home_score'):
+                pred.actual_home_score = home_score
+            if hasattr(pred, 'actual_away_score'):
+                pred.actual_away_score = away_score
+            pred.save()
+
+            evaluated += 1
+            if is_correct:
+                correct += 1
+
+        accuracy = round((correct / evaluated) * 100, 1) if evaluated > 0 else 0
+
+        logger.info(
+            f"[ML-EVAL] Evaluated {evaluated} predictions: "
+            f"{correct} correct ({accuracy}% accuracy)"
+        )
+        return {
+            'status': 'success',
+            'evaluated': evaluated,
+            'correct': correct,
+            'accuracy': accuracy,
+        }
+
+    except Exception as e:
+        logger.error(f"[ML-EVAL] Failed: {e}", exc_info=True)
+        raise self.retry(exc=e)
+
+
 @shared_task(name='core.tasks.maintain_dream_backlog')
 def maintain_dream_backlog():
     """

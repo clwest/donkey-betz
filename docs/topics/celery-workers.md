@@ -1,6 +1,6 @@
 # Celery & Workers
 
-262 Celery tasks across 7 worker types with queue-based routing, memory management, and observability via CeleryTaskEvent signals.
+264 Celery tasks across 7 worker types with queue-based routing, memory management, and observability via CeleryTaskEvent signals.
 
 ## Worker Types (7)
 
