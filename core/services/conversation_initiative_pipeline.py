@@ -257,6 +257,71 @@ class ConversationInitiativePipeline:
 
         return max(scores.keys(), key=lambda k: scores[k])
 
+    # Session 994: Exploratory / low-signal topics that should NOT spawn initiatives
+    EXPLORE_PATTERNS = [
+        'explore', 'exploring', 'brainstorm', 'what if', 'just thinking',
+        'trending', 'trends', 'catch me up', 'what\'s new', 'what\'s going on',
+        'show me', 'tell me about', 'how does', 'explain', 'describe',
+        'recommend', 'suggest', 'any ideas', 'overview', 'summary',
+    ]
+
+    # Action verbs that indicate an initiative-worthy objective
+    ACTION_VERBS = [
+        'build', 'create', 'implement', 'deploy', 'launch', 'design',
+        'develop', 'integrate', 'automate', 'optimize', 'fix', 'repair',
+        'migrate', 'refactor', 'test', 'validate', 'ship', 'deliver',
+        'establish', 'configure', 'set up', 'install', 'write', 'draft',
+    ]
+
+    def _quality_gate(
+        self,
+        topic: str,
+        messages: List[Dict[str, Any]],
+        decision_summary: Optional[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Session 994: Pre-creation quality gate to prevent initiative spam.
+
+        Checks:
+        1. Topic is not purely exploratory (trends, brainstorm, overview)
+        2. Decision summary contains an actionable objective
+        3. Conversation has sufficient substance
+
+        Returns:
+            {'pass': bool, 'reason': str}
+        """
+        topic_lower = (topic or '').lower()
+
+        # 1. Reject exploratory topics
+        explore_matches = sum(1 for p in self.EXPLORE_PATTERNS if p in topic_lower)
+        if explore_matches >= 2:
+            return {'pass': False, 'reason': f'Exploratory topic ({explore_matches} explore patterns)'}
+
+        # 2. Check decision summary for actionable content
+        if decision_summary:
+            summary_text = ''
+            if isinstance(decision_summary, dict):
+                summary_text = str(decision_summary.get('synthesis', '')) + ' ' + str(decision_summary.get('suggested_feature', ''))
+            elif isinstance(decision_summary, str):
+                summary_text = decision_summary
+            summary_lower = summary_text.lower()
+
+            # Must contain at least one action verb
+            has_action = any(verb in summary_lower for verb in self.ACTION_VERBS)
+            if not has_action and len(summary_text) > 50:
+                return {'pass': False, 'reason': 'No actionable objective in decision summary'}
+
+        # 3. Check conversation substance (total content length)
+        total_content = sum(len(m.get('content', '')) for m in messages)
+        if total_content < 1000:
+            return {'pass': False, 'reason': f'Insufficient substance ({total_content} chars, need 1000+)'}
+
+        # 4. Single-pattern explore check on topic alone
+        if any(topic_lower.startswith(p) for p in ['exploring ', 'what is ', 'tell me ', 'show me ']):
+            return {'pass': False, 'reason': f'Topic starts with exploratory pattern'}
+
+        return {'pass': True, 'reason': 'Passed quality gate'}
+
     def extract_best_content(self, messages: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         """Extract the best content from conversation messages."""
         best_content = None
@@ -303,6 +368,16 @@ class ConversationInitiativePipeline:
             PipelineResult with Initiative, Deliverable, and task info
         """
         result = PipelineResult(conversation_id=conversation_id)
+
+        # Session 994: Quality gate — reject low-signal conversations before creating initiatives
+        gate_result = self._quality_gate(topic, messages, decision_summary)
+        if not gate_result['pass']:
+            result.errors.append(f"Quality gate rejected: {gate_result['reason']}")
+            logger.info(
+                f"[pipeline] Quality gate REJECTED initiative for topic '{topic[:50]}': "
+                f"{gate_result['reason']}"
+            )
+            return result
 
         # Session 884: Circuit breaker check - pause creation when backlog is too high
         from core.services.initiative_circuit_breaker import can_create_initiative, get_backlog_status
@@ -382,7 +457,7 @@ class ConversationInitiativePipeline:
                 initiative = Initiative.objects.create(
                     name=initiative_name,
                     description=f"Auto-created from conversation about: {topic}",
-                    status='ACTIVE',
+                    status='TRIAGE',  # Session 994: Auto-created → TRIAGE, not ACTIVE
                     current_stage=1,
                     created_by='ConversationInitiativePipeline',
                     parent_topic=topic[:200] if topic else '',
@@ -609,6 +684,12 @@ def handle_stage_task_completion(
                     logger.warning(f"Could not enrich deliverable: {e}")
 
         stage.save()
+
+        # Session 994: Record activity whenever stage work completes
+        try:
+            initiative.update_activity()
+        except Exception:
+            pass  # Don't let tracking block stage processing
 
         # Check if we should auto-advance (simplified: advance after first successful task)
         # In production, you'd want more sophisticated logic (all tasks complete, human approval, etc.)

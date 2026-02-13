@@ -9084,10 +9084,11 @@ class AgentDream(models.Model):
         )
 
         # Create the Initiative from Dream
+        # Session 994: Auto-created → TRIAGE. Boardroom-approved dreams still go through triage.
         initiative = Initiative.objects.create(
             name=initiative_name,
             description=self.content,
-            status='active',
+            status='TRIAGE',
             current_stage=1,
             created_by=self.agent.name if self.agent else 'system',
             parent_topic=self.title[:200] if self.title else '',  # Original dream title for reference
