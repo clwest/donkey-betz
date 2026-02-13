@@ -4441,6 +4441,7 @@ urlpatterns += [
 # Stock Intelligence Dashboard
 # =========================================================================
 from core.views_stock_intelligence import (
+    stock_hub,
     stock_dashboard,
     stock_briefs,
     stock_brief_detail,
@@ -4451,6 +4452,7 @@ from core.views_stock_intelligence import (
 )
 
 urlpatterns += [
+    path('api/stocks/hub/', stock_hub, name='stock-hub'),
     path('api/stocks/dashboard/', stock_dashboard, name='stock-dashboard'),
     path('api/stocks/briefs/', stock_briefs, name='stock-briefs'),
     path('api/stocks/briefs/<uuid:brief_id>/', stock_brief_detail, name='stock-brief-detail'),
