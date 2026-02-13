@@ -1,5 +1,5 @@
-# Session 988: Moved ml queue to celery-long-running (higher memory limit) to prevent OOM
-# Parent process holds ~200MB from imports (262 tasks, 76 agents, etc.)
+# Session 1000C: Routed 60+ heavy tasks off default queue to prevent OOM
+# Parent process holds ~200MB from imports (331 tasks, 82 agents, etc.)
 # With -c 1 + 200MB child, peak = ~400MB — fits Railway 512MB limit
 # Reduced max-tasks-per-child: celery-worker 50→25→10 (Session 1000C OOM fix)
 # --pool=prefork on Linux (Railway) recycles child processes after N tasks
