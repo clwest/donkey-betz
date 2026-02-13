@@ -174,6 +174,9 @@ class ToolDispatcher:
         # Session 979: Stock intelligence tool for PA access to market data
         self.register("stock_intelligence_tool", self._handle_stock_intelligence)
 
+        # Session 995B: Sports betting intelligence tool
+        self.register("sports_betting_tool", self._handle_sports_betting)
+
         # Session 973: Status snapshot for broad system overview
         self.register("status_snapshot_tool", self._handle_status_snapshot)
 
@@ -4393,6 +4396,194 @@ class ToolDispatcher:
             logger.warning(f"Unknown stock_intelligence action '{action}', defaulting to overview")
             payload['action'] = 'overview'
             return self._handle_stock_intelligence(tool_name, payload, user_id, trace_id)
+
+    def _handle_sports_betting(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Session 995B: Sports betting intelligence tool for PA.
+
+        Surfaces wagers, arbitrage, predictions, sharp action, line movements,
+        and full betting briefs — the same data as the /betting dashboard.
+
+        Actions:
+        - overview: Dashboard summary (default)
+        - arbs: Active arbitrage opportunities
+        - predictions: Game predictions
+        - sharp_action: Sharp action signals
+        - line_movements: Detected line movements
+        - wagers: User's placed wagers
+        - live_odds: Current odds from TheOddsSpider
+        - brief: Full betting brief from coordinator
+        """
+        from django.utils import timezone
+        from datetime import timedelta
+
+        action = payload.get('action', 'overview')
+        limit = payload.get('limit', 10)
+
+        if action == 'overview':
+            from core.models_betting import PlacedWager, BettingStats
+            from core.models_human_interface import HumanAttentionItem
+
+            pending = PlacedWager.objects.filter(status='pending').count()
+            settled = PlacedWager.objects.filter(status__in=['won', 'lost', 'push']).count()
+
+            arb_count = HumanAttentionItem.objects.filter(
+                item_type='arbitrage',
+                status='watching',
+            ).count()
+
+            # Recent sharp signals from SpiderData
+            from core.models_unified_system import SpiderData
+            cutoff = timezone.now() - timedelta(hours=12)
+            recent_odds = SpiderData.objects.filter(
+                spider_name='theodds',
+                created_at__gte=cutoff,
+            ).count()
+
+            # Active sports from recent odds data
+            active_sports = list(
+                SpiderData.objects.filter(
+                    spider_name='theodds',
+                    created_at__gte=cutoff,
+                ).values_list('data_type', flat=True).distinct()[:10]
+            )
+
+            return {
+                'action': 'overview',
+                'pending_wagers': pending,
+                'settled_wagers': settled,
+                'active_arb_opps': arb_count,
+                'hot_sharp_signals': 0,  # populated by agent runs
+                'recent_odds_records': recent_odds,
+                'active_sports': active_sports,
+            }
+
+        elif action == 'arbs':
+            from core.models_human_interface import HumanAttentionItem
+            qs = HumanAttentionItem.objects.filter(
+                item_type='arbitrage',
+                status='watching',
+            ).order_by('-created_at')
+            total = qs.count()
+            items = []
+            for item in qs[:limit]:
+                p = item.payload or {}
+                items.append({
+                    'id': str(item.id),
+                    'matchup': p.get('matchup', p.get('event', '')),
+                    'sport': p.get('sport', ''),
+                    'profit_pct': p.get('profit_pct', 0),
+                    'rating': p.get('rating', ''),
+                    'home_book': p.get('home_book', ''),
+                    'away_book': p.get('away_book', ''),
+                    'created_at': item.created_at.isoformat() if item.created_at else None,
+                })
+            return {'action': 'arbs', 'items': items, 'total': total}
+
+        elif action == 'predictions':
+            try:
+                from sports.models import MLPrediction
+                qs = MLPrediction.objects.order_by('-created_at')
+                total = qs.count()
+                items = []
+                for p in qs[:limit]:
+                    items.append({
+                        'id': str(p.id),
+                        'matchup': f"{p.away_team} @ {p.home_team}" if hasattr(p, 'home_team') else str(p),
+                        'predicted_winner': p.predicted_winner if hasattr(p, 'predicted_winner') else '',
+                        'confidence': p.confidence if hasattr(p, 'confidence') else 0,
+                        'sport_name': p.sport_name if hasattr(p, 'sport_name') else '',
+                        'created_at': p.created_at.isoformat() if hasattr(p, 'created_at') and p.created_at else None,
+                    })
+                return {'action': 'predictions', 'items': items, 'total': total}
+            except Exception as e:
+                logger.warning(f"MLPrediction query failed: {e}")
+                return {'action': 'predictions', 'items': [], 'total': 0, 'error': str(e)}
+
+        elif action == 'sharp_action':
+            try:
+                from core.agents.markets.sharp_action_detector import SharpActionDetector
+                agent = SharpActionDetector()
+                result = agent.execute(
+                    task="Identify sharp betting action and stale lines",
+                    context={}
+                )
+                if result.success:
+                    signals = result.data.get('signals', [])
+                    return {
+                        'action': 'sharp_action',
+                        'items': signals[:limit],
+                        'total': len(signals),
+                    }
+                return {'action': 'sharp_action', 'items': [], 'total': 0, 'error': result.error}
+            except Exception as e:
+                logger.warning(f"SharpActionDetector failed: {e}")
+                return {'action': 'sharp_action', 'items': [], 'total': 0, 'error': str(e)}
+
+        elif action == 'line_movements':
+            try:
+                from core.agents.markets.line_movement_analyzer import LineMovementAnalyzer
+                agent = LineMovementAnalyzer()
+                result = agent.execute(
+                    task="Detect sharp money line movements",
+                    context={}
+                )
+                if result.success:
+                    movements = result.data.get('movements', [])
+                    return {
+                        'action': 'line_movements',
+                        'items': movements[:limit],
+                        'total': len(movements),
+                    }
+                return {'action': 'line_movements', 'items': [], 'total': 0, 'error': result.error}
+            except Exception as e:
+                logger.warning(f"LineMovementAnalyzer failed: {e}")
+                return {'action': 'line_movements', 'items': [], 'total': 0, 'error': str(e)}
+
+        elif action == 'wagers':
+            from core.models_betting import PlacedWager
+            qs = PlacedWager.objects.all().order_by('-created_at')
+            if user_id:
+                qs = qs.filter(user_id=user_id)
+            total = qs.count()
+            items = []
+            for w in qs[:limit]:
+                items.append({
+                    'id': str(w.id),
+                    'description': w.description if hasattr(w, 'description') else str(w),
+                    'status': w.status,
+                    'stake': float(w.stake) if hasattr(w, 'stake') and w.stake else 0,
+                    'potential_payout': float(w.potential_payout) if hasattr(w, 'potential_payout') and w.potential_payout else 0,
+                    'created_at': w.created_at.isoformat() if hasattr(w, 'created_at') and w.created_at else None,
+                })
+            return {'action': 'wagers', 'items': items, 'total': total}
+
+        elif action in ('brief', 'live_odds'):
+            try:
+                from core.services.sports_betting_coordinator import SportsBettingCoordinator
+                coordinator = SportsBettingCoordinator()
+                brief = coordinator.generate_brief()
+                return {
+                    'action': action,
+                    'executive_summary': brief.get('executive_summary', ''),
+                    'top_plays': brief.get('top_plays', []),
+                    'agents_run': brief.get('agents_run', []),
+                    'generation_time_seconds': brief.get('generation_time_seconds', 0),
+                }
+            except Exception as e:
+                logger.warning(f"SportsBettingCoordinator failed: {e}")
+                return {'action': action, 'top_plays': [], 'error': str(e)}
+
+        else:
+            logger.warning(f"Unknown sports_betting action '{action}', defaulting to overview")
+            payload['action'] = 'overview'
+            return self._handle_sports_betting(tool_name, payload, user_id, trace_id)
 
     def _handle_status_snapshot(self, tool_name: str, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:
         """

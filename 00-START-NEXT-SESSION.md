@@ -1,76 +1,57 @@
-# Session 995 - Start Here
+# Session 996 - Start Here
 
-**Previous Session:** 994B (Initiative Pipeline Fixes — Stop the Bleeding)
+**Previous Session:** 995B (Sports Betting Intelligence System)
 **Date:** February 12, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **INITIATIVE PIPELINE: CIRCUIT BREAKER ENFORCED + TRIAGE STATUS + QUALITY GATE** | **Workspace: 9 TABS** | **Bundle: 2,305 KB** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 95 (added flow_metrics)** | **PA Intents: 37** | **Enrichment Services: 8** | **Context Layers: 11** | **Content Feedback Loop: CLOSED** | **Stock Predictions: FIXED** | **Podcast User Context: FIXED**
+**Status:** 79 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **Workspace: 9 TABS** | **Bundle: 2,305 KB** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 96** | **PA Intents: 38** | **Enrichment Services: 8** | **Context Layers: 11** | **Content Feedback Loop: CLOSED** | **Celery Tasks: 264**
 
 ---
 
-## Session 994B Summary (Just Completed)
+## Session 995B Summary (Just Completed)
+
+### Sports Betting Intelligence System — 3 Phases
+
+Built out the full sports betting intelligence pipeline across 3 phases.
+
+**Phase 1 — PA Integration:**
+- Added `sports_betting` intent (38th intent) + `sports_betting_tool` handler (52nd handler)
+- 8 actions: overview, arbs, predictions, sharp_action, line_movements, wagers, live_odds, brief
+- Full result formatter for natural language PA responses
+
+**Phase 2 — 3 New Agents:**
+- **GamePredictor** — Predicts game outcomes from odds consensus, stores in MLPrediction
+- **LineMovementAnalyzer** — Compares odds snapshots, detects STEAM/SHARP/DRIFT moves
+- **SharpActionDetector** — Compares sharp (Pinnacle) vs soft (DraftKings) books for divergence
+
+**Phase 3 — Intelligence Pipeline:**
+- **SportsBettingCoordinator** — Orchestrates 5 agents into unified briefs with top plays
+- **`generate_daily_betting_brief`** — Celery task at 9 AM + 7 PM
+- **`evaluate_ml_predictions`** — Checks prediction accuracy every 6h
+
+**Files changed:** 10 files (4 new). No models, no migrations. See `docs/handoffs/SESSION_995B_SPORTS_BETTING_INTELLIGENCE.md`.
+
+## Session 995 Summary (Prior)
+
+### Betting Outcome Verification + Learning Loop
+
+Closed the feedback loop: BettingOutcomeVerifier settles pending wagers, verifies watched arb items, feeds learning bridge. Runs every 2h. See `docs/handoffs/SESSION_995_BETTING_OUTCOME_VERIFICATION.md`.
+
+## Session 994B Summary (Prior)
 
 ### Initiative Pipeline Fixes — Stop the Bleeding
 
-Production showed 158 active initiatives, ALL with `last_activity_at=None`, 64 created in 24h despite circuit breaker threshold of 50. Root cause: `InitiativeIntegrationService` bypassed the circuit breaker entirely.
-
-**6 fixes implemented:**
-1. **Circuit breaker enforcement** — `InitiativeIntegrationService.get_or_create_initiative()` now checks circuit breaker. Added `InitiativeCreationBlocked` exception caught by `DecisionExtractor` and `link_action_to_initiative`.
-2. **Quality gate** — `_quality_gate()` in `ConversationInitiativePipeline` rejects exploratory conversations (20 explore patterns) and requires action verbs + substantive content (1000+ chars).
-3. **TRIAGE status** — ALL auto-created initiatives start as TRIAGE, not ACTIVE. Migration `0238`. PA can update TRIAGE status.
-4. **Intent-aware spawning** — Exploratory topics filtered by quality gate.
-5. **Activity tracking** — `update_activity()` now called from `stage.approve()`, `generate_initiative_stage_document`, `handle_stage_task_completion`, and `process_initiative_auto_progression`. Previously only called from conversations.
-6. **PA flow_metrics** — New `flow_metrics` action on `initiative_tool` shows creation rate, backlog, stage distribution, circuit breaker status.
-
-**Files changed:** 10 files, 1 migration. See `docs/handoffs/SESSION_994B_INITIATIVE_PIPELINE_FIXES.md`.
+6 fixes: circuit breaker enforcement, quality gate, TRIAGE status, intent-aware spawning, activity tracking, PA flow_metrics. See `docs/handoffs/SESSION_994B_INITIATIVE_PIPELINE_FIXES.md`.
 
 ## Session 994 Summary (Prior)
 
 ### Fix Stock Prediction Pipeline + Podcast User Context
 
-Fixed two broken subsystem pipelines discovered via PA conversations on Railway production.
-
-**Stock Prediction Pipeline** (`market_intelligence_coordinator.py`):
-- `_parse_target_move()` crashed on numeric types from GPT JSON — added type safety for int/float inputs
-- `_record_predictions_for_learning()` had single try/except around entire loop — one bad ticker killed ALL predictions for the brief. Added per-iteration error handling.
-
-**Podcast Pipeline** (`tasks.py`):
-- `PodcastCoordinatorAgent(user=episode.user)` — enables learning hooks, memory attribution, feedback recording
+Fixed `_parse_target_move()` type safety + per-iteration error handling. Added `PodcastCoordinatorAgent(user=episode.user)`.
 
 ## Session 993 Summary (Prior)
 
 ### PA Capability Gaps: Write Actions + Blog Triage + V2 Generation
 
-Added 11 new write actions across PA tools — the PA can now modify data, not just read it.
-
-**Bulk Blog Triage + Publish/Archive** (5 new actions in `_handle_blog_query`):
-- `triage` — groups ALL blogs into 3 quality tiers (publish-ready, needs-revision, archive-candidates)
-- `publish` / `archive` — single blog publish/archive with content feedback recording
-- `batch_publish` / `batch_archive` — bulk operations capped at 50 per call
-
-**V2 Blog Generation** (new `generate_blog_tool` handler):
-- With topic: runs `ContentDeliberationRunner.run_blog()` synchronously (full deliberation pipeline)
-- Without topic: dispatches `generate_self_blog_deliberation_task` to Celery
-- New intent: "generate a blog", "v2 blog", "deliberated blog", "generate content"
-
-**Write Actions for Read-Only Tools** (5 new actions):
-- `initiative_tool`: update_status, advance (next pipeline stage), complete_action_item
-- `opportunity_manager_tool`: update_status
-- `spider_data_tool`: trigger (dispatch spider run by category)
-
-**Files changed:** `tool_dispatcher.py` (~200 lines added), `unified_pa_entrypoint.py` (12 lines added)
-
-No new models, no migrations, no new Celery tasks, no frontend changes.
-
-### Session 992 Summary (Prior)
-
-Wire 3 Remaining Unwired Services — DynamicTeamBuilder, PlatformIntelligenceBriefingService, PlatformIntegration.
-
-### Session 991 Summary (Prior)
-
-Wire ProactiveIntelligenceService + AgentLearningService into execution paths.
-
-### Session 990 Summary (Prior)
-
-Closed PA-to-Agent content feedback loop. When PA publishes/archives/revises content, the decision is recorded back to the originating agent via AgentMemory, UserAgentLearning, and FeedbackLoopEngine.
+11 new write actions across PA tools, bulk blog triage, V2 blog generation via deliberation pipeline.
 
 ---
 

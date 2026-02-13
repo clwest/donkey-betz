@@ -1,6 +1,6 @@
 # Celery & Workers
 
-261 Celery tasks across 7 worker types with queue-based routing, memory management, and observability via CeleryTaskEvent signals.
+264 Celery tasks across 7 worker types with queue-based routing, memory management, and observability via CeleryTaskEvent signals.
 
 ## Worker Types (7)
 
@@ -43,6 +43,8 @@ Tasks routed by module and explicit name:
 **Content Generation:** generate_self_blog_task (6h), generate_self_blog_deliberation_task (on-demand), generate_podcast_task (on-demand)
 
 **Attention & Orchestration:** generate_human_attention_items (15m), process_human_attention_lifecycle (10m), enrich_boardroom_ml_predictions (15m), process_spider_actions (30m), process_gate_progression (15m)
+
+**Betting Verification (Session 995):** verify_betting_outcomes (2h) — fetches game scores, settles pending wagers, verifies watched arb items, feeds learning loop
 
 ## Observability (Session 983)
 
