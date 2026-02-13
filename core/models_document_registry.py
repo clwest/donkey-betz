@@ -145,6 +145,22 @@ class Initiative(models.Model):
         help_text='Target workspace for this initiative\'s outputs'
     )
 
+    # Session 996: Initiative ownership — who is accountable for this initiative?
+    owner = models.ForeignKey(
+        'core.UnifiedUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='owned_initiatives',
+        help_text='Session 996: Human owner responsible for this initiative'
+    )
+    owner_agent = models.CharField(
+        max_length=100,
+        blank=True,
+        default='',
+        help_text='Session 996: Agent owner responsible (e.g., "ResearchAgent")'
+    )
+
     # Session 913: Link to Signal Intelligence (Origin & Trigger)
     signal_cluster = models.ForeignKey(
         'core.SignalCluster',

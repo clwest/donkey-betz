@@ -88,7 +88,7 @@ Methods: `start()`, `complete()`, `block(reason)`. Properties: `is_overdue`, `da
 
 ## Key Model Fields
 
-**Initiative:** updated_at, last_activity_at, impact_score, urgency, confidence, revenue_potential, current_stage (1-5), purpose, program, execution_track
+**Initiative:** updated_at, last_activity_at, impact_score, urgency, confidence, revenue_potential, current_stage (1-5), purpose, program, execution_track, owner (FK to User), owner_agent (CharField)
 
 **InitiativeActionItem:** status, priority, timeline_text, due_date, assigned_agent, assigned_user, source_conversation (FK to HiveMindSession)
 
@@ -128,8 +128,21 @@ Auto-created initiatives start as `TRIAGE`, not `ACTIVE`. The PA can promote TRI
 - `process_initiative_auto_progression` task — when stages auto-progress
 - HiveMind session completion (original 2 call sites)
 
+## Ownership (Session 996)
+
+Each initiative can have an **owner** (human FK) or **owner_agent** (agent name string). The PA can filter by owner, show ownership in list/details, and assign/transfer ownership.
+
+**Auto-assignment rules** (via `_auto_assign_owner()` in `initiative_integration_service.py`):
+1. If `program` matches `PROGRAM_OWNER_MAP` → assign that agent (e.g., content_pipeline → ContentStrategyAgent)
+2. Else if `created_by` looks like an agent name → use created_by
+3. Otherwise leave unowned
+
+**PROGRAM_OWNER_MAP:** content_pipeline → ContentStrategyAgent, growth_intelligence → MarketIntelligenceAgent, monetization → OpportunityScoringAgent, platform_health → SystemIntelligenceAgent, ai_capabilities → ThinkingAgent, infrastructure → DevOpsAgent, research/experiments → ResearchAgent
+
+**PA commands:** "show my initiatives", "unowned initiatives", "who owns [X]?", "assign [X] to [Agent]", "take ownership of [X]"
+
 ## PA Flow Metrics (Session 994)
 
-`initiative_tool` actions: list, stats, details, action_items, **flow_metrics**, update_status, advance, complete_action_item.
+`initiative_tool` actions: list, stats, details, action_items, **flow_metrics**, update_status, advance, complete_action_item, **assign_owner**.
 
 `flow_metrics` returns: creation_rate (24h/7d), backlog (triage/active/no_activity), stage_distribution, circuit_breaker status, completed_last_7d.

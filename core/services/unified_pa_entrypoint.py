@@ -629,6 +629,14 @@ class UnifiedPAEntrypoint:
         """
         message_lower = message.lower()
 
+        # Session 996: Initiative ownership patterns — check BEFORE generic initiative match
+        if any(phrase in message_lower for phrase in [
+            'assign owner', 'who owns', 'my initiatives', 'unowned initiative',
+            'unowned project', 'transfer ownership', 'take ownership',
+            'no owner', 'initiatives i own', 'projects i own',
+        ]):
+            return ('initiatives', 'initiative_tool')
+
         # Session 988: Initiative/project patterns — check BEFORE boardroom
         # so "initiative" + "attention" routes to initiatives, not boardroom
         if any(word in message_lower for word in [
@@ -1205,6 +1213,39 @@ class UnifiedPAEntrypoint:
                     name_match = re.search(r'(?:about|status of|details on)\s+["\']?([^"\']+)["\']?', msg_lower)
                     if name_match:
                         payload['name'] = name_match.group(1).strip()
+            # Session 996: Ownership actions
+            elif any(w in msg_lower for w in ['assign owner', 'transfer ownership', 'take ownership']):
+                payload['action'] = 'assign_owner'
+                import re
+                id_match = re.search(r'([a-f0-9-]{36}|[a-f0-9]{8,})', msg_lower)
+                if id_match:
+                    payload['id'] = id_match.group(1)
+                else:
+                    name_match = re.search(r'(?:assign|transfer|ownership)\s+(?:of\s+|to\s+)?["\']?([^"\']+?)["\']?\s+(?:to|from)', msg_lower)
+                    if name_match:
+                        payload['name'] = name_match.group(1).strip()
+                # Extract target: "to ResearchAgent" or "to me"
+                agent_match = re.search(r'to\s+(\w+Agent)\b', message)
+                if agent_match:
+                    payload['agent_name'] = agent_match.group(1)
+                elif 'take ownership' in msg_lower or 'to me' in msg_lower:
+                    payload['user_name'] = 'me'
+                else:
+                    user_match = re.search(r'to\s+(\w+)', msg_lower)
+                    if user_match:
+                        payload['agent_name'] = user_match.group(1)
+            elif 'who owns' in msg_lower:
+                payload['action'] = 'details'
+                import re
+                name_match = re.search(r'who owns\s+["\']?(.+?)["\']?\s*\??$', msg_lower)
+                if name_match:
+                    payload['name'] = name_match.group(1).strip()
+            elif any(w in msg_lower for w in ['my initiative', 'my project', 'initiatives i own', 'projects i own']):
+                payload['action'] = 'list'
+                payload['owner'] = 'me'
+            elif any(w in msg_lower for w in ['unowned', 'no owner']):
+                payload['action'] = 'list'
+                payload['owner'] = 'unowned'
             else:
                 # Default to list
                 payload['action'] = 'list'
@@ -2588,7 +2629,9 @@ Address the user by name occasionally."""
                         critical = item.get('critical_actions', 0)
                         last_activity = item.get('last_activity_at')
                         status_icon = '🟢' if item.get('status') == 'ACTIVE' else '⏸️'
-                        response += f"{status_icon} **{name}** (Stage {stage}/5, {purpose})"
+                        owner = item.get('owner')
+                        owner_badge = f" [{owner}]" if owner else ""
+                        response += f"{status_icon} **{name}** (Stage {stage}/5, {purpose}){owner_badge}"
                         if pending > 0:
                             action_desc = f"{pending} actions"
                             if critical > 0:
@@ -2672,11 +2715,14 @@ Address the user by name occasionally."""
 
                     status_icon = '🟢' if status == 'ACTIVE' else ('✅' if status == 'COMPLETED' else '⏸️')
 
+                    owner = tool_result.get('owner')
+
                     response = f"{status_icon} **{name}**\n\n"
                     response += f"- Status: {status}\n"
                     response += f"- Stage: {stage}/5\n"
                     response += f"- Purpose: {purpose}\n"
                     response += f"- Program: {program}\n"
+                    response += f"- Owner: {owner or 'unassigned'}\n"
 
                     if description:
                         response += f"\n**Description:** {description}...\n"
@@ -2705,6 +2751,20 @@ Address the user by name occasionally."""
                         response += f"   └─ {initiative} ({item.get('status', 'pending')})\n"
 
                     return response
+
+                elif action == 'assign_owner':
+                    name = tool_result.get('name', 'Unknown')
+                    old_owner = tool_result.get('old_owner', 'unowned')
+                    new_owner = tool_result.get('new_owner', 'unknown')
+                    return f"Done. **{name}** is now owned by **{new_owner}** (was: {old_owner})."
+
+                elif action == 'update_status':
+                    name = tool_result.get('name', 'Unknown')
+                    return f"Updated **{name}** status: {tool_result.get('old_status')} → {tool_result.get('new_status')}."
+
+                elif action == 'advance':
+                    name = tool_result.get('name', 'Unknown')
+                    return tool_result.get('message', f"Advanced **{name}**.")
 
                 else:
                     return str(tool_result)
