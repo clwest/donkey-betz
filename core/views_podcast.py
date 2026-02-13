@@ -1,8 +1,8 @@
 """
-Podcast Studio API Views - Session 502
+Podcast Studio API Views - Session 502 / Session 997B
 
 Real API endpoints for the AI Podcast Studio.
-Combines PodcastEpisode + ChannelEpisode (Autonomous Content Studio) into one unified view.
+Session 997B: Removed ChannelEpisode merging — only show real PodcastEpisode records.
 """
 
 import json
@@ -71,17 +71,16 @@ def _channel_episode_to_dict(ep):
 def podcast_list(request):
     """
     List all podcast episodes for the current user.
-    Combines PodcastEpisode + ChannelEpisode (Autonomous Content Studio).
 
     GET /api/podcasts/list/
 
     Query params:
         - status: Filter by status (pending, researching, debating, scripting, generating_audio, complete, failed)
-        - source: Filter by source (podcast, studio, or empty for all)
         - limit: Number of results (default 20)
         - offset: Pagination offset (default 0)
 
     Session 887: Added Token auth support since /api/podcasts/ is in PUBLIC_PATHS.
+    Session 997B: Removed ChannelEpisode merging — only real PodcastEpisode records.
     """
     # Session 887: Manual auth check to support Token auth
     from rest_framework.authtoken.models import Token
@@ -102,68 +101,39 @@ def podcast_list(request):
         return JsonResponse({'success': True, 'episodes': [], 'total': 0, 'limit': 20, 'offset': 0})
 
     from core.models_podcast_studio import PodcastEpisode
-    from core.models_autonomous_studio import ChannelEpisode
 
     try:
         status_filter = request.GET.get('status', '')
-        source_filter = request.GET.get('source', '')
         limit = int(request.GET.get('limit', 20))
         offset = int(request.GET.get('offset', 0))
 
-        all_episodes = []
+        # Session 997B: Only query real PodcastEpisode records
+        episodes = PodcastEpisode.objects.filter(user=request.user).order_by('-created_at')
 
-        # Get PodcastEpisode records (filtered by user)
-        if not source_filter or source_filter == 'podcast':
-            podcast_episodes = PodcastEpisode.objects.filter(user=request.user).order_by('-created_at')
+        if status_filter:
+            statuses = [s.strip() for s in status_filter.split(',')]
+            episodes = episodes.filter(status__in=statuses)
 
-            if status_filter:
-                statuses = [s.strip() for s in status_filter.split(',')]
-                podcast_episodes = podcast_episodes.filter(status__in=statuses)
+        total_count = episodes.count()
+        paginated = episodes[offset:offset + limit]
+        episode_list = [_podcast_episode_to_dict(ep) for ep in paginated]
 
-            for ep in podcast_episodes:
-                all_episodes.append(_podcast_episode_to_dict(ep))
-
-        # Get ChannelEpisode records (all - they don't have user field)
-        if not source_filter or source_filter == 'studio':
-            channel_episodes = ChannelEpisode.objects.all().order_by('-created_at')
-
-            # ChannelEpisodes are always "complete" - only include if status filter matches
-            if status_filter:
-                statuses = [s.strip() for s in status_filter.split(',')]
-                if 'complete' not in statuses:
-                    channel_episodes = ChannelEpisode.objects.none()
-
-            for ep in channel_episodes:
-                all_episodes.append(_channel_episode_to_dict(ep))
-
-        # Sort combined list by created_at (descending)
-        all_episodes.sort(key=lambda x: x['created_at'], reverse=True)
-
-        total_count = len(all_episodes)
-
-        # Apply pagination
-        paginated_episodes = all_episodes[offset:offset + limit]
-
-        # Get status counts
-        podcast_count = PodcastEpisode.objects.filter(user=request.user).count()
-        channel_count = ChannelEpisode.objects.count()
-
+        # Status counts (PodcastEpisode only)
+        user_eps = PodcastEpisode.objects.filter(user=request.user)
         status_counts = {
-            'complete': (
-                PodcastEpisode.objects.filter(user=request.user, status='complete').count() +
-                channel_count  # All ChannelEpisodes are complete
-            ),
-            'pending': PodcastEpisode.objects.filter(user=request.user, status='pending').count(),
-            'researching': PodcastEpisode.objects.filter(user=request.user, status='researching').count(),
-            'debating': PodcastEpisode.objects.filter(user=request.user, status='debating').count(),
-            'scripting': PodcastEpisode.objects.filter(user=request.user, status='scripting').count(),
-            'generating_audio': PodcastEpisode.objects.filter(user=request.user, status='generating_audio').count(),
-            'failed': PodcastEpisode.objects.filter(user=request.user, status='failed').count(),
+            'total': user_eps.count(),
+            'complete': user_eps.filter(status='complete').count(),
+            'pending': user_eps.filter(status='pending').count(),
+            'researching': user_eps.filter(status='researching').count(),
+            'debating': user_eps.filter(status='debating').count(),
+            'scripting': user_eps.filter(status='scripting').count(),
+            'generating_audio': user_eps.filter(status='generating_audio').count(),
+            'failed': user_eps.filter(status='failed').count(),
         }
 
         return JsonResponse({
             'success': True,
-            'episodes': paginated_episodes,
+            'episodes': episode_list,
             'total_count': total_count,
             'status_counts': status_counts,
             'limit': limit,
@@ -699,9 +669,10 @@ def podcast_stats(request):
     # Session 688: Removed @login_required for React frontend access
     """
     Get podcast statistics for the current user.
-    Combines PodcastEpisode + ChannelEpisode stats.
 
     GET /api/podcasts/stats/
+
+    Session 997B: Removed ChannelEpisode stats — PodcastEpisode only.
     """
     # Session 887: Manual auth check to support Token auth
     # /api/podcasts/ is in PUBLIC_PATHS so middleware skips auth
@@ -732,48 +703,26 @@ def podcast_stats(request):
         })
 
     from core.models_podcast_studio import PodcastEpisode
-    from core.models_autonomous_studio import ChannelEpisode
     from django.db.models import Sum
 
     try:
-        # PodcastEpisode stats
-        podcast_episodes = PodcastEpisode.objects.filter(user=request.user)
-        podcast_total = podcast_episodes.count()
-        podcast_complete = podcast_episodes.filter(status='complete').count()
-        podcast_in_progress = podcast_episodes.filter(
+        # Session 997B: Only PodcastEpisode stats
+        episodes = PodcastEpisode.objects.filter(user=request.user)
+        total = episodes.count()
+        complete = episodes.filter(status='complete').count()
+        in_progress = episodes.filter(
             status__in=['pending', 'researching', 'debating', 'scripting', 'generating_audio']
         ).count()
-        podcast_failed = podcast_episodes.filter(status='failed').count()
+        failed = episodes.filter(status='failed').count()
 
-        # ChannelEpisode stats (all are "complete")
-        channel_episodes = ChannelEpisode.objects.all()
-        channel_total = channel_episodes.count()
-
-        # Combined totals
-        total = podcast_total + channel_total
-        complete = podcast_complete + channel_total
-        in_progress = podcast_in_progress
-        failed = podcast_failed
-
-        # Calculate duration from both sources
-        podcast_duration = podcast_episodes.filter(status='complete').aggregate(
+        total_duration = episodes.filter(status='complete').aggregate(
             total=Sum('audio_duration_seconds')
         )['total'] or 0
 
-        channel_duration = channel_episodes.aggregate(
-            total=Sum('watch_time_seconds')
-        )['total'] or 0
-
-        total_duration = podcast_duration + channel_duration
-
-        # Calculate total words from scripts
         total_words = 0
-        for ep in podcast_episodes.filter(status='complete'):
+        for ep in episodes.filter(status='complete'):
             if ep.script:
                 total_words += len(ep.script.split())
-        for ep in channel_episodes:
-            if ep.description:
-                total_words += len(ep.description.split())
 
         return JsonResponse({
             'success': True,
@@ -785,9 +734,6 @@ def podcast_stats(request):
                 'total_words': total_words,
                 'total_duration_seconds': total_duration,
                 'avg_duration_seconds': round(total_duration / complete, 1) if complete > 0 else 0,
-                # Breakdown by source
-                'podcast_count': podcast_total,
-                'studio_count': channel_total,
             }
         })
 
