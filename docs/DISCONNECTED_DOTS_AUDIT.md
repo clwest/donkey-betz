@@ -246,7 +246,7 @@ api/rag/observability/ (multiple)
 - **CompetitorAnalysisAgent** — competitive intelligence not captured
 - **DecisionEnforcerAgent** — has `DecisionRecord` model but wiring incomplete
 - **StockAuditCoordinator, BlockchainAuditCoordinator** — audit reports discarded
-- **PodcastCoordinatorAgent** — production records lost
+- **PodcastCoordinatorAgent** — production records lost (Session 994: user context now passed, attribution fixed)
 - **CodeGeneratorAgent, FullStackDeveloperAgent** — code generation not saved
 
 ### Impact
