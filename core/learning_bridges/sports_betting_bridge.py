@@ -407,6 +407,161 @@ class SportsBettingLearningBridge:
             'avg_bet_percentage': avg_bet_percentage
         }
 
+    def record_wager_outcome(self, wager):
+        """
+        Session 995: Record settled wager outcome into the learning loop.
+
+        Creates/updates UserAgentLearning for SportsOddsAnalyst and creates
+        AgentMemory entries with outcome details.
+
+        Args:
+            wager: PlacedWager instance (must be settled — won/lost/push)
+        """
+        from core.models_unified_system import UserAgentLearning, AgentMemory, Agent
+
+        if not wager.user or wager.status == 'pending':
+            return
+
+        # Determine sport from first leg
+        first_leg = wager.legs.first()
+        if not first_leg:
+            return
+
+        sport_key = first_leg.sport or 'unknown'
+        # Normalize sport key to short form for learning domain
+        sport_short = sport_key.split('_')[-1] if '_' in sport_key else sport_key
+
+        # Update/create UserAgentLearning for SportsOddsAnalyst
+        learning, created = UserAgentLearning.objects.update_or_create(
+            user=wager.user,
+            agent_name='SportsOddsAnalyst',
+            learning_domain=f'sports_betting_{sport_short}',
+            defaults={
+                'learning_content': {
+                    'last_wager_id': str(wager.id),
+                    'last_status': wager.status,
+                    'last_result_amount': float(wager.result_amount or 0),
+                    'wager_type': wager.wager_type,
+                    'synced_at': timezone.now().isoformat(),
+                },
+                'learning_source': 'performance_tracking',
+            }
+        )
+
+        if wager.status == 'won':
+            learning.record_success()
+        elif wager.status == 'lost':
+            learning.record_failure()
+        # push doesn't count as success or failure
+
+        # Create AgentMemory entry
+        try:
+            agent = Agent.objects.filter(name='SportsOddsAnalyst').first()
+            if agent:
+                legs_summary = ', '.join(
+                    f"{leg.pick} ({leg.matchup})" for leg in wager.legs.all()
+                )
+                AgentMemory.objects.create(
+                    agent=agent,
+                    title=f"Wager {wager.status}: {wager.wager_type} ${wager.stake}",
+                    content=(
+                        f"Wager settled as {wager.status}. "
+                        f"Stake: ${wager.stake}, P/L: ${wager.result_amount or 0}. "
+                        f"Legs: {legs_summary}"
+                    ),
+                    context=f"Sport: {sport_key}, Type: {wager.wager_type}",
+                    memory_type='success' if wager.status == 'won' else 'failure',
+                    valence='positive' if wager.status == 'won' else 'negative',
+                    importance_score=0.6 if wager.status == 'won' else 0.8,
+                    memory_outcome='success' if wager.status == 'won' else 'failure',
+                    safety_class='approved',
+                    source_type='betting_outcome_verification',
+                    source_id=str(wager.id),
+                    tags=[sport_short, wager.wager_type, 'verified', wager.status],
+                )
+        except Exception as e:
+            logger.warning(f"Could not create AgentMemory for wager {wager.id}: {e}")
+
+        logger.info(f"Recorded wager outcome: {wager.id} → {wager.status}")
+
+    def record_arbitrage_outcome(self, arb_item):
+        """
+        Session 995: Record arbitrage verification outcome into the learning loop.
+
+        Creates/updates UserAgentLearning for ArbitrageDetector and creates
+        AgentMemory entries with predicted vs actual profit.
+
+        Args:
+            arb_item: HumanAttentionItem instance (must be verified)
+        """
+        from core.models_unified_system import UserAgentLearning, AgentMemory, Agent
+
+        if not arb_item.user or arb_item.status != 'verified':
+            return
+
+        payload = arb_item.payload or {}
+        sport = payload.get('sport', 'unknown')
+        predicted_profit = payload.get('profit_pct', 0)
+        actual_profit = arb_item.verification_profit or 0
+        outcome = arb_item.verification_outcome
+
+        is_success = outcome == 'won'
+
+        # Update/create UserAgentLearning for ArbitrageDetector
+        learning, created = UserAgentLearning.objects.update_or_create(
+            user=arb_item.user,
+            agent_name='ArbitrageDetector',
+            learning_domain='general',
+            defaults={
+                'learning_content': {
+                    'last_item_id': str(arb_item.id),
+                    'last_outcome': outcome,
+                    'last_predicted_profit': predicted_profit,
+                    'last_actual_profit': actual_profit,
+                    'synced_at': timezone.now().isoformat(),
+                },
+                'learning_source': 'performance_tracking',
+            }
+        )
+
+        if is_success:
+            learning.record_success()
+        else:
+            learning.record_failure()
+
+        # Create AgentMemory entry
+        try:
+            agent = Agent.objects.filter(name='ArbitrageDetector').first()
+            if agent:
+                bookmakers = payload.get('bookmakers', [])
+                bookmaker_str = ' vs '.join(bookmakers) if bookmakers else 'unknown'
+                AgentMemory.objects.create(
+                    agent=agent,
+                    title=f"Arb {outcome}: {sport} ({bookmaker_str})",
+                    content=(
+                        f"Arbitrage verification: {outcome}. "
+                        f"Predicted profit: {predicted_profit}%, Actual: ${actual_profit:.2f}. "
+                        f"Bookmakers: {bookmaker_str}. Sport: {sport}. "
+                        f"Event: {arb_item.title}"
+                    ),
+                    context=f"Sport: {sport}, Bookmakers: {bookmaker_str}",
+                    memory_type='success' if is_success else 'failure',
+                    valence='positive' if is_success else 'negative',
+                    importance_score=0.6 if is_success else 0.8,
+                    memory_outcome='success' if is_success else 'failure',
+                    safety_class='approved',
+                    source_type='arbitrage_verification',
+                    source_id=str(arb_item.id),
+                    tags=[sport, 'arbitrage', 'verified', outcome],
+                )
+        except Exception as e:
+            logger.warning(f"Could not create AgentMemory for arb item {arb_item.id}: {e}")
+
+        logger.info(
+            f"Recorded arbitrage outcome: {arb_item.id} → {outcome} "
+            f"(predicted {predicted_profit}%, actual ${actual_profit:.2f})"
+        )
+
 
 # Convenience functions for common operations
 

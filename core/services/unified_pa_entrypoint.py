@@ -846,6 +846,16 @@ class UnifiedPAEntrypoint:
         ]):
             return ('crypto_price', 'spider_data_tool')
 
+        # Session 995B: Sports betting intelligence patterns
+        if any(phrase in message_lower for phrase in [
+            'betting', 'sports betting', 'odds', 'spread', 'moneyline',
+            'arbitrage', 'arb ', 'arbs', 'sharp action', 'sharp money',
+            'line movement', 'steam move', 'wager', 'wagers', 'parlay',
+            'game prediction', 'who will win', 'betting brief',
+            'top plays', 'value bet', 'value bets', 'stale line',
+        ]):
+            return ('sports_betting', 'sports_betting_tool')
+
         # Session 979: Stock intelligence patterns (before spider_data to avoid overlap)
         if any(phrase in message_lower for phrase in [
             'stock', 'stocks', 'market brief', 'market briefs', 'sec filing',
@@ -1348,6 +1358,26 @@ class UnifiedPAEntrypoint:
                 payload['action'] = 'predictions'
             elif any(w in msg_lower for w in ['sec', 'filing', 'edgar']):
                 payload['action'] = 'sec_filings'
+            else:
+                payload['action'] = 'overview'
+
+        # Session 995B: Sports betting payload
+        elif intent == 'sports_betting':
+            msg_lower = message.lower()
+            if any(w in msg_lower for w in ['arbitrage', 'arb ', 'arbs']):
+                payload['action'] = 'arbs'
+            elif any(w in msg_lower for w in ['prediction', 'predict', 'who will win', 'game prediction']):
+                payload['action'] = 'predictions'
+            elif any(w in msg_lower for w in ['sharp action', 'sharp money', 'stale line']):
+                payload['action'] = 'sharp_action'
+            elif any(w in msg_lower for w in ['line movement', 'steam move', 'line move']):
+                payload['action'] = 'line_movements'
+            elif any(w in msg_lower for w in ['wager', 'wagers', 'parlay', 'my bets']):
+                payload['action'] = 'wagers'
+            elif any(w in msg_lower for w in ['odds', 'spread', 'moneyline', 'live odds']):
+                payload['action'] = 'live_odds'
+            elif any(w in msg_lower for w in ['brief', 'top plays']):
+                payload['action'] = 'brief'
             else:
                 payload['action'] = 'overview'
 
@@ -2911,6 +2941,126 @@ Address the user by name occasionally."""
                         response += f"- [{dtype}] {url[:60]} ({date})\n"
                     if total > 6:
                         response += f"\n...and {total - 6} more filings."
+                    return response
+
+                else:
+                    return str(tool_result)
+
+            # Session 995B: Sports betting results formatting
+            elif intent == 'sports_betting':
+                action = tool_result.get('action', '')
+
+                if action == 'overview':
+                    pending = tool_result.get('pending_wagers', 0)
+                    settled = tool_result.get('settled_wagers', 0)
+                    arb_count = tool_result.get('active_arb_opps', 0)
+                    hot_signals = tool_result.get('hot_sharp_signals', 0)
+                    sports = tool_result.get('active_sports', [])
+
+                    response = f"Sports Betting Dashboard, {user_name}:\n\n"
+                    response += f"- **Wagers:** {pending} pending, {settled} settled\n"
+                    response += f"- **Arbitrage:** {arb_count} active opportunities\n"
+                    response += f"- **Sharp Signals:** {hot_signals} HOT signals detected\n"
+                    if sports:
+                        response += f"- **Active Sports:** {', '.join(sports[:6])}\n"
+                    return response
+
+                elif action == 'arbs':
+                    items = tool_result.get('items', [])
+                    total = tool_result.get('total', 0)
+                    if total == 0:
+                        return f"No arbitrage opportunities found right now, {user_name}."
+                    response = f"Arbitrage Opportunities ({total} found):\n\n"
+                    for a in items[:6]:
+                        matchup = a.get('matchup', 'Unknown')
+                        profit = a.get('profit_pct', 0)
+                        rating = a.get('rating', '')
+                        sport = a.get('sport', '')
+                        response += f"- **[{rating}]** {matchup} ({sport}): {profit:.1f}% guaranteed profit\n"
+                    if total > 6:
+                        response += f"\n...and {total - 6} more opportunities."
+                    return response
+
+                elif action == 'predictions':
+                    items = tool_result.get('items', [])
+                    total = tool_result.get('total', 0)
+                    if total == 0:
+                        return f"No game predictions available, {user_name}."
+                    response = f"Game Predictions ({total} games):\n\n"
+                    for p in items[:8]:
+                        matchup = p.get('matchup', '')
+                        winner = p.get('predicted_winner', '')
+                        conf = p.get('confidence', 0)
+                        sport = p.get('sport_name', '')
+                        response += f"- **{matchup}** ({sport}): {winner} ({conf}% confidence)\n"
+                    return response
+
+                elif action == 'sharp_action':
+                    items = tool_result.get('items', [])
+                    total = tool_result.get('total', 0)
+                    if total == 0:
+                        return f"No sharp action signals detected, {user_name}."
+                    response = f"Sharp Action Signals ({total} detected):\n\n"
+                    for s in items[:6]:
+                        matchup = s.get('matchup', '')
+                        rating = s.get('rating', '')
+                        sport = s.get('sport_name', '')
+                        svs = s.get('sharp_vs_soft', {})
+                        favors = svs.get('sharp_favors', '') if svs else ''
+                        div = svs.get('divergence', 0) if svs else 0
+                        response += f"- **[{rating}]** {matchup} ({sport})"
+                        if favors:
+                            response += f" — Sharps favor {favors} (divergence: {div} pts)"
+                        response += "\n"
+                    return response
+
+                elif action == 'line_movements':
+                    items = tool_result.get('items', [])
+                    total = tool_result.get('total', 0)
+                    if total == 0:
+                        return f"No significant line movements detected, {user_name}."
+                    response = f"Line Movements ({total} detected):\n\n"
+                    for m in items[:6]:
+                        matchup = m.get('matchup', '')
+                        rating = m.get('rating', '')
+                        changes = m.get('changes', [])
+                        response += f"- **[{rating}]** {matchup}: {'; '.join(changes[:2])}\n"
+                    return response
+
+                elif action == 'wagers':
+                    items = tool_result.get('items', [])
+                    total = tool_result.get('total', 0)
+                    if total == 0:
+                        return f"No wagers found, {user_name}."
+                    response = f"Your Wagers ({total} total):\n\n"
+                    for w in items[:8]:
+                        desc = w.get('description', '')
+                        status = w.get('status', '')
+                        stake = w.get('stake', 0)
+                        payout = w.get('potential_payout', 0)
+                        icon = {'pending': 'P', 'won': 'W', 'lost': 'L', 'push': '-'}.get(status, '?')
+                        response += f"- [{icon}] {desc} — ${stake:.2f} stake"
+                        if status == 'pending':
+                            response += f" (potential: ${payout:.2f})"
+                        response += "\n"
+                    return response
+
+                elif action in ('brief', 'live_odds'):
+                    # Brief or live odds — just surface the data nicely
+                    top_plays = tool_result.get('top_plays', [])
+                    summary = tool_result.get('executive_summary', '')
+                    if summary:
+                        response = f"{summary}\n\n"
+                    else:
+                        response = f"Sports Betting Brief, {user_name}:\n\n"
+                    if top_plays:
+                        response += "**Top Plays:**\n"
+                        for p in top_plays[:6]:
+                            source = p.get('source', '')
+                            pick = p.get('pick', '')
+                            conf = p.get('confidence', 0)
+                            matchup = p.get('matchup', '')
+                            response += f"- [{source}] **{matchup}**: {pick} ({conf}%)\n"
                     return response
 
                 else:

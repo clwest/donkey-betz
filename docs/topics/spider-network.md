@@ -78,3 +78,7 @@ Feeds into Boardroom with dedup on `source_type + item_type + title`. Auto-appro
 - Backfill: `backfill_spider_embeddings` task (every 10 min, batch 500)
 - ~88% of SpiderData records have embeddings
 - Query: `SpiderIntelligenceService.query_by_text(query)` for semantic search
+
+## TheOddsSpider Score Fetching (Session 995)
+
+`TheOddsSpider.fetch_scores(sport_key, days_from=3)` fetches completed game scores from `/v4/sports/{sport}/scores`. Returns same `event_id` as odds data for direct joining. Used by `BettingOutcomeVerifier` to settle placed wagers and verify arbitrage items.

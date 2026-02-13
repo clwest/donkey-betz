@@ -1284,6 +1284,23 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(minute='*/5'),  # Every 5 minutes
     },
     # =========================================================================
+    # Session 995: Betting Outcome Verification + Learning Loop
+    # =========================================================================
+    'verify-betting-outcomes': {
+        'task': 'core.tasks.verify_betting_outcomes',
+        'schedule': crontab(hour='*/2', minute='15'),  # Every 2 hours at :15
+    },
+    # Session 995B: Sports betting brief generation (morning + evening)
+    'generate-daily-betting-brief': {
+        'task': 'core.tasks.generate_daily_betting_brief',
+        'schedule': crontab(hour='9,19', minute='0'),  # 9 AM + 7 PM
+    },
+    # Session 995B: Evaluate ML prediction accuracy
+    'evaluate-ml-predictions': {
+        'task': 'core.tasks.evaluate_ml_predictions',
+        'schedule': crontab(hour='*/6', minute='45'),  # Every 6 hours at :45
+    },
+    # =========================================================================
     # Session 563: Self-Blog Generation
     # Session 766: Fixed crontab - was missing minute=0, causing 240 blogs/day
     # Session 987: Swapped v1 → v2 deliberation pipeline (ClaimsPack + 3 reviewers)
