@@ -710,6 +710,64 @@ class TheOddsSpider:
 
         return tags
 
+    def fetch_scores(self, sport_key: str, days_from: int = 3) -> List[Dict]:
+        """
+        Fetch completed game scores from The Odds API.
+
+        Uses the /v4/sports/{sport}/scores endpoint which returns the same
+        event_id as odds data — no fuzzy team matching needed for joining.
+
+        Args:
+            sport_key: Sport key (e.g., 'basketball_nba')
+            days_from: How many days back to fetch (max 3)
+
+        Returns:
+            List of completed events with scores:
+            [{event_id, home_team, away_team, home_score, away_score, completed}, ...]
+        """
+        params = {
+            'daysFrom': min(days_from, 3),
+            'dateFormat': 'iso',
+        }
+
+        data = self._make_request(f'sports/{sport_key}/scores', params)
+        if not data:
+            return []
+
+        results = []
+        for event in data:
+            if not event.get('completed', False):
+                continue
+
+            scores = event.get('scores', [])
+            if not scores or len(scores) < 2:
+                continue
+
+            # Build score lookup by team name
+            score_map = {s['name']: int(s['score']) for s in scores if s.get('score') is not None}
+
+            home_team = event.get('home_team', '')
+            away_team = event.get('away_team', '')
+            home_score = score_map.get(home_team)
+            away_score = score_map.get(away_team)
+
+            if home_score is None or away_score is None:
+                continue
+
+            results.append({
+                'event_id': event.get('id'),
+                'sport_key': sport_key,
+                'home_team': home_team,
+                'away_team': away_team,
+                'home_score': home_score,
+                'away_score': away_score,
+                'completed': True,
+                'commence_time': event.get('commence_time', ''),
+            })
+
+        logger.info(f"TheOddsSpider fetched {len(results)} completed scores for {sport_key}")
+        return results
+
     def get_sport_odds(self, sport_key: str) -> List[Dict]:
         """Get odds for a specific sport."""
         if sport_key not in self.SPORTS:
