@@ -1377,7 +1377,7 @@ from core.views_push_notifications import (
 # Session 563: Bet Tracking APIs
 from core.views_betting import (
     place_bet, get_wagers, get_wager_detail, settle_wager,
-    cancel_wager, get_betting_stats, get_recent_activity
+    cancel_wager, get_betting_stats, get_recent_activity, quick_pick
 )
 
 # Import Phase 2 advanced features
@@ -2900,6 +2900,7 @@ urlpatterns = [
     path('api/v1/betting/wagers/<uuid:wager_id>/cancel/', cancel_wager, name='betting-wager-cancel'),
     path('api/v1/betting/stats/', get_betting_stats, name='betting-stats'),
     path('api/v1/betting/recent/', get_recent_activity, name='betting-recent'),
+    path('api/v1/betting/quick-pick/', quick_pick, name='betting-quick-pick'),
     # Session 995B: Sports betting intelligence endpoints
     path('api/v1/betting/todays-games/', get_todays_games, name='betting-todays-games'),
     path('api/v1/betting/brief/', get_betting_brief, name='betting-brief'),

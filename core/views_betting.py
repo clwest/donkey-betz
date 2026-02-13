@@ -479,6 +479,81 @@ def get_recent_activity(request):
         }, status=500)
 
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def quick_pick(request):
+    """
+    Session 999B: One-click bet logging from game cards.
+    Simplified wrapper around PlacedWager + PlacedWagerLeg creation.
+    """
+    try:
+        data = request.data
+        event_id = data.get('event_id', '')
+        matchup = data.get('matchup', '')
+        pick = data.get('pick', '')
+        odds_val = int(data.get('odds', -110))
+        stake = Decimal(str(data.get('stake', 10)))
+        sport = data.get('sport', '')
+        market_type = data.get('market_type', 'h2h')
+        bookmaker = data.get('bookmaker', 'consensus')
+        line = data.get('line')
+        commence_time = data.get('commence_time')
+        source = data.get('source', 'quick_pick')
+
+        if not pick:
+            return Response({'success': False, 'error': 'pick is required'}, status=400)
+
+        # Calculate payout from American odds
+        if odds_val > 0:
+            decimal_odds = 1 + (odds_val / 100)
+        else:
+            decimal_odds = 1 + (100 / abs(odds_val))
+        potential_payout = round(float(stake) * decimal_odds, 2)
+
+        user = request.user if request.user.is_authenticated else None
+
+        wager = PlacedWager.objects.create(
+            user=user,
+            wager_type='single',
+            stake=stake,
+            odds=odds_val,
+            potential_payout=Decimal(str(potential_payout)),
+            notes=f"Quick pick from {source}",
+        )
+
+        from django.utils.dateparse import parse_datetime
+        ct = parse_datetime(commence_time) if commence_time else None
+
+        PlacedWagerLeg.objects.create(
+            wager=wager,
+            event_id=event_id,
+            sport=sport,
+            matchup=matchup,
+            market_type=market_type,
+            pick=pick,
+            odds=odds_val,
+            line=Decimal(str(line)) if line else None,
+            bookmaker=bookmaker,
+            commence_time=ct,
+        )
+
+        _update_stats(user)
+
+        return Response({
+            'success': True,
+            'wager_id': str(wager.id),
+            'matchup': matchup,
+            'pick': pick,
+            'odds': odds_val,
+            'stake': float(stake),
+            'potential_payout': potential_payout,
+        }, status=201)
+
+    except Exception as e:
+        logger.error(f"Error in quick_pick: {e}")
+        return Response({'success': False, 'error': str(e)}, status=500)
+
+
 def _update_stats(user):
     """Update betting stats for a user."""
     try:
