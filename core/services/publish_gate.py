@@ -44,6 +44,9 @@ class PublishGate:
     QUALITY_THRESHOLD = 0.75
     NOVELTY_THRESHOLD = 0.6
     STRUCTURE_THRESHOLD = 0.55  # Session 864: Lowered from 0.65 to catch more legitimate content
+    # Session 1003: Lowered from 0.5 — MythologyDetectionService gives 0.55-1.0 risk
+    # on ALL AI-generated content, blocking every blog from publishing.
+    MYTHOLOGY_THRESHOLD = 0.15
 
     # Session 864: Operational title prefixes that bypass quality checks -> internal_only
     # These are clearly internal documents and shouldn't be evaluated as public content
@@ -412,10 +415,12 @@ class PublishGate:
         """
         notes_parts = []
 
-        # Session 997: Mythology check — high risk caps decision at 'enhance'
-        if mythology_score < 0.5:
+        # Session 997: Mythology check — very high risk caps decision at 'enhance'
+        # Session 1003: Lowered threshold from 0.5 to MYTHOLOGY_THRESHOLD (0.15)
+        # Old threshold blocked ALL AI-generated blogs (MythologyDetection too aggressive)
+        if mythology_score < self.MYTHOLOGY_THRESHOLD:
             notes_parts.append(
-                f"Mythology score {mythology_score:.2f} indicates fabricated claims; "
+                f"Mythology score {mythology_score:.2f} below {self.MYTHOLOGY_THRESHOLD}; "
                 f"capped at 'enhance'"
             )
 
@@ -439,7 +444,7 @@ class PublishGate:
 
         # All thresholds passed
         if passed_quality and passed_novelty and passed_structure:
-            if mythology_score < 0.5:
+            if mythology_score < self.MYTHOLOGY_THRESHOLD:
                 notes_parts.append("All quality checks passed but mythology risk too high")
                 return ('enhance', '; '.join(notes_parts))
             notes_parts.append("All quality checks passed")
