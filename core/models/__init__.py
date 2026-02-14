@@ -369,4 +369,8 @@ __all__ = [
     'LearningAchievement',
     'UserLearningAchievement',
     'UserLearningStreak',
+
+    # Desk Intelligence Briefs (Session 1003)
+    'SportsBettingBrief',
+    'BlockchainAuditBrief',
 ]
