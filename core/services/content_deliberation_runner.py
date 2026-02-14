@@ -179,6 +179,15 @@ class ContentDeliberationRunner:
         if claims_pack and claims_pack.claims:
             research = claims_pack.to_prompt_block()
 
+        # Session 1001: Inject real operational telemetry
+        try:
+            from core.tasks import _build_operational_context
+            operational_context = _build_operational_context()
+            if operational_context:
+                research += f"\n\n{operational_context}"
+        except Exception as e:
+            logger.warning(f"[Phase 4] Operational context injection failed: {e}")
+
         task_str = f'Write a blog post about: {topic}'
         context = {
             'research': research,
