@@ -88,6 +88,47 @@ python manage.py migrate core 0243
 - `0242`: Creates `SportsBettingBrief` + `BlockchainAuditBrief` tables
 - `0243`: **Data migration** — bulk-sets `founder_intent_set=True` on all ACTIVE/TRIAGE initiatives that lack it (reversible via `founder_intent_set_by='system_auto_backfill'` marker)
 
+### Fix 7: AudioAgent Cloudinary Storage — 89% Failure Rate Fix
+**Files:** `core/services/elevenlabs_tts_service.py`, `core/views_audio.py`, `content/elevenlabs_provider.py`, `core/services/podcast_audio_service.py`
+
+**Root cause:** Production uses `MediaCloudinaryStorage` as `DEFAULT_FILE_STORAGE`, which validates uploads as images. When AudioAgent saves MP3 audio via `default_storage.save()`, Cloudinary rejects it with "Invalid image file" — causing 89% failure rate (102/115 executions failed).
+
+**Fix:** Centralized `get_audio_storage()` helper in `elevenlabs_tts_service.py` that returns `RawMediaCloudinaryStorage` when production Cloudinary is detected. Applied to all 4 audio save points:
+1. `core/views_audio.py` — `_execute_generate_voice()` (AudioAgent's primary path)
+2. `content/elevenlabs_provider.py` — `generate_speech()` fallback save (line 193)
+3. `content/elevenlabs_provider.py` — `generate_sound_effect()` save (line 293)
+4. `core/services/podcast_audio_service.py` — podcast episode final audio save (line 336)
+
+### Fix 8: Worker Concurrency Bump
+**File:** `Procfile`
+
+- `celery-pa`: `-c 1` to `-c 2` (PA tasks are lightweight text processing)
+- `celery-content`: `-c 1` to `-c 2` (content tasks are text-based)
+- `celery-broadcast`: `-c 1` to `-c 3` (threads pool shares memory, safe to scale)
+- `celery-worker` and `celery-long-running` stay at `-c 1` (ML/agent tasks need full memory)
+- Lowered `max-memory-per-child` to 150000 for pa/content to fit 2 children in 512MB
+
+## Files Modified
+
+| File | Changes |
+|------|---------|
+| `core/celery.py` | Switch blog task + add 2 beat entries |
+| `core/services/conversation_initiative_pipeline.py` | `set_founder_intent()` after create |
+| `core/services/initiative_integration_service.py` | `set_founder_intent()` after create |
+| `core/services/hivemind_execution_pipeline.py` | `set_founder_intent()` after create |
+| `core/services/autonomous_action_executor.py` | `set_founder_intent()` after create |
+| `core/services/signal_aggregation_service.py` | Relaxed filter + lower cluster size + text extraction fallbacks |
+| `core/tasks.py` | Enable podcast audio + persist desk briefs to DB |
+| `core/models_unified_system.py` | `SportsBettingBrief` + `BlockchainAuditBrief` models |
+| `core/models/__init__.py` | Register new models in `__all__` |
+| `core/migrations/0242_...` | Migration for new models |
+| `core/migrations/0243_...` | Data migration: backfill founder_intent on stuck initiatives |
+| `core/services/elevenlabs_tts_service.py` | `get_audio_storage()` centralized helper |
+| `core/views_audio.py` | Use `get_audio_storage()` for MP3 saves |
+| `content/elevenlabs_provider.py` | Use `get_audio_storage()` for audio saves (2 places) |
+| `core/services/podcast_audio_service.py` | Use `get_audio_storage()` for podcast saves |
+| `Procfile` | Bump pa/content to -c 2, broadcast to -c 3 |
+
 ## Verification
 
 1. **Blog:** New blogs have deliberation metadata (`quality_score` set, status progression)
@@ -95,3 +136,5 @@ python manage.py migrate core 0243
 3. **Signals:** `SignalCluster.objects.count()` > 0 within 1h of deploy
 4. **Podcasts:** New PodcastEpisode with audio data (requires `ELEVENLABS_API_KEY`)
 5. **Desks:** `SportsBettingBrief.objects.count()` + `BlockchainAuditBrief.objects.count()` > 0 after desk run
+6. **AudioAgent:** Failure rate drops from 89% to near 0% — check `AgentExecution.objects.filter(agent__name='AudioAgent', status='failed').count()`
+7. **Concurrency:** `celery inspect active` shows 2 workers on pa/content queues

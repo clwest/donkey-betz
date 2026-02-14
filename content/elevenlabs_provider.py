@@ -189,9 +189,12 @@ class ElevenLabsProvider:
                 logger.info(f"📁 Falling back to local storage...")
 
                 # Fallback to local storage
+                # Session 1003: Use RawMediaCloudinaryStorage for audio files
+                from core.services.elevenlabs_tts_service import get_audio_storage
+                storage = get_audio_storage()
                 filepath = f"audio/elevenlabs/{filename}"
-                saved_path = default_storage.save(filepath, ContentFile(audio_data))
-                audio_url = default_storage.url(saved_path)
+                saved_path = storage.save(filepath, ContentFile(audio_data))
+                audio_url = storage.url(saved_path)
 
                 # Convert relative path to full URI
                 if audio_url.startswith('/'):
@@ -289,9 +292,11 @@ class ElevenLabsProvider:
             filename = f"elevenlabs_sound_{file_id}.mp3"
             filepath = f"audio/elevenlabs/{filename}"
 
-            # Save to Django storage
-            saved_path = default_storage.save(filepath, ContentFile(audio_data))
-            audio_url = default_storage.url(saved_path)
+            # Session 1003: Use RawMediaCloudinaryStorage for audio files
+            from core.services.elevenlabs_tts_service import get_audio_storage
+            storage = get_audio_storage()
+            saved_path = storage.save(filepath, ContentFile(audio_data))
+            audio_url = storage.url(saved_path)
 
             logger.info(f"✅ Sound effect generated successfully!")
             logger.info(f"🎵 Audio saved: {audio_url}")

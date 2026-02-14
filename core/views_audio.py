@@ -58,7 +58,7 @@ def _execute_generate_voice(user, parameters, session=None):
         logger.info(f"Agent generating voice: '{text[:50]}...' with voice {voice}")
 
         from core.services.elevenlabs_tts_service import (
-            generate_speech_with_retry, get_voice_id
+            generate_speech_with_retry, get_voice_id, get_audio_storage
         )
 
         voice_id = get_voice_id(voice)
@@ -81,8 +81,13 @@ def _execute_generate_voice(user, parameters, session=None):
         filename = f'voice_{uuid.uuid4().hex[:8]}.mp3'
         username = user.username if user else 'system'
         filepath = os.path.join('generated_audio', username, filename)
-        saved_path = default_storage.save(filepath, ContentFile(audio_data))
-        audio_url = default_storage.url(saved_path)
+
+        # Session 1003: Use RawMediaCloudinaryStorage for audio files in production.
+        # The default MediaCloudinaryStorage rejects non-image files with
+        # "Invalid image file", causing 89% AudioAgent failure rate.
+        storage = get_audio_storage()
+        saved_path = storage.save(filepath, ContentFile(audio_data))
+        audio_url = storage.url(saved_path)
 
         logger.info(f"Agent generated voice: {saved_path}")
 
