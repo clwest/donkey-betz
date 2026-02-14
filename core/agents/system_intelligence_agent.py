@@ -495,14 +495,6 @@ and only important ones should be promoted. Don't treat this as a crisis."""
         - get_item_details: Get detailed information about a specific attention item
         """
         # Session 744: Handle delegation tool
-        if tool_name == 'delegate_to_specialist':
-            return self._handle_delegate_to_specialist(
-                specialist_agent=arguments.get('specialist_agent', ''),
-                task=arguments.get('task', ''),
-                context=arguments.get('context', ''),
-                delegation_context=getattr(self, '_current_delegation_context', {})
-            )
-
         if tool_name == "get_system_attention":
             return self._tool_get_system_attention(arguments)
         elif tool_name == "get_item_details":

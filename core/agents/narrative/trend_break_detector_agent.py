@@ -259,17 +259,9 @@ When analyzing potential shifts, consider:
         elif tool_name == "get_recent_spider_data":
             return self._get_recent_spider_data(tool_input)
 
-        elif tool_name == "delegate_to_specialist":
-            # Session 833: Handle delegation properly
-            return self._handle_delegate_to_specialist(
-                specialist_agent=arguments.get('specialist_agent', ''),
-                task=arguments.get('task', ''),
-                context=arguments.get('context', ''),
-                delegation_context=getattr(self, '_current_delegation_context', {})
-            )
-
         else:
-            return {"error": f"Unknown tool: {tool_name}"}
+            # Session 1002C: Fall through to BaseAgent for web_search, spider_query, delegation
+            return super()._execute_tool_call(tool_name, tool_input)
 
     def _scan_for_shifts(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         """Scan for potential narrative shifts."""

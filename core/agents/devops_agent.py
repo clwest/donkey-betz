@@ -523,15 +523,6 @@ Only use these tools when explicitly asked to generate configs. For questions or
         elif tool_name == "create_monitoring_config":
             return self._create_monitoring_config(**arguments)
 
-        elif tool_name == "delegate_to_specialist":
-            # Session 833: Handle delegation properly
-            return self._handle_delegate_to_specialist(
-                specialist_agent=arguments.get('specialist_agent', ''),
-                task=arguments.get('task', ''),
-                context=arguments.get('context', ''),
-                delegation_context=getattr(self, '_current_delegation_context', {})
-            )
-        # Session 988: Fall through to BaseAgent for web_search + delegation
         return super()._execute_tool_call(tool_name, arguments)
 
     def _create_ci_pipeline(
