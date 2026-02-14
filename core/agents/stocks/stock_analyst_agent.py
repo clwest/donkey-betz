@@ -972,12 +972,6 @@ Provide:
 
         Tools: analyze_filing, check_valuation, compare_peers, assess_risk
         """
-        # First check if base class handles it (delegation)
-        try:
-            return super()._execute_tool_call(tool_name, arguments)
-        except NotImplementedError:
-            pass
-
         ticker = arguments.get('ticker', '')
 
         # Session 918: Track sources for provenance
@@ -1056,8 +1050,5 @@ Provide:
                 context=arguments.get('context', ''),
                 delegation_context=getattr(self, '_current_delegation_context', {})
             )
-        else:
-            return {
-                'success': False,
-                'error': f"Unknown tool: {tool_name}"
-            }
+        # Session 1002C: Fall through to BaseAgent for web_search, spider_query, delegation
+        return super()._execute_tool_call(tool_name, arguments)
