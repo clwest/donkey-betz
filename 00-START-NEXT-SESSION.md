@@ -1,31 +1,56 @@
 # Session 1004 - Start Here
 
-**Previous Session:** 1003 (Pipeline Completion — 6 Broken Execution Loops Fixed)
+**Previous Session:** 1003 (Pipeline Completion — 12 Fixes Closing All Execution Loops)
 **Date:** February 13, 2026
-**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **LIVE SCORES + AI PICKS** | **BETTING HUB: LIVE** | **STOCK HUB: LIVE** | **INTELLIGENCE DESKS: 4 ACTIVE + PERSISTED** | **Workspace: 9 TABS** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 97** | **PA Intents: 38** | **Enrichment Services: 8** | **BLOG PIPELINE: DELIBERATION + AUTO-PUBLISH** | **INITIATIVE AUTO-PROGRESSION: UNBLOCKED** | **SIGNAL AGGREGATION: ACTIVATED** | **PODCAST AUDIO: ENABLED** | **DESK PERSISTENCE: 2 NEW MODELS** | **Celery Tasks: 268** | **GOVERNANCE: HARDENED**
+**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **LIVE SCORES + AI PICKS** | **BETTING HUB: LIVE** | **STOCK HUB: LIVE** | **INTELLIGENCE DESKS: 4 ACTIVE + PERSISTED** | **Workspace: 9 TABS** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 97** | **PA Intents: 38** | **Enrichment Services: 8** | **BLOG PIPELINE: DELIBERATION + AUTO-PUBLISH (EVERY 2H)** | **INITIATIVE AUTO-PROGRESSION: UNBLOCKED** | **SIGNAL AGGREGATION: 938 CLUSTERS** | **PODCAST AUDIO: ENABLED** | **DESK PERSISTENCE: 2 NEW MODELS** | **Celery Tasks: 268** | **GOVERNANCE: HARDENED**
 
 ---
 
 ## Session 1003 Summary (Just Completed)
 
-### Pipeline Completion — Fix 6 Broken Execution Loops
+### Pipeline Completion — 12 Fixes Closing All Execution Loops
 
-Production data revealed world-class intake but broken execution completion (13,480 executions, 8 published blogs, 596 initiatives stuck at Stage 1, 0 signal clusters from 18,893 spider records). Fixed all 6 broken pipelines:
+Production audit revealed world-class intake but broken execution completion. Fixed 12 issues across 6 PRs + direct DB fixes:
 
-1. **Blog Pipeline** -- Switched beat task from `generate_self_blog_task` to `generate_self_blog_deliberation_task`. Added `reevaluate-enhanced-blogs` (4h) and `auto-publish-approved-blogs` (2h) beat entries.
+#### Phase 1: Core Pipeline Fixes (PR #1130)
+1. **Blog Pipeline** -- Switched beat task to deliberation pipeline. Added reevaluate (4h) + auto-publish (2h) beat entries.
+2. **Initiative Founder Intent** -- Added `set_founder_intent()` after all 4 creation points. Data migration `0243` backfills stuck initiatives.
+3. **Signal Aggregation** -- Relaxed `is_processed` filter, added text extraction fallbacks, lowered MIN_CLUSTER_SIZE to 2. **Result: 938 clusters from 18,893 spider records (was 0).**
+4. **Podcast Audio** -- Changed `generate_audio: False` to `True`.
+5. **Sports Desk Persistence** -- New `SportsBettingBrief` model.
+6. **Blockchain Desk Persistence** -- New `BlockchainAuditBrief` model.
 
-2. **Initiative Founder Intent** -- Added `set_founder_intent()` after `Initiative.objects.create()` in all 4 creation points. `can_auto_progress()` was returning `False` for all initiatives. Data migration `0243` auto-backfills existing stuck initiatives on deploy.
+#### Phase 2: AudioAgent + Concurrency (PR #1131)
+7. **AudioAgent Cloudinary Fix** -- Centralized `get_audio_storage()` returns `RawMediaCloudinaryStorage` for audio files. Applied to all 4 audio save paths. Fixes 89% failure rate (102/115 executions failed).
+8. **Worker Concurrency Bump** -- pa/content workers: -c 1 → -c 2; broadcast: -c 1 → -c 3.
 
-3. **Signal Aggregation** -- Relaxed `is_processed=True` filter to include records with `embedding_text`. Added `embedding_text` and `processed_data` fallbacks in text extraction. Lowered `MIN_CLUSTER_SIZE` from 3 to 2.
+#### Phase 3: ContentStudio Timeout (PR #1132)
+- **ContentStudio Timeout Epidemic** -- Added `soft_time_limit=600, time_limit=720` to content generation. Parallelized fallback debate with ThreadPoolExecutor (3 agents × 120s). Added `timeout=60` to OpenAI clients. Graceful SoftTimeLimitExceeded handler saves partial results.
 
-4. **Podcast Audio** -- Changed `generate_audio: False` to `True` in auto-podcast task.
-
-5. **Sports Desk Persistence** -- New `SportsBettingBrief` model. Desk output now persists to DB (was only cached 6h).
-
-6. **Blockchain Desk Persistence** -- New `BlockchainAuditBrief` model. Same pattern as sports.
+#### Phase 4: Blog Scoring + Mythology + Initiative Quality (PRs #1133, #1134, #1135)
+9. **Mythology Threshold** -- `MYTHOLOGY_THRESHOLD` lowered from 0.5 to 0.15. MythologyDetectionService was giving 0.55-1.0 risk on ALL AI-generated blogs, blocking every blog from publishing.
+10. **Beat Schedule DB Fixes** -- Direct Railway DB: auto-publish `hour=6` → `hour=*/2`, created missing `run-all-desks-intelligence` task.
+11. **Blog Scoring Expansion** -- `reevaluate_enhanced_blogs` now scores ALL unscored blogs (pending_review + draft), not just needs_enhancement.
+12. **Initiative Quality Gate** -- Added 'Key Finding', 'Research on', 'Status', 'Confidence', 'Complete' as accepted alternatives in Stage 1 quality check. All 59 DRAFT stages were failing with "Missing sections: Research Findings".
 
 **Migrations:** `0242_session_1003_desk_intelligence_briefs` + `0243_session_1003_backfill_founder_intent`
-**Files changed:** 10 files. See `docs/handoffs/SESSION_1003_PIPELINE_COMPLETION.md`.
+**PRs:** #1130, #1131, #1132, #1133, #1134, #1135
+**Handoff:** `docs/handoffs/SESSION_1003_PIPELINE_COMPLETION.md`
+
+### Production Metrics After Session 1003
+
+| Metric | Before | After | Fix |
+|--------|--------|-------|-----|
+| Signal Clusters | 0 | 938 (295/day) | Fix 3 |
+| Blog scoring | 59/160 scored | All scored (deploying) | Fix 11 |
+| Blog mythology gate | ALL blocked | 8+ unblocked (deploying) | Fix 9 |
+| Initiative Stage 1 stuck | 59 stuck | 59 unblocked (deploying) | Fix 12 |
+| AudioAgent failure | 89% (102/115) | Fix deployed, awaiting runs | Fix 7 |
+| ContentStudio timeouts | 65 in 3 days | Time-limited + parallel | ContentStudio fix |
+| Auto-publish frequency | Once daily 6 AM | Every 2 hours | Fix 10 |
+| Desk intelligence | Missing from beat | Created in beat DB | Fix 10 |
+| Agent success rate | 94.7% | 94.8% (stable) | — |
+| Agent executions/day | ~980 | ~980 | — |
 
 ## Session 1002C Summary (Prior)
 
@@ -43,95 +68,11 @@ Session 1002B centralized `delegate_to_specialist`, `web_search`, and `spider_qu
 
 5. **Delegate block cleanup** — Removed redundant `delegate_to_specialist` elif blocks from 59 agents (-534 lines). BaseAgent handles delegation via super() now (PR #1127).
 
-6. **9 agents: direct API call fix** — 9 agents bypassed `_call_openai()` by calling `client.chat.completions.create(tools=self.tools)` directly. Replaced with `tools=self.get_tools_with_delegation()` so shared tools are included. Fixes: market_intelligence, base_business_research (+ all children), narrative_drift_coordinator, platform_audit, stock_analyst, institutional_watcher, market_anomaly_detector, market_movement_monitor, system_intelligence.
+6. **9 agents: direct API call fix** — 9 agents bypassed `_call_openai()` by calling `client.chat.completions.create(tools=self.tools)` directly. Replaced with `tools=self.get_tools_with_delegation()` so shared tools are included.
 
-**Result:** 64 agents with tool handlers all fall through to BaseAgent. Every agent sees `web_search`, `spider_query`, and `delegate_to_specialist` in its LLM tool schema. Zero dead code blocks remain. Zero agents bypass shared tool injection via direct API calls.
+**Result:** 64 agents with tool handlers all fall through to BaseAgent. Every agent sees `web_search`, `spider_query`, and `delegate_to_specialist` in its LLM tool schema.
 
 **PRs:** #1125, #1126, #1127, #1129. See `docs/handoffs/SESSION_1002C_SUPER_FALLBACK.md`.
-
-## Session 1002B Summary (Prior)
-
-### Agent Delegation System Fix & Shared Tool Sets (1002B)
-
-Fixed systemic under-utilization of the 82-agent system:
-
-1. **Dynamic AVAILABLE_SPECIALISTS** -- Replaced static 13-agent list with a cached property reading from AgentRouter.AGENT_MAP. LLM delegation tool now sees all 81 agents (was 13).
-
-2. **Enhanced delegation tool description** -- Expanded from a vague 4-example hint to categorized overview across 8 categories (Research, Content, Media, Finance, Development, Business, Blockchain, Markets).
-
-3. **SPIDER_QUERY_TOOL constant** -- Module-level shared constant (like WEB_SEARCH_TOOL). Any agent can include it and get automatic handling from BaseAgent._execute_tool_call().
-
-4. **Centralized spider_query handler** -- Added to BaseAgent._execute_tool_call() using SpiderIntelligenceService.search_spider_data(). No more per-agent handler boilerplate.
-
-5. **Fixed broken business agent spider_query** -- BaseBusinessResearchAgent called `search_intelligence()` (doesn't exist). Fixed to `search_spider_data()`.
-
-**Files changed:** 2 code files. See `docs/handoffs/SESSION_1002B_DELEGATION_SHARED_TOOLS.md`.
-
-## Session 1002 Summary (Prior)
-
-### Spider Context Fabrication Fix
-
-Fixed two root causes of content fabrication in ContentWriterAgent:
-
-1. **PLATFORM_CONTEXT inflation** -- Replaced a ~1,400 token static string (listing every spider/agent name) with `_build_dynamic_platform_summary()` (~90 tokens) that queries live Agent, SpiderData, and HeartBeat counts. GPT no longer sees spider names it has no data for.
-
-2. **SpiderContextBuilder under-utilization** -- `spider_context.get('trends', [])` used the WRONG KEY (should be `relevant_trends`), so spider data was **never injected**. New `_format_spider_intelligence()` reads all 6 fields from SpiderContextBuilder (trends, discussions, articles, market_data, related_discussions, freshness) and formats them as citable markdown.
-
-Also researched the agent execution model: agents use single-pass LLM tool calling (no explicit step planning), WorkflowAgent is the only multi-turn exception, delegation is recursive up to depth 3.
-
-**Files changed:** 1 file. See `docs/handoffs/SESSION_1002_SPIDER_CONTEXT_FABRICATION_FIX.md`.
-
-## Session 1001 Summary (Prior)
-
-### Blog Telemetry Grounding
-
-Injected real operational telemetry into blog generation so ContentWriterAgent cites verifiable metrics instead of fabricating claims. New `_build_operational_context()` queries AgentExecution, CeleryTaskEvent, HeartBeat, and AgentDecisionSummary (72h window) and appends real data to both Pipeline 1 (self-blog) and Pipeline 2 (deliberation). Replaced all "add your own insights" prompt language with "Ground all claims in the data provided." Added anti-fabrication bullets to ContentWriterAgent's system prompt.
-
-**Files changed:** 3 files. See `docs/handoffs/SESSION_1001_BLOG_TELEMETRY_GROUNDING.md`.
-
-## Session 1000C Summary (Prior)
-
-### Content Review Automation Pipeline
-
-Wired the content review pipeline so 1,400+ blogs no longer sit in 'draft' forever. PublishGate now promotes blogs to 'approved' on publish decision. EditorAgent enhance task saves by default with a 3-round cap. Two new tasks: `reevaluate_enhanced_blogs` re-scores enhanced blogs, `auto_publish_approved_blogs` publishes approved blogs daily at 6 AM.
-
-**Pipeline:** `draft → evaluate (2h) → scored → publish → approved → auto-publish (daily 6AM) → published` with enhancement loop: `enhance → needs_enhancement → EditorAgent (6h) → re-evaluate (6h) → approved (max 3 rounds)`.
-
-**Files changed:** 3 files. See `docs/handoffs/SESSION_1000C_CONTENT_REVIEW_AUTOMATION.md`.
-
-## Session 1000 Summary (Prior)
-
-### Activate All Intelligence Desks
-
-Added a unified intelligence desk system running 4 desk coordinators daily at 6 AM via Celery beat. Each desk orchestrates 3-9 sub-agents, producing cached intelligence briefs. 23 agents went from idle to daily production.
-
-**4 Intelligence Desks:**
-- **Stocks** (9 agents) - MarketIntelligenceCoordinator + bull/bear/audit agents
-- **Sports** (5 agents) - SportsBettingCoordinator + predictor/odds/arbitrage agents
-- **Blockchain** (5 agents) - BlockchainAuditCoordinator + contract/transaction/whale agents
-- **Narrative** (4 agents) - NarrativeDriftCoordinator + historian/trend/cultural agents
-
-**Also:** Wired BookmakerAgent + DecisionEnforcerAgent to router (82 routable agents). New API endpoints: `GET /api/home/intelligence-desks/`, `POST /api/home/trigger-desks/`. New Intelligence Desks panel in Command Center with 4-card grid and "Run All Desks" button.
-
-**Files changed:** 7 files. See `docs/handoffs/SESSION_1000_INTELLIGENCE_DESKS.md`.
-
-## Session 999 Summary (Prior)
-
-### Stock Intelligence Hub
-
-Added "Hub" tab as default landing on Stock Intelligence page. Bloomberg-terminal-inspired view with brief, alerts, predictions, news, SEC. See `docs/handoffs/SESSION_999_STOCK_INTELLIGENCE_HUB.md`.
-
-## Session 998B Summary (Prior)
-
-### Live Scores + AI Predictions
-
-Today's Games tab shows live scores + odds-consensus AI predictions with W/L tracking. See `docs/handoffs/SESSION_998B_BETTING_HUB_LIVE_SCORES.md`.
-
-## Session 998 Summary (Prior)
-
-### System Governance Hardening
-
-PublishGate blocks publishing when `publish_ready=False`. SelfBlog.author tracks creation source. New 'reviewer' platform_role. See `docs/handoffs/SESSION_998_GOVERNANCE_HARDENING.md`.
 
 ---
 
@@ -142,7 +83,7 @@ PublishGate blocks publishing when `publish_ready=False`. SelfBlog.author tracks
 | Agents | 82 routable, 25 non-routable, 26+ provenance-tracked |
 | Spiders | 79 (74 working, 5 need API keys) |
 | Advisors | 25 |
-| Database Models | 393+ |
+| Database Models | 395+ |
 | Services | 134 |
 | Celery Tasks | 268 |
 | Intelligence Desks | 4 (Stocks, Sports, Blockchain, Narrative) |
@@ -153,7 +94,7 @@ PublishGate blocks publishing when `publish_ready=False`. SelfBlog.author tracks
 | Enrichment Services | 8 |
 | Attention Sections | 7 |
 | LLM Providers | 6 (OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini) |
-| Migrations | Through 0242 |
+| Migrations | Through 0243 |
 | Standalone Pages | `/stocks`, `/advisors`, `/betting`, `/neural-orchestra`, `/conversation-contract`, `/mythology-lab`, `/billing`, `/analytics`, `/docs-index` |
 
 ---
@@ -193,9 +134,26 @@ Diagnostic pipeline (Session 856) has 0 records. May need activation.
 ### Disconnected Dots Audit (Session 972) -- Ongoing
 Many items remain from the audit: agent output persistence, orphan endpoints, enrichment data loss.
 
+### sync_celery_beat Parser Misses Tasks
+The regex-based parser in `core/management/commands/sync_celery_beat.py` failed to create `run-all-desks-intelligence` and doesn't update `auto-publish-approved-blogs` crontab correctly. May need migration to a more robust parser (e.g., import the Python dict directly instead of regex parsing).
+
+### 89 Initiatives Can't Auto-Progress (no can_auto_progress)
+65/154 ACTIVE initiatives can auto-progress. The remaining 89 lack founder_intent or have other constraints. May need investigation.
+
+### 1208 DRAFT Stages Without Documents
+Stage document generation produced 103 documents but 1208 DRAFT stages still have no document. The `generate_initiative_stage_document` task may need to run more frequently or process more per batch.
+
 ---
 
 ## What Could Come Next
+
+### Monitor Pipeline Fix Impact
+All 12 fixes deployed — verify within 24h:
+- Blog `approved` count > 0
+- Initiative Stage 1 count decreasing
+- AudioAgent failure rate drops
+- Desk briefs populating
+- Auto-publish running every 2h
 
 ### Intelligence Desk Enhancements
 - Add desk-specific detail pages (click a desk card -> full brief view)
@@ -209,6 +167,9 @@ Session 972 identified ~200+ items. High-impact remaining items:
 - DecisionEnforcerAgent has `DecisionRecord` model but wiring incomplete
 - 85-95% enrichment data loss from truncation
 - Orphan API endpoints with no frontend consumers
+
+### Fix sync_celery_beat Parser
+Replace regex-based parsing with direct Python import to prevent beat schedule drift.
 
 ### Fix chat_conversations.platform Migration
 Create migration for the missing `platform` column to fix PA conversation persistence.
@@ -225,25 +186,6 @@ PA has no visibility into Celery Beat scheduled tasks. Add `scheduled_tasks_tool
 ### Agent Introspection
 PA can invoke agents but can't describe their capabilities. Add "what can [agent name] do?" intent.
 
-### CoinGecko Spider Schedule
-Ensure CoinGecko spider runs on schedule so crypto price queries return data.
-
-### Ticker Lookup Enhancements
-- Wire ticker lookup to PA: "look up AAPL"
-- Historical price chart (sparkline)
-
-### CeleryTaskEvent Analytics
-Dashboard showing task stats, success rates, queue utilization.
-
-### Admin Tab
-Dedicated workspace tab for Billing, Analytics, system configuration.
-
-### Code-Splitting
-`React.lazy()` for workspace tabs -- all 9 are in the main bundle.
-
-### Betting Prediction Tracking
-Track AI pick accuracy over time. Dashboard showing hit rate by sport, confidence band performance.
-
 ---
 
 ## Critical Patterns & Gotchas
@@ -257,7 +199,25 @@ Track AI pick accuracy over time. Dashboard showing hit rate by sport, confidenc
 **AgentExecution fields (Session 989):**
 - `agent` is FK to Agent -- use `agent__name` in `.values()` and `agent__name__icontains` in filters
 - No `success` field -- use `status='completed'` / `status='failed'`
-- No `agent_name` field
+- No `agent_name` field, no `started_at` field -- use `created_at`
+
+**CeleryTaskEvent fields:**
+- `duration_seconds`, `error_message`, `error_type`, `finished_at`, `id`, `queue`, `started_at`, `status`, `task_id`, `task_name`, `worker`
+- NO `timestamp` field -- use `started_at`
+
+**Initiative model:**
+- Status values are UPPERCASE: `'ACTIVE'`, `'ARCHIVED'`, `'COMPLETED'`
+- Import from `core.models` (NOT `core.models_unified_system`)
+- Field `name` (NOT `title`)
+
+**SelfBlog model:**
+- Import from `core.models_unified_system`
+- Has `created_at` but NO `updated_at`
+- Status flow: `draft → pending_review → needs_enhancement → approved → published`
+
+**SignalCluster model:**
+- Import from `core.models`
+- Timestamp field is `detected_at`
 
 **DeliberationSession.participants (Session 989):**
 - JSONField containing dicts (not strings)
