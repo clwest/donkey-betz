@@ -966,10 +966,10 @@ CELERY_TASK_ROUTES = {
     'core.tasks.process_approved_dreams': {'queue': 'long_running'},
     # Session 1000: Intelligence desks — 4 coordinators, heavy memory
     'core.tasks.run_all_desks_intelligence': {'queue': 'long_running'},
-    # Session 1000B: Heartbeat loads LLM registry + SentenceTransformer — too heavy for celery-worker
-    'core.tasks.run_heartbeat': {'queue': 'long_running'},
-    # Session 1000B: Nervous check imports core.routing → consumers → PA → SentenceTransformer
-    'core.tasks.check_nervous': {'queue': 'long_running'},
+    # Session 1004: Moved heartbeat + nervous off long_running to unblock desk intelligence.
+    # broadcast worker uses --pool=threads, so SentenceTransformer loads once and threads share it.
+    'core.tasks.run_heartbeat': {'queue': 'broadcast'},
+    'core.tasks.check_nervous': {'queue': 'broadcast'},
     # Session 885: Content generation tasks - dedicated content worker
     'core.tasks.generate_self_blog_task': {'queue': 'content'},
     'core.tasks.generate_self_blog_deliberation_task': {'queue': 'content'},
