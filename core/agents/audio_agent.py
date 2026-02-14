@@ -448,11 +448,8 @@ If asked to do something outside audio generation, politely explain you can only
                 context=arguments.get('context', ''),
                 delegation_context=getattr(self, '_current_delegation_context', {})
             )
-        else:
-            return {
-                'success': False,
-                'error': f"Unknown tool: {tool_name}. AudioAgent only supports audio tools."
-            }
+        # Session 1002C: Fall through to BaseAgent for web_search, spider_query, delegation
+        return super()._execute_tool_call(tool_name, arguments)
 
 
 # Session 392: Factory function for backwards compatibility

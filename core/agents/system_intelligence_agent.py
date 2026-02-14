@@ -507,8 +507,8 @@ and only important ones should be promoted. Don't treat this as a crisis."""
             return self._tool_get_system_attention(arguments)
         elif tool_name == "get_item_details":
             return self._tool_get_item_details(arguments)
-        else:
-            return {"error": f"Unknown tool: {tool_name}"}
+        # Session 1002C: Fall through to BaseAgent for web_search, spider_query, delegation
+        return super()._execute_tool_call(tool_name, arguments)
 
     def _tool_get_system_attention(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Get current system attention items."""

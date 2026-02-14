@@ -1256,11 +1256,8 @@ Return a comprehensive competitive landscape analysis with DOMAIN-RELEVANT data.
                 context=arguments.get('context', ''),
                 delegation_context=getattr(self, '_current_delegation_context', {})
             )
-        else:
-            return {
-                'success': False,
-                'error': f"Unknown tool: {tool_name}"
-            }
+        # Session 1002C: Fall through to BaseAgent for web_search, spider_query, delegation
+        return super()._execute_tool_call(tool_name, arguments)
 
     def _spider_fallback(self, query: str) -> Dict[str, Any]:
         """Fallback to spider data when web search fails - uses SEMANTIC search."""
