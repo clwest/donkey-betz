@@ -269,9 +269,9 @@ Always delegate tasks you cannot perform yourself rather than refusing or making
 
         prompt_parts = [self.system_prompt]
 
-        # Add platform context if available
-        if PROMPTING_SYSTEM_AVAILABLE and PLATFORM_CONTEXT:
-            prompt_parts.append(f"\n\n{PLATFORM_CONTEXT}")
+        # Session 1001B: Dynamic platform summary replaces static PLATFORM_CONTEXT
+        # (PLATFORM_CONTEXT listed every spider/agent name, causing fabrication)
+        prompt_parts.append(f"\n\n{self._build_dynamic_platform_summary()}")
 
         # Add temporal awareness
         prompt_parts.append(f"""
@@ -388,18 +388,11 @@ Tailor the content to match these preferences.""")
             except Exception as e:
                 logger.debug(f"Could not fetch user preferences: {e}")
 
-        # Add spider intelligence summary
+        # Session 1001B: Inject full spider intelligence (trends, discussions, articles, market data)
         if spider_context:
-            trends = spider_context.get('trends', [])
-            if trends:
-                trend_text = ", ".join(trends[:5]) if isinstance(trends[0], str) else ", ".join([t.get('title', str(t)) for t in trends[:5]])
-                prompt_parts.append(f"""
-
-## REAL-TIME INTELLIGENCE (Session 523)
-Current trending topics from spider network:
-{trend_text}
-
-Consider these trends when crafting the content to maximize relevance and engagement.""")
+            spider_intel = self._format_spider_intelligence(spider_context)
+            if spider_intel:
+                prompt_parts.append(f"\n\n{spider_intel}")
 
         # Session 886: Add performance context for feedback loop
         # Session 990: Wrapped with timeout to prevent context builders from hanging
@@ -459,6 +452,193 @@ For this {content_type}, ensure:
 - Make it shareable and memorable""")
 
         return "\n".join(prompt_parts)
+
+    def _build_dynamic_platform_summary(self) -> str:
+        """
+        Session 1001B: Build a compact platform summary from live DB counts.
+
+        Replaces the static PLATFORM_CONTEXT (~1,400 tokens listing every spider/agent
+        name) which caused GPT to fabricate stories about spiders it had no data from.
+        """
+        try:
+            from core.models import Agent
+            from core.models_unified_system import SpiderData
+            from core.models_heart import HeartBeat
+            from django.utils import timezone
+            from datetime import timedelta
+
+            now = timezone.now()
+            cutoff = now - timedelta(hours=72)
+
+            active_agents = Agent.objects.filter(is_active=True).count()
+
+            spider_qs = SpiderData.objects.filter(created_at__gte=cutoff)
+            active_spiders = spider_qs.values('spider_name').distinct().count()
+            data_points = spider_qs.count()
+
+            health_line = "unavailable"
+            hb = HeartBeat.objects.order_by('-recorded_at').first()
+            if hb:
+                health_line = f"{hb.overall_status} (score: {hb.health_score})"
+
+            return (
+                "## Platform Context (Live)\n"
+                f"- Active agents: {active_agents} | Data spiders active (72h): {active_spiders} | Data points collected: {data_points:,}\n"
+                f"- System health: {health_line}\n"
+                "- Infrastructure: Django + PostgreSQL + Redis + Celery\n\n"
+                "This is what you are part of. Do NOT list specific spider or agent names "
+                "unless they appear in the research data below.\n"
+            )
+        except Exception as e:
+            logger.debug(f"Dynamic platform summary failed: {e}")
+            return "## Platform Context\nAI content platform with multiple agents, spiders, and services.\n"
+
+    def _format_spider_intelligence(self, spider_context: Dict[str, Any]) -> str:
+        """
+        Session 1001B: Format the rich spider_context dict into citable markdown.
+
+        SpiderContextBuilder returns: relevant_trends, discussions, articles,
+        market_data, related_discussions, freshness — all previously ignored.
+        """
+        sections = []
+
+        # --- relevant_trends ---
+        try:
+            trends = spider_context.get('relevant_trends', [])
+            if trends:
+                lines = []
+                for t in trends[:7]:
+                    if isinstance(t, dict):
+                        topic = t.get('topic', t.get('title', str(t)))
+                        score = t.get('score', '')
+                        sources = ', '.join(t.get('sources', [])) if isinstance(t.get('sources'), list) else ''
+                        parts = [f"**{topic}**"]
+                        if score:
+                            parts.append(f"(score: {score})")
+                        if sources:
+                            parts.append(f"(sources: {sources})")
+                        lines.append(f"- {' '.join(parts)}")
+                    else:
+                        lines.append(f"- {t}")
+                if lines:
+                    sections.append("### Trending Topics\n" + "\n".join(lines))
+        except Exception as e:
+            logger.debug(f"Spider intel trends format error: {e}")
+
+        # --- discussions ---
+        try:
+            discussions = spider_context.get('discussions', [])
+            if discussions:
+                lines = []
+                for d in discussions[:5]:
+                    if isinstance(d, dict):
+                        title = d.get('title', d.get('topic', str(d)))
+                        source = d.get('source', d.get('spider_name', ''))
+                        lines.append(f"- {title}" + (f" -- {source}" if source else ""))
+                    else:
+                        lines.append(f"- {d}")
+                if lines:
+                    sections.append("### Discussions\n" + "\n".join(lines))
+        except Exception as e:
+            logger.debug(f"Spider intel discussions format error: {e}")
+
+        # --- articles ---
+        try:
+            articles = spider_context.get('articles', [])
+            if articles:
+                lines = []
+                for a in articles[:5]:
+                    if isinstance(a, dict):
+                        title = a.get('title', a.get('name', str(a)))
+                        url = a.get('url', a.get('source', ''))
+                        lines.append(f"- {title}" + (f" -- {url}" if url else ""))
+                    else:
+                        lines.append(f"- {a}")
+                if lines:
+                    sections.append("### Articles & Projects\n" + "\n".join(lines))
+        except Exception as e:
+            logger.debug(f"Spider intel articles format error: {e}")
+
+        # --- market_data ---
+        try:
+            market = spider_context.get('market_data')
+            if market and isinstance(market, dict):
+                lines = []
+                summary = market.get('summary', '')
+                if summary:
+                    lines.append(summary)
+                for key in ('crypto', 'stocks'):
+                    items = market.get(key, [])
+                    for item in items[:3]:
+                        if isinstance(item, dict):
+                            name = item.get('name', item.get('symbol', ''))
+                            price = item.get('price', '')
+                            change = item.get('change', item.get('change_24h', ''))
+                            parts = [name]
+                            if price:
+                                parts.append(str(price))
+                            if change:
+                                parts.append(f"({change})")
+                            lines.append(f"- {' '.join(parts)}")
+                if lines:
+                    sections.append("### Market Data\n" + "\n".join(lines))
+        except Exception as e:
+            logger.debug(f"Spider intel market format error: {e}")
+
+        # --- related_discussions ---
+        try:
+            related = spider_context.get('related_discussions', [])
+            if related:
+                lines = []
+                for r in related[:5]:
+                    if isinstance(r, dict):
+                        title = r.get('title', r.get('topic', str(r)))
+                        source = r.get('source', r.get('spider_name', ''))
+                        snippet = str(r.get('snippet', r.get('summary', '')))[:120]
+                        line = f"- {title}"
+                        if source:
+                            line += f" -- {source}"
+                        if snippet:
+                            line += f": {snippet}"
+                        lines.append(line)
+                    else:
+                        lines.append(f"- {r}")
+                if lines:
+                    sections.append("### Related Discussions\n" + "\n".join(lines))
+        except Exception as e:
+            logger.debug(f"Spider intel related format error: {e}")
+
+        # --- freshness ---
+        try:
+            freshness = spider_context.get('freshness', {})
+            if freshness and isinstance(freshness, dict):
+                quality = freshness.get('data_quality', '')
+                hours = freshness.get('hours_covered', '')
+                updated = freshness.get('last_updated', '')
+                if quality or hours:
+                    parts = []
+                    if quality:
+                        parts.append(f"Data quality: {quality}")
+                    if hours:
+                        parts.append(f"covering last {hours}h")
+                    if updated:
+                        parts.append(f"updated {updated}")
+                    sections.append(f"*{', '.join(parts)}*")
+        except Exception as e:
+            logger.debug(f"Spider intel freshness format error: {e}")
+
+        if not sections:
+            return ""
+
+        header = "## Spider Intelligence (Real-Time Data -- cite these specifically)"
+        footer = "Reference these data points by name when writing. Do not invent additional spider findings."
+        body = "\n\n".join(sections)
+
+        # Soft cap to prevent prompt bloat
+        if len(body) > 2000:
+            body = body[:2000] + "\n... (truncated)"
+
+        return f"{header}\n\n{body}\n\n{footer}"
 
     def execute(
         self,
