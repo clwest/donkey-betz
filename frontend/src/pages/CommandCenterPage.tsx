@@ -21,12 +21,12 @@ import { ChatMarkdown } from '@/components/ChatMarkdown'
 import {
   Send, Mic, MicOff, Loader2, Bot, User, Copy, RefreshCw, Activity,
   ThumbsUp, ThumbsDown, Trash2, Sparkles, AlertCircle,
-  ChevronRight, CheckCircle, XCircle, Zap, MessageSquare,
-  Heart, TrendingUp, Lightbulb, Palette, Settings2,
+  CheckCircle, XCircle, Zap, MessageSquare,
+  Heart, TrendingUp, Lightbulb, Palette,
   Bell, ClipboardList, Play, Check, X, Clock, HelpCircle,
-  Volume2, VolumeX, Settings, Moon, Eye, Pause, Sliders,
-  Bug, AlertTriangle, Wrench, ChevronDown, ChevronUp,
-  ExternalLink, Workflow, Database, Sparkles as SparklesIcon,
+  Volume2, VolumeX, Moon, Eye, Pause, Sliders,
+  Bug, ChevronDown, ChevronUp,
+  ExternalLink, Workflow, Database,
   PanelLeftClose, PanelLeftOpen, Plus, Brain,
   BarChart3, Shield, BookOpen,
 } from 'lucide-react'
@@ -678,8 +678,6 @@ export default function CommandCenterPage() {
 
   const fetchAttentionStats = useUnifiedStore((s) => s.fetchAttentionStats)
   const fetchRunningPilots = useUnifiedStore((s) => s.fetchRunningPilots)
-  const unifiedPendingCount = useUnifiedStore((s) => s.pendingDecisionsCount)
-  const runningPilotsCount = useUnifiedStore((s) => s.runningPilotsCount)
 
   // Fetch unified store data on mount
   useEffect(() => {
@@ -1636,7 +1634,7 @@ export default function CommandCenterPage() {
                       </div>
 
                       {/* Decision Items */}
-                      {pendingDecisions.map((item, idx) => {
+                      {pendingDecisions.map((item) => {
                         const urgencyEmoji = { critical: '🚨', high: '⚠️', medium: '📋', low: 'ℹ️' }[item.urgency] || '📋'
                         const hasML = item.ml_recommendation && item.ml_confidence && item.ml_confidence > 0.7
 
