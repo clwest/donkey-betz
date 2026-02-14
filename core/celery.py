@@ -1712,7 +1712,7 @@ app.conf.beat_schedule = {
         'schedule': 60.0,  # Every 60 seconds
         'options': {
             'expires': 55,  # Expire before next run
-            'queue': 'long_running',  # Session 1000B: Loads LLM registry + SentenceTransformer
+            'queue': 'broadcast',  # Session 1004: Moved off long_running (was blocking desks)
         }
     },
     # Session 702: LUNGS Service - Resource & Capacity Management
@@ -1818,7 +1818,7 @@ app.conf.beat_schedule = {
         'schedule': 60.0,  # Every 60 seconds
         'options': {
             'expires': 55,  # Expire before next check
-            'queue': 'long_running',  # Session 1000B: imports routing → consumers → SentenceTransformer
+            'queue': 'broadcast',  # Session 1004: Moved off long_running (was blocking desks)
         }
     },
     # Session 711: BODY COORDINATOR - Autonomic Nervous System
