@@ -246,39 +246,54 @@ class PublishGate:
         """
         Score novelty vs existing content (0-1).
 
+        Session 1004: Strengthened to count ALL similar blogs and apply
+        proportional penalties. Previous version broke after first match,
+        allowing 19/40 published blogs on the same topic.
+
         Checks:
-        - Title similarity to existing blogs
-        - Content overlap with recent blogs
+        - Title similarity to existing blogs (cumulative)
+        - Topic keyword overlap across all existing blogs
         """
         from core.models_unified_system import SelfBlog
 
-        score = 0.8  # Assume novel by default
+        score = 1.0
 
-        # Check title similarity
+        # Check title similarity against ALL approved/published blogs
         existing = SelfBlog.objects.exclude(id=blog.id).filter(
             status__in=['approved', 'published']
-        ).values_list('title', flat=True)[:100]
+        ).values_list('title', flat=True)[:200]
 
         title_lower = blog.title.lower() if blog.title else ''
+        title_words = set(title_lower.split()) - {'the', 'a', 'an', 'in', 'of', 'and', 'to', 'for', 'on', 'is', 'at', 'by', 'with'}
+
+        exact_matches = 0
+        high_overlap_matches = 0
 
         for existing_title in existing:
             if not existing_title:
                 continue
             existing_lower = existing_title.lower()
 
-            # Check for very similar titles
+            # Check for substring containment (very similar titles)
             if title_lower in existing_lower or existing_lower in title_lower:
-                score -= 0.3
-                break
+                exact_matches += 1
+                continue
 
-            # Check word overlap
-            title_words = set(title_lower.split())
-            existing_words = set(existing_lower.split())
+            # Check significant word overlap
+            existing_words = set(existing_lower.split()) - {'the', 'a', 'an', 'in', 'of', 'and', 'to', 'for', 'on', 'is', 'at', 'by', 'with'}
+            if not title_words or not existing_words:
+                continue
             overlap = len(title_words & existing_words) / max(len(title_words), 1)
 
-            if overlap > 0.6:
-                score -= 0.2
-                break
+            if overlap > 0.5:
+                high_overlap_matches += 1
+
+        # Apply proportional penalties
+        # First duplicate: -0.25, each additional: -0.15
+        if exact_matches > 0:
+            score -= 0.25 + (exact_matches - 1) * 0.15
+        if high_overlap_matches > 0:
+            score -= 0.15 + (high_overlap_matches - 1) * 0.10
 
         # Check for common overused topics
         overused_topics = [
