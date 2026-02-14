@@ -181,13 +181,33 @@ app.conf.beat_schedule = {
     },
     # Session 794: Self-Blog Generation - was in settings.py but overwritten by celery.py
     # Generates AI blog posts about the platform using ContentWriterAgent
+    # Session 1003: Switched from generate_self_blog_task to deliberation pipeline
+    # Old task had no research, no review, no quality gate — 100 drafts sat forever
     'generate-self-blog': {
-        'task': 'core.tasks.generate_self_blog_task',
+        'task': 'core.tasks.generate_self_blog_deliberation_task',
         'schedule': crontab(minute=0, hour='*/6'),  # Every 6 hours at :00
         'options': {
             'expires': 21600,  # 6 hours
             'queue': 'content',  # Session 1000C: matches content route
         }
+    },
+    # Session 1003: Re-evaluate enhanced blogs (EditorAgent reviewed → quality gate)
+    'reevaluate-enhanced-blogs': {
+        'task': 'core.tasks.reevaluate_enhanced_blogs',
+        'schedule': crontab(hour='*/4', minute=30),
+        'options': {
+            'expires': 14400,
+            'queue': 'content',
+        },
+    },
+    # Session 1003: Auto-publish approved blogs
+    'auto-publish-approved-blogs': {
+        'task': 'core.tasks.auto_publish_approved_blogs',
+        'schedule': crontab(hour='*/2', minute=0),
+        'options': {
+            'expires': 7200,
+            'queue': 'content',
+        },
     },
     # Sports Prediction Evaluation & Bet Settlement
     # Updated Session 23: Using new PredictionEvaluator system

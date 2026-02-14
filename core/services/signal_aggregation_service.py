@@ -38,7 +38,9 @@ class SignalAggregationService:
     """
 
     # Minimum signals needed to form a cluster
-    MIN_CLUSTER_SIZE = 3
+    # Session 1003: Lowered from 3 to 2 — with 18,893 spider records and 0 clusters,
+    # the old threshold was too strict for the keyword-based clustering approach
+    MIN_CLUSTER_SIZE = 2
 
     # Minimum sources needed for confidence
     MIN_SOURCES_FOR_CONFIDENCE = 2
@@ -131,11 +133,17 @@ class SignalAggregationService:
         return created_clusters
 
     def _fetch_recent_spider_data(self) -> List[SpiderData]:
-        """Fetch spider data from the lookback window."""
+        """Fetch spider data from the lookback window.
+
+        Session 1003: Include records that are either processed OR have embedding_text
+        populated (many spiders set embedding_text directly without the is_processed flag).
+        This fixes the 18,893 records → 0 clusters problem.
+        """
+        from django.db.models import Q
         return list(
             SpiderData.objects.filter(
+                Q(is_processed=True) | ~Q(embedding_text=''),
                 created_at__gte=self.cutoff_time,
-                is_processed=True
             ).order_by('-created_at')[:500]  # Limit for performance
         )
 
@@ -194,6 +202,17 @@ class SignalAggregationService:
                     for field in ['title', 'description', 'summary']:
                         if field in item and item[field]:
                             text_parts.append(str(item[field]))
+
+        # Session 1003: Fall back to embedding_text which many spiders populate directly
+        if not text_parts and sd.embedding_text:
+            text_parts.append(sd.embedding_text)
+
+        # Also check processed_data
+        processed = sd.processed_data or {}
+        if not text_parts and isinstance(processed, dict):
+            for field in ['summary', 'analysis', 'content', 'description']:
+                if field in processed and processed[field]:
+                    text_parts.append(str(processed[field]))
 
         return ' '.join(text_parts)
 

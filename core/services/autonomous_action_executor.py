@@ -1125,6 +1125,14 @@ class AutonomousActionExecutor:
                             current_stage=1,
                             created_by='ResearchAgent'
                         )
+
+                        # Session 1003: Auto-set founder intent so auto-progression works
+                        initiative.set_founder_intent(
+                            execution_speed='fast',
+                            risk_tolerance='balanced',
+                            set_by='system_auto'
+                        )
+
                         logger.info(f"[Session 906] Created new Initiative: {initiative.id}")
 
                         # Create all 5 stages
