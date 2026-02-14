@@ -2,27 +2,29 @@
 
 **Previous Session:** 1002C (super() Fallback for 31 Agents)
 **Date:** February 13, 2026
-**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **LIVE SCORES + AI PICKS** | **BETTING HUB: LIVE** | **STOCK HUB: LIVE** | **INTELLIGENCE DESKS: 4 ACTIVE** | **Workspace: 9 TABS** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 97** | **PA Intents: 38** | **Enrichment Services: 8** | **Content Feedback Loop: CLOSED** | **CONTENT REVIEW AUTOMATION: WIRED** | **BLOG TELEMETRY GROUNDING: ACTIVE** | **SPIDER CONTEXT INJECTION: FIXED** | **DELEGATION: 81 AGENTS DISCOVERABLE** | **SPIDER_QUERY: CENTRALIZED** | **SHARED TOOLS: ALL 50 AGENTS WIRED** | **Celery Tasks: 268** | **GOVERNANCE: HARDENED**
+**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **LIVE SCORES + AI PICKS** | **BETTING HUB: LIVE** | **STOCK HUB: LIVE** | **INTELLIGENCE DESKS: 4 ACTIVE** | **Workspace: 9 TABS** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 97** | **PA Intents: 38** | **Enrichment Services: 8** | **Content Feedback Loop: CLOSED** | **CONTENT REVIEW AUTOMATION: WIRED** | **BLOG TELEMETRY GROUNDING: ACTIVE** | **SPIDER CONTEXT INJECTION: FIXED** | **DELEGATION: 81 AGENTS DISCOVERABLE** | **SPIDER_QUERY: CENTRALIZED** | **SHARED TOOLS: ALL 64 AGENTS WIRED** | **Celery Tasks: 268** | **GOVERNANCE: HARDENED**
 
 ---
 
 ## Session 1002C Summary (Just Completed)
 
-### super() Fallback for 31 Agents
+### Universal Agent Tool Access — super() Fallback + Shared Tools + Delegate Cleanup
 
-Session 1002B centralized `delegate_to_specialist`, `web_search`, and `spider_query` in `BaseAgent._execute_tool_call()`, but 31 agents overrode that method and returned error dicts for unrecognized tools instead of falling through to super(). This meant the centralized handlers were unreachable for those agents.
+Session 1002B centralized `delegate_to_specialist`, `web_search`, and `spider_query` in `BaseAgent._execute_tool_call()`, but most agents couldn't reach those handlers. Fixed in 3 PRs:
 
-1. **BaseAgent: return dict instead of raising** -- Changed `raise NotImplementedError(...)` to `return {'success': False, 'error': ...}` so subclasses can safely call `super()._execute_tool_call()` as a fallback (the 19 agents that already had try/except NotImplementedError still work fine -- the except just never triggers).
+1. **BaseAgent: return dict instead of raising** — Changed `raise NotImplementedError(...)` to `return {'success': False, 'error': ...}` so subclasses can safely call `super()._execute_tool_call()` as a fallback.
 
-2. **31 agents: replaced final error return with `super()` call** -- Each agent's `else: return error` (or equivalent) now delegates to `super()._execute_tool_call(tool_name, arguments)`, making centralized handlers reachable. 4 agents intentionally skipped (content_executor, opportunity_pipeline, workflow_orchestration, workflow_agent -- programmatic agents that reject all tools by design).
+2. **45 agents: super() fallback** — Replaced final error returns in 31 agents (PR #1125) + 14 more discovered agents that used `_execute_tool` or `_handle_tool_call` instead of `_execute_tool_call` (PR #1127). All now fall through to BaseAgent for centralized handling. 4 agents intentionally skipped (content_executor, opportunity_pipeline, workflow_orchestration, workflow_agent — programmatic agents that reject all tools by design).
 
-3. **Universal tool injection** -- New `_get_tools_with_shared()` in BaseAgent auto-injects `WEB_SEARCH_TOOL` and `SPIDER_QUERY_TOOL` into every agent's LLM tool schema (with dedup). All agents now see these tools without per-agent imports. Called from both `get_tools_with_delegation()` and the non-delegation path in `_call_llm_with_tools()`.
+3. **Universal tool injection** — New `_get_tools_with_shared()` in BaseAgent auto-injects `WEB_SEARCH_TOOL` and `SPIDER_QUERY_TOOL` into every agent's LLM tool schema (with dedup). Called from both `get_tools_with_delegation()` and `_call_llm_with_tools()` (PR #1126).
 
-4. **Fixed try/except regression in 4 stock agents** -- bull_case, bear_case, institutional_watcher, stock_analyst used `try: return super()... except NotImplementedError: pass` which broke when BaseAgent stopped raising. Moved super() to the end (same pattern as all other agents).
+4. **Fixed try/except regression** — 4 stock agents used `try: return super()... except NotImplementedError: pass` which broke when BaseAgent stopped raising. Removed dead blocks (PR #1126).
 
-**Result:** Every agent that uses LLM tool calling now automatically has `web_search`, `spider_query`, and `delegate_to_specialist` available. Zero `except NotImplementedError` blocks remain.
+5. **Delegate block cleanup** — Removed redundant `delegate_to_specialist` elif blocks from 59 agents (-534 lines). BaseAgent handles delegation via super() now (PR #1127).
 
-**Files changed:** 37 code files. See `docs/handoffs/SESSION_1002C_SUPER_FALLBACK.md`.
+**Result:** 64 agents with tool handlers all fall through to BaseAgent. Every agent sees `web_search`, `spider_query`, and `delegate_to_specialist` in its LLM tool schema. Zero dead code blocks remain.
+
+**PRs:** #1125, #1126, #1127. See `docs/handoffs/SESSION_1002C_SUPER_FALLBACK.md`.
 
 ## Session 1002B Summary (Prior)
 
