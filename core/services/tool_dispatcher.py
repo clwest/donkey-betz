@@ -3253,10 +3253,157 @@ class ToolDispatcher:
                 'completed_last_7d': completed_7d,
             }
 
+        elif action == 'bulk_auto_assign':
+            # Session 1000C: Auto-assign agents to unowned initiatives by keyword
+            from core.agent_router import AgentRouter
+
+            # Keyword → agent mapping for initiative content routing
+            KEYWORD_AGENT_MAP = {
+                'research': 'ResearchAgent',
+                'competitor': 'CompetitorAnalysisAgent',
+                'customer': 'CustomerResearchAgent',
+                'content': 'ContentStrategyAgent',
+                'blog': 'ContentStrategyAgent',
+                'seo': 'SEOOptimizerAgent',
+                'brand': 'BrandIdentityAgent',
+                'social media': 'SocialMediaAgent',
+                'image': 'ImageAgent',
+                'video': 'VideoAgent',
+                'audio': 'AudioAgent',
+                'trend': 'TrendAnalysisAgent',
+                'opportunit': 'OpportunityScoringAgent',
+                'financial': 'ResearchAgent',
+                'market': 'TrendAnalysisAgent',
+                'stock': 'ResearchAgent',
+                'prediction': 'PredictionMarketAnalyst',
+                'sport': 'SportsOddsAnalyst',
+                'betting': 'SportsOddsAnalyst',
+                'security': 'MemoryIsolationAgent',
+                'cyber': 'MemoryIsolationAgent',
+                'pipeline': 'CTOAgent',
+                'infrastructure': 'CTOAgent',
+                'operation': 'COOAgent',
+                'risk': 'COOAgent',
+                'creative': 'CreativeDirectorAgent',
+                'signal': 'TrendAnalysisAgent',
+                'enhancement': 'ResearchAgent',
+            }
+
+            dry_run = payload.get('dry_run', False)
+            limit_count = payload.get('limit', 50)
+
+            qs = Initiative.objects.filter(status='ACTIVE').order_by('-impact_score', '-created_at')[:limit_count]
+            assignments = []
+            skipped = 0
+
+            for init in qs:
+                name_lower = init.name.lower()
+                matched_agent = None
+                for keyword, agent in KEYWORD_AGENT_MAP.items():
+                    if keyword in name_lower:
+                        matched_agent = agent
+                        break
+
+                if not matched_agent:
+                    matched_agent = 'ResearchAgent'  # default fallback
+
+                # Skip if already assigned to a real agent (not just creator)
+                if init.owner_agent and init.owner_agent not in ('DecisionExtractor', 'ThinkingAgent', 'auto_populate', ''):
+                    skipped += 1
+                    continue
+
+                if not dry_run:
+                    init.owner_agent = matched_agent
+                    init.save(update_fields=['owner_agent'])
+
+                assignments.append({
+                    'id': str(init.id),
+                    'name': init.name[:80],
+                    'agent': matched_agent,
+                })
+
+            result = {
+                'action': 'bulk_auto_assign',
+                'assigned': len(assignments),
+                'skipped': skipped,
+                'dry_run': dry_run,
+                'assignments': assignments[:25],  # show first 25
+            }
+
+            # Session 1000C: Combined auto-assign + cleanup
+            if payload.get('also_cleanup'):
+                cleanup_result = self._handle_initiative(
+                    tool_name, {**payload, 'action': 'bulk_cleanup'}, user_id, trace_id
+                )
+                result['cleanup'] = cleanup_result
+
+            return result
+
+        elif action == 'bulk_cleanup':
+            # Session 1000C: Archive stalled, noise, and duplicate initiatives
+            from datetime import timedelta
+            from django.utils import timezone
+            from core.management.commands.consolidate_duplicate_initiatives import (
+                find_duplicate_clusters,
+            )
+
+            dry_run = payload.get('dry_run', False)
+            cutoff = timezone.now() - timedelta(days=14)
+
+            init_list = list(Initiative.objects.filter(
+                status__in=['ACTIVE', 'TRIAGE']
+            ).only('id', 'name', 'status', 'current_stage', 'last_activity_at', 'created_at'))
+
+            # Classify
+            stalled = [i for i in init_list if i.current_stage <= 1 and not i.last_activity_at and i.created_at < cutoff]
+            noise = [i for i in init_list if i.current_stage <= 1 and not i.last_activity_at and i.created_at >= cutoff and (timezone.now() - i.created_at).days >= 7]
+
+            # Duplicates
+            clusters = find_duplicate_clusters(init_list, threshold=0.6)
+            duplicate_ids = set()
+            for cluster in clusters:
+                for init in cluster[1:]:
+                    duplicate_ids.add(init.id)
+
+            archived_stalled = []
+            archived_noise = []
+            archived_dupes = []
+
+            if not dry_run:
+                for init in stalled:
+                    init.status = 'ARCHIVED'
+                    init.save(update_fields=['status'])
+                    archived_stalled.append(init.name[:60])
+
+                for init in noise:
+                    init.status = 'ARCHIVED'
+                    init.save(update_fields=['status'])
+                    archived_noise.append(init.name[:60])
+
+                for init in init_list:
+                    if init.id in duplicate_ids:
+                        init.status = 'ARCHIVED'
+                        init.save(update_fields=['status'])
+                        archived_dupes.append(init.name[:60])
+            else:
+                archived_stalled = [i.name[:60] for i in stalled]
+                archived_noise = [i.name[:60] for i in noise]
+                archived_dupes = [i.name[:60] for i in init_list if i.id in duplicate_ids]
+
+            return {
+                'action': 'bulk_cleanup',
+                'dry_run': dry_run,
+                'stalled': {'count': len(archived_stalled), 'items': archived_stalled[:10]},
+                'noise': {'count': len(archived_noise), 'items': archived_noise[:10]},
+                'duplicates': {'count': len(archived_dupes), 'items': archived_dupes[:10], 'cluster_count': len(clusters)},
+                'total_cleaned': len(archived_stalled) + len(archived_noise) + len(archived_dupes),
+            }
+
         else:
             raise ValueError(
                 f"Unknown action: {action}. Valid actions: list, stats, details, "
-                f"action_items, flow_metrics, update_status, advance, complete_action_item, assign_owner"
+                f"action_items, flow_metrics, update_status, advance, complete_action_item, "
+                f"assign_owner, bulk_auto_assign, bulk_cleanup"
             )
 
     # =========================================================================
