@@ -143,3 +143,24 @@ Scheduled tasks that move blogs through the pipeline without manual intervention
 | `auto_publish_approved_blogs` | Daily 6 AM | content | Move approved+publish_ready blogs to published |
 
 **Enhancement guard:** `stats_snapshot['enhancement_count']` tracks rounds per blog. After 3 unsuccessful rounds, the blog is skipped to prevent infinite loops.
+
+## Operational Telemetry Grounding (Session 1001)
+
+Blog generation now injects real operational data so ContentWriterAgent cites verifiable metrics instead of fabricating claims.
+
+**`_build_operational_context()`** (in `core/tasks.py`) queries 4 telemetry models and returns a markdown block:
+
+| Section | Model | Import Path | Data |
+|---------|-------|-------------|------|
+| Agent Executions (72h) | `AgentExecution` | `core.models` | Total/completed/failed, success rate, avg execution time, 3 recent executions |
+| Background Tasks (72h) | `CeleryTaskEvent` | `core.models_celery_telemetry` | Total/success/failure, reliability %, avg duration, top 3 failing tasks |
+| System Health | `HeartBeat` | `core.models_heart` | Latest score, status, component counts |
+| Recent Decisions | `AgentDecisionSummary` | `core.models_unified_system` | 3 recent with topic, stance, insights, participants |
+
+Each section in its own try/except -- graceful degradation if any model is unavailable.
+
+**Injection points:**
+- **Pipeline 1** (`generate_self_blog_task`): Appended to `blog_research` after all topic-category assembly
+- **Pipeline 2** (`ContentDeliberationRunner._generate_draft()`): Appended to `research` after ClaimsPack
+
+**Prompt changes:** All "add your own insights" / "expand with your perspective" language replaced with "Ground all claims in the data provided" / "cite these, do not invent". ContentWriterAgent's `## IMPORTANT` section now explicitly forbids fabricating operational metrics or incidents.
