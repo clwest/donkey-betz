@@ -23,7 +23,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/15'),  # Every 15 minutes
         'options': {
             'expires': 900,  # Expire after 15 minutes if not executed
-            'queue': 'long_running',  # Session 1000C: scrapes external sites
+            'queue': 'default',  # Session 1004: I/O-bound scraping, not memory-bound
         }
     },
     'refresh-ai-opportunities': {
@@ -31,7 +31,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/30'),  # Every 30 minutes
         'options': {
             'expires': 1800,
-            'queue': 'long_running',  # Session 1000C: imports generator, heavy
+            'queue': 'default',  # Session 1004: I/O-bound, not memory-bound
         }
     },
     'sync-revenue-metrics': {
@@ -63,7 +63,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours
         'options': {
             'expires': 14400,
-            'queue': 'long_running',  # Session 1000C: initializes 74+ spiders
+            'queue': 'default',  # Session 1004: I/O-bound initialization, not memory-bound
         }
     },
     # ML Model Training & Prediction Tasks (Session 24: Updated retraining pipeline)
