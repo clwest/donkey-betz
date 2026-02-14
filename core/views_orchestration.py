@@ -964,6 +964,89 @@ class OrchestrationStepIntelligenceView(View):
             }, status=500)
 
 
+@method_decorator([csrf_exempt, login_required], name='dispatch')
+class ActiveWorkView(View):
+    """
+    Session 1000C: Combined "Active Work" view for Command Center NowHub.
+
+    Returns active initiatives, recent agent executions, and running
+    orchestration workflows in a single lightweight response.
+    """
+
+    def get(self, request):
+        try:
+            from core.models_document_registry import Initiative
+            from core.models import AgentExecution
+            from django.utils.timezone import now
+            from datetime import timedelta
+            from django.db.models import Count
+
+            cutoff = now() - timedelta(hours=24)
+
+            # Active initiatives summary
+            active_initiatives = Initiative.objects.filter(status='ACTIVE')
+            initiative_count = active_initiatives.count()
+            by_stage = dict(
+                active_initiatives.values_list('current_stage')
+                .annotate(c=Count('id'))
+                .values_list('current_stage', 'c')
+            )
+
+            # Top 5 most recent active initiatives
+            top_initiatives = list(
+                active_initiatives.order_by('-updated_at')[:5].values(
+                    'id', 'name', 'current_stage', 'completion_percentage'
+                )
+            )
+            for init in top_initiatives:
+                init['id'] = str(init['id'])
+                init['name'] = (init['name'] or '')[:80]
+
+            # Agent executions in last 24h
+            recent_execs = AgentExecution.objects.filter(created_at__gte=cutoff)
+            exec_total = recent_execs.count()
+            exec_completed = recent_execs.filter(status='completed').count()
+            exec_failed = recent_execs.filter(status='failed').count()
+
+            # Top 5 most active agents in last 24h
+            top_agents = list(
+                recent_execs.values('agent__name')
+                .annotate(c=Count('id'))
+                .order_by('-c')[:5]
+            )
+
+            # Running orchestration executions (original Active Work source)
+            from core.models_orchestration import OrchestrationExecution
+            running_workflows = OrchestrationExecution.objects.filter(
+                status='running'
+            ).count()
+
+            return JsonResponse({
+                'success': True,
+                'initiatives': {
+                    'active_count': initiative_count,
+                    'by_stage': {str(k): v for k, v in by_stage.items()},
+                    'recent': top_initiatives,
+                },
+                'agent_executions': {
+                    'last_24h': exec_total,
+                    'completed': exec_completed,
+                    'failed': exec_failed,
+                    'top_agents': [{'name': a['agent__name'] or 'Unknown', 'count': a['c']} for a in top_agents],
+                },
+                'workflows': {
+                    'running': running_workflows,
+                },
+            })
+
+        except Exception as e:
+            logger.error(f"Error fetching active work: {e}", exc_info=True)
+            return JsonResponse({
+                'success': False,
+                'error': str(e),
+            }, status=500)
+
+
 # URL patterns for this module
 def get_urlpatterns():
     """Return URL patterns for orchestration API."""
@@ -982,4 +1065,6 @@ def get_urlpatterns():
         # Session 765: Step intelligence endpoint
         path('executions/<uuid:execution_id>/steps/<int:step_number>/intelligence/',
              OrchestrationStepIntelligenceView.as_view(), name='orchestration-step-intelligence'),
+        # Session 1000C: Combined active work for Command Center NowHub
+        path('active-work/', ActiveWorkView.as_view(), name='orchestration-active-work'),
     ]

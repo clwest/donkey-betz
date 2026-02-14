@@ -2765,6 +2765,24 @@ export const orchestrationApi = {
       { params }
     ),
 
+  // Session 1000C: Combined active work for NowHub
+  activeWork: () =>
+    api.get<{
+      success: boolean
+      initiatives: {
+        active_count: number
+        by_stage: Record<string, number>
+        recent: Array<{ id: string; name: string; current_stage: number; completion_percentage: number }>
+      }
+      agent_executions: {
+        last_24h: number
+        completed: number
+        failed: number
+        top_agents: Array<{ name: string; count: number }>
+      }
+      workflows: { running: number }
+    }>('/orchestration/active-work/'),
+
   // Get execution details
   getExecution: (executionId: string) =>
     api.get<{ success: boolean } & OrchestrationExecutionDetail>(
