@@ -1243,9 +1243,14 @@ export default function BettingPage() {
                       <div className="col-span-2">
                         <p className="font-medium">{game.away_team}</p>
                         {game.away_odds && (
-                          <span className={cn('text-sm font-mono', game.away_odds > 0 ? 'text-accent-green' : 'text-accent-red')}>
-                            {game.away_odds > 0 ? '+' : ''}{game.away_odds}
-                          </span>
+                          <div className="flex items-baseline gap-1.5">
+                            <span className={cn('text-sm font-mono', game.away_odds > 0 ? 'text-accent-green' : 'text-accent-red')}>
+                              {game.away_odds > 0 ? '+' : ''}{game.away_odds}
+                            </span>
+                            {game.away_implied_prob && (
+                              <span className="text-[10px] text-gray-500">{game.away_implied_prob}%</span>
+                            )}
+                          </div>
                         )}
                       </div>
 
@@ -1263,13 +1268,26 @@ export default function BettingPage() {
                           </div>
                         ) : (
                           <div className="space-y-1">
-                            {game.home_spread && (
-                              <p className="text-xs text-gray-400">Spread: {game.home_spread > 0 ? '+' : ''}{game.home_spread}</p>
+                            {game.home_spread != null && (
+                              <p className="text-xs text-gray-400">
+                                Spread: {game.home_spread > 0 ? '+' : ''}{game.home_spread}
+                                {game.spread_home_odds && <span className="text-gray-500 ml-1">({game.spread_home_odds > 0 ? '+' : ''}{game.spread_home_odds})</span>}
+                              </p>
                             )}
                             {game.total_line && (
-                              <p className="text-xs text-gray-400">O/U: {game.total_line}</p>
+                              <p className="text-xs text-gray-400">
+                                O/U: {game.total_line}
+                                {(game.over_odds || game.under_odds) && (
+                                  <span className="text-gray-500 ml-1">
+                                    ({game.over_odds ? `o${game.over_odds > 0 ? '+' : ''}${game.over_odds}` : ''}{game.over_odds && game.under_odds ? ' / ' : ''}{game.under_odds ? `u${game.under_odds > 0 ? '+' : ''}${game.under_odds}` : ''})
+                                  </span>
+                                )}
+                              </p>
                             )}
-                            {!game.home_spread && !game.total_line && (
+                            {game.draw_odds && (
+                              <p className="text-xs text-gray-500">Draw: {game.draw_odds > 0 ? '+' : ''}{game.draw_odds}</p>
+                            )}
+                            {!game.home_spread && !game.total_line && !game.draw_odds && (
                               <span className="text-gray-500 text-sm">vs</span>
                             )}
                           </div>
@@ -1280,12 +1298,32 @@ export default function BettingPage() {
                       <div className="col-span-2 text-right">
                         <p className="font-medium">{game.home_team}</p>
                         {game.home_odds && (
-                          <span className={cn('text-sm font-mono', game.home_odds > 0 ? 'text-accent-green' : 'text-accent-red')}>
-                            {game.home_odds > 0 ? '+' : ''}{game.home_odds}
-                          </span>
+                          <div className="flex items-baseline gap-1.5 justify-end">
+                            {game.home_implied_prob && (
+                              <span className="text-[10px] text-gray-500">{game.home_implied_prob}%</span>
+                            )}
+                            <span className={cn('text-sm font-mono', game.home_odds > 0 ? 'text-accent-green' : 'text-accent-red')}>
+                              {game.home_odds > 0 ? '+' : ''}{game.home_odds}
+                            </span>
+                          </div>
                         )}
                       </div>
                     </div>
+
+                    {/* Bookmaker info + live score freshness */}
+                    {(game.best_bookmaker || (isLive && game.last_updated)) && (
+                      <div className="flex items-center justify-between mt-1.5 text-[10px] text-gray-500">
+                        {game.best_bookmaker && (
+                          <span>via {game.best_bookmaker}{game.bookmaker_count > 1 ? ` + ${game.bookmaker_count - 1} more` : ''}</span>
+                        )}
+                        {isLive && game.last_updated && (
+                          <span>Updated {(() => {
+                            const mins = Math.round((Date.now() - new Date(game.last_updated).getTime()) / 60000)
+                            return mins < 1 ? 'just now' : `${mins}m ago`
+                          })()}</span>
+                        )}
+                      </div>
+                    )}
 
                     {/* Prediction Banner */}
                     {hasPrediction && (

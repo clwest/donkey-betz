@@ -3059,15 +3059,29 @@ def get_todays_games(request):
                 'home_team': event.get('home_team', ''),
                 'away_team': event.get('away_team', ''),
                 'commence_time': event.get('commence_time', ''),
+                # Moneyline
                 'home_odds': event.get('home_odds'),
                 'away_odds': event.get('away_odds'),
+                'draw_odds': event.get('draw_odds'),
+                'home_implied_prob': event.get('home_implied_prob'),
+                'away_implied_prob': event.get('away_implied_prob'),
+                # Spread (point + juice)
                 'home_spread': event.get('home_spread'),
                 'away_spread': event.get('away_spread'),
+                'spread_home_odds': event.get('spread', {}).get('home_odds') if isinstance(event.get('spread'), dict) else None,
+                'spread_away_odds': event.get('spread', {}).get('away_odds') if isinstance(event.get('spread'), dict) else None,
+                # Totals (line + juice)
                 'total_line': event.get('total_line'),
+                'over_odds': event.get('over_odds'),
+                'under_odds': event.get('under_odds'),
+                # Bookmaker info
+                'bookmaker_count': event.get('bookmaker_count', 0),
+                'best_bookmaker': event.get('best_bookmaker'),
                 # Score (completed or live)
                 'completed': score.get('completed', False),
                 'home_score': score.get('home_score'),
                 'away_score': score.get('away_score'),
+                'last_updated': score.get('last_updated'),
                 # Prediction from odds consensus
                 'predicted_winner': prediction.get('predicted_winner', ''),
                 'confidence': prediction.get('confidence', 0),
