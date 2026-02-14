@@ -813,6 +813,12 @@ export const userLearningApi = {
   // Combined summary
   getSummary: () =>
     api.get('/user-learning/summary/'),
+
+  // Session 1000C: Learning velocity + preferences (used by Command Center learning tab)
+  getVelocity: () =>
+    api.get('/learning/velocity/'),
+  getAllPreferences: () =>
+    api.get('/preferences/'),
 }
 
 // Session 745: Research API for network graph
