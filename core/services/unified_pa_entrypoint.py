@@ -1261,7 +1261,14 @@ class UnifiedPAEntrypoint:
             msg_lower = message.lower()
 
             # Determine action based on message
-            if any(w in msg_lower for w in ['audit', 'classify', 'classification', 'triage', 'cleanup']):
+            # Session 1000C: Bulk operations (check before single-item patterns)
+            if any(w in msg_lower for w in ['auto-assign', 'auto assign', 'assign agents', 'bulk assign']):
+                payload['action'] = 'bulk_auto_assign'
+                if 'clean' in msg_lower or 'archive' in msg_lower:
+                    payload['also_cleanup'] = True
+            elif any(w in msg_lower for w in ['clean up', 'cleanup', 'archive stale', 'archive duplicate', 'bulk cleanup', 'remove redundant', 'clean redundant']):
+                payload['action'] = 'bulk_cleanup'
+            elif any(w in msg_lower for w in ['audit', 'classify', 'classification', 'triage']):
                 payload['action'] = 'audit'
             elif 'stats' in msg_lower or 'overview' in msg_lower or 'pipeline' in msg_lower:
                 payload['action'] = 'stats'
@@ -2690,33 +2697,33 @@ Address the user by name occasionally."""
                         return f"No initiatives found matching your criteria, {user_name}."
 
                     if total_count > count:
-                        response = f"Found {total_count} initiatives (showing {count}):\n\n"
+                        response = f"**{total_count} initiatives** (showing {count}):\n\n"
                     else:
-                        response = f"Found {count} initiatives:\n\n"
+                        response = f"**{count} initiatives:**\n\n"
 
                     display_limit = 25
-                    for item in items[:display_limit]:
+                    for i, item in enumerate(items[:display_limit]):
                         name = item.get('name', 'Untitled')[:80]
                         stage = item.get('current_stage', 1)
                         purpose = item.get('purpose', 'unknown')
                         pending = item.get('pending_actions', 0)
                         critical = item.get('critical_actions', 0)
                         last_activity = item.get('last_activity_at')
-                        status_icon = '🟢' if item.get('status') == 'ACTIVE' else '⏸️'
                         owner = item.get('owner')
-                        owner_badge = f" [{owner}]" if owner else ""
-                        response += f"{status_icon} **{name}** (Stage {stage}/5, {purpose}){owner_badge}"
+                        # Compact detail line
+                        details = f"Stage {stage}/5"
+                        if owner:
+                            details += f" | {owner}"
                         if pending > 0:
-                            action_desc = f"{pending} actions"
+                            details += f" | {pending} actions"
                             if critical > 0:
-                                action_desc += f" ({critical} critical)"
-                            response += f" - {action_desc}"
+                                details += f" ({critical} critical)"
                         if not last_activity:
-                            response += " - no activity"
-                        response += "\n"
+                            details += " | no activity"
+                        response += f"{i + 1}. **{name}**\n   {details}\n\n"
 
                     if count > display_limit:
-                        response += f"\n...and {count - display_limit} more."
+                        response += f"...and {count - display_limit} more.\n"
 
                     return response
 
@@ -2839,6 +2846,86 @@ Address the user by name occasionally."""
                 elif action == 'advance':
                     name = tool_result.get('name', 'Unknown')
                     return tool_result.get('message', f"Advanced **{name}**.")
+
+                elif action == 'complete_action_item':
+                    title = tool_result.get('title', 'Unknown')
+                    init_name = tool_result.get('initiative_name', '')
+                    return f"Completed action item **{title}** on {init_name}."
+
+                elif action == 'flow_metrics':
+                    cr = tool_result.get('creation_rate', {})
+                    bl = tool_result.get('backlog', {})
+                    sd = tool_result.get('stage_distribution', {})
+                    cb = tool_result.get('circuit_breaker', {})
+                    response = f"**Pipeline Health**, {user_name}:\n\n"
+                    response += f"**Creation Rate:** {cr.get('last_24h', 0)} (24h) / {cr.get('last_7d', 0)} (7d)\n"
+                    response += f"**Backlog:** {bl.get('active', 0)} active, {bl.get('triage', 0)} triage, {bl.get('no_activity', 0)} dormant\n"
+                    response += f"**Stages:** "
+                    response += " | ".join(f"S{k.replace('stage_', '')}: {v}" for k, v in sd.items())
+                    response += "\n"
+                    cb_status = "paused" if cb.get('paused') else f"{cb.get('utilization_pct', 0):.0f}% utilized"
+                    response += f"**Circuit Breaker:** {cb_status} ({cb.get('pending', 0)}/{cb.get('threshold', 0)})\n"
+                    response += f"**Completed (7d):** {tool_result.get('completed_last_7d', 0)}\n"
+                    return response
+
+                # Session 1000C: Bulk operation formatters
+                elif action == 'bulk_auto_assign':
+                    assigned = tool_result.get('assigned', 0)
+                    skipped = tool_result.get('skipped', 0)
+                    dry_run = tool_result.get('dry_run', False)
+                    assignments = tool_result.get('assignments', [])
+                    prefix = "**[DRY RUN]** " if dry_run else ""
+                    response = f"{prefix}Auto-assigned {assigned} initiatives ({skipped} already owned):\n\n"
+                    for a in assignments[:15]:
+                        response += f"- **{a.get('name', '')[:60]}** → {a.get('agent', '')}\n"
+                    if assigned > 15:
+                        response += f"\n...and {assigned - 15} more.\n"
+                    # Combined cleanup results
+                    cleanup = tool_result.get('cleanup')
+                    if cleanup:
+                        total_cleaned = cleanup.get('total_cleaned', 0)
+                        response += f"\n**Cleanup:** archived {total_cleaned} initiatives"
+                        st = cleanup.get('stalled', {})
+                        ns = cleanup.get('noise', {})
+                        dp = cleanup.get('duplicates', {})
+                        parts = []
+                        if st.get('count', 0):
+                            parts.append(f"{st['count']} stalled")
+                        if ns.get('count', 0):
+                            parts.append(f"{ns['count']} noise")
+                        if dp.get('count', 0):
+                            parts.append(f"{dp['count']} duplicates in {dp.get('cluster_count', 0)} clusters")
+                        if parts:
+                            response += f" ({', '.join(parts)})"
+                        response += ".\n"
+                    return response
+
+                elif action == 'bulk_cleanup':
+                    dry_run = tool_result.get('dry_run', False)
+                    total = tool_result.get('total_cleaned', 0)
+                    st = tool_result.get('stalled', {})
+                    ns = tool_result.get('noise', {})
+                    dp = tool_result.get('duplicates', {})
+                    prefix = "**[DRY RUN]** " if dry_run else ""
+                    response = f"{prefix}Cleaned up {total} initiatives:\n\n"
+                    if st.get('count', 0):
+                        response += f"**Stalled** ({st['count']} archived):\n"
+                        for name in st.get('items', [])[:5]:
+                            response += f"  - {name}\n"
+                        response += "\n"
+                    if ns.get('count', 0):
+                        response += f"**Noise** ({ns['count']} archived):\n"
+                        for name in ns.get('items', [])[:5]:
+                            response += f"  - {name}\n"
+                        response += "\n"
+                    if dp.get('count', 0):
+                        response += f"**Duplicates** ({dp['count']} archived, {dp.get('cluster_count', 0)} clusters):\n"
+                        for name in dp.get('items', [])[:5]:
+                            response += f"  - {name}\n"
+                        response += "\n"
+                    if total == 0:
+                        response = f"No initiatives needed cleanup, {user_name}. Pipeline is clean."
+                    return response
 
                 else:
                     return str(tool_result)
