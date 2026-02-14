@@ -2,15 +2,15 @@
 
 **Previous Session:** 1002C (super() Fallback for 31 Agents)
 **Date:** February 13, 2026
-**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **LIVE SCORES + AI PICKS** | **BETTING HUB: LIVE** | **STOCK HUB: LIVE** | **INTELLIGENCE DESKS: 4 ACTIVE** | **Workspace: 9 TABS** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 97** | **PA Intents: 38** | **Enrichment Services: 8** | **Content Feedback Loop: CLOSED** | **CONTENT REVIEW AUTOMATION: WIRED** | **BLOG TELEMETRY GROUNDING: ACTIVE** | **SPIDER CONTEXT INJECTION: FIXED** | **DELEGATION: 81 AGENTS DISCOVERABLE** | **SPIDER_QUERY: CENTRALIZED** | **SHARED TOOLS: ALL 64 AGENTS WIRED** | **Celery Tasks: 268** | **GOVERNANCE: HARDENED**
+**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **LIVE SCORES + AI PICKS** | **BETTING HUB: LIVE** | **STOCK HUB: LIVE** | **INTELLIGENCE DESKS: 4 ACTIVE** | **Workspace: 9 TABS** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 97** | **PA Intents: 38** | **Enrichment Services: 8** | **Content Feedback Loop: CLOSED** | **CONTENT REVIEW AUTOMATION: WIRED** | **BLOG TELEMETRY GROUNDING: ACTIVE** | **SPIDER CONTEXT INJECTION: FIXED** | **DELEGATION: 81 AGENTS DISCOVERABLE** | **SPIDER_QUERY: CENTRALIZED** | **SHARED TOOLS: ALL 64 AGENTS WIRED + 9 DIRECT-API FIXED** | **Celery Tasks: 268** | **GOVERNANCE: HARDENED**
 
 ---
 
 ## Session 1002C Summary (Just Completed)
 
-### Universal Agent Tool Access — super() Fallback + Shared Tools + Delegate Cleanup
+### Universal Agent Tool Access — super() Fallback + Shared Tools + Delegate Cleanup + Direct API Fix
 
-Session 1002B centralized `delegate_to_specialist`, `web_search`, and `spider_query` in `BaseAgent._execute_tool_call()`, but most agents couldn't reach those handlers. Fixed in 3 PRs:
+Session 1002B centralized `delegate_to_specialist`, `web_search`, and `spider_query` in `BaseAgent._execute_tool_call()`, but most agents couldn't reach those handlers. Fixed in 3 PRs + 1 follow-up:
 
 1. **BaseAgent: return dict instead of raising** — Changed `raise NotImplementedError(...)` to `return {'success': False, 'error': ...}` so subclasses can safely call `super()._execute_tool_call()` as a fallback.
 
@@ -22,9 +22,11 @@ Session 1002B centralized `delegate_to_specialist`, `web_search`, and `spider_qu
 
 5. **Delegate block cleanup** — Removed redundant `delegate_to_specialist` elif blocks from 59 agents (-534 lines). BaseAgent handles delegation via super() now (PR #1127).
 
-**Result:** 64 agents with tool handlers all fall through to BaseAgent. Every agent sees `web_search`, `spider_query`, and `delegate_to_specialist` in its LLM tool schema. Zero dead code blocks remain.
+6. **9 agents: direct API call fix** — 9 agents bypassed `_call_openai()` by calling `client.chat.completions.create(tools=self.tools)` directly. Replaced with `tools=self.get_tools_with_delegation()` so shared tools are included. Fixes: market_intelligence, base_business_research (+ all children), narrative_drift_coordinator, platform_audit, stock_analyst, institutional_watcher, market_anomaly_detector, market_movement_monitor, system_intelligence.
 
-**PRs:** #1125, #1126, #1127. See `docs/handoffs/SESSION_1002C_SUPER_FALLBACK.md`.
+**Result:** 64 agents with tool handlers all fall through to BaseAgent. Every agent sees `web_search`, `spider_query`, and `delegate_to_specialist` in its LLM tool schema. Zero dead code blocks remain. Zero agents bypass shared tool injection via direct API calls.
+
+**PRs:** #1125, #1126, #1127, #1129. See `docs/handoffs/SESSION_1002C_SUPER_FALLBACK.md`.
 
 ## Session 1002B Summary (Prior)
 

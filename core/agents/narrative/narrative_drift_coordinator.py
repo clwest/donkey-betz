@@ -1373,7 +1373,7 @@ Your job is to keep this system running smoothly and surfacing valuable narrativ
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=messages,
-                tools=self.tools,
+                tools=self.get_tools_with_delegation(),
                 tool_choice="auto",
                 max_tokens=2000
             )

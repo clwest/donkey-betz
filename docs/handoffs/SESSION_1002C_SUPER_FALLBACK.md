@@ -126,6 +126,25 @@ Fix: Replaced final error returns with `super()._execute_tool_call(tool_name, ar
 
 **Gap check:** 68 agents with tool handlers, 64 with `super()._execute_tool_call` = 4 gap, exactly the intentionally skipped agents (content_executor, opportunity_pipeline, workflow_agent, workflow_orchestration).
 
+## Change 7: Fix 9 agents bypassing shared tool injection via direct API calls
+
+Nine agents make direct `client.chat.completions.create()` calls with `tools=self.tools`, bypassing `BaseAgent._call_openai()` and its automatic tool injection. Their LLMs never saw `web_search`, `spider_query`, or `delegate_to_specialist`.
+
+Fix: Replaced `tools=self.tools` with `tools=self.get_tools_with_delegation()` at all 9 call sites.
+
+**Files:**
+1. `core/agents/analysis/market_intelligence_agent.py` (line 308)
+2. `core/agents/business/base_business_research_agent.py` (line 560) -- fixes all child agents
+3. `core/agents/narrative/narrative_drift_coordinator.py` (line 1376)
+4. `core/agents/platform_audit_agent.py` (line 287)
+5. `core/agents/stocks/stock_analyst_agent.py` (line 323)
+6. `core/agents/stocks/institutional_watcher_agent.py` (line 223)
+7. `core/agents/stocks/market_anomaly_detector_agent.py` (line 283)
+8. `core/agents/stocks/market_movement_monitor_agent.py` (line 227)
+9. `core/agents/system_intelligence_agent.py` (line 242)
+
+**Verification:** `grep -rn "tools=self\.tools" core/agents/` returns 0 matches (excluding `__pycache__` and `base_agent.py`).
+
 ## Result
 
-All agents that go through `_call_llm_with_tools()` now automatically get `web_search` and `spider_query` in their tool schemas (no per-agent imports needed). All 64 agents with tool handlers fall through to BaseAgent for centralized handling. Zero `except NotImplementedError` blocks remain. Zero redundant delegate_to_specialist blocks remain.
+All agents that go through `_call_llm_with_tools()` now automatically get `web_search` and `spider_query` in their tool schemas (no per-agent imports needed). All 64 agents with tool handlers fall through to BaseAgent for centralized handling. Zero `except NotImplementedError` blocks remain. Zero redundant delegate_to_specialist blocks remain. Zero agents bypass shared tool injection via direct API calls.

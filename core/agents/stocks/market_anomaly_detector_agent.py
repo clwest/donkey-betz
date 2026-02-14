@@ -280,7 +280,7 @@ Focus on patterns that suggest informed trading or manipulation."""
                 response = client.chat.completions.create(
                     model="gpt-5-mini",
                     messages=messages,
-                    tools=self.tools,
+                    tools=self.get_tools_with_delegation(),
                     tool_choice="auto",
                     max_completion_tokens=4000
                 )
