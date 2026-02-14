@@ -1,12 +1,45 @@
-# Session 1004 - Start Here
+# Session 1005 - Start Here
 
-**Previous Session:** 1003 (Pipeline Completion — 12 Fixes Closing All Execution Loops)
-**Date:** February 13, 2026
-**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **LIVE SCORES + AI PICKS** | **BETTING HUB: LIVE** | **STOCK HUB: LIVE** | **INTELLIGENCE DESKS: 4 ACTIVE + PERSISTED** | **Workspace: 9 TABS** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 97** | **PA Intents: 38** | **Enrichment Services: 8** | **BLOG PIPELINE: DELIBERATION + AUTO-PUBLISH (EVERY 2H)** | **INITIATIVE AUTO-PROGRESSION: UNBLOCKED** | **SIGNAL AGGREGATION: 938 CLUSTERS** | **PODCAST AUDIO: ENABLED** | **DESK PERSISTENCE: 2 NEW MODELS** | **Celery Tasks: 268** | **GOVERNANCE: HARDENED**
+**Previous Session:** 1004 (Production Stabilization — Blog Quality + PA Intent + Task Error Sweep)
+**Date:** February 14, 2026
+**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **40 PUBLISHED BLOGS** | **1,089 SIGNAL CLUSTERS** | **INITIATIVE STAGES 1-5 ACTIVE** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 38+** | **Enrichment Services: 8** | **NOVELTY SCORING: STRENGTHENED** | **BEAT SCHEDULE: PROTECTED** | **Celery Tasks: 268** | **GOVERNANCE: HARDENED**
 
 ---
 
-## Session 1003 Summary (Just Completed)
+## Session 1004 Summary (Just Completed)
+
+### Production Stabilization — Blog Quality + PA Intent + Task Error Sweep
+
+After overnight pipeline run, 40 blogs published (up from 8), 1,089 signal clusters (up from 0), initiative stages 1-5 active. Found and fixed quality issues:
+
+#### PR #1138: Increase Blog Reevaluate Frequency + Batch Size
+- Blog reevaluation: `*/4h limit=20` → `*/3h limit=50`
+
+#### PR #1139: Protect Beat Schedule from Deploy Overwrite
+- Added `--create-only` to `sync_celery_beat` in Procfile release command
+- Prevents deploys from reverting DB schedule fixes
+
+#### PR #1140: ContextTracer.auto_repair_context AttributeError
+- `auto_repair_context` is a module-level function, not a ContextTracer method
+- Fixed both call sites in `core/tasks.py` and `core/agent_router.py`
+
+#### PR #1141: Strengthen Novelty Scoring + Broaden PA Intent
+- **Novelty scoring**: 19/40 published blogs were about Security/Homeland. Old scoring broke after first match, max penalty -0.3. New: counts ALL similar blogs, proportional penalties. 3rd duplicate gets blocked.
+- **PA intent routing**: PA didn't use `content_review_tool` when user said "one titled 'X'" or mentioned "inaccuracy". Added broader patterns and title extraction regex.
+
+#### PR #1142: Fix 165 Daily Task Failures
+- `retry_blocked_research` (141/day): Used `SpiderData.category` (doesn't exist) → `data_type`
+- `execute_agent_task` (24/day): Signal handler accessed `.template` on deprecated model → added `hasattr` fallback
+
+#### Beat Schedule DB Fixes (Direct)
+- `auto-publish-approved-blogs`: `hour=6` → `hour=*/2`, queue=`content`
+- `reevaluate-enhanced-blogs`: `hour=5,11,17,23` → `hour=*/3`, limit=50, queue=`content`
+
+**PRs:** #1138, #1139, #1140, #1141, #1142
+
+---
+
+## Session 1003 Summary (Prior)
 
 ### Pipeline Completion — 12 Fixes Closing All Execution Loops
 
@@ -44,7 +77,7 @@ Production audit revealed world-class intake but broken execution completion. Fi
 
 | Metric | Before | After | Fix |
 |--------|--------|-------|-----|
-| Signal Clusters | 0 | 938 (295/day) | Fix 3 |
+| Signal Clusters | 0 | 1,089 (350/day) | Fix 3 |
 | Blog scoring | 59/160 scored | All scored (deploying) | Fix 11 |
 | Blog mythology gate | ALL blocked | 8+ unblocked (deploying) | Fix 9 |
 | Initiative Stage 1 stuck | 59 stuck | 59 unblocked (deploying) | Fix 12 |
@@ -137,11 +170,17 @@ Diagnostic pipeline (Session 856) has 0 records. May need activation.
 ### Disconnected Dots Audit (Session 972) -- Ongoing
 Many items remain from the audit: agent output persistence, orphan endpoints, enrichment data loss.
 
-### sync_celery_beat Parser Misses Tasks
-The regex-based parser in `core/management/commands/sync_celery_beat.py` failed to create `run-all-desks-intelligence` and doesn't update `auto-publish-approved-blogs` crontab correctly. May need migration to a more robust parser (e.g., import the Python dict directly instead of regex parsing).
+### sync_celery_beat Parser -- Mitigated
+`--create-only` flag prevents overwrites (PR #1139), but the parser still can't update existing schedules. DB fixes must be applied directly. Full parser rewrite still needed for robustness.
 
-### 89 Initiatives Can't Auto-Progress (no can_auto_progress)
-65/154 ACTIVE initiatives can auto-progress. The remaining 89 lack founder_intent or have other constraints. May need investigation.
+### 89 Initiatives Can't Auto-Progress -- BY DESIGN
+All 89 are `fast_track` at their `max_stage`. Fast-track initiatives intentionally cap at a lower stage count. No fix needed.
+
+### Blog Topic Diversity -- Fix Deployed
+19/40 published blogs about Security/Homeland due to weak novelty scoring. PR #1141 strengthens scoring — verify after next batch.
+
+### Blog Factual Accuracy
+LLM uses stale training data ("former President Trump" when Trump is current president in 2026). Need to add current context (year, current events) to blog generation system prompt.
 
 ### 1208 DRAFT Stages Without Documents
 Stage document generation produced 103 documents but 1208 DRAFT stages still have no document. The `generate_initiative_stage_document` task may need to run more frequently or process more per batch.
@@ -150,13 +189,11 @@ Stage document generation produced 103 documents but 1208 DRAFT stages still hav
 
 ## What Could Come Next
 
-### Monitor Pipeline Fix Impact
-All 12 fixes deployed — verify within 24h:
-- Blog `approved` count > 0
-- Initiative Stage 1 count decreasing
-- AudioAgent failure rate drops
-- Desk briefs populating
-- Auto-publish running every 2h
+### Monitor Session 1004 Fix Impact
+- Blog novelty scoring: verify topic diversity improves (was 19/40 same topic)
+- Task failure rate: verify `retry_blocked_research` and `execute_agent_task` drop to 0
+- Desk briefs: `SportsBettingBrief` and `BlockchainAuditBrief` should populate after 6 AM UTC run
+- Auto-publish: verify running every 2h on `content` queue
 
 ### Intelligence Desk Enhancements
 - Add desk-specific detail pages (click a desk card -> full brief view)
