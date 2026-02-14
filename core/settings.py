@@ -1025,9 +1025,11 @@ CELERY_TASK_ROUTES = {
     'core.tasks.process_content_ideas': {'queue': 'content'},
     'core.tasks.generate_weekly_opportunity_digest': {'queue': 'content'},
     # ai_core tasks — scrape external sites, initialize spiders
-    'ai_core.tasks.collect_real_opportunities': {'queue': 'long_running'},
-    'ai_core.tasks.refresh_ai_content_opportunities': {'queue': 'long_running'},
-    'ai_core.tasks.warm_up_spider_network': {'queue': 'long_running'},
+    # Session 1004: Moved off long_running — I/O-bound scraping, not memory-bound.
+    # long_running (concurrency 1) was permanently blocked by these.
+    'ai_core.tasks.collect_real_opportunities': {'queue': 'default'},
+    'ai_core.tasks.refresh_ai_content_opportunities': {'queue': 'default'},
+    'ai_core.tasks.warm_up_spider_network': {'queue': 'default'},
     # Agent exercise tasks — trigger full agent execution with LLM calls
     'core.tasks.run_market_monitoring_agents': {'queue': 'long_running'},
     'core.tasks.run_blockchain_monitoring_agents': {'queue': 'long_running'},
