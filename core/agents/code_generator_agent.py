@@ -638,14 +638,6 @@ IMPORTANT: You MUST use read_file and edit_file on these specific files. Do NOT 
         """Execute a specific tool call."""
 
         # Session 744: Handle delegation to specialists first
-        if tool_name == "delegate_to_specialist":
-            return self._handle_delegate_to_specialist(
-                specialist_agent=arguments.get('specialist_agent', ''),
-                task=arguments.get('task', ''),
-                context=arguments.get('context', ''),
-                delegation_context=getattr(self, '_current_delegation_context', {})
-            )
-
         if tool_name == "generate_code":
             return self._generate_code(
                 specification=arguments.get("specification", ""),

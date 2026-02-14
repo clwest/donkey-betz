@@ -545,15 +545,6 @@ You have access to:
         elif tool_name == "get_system_status":
             return self._get_system_status(**arguments)
 
-        elif tool_name == "delegate_to_specialist":
-            # Session 833: Handle delegation properly
-            return self._handle_delegate_to_specialist(
-                specialist_agent=arguments.get('specialist_agent', ''),
-                task=arguments.get('task', ''),
-                context=arguments.get('context', ''),
-                delegation_context=getattr(self, '_current_delegation_context', {})
-            )
-        # Session 988: Fall through to BaseAgent for web_search + delegation
         return super()._execute_tool_call(tool_name, arguments)
 
     def _route_to_agent(

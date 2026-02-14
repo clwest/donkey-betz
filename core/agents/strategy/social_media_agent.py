@@ -430,15 +430,6 @@ You CANNOT create content - just provide platform strategy."""
                 timezone=arguments.get('timezone', 'UTC')
             )
 
-        elif tool_name == "delegate_to_specialist":
-            # Session 833: Handle delegation properly
-            return self._handle_delegate_to_specialist(
-                specialist_agent=arguments.get('specialist_agent', ''),
-                task=arguments.get('task', ''),
-                context=arguments.get('context', ''),
-                delegation_context=getattr(self, '_current_delegation_context', {})
-            )
-        # Session 1002C: Fall through to BaseAgent for web_search, spider_query, delegation
         return super()._execute_tool_call(tool_name, arguments)
 
     def _get_platform_specs(self, platform: str) -> Dict[str, Any]:

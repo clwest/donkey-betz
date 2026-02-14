@@ -383,15 +383,6 @@ CRITICAL: Always use tools to interact with the system. Never simulate or make u
             elif tool_name == "analyze_channel_performance":
                 return self._analyze_channel_performance(tool_input)
 
-            elif tool_name == "delegate_to_specialist":
-                # Session 833: Handle delegation properly
-                return self._handle_delegate_to_specialist(
-                    specialist_agent=tool_input.get('specialist_agent', ''),
-                    task=tool_input.get('task', ''),
-                    context=tool_input.get('context', ''),
-                    delegation_context=getattr(self, '_current_delegation_context', {})
-                )
-
             else:
                 # Session 988: Fall through to BaseAgent for web_search + delegation
                 return super()._execute_tool_call(tool_name, tool_input)

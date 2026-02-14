@@ -350,7 +350,8 @@ Include counts, categorizations, and actionable findings."""
         elif tool_name == "generate_audit_report":
             return self._generate_audit_report(arguments.get('audit_type'), arguments.get('include_recommendations', True))
         else:
-            return {"error": f"Unknown tool: {tool_name}"}
+            # Session 1002C: Fall through to BaseAgent for web_search, spider_query, delegation
+            return super()._execute_tool_call(tool_name, arguments)
 
     def _read_documentation(self, doc_name: str, section: str = None) -> Dict[str, Any]:
         """Read a documentation file."""

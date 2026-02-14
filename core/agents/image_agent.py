@@ -468,14 +468,6 @@ you already have, then call generate_image immediately. Do not delegate first.""
             Dict with success status and result
         """
         # Session 744: Handle delegation to specialists first
-        if tool_name == "delegate_to_specialist":
-            return self._handle_delegate_to_specialist(
-                specialist_agent=arguments.get('specialist_agent', ''),
-                task=arguments.get('task', ''),
-                context=arguments.get('context', ''),
-                delegation_context=getattr(self, '_current_delegation_context', {})
-            )
-
         if tool_name != "generate_image":
             # Session 1002C: Fall through to BaseAgent for web_search, spider_query, delegation
             return super()._execute_tool_call(tool_name, arguments)

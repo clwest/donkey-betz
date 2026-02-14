@@ -227,17 +227,9 @@ When analyzing cultural impact, consider:
         elif tool_name == "find_historical_parallels":
             return self._find_historical_parallels(tool_input)
 
-        elif tool_name == "delegate_to_specialist":
-            # Session 833: Handle delegation properly
-            return self._handle_delegate_to_specialist(
-                specialist_agent=arguments.get('specialist_agent', ''),
-                task=arguments.get('task', ''),
-                context=arguments.get('context', ''),
-                delegation_context=getattr(self, '_current_delegation_context', {})
-            )
-
         else:
-            return {"error": f"Unknown tool: {tool_name}"}
+            # Session 1002C: Fall through to BaseAgent for web_search, spider_query, delegation
+            return super()._execute_tool_call(tool_name, tool_input)
 
     def _analyze_shift_impact(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze the impact of a narrative shift."""
