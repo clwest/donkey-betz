@@ -161,3 +161,37 @@ Expanded from only re-evaluating `needs_enhancement` blogs to also scoring:
 8. **Mythology:** Blogs with quality ≥ 0.75 and mythology ≥ 0.15 progress to 'approved' — check `SelfBlog.objects.filter(status='approved').count()`
 9. **Auto-publish:** Runs every 2h — check `PeriodicTask.objects.get(name='auto-publish-approved-blogs').total_run_count`
 10. **Desk Intelligence:** `run-all-desks-intelligence` appears in beat schedule and runs daily at 6 AM
+
+### Fix 12: Initiative Quality Gate — Accept Document Pattern Alternatives
+**File:** `core/services/initiative_auto_progression.py`
+
+**Root cause:** `evaluate_stage_quality()` requires section header 'Research Findings' in Stage 1 documents, but all 59 documents use 'Key Finding' pattern instead. Quality evaluation returned confidence 0.50 (below 0.60 threshold), blocking all Stage 1 progression.
+
+**Fix:** Added accepted alternatives to `STAGE_QUALITY_THRESHOLDS[1]`:
+- Section 1: Added `'Key Finding'`, `'Research on'`, `'Key Insight'`
+- Section 2: Added `'Status'`, `'Confidence'`, `'Complete'`
+
+**PR:** #1135
+
+### Fix 13: Task NameError + TypeError — 47 Daily Failures
+**File:** `core/tasks.py`
+
+Two bugs causing 47 combined daily failures:
+1. **NameError (31/day):** `check_blocked_research_for_unblock` used `models.F('max_retries')` without importing `models`. Fixed with explicit `from django.db.models import F`.
+2. **TypeError (16/day):** `execute_agent_task` passed invalid `action_name` kwarg to `ContextTracer.log_post_deserialize()`. Removed the non-existent parameter.
+
+**PR:** #1137
+
+## Production Sweep Findings (Informational)
+
+### 89 Initiatives Can't Auto-Progress — BY DESIGN
+All 89 are `fast_track` at their `max_stage` (Stage 2=54, Stage 3=33, Stage 4=2). Fast-track initiatives intentionally cap at a lower stage count. No fix needed.
+
+### 4,376 DRAFT Stages Without Documents
+Stage document generator works (119 successes, 0 failures in 7 days) but processes ~17/day for 4,376 pending. May need higher batch size or more frequent scheduling.
+
+### Podcast Episodes Have Empty Scripts
+All 10 pending episodes have 0-character scripts with garbled topics (e.g., "b'The Opportunity\\n\\n...'"). The 2 "complete" episodes pre-date the audio fix and have no audio. Script generation needs investigation.
+
+### Worker Health — Excellent
+0 memory failures, 0 OOM events, 15,413 tasks processed in 24h. Memory management is solid

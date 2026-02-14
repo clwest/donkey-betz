@@ -194,9 +194,9 @@ app.conf.beat_schedule = {
     # Session 1003: Re-evaluate enhanced blogs (EditorAgent reviewed → quality gate)
     'reevaluate-enhanced-blogs': {
         'task': 'core.tasks.reevaluate_enhanced_blogs',
-        'schedule': crontab(hour='*/4', minute=30),
+        'schedule': crontab(hour='*/3', minute=30),
         'options': {
-            'expires': 14400,
+            'expires': 10800,
             'queue': 'content',
         },
     },
