@@ -285,16 +285,33 @@ function Toast({ result, onClose }: { result: { type: 'success' | 'error'; messa
 
 interface NowHubProps {
   pendingDecisions: PendingDecision[]
-  runningExecutions: Array<{ id: string; workflow_name?: string | null; agent_name?: string | null; status: string; current_step?: number | null; total_steps?: number | null }>
+  activeWork: {
+    initiatives: {
+      active_count: number
+      by_stage: Record<string, number>
+      recent: Array<{ id: string; name: string; current_stage: number; completion_percentage: number }>
+    }
+    agent_executions: {
+      last_24h: number
+      completed: number
+      failed: number
+      top_agents: Array<{ name: string; count: number }>
+    }
+    workflows: { running: number }
+  } | null
   bodyHealthScore: number
   agentsActive: number
   systemHealth: string
   onNavigate: (tab: string) => void
 }
 
-function NowHub({ pendingDecisions, runningExecutions, bodyHealthScore, agentsActive, systemHealth, onNavigate }: NowHubProps) {
+const STAGE_NAMES: Record<number, string> = { 1: 'Research', 2: 'Analysis', 3: 'Strategy', 4: 'Execution', 5: 'Review' }
+
+function NowHub({ pendingDecisions, activeWork, bodyHealthScore, agentsActive, systemHealth, onNavigate }: NowHubProps) {
   const urgentItems = pendingDecisions.filter(d => d.urgency === 'critical' || d.urgency === 'high')
-  const hasContent = urgentItems.length > 0 || runningExecutions.length > 0
+  const initCount = activeWork?.initiatives?.active_count || 0
+  const execCount = activeWork?.agent_executions?.last_24h || 0
+  const hasWork = initCount > 0 || execCount > 0
 
   return (
     <div className="grid grid-cols-3 gap-3 mb-4">
@@ -336,7 +353,7 @@ function NowHub({ pendingDecisions, runningExecutions, bodyHealthScore, agentsAc
 
       {/* Active Work */}
       <button
-        onClick={() => onNavigate('system')}
+        onClick={() => onNavigate('initiatives')}
         className="bg-dark-card border border-dark-border rounded-lg p-3 text-left hover:border-primary-500/30 transition-colors group"
       >
         <div className="flex items-center justify-between mb-2">
@@ -344,29 +361,39 @@ function NowHub({ pendingDecisions, runningExecutions, bodyHealthScore, agentsAc
             <Workflow size={12} />
             Active Work
           </div>
-          {runningExecutions.length > 0 && (
+          {hasWork && (
             <span className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400">
-              {runningExecutions.length}
+              {initCount}
             </span>
           )}
         </div>
-        {runningExecutions.length > 0 ? (
-          <div className="space-y-1">
-            {runningExecutions.slice(0, 2).map(exec => (
-              <div key={exec.id} className="flex items-center gap-2 text-sm">
-                <Loader2 size={12} className="animate-spin text-blue-400 shrink-0" />
-                <span className="text-gray-300 truncate">
-                  {exec.agent_name || exec.workflow_name || 'Agent task'}
-                </span>
-                {exec.total_steps && exec.current_step && (
-                  <span className="text-xs text-gray-500 shrink-0">
-                    {exec.current_step}/{exec.total_steps}
+        {hasWork ? (
+          <div className="space-y-1.5">
+            {/* Initiative pipeline summary */}
+            {initCount > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {Object.entries(activeWork?.initiatives?.by_stage || {}).sort(([a], [b]) => Number(a) - Number(b)).map(([stage, count]) => (
+                  <span key={stage} className="text-[10px] px-1.5 py-0.5 rounded bg-primary-600/15 text-gray-400">
+                    {STAGE_NAMES[Number(stage)] || `S${stage}`}: {count}
                   </span>
+                ))}
+              </div>
+            )}
+            {/* Agent execution activity */}
+            {execCount > 0 && (
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-400">{execCount} agent runs (24h)</span>
+                {(activeWork?.agent_executions?.failed || 0) > 0 && (
+                  <span className="text-accent-red">{activeWork?.agent_executions?.failed} failed</span>
                 )}
               </div>
-            ))}
-            {runningExecutions.length > 2 && (
-              <span className="text-xs text-gray-500">+{runningExecutions.length - 2} more</span>
+            )}
+            {/* Top recent initiative */}
+            {(activeWork?.initiatives?.recent?.length || 0) > 0 && (
+              <div className="flex items-center gap-2 text-sm">
+                <Loader2 size={12} className="animate-spin text-blue-400 shrink-0" />
+                <span className="text-gray-300 truncate text-xs">{activeWork!.initiatives.recent[0].name}</span>
+              </div>
             )}
           </div>
         ) : (
@@ -691,12 +718,12 @@ export default function CommandCenterPage() {
     refetchInterval: 30000,
   })
 
-  // Session 971b D: Running executions for "Now" hub
-  const { data: runningExecsData } = useQuery({
-    queryKey: ['running-executions'],
-    queryFn: () => orchestrationApi.listExecutions({ status: 'running', limit: 5 }),
+  // Session 1000C: Combined active work for NowHub (initiatives + agent executions + workflows)
+  const { data: activeWorkData } = useQuery({
+    queryKey: ['active-work'],
+    queryFn: () => orchestrationApi.activeWork(),
     enabled: isAuthenticated,
-    refetchInterval: 15000,
+    refetchInterval: 30000,
   })
 
   // System control state
@@ -935,7 +962,7 @@ export default function CommandCenterPage() {
 
   const pendingDecisions: PendingDecision[] = pendingDecisionsData?.data?.items || []
   const pendingCount = pendingDecisions.length
-  const runningExecutions = runningExecsData?.data?.executions || []
+  const activeWork = activeWorkData?.data || null
 
   const systemState: SystemState = controlData?.data?.system_state || {
     system_paused: false,
@@ -1109,7 +1136,7 @@ export default function CommandCenterPage() {
       {/* Session 971b D: "Now" Hub — Attention + Active Work + Pulse */}
       <NowHub
         pendingDecisions={pendingDecisions}
-        runningExecutions={runningExecutions}
+        activeWork={activeWork}
         bodyHealthScore={bodyHealthScore}
         agentsActive={bootData?.quick_stats?.agents_active || 0}
         systemHealth={bootData?.quick_stats?.system_health || 'healthy'}
