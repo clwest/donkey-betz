@@ -37,6 +37,31 @@ After overnight pipeline run, 40 blogs published (up from 8), 1,089 signal clust
 
 **PRs:** #1138, #1139, #1140, #1141, #1142
 
+#### PR #1144: Move Heartbeat + check_nervous off long_running
+- Moved `run_heartbeat` and `check_nervous` from `long_running` to `broadcast` queue
+- Heartbeat every 60s was consuming 50% of long_running's c=1 capacity
+
+#### PR #1145: Move I/O-bound ai_core Tasks off long_running
+- `collect_real_opportunities`, `refresh_ai_content_opportunities`, `warm_up_spider_network` → `default` queue
+- Web scraping tasks, not memory-bound — don't need prefork isolation
+
+#### PR #1146: Redistribute 40+ Tasks off long_running Queue
+- **Root cause of desk intelligence never running:** 55+ tasks on `long_running` with concurrency 1
+- Bumped `celery-long-running` from `-c 1` to `-c 3`
+- Moved 18 agent rotation tasks → `agents` queue
+- Moved 14 autonomous monitor tasks → `agents` queue
+- Moved 6 conversation/research tasks → `default` queue
+- Moved 4 pipeline execution + 4 narrative drift tasks → `default` queue
+- **long_running now reserved for 7 truly memory-heavy tasks**
+
+#### PR #1147: Add Queue Override to trigger-desks Endpoint
+- `POST /api/home/trigger-desks/` accepts `{"queue": "default"}` to override queue
+- Needed to bypass pre-deploy tasks stuck in Redis long_running queue
+
+**Result:** First successful desk intelligence run ever — BlockchainAuditBrief created (133s, 5 agents). Task success rate hit 99.8%.
+
+**PRs:** #1138-#1142, #1144-#1147
+
 ---
 
 ## Session 1003 Summary (Prior)
@@ -122,6 +147,7 @@ Session 1002B centralized `delegate_to_specialist`, `web_search`, and `spider_qu
 | Database Models | 395+ |
 | Services | 134 |
 | Celery Tasks | 268 |
+| long_running Queue Tasks | 7 (was 55+) |
 | Intelligence Desks | 4 (Stocks, Sports, Blockchain, Narrative) |
 | Workspace Tabs | 9 |
 | Frontend Routes | 37 (15 standalone + 22 redirects) |
@@ -136,6 +162,15 @@ Session 1002B centralized `delegate_to_specialist`, `web_search`, and `spider_qu
 ---
 
 ## Known Issues / Open Items
+
+### collect_real_opportunities Infinite Loop
+`ai_core/tasks.py` — `JobIncomeBridge.sync_to_income_builder()` cycles through the same jobs endlessly. Pre-deploy instances consumed all long_running capacity for 3+ hours. Needs: timeout/job-count limit, or fix the loop in `sync_to_income_builder`.
+
+### Stocks Desk Not Creating MarketIntelligenceBrief
+`MarketIntelligenceCoordinator` errored silently during desk task run. Last brief was 16:05 UTC, desk task at 22:45 UTC produced no new brief. Need to check coordinator health and API keys.
+
+### Sports Desk Not Creating SportsBettingBrief
+`SportsBettingCoordinator.generate_brief()` failed silently. 0 SportsBettingBriefs ever created. Need to check API keys and coordinator health.
 
 ### chat_conversations.platform Column Missing
 `Failed to persist PA conversation: column chat_conversations.platform does not exist` -- ChatConversation model has a `platform` field that hasn't been migrated. Create and run migration.
@@ -191,9 +226,10 @@ Stage document generation produced 103 documents but 1208 DRAFT stages still hav
 
 ### Monitor Session 1004 Fix Impact
 - Blog novelty scoring: verify topic diversity improves (was 19/40 same topic)
-- Task failure rate: verify `retry_blocked_research` and `execute_agent_task` drop to 0
-- Desk briefs: `SportsBettingBrief` and `BlockchainAuditBrief` should populate after 6 AM UTC run
+- Task failure rate: dropped to 99.8% success (verified)
+- Desk briefs: BlockchainAuditBrief created (1 record). SportsBettingBrief still 0. MarketIntelligenceBrief stale.
 - Auto-publish: verify running every 2h on `content` queue
+- Queue distribution: long_running down to 7 tasks (from 55+), heartbeat on broadcast (verified)
 
 ### Intelligence Desk Enhancements
 - Add desk-specific detail pages (click a desk card -> full brief view)
@@ -276,6 +312,7 @@ PA can invoke agents but can't describe their capabilities. Add "what can [agent
 **Intelligence desk cache keys (Session 1000):**
 - `desk:stocks:latest`, `desk:sports:latest`, `desk:blockchain:latest`, `desk:narrative:latest`
 - 6-hour TTL, regenerated daily at 6 AM or on-demand via `/api/home/trigger-desks/`
+- Trigger endpoint accepts `{"queue": "default"}` to override queue (PR #1147)
 
 **Railway multi-service deployment (Session 989):**
 - Each Procfile process is a SEPARATE Railway service
