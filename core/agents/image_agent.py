@@ -477,10 +477,8 @@ you already have, then call generate_image immediately. Do not delegate first.""
             )
 
         if tool_name != "generate_image":
-            return {
-                'success': False,
-                'error': f"Unknown tool: {tool_name}. ImageAgent only supports generate_image."
-            }
+            # Session 1002C: Fall through to BaseAgent for web_search, spider_query, delegation
+            return super()._execute_tool_call(tool_name, arguments)
 
         # Import the actual image generation function
         from core.views_image import _execute_generate_image

@@ -453,7 +453,8 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                 output_style=arguments.get("output_style", "")
             )
 
-        return {"error": f"Unknown tool: {tool_name}"}
+        # Session 1002C: Fall through to BaseAgent for web_search, spider_query, delegation
+        return super()._execute_tool_call(tool_name, arguments)
 
     def _design_prompt(
         self,

@@ -466,11 +466,8 @@ and call generate_video immediately. Do not delegate for research first."""
             }
             return _execute_chain_videos(self.user, parameters)
 
-        else:
-            return {
-                'success': False,
-                'error': f"Unknown tool: {tool_name}. VideoAgent only supports video tools."
-            }
+        # Session 1002C: Fall through to BaseAgent for web_search, spider_query, delegation
+        return super()._execute_tool_call(tool_name, arguments)
 
 
 # Session 392: Factory function for backwards compatibility
