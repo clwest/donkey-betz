@@ -723,12 +723,14 @@ Research Type: {self.research_type}""")
         try:
             from core.services.spider_intelligence import SpiderIntelligenceService
             service = SpiderIntelligenceService()
-            results = service.search_intelligence(
+            # Session 1002B: Fixed — search_intelligence() doesn't exist, use search_spider_data()
+            results = service.search_spider_data(
                 query=query,
-                categories=categories,
+                category=categories[0] if isinstance(categories, list) and len(categories) == 1 else None,
+                hours=72,
                 limit=limit
             )
-            discussions = results.get('results', [])
+            discussions = results if isinstance(results, list) else []
             logger.info(f"{self.name}: Spider query returned {len(discussions)} results")
             return {"success": True, "discussions": discussions, "query": query}
         except Exception as e:

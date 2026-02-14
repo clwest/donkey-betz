@@ -1,12 +1,44 @@
-# Session 1002 - Start Here
+# Session 1003 - Start Here
 
-**Previous Session:** 1001 (Blog Telemetry Grounding)
+**Previous Session:** 1002B (Agent Delegation & Shared Tools)
 **Date:** February 13, 2026
-**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **LIVE SCORES + AI PICKS** | **BETTING HUB: LIVE** | **STOCK HUB: LIVE** | **INTELLIGENCE DESKS: 4 ACTIVE** | **Workspace: 9 TABS** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 97** | **PA Intents: 38** | **Enrichment Services: 8** | **Content Feedback Loop: CLOSED** | **CONTENT REVIEW AUTOMATION: WIRED** | **BLOG TELEMETRY GROUNDING: ACTIVE** | **Celery Tasks: 268** | **GOVERNANCE: HARDENED**
+**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **LIVE SCORES + AI PICKS** | **BETTING HUB: LIVE** | **STOCK HUB: LIVE** | **INTELLIGENCE DESKS: 4 ACTIVE** | **Workspace: 9 TABS** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 97** | **PA Intents: 38** | **Enrichment Services: 8** | **Content Feedback Loop: CLOSED** | **CONTENT REVIEW AUTOMATION: WIRED** | **BLOG TELEMETRY GROUNDING: ACTIVE** | **SPIDER CONTEXT INJECTION: FIXED** | **DELEGATION: 81 AGENTS DISCOVERABLE** | **SPIDER_QUERY: CENTRALIZED** | **Celery Tasks: 268** | **GOVERNANCE: HARDENED**
 
 ---
 
-## Session 1001 Summary (Just Completed)
+## Session 1002B Summary (Just Completed)
+
+### Agent Delegation System Fix & Shared Tool Sets
+
+Fixed systemic under-utilization of the 82-agent system:
+
+1. **Dynamic AVAILABLE_SPECIALISTS** -- Replaced static 13-agent list with a cached property reading from AgentRouter.AGENT_MAP. LLM delegation tool now sees all 81 agents (was 13).
+
+2. **Enhanced delegation tool description** -- Expanded from a vague 4-example hint to categorized overview across 8 categories (Research, Content, Media, Finance, Development, Business, Blockchain, Markets).
+
+3. **SPIDER_QUERY_TOOL constant** -- Module-level shared constant (like WEB_SEARCH_TOOL). Any agent can include it and get automatic handling from BaseAgent._execute_tool_call().
+
+4. **Centralized spider_query handler** -- Added to BaseAgent._execute_tool_call() using SpiderIntelligenceService.search_spider_data(). No more per-agent handler boilerplate.
+
+5. **Fixed broken business agent spider_query** -- BaseBusinessResearchAgent called `search_intelligence()` (doesn't exist). Fixed to `search_spider_data()`.
+
+**Files changed:** 2 code files. See `docs/handoffs/SESSION_1002B_DELEGATION_SHARED_TOOLS.md`.
+
+## Session 1002 Summary (Prior)
+
+### Spider Context Fabrication Fix
+
+Fixed two root causes of content fabrication in ContentWriterAgent:
+
+1. **PLATFORM_CONTEXT inflation** -- Replaced a ~1,400 token static string (listing every spider/agent name) with `_build_dynamic_platform_summary()` (~90 tokens) that queries live Agent, SpiderData, and HeartBeat counts. GPT no longer sees spider names it has no data for.
+
+2. **SpiderContextBuilder under-utilization** -- `spider_context.get('trends', [])` used the WRONG KEY (should be `relevant_trends`), so spider data was **never injected**. New `_format_spider_intelligence()` reads all 6 fields from SpiderContextBuilder (trends, discussions, articles, market_data, related_discussions, freshness) and formats them as citable markdown.
+
+Also researched the agent execution model: agents use single-pass LLM tool calling (no explicit step planning), WorkflowAgent is the only multi-turn exception, delegation is recursive up to depth 3.
+
+**Files changed:** 1 file. See `docs/handoffs/SESSION_1002_SPIDER_CONTEXT_FABRICATION_FIX.md`.
+
+## Session 1001 Summary (Prior)
 
 ### Blog Telemetry Grounding
 
