@@ -170,9 +170,13 @@ STAGE_QUALITY_THRESHOLDS = {
         'min_findings_length': 100,  # At least 100 chars of findings
         'min_sources': 1,  # At least 1 data source
         # Session 906: Accept alternative section names (any match counts)
+        # Session 1003: Added 'Key Finding', 'Research on', 'Status' — stage documents
+        # contain these patterns instead of formal section headers
         'required_sections': [
-            ['Research Findings', 'Market Signal', 'Problem Statement', 'Executive Summary', 'Findings'],
-            ['Data Sources', 'Source', 'Sources Consulted', 'Data', 'Evidence'],
+            ['Research Findings', 'Market Signal', 'Problem Statement', 'Executive Summary',
+             'Findings', 'Key Finding', 'Research on', 'Key Insight'],
+            ['Data Sources', 'Source', 'Sources Consulted', 'Data', 'Evidence',
+             'Status', 'Confidence', 'Complete'],
         ],
     },
     2: {  # Prototype Plan
