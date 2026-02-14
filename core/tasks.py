@@ -20048,6 +20048,139 @@ Use the generate_podcast_script tool to create the full script with speaker labe
         return {'status': 'error', 'error': str(e)}
 
 
+# =============================================================================
+# SESSION 1001: OPERATIONAL TELEMETRY CONTEXT FOR BLOG GROUNDING
+# =============================================================================
+
+def _build_operational_context():
+    """
+    Query real telemetry models and return a markdown string the content writer
+    can cite instead of fabricating operational claims.
+    Returns '' on total failure so callers can safely concatenate.
+    """
+    from datetime import timedelta
+    from django.utils import timezone
+
+    now = timezone.now()
+    window_72h = now - timedelta(hours=72)
+    sections = []
+
+    # --- Agent Executions (72h) ---
+    try:
+        from core.models import AgentExecution
+        execs = AgentExecution.objects.filter(created_at__gte=window_72h)
+        total = execs.count()
+        completed = execs.filter(status='completed').count()
+        failed = execs.filter(status='failed').count()
+        success_rate = round(completed / total * 100, 1) if total else 0
+
+        from django.db.models import Avg
+        avg_ms = execs.filter(status='completed').aggregate(avg=Avg('execution_time_ms'))['avg']
+
+        recent = list(
+            execs.select_related('agent')
+            .order_by('-created_at')[:3]
+        )
+        recent_lines = []
+        for ex in recent:
+            name = ex.agent.name if ex.agent else 'unknown'
+            task_preview = (ex.task or '')[:80]
+            ms = ex.execution_time_ms or 0
+            recent_lines.append(
+                f"  - **{name}**: \"{task_preview}\" — {ms}ms, {ex.status}"
+            )
+
+        section = (
+            f"### Agent Executions (last 72 h)\n"
+            f"- Total: {total}  |  Completed: {completed}  |  Failed: {failed}  |  Success rate: {success_rate}%\n"
+            f"- Avg execution time (completed): {round(avg_ms) if avg_ms else 'N/A'} ms\n"
+            f"- Recent executions:\n" + "\n".join(recent_lines)
+        )
+        sections.append(section)
+    except Exception as e:
+        logger.debug(f"[OpCtx] Agent executions section failed: {e}")
+
+    # --- Background Tasks (72h) ---
+    try:
+        from core.models_celery_telemetry import CeleryTaskEvent
+        events = CeleryTaskEvent.objects.filter(started_at__gte=window_72h)
+        c_total = events.count()
+        c_success = events.filter(status='SUCCESS').count()
+        c_failed = events.filter(status='FAILURE').count()
+        reliability = round(c_success / c_total * 100, 1) if c_total else 0
+
+        from django.db.models import Avg
+        avg_dur = events.filter(status='SUCCESS').aggregate(avg=Avg('duration_seconds'))['avg']
+
+        from django.db.models import Count
+        top_failures = list(
+            events.filter(status='FAILURE')
+            .values('task_name')
+            .annotate(cnt=Count('id'))
+            .order_by('-cnt')[:3]
+        )
+        fail_lines = [f"  - `{f['task_name']}` ({f['cnt']} failures)" for f in top_failures]
+
+        section = (
+            f"### Background Tasks / Celery (last 72 h)\n"
+            f"- Total: {c_total}  |  Succeeded: {c_success}  |  Failed: {c_failed}  |  Reliability: {reliability}%\n"
+            f"- Avg duration (succeeded): {round(avg_dur, 2) if avg_dur else 'N/A'} s\n"
+        )
+        if fail_lines:
+            section += "- Top failing tasks:\n" + "\n".join(fail_lines)
+        sections.append(section)
+    except Exception as e:
+        logger.debug(f"[OpCtx] Celery section failed: {e}")
+
+    # --- System Health ---
+    try:
+        from core.models_heart import HeartBeat
+        latest = HeartBeat.objects.order_by('-recorded_at').first()
+        if latest:
+            components = latest.components or {}
+            section = (
+                f"### System Health (latest heartbeat)\n"
+                f"- Health score: {latest.health_score}  |  Status: {latest.overall_status}\n"
+                f"- Components checked: {latest.components_checked}  |  Healthy: {latest.components_healthy}\n"
+                f"- Recorded at: {latest.recorded_at.strftime('%Y-%m-%d %H:%M UTC')}"
+            )
+            sections.append(section)
+    except Exception as e:
+        logger.debug(f"[OpCtx] HeartBeat section failed: {e}")
+
+    # --- Recent Decisions ---
+    try:
+        from core.models_unified_system import AgentDecisionSummary
+        decisions = list(
+            AgentDecisionSummary.objects.order_by('-created_at')[:3]
+        )
+        if decisions:
+            dec_lines = []
+            for d in decisions:
+                participants = d.participants or []
+                names = ', '.join(
+                    p.get('name', 'unknown') if isinstance(p, dict) else str(p)
+                    for p in participants[:5]
+                )
+                insights = d.key_insights or []
+                insight_str = '; '.join(str(i) for i in insights[:3]) if insights else 'N/A'
+                dec_lines.append(
+                    f"  - **{d.topic}** ({d.decision_type}): stance={d.recommended_stance}, "
+                    f"insights=[{insight_str}], participants=[{names}]"
+                )
+            section = (
+                f"### Recent Agent Decisions\n" + "\n".join(dec_lines)
+            )
+            sections.append(section)
+    except Exception as e:
+        logger.debug(f"[OpCtx] Decisions section failed: {e}")
+
+    if not sections:
+        return ''
+
+    header = "## Operational Telemetry (Real Data — cite these, do not invent)\n"
+    return header + "\n\n".join(sections)
+
 
 # =============================================================================
 # SESSION 543: SELF-BLOG GENERATION TASK
@@ -20250,9 +20383,9 @@ The topic connects to broader trends in:
 - What's capturing attention right now
 
 Write an insightful, engaging blog post that explores this topic in depth.
-Add your own analysis and perspective. Make it valuable to readers.
+Ground all claims in the data provided above. Do not invent operational statistics or fabricate specific incidents.
 """
-                blog_task = f"Write an informative and engaging blog post about: {blog_topic}. Use the research provided but expand on it with your own insights. Make it valuable, not just a summary."
+                blog_task = f"Write an informative and engaging blog post about: {blog_topic}. Ground all claims in the provided research and telemetry. Make it valuable and specific, not generic."
                 seo_keywords = [blog_topic.split()[0], source, 'technology', 'trends', 'analysis']
             else:
                 topic_category = 'system'  # Fallback if no spider data
@@ -20292,7 +20425,7 @@ gathered from {total_knowledge:,} sources, {total_conversations} conversations, 
 Write a thoughtful blog post exploring the themes and ideas in this dream.
 What does it reveal about the nature of intelligence, creativity, or technology?
 """
-                blog_task = f"Write a reflective blog post inspired by this AI insight: '{blog_topic}'. Explore the themes, add your own perspective, and make it thought-provoking."
+                blog_task = f"Write a reflective blog post inspired by this AI insight: '{blog_topic}'. Explore the themes using the operational data provided, and make it thought-provoking."
                 seo_keywords = ['AI insights', 'artificial intelligence', 'machine learning', 'technology', 'future']
             else:
                 topic_category = 'system'  # Fallback
@@ -20447,6 +20580,11 @@ and {spider_data_total:,} collected data points. Use this as credibility context
 4. End with a clear takeaway or call to action
 5. Keep it grounded — real insights, not hype
 """
+
+        # Session 1001: Inject real operational telemetry into blog research
+        operational_context = _build_operational_context()
+        if operational_context:
+            blog_research = (blog_research or '') + f"\n\n{operational_context}"
 
         logger.info(f"🤖 [SELF-BLOG] Topic: {blog_topic}, invoking ContentWriterAgent...")
 

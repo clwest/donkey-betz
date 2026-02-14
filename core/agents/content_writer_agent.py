@@ -1095,10 +1095,12 @@ Plus these additional fields:
 
 ## IMPORTANT
 - Base ALL content on the provided research - do not invent facts
+- When referencing operational metrics (execution times, success rates, health scores), use ONLY the exact numbers from the Operational Telemetry section
+- Do NOT fabricate specific incidents, error messages, or recovery narratives that are not in the provided research
 - CITE YOUR SOURCES! Attribute specific claims to their sources
 - Write in a natural, engaging style appropriate for {target_audience}
 - Ensure the content is ready to publish with minimal editing
-- Include practical examples and actionable insights where appropriate
+- Include practical examples from the provided data where appropriate
 - Make it compelling, valuable, and credible to the reader
 
 Generate the {content_config['name']} now:"""
