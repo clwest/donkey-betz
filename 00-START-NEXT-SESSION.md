@@ -33,8 +33,11 @@ Production audit revealed world-class intake but broken execution completion. Fi
 11. **Blog Scoring Expansion** -- `reevaluate_enhanced_blogs` now scores ALL unscored blogs (pending_review + draft), not just needs_enhancement.
 12. **Initiative Quality Gate** -- Added 'Key Finding', 'Research on', 'Status', 'Confidence', 'Complete' as accepted alternatives in Stage 1 quality check. All 59 DRAFT stages were failing with "Missing sections: Research Findings".
 
+#### Phase 5: Task Error Sweep (PR #1137)
+13. **47 Daily Task Failures** -- NameError in `check_blocked_research_for_unblock` (31/day, `models.F()` without import) + TypeError in `execute_agent_task` (16/day, invalid `action_name` kwarg to `log_post_deserialize`).
+
 **Migrations:** `0242_session_1003_desk_intelligence_briefs` + `0243_session_1003_backfill_founder_intent`
-**PRs:** #1130, #1131, #1132, #1133, #1134, #1135
+**PRs:** #1130, #1131, #1132, #1133, #1134, #1135, #1137
 **Handoff:** `docs/handoffs/SESSION_1003_PIPELINE_COMPLETION.md`
 
 ### Production Metrics After Session 1003
