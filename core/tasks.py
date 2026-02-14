@@ -7,6 +7,7 @@ Session 969b: Touched to trigger Celery worker restart after PA telemetry deploy
 """
 
 from celery import shared_task
+from celery.exceptions import SoftTimeLimitExceeded
 import logging
 import time
 from datetime import datetime, timedelta
@@ -15342,7 +15343,7 @@ def run_autonomous_content_studio():
         return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task(name='autonomous_studio.generate_content')
+@shared_task(name='autonomous_studio.generate_content', soft_time_limit=600, time_limit=720)
 def generate_content_for_channel(channel_id):
     """
     Session 466: Generate content for a specific channel.
@@ -15464,50 +15465,57 @@ Call the initiate_content_debate tool NOW with channel_id="{channel.id}" to coor
             scifi_context = {}
             spider_context = {"domain_keywords": domain_keywords}
 
-            # Run TopicMinerAgent
-            logger.info(f"🗣️ Fallback Debate Step 1: TopicMinerAgent")
-            try:
-                topic_miner = TopicMinerAgent(user=channel.user)
-                miner_result = topic_miner.execute(
-                    task=f"Find trending topics in {channel.topic_domain}",
-                    context={"channel_id": str(channel.id), "domain_keywords": domain_keywords},
-                    scifi_context=scifi_context,
-                    spider_context=spider_context
-                )
-                topic_miner_position = miner_result.message or "No trends found"
-            except Exception as e:
-                logger.error(f"TopicMinerAgent error: {e}")
-                topic_miner_position = f"Error: {str(e)}"
+            # Session 1003: Run debate agents in PARALLEL with 120s timeout each
+            # (was serial with no timeouts — caused 30+ min hangs)
+            from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+            FALLBACK_DEBATE_TIMEOUT = 120  # 2 min per agent
 
-            # Run ContrarianAgent
-            logger.info(f"🗣️ Fallback Debate Step 2: ContrarianAgent")
-            try:
-                contrarian = ContrarianAgent(user=channel.user)
-                contrarian_result = contrarian.execute(
-                    task=f"Check saturation and suggest unique angles for {channel.topic_domain}",
-                    context={"channel_id": str(channel.id), "domain_keywords": domain_keywords},
-                    scifi_context=scifi_context,
-                    spider_context=spider_context
-                )
-                contrarian_position = contrarian_result.message or "No suggestions"
-            except Exception as e:
-                logger.error(f"ContrarianAgent error: {e}")
-                contrarian_position = f"Error: {str(e)}"
+            def _run_debate_agent(agent_cls, agent_name, task_text):
+                try:
+                    agent = agent_cls(user=channel.user)
+                    result = agent.execute(
+                        task=task_text,
+                        context={"channel_id": str(channel.id), "domain_keywords": domain_keywords},
+                        scifi_context=scifi_context,
+                        spider_context=spider_context
+                    )
+                    return result.message or f"No response from {agent_name}"
+                except Exception as e:
+                    logger.error(f"{agent_name} error: {e}")
+                    return f"Error: {str(e)}"
 
-            # Run PerformanceAnalystAgent
-            logger.info(f"🗣️ Fallback Debate Step 3: PerformanceAnalystAgent")
-            try:
-                analyst = PerformanceAnalystAgent(user=channel.user)
-                analyst_result = analyst.execute(
-                    task=f"Analyze performance predictions for {channel.topic_domain}",
-                    context={"channel_id": str(channel.id), "domain_keywords": domain_keywords},
-                    scifi_context=scifi_context,
-                    spider_context=spider_context
+            logger.info(f"🗣️ Fallback: Running 3 debate agents in parallel (120s timeout each)")
+            with ThreadPoolExecutor(max_workers=3) as executor:
+                miner_future = executor.submit(
+                    _run_debate_agent, TopicMinerAgent, "TopicMinerAgent",
+                    f"Find trending topics in {channel.topic_domain}"
                 )
-                analyst_position = analyst_result.message or "No insights"
-            except Exception as e:
-                logger.error(f"PerformanceAnalystAgent error: {e}")
-                analyst_position = f"Error: {str(e)}"
+                contrarian_future = executor.submit(
+                    _run_debate_agent, ContrarianAgent, "ContrarianAgent",
+                    f"Check saturation and suggest unique angles for {channel.topic_domain}"
+                )
+                analyst_future = executor.submit(
+                    _run_debate_agent, PerformanceAnalystAgent, "PerformanceAnalystAgent",
+                    f"Analyze performance predictions for {channel.topic_domain}"
+                )
+
+                try:
+                    topic_miner_position = miner_future.result(timeout=FALLBACK_DEBATE_TIMEOUT)
+                except (FuturesTimeoutError, Exception) as e:
+                    topic_miner_position = f"TopicMinerAgent timed out after {FALLBACK_DEBATE_TIMEOUT}s"
+                    logger.warning(topic_miner_position)
+
+                try:
+                    contrarian_position = contrarian_future.result(timeout=FALLBACK_DEBATE_TIMEOUT)
+                except (FuturesTimeoutError, Exception) as e:
+                    contrarian_position = f"ContrarianAgent timed out after {FALLBACK_DEBATE_TIMEOUT}s"
+                    logger.warning(contrarian_position)
+
+                try:
+                    analyst_position = analyst_future.result(timeout=FALLBACK_DEBATE_TIMEOUT)
+                except (FuturesTimeoutError, Exception) as e:
+                    analyst_position = f"PerformanceAnalystAgent timed out after {FALLBACK_DEBATE_TIMEOUT}s"
+                    logger.warning(analyst_position)
 
             # Create debate record with real agent responses
             recent_debate = ContentDebate.objects.create(
@@ -15544,7 +15552,8 @@ Call the initiate_content_debate tool NOW with channel_id="{channel.id}" to coor
 
         actual_script = ""
         try:
-            client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+            # Session 1003: 60s timeout prevents indefinite OpenAI hangs
+            client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'), timeout=60)
 
             # Build debate context for richer content
             debate_context = f"""
@@ -15648,6 +15657,11 @@ Make it conversational and engaging. Use natural speech patterns."""
 
         return results
 
+    except SoftTimeLimitExceeded:
+        logger.error(f"🎥 [SESSION 1003] Content generation SOFT TIMEOUT for channel {channel_id} — saving partial results")
+        results['status'] = 'timeout'
+        results['error'] = 'Soft time limit exceeded (600s)'
+        return results
     except Exception as e:
         logger.error(f"🎥 [SESSION 466] Content generation failed for channel {channel_id}: {e}")
         results['status'] = 'failed'

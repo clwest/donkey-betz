@@ -732,7 +732,8 @@ User Preferences Applied: {json.dumps(user_prefs) if user_prefs else 'None'}"""
         script_content = series_prompt  # Fallback to prompt if generation fails
 
         try:
-            client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+            # Session 1003: 60s timeout prevents indefinite OpenAI hangs
+            client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'), timeout=60)
 
             # Get debate positions for richer content
             debate_context = ""
