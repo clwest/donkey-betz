@@ -760,6 +760,7 @@ class TheOddsSpider:
                 'away_score': away_score,
                 'completed': event.get('completed', False),
                 'commence_time': event.get('commence_time', ''),
+                'last_updated': event.get('last_updated'),
             })
 
         completed = sum(1 for r in results if r['completed'])
