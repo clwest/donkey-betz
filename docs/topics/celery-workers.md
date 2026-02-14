@@ -28,8 +28,8 @@
 | Queue | # Tasks | Categories |
 |-------|---------|------------|
 | default | ~28 | Light DB queries, body system checks, attention lifecycle |
-| long_running | ~49 | Agent exercises (18), autonomous situations (14), pipeline execution, spider network, intelligence desks |
-| content | ~19 | Blog generation, podcasts, initiative stages, content deliberation |
+| long_running | ~50 | Agent exercises (18), autonomous situations (14), pipeline execution, spider network, intelligence desks, blog enhancement |
+| content | ~21 | Blog generation, podcasts, initiative stages, content deliberation, blog re-evaluation, auto-publish |
 | sports | ~5 | Odds snapshots, arb scans, outcome verification, betting briefs |
 | broadcast | ~4 | Status snapshots, heartbeat, nervous system |
 | ml | ~3 | Embedding backfills, ML model training/scoring |
@@ -45,7 +45,7 @@
 
 **Learning & Intelligence:** run_learning_loop_cycle (6h), mine_learning_patterns (12h), discover_success_patterns (6h)
 
-**Content Generation:** generate_self_blog_task (6h), generate_self_blog_deliberation_task (on-demand), generate_podcast_task (on-demand)
+**Content Generation:** generate_self_blog_task (6h), generate_self_blog_deliberation_task (on-demand), generate_podcast_task (on-demand), enhance_all_blogs_needing_enhancement (6h), reevaluate_enhanced_blogs (6h), auto_publish_approved_blogs (daily 6AM)
 
 **Attention & Orchestration:** generate_human_attention_items (15m), process_human_attention_lifecycle (10m), enrich_boardroom_ml_predictions (15m), process_spider_actions (30m), process_gate_progression (15m)
 

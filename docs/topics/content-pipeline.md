@@ -74,6 +74,8 @@ Three quality dimensions with thresholds:
 
 **Final gate decision:** `publish` (all pass), `enhance` (partial pass), `internal_only` (low quality or internal).
 
+**Status promotion (Session 1000C):** `apply_to_blog()` now sets `blog.status = 'approved'` on `publish` decision (previously only set `publish_ready=True` without changing status).
+
 ## Blog Quality Fields (SelfBlog Model)
 
 | Field | Type | Description |
@@ -85,7 +87,7 @@ Three quality dimensions with thresholds:
 | gate_notes | Text | PublishGate decision reasoning |
 | content_type | Char | public / internal / strategic |
 | status | Char | draft / pending_review / approved / published / needs_enhancement |
-| stats_snapshot | JSON | Includes `{deliberation: {session_id, decision, claims_count, sources_count, reviewers, review_verdicts}}` |
+| stats_snapshot | JSON | Includes `{deliberation: {session_id, decision, claims_count, sources_count, reviewers, review_verdicts}, enhancement_count: N}` |
 
 ## Content Feedback Loop (Session 886)
 
@@ -128,3 +130,16 @@ Max 2 domains per content piece. Gives content the "builder voice" — writing f
 - **v1:** `content_review_panel.py` — original panel, still accessible, untouched
 - **v2:** `content_review_panel_v2.py` + `ContentDeliberationRunner` — claims-based, structured validation
 - Different entry points for A/B testing. v2 via `POST /api/v1/research/self-blog/generate-v2/`
+
+## Content Review Automation (Session 1000C)
+
+Scheduled tasks that move blogs through the pipeline without manual intervention:
+
+| Task | Schedule | Queue | Action |
+|------|----------|-------|--------|
+| `evaluate_unscored_blogs` | Every 2h at :10 | content | Score draft blogs through PublishGate |
+| `enhance_all_blogs_needing_enhancement` | Every 6h at :40 | long_running | EditorAgent improves needs_enhancement blogs (limit 5, max 3 rounds) |
+| `reevaluate_enhanced_blogs` | Every 6h at :10 | content | Re-score enhanced blogs through PublishGate |
+| `auto_publish_approved_blogs` | Daily 6 AM | content | Move approved+publish_ready blogs to published |
+
+**Enhancement guard:** `stats_snapshot['enhancement_count']` tracks rounds per blog. After 3 unsuccessful rounds, the blog is skipped to prevent infinite loops.
