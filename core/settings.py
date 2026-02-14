@@ -951,19 +951,20 @@ CELERY_TASK_ROUTES = {
     'ml.*': {'queue': 'ml'},
     'intelligence.*': {'queue': 'long_running'},  # Session 884: Intelligence tasks are long-running
 
-    # Session 573: Long-running tasks (1+ minutes) - separate worker
+    # Session 573: Long-running tasks — heavy memory (ML models, coordinators)
     'core.tasks.run_spider_network': {'queue': 'long_running'},
     'core.tasks.generate_agent_dreams': {'queue': 'long_running'},
-    'core.tasks.run_agent_conversation': {'queue': 'long_running'},
-    'core.tasks.run_multi_agent_conversation': {'queue': 'long_running'},
-    'core.tasks.run_autonomous_thinking_cycle': {'queue': 'long_running'},
-    'core.tasks.run_agent_learning_cycle': {'queue': 'long_running'},
-    'core.tasks.trigger_spider_conversations': {'queue': 'long_running'},
-    'core.tasks.trigger_project_research': {'queue': 'long_running'},
     'core.tasks.run_autonomous_intelligence_loop': {'queue': 'long_running'},
-    'core.tasks.agent_think_and_synthesize': {'queue': 'long_running'},
+    'core.tasks.run_agent_learning_cycle': {'queue': 'long_running'},
     'core.tasks.score_and_promote_dreams': {'queue': 'long_running'},
     'core.tasks.process_approved_dreams': {'queue': 'long_running'},
+    # Session 1004: Moved I/O-bound LLM API tasks off long_running (was saturating c=1)
+    'core.tasks.run_agent_conversation': {'queue': 'default'},
+    'core.tasks.run_multi_agent_conversation': {'queue': 'default'},
+    'core.tasks.run_autonomous_thinking_cycle': {'queue': 'default'},
+    'core.tasks.trigger_spider_conversations': {'queue': 'default'},
+    'core.tasks.trigger_project_research': {'queue': 'default'},
+    'core.tasks.agent_think_and_synthesize': {'queue': 'default'},
     # Session 1000: Intelligence desks — 4 coordinators, heavy memory
     'core.tasks.run_all_desks_intelligence': {'queue': 'long_running'},
     # Session 1004: Moved heartbeat + nervous off long_running to unblock desk intelligence.
@@ -991,7 +992,7 @@ CELERY_TASK_ROUTES = {
     'core.tasks.universal_agent_workspace_output': {'queue': 'content'},
     'core.tasks.agent_category_rotation': {'queue': 'content'},
     'core.tasks.full_agent_rotation': {'queue': 'content'},
-    'autonomous.blockchain_security_monitor': {'queue': 'long_running'},
+    'autonomous.blockchain_security_monitor': {'queue': 'agents'},  # Session 1004: LLM API calls
     # Session 989: Removed phantom autonomous.stock_market_intelligence routing (task didn't exist)
 
     # Session 976: PA chat — dedicated queue so user isn't blocked by spider/body-system traffic
@@ -1016,11 +1017,11 @@ CELERY_TASK_ROUTES = {
     'core.tasks.backfill_conversation_embeddings': {'queue': 'ml'},
     # ML prediction enrichment — calls OpenAI embedding API per item
     'core.tasks.enrich_boardroom_ml_predictions': {'queue': 'ml'},
-    # Pipeline execution tasks — trigger full agent workflows
-    'core.tasks.process_high_scoring_opportunities': {'queue': 'long_running'},
-    'core.tasks.process_spider_actions': {'queue': 'long_running'},
-    'core.tasks.process_hivemind_sessions': {'queue': 'long_running'},
-    'core.tasks.execute_approved_dreams_via_orchestration': {'queue': 'long_running'},
+    # Session 1004: Pipeline execution tasks — LLM calls, moved to default
+    'core.tasks.process_high_scoring_opportunities': {'queue': 'default'},
+    'core.tasks.process_spider_actions': {'queue': 'default'},
+    'core.tasks.process_hivemind_sessions': {'queue': 'default'},
+    'core.tasks.execute_approved_dreams_via_orchestration': {'queue': 'default'},
     # Content pipeline tasks
     'core.tasks.process_content_ideas': {'queue': 'content'},
     'core.tasks.generate_weekly_opportunity_digest': {'queue': 'content'},
@@ -1030,48 +1031,48 @@ CELERY_TASK_ROUTES = {
     'ai_core.tasks.collect_real_opportunities': {'queue': 'default'},
     'ai_core.tasks.refresh_ai_content_opportunities': {'queue': 'default'},
     'ai_core.tasks.warm_up_spider_network': {'queue': 'default'},
-    # Agent exercise tasks — trigger full agent execution with LLM calls
-    'core.tasks.run_market_monitoring_agents': {'queue': 'long_running'},
-    'core.tasks.run_blockchain_monitoring_agents': {'queue': 'long_running'},
-    'core.tasks.run_business_strategy_agents': {'queue': 'long_running'},
-    'core.tasks.run_content_creation_agents': {'queue': 'long_running'},
-    'core.tasks.run_strategy_marketing_agents': {'queue': 'long_running'},
-    'core.tasks.run_research_analysis_agents': {'queue': 'long_running'},
-    'core.tasks.run_stock_financial_agents': {'queue': 'long_running'},
-    'core.tasks.run_prediction_market_agents': {'queue': 'long_running'},
-    'core.tasks.run_narrative_culture_agents': {'queue': 'long_running'},
-    'core.tasks.run_development_tech_agents': {'queue': 'long_running'},
-    'core.tasks.run_executive_leadership_agents': {'queue': 'long_running'},
-    'core.tasks.run_podcast_debate_agents': {'queue': 'long_running'},
-    'core.tasks.run_content_studio_agents': {'queue': 'long_running'},
-    'core.tasks.run_campaign_series_agents': {'queue': 'long_running'},
-    'core.tasks.run_system_orchestration_agents': {'queue': 'long_running'},
-    'core.tasks.run_quality_audit_agents': {'queue': 'long_running'},
-    'core.tasks.run_specialty_agents': {'queue': 'long_running'},
-    'core.tasks.exercise_all_dormant_agents': {'queue': 'long_running'},
+    # Session 1004: Agent exercise tasks — LLM API calls, moved to agents queue
+    'core.tasks.run_market_monitoring_agents': {'queue': 'agents'},
+    'core.tasks.run_blockchain_monitoring_agents': {'queue': 'agents'},
+    'core.tasks.run_business_strategy_agents': {'queue': 'agents'},
+    'core.tasks.run_content_creation_agents': {'queue': 'agents'},
+    'core.tasks.run_strategy_marketing_agents': {'queue': 'agents'},
+    'core.tasks.run_research_analysis_agents': {'queue': 'agents'},
+    'core.tasks.run_stock_financial_agents': {'queue': 'agents'},
+    'core.tasks.run_prediction_market_agents': {'queue': 'agents'},
+    'core.tasks.run_narrative_culture_agents': {'queue': 'agents'},
+    'core.tasks.run_development_tech_agents': {'queue': 'agents'},
+    'core.tasks.run_executive_leadership_agents': {'queue': 'agents'},
+    'core.tasks.run_podcast_debate_agents': {'queue': 'agents'},
+    'core.tasks.run_content_studio_agents': {'queue': 'agents'},
+    'core.tasks.run_campaign_series_agents': {'queue': 'agents'},
+    'core.tasks.run_system_orchestration_agents': {'queue': 'agents'},
+    'core.tasks.run_quality_audit_agents': {'queue': 'agents'},
+    'core.tasks.run_specialty_agents': {'queue': 'agents'},
+    'core.tasks.exercise_all_dormant_agents': {'queue': 'agents'},
     'core.tasks.auto_generate_podcast_episode': {'queue': 'content'},
-    # Autonomous situations — trigger agent execution with LLM calls
-    'core.tasks.run_design_trends_monitor': {'queue': 'long_running'},
-    'core.tasks.run_viral_content_predictor': {'queue': 'long_running'},
-    'core.tasks.run_job_match_intelligence': {'queue': 'long_running'},
-    'core.tasks.run_side_hustle_detector': {'queue': 'long_running'},
-    'core.tasks.run_crypto_sentiment_monitor': {'queue': 'long_running'},
-    'core.tasks.run_tech_stack_tracker': {'queue': 'long_running'},
-    'core.tasks.run_ai_model_monitor': {'queue': 'long_running'},
-    'core.tasks.run_case_law_monitor': {'queue': 'long_running'},
-    'core.tasks.run_regulatory_change_detector': {'queue': 'long_running'},
-    'core.tasks.run_thumbnail_optimizer': {'queue': 'long_running'},
-    'core.tasks.run_freelance_opportunity_scout': {'queue': 'long_running'},
-    'core.tasks.run_sec_filing_analyzer': {'queue': 'long_running'},
-    'core.tasks.run_earnings_predictor': {'queue': 'long_running'},
-    'core.tasks.run_skill_gap_analyzer': {'queue': 'long_running'},
+    # Session 1004: Autonomous situations — LLM API calls, moved to agents queue
+    'core.tasks.run_design_trends_monitor': {'queue': 'agents'},
+    'core.tasks.run_viral_content_predictor': {'queue': 'agents'},
+    'core.tasks.run_job_match_intelligence': {'queue': 'agents'},
+    'core.tasks.run_side_hustle_detector': {'queue': 'agents'},
+    'core.tasks.run_crypto_sentiment_monitor': {'queue': 'agents'},
+    'core.tasks.run_tech_stack_tracker': {'queue': 'agents'},
+    'core.tasks.run_ai_model_monitor': {'queue': 'agents'},
+    'core.tasks.run_case_law_monitor': {'queue': 'agents'},
+    'core.tasks.run_regulatory_change_detector': {'queue': 'agents'},
+    'core.tasks.run_thumbnail_optimizer': {'queue': 'agents'},
+    'core.tasks.run_freelance_opportunity_scout': {'queue': 'agents'},
+    'core.tasks.run_sec_filing_analyzer': {'queue': 'agents'},
+    'core.tasks.run_earnings_predictor': {'queue': 'agents'},
+    'core.tasks.run_skill_gap_analyzer': {'queue': 'agents'},
     # ML scoring tasks — load ML models
     'core.tasks.train_ml_scoring_model': {'queue': 'ml'},
     'core.tasks.evaluate_ml_model_performance': {'queue': 'ml'},
     'core.tasks.process_batch_scoring_queue': {'queue': 'ml'},
-    # Market intelligence desk — LLM calls
-    'core.tasks.run_market_intelligence_desk': {'queue': 'long_running'},
-    'core.tasks.check_market_events_and_rerun': {'queue': 'long_running'},
+    # Session 1004: Market intelligence desk — LLM calls, moved to agents
+    'core.tasks.run_market_intelligence_desk': {'queue': 'agents'},
+    'core.tasks.check_market_events_and_rerun': {'queue': 'agents'},
     # Betting tasks — light DB queries, keep on sports worker
     'core.tasks.snapshot_odds_for_line_movement': {'queue': 'sports'},
     'core.tasks.scan_arbs_and_notify': {'queue': 'sports'},
@@ -1081,18 +1082,18 @@ CELERY_TASK_ROUTES = {
     # Initiative pipeline tasks
     'core.tasks.process_initiative_auto_progression': {'queue': 'content'},
     'core.tasks.evaluate_unscored_blogs': {'queue': 'content'},
-    # Session 1000C: Content Review Automation Pipeline
-    'core.tasks.enhance_all_blogs_needing_enhancement': {'queue': 'long_running'},  # EditorAgent = LLM calls
+    # Session 1004: Content Review Automation Pipeline — LLM calls, moved to content
+    'core.tasks.enhance_all_blogs_needing_enhancement': {'queue': 'content'},  # EditorAgent = LLM calls
     'core.tasks.reevaluate_enhanced_blogs': {'queue': 'content'},  # PublishGate = heuristic only
     'core.tasks.auto_publish_approved_blogs': {'queue': 'content'},  # Simple status update
-    # Narrative/pipeline module tasks
-    'narrative_drift.run_detector_cycle': {'queue': 'long_running'},
-    'narrative_drift.process_spider_data': {'queue': 'long_running'},
-    'narrative_drift.update_narrative_statuses': {'queue': 'long_running'},
-    'narrative_drift.send_daily_digest': {'queue': 'long_running'},
+    # Session 1004: Narrative/pipeline module tasks — LLM calls, moved to default
+    'narrative_drift.run_detector_cycle': {'queue': 'default'},
+    'narrative_drift.process_spider_data': {'queue': 'default'},
+    'narrative_drift.update_narrative_statuses': {'queue': 'default'},
+    'narrative_drift.send_daily_digest': {'queue': 'default'},
     'narrative_drift.process_shifts_for_content': {'queue': 'content'},
-    'unified_pipeline.run_complete_cycle': {'queue': 'long_running'},
-    'unified_pipeline.health_check': {'queue': 'long_running'},
+    'unified_pipeline.run_complete_cycle': {'queue': 'default'},
+    'unified_pipeline.health_check': {'queue': 'default'},
     'autonomous_studio.track_performance': {'queue': 'content'},
 }
 
