@@ -107,6 +107,39 @@ WEB_SEARCH_TOOL = {
     }
 }
 
+# Session 1002B: Cache for dynamic AVAILABLE_SPECIALISTS (refreshes every 5 min)
+_AVAILABLE_SPECIALISTS_CACHE = None
+_AVAILABLE_SPECIALISTS_CACHE_TIME = 0
+
+# Session 1002B: Shared spider_query tool definition — any agent can include this
+SPIDER_QUERY_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "spider_query",
+        "description": "Query the spider network for trending data, discussions, and real-time intelligence from 77 data spiders. Use when you need current trends, community discussions, or market data.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Search query for spider data"
+                },
+                "categories": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Categories: tech, financial, news, social, creative, legal, sports, crypto, jobs, entertainment, science, health. Empty for all."
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum results (default 20)",
+                    "default": 20
+                }
+            },
+            "required": ["query"]
+        }
+    }
+}
+
 
 @dataclass
 class KnowledgeAttribution:
@@ -548,7 +581,18 @@ class BaseAgent(ABC, TimeTravelMixin):
         "type": "function",
         "function": {
             "name": "delegate_to_specialist",
-            "description": "Delegate a sub-task to another specialist agent. Use this when you need help from an agent with different expertise (e.g., ResearchAgent for research, ImageAgent for images, StockAnalystAgent for financial analysis).",
+            "description": (
+                "Delegate a sub-task to a specialist agent from our 82-agent system. "
+                "Categories: Research (ResearchAgent, TrendAnalysisAgent, MarketIntelligenceAgent), "
+                "Content (ContentWriterAgent, EditorAgent, SEOOptimizerAgent), "
+                "Media (ImageAgent, VideoAgent, AudioAgent), "
+                "Finance (StockAnalystAgent, BullCaseAgent, BearCaseAgent), "
+                "Development (CodeGeneratorAgent, FullStackDeveloperAgent, CodeReviewAgent), "
+                "Business (BrandStrategyAgent, CompetitorAnalysisAgent, CustomerResearchAgent), "
+                "Blockchain (SmartContractAuditorAgent, WhaleWatcherAgent), "
+                "Markets (SportsOddsAnalyst, ArbitrageDetector, GamePredictor), "
+                "and 50+ more specialists. Delegate when a task is outside your expertise."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -570,22 +614,28 @@ class BaseAgent(ABC, TimeTravelMixin):
         }
     }
 
-    # List of available specialist agents for delegation
-    AVAILABLE_SPECIALISTS = [
-        'ResearchAgent',
-        'ContentWriterAgent',
-        'ImageAgent',
-        'VideoAgent',
-        'AudioAgent',
-        'StockAnalystAgent',
-        'TrendAnalysisAgent',
-        'CompetitorAnalysisAgent',
-        'CustomerResearchAgent',
-        'SEOOptimizerAgent',
-        'SocialMediaAgent',
-        'CodeGeneratorAgent',
-        'LegalDocDrafterAgent',
-    ]
+    # Session 1002B: Dynamic specialist list from AgentRouter (cached 5 min)
+    @property
+    def AVAILABLE_SPECIALISTS(self) -> list:
+        """Dynamic list from AgentRouter.AGENT_MAP, cached 5 min."""
+        global _AVAILABLE_SPECIALISTS_CACHE, _AVAILABLE_SPECIALISTS_CACHE_TIME
+        now = time.time()
+        if _AVAILABLE_SPECIALISTS_CACHE is None or (now - _AVAILABLE_SPECIALISTS_CACHE_TIME) > 300:
+            try:
+                from core.agent_router import AgentRouter
+                _AVAILABLE_SPECIALISTS_CACHE = [
+                    name for name in AgentRouter.AGENT_MAP.keys()
+                    if name != 'PersonalAssistantAgent'
+                ]
+            except Exception:
+                _AVAILABLE_SPECIALISTS_CACHE = [
+                    'ResearchAgent', 'ContentWriterAgent', 'ImageAgent', 'VideoAgent',
+                    'AudioAgent', 'StockAnalystAgent', 'TrendAnalysisAgent',
+                    'CompetitorAnalysisAgent', 'CustomerResearchAgent', 'SEOOptimizerAgent',
+                    'SocialMediaAgent', 'CodeGeneratorAgent', 'LegalDocDrafterAgent',
+                ]
+            _AVAILABLE_SPECIALISTS_CACHE_TIME = now
+        return _AVAILABLE_SPECIALISTS_CACHE
 
     @property
     def agent_router(self):
@@ -2561,6 +2611,24 @@ Consider these trends when crafting the response to maximize relevance and engag
                     'success': False,
                     'error': f"Web search failed: {str(e)}"
                 }
+
+        # Session 1002B: Handle spider_query tool for any agent that includes it
+        if tool_name == 'spider_query':
+            try:
+                from core.services.spider_intelligence import SpiderIntelligenceService
+                service = SpiderIntelligenceService()
+                query = arguments.get('query', '')
+                categories = arguments.get('categories', [])
+                limit = arguments.get('limit', 20)
+                results = service.search_spider_data(
+                    query=query,
+                    category=categories[0] if len(categories) == 1 else None,
+                    hours=72,
+                    limit=limit
+                )
+                return {'success': True, 'discussions': results, 'query': query, 'count': len(results)}
+            except Exception as e:
+                return {'success': False, 'error': f"Spider query failed: {e}", 'discussions': []}
 
         # Subclasses should override and handle their own tools
         raise NotImplementedError(
