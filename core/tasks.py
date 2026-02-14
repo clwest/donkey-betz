@@ -28508,22 +28508,30 @@ def evaluate_unscored_blogs(limit: int = 20):
 def reevaluate_enhanced_blogs(limit: int = 20):
     """
     Session 1000C: Re-evaluate blogs that were enhanced by EditorAgent.
+    Session 1003: Also score unscored pending_review and draft blogs.
 
-    Runs PublishGate again on needs_enhancement blogs that have already been
-    scored (quality_score is not null). If quality improved enough, blog
-    gets promoted to 'approved'.
+    Runs PublishGate on:
+    1. needs_enhancement blogs (re-check if quality improved enough)
+    2. pending_review blogs without quality_score (never scored)
+    3. draft blogs without quality_score (never scored)
+
+    PublishGate promotes to 'approved' if quality threshold met.
     """
+    from django.db.models import Q
     from core.models_unified_system import SelfBlog
     from core.services.publish_gate import PublishGate
 
+    # Session 1003: Score ALL blogs that need evaluation, not just needs_enhancement
     blogs = SelfBlog.objects.filter(
-        status='needs_enhancement',
-        quality_score__isnull=False,
+        Q(status='needs_enhancement', quality_score__isnull=False) |  # Re-evaluate enhanced
+        Q(status='pending_review', quality_score__isnull=True) |  # Never scored
+        Q(status='pending_review', quality_score__isnull=False) |  # Scored but not promoted
+        Q(status='draft', quality_score__isnull=True)  # Draft, never scored
     ).order_by('-created_at')[:limit]
 
     total = blogs.count()
     if total == 0:
-        return {'processed': 0, 'message': 'No enhanced blogs to re-evaluate'}
+        return {'processed': 0, 'message': 'No blogs to evaluate'}
 
     gate = PublishGate()
     results = {'processed': 0, 'promoted': 0, 'still_needs_work': 0, 'errors': 0}
@@ -28541,7 +28549,7 @@ def reevaluate_enhanced_blogs(limit: int = 20):
             logger.warning(f"Re-evaluate blog {blog.id} failed: {e}")
 
     logger.info(
-        f"[PUBLISH-GATE] Re-evaluation: {results['promoted']}/{results['processed']} promoted to approved"
+        f"[PUBLISH-GATE] Evaluation: {results['promoted']}/{results['processed']} promoted to approved"
     )
     return results
 
