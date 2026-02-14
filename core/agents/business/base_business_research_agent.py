@@ -557,7 +557,7 @@ Research Type: {self.research_type}""")
             response = self._call_openai_with_retry(
                 messages=messages,
                 model="gpt-4o-mini",
-                tools=self.tools,
+                tools=self.get_tools_with_delegation(),
                 tool_choice="auto",
                 max_completion_tokens=6000,  # High for reasoning + output
             )

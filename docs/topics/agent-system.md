@@ -74,6 +74,22 @@ Every agent receives contextual data before execution:
 
 Context can be pre-gathered before timeout starts via `gather_context()` + `pre_gathered_context` param.
 
+## Shared Tools & Delegation (Sessions 1002B-1002C)
+
+Every agent automatically receives 3 shared tools in its LLM tool schema via `BaseAgent`:
+
+| Tool | Handler | Purpose |
+|------|---------|---------|
+| `web_search` | `BaseAgent._execute_tool_call()` | Real-time web search via Tavily |
+| `spider_query` | `BaseAgent._execute_tool_call()` | Query SpiderData via `SpiderIntelligenceService` |
+| `delegate_to_specialist` | `BaseAgent._execute_tool_call()` | Route sub-tasks to any of 81 discoverable agents |
+
+**Injection paths:**
+- `_call_openai()` / `_call_llm_with_tools()` — automatic via `_get_tools_with_shared()`
+- Direct `client.chat.completions.create()` calls — use `self.get_tools_with_delegation()`
+
+**Tool handler chain:** Agent's `_execute_tool_call()` handles own tools, then `super()._execute_tool_call()` handles shared tools. 64 agents wired. 4 programmatic agents intentionally skipped (content_executor, opportunity_pipeline, workflow_orchestration, workflow_agent).
+
 ## ToolCallRecord (Session 970)
 
 Automatic audit trail for all agents via `__init_subclass__()` in `BaseAgent`:
