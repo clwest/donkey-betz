@@ -16,9 +16,13 @@ Session 1002B centralized `delegate_to_specialist`, `web_search`, and `spider_qu
 
 2. **31 agents: replaced final error return with `super()` call** -- Each agent's `else: return error` (or equivalent) now delegates to `super()._execute_tool_call(tool_name, arguments)`, making centralized handlers reachable. 4 agents intentionally skipped (content_executor, opportunity_pipeline, workflow_orchestration, workflow_agent -- programmatic agents that reject all tools by design).
 
-**Result:** All 50 agents that define `_execute_tool_call` now have access to centralized `web_search`, `spider_query`, and `delegate_to_specialist` handlers (was 19). Gap is exactly 4 intentionally skipped agents.
+3. **Universal tool injection** -- New `_get_tools_with_shared()` in BaseAgent auto-injects `WEB_SEARCH_TOOL` and `SPIDER_QUERY_TOOL` into every agent's LLM tool schema (with dedup). All agents now see these tools without per-agent imports. Called from both `get_tools_with_delegation()` and the non-delegation path in `_call_llm_with_tools()`.
 
-**Files changed:** 32 code files. See `docs/handoffs/SESSION_1002C_SUPER_FALLBACK.md`.
+4. **Fixed try/except regression in 4 stock agents** -- bull_case, bear_case, institutional_watcher, stock_analyst used `try: return super()... except NotImplementedError: pass` which broke when BaseAgent stopped raising. Moved super() to the end (same pattern as all other agents).
+
+**Result:** Every agent that uses LLM tool calling now automatically has `web_search`, `spider_query`, and `delegate_to_specialist` available. Zero `except NotImplementedError` blocks remain.
+
+**Files changed:** 37 code files. See `docs/handoffs/SESSION_1002C_SUPER_FALLBACK.md`.
 
 ## Session 1002B Summary (Prior)
 

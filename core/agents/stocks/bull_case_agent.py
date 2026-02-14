@@ -735,11 +735,6 @@ Be specific and data-driven. Use the market data provided."""
 
         Tools: identify_catalysts, analyze_growth, technical_bullish, sentiment_analysis
         """
-        try:
-            return super()._execute_tool_call(tool_name, arguments)
-        except NotImplementedError:
-            pass
-
         ticker = arguments.get('ticker', '')
 
         if tool_name == 'identify_catalysts':
@@ -788,5 +783,5 @@ Be specific and data-driven. Use the market data provided."""
                 context=arguments.get('context', ''),
                 delegation_context=getattr(self, '_current_delegation_context', {})
             )
-        else:
-            return {'success': False, 'error': f"Unknown tool: {tool_name}"}
+        # Session 1002C: Fall through to BaseAgent for web_search, spider_query, delegation
+        return super()._execute_tool_call(tool_name, arguments)

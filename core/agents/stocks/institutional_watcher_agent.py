@@ -627,12 +627,6 @@ Focus on transactions that diverge from normal patterns."""
         - analyze_sentiment: Analyze insider buying/selling patterns
         - web_search: Web search fallback (handled by BaseAgent)
         """
-        # Session 988: Handle delegation + web_search via BaseAgent
-        try:
-            return super()._execute_tool_call(tool_name, arguments)
-        except NotImplementedError:
-            pass
-
         ticker = arguments.get('ticker', '')
 
         if tool_name == 'monitor_insiders':
@@ -691,4 +685,5 @@ Focus on transactions that diverge from normal patterns."""
                 'message': f"Insider sentiment for {ticker}: {sentiment['sentiment']} ({sentiment['description']})"
             }
 
-        return {'error': f'Unknown tool: {tool_name}'}
+        # Session 1002C: Fall through to BaseAgent for web_search, spider_query, delegation
+        return super()._execute_tool_call(tool_name, arguments)
