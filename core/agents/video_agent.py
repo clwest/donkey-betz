@@ -423,14 +423,6 @@ and call generate_video immediately. Do not delegate for research first."""
         """Execute a tool call for video generation."""
 
         # Session 744: Handle delegation to specialists first
-        if tool_name == "delegate_to_specialist":
-            return self._handle_delegate_to_specialist(
-                specialist_agent=arguments.get('specialist_agent', ''),
-                task=arguments.get('task', ''),
-                context=arguments.get('context', ''),
-                delegation_context=getattr(self, '_current_delegation_context', {})
-            )
-
         if tool_name == "generate_video":
             from core.views_image import _execute_generate_video
             parameters = {

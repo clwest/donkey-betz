@@ -397,16 +397,9 @@ Always use tools to get real performance data. Never make up statistics."""
                 return self._get_success_patterns(tool_input)
             elif tool_name == "calculate_confidence_score":
                 return self._calculate_confidence_score(tool_input)
-            elif tool_name == "delegate_to_specialist":
-                # Session 780: Handle delegation properly
-                return self._handle_delegate_to_specialist(
-                    specialist_agent=tool_input.get('specialist_agent', ''),
-                    task=tool_input.get('task', ''),
-                    context=tool_input.get('context', ''),
-                    delegation_context=getattr(self, '_current_delegation_context', {})
-                )
             else:
-                return {"error": f"Unknown tool: {tool_name}"}
+                # Session 1002C: Fall through to BaseAgent for web_search, spider_query, delegation
+                return super()._execute_tool_call(tool_name, tool_input)
         except Exception as e:
             logger.error(f"Error executing tool {tool_name}: {e}", exc_info=True)
             return {"error": str(e)}
