@@ -1270,7 +1270,7 @@ def execute_agent_task(
     """
     from core.agent_router import AgentRouter
     from core.models_unified_system import Agent, AgentExecution
-    from core.services.context_tracing import ContextTracer
+    from core.services.context_tracing import ContextTracer, auto_repair_context
     from decimal import Decimal
 
     # Session 875: Initialize context tracer for bad context forensics
@@ -1287,7 +1287,7 @@ def execute_agent_task(
     if not isinstance(context, dict):
         logger.warning(f"[execute_agent_task] Received non-dict context (type={type(context).__name__}), using empty dict")
         # Auto-repair the context
-        context = ContextTracer.auto_repair_context(context)
+        context = auto_repair_context(context)
     else:
         context = context or {}
     conversation_id = context.get('conversation_id', 'unknown')
