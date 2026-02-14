@@ -330,6 +330,7 @@ export function BoardroomTab() {
 
     const prediction = item.ml_prediction
     const confidence = item.ml_confidence ?? prediction?.confidence ?? 0
+    if (confidence < 0.3) return null
     const confidencePercent = Math.round(confidence * 100)
     const approvalProb = prediction?.approval_probability ?? 0.5
     const approvalPercent = Math.round(approvalProb * 100)
@@ -460,6 +461,18 @@ export function BoardroomTab() {
     return text.replace(/^---\n## Report Provenance[\s\S]*?---\n?/, '').trim()
   }
 
+  // Strip markdown formatting for plain-text display
+  const stripMarkdown = (text: string): string => {
+    return text
+      .replace(/^---\n[\s\S]*?---\n?/gm, '')    // provenance/hr blocks
+      .replace(/^#{1,6}\s+/gm, '')                // heading markers
+      .replace(/\*\*([^*]+)\*\*/g, '$1')          // **bold** → bold
+      .replace(/\*([^*]+)\*/g, '$1')              // *italic* → italic
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')    // [text](url) → text
+      .replace(/\n{3,}/g, '\n\n')                 // collapse multiple newlines
+      .trim()
+  }
+
   // Session 972: Extract the richest content from payload.result_data
   // Deep-searches sub-agent results (*_results.message, *_results.data.analysis)
   const extractResultContent = (resultData: unknown): string | null => {
@@ -512,6 +525,48 @@ export function BoardroomTab() {
     return null
   }
 
+  // Type-specific expanded content components
+  const SpiderItemDetail = ({ data }: { data: Record<string, unknown> }) => (
+    <div className="mt-2 space-y-1 text-sm">
+      {!!data.source && <div className="text-gray-500">Source: <span className="text-gray-300">{String(data.source)}</span></div>}
+      {!!data.url && (
+        <a href={String(data.url)} target="_blank" rel="noopener noreferrer"
+          className="text-primary-400 hover:underline text-xs truncate block">{String(data.url)}</a>
+      )}
+      {!!data.published && <div className="text-xs text-gray-500">Published: {new Date(String(data.published)).toLocaleString()}</div>}
+    </div>
+  )
+
+  const ArbitrageDetail = ({ payload }: { payload: Record<string, unknown> }) => (
+    <div className="mt-2 p-3 bg-dark-bg rounded-lg border border-dark-border space-y-2">
+      <div className="flex items-center gap-4 text-sm">
+        <span className="text-green-400 font-bold text-lg">{Number(payload.profit_pct || 0).toFixed(1)}% profit</span>
+        <span className="text-gray-400">{String(payload.sport || '')}</span>
+      </div>
+      <div className="text-sm text-gray-300">{String(payload.away_team || '')} @ {String(payload.home_team || '')}</div>
+      {payload.stake_home != null && (
+        <div className="text-xs text-gray-500">
+          Stakes: Home ${Number(payload.stake_home).toFixed(2)} / Away ${Number(payload.stake_away).toFixed(2)}
+        </div>
+      )}
+    </div>
+  )
+
+  const ReviewDetail = ({ payload }: { payload: Record<string, unknown> }) => {
+    const score = Number(payload.quality_score || 0)
+    return (
+      <div className="mt-2 flex items-center gap-3">
+        <span className="text-xs text-gray-500">Quality:</span>
+        <div className="w-32 h-2 bg-dark-border rounded-full overflow-hidden">
+          <div className={cn("h-full rounded-full",
+            score >= 70 ? "bg-green-500" : score >= 50 ? "bg-amber-500" : "bg-red-500"
+          )} style={{ width: `${score}%` }} />
+        </div>
+        <span className="text-sm font-medium text-gray-300">{score}/100</span>
+      </div>
+    )
+  }
+
   // Session 972: Attention Item Detail component for expanded view
   const AttentionItemDetail = ({ item }: { item: AttentionItem }) => {
     const [showRaw, setShowRaw] = useState(false)
@@ -530,8 +585,19 @@ export function BoardroomTab() {
     return (
       <div className="space-y-3 mt-2">
         {/* Summary (with provenance header stripped) */}
-        {showSummary && (
-          <p className="text-sm text-gray-300 whitespace-pre-wrap">{cleanSummary}</p>
+        {showSummary && cleanSummary && (
+          <p className="text-sm text-gray-300 whitespace-pre-wrap">{stripMarkdown(cleanSummary)}</p>
+        )}
+
+        {/* Type-specific expanded content */}
+        {item.item_type === 'spider_action' && !!item.payload?.spider_item && (
+          <SpiderItemDetail data={item.payload.spider_item as Record<string, unknown>} />
+        )}
+        {item.item_type === 'arbitrage' && item.payload?.profit_pct !== undefined && (
+          <ArbitrageDetail payload={item.payload} />
+        )}
+        {item.item_type === 'review' && item.payload?.quality_score !== undefined && (
+          <ReviewDetail payload={item.payload} />
         )}
 
         {/* Rich content from result_data */}
@@ -797,8 +863,8 @@ export function BoardroomTab() {
                             NEW
                           </span>
                         )}
-                        {/* Session 956: ML prediction indicator badge */}
-                        {(item.ml_recommendation || item.ml_prediction) && (
+                        {/* Session 956: ML prediction indicator badge (hidden below 30% confidence) */}
+                        {(item.ml_recommendation || item.ml_prediction) && (item.ml_confidence ?? 0) >= 0.3 && (
                           <span className={cn(
                             "flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded border",
                             getMLRecommendationStyle(item.ml_recommendation || item.ml_prediction?.prediction || 'uncertain')
