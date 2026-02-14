@@ -308,11 +308,8 @@ You are a READ-ONLY security agent - you audit and isolate, not modify content."
                 context=arguments.get('context', ''),
                 delegation_context=getattr(self, '_current_delegation_context', {})
             )
-        else:
-            return {
-                'success': False,
-                'error': f"Unknown tool: {tool_name}"
-            }
+        # Session 1002C: Fall through to BaseAgent for web_search, spider_query, delegation
+        return super()._execute_tool_call(tool_name, arguments)
 
     def _audit_memories(self, scope: str) -> Dict[str, Any]:
         """Audit memory systems for cross-contamination."""

@@ -509,11 +509,8 @@ You score and analyze - you do NOT create content or execute workflows."""
                 context=arguments.get('context', ''),
                 delegation_context=getattr(self, '_current_delegation_context', {})
             )
-        else:
-            return {
-                'success': False,
-                'error': f"Unknown tool: {tool_name}"
-            }
+        # Session 1002C: Fall through to BaseAgent for web_search, spider_query, delegation
+        return super()._execute_tool_call(tool_name, arguments)
 
     def _score_data(self, hours: int, limit: int) -> Dict[str, Any]:
         """Score spider data for opportunities."""

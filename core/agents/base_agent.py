@@ -2576,9 +2576,9 @@ Consider these trends when crafting the response to maximize relevance and engag
         Execute a tool call. Override in subclasses for tool-specific logic.
 
         Session 744: Now handles delegate_to_specialist tool automatically.
-        Subclasses should call super()._execute_tool_call() first to handle
-        delegation, then implement their own tool handling if delegation
-        returns NotImplementedError.
+        Subclasses should call super()._execute_tool_call() as a fallback
+        to handle delegation, web_search, and spider_query automatically.
+        Returns an error dict for unrecognized tools (never raises).
 
         Args:
             tool_name: Name of the tool to execute
@@ -2630,10 +2630,12 @@ Consider these trends when crafting the response to maximize relevance and engag
             except Exception as e:
                 return {'success': False, 'error': f"Spider query failed: {e}", 'discussions': []}
 
-        # Subclasses should override and handle their own tools
-        raise NotImplementedError(
-            f"Tool execution for '{tool_name}' not implemented in {self.name}"
-        )
+        # Session 1002C: Return error dict instead of raising, so subclasses
+        # can safely call super()._execute_tool_call() as a fallback.
+        return {
+            'success': False,
+            'error': f"Tool execution for '{tool_name}' not implemented in {self.name}"
+        }
 
     def _execute_and_record_tool_call(
         self,

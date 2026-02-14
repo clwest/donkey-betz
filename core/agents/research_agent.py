@@ -1538,11 +1538,8 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                 include_details=arguments.get('include_details', True)
             )
 
-        else:
-            return {
-                'success': False,
-                'error': f"Unknown tool: {tool_name}. ResearchAgent only supports research tools."
-            }
+        # Session 1002C: Fall through to BaseAgent for web_search, spider_query, delegation
+        return super()._execute_tool_call(tool_name, arguments)
 
     def _reddit_dynamic_search(
         self,
