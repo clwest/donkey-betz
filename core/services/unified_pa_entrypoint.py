@@ -832,6 +832,11 @@ class UnifiedPAEntrypoint:
             'about the blog', 'blog called', 'read the blog',
             'blog accuracy', 'accurate is the blog', 'accurate is that',
             'about this blog', 'about that blog',
+            # Session 1004: Broader blog reference patterns
+            'one titled', 'titled "', "titled '", 'is titled',
+            'inaccuracy', 'inaccurate', 'factual error', 'factually',
+            'fix the blog', 'edit the blog', 'correct the blog',
+            'update the blog', 'revise the blog', 'blog has',
             # Session 993: Triage, batch publish/archive patterns
             'triage content', 'triage blogs', 'summarize all blogs',
             'blog triage', 'review all blogs', 'publish all',
@@ -1222,19 +1227,24 @@ class UnifiedPAEntrypoint:
                 if id_match:
                     payload['id'] = id_match.group(1)
             # Session 986: Read/analyze specific blog content by title
+            # Session 1004: Added inaccuracy/factual/titled patterns
             elif any(phrase in msg_lower for phrase in [
                 'reading', 'read the', 'how accurate', 'accuracy',
                 'about the blog', 'blog titled', 'blog called',
                 'section titled', 'section called', 'section on',
                 'about this blog', 'about that blog',
+                'one titled', 'titled "', "titled '", 'is titled',
+                'inaccuracy', 'inaccurate', 'factual error', 'factually',
+                'fix the blog', 'edit the blog', 'correct the blog',
+                'update the blog', 'revise the blog', 'blog has',
             ]):
                 payload['action'] = 'read'
                 import re
-                # Extract blog title from quoted strings or "blog titled/called X"
+                # Extract blog title from quoted strings or "titled X" patterns
                 title_match = (
                     re.search(r'["\u201c]([^"\u201d]+)["\u201d]', message)  # quoted
                     or re.search(r"'([^']{5,})'", message)  # single-quoted (min 5 chars to skip contractions)
-                    or re.search(r'blog\s+(?:titled|called)\s+(.+?)(?:\s*[-\u2014]\s*|\s+how\b|\s+is\b|$)', message, re.IGNORECASE)
+                    or re.search(r'(?:blog\s+)?(?:titled|called)\s+(.+?)(?:\s*[-\u2014]\s*|\s+how\b|\s+is\b|\s+has\b|\s+that\b|$)', message, re.IGNORECASE)
                 )
                 if title_match:
                     payload['title'] = title_match.group(1).strip()
