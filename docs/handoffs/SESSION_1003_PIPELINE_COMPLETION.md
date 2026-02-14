@@ -1,0 +1,97 @@
+# Session 1003: Pipeline Completion — Fix 6 Broken Execution Loops
+
+**Date:** February 13, 2026
+**Focus:** Close broken execution loops that prevented 13,480 agent executions from producing persistent output
+
+## Problem
+
+Production data revealed world-class intake but broken execution completion:
+- 13,480 agent executions (5,687 last week), but only 8 published blogs out of 160
+- 897 initiatives created, 5 completed — 596 stuck at Stage 1
+- 18,893 spider records, 0 signal clusters formed
+- 13 podcast scripts, 0 audio generated
+- Sports/blockchain desk output vanished after 6-hour cache TTL
+
+## Changes
+
+### Fix 1: Blog Pipeline — Deliberation + Close the Loop
+**File:** `core/celery.py`
+
+- Changed `generate-self-blog` beat task from `generate_self_blog_task` to `generate_self_blog_deliberation_task` — new blogs go through full multi-agent deliberation pipeline instead of raw single-agent generation
+- Added `reevaluate-enhanced-blogs` beat entry (every 4h) — re-scores blogs enhanced by EditorAgent
+- Added `auto-publish-approved-blogs` beat entry (every 2h) — publishes approved blogs
+
+### Fix 2: Initiative Founder Intent — Auto-Set on Creation
+**Files:** 4 service files
+
+All 4 initiative creation points now call `set_founder_intent()` immediately after `Initiative.objects.create()`:
+1. `core/services/conversation_initiative_pipeline.py` — ConversationInitiativePipeline
+2. `core/services/initiative_integration_service.py` — InitiativeIntegrationService
+3. `core/services/hivemind_execution_pipeline.py` — HiveMindExecutionPipeline
+4. `core/services/autonomous_action_executor.py` — ResearchAgent auto-creation
+
+Settings: `execution_speed='fast'`, `risk_tolerance='balanced'`, `set_by='system_auto'`
+
+**Impact:** `can_auto_progress()` was returning `False` for all initiatives because `founder_intent_set=False`. 596 initiatives stuck at Stage 1 are now unblockable via one-time Railway shell bulk-fix.
+
+### Fix 3: Signal Aggregation — Diagnose + Activate
+**File:** `core/services/signal_aggregation_service.py`
+
+Three fixes:
+1. **Relaxed `is_processed` filter** — Changed from `is_processed=True` to `Q(is_processed=True) | ~Q(embedding_text='')`. Many spiders populate `embedding_text` directly without setting `is_processed`.
+2. **Added `embedding_text` and `processed_data` fallbacks** in `_extract_text_from_spider_data()` — raw_data didn't have the expected fields for many spider types.
+3. **Lowered `MIN_CLUSTER_SIZE`** from 3 to 2 — combined with keyword-only clustering, 3 was too strict for initial activation.
+
+### Fix 4: Podcast Audio — Enable Auto-Generation
+**File:** `core/tasks.py`
+
+Changed `generate_audio: False` to `True` in two places:
+1. The `generation_config` dict (line ~31259)
+2. The `generate_podcast_episode.delay()` call (line ~31270)
+
+### Fix 5: Sports Desk Persistence
+**Files:** `core/models_unified_system.py`, `core/models/__init__.py`, `core/tasks.py`
+
+- New model: `SportsBettingBrief` — persists sports desk output that was previously only cached with 6h TTL
+- DB persistence wired into both `run_all_desks_intelligence` and `generate_daily_betting_brief`
+- Migration: `0242_session_1003_desk_intelligence_briefs`
+
+### Fix 6: Blockchain Desk Persistence
+**Files:** Same as Fix 5
+
+- New model: `BlockchainAuditBrief` — persists blockchain desk output
+- DB persistence wired into `run_all_desks_intelligence`
+- Same migration as Fix 5
+
+## Files Modified
+
+| File | Changes |
+|------|---------|
+| `core/celery.py` | Switch blog task + add 2 beat entries |
+| `core/services/conversation_initiative_pipeline.py` | `set_founder_intent()` after create |
+| `core/services/initiative_integration_service.py` | `set_founder_intent()` after create |
+| `core/services/hivemind_execution_pipeline.py` | `set_founder_intent()` after create |
+| `core/services/autonomous_action_executor.py` | `set_founder_intent()` after create |
+| `core/services/signal_aggregation_service.py` | Relaxed filter + lower cluster size + text extraction fallbacks |
+| `core/tasks.py` | Enable podcast audio + persist desk briefs to DB |
+| `core/models_unified_system.py` | `SportsBettingBrief` + `BlockchainAuditBrief` models |
+| `core/models/__init__.py` | Register new models in `__all__` |
+| `core/migrations/0242_...` | Migration for new models |
+| `core/migrations/0243_...` | Data migration: backfill founder_intent on stuck initiatives |
+
+## Migrations
+
+```bash
+python manage.py migrate core 0243
+```
+
+- `0242`: Creates `SportsBettingBrief` + `BlockchainAuditBrief` tables
+- `0243`: **Data migration** — bulk-sets `founder_intent_set=True` on all ACTIVE/TRIAGE initiatives that lack it (reversible via `founder_intent_set_by='system_auto_backfill'` marker)
+
+## Verification
+
+1. **Blog:** New blogs have deliberation metadata (`quality_score` set, status progression)
+2. **Initiatives:** `Initiative.objects.filter(founder_intent_set=True).count()` > 0
+3. **Signals:** `SignalCluster.objects.count()` > 0 within 1h of deploy
+4. **Podcasts:** New PodcastEpisode with audio data (requires `ELEVENLABS_API_KEY`)
+5. **Desks:** `SportsBettingBrief.objects.count()` + `BlockchainAuditBrief.objects.count()` > 0 after desk run

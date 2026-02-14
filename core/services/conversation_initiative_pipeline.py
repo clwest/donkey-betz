@@ -464,6 +464,13 @@ class ConversationInitiativePipeline:
                     target_workspace=workspace,  # Session 908: Link to workspace
                 )
 
+                # Session 1003: Auto-set founder intent so auto-progression works
+                initiative.set_founder_intent(
+                    execution_speed='fast',
+                    risk_tolerance='balanced',
+                    set_by='system_auto'
+                )
+
                 # Session 996: Auto-assign owner
                 from core.services.initiative_integration_service import InitiativeIntegrationService
                 InitiativeIntegrationService()._auto_assign_owner(initiative)
