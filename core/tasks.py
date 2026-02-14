@@ -1280,7 +1280,6 @@ def execute_agent_task(
     tracer.log_post_deserialize(
         context=context,
         agent_name=agent_name,
-        action_name=task[:100] if task else "",
         task_name="execute_agent_task"
     )
 
@@ -34198,10 +34197,11 @@ def check_blocked_research_for_unblock(self):
 
     logger.info("🔍 [RESEARCH-UNBLOCK] Checking for blocked research ready to retry")
 
+    from django.db.models import F
     blocked_research = ResearchResult.objects.filter(
         status='blocked',
         retry_after__lte=timezone.now(),
-        retry_count__lt=models.F('max_retries')
+        retry_count__lt=F('max_retries')
     )
 
     triggered_count = 0
