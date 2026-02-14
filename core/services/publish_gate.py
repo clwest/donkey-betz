@@ -567,6 +567,10 @@ class PublishGate:
         elif result.decision == 'enhance':
             if blog.status in ['draft', 'pending_review']:
                 blog.status = 'needs_enhancement'
+        # Session 1000C: Promote publish-ready blogs to 'approved'
+        elif result.decision == 'publish':
+            if blog.status in ['draft', 'pending_review', 'needs_enhancement']:
+                blog.status = 'approved'
 
         # Update category if suggested
         if result.suggested_category and blog.category == 'blog':
