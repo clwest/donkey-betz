@@ -34093,7 +34093,7 @@ def retry_blocked_research(self, research_result_id: str):
     from core.models_unified_system import SpiderData
     recent_spider_data = SpiderData.objects.filter(
         created_at__gte=research.created_at,
-        category__in=['tech', 'news', 'content', 'research']
+        data_type__in=['tech', 'news', 'content', 'research']
     ).count()
 
     logger.info(f"🔄 [RESEARCH-RETRY] Found {recent_spider_data} spider data records since research started")

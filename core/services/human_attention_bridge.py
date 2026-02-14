@@ -470,7 +470,9 @@ def on_agent_execution_complete(sender, instance, created, **kwargs):
             'ThinkingAgent', 'ArbitrageDetector', 'PredictionMarketAnalyst',
             'BlockchainAuditCoordinator', 'StockAuditCoordinator',
         ]
-        agent_name = instance.template.name if instance.template else ''
+        agent_name = (instance.template.name if hasattr(instance, 'template') and instance.template
+                      else instance.agent.name if hasattr(instance, 'agent') and instance.agent
+                      else '')
         if agent_name in critical_agents:
             attention_bridge.create_agent_execution_attention(instance)
 
