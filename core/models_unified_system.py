@@ -17775,6 +17775,88 @@ class MarketIntelligenceBrief(models.Model):
             'generated_at': self.generated_at.isoformat(),
             'updated_at': self.updated_at.isoformat(),
         }
+
+
+# ==========================================
+# Sports Betting Intelligence Brief
+# Session 1003: Persist sports desk output
+# ==========================================
+
+class SportsBettingBrief(models.Model):
+    """
+    Session 1003: Persistent sports betting intelligence brief.
+
+    Before this model, SportsBettingCoordinator.generate_brief() output was
+    only stored in a 6-hour cache that expired. This model persists briefs
+    for historical analysis and learning.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    brief_date = models.DateField()
+    sport_filter = models.CharField(max_length=50, blank=True, default='')
+    executive_summary = models.TextField(blank=True, default='')
+    predictions = models.JSONField(default=dict)
+    arbitrage_opportunities = models.JSONField(default=dict)
+    sharp_action_alerts = models.JSONField(default=dict)
+    line_movements = models.JSONField(default=dict)
+    top_plays = models.JSONField(default=list)
+    agents_run = models.JSONField(default=list)
+    errors = models.JSONField(default=list)
+    generation_time_seconds = models.FloatField(default=0.0)
+    generated_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Sports Betting Brief"
+        verbose_name_plural = "Sports Betting Briefs"
+        ordering = ['-generated_at']
+        indexes = [
+            models.Index(fields=['-brief_date']),
+            models.Index(fields=['-generated_at']),
+        ]
+
+    def __str__(self):
+        return f"Sports Betting Brief - {self.brief_date}"
+
+
+# ==========================================
+# Blockchain Audit Intelligence Brief
+# Session 1003: Persist blockchain desk output
+# ==========================================
+
+class BlockchainAuditBrief(models.Model):
+    """
+    Session 1003: Persistent blockchain audit intelligence brief.
+
+    Before this model, BlockchainAuditCoordinator.execute() output was
+    only stored in a 6-hour cache that expired. This model persists briefs
+    for historical analysis and learning.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    brief_date = models.DateField()
+    executive_summary = models.TextField(blank=True, default='')
+    security_alerts = models.JSONField(default=dict)
+    whale_movements = models.JSONField(default=dict)
+    contract_audits = models.JSONField(default=dict)
+    exploit_detection = models.JSONField(default=dict)
+    agents_run = models.JSONField(default=list)
+    errors = models.JSONField(default=list)
+    generation_time_seconds = models.FloatField(default=0.0)
+    generated_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Blockchain Audit Brief"
+        verbose_name_plural = "Blockchain Audit Briefs"
+        ordering = ['-generated_at']
+        indexes = [
+            models.Index(fields=['-brief_date']),
+            models.Index(fields=['-generated_at']),
+        ]
+
+    def __str__(self):
+        return f"Blockchain Audit Brief - {self.brief_date}"
+
+
 class PredictionOutcome(models.Model):
     """
     Tracks a single stock prediction (bull or bear case) and its actual outcome.

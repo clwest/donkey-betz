@@ -161,6 +161,13 @@ class InitiativeIntegrationService:
                 current_stage=1,
             )
 
+            # Session 1003: Auto-set founder intent so auto-progression works
+            initiative.set_founder_intent(
+                execution_speed='fast',
+                risk_tolerance='balanced',
+                set_by='system_auto'
+            )
+
             self.logger.info(f"[Session 847] Created new Initiative: {normalized_topic}")
             # Initialize all 5 stages
             self._initialize_stages(initiative)

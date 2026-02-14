@@ -22780,6 +22780,24 @@ def generate_daily_betting_brief(self):
         except Exception as e:
             logger.warning(f"[BETTING-BRIEF] Could not store brief: {e}")
 
+        # Session 1003: Also persist to dedicated model
+        try:
+            from core.models_unified_system import SportsBettingBrief
+            SportsBettingBrief.objects.create(
+                brief_date=timezone.now().date(),
+                executive_summary=(brief.get('executive_summary', '') or '')[:500],
+                predictions=brief.get('predictions', {}),
+                arbitrage_opportunities=brief.get('arbitrage_opportunities', {}),
+                sharp_action_alerts=brief.get('sharp_action_alerts', {}),
+                line_movements=brief.get('line_movements', {}),
+                top_plays=brief.get('top_plays', []),
+                agents_run=agents_run,
+                errors=brief.get('errors', []),
+                generation_time_seconds=gen_time,
+            )
+        except Exception as e:
+            logger.warning(f"[BETTING-BRIEF] Could not persist to SportsBettingBrief: {e}")
+
         return {
             'status': 'success',
             'agents_run': agents_run,
@@ -31256,7 +31274,7 @@ def auto_generate_podcast_episode():
             generation_config={
                 'format': 'debate',
                 'participant_count': 3,
-                'generate_audio': False,  # Scripts only for now
+                'generate_audio': True,  # Session 1003: Enable TTS audio generation
             }
         )
         logger.info(f"🎙️ [AUTO-PODCAST] Created episode: {episode.id} - {topic[:50]}...")
@@ -31267,7 +31285,7 @@ def auto_generate_podcast_episode():
             topic=topic,
             format_type='debate',
             participants=3,
-            generate_audio=False
+            generate_audio=True  # Session 1003: Enable TTS audio generation
         )
 
         return {
@@ -35060,6 +35078,25 @@ def run_all_desks_intelligence():
             ],
             'elapsed_seconds': elapsed,
         }, CACHE_TTL)
+
+        # Session 1003: Persist to DB so briefs survive cache TTL
+        try:
+            from core.models_unified_system import SportsBettingBrief
+            SportsBettingBrief.objects.create(
+                brief_date=timezone.now().date(),
+                executive_summary=(brief.get('executive_summary', '') or '')[:500],
+                predictions=brief.get('predictions', {}),
+                arbitrage_opportunities=brief.get('arbitrage_opportunities', {}),
+                sharp_action_alerts=brief.get('sharp_action_alerts', {}),
+                line_movements=brief.get('line_movements', {}),
+                top_plays=brief.get('top_plays', []),
+                agents_run=brief.get('agents_run', []),
+                errors=brief.get('errors', []),
+                generation_time_seconds=elapsed,
+            )
+        except Exception as db_err:
+            logger.warning(f"[SESSION 1003] Could not persist sports brief: {db_err}")
+
         desks_completed += 1
         logger.info(f"[SESSION 1000] Sports desk done in {elapsed}s")
     except Exception as e:
@@ -35094,6 +35131,27 @@ def run_all_desks_intelligence():
             ],
             'elapsed_seconds': elapsed,
         }, CACHE_TTL)
+
+        # Session 1003: Persist to DB so briefs survive cache TTL
+        try:
+            from core.models_unified_system import BlockchainAuditBrief
+            BlockchainAuditBrief.objects.create(
+                brief_date=timezone.now().date(),
+                executive_summary=(data.get('summary', '') or data.get('executive_summary', '') or result.message[:500])[:500],
+                security_alerts=data.get('security_alerts', {}),
+                whale_movements=data.get('whale_movements', {}),
+                contract_audits=data.get('contract_audits', {}),
+                exploit_detection=data.get('exploit_detection', {}),
+                agents_run=[
+                    'BlockchainAuditCoordinator', 'SmartContractAuditorAgent',
+                    'TransactionMonitorAgent', 'WhaleWatcherAgent', 'ExploitDetectorAgent',
+                ],
+                errors=data.get('errors', []),
+                generation_time_seconds=elapsed,
+            )
+        except Exception as db_err:
+            logger.warning(f"[SESSION 1003] Could not persist blockchain brief: {db_err}")
+
         desks_completed += 1
         logger.info(f"[SESSION 1000] Blockchain desk done in {elapsed}s")
     except Exception as e:

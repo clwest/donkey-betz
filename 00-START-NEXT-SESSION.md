@@ -1,12 +1,33 @@
-# Session 1003 - Start Here
+# Session 1004 - Start Here
 
-**Previous Session:** 1002C (super() Fallback for 31 Agents)
+**Previous Session:** 1003 (Pipeline Completion — 6 Broken Execution Loops Fixed)
 **Date:** February 13, 2026
-**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **LIVE SCORES + AI PICKS** | **BETTING HUB: LIVE** | **STOCK HUB: LIVE** | **INTELLIGENCE DESKS: 4 ACTIVE** | **Workspace: 9 TABS** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 97** | **PA Intents: 38** | **Enrichment Services: 8** | **Content Feedback Loop: CLOSED** | **CONTENT REVIEW AUTOMATION: WIRED** | **BLOG TELEMETRY GROUNDING: ACTIVE** | **SPIDER CONTEXT INJECTION: FIXED** | **DELEGATION: 81 AGENTS DISCOVERABLE** | **SPIDER_QUERY: CENTRALIZED** | **SHARED TOOLS: ALL 64 AGENTS WIRED + 9 DIRECT-API FIXED** | **Celery Tasks: 268** | **GOVERNANCE: HARDENED**
+**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **LIVE SCORES + AI PICKS** | **BETTING HUB: LIVE** | **STOCK HUB: LIVE** | **INTELLIGENCE DESKS: 4 ACTIVE + PERSISTED** | **Workspace: 9 TABS** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 97** | **PA Intents: 38** | **Enrichment Services: 8** | **BLOG PIPELINE: DELIBERATION + AUTO-PUBLISH** | **INITIATIVE AUTO-PROGRESSION: UNBLOCKED** | **SIGNAL AGGREGATION: ACTIVATED** | **PODCAST AUDIO: ENABLED** | **DESK PERSISTENCE: 2 NEW MODELS** | **Celery Tasks: 268** | **GOVERNANCE: HARDENED**
 
 ---
 
-## Session 1002C Summary (Just Completed)
+## Session 1003 Summary (Just Completed)
+
+### Pipeline Completion — Fix 6 Broken Execution Loops
+
+Production data revealed world-class intake but broken execution completion (13,480 executions, 8 published blogs, 596 initiatives stuck at Stage 1, 0 signal clusters from 18,893 spider records). Fixed all 6 broken pipelines:
+
+1. **Blog Pipeline** -- Switched beat task from `generate_self_blog_task` to `generate_self_blog_deliberation_task`. Added `reevaluate-enhanced-blogs` (4h) and `auto-publish-approved-blogs` (2h) beat entries.
+
+2. **Initiative Founder Intent** -- Added `set_founder_intent()` after `Initiative.objects.create()` in all 4 creation points. `can_auto_progress()` was returning `False` for all initiatives. Data migration `0243` auto-backfills existing stuck initiatives on deploy.
+
+3. **Signal Aggregation** -- Relaxed `is_processed=True` filter to include records with `embedding_text`. Added `embedding_text` and `processed_data` fallbacks in text extraction. Lowered `MIN_CLUSTER_SIZE` from 3 to 2.
+
+4. **Podcast Audio** -- Changed `generate_audio: False` to `True` in auto-podcast task.
+
+5. **Sports Desk Persistence** -- New `SportsBettingBrief` model. Desk output now persists to DB (was only cached 6h).
+
+6. **Blockchain Desk Persistence** -- New `BlockchainAuditBrief` model. Same pattern as sports.
+
+**Migrations:** `0242_session_1003_desk_intelligence_briefs` + `0243_session_1003_backfill_founder_intent`
+**Files changed:** 10 files. See `docs/handoffs/SESSION_1003_PIPELINE_COMPLETION.md`.
+
+## Session 1002C Summary (Prior)
 
 ### Universal Agent Tool Access — super() Fallback + Shared Tools + Delegate Cleanup + Direct API Fix
 
@@ -121,7 +142,7 @@ PublishGate blocks publishing when `publish_ready=False`. SelfBlog.author tracks
 | Agents | 82 routable, 25 non-routable, 26+ provenance-tracked |
 | Spiders | 79 (74 working, 5 need API keys) |
 | Advisors | 25 |
-| Database Models | 391+ |
+| Database Models | 393+ |
 | Services | 134 |
 | Celery Tasks | 268 |
 | Intelligence Desks | 4 (Stocks, Sports, Blockchain, Narrative) |
@@ -132,7 +153,7 @@ PublishGate blocks publishing when `publish_ready=False`. SelfBlog.author tracks
 | Enrichment Services | 8 |
 | Attention Sections | 7 |
 | LLM Providers | 6 (OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini) |
-| Migrations | Through 0241 |
+| Migrations | Through 0242 |
 | Standalone Pages | `/stocks`, `/advisors`, `/betting`, `/neural-orchestra`, `/conversation-contract`, `/mythology-lab`, `/billing`, `/analytics`, `/docs-index` |
 
 ---
