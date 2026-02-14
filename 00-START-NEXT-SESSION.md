@@ -1,14 +1,28 @@
 # Session 1003 - Start Here
 
-**Previous Session:** 1002B (Agent Delegation & Shared Tools)
+**Previous Session:** 1002C (super() Fallback for 31 Agents)
 **Date:** February 13, 2026
-**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **LIVE SCORES + AI PICKS** | **BETTING HUB: LIVE** | **STOCK HUB: LIVE** | **INTELLIGENCE DESKS: 4 ACTIVE** | **Workspace: 9 TABS** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 97** | **PA Intents: 38** | **Enrichment Services: 8** | **Content Feedback Loop: CLOSED** | **CONTENT REVIEW AUTOMATION: WIRED** | **BLOG TELEMETRY GROUNDING: ACTIVE** | **SPIDER CONTEXT INJECTION: FIXED** | **DELEGATION: 81 AGENTS DISCOVERABLE** | **SPIDER_QUERY: CENTRALIZED** | **Celery Tasks: 268** | **GOVERNANCE: HARDENED**
+**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **LIVE SCORES + AI PICKS** | **BETTING HUB: LIVE** | **STOCK HUB: LIVE** | **INTELLIGENCE DESKS: 4 ACTIVE** | **Workspace: 9 TABS** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 97** | **PA Intents: 38** | **Enrichment Services: 8** | **Content Feedback Loop: CLOSED** | **CONTENT REVIEW AUTOMATION: WIRED** | **BLOG TELEMETRY GROUNDING: ACTIVE** | **SPIDER CONTEXT INJECTION: FIXED** | **DELEGATION: 81 AGENTS DISCOVERABLE** | **SPIDER_QUERY: CENTRALIZED** | **SHARED TOOLS: ALL 50 AGENTS WIRED** | **Celery Tasks: 268** | **GOVERNANCE: HARDENED**
 
 ---
 
-## Session 1002B Summary (Just Completed)
+## Session 1002C Summary (Just Completed)
 
-### Agent Delegation System Fix & Shared Tool Sets
+### super() Fallback for 31 Agents
+
+Session 1002B centralized `delegate_to_specialist`, `web_search`, and `spider_query` in `BaseAgent._execute_tool_call()`, but 31 agents overrode that method and returned error dicts for unrecognized tools instead of falling through to super(). This meant the centralized handlers were unreachable for those agents.
+
+1. **BaseAgent: return dict instead of raising** -- Changed `raise NotImplementedError(...)` to `return {'success': False, 'error': ...}` so subclasses can safely call `super()._execute_tool_call()` as a fallback (the 19 agents that already had try/except NotImplementedError still work fine -- the except just never triggers).
+
+2. **31 agents: replaced final error return with `super()` call** -- Each agent's `else: return error` (or equivalent) now delegates to `super()._execute_tool_call(tool_name, arguments)`, making centralized handlers reachable. 4 agents intentionally skipped (content_executor, opportunity_pipeline, workflow_orchestration, workflow_agent -- programmatic agents that reject all tools by design).
+
+**Result:** All 50 agents that define `_execute_tool_call` now have access to centralized `web_search`, `spider_query`, and `delegate_to_specialist` handlers (was 19). Gap is exactly 4 intentionally skipped agents.
+
+**Files changed:** 32 code files. See `docs/handoffs/SESSION_1002C_SUPER_FALLBACK.md`.
+
+## Session 1002B Summary (Prior)
+
+### Agent Delegation System Fix & Shared Tool Sets (1002B)
 
 Fixed systemic under-utilization of the 82-agent system:
 
