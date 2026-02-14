@@ -333,8 +333,11 @@ def generate_podcast_audio(
     filepath = os.path.join('podcasts', 'episodes', filename)
 
     try:
-        saved_path = default_storage.save(filepath, ContentFile(final_audio))
-        audio_url = default_storage.url(saved_path)
+        # Session 1003: Use RawMediaCloudinaryStorage for audio files
+        from core.services.elevenlabs_tts_service import get_audio_storage
+        storage = get_audio_storage()
+        saved_path = storage.save(filepath, ContentFile(final_audio))
+        audio_url = storage.url(saved_path)
     except Exception as e:
         logger.error(f"❌ Failed to save audio: {e}")
         return {'success': False, 'error': f'Failed to save audio: {e}'}

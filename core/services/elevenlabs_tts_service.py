@@ -26,6 +26,22 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
+
+def get_audio_storage():
+    """Return a storage backend that can save audio (non-image) files.
+
+    Session 1003: In production, DEFAULT_FILE_STORAGE is Cloudinary's
+    MediaCloudinaryStorage which rejects MP3/WAV files with "Invalid image
+    file".  Use RawMediaCloudinaryStorage for audio uploads instead.
+    """
+    from django.conf import settings
+    from django.core.files.storage import default_storage
+    if getattr(settings, 'DEFAULT_FILE_STORAGE', '') == 'cloudinary_storage.storage.MediaCloudinaryStorage':
+        from cloudinary_storage.storage import RawMediaCloudinaryStorage
+        return RawMediaCloudinaryStorage()
+    return default_storage
+
+
 # Voice ID mapping for all available voices
 VOICE_IDS = {
     'Rachel': '21m00Tcm4TlvDq8ikWAM',
