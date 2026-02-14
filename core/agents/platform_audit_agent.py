@@ -284,7 +284,7 @@ Include counts, categorizations, and actionable findings."""
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=messages,
-            tools=self.tools,
+            tools=self.get_tools_with_delegation(),
             tool_choice="auto",
             max_tokens=4000,
             temperature=0.3
