@@ -837,20 +837,14 @@ class BaseAgent(ABC, TimeTravelMixin):
 
     def get_tools_with_delegation(self) -> List[Dict[str, Any]]:
         """
-        Session 744: Get this agent's tools plus the delegation tool.
-
-        Use this in subclasses to enable delegation capability:
-
-            def execute(self, task, context, scifi_context, spider_context):
-                tools = self.get_tools_with_delegation()
-                # Use tools in OpenAI call...
+        Session 744: Get this agent's tools plus shared tools.
+        Session 1002C: Also injects web_search and spider_query.
 
         Returns:
-            List of tool definitions including delegate_to_specialist
+            List of tool definitions including delegate_to_specialist,
+            web_search, and spider_query
         """
-        # Start with agent's own tools
-        all_tools = list(self.tools) if self.tools else []
-
+        all_tools = self._get_tools_with_shared()
         # Add delegation tool if not already present
         has_delegation = any(
             t.get('function', {}).get('name') == 'delegate_to_specialist'
@@ -859,6 +853,22 @@ class BaseAgent(ABC, TimeTravelMixin):
         if not has_delegation:
             all_tools.append(self.DELEGATE_TO_SPECIALIST_TOOL)
 
+        return all_tools
+
+    def _get_tools_with_shared(self) -> List[Dict[str, Any]]:
+        """
+        Session 1002C: Inject web_search and spider_query into any agent's
+        tool list. Called by get_tools_with_delegation() and also used
+        directly for non-delegating agents.
+        """
+        all_tools = list(self.tools) if self.tools else []
+        existing_names = {
+            t.get('function', {}).get('name') for t in all_tools
+        }
+        if 'web_search' not in existing_names:
+            all_tools.append(WEB_SEARCH_TOOL)
+        if 'spider_query' not in existing_names:
+            all_tools.append(SPIDER_QUERY_TOOL)
         return all_tools
 
     def get_available_specialists_prompt(self) -> str:
@@ -2088,10 +2098,11 @@ Consider these trends when crafting the response to maximize relevance and engag
         start_time = time.time()  # Session 536: Track timing for analytics
 
         # Session 744: Auto-include delegation tool if can_delegate is True
+        # Session 1002C: Always inject web_search + spider_query for all agents
         if self.can_delegate:
             effective_tools = self.get_tools_with_delegation()
         else:
-            effective_tools = self.tools if self.tools else None
+            effective_tools = self._get_tools_with_shared()
 
         try:
             response = self.client.chat.completions.create(

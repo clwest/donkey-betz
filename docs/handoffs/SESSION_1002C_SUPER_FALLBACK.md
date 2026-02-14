@@ -74,6 +74,26 @@ Replaced each agent's final error return with `return super()._execute_tool_call
 3. **BaseAgent behavior:** `BaseAgent._execute_tool_call('nonexistent_tool', {})` returns `{'success': False, 'error': "..."}` (does not raise).
 4. **Spot-check:** `ResearchAgent._execute_tool_call('nonexistent_tool', {})` returns error dict via super() chain.
 
+## Change 3: Universal web_search + spider_query tool injection
+
+Only 6 stock agents manually included `WEB_SEARCH_TOOL` in their tool schemas. Zero agents included `SPIDER_QUERY_TOOL`. The LLM can only call tools it sees in the schema, so centralized handlers were unreachable for most agents.
+
+Fix: Added `_get_tools_with_shared()` to BaseAgent that auto-injects `WEB_SEARCH_TOOL` and `SPIDER_QUERY_TOOL` (with dedup) into every agent's tool list. Called by `get_tools_with_delegation()` for delegating agents and directly in `_call_llm_with_tools()` for non-delegating agents.
+
+**File:** `core/agents/base_agent.py`
+
+## Change 4: Fix regression in 4 stock agents with try/except NotImplementedError
+
+Since Change 1 made BaseAgent return a dict instead of raising, the `try: return super()... except NotImplementedError: pass` pattern in 4 stock agents became a bug -- `super()` returned an error dict for the agent's own tools instead of raising, so the agent's own handlers were never reached.
+
+Fix: Removed the `try/except` block and moved `super()` to the end (same pattern as all other agents).
+
+**Files:**
+- `core/agents/stocks/bull_case_agent.py`
+- `core/agents/stocks/bear_case_agent.py`
+- `core/agents/stocks/institutional_watcher_agent.py`
+- `core/agents/stocks/stock_analyst_agent.py`
+
 ## Result
 
-All 50 agents that define `_execute_tool_call` now have access to centralized `web_search`, `spider_query`, and `delegate_to_specialist` handlers (was 19). The remaining 4 agents are intentionally isolated.
+All agents that go through `_call_llm_with_tools()` now automatically get `web_search` and `spider_query` in their tool schemas (no per-agent imports needed). All 50+ agents with `_execute_tool_call` fall through to BaseAgent for centralized handling. Zero `except NotImplementedError` blocks remain.
