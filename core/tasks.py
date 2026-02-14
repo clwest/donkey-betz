@@ -28504,7 +28504,7 @@ def evaluate_unscored_blogs(limit: int = 20):
 
 
 @shared_task(name='core.tasks.reevaluate_enhanced_blogs')
-def reevaluate_enhanced_blogs(limit: int = 20):
+def reevaluate_enhanced_blogs(limit: int = 50):
     """
     Session 1000C: Re-evaluate blogs that were enhanced by EditorAgent.
     Session 1003: Also score unscored pending_review and draft blogs.
