@@ -229,10 +229,13 @@ def trigger_desks(request):
     POST /api/home/trigger-desks/
 
     Triggers an on-demand run of all intelligence desks via Celery.
+    Optional: pass {"queue": "default"} to override the queue.
     """
     from core.tasks import run_all_desks_intelligence
-    result = run_all_desks_intelligence.apply_async(queue='long_running')
+    queue = request.data.get('queue', 'long_running')
+    result = run_all_desks_intelligence.apply_async(queue=queue)
     return Response({
         'success': True,
         'task_id': str(result.id),
+        'queue': queue,
     })
