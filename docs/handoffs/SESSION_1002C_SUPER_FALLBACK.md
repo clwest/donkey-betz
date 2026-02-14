@@ -94,6 +94,38 @@ Fix: Removed the `try/except` block and moved `super()` to the end (same pattern
 - `core/agents/stocks/institutional_watcher_agent.py`
 - `core/agents/stocks/stock_analyst_agent.py`
 
+## Change 5: Remove redundant delegate_to_specialist elif blocks
+
+Since BaseAgent now handles `delegate_to_specialist` via the `super()` fallback, all 59 agents with explicit `delegate_to_specialist` elif blocks in their tool handlers had redundant code. Removed all delegate blocks using a programmatic script.
+
+**Files:** 59 agent files (all except `base_agent.py` and `workflow_agent.py`)
+
+## Change 6: Add super() fallback to 14 newly discovered agents
+
+During the delegate block cleanup, discovered 14 agents that had their own tool handler methods (`_execute_tool`, `_handle_tool_call`) but no fallback to BaseAgent. These agents would silently fail on `web_search`, `spider_query`, and `delegate_to_specialist` tool calls.
+
+Fix: Replaced final error returns with `super()._execute_tool_call(tool_name, args)`.
+
+**Files:**
+1. `core/agents/analysis/market_intelligence_agent.py` -- `_execute_tool`
+2. `core/agents/business/base_business_research_agent.py` -- `handle_custom_tool` default
+3. `core/agents/content/contrarian_agent.py` -- `_execute_tool` (inside try/except)
+4. `core/agents/content/performance_analyst_agent.py` -- `_execute_tool` (inside try/except)
+5. `core/agents/content/topic_miner_agent.py` -- `_execute_tool` (inside try/except)
+6. `core/agents/narrative/cultural_impact_agent.py` -- `_handle_tool_call`
+7. `core/agents/narrative/narrative_drift_coordinator.py` -- `_handle_tool_call`
+8. `core/agents/narrative/narrative_historian_agent.py` -- `_handle_tool_call`
+9. `core/agents/narrative/trend_break_detector_agent.py` -- `_handle_tool_call`
+10. `core/agents/podcast/debate_advocate_agent.py` -- `_handle_tool_call`
+11. `core/agents/podcast/debate_skeptic_agent.py` -- `_handle_tool_call`
+12. `core/agents/podcast/moderator_agent.py` -- `_handle_tool_call`
+13. `core/agents/stocks/signal_scanner_agent.py` -- `_handle_tool_call`
+14. `core/agents/platform_audit_agent.py` -- `_execute_tool`
+
+## Final Verification
+
+**Gap check:** 68 agents with tool handlers, 64 with `super()._execute_tool_call` = 4 gap, exactly the intentionally skipped agents (content_executor, opportunity_pipeline, workflow_agent, workflow_orchestration).
+
 ## Result
 
-All agents that go through `_call_llm_with_tools()` now automatically get `web_search` and `spider_query` in their tool schemas (no per-agent imports needed). All 50+ agents with `_execute_tool_call` fall through to BaseAgent for centralized handling. Zero `except NotImplementedError` blocks remain.
+All agents that go through `_call_llm_with_tools()` now automatically get `web_search` and `spider_query` in their tool schemas (no per-agent imports needed). All 64 agents with tool handlers fall through to BaseAgent for centralized handling. Zero `except NotImplementedError` blocks remain. Zero redundant delegate_to_specialist blocks remain.

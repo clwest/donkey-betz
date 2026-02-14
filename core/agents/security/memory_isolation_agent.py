@@ -300,15 +300,6 @@ You are a READ-ONLY security agent - you audit and isolate, not modify content."
         elif tool_name == "verify_isolation":
             return self._verify_isolation()
 
-        elif tool_name == "delegate_to_specialist":
-            # Session 833: Handle delegation properly
-            return self._handle_delegate_to_specialist(
-                specialist_agent=arguments.get('specialist_agent', ''),
-                task=arguments.get('task', ''),
-                context=arguments.get('context', ''),
-                delegation_context=getattr(self, '_current_delegation_context', {})
-            )
-        # Session 1002C: Fall through to BaseAgent for web_search, spider_query, delegation
         return super()._execute_tool_call(tool_name, arguments)
 
     def _audit_memories(self, scope: str) -> Dict[str, Any]:
