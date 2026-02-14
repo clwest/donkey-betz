@@ -28193,7 +28193,7 @@ def enhance_blog_task(blog_id: str, focus_areas: list = None, save: bool = False
 
 
 @shared_task(name='core.tasks.enhance_all_blogs_needing_enhancement')
-def enhance_all_blogs_task(limit: int = 10, save: bool = False):
+def enhance_all_blogs_task(limit: int = 10, save: bool = True):
     """
     Session 864: Batch enhance all blogs marked as 'needs_enhancement'.
 
@@ -28230,6 +28230,12 @@ def enhance_all_blogs_task(limit: int = 10, save: bool = False):
 
     for blog in blogs:
         try:
+            # Session 1000C: Skip blogs that already had 3 enhancement rounds
+            ss = blog.stats_snapshot or {}
+            if ss.get('enhancement_count', 0) >= 3:
+                logger.info(f"📝 [EDITOR] Skipping blog {blog.id}: max enhancement rounds reached")
+                continue
+
             result = agent.execute(
                 task=f"Enhance blog: {blog.title[:50]}",
                 context={
@@ -28244,6 +28250,10 @@ def enhance_all_blogs_task(limit: int = 10, save: bool = False):
 
             if result.success:
                 results['successful'] += 1
+                # Session 1000C: Track enhancement rounds
+                blog.stats_snapshot = blog.stats_snapshot or {}
+                blog.stats_snapshot['enhancement_count'] = blog.stats_snapshot.get('enhancement_count', 0) + 1
+                blog.save(update_fields=['stats_snapshot'])
                 results['details'].append({
                     'blog_id': str(blog.id),
                     'title': blog.title[:60],
@@ -28322,6 +28332,74 @@ def evaluate_unscored_blogs(limit: int = 20):
         f"{results['publish_ready']} publish-ready"
     )
     return results
+
+
+@shared_task(name='core.tasks.reevaluate_enhanced_blogs')
+def reevaluate_enhanced_blogs(limit: int = 20):
+    """
+    Session 1000C: Re-evaluate blogs that were enhanced by EditorAgent.
+
+    Runs PublishGate again on needs_enhancement blogs that have already been
+    scored (quality_score is not null). If quality improved enough, blog
+    gets promoted to 'approved'.
+    """
+    from core.models_unified_system import SelfBlog
+    from core.services.publish_gate import PublishGate
+
+    blogs = SelfBlog.objects.filter(
+        status='needs_enhancement',
+        quality_score__isnull=False,
+    ).order_by('-created_at')[:limit]
+
+    total = blogs.count()
+    if total == 0:
+        return {'processed': 0, 'message': 'No enhanced blogs to re-evaluate'}
+
+    gate = PublishGate()
+    results = {'processed': 0, 'promoted': 0, 'still_needs_work': 0, 'errors': 0}
+
+    for blog in blogs:
+        try:
+            gate.apply_to_blog(blog)
+            results['processed'] += 1
+            if blog.status == 'approved':
+                results['promoted'] += 1
+            else:
+                results['still_needs_work'] += 1
+        except Exception as e:
+            results['errors'] += 1
+            logger.warning(f"Re-evaluate blog {blog.id} failed: {e}")
+
+    logger.info(
+        f"[PUBLISH-GATE] Re-evaluation: {results['promoted']}/{results['processed']} promoted to approved"
+    )
+    return results
+
+
+@shared_task(name='core.tasks.auto_publish_approved_blogs')
+def auto_publish_approved_blogs():
+    """
+    Session 1000C: Move approved blogs to published status.
+
+    Final step in the automation pipeline. Blogs that passed PublishGate
+    quality checks and were promoted to 'approved' get set to 'published'.
+    """
+    from core.models_unified_system import SelfBlog
+
+    blogs = SelfBlog.objects.filter(status='approved', publish_ready=True)
+    count = blogs.count()
+
+    if count == 0:
+        return {'published': 0, 'message': 'No approved blogs to publish'}
+
+    published_ids = []
+    for blog in blogs:
+        blog.status = 'published'
+        blog.save(update_fields=['status'])
+        published_ids.append(str(blog.id))
+        logger.info(f"[AUTO-PUBLISH] Published blog: {blog.title[:60]}")
+
+    return {'published': count, 'blog_ids': published_ids}
 
 
 @shared_task(name='core.tasks.agent_daily_summary')

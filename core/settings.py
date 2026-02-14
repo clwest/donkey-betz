@@ -1079,6 +1079,10 @@ CELERY_TASK_ROUTES = {
     # Initiative pipeline tasks
     'core.tasks.process_initiative_auto_progression': {'queue': 'content'},
     'core.tasks.evaluate_unscored_blogs': {'queue': 'content'},
+    # Session 1000C: Content Review Automation Pipeline
+    'core.tasks.enhance_all_blogs_needing_enhancement': {'queue': 'long_running'},  # EditorAgent = LLM calls
+    'core.tasks.reevaluate_enhanced_blogs': {'queue': 'content'},  # PublishGate = heuristic only
+    'core.tasks.auto_publish_approved_blogs': {'queue': 'content'},  # Simple status update
     # Narrative/pipeline module tasks
     'narrative_drift.run_detector_cycle': {'queue': 'long_running'},
     'narrative_drift.process_spider_data': {'queue': 'long_running'},
@@ -1675,6 +1679,24 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.evaluate_unscored_blogs',
         'schedule': crontab(hour='*/2', minute=10),  # Every 2 hours at :10
         'kwargs': {'limit': 20},
+    },
+    # Session 1000C: Content Review Automation Pipeline
+    # Enhance blogs marked as needs_enhancement (EditorAgent, LLM calls)
+    'enhance-blogs-needing-enhancement': {
+        'task': 'core.tasks.enhance_all_blogs_needing_enhancement',
+        'schedule': crontab(hour='2,8,14,20', minute=40),  # Every 6h at :40
+        'kwargs': {'limit': 5, 'save': True},
+    },
+    # Re-evaluate enhanced blogs through PublishGate (lightweight scoring)
+    'reevaluate-enhanced-blogs': {
+        'task': 'core.tasks.reevaluate_enhanced_blogs',
+        'schedule': crontab(hour='5,11,17,23', minute=10),  # Every 6h at :10, 3h after enhance
+        'kwargs': {'limit': 20},
+    },
+    # Auto-publish approved blogs (final pipeline step)
+    'auto-publish-approved-blogs': {
+        'task': 'core.tasks.auto_publish_approved_blogs',
+        'schedule': crontab(hour=6, minute=0),  # Daily at 6 AM
     },
 }
 

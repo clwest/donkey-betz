@@ -1,12 +1,22 @@
 # Session 1001 - Start Here
 
-**Previous Session:** 1000 (Intelligence Desks)
-**Date:** February 12, 2026
-**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **LIVE SCORES + AI PICKS** | **BETTING HUB: LIVE** | **STOCK HUB: LIVE** | **INTELLIGENCE DESKS: 4 ACTIVE** | **Workspace: 9 TABS** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 97** | **PA Intents: 38** | **Enrichment Services: 8** | **Content Feedback Loop: CLOSED** | **Celery Tasks: 265** | **GOVERNANCE: HARDENED**
+**Previous Session:** 1000C (Content Review Automation Pipeline)
+**Date:** February 13, 2026
+**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **SPORTS BETTING PIPELINE: LIVE** | **LIVE SCORES + AI PICKS** | **BETTING HUB: LIVE** | **STOCK HUB: LIVE** | **INTELLIGENCE DESKS: 4 ACTIVE** | **Workspace: 9 TABS** | **Unified PA: ANALYTICAL ADVISOR** | **PA Tools: 97** | **PA Intents: 38** | **Enrichment Services: 8** | **Content Feedback Loop: CLOSED** | **CONTENT REVIEW AUTOMATION: WIRED** | **Celery Tasks: 268** | **GOVERNANCE: HARDENED**
 
 ---
 
-## Session 1000 Summary (Just Completed)
+## Session 1000C Summary (Just Completed)
+
+### Content Review Automation Pipeline
+
+Wired the content review pipeline so 1,400+ blogs no longer sit in 'draft' forever. PublishGate now promotes blogs to 'approved' on publish decision. EditorAgent enhance task saves by default with a 3-round cap. Two new tasks: `reevaluate_enhanced_blogs` re-scores enhanced blogs, `auto_publish_approved_blogs` publishes approved blogs daily at 6 AM.
+
+**Pipeline:** `draft → evaluate (2h) → scored → publish → approved → auto-publish (daily 6AM) → published` with enhancement loop: `enhance → needs_enhancement → EditorAgent (6h) → re-evaluate (6h) → approved (max 3 rounds)`.
+
+**Files changed:** 3 files. See `docs/handoffs/SESSION_1000C_CONTENT_REVIEW_AUTOMATION.md`.
+
+## Session 1000 Summary (Prior)
 
 ### Activate All Intelligence Desks
 
@@ -51,7 +61,7 @@ PublishGate blocks publishing when `publish_ready=False`. SelfBlog.author tracks
 | Advisors | 25 |
 | Database Models | 391+ |
 | Services | 134 |
-| Celery Tasks | 265 |
+| Celery Tasks | 268 |
 | Intelligence Desks | 4 (Stocks, Sports, Blockchain, Narrative) |
 | Workspace Tabs | 9 |
 | Frontend Routes | 37 (15 standalone + 22 redirects) |
