@@ -360,6 +360,16 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                             tool_calls=tool_calls_made
                         )
 
+                        # Session 1006: Persist output to Deliverable
+                        self._save_to_deliverable(
+                            title=f"Prompt Engineering: {task[:80]}",
+                            content=descriptive_msg,
+                            deliverable_type='document',
+                            category='Prompt Engineering',
+                            tags=['prompt', tool_used or 'engineering'],
+                            metadata={'task': task[:200], 'tool_used': tool_used},
+                        )
+
                         self._record_learning_outcome(
                             result=result,
                             task=task,
