@@ -249,6 +249,16 @@ You train models - you do NOT generate images with them (use TrainedCreationAgen
                         tool_calls=tool_calls_made
                     )
 
+                    # Session 1006: Persist output to Deliverable
+                    self._save_to_deliverable(
+                        title=f"Character Training: {task[:80]}",
+                        content=result.message,
+                        deliverable_type='training',
+                        category='Character Training',
+                        tags=['training', 'character'],
+                        metadata={'task': task[:200]},
+                    )
+
                     # Session 380: Learning hooks for collective intelligence
                     self._record_learning_outcome(
                         result=result,
