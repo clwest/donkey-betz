@@ -35033,6 +35033,7 @@ def run_all_desks_intelligence():
     """
     import gc
     import time as _time
+    import traceback
     from django.core.cache import cache
 
     CACHE_TTL = 6 * 3600  # 6 hours
@@ -35058,8 +35059,14 @@ def run_all_desks_intelligence():
 
         summary = ''
         if hasattr(result, 'data') and isinstance(result.data, dict):
-            summary = result.data.get('executive_summary', '') or result.data.get('summary', '')
-        elif result.message:
+            # The brief is nested under result.data['brief']
+            brief_data = result.data.get('brief', {}) or {}
+            summary = (
+                brief_data.get('executive_summary', '')
+                or result.data.get('executive_summary', '')
+                or result.data.get('summary', '')
+            )
+        if not summary and hasattr(result, 'message') and result.message:
             summary = str(result.message)[:500]
 
         cache.set('desk:stocks:latest', {
@@ -35077,7 +35084,7 @@ def run_all_desks_intelligence():
     except Exception as e:
         desks_failed += 1
         timing['stocks'] = -1
-        logger.error(f"[SESSION 1000] Stocks desk failed: {e}")
+        logger.error(f"[SESSION 1000] Stocks desk failed: {e}\n{traceback.format_exc()}")
 
     gc.collect()
 
@@ -35093,38 +35100,36 @@ def run_all_desks_intelligence():
         cache.set('desk:sports:latest', {
             'generated_at': timezone.now().isoformat(),
             'executive_summary': (brief.get('executive_summary', '') or '')[:500],
-            'top_plays': brief.get('top_plays', [])[:5],
-            'agents_run': [
-                'GamePredictor', 'SportsOddsAnalyst', 'ArbitrageDetector',
-                'LineMovementAnalyzer', 'SharpActionDetector',
-            ],
+            'top_plays': brief.get('top_plays') or [],
+            'agents_run': brief.get('agents_run') or [],
             'elapsed_seconds': elapsed,
         }, CACHE_TTL)
 
         # Session 1003: Persist to DB so briefs survive cache TTL
+        # Session 1005: Fixed key mismatches (arbitrage, sharp_action) and None guards
         try:
             from core.models_unified_system import SportsBettingBrief
             SportsBettingBrief.objects.create(
                 brief_date=timezone.now().date(),
                 executive_summary=(brief.get('executive_summary', '') or '')[:500],
-                predictions=brief.get('predictions', {}),
-                arbitrage_opportunities=brief.get('arbitrage_opportunities', {}),
-                sharp_action_alerts=brief.get('sharp_action_alerts', {}),
-                line_movements=brief.get('line_movements', {}),
-                top_plays=brief.get('top_plays', []),
-                agents_run=brief.get('agents_run', []),
-                errors=brief.get('errors', []),
+                predictions=brief.get('predictions') or {},
+                arbitrage_opportunities=brief.get('arbitrage') or {},
+                sharp_action_alerts=brief.get('sharp_action') or {},
+                line_movements=brief.get('line_movements') or {},
+                top_plays=brief.get('top_plays') or [],
+                agents_run=brief.get('agents_run') or [],
+                errors=brief.get('errors') or [],
                 generation_time_seconds=elapsed,
             )
         except Exception as db_err:
-            logger.warning(f"[SESSION 1003] Could not persist sports brief: {db_err}")
+            logger.warning(f"[SESSION 1005] Could not persist sports brief: {db_err}")
 
         desks_completed += 1
         logger.info(f"[SESSION 1000] Sports desk done in {elapsed}s")
     except Exception as e:
         desks_failed += 1
         timing['sports'] = -1
-        logger.error(f"[SESSION 1000] Sports desk failed: {e}")
+        logger.error(f"[SESSION 1000] Sports desk failed: {e}\n{traceback.format_exc()}")
 
     gc.collect()
 
@@ -35179,7 +35184,7 @@ def run_all_desks_intelligence():
     except Exception as e:
         desks_failed += 1
         timing['blockchain'] = -1
-        logger.error(f"[SESSION 1000] Blockchain desk failed: {e}")
+        logger.error(f"[SESSION 1000] Blockchain desk failed: {e}\n{traceback.format_exc()}")
 
     gc.collect()
 
@@ -35213,7 +35218,7 @@ def run_all_desks_intelligence():
     except Exception as e:
         desks_failed += 1
         timing['narrative'] = -1
-        logger.error(f"[SESSION 1000] Narrative desk failed: {e}")
+        logger.error(f"[SESSION 1000] Narrative desk failed: {e}\n{traceback.format_exc()}")
 
     logger.info(
         f"[SESSION 1000] Intelligence desks complete: "
