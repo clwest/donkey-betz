@@ -3,6 +3,7 @@ Celery Tasks for Automated Spider Scheduling and Data Collection
 """
 
 from celery import shared_task
+from celery.exceptions import SoftTimeLimitExceeded
 from celery.schedules import crontab
 from django.core.cache import cache
 from django.utils import timezone
@@ -13,11 +14,13 @@ import asyncio
 logger = logging.getLogger(__name__)
 
 
-@shared_task
+@shared_task(soft_time_limit=120, time_limit=180)
 def collect_real_opportunities():
     """
     Main task to collect real opportunities from all spider sources.
     Runs every 15 minutes to keep data fresh.
+    soft_time_limit=120s, time_limit=180s prevents hanging HTTP requests
+    from blocking the worker indefinitely (Session 1005 fix).
     """
     logger.info("🕷️ Starting scheduled spider collection...")
 
@@ -58,16 +61,20 @@ def collect_real_opportunities():
             logger.warning("⚠️ No jobs collected from spiders")
             return {'success': False, 'jobs_collected': 0}
 
+    except SoftTimeLimitExceeded:
+        logger.warning("⏰ collect_real_opportunities hit soft time limit (120s), returning partial results")
+        return {'success': False, 'error': 'soft_time_limit_exceeded'}
     except Exception as e:
         logger.error(f"❌ Spider collection failed: {e}")
         return {'success': False, 'error': str(e)}
 
 
-@shared_task
+@shared_task(soft_time_limit=120, time_limit=180)
 def refresh_ai_content_opportunities():
     """
     Generate fresh AI-powered income opportunities.
     Runs every 30 minutes.
+    soft_time_limit=120s, time_limit=180s (Session 1005).
     """
     logger.info("🚀 Generating AI content opportunities...")
 
@@ -83,6 +90,9 @@ def refresh_ai_content_opportunities():
 
         return {'success': True, 'opportunities_generated': len(opportunities)}
 
+    except SoftTimeLimitExceeded:
+        logger.warning("⏰ refresh_ai_content_opportunities hit soft time limit (120s)")
+        return {'success': False, 'error': 'soft_time_limit_exceeded'}
     except Exception as e:
         logger.error(f"❌ AI opportunity generation failed: {e}")
         return {'success': False, 'error': str(e)}

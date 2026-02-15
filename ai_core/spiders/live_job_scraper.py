@@ -49,8 +49,12 @@ class LiveJobScraper:
             self.scrape_hackernews_hiring()
         ]
 
+        # Session-level timeout prevents hanging connections from blocking the worker.
+        # total=60s caps the entire session, connect=10s per connection, sock_read=15s per read.
+        timeout = aiohttp.ClientTimeout(total=60, connect=10, sock_read=15)
+
         # Run all scrapers concurrently
-        async with aiohttp.ClientSession(headers=self.headers) as session:
+        async with aiohttp.ClientSession(headers=self.headers, timeout=timeout) as session:
             self.session = session
             results = await asyncio.gather(*sources, return_exceptions=True)
 
@@ -76,7 +80,7 @@ class LiveJobScraper:
         """Scrape RemoteOK for remote developer jobs"""
         try:
             url = "https://remoteok.io/api"
-            async with self.session.get(url, timeout=10) as response:
+            async with self.session.get(url) as response:
                 if response.status == 200:
                     data = await response.json()
 
@@ -112,7 +116,7 @@ class LiveJobScraper:
         """Scrape WeWorkRemotely for remote jobs"""
         try:
             url = "https://weworkremotely.com/categories/remote-programming-jobs"
-            async with self.session.get(url, timeout=10) as response:
+            async with self.session.get(url) as response:
                 if response.status == 200:
                     html = await response.text()
                     soup = BeautifulSoup(html, 'html.parser')
@@ -154,7 +158,7 @@ class LiveJobScraper:
         """Scrape GitHub trending repositories for contributor opportunities"""
         try:
             url = "https://api.github.com/search/repositories?q=language:python+stars:>100&sort=updated"
-            async with self.session.get(url, timeout=10) as response:
+            async with self.session.get(url) as response:
                 if response.status == 200:
                     data = await response.json()
 
@@ -189,7 +193,7 @@ class LiveJobScraper:
         try:
             # Get the latest "Who is hiring?" post
             url = "https://hacker-news.firebaseio.com/v0/user/whoishiring.json"
-            async with self.session.get(url, timeout=10) as response:
+            async with self.session.get(url) as response:
                 if response.status == 200:
                     user_data = await response.json()
 
@@ -199,7 +203,7 @@ class LiveJobScraper:
 
                         # Fetch the thread
                         thread_url = f"https://hacker-news.firebaseio.com/v0/item/{latest_id}.json"
-                        async with self.session.get(thread_url, timeout=10) as thread_response:
+                        async with self.session.get(thread_url) as thread_response:
                             if thread_response.status == 200:
                                 thread_data = await thread_response.json()
 
@@ -223,7 +227,7 @@ class LiveJobScraper:
         """Parse a single HackerNews comment as a job posting"""
         try:
             url = f"https://hacker-news.firebaseio.com/v0/item/{comment_id}.json"
-            async with self.session.get(url, timeout=5) as response:
+            async with self.session.get(url) as response:
                 if response.status == 200:
                     data = await response.json()
 
