@@ -1,64 +1,55 @@
-# Session 1005 - Start Here
+# Session 1006 - Start Here
 
-**Previous Session:** 1004 (Production Stabilization — Blog Quality + PA Intent + Task Error Sweep)
+**Previous Session:** 1005 (Desk Intelligence Fixes + Queue Purge)
 **Date:** February 14, 2026
-**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **40 PUBLISHED BLOGS** | **1,089 SIGNAL CLUSTERS** | **INITIATIVE STAGES 1-5 ACTIVE** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 38+** | **Enrichment Services: 8** | **NOVELTY SCORING: STRENGTHENED** | **BEAT SCHEDULE: PROTECTED** | **Celery Tasks: 268** | **GOVERNANCE: HARDENED**
+**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **40 PUBLISHED BLOGS** | **1,089 SIGNAL CLUSTERS** | **INITIATIVE STAGES 1-5 ACTIVE** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 38+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING** | **long_running QUEUE CLEAN** | **Celery Tasks: 268** | **PURGE ENDPOINT LIVE**
 
 ---
 
-## Session 1004 Summary (Just Completed)
+## Session 1005 Summary (Just Completed)
+
+### Desk Intelligence Fixes + Queue Purge
+
+Verified all 4 intelligence desks running, fixed sports agent crashes, and purged 3,857 stale tasks from long_running queue.
+
+#### PR #1148: Desk Cache Key Mismatches
+- Aligned cache key patterns between `run_all_desks_intelligence` task and coordinators
+
+#### PR #1149: Time Limit on collect_real_opportunities
+- Added `soft_time_limit=300, time_limit=360` to prevent infinite loop consuming queue capacity
+
+#### PR #1150: Desk Key Alignment Fixes
+- Additional cache key alignment fixes for desk coordinators
+
+#### PR #1151: Fix Sports Agent SourceInfo Crash
+- `GamePredictor`, `SharpActionDetector`, `LineMovementAnalyzer` crashed with `SourceInfo.__init__() got an unexpected keyword argument 'data_type'`
+- `SourceInfo` dataclass has `source_type` field, not `data_type`
+- Fixed `data_type='sports_odds'` → `source_type='spider_data'` in all 3 agents
+
+#### PRs #1152-#1154: Purge Queue API Endpoint
+- Built `POST /api/home/purge-queue/` with secret-based auth (PURGE_SECRET env var)
+- Added to `PUBLIC_PATHS_EXACT` in auth middleware (uses own secret, not DRF auth)
+- Allowed queues: `long_running`, `ml`, `broadcast`, `content`, `agents`, `sports`
+- **Purged 3,857 stale messages** — circulatory flow_score hit 100%, all 9 routes healthy
+
+#### Desk Intelligence Full Run Results
+| Desk | Time | Result |
+|------|------|--------|
+| Stocks | 507s | 10 stocks, ElevenLabs audio brief, Discord notification |
+| Sports | 20.8s | 2/5 agents succeeded, 5 top plays |
+| Blockchain | 69.4s | Full audit brief |
+| Narrative | 4.9s | Completed |
+
+**PRs:** #1148-#1154
+**Handoff:** `docs/handoffs/SESSION_1005_DESK_FIXES_AND_QUEUE_PURGE.md`
+
+---
+
+## Session 1004 Summary (Prior)
 
 ### Production Stabilization — Blog Quality + PA Intent + Task Error Sweep
 
-After overnight pipeline run, 40 blogs published (up from 8), 1,089 signal clusters (up from 0), initiative stages 1-5 active. Found and fixed quality issues:
-
-#### PR #1138: Increase Blog Reevaluate Frequency + Batch Size
-- Blog reevaluation: `*/4h limit=20` → `*/3h limit=50`
-
-#### PR #1139: Protect Beat Schedule from Deploy Overwrite
-- Added `--create-only` to `sync_celery_beat` in Procfile release command
-- Prevents deploys from reverting DB schedule fixes
-
-#### PR #1140: ContextTracer.auto_repair_context AttributeError
-- `auto_repair_context` is a module-level function, not a ContextTracer method
-- Fixed both call sites in `core/tasks.py` and `core/agent_router.py`
-
-#### PR #1141: Strengthen Novelty Scoring + Broaden PA Intent
-- **Novelty scoring**: 19/40 published blogs were about Security/Homeland. Old scoring broke after first match, max penalty -0.3. New: counts ALL similar blogs, proportional penalties. 3rd duplicate gets blocked.
-- **PA intent routing**: PA didn't use `content_review_tool` when user said "one titled 'X'" or mentioned "inaccuracy". Added broader patterns and title extraction regex.
-
-#### PR #1142: Fix 165 Daily Task Failures
-- `retry_blocked_research` (141/day): Used `SpiderData.category` (doesn't exist) → `data_type`
-- `execute_agent_task` (24/day): Signal handler accessed `.template` on deprecated model → added `hasattr` fallback
-
-#### Beat Schedule DB Fixes (Direct)
-- `auto-publish-approved-blogs`: `hour=6` → `hour=*/2`, queue=`content`
-- `reevaluate-enhanced-blogs`: `hour=5,11,17,23` → `hour=*/3`, limit=50, queue=`content`
-
-**PRs:** #1138, #1139, #1140, #1141, #1142
-
-#### PR #1144: Move Heartbeat + check_nervous off long_running
-- Moved `run_heartbeat` and `check_nervous` from `long_running` to `broadcast` queue
-- Heartbeat every 60s was consuming 50% of long_running's c=1 capacity
-
-#### PR #1145: Move I/O-bound ai_core Tasks off long_running
-- `collect_real_opportunities`, `refresh_ai_content_opportunities`, `warm_up_spider_network` → `default` queue
-- Web scraping tasks, not memory-bound — don't need prefork isolation
-
-#### PR #1146: Redistribute 40+ Tasks off long_running Queue
-- **Root cause of desk intelligence never running:** 55+ tasks on `long_running` with concurrency 1
-- Bumped `celery-long-running` from `-c 1` to `-c 3`
-- Moved 18 agent rotation tasks → `agents` queue
-- Moved 14 autonomous monitor tasks → `agents` queue
-- Moved 6 conversation/research tasks → `default` queue
-- Moved 4 pipeline execution + 4 narrative drift tasks → `default` queue
-- **long_running now reserved for 7 truly memory-heavy tasks**
-
-#### PR #1147: Add Queue Override to trigger-desks Endpoint
-- `POST /api/home/trigger-desks/` accepts `{"queue": "default"}` to override queue
-- Needed to bypass pre-deploy tasks stuck in Redis long_running queue
-
-**Result:** First successful desk intelligence run ever — BlockchainAuditBrief created (133s, 5 agents). Task success rate hit 99.8%.
+After overnight pipeline run, 40 blogs published (up from 8), 1,089 signal clusters (up from 0), initiative stages 1-5 active. Found and fixed quality issues. Moved 40+ tasks off long_running queue, achieved first desk intelligence run (BlockchainAuditBrief created). Task success rate hit 99.8%.
 
 **PRs:** #1138-#1142, #1144-#1147
 
@@ -148,7 +139,7 @@ Session 1002B centralized `delegate_to_specialist`, `web_search`, and `spider_qu
 | Services | 134 |
 | Celery Tasks | 268 |
 | long_running Queue Tasks | 7 (was 55+) |
-| Intelligence Desks | 4 (Stocks, Sports, Blockchain, Narrative) |
+| Intelligence Desks | 4 (Stocks, Sports, Blockchain, Narrative) — ALL RUNNING |
 | Workspace Tabs | 9 |
 | Frontend Routes | 37 (15 standalone + 22 redirects) |
 | PA Tools | 97 |
@@ -163,14 +154,17 @@ Session 1002B centralized `delegate_to_specialist`, `web_search`, and `spider_qu
 
 ## Known Issues / Open Items
 
-### collect_real_opportunities Infinite Loop
-`ai_core/tasks.py` — `JobIncomeBridge.sync_to_income_builder()` cycles through the same jobs endlessly. Pre-deploy instances consumed all long_running capacity for 3+ hours. Needs: timeout/job-count limit, or fix the loop in `sync_to_income_builder`.
+### collect_real_opportunities Infinite Loop — MITIGATED
+`ai_core/tasks.py` — `JobIncomeBridge.sync_to_income_builder()` cycles through the same jobs endlessly. **Mitigated** with `soft_time_limit=300, time_limit=360` (PR #1149) and moved to `default` queue (PR #1145). Root cause loop in `sync_to_income_builder` not yet fixed.
 
-### Stocks Desk Not Creating MarketIntelligenceBrief
-`MarketIntelligenceCoordinator` errored silently during desk task run. Last brief was 16:05 UTC, desk task at 22:45 UTC produced no new brief. Need to check coordinator health and API keys.
+### Sports Desk: 3/5 Agents Still Failing
+SourceInfo crash fixed (PR #1151), but only 2/5 sports agents succeed. Remaining 3 may need additional fixes beyond the SourceInfo kwarg.
 
-### Sports Desk Not Creating SportsBettingBrief
-`SportsBettingCoordinator.generate_brief()` failed silently. 0 SportsBettingBriefs ever created. Need to check API keys and coordinator health.
+### MemoryCluster Unexpected kwargs
+`MemoryCluster()` receives unexpected kwargs `clustering_method`, `is_active` — recurring error in Railway logs.
+
+### Initiative Auto-Progression Rate Limit
+Auto-progression rate-limited at 40/day. 19 initiatives failed with rate limit in a single run. May need to increase limit or stagger execution.
 
 ### chat_conversations.platform Column Missing
 `Failed to persist PA conversation: column chat_conversations.platform does not exist` -- ChatConversation model has a `platform` field that hasn't been migrated. Create and run migration.
@@ -224,12 +218,12 @@ Stage document generation produced 103 documents but 1208 DRAFT stages still hav
 
 ## What Could Come Next
 
-### Monitor Session 1004 Fix Impact
+### Monitor Session 1005 Results
+- All 4 desks running: verify briefs continue generating on beat schedule
+- Sports desk: investigate remaining 3/5 agent failures
 - Blog novelty scoring: verify topic diversity improves (was 19/40 same topic)
-- Task failure rate: dropped to 99.8% success (verified)
-- Desk briefs: BlockchainAuditBrief created (1 record). SportsBettingBrief still 0. MarketIntelligenceBrief stale.
-- Auto-publish: verify running every 2h on `content` queue
-- Queue distribution: long_running down to 7 tasks (from 55+), heartbeat on broadcast (verified)
+- Queue health: long_running depth 0 after purge, monitor for re-accumulation
+- Purge endpoint: set `PURGE_SECRET` env var on Railway (currently uses default)
 
 ### Intelligence Desk Enhancements
 - Add desk-specific detail pages (click a desk card -> full brief view)
@@ -336,5 +330,13 @@ PA can invoke agents but can't describe their capabilities. Add "what can [agent
 - `SpiderData`: `core.models_unified_system`
 - `CeleryTaskEvent`: `core.models_celery_telemetry`
 - `DeliberationSession`: `core.models_deliberation`
+
+**Purge queue endpoint (Session 1005):**
+```bash
+curl -X POST https://donkey-betz-platform-production.up.railway.app/api/home/purge-queue/ \
+  -H 'Content-Type: application/json' \
+  -d '{"queue": "long_running", "secret": "donkey-purge-2026"}'
+```
+Allowed queues: `long_running`, `ml`, `broadcast`, `content`, `agents`, `sports`. Uses `PURGE_SECRET` env var (default: `donkey-purge-2026`).
 
 **Auth for production API:** `Token 0cdc1c72dba99ea637485076ee952d571440aa30` (User: Donkeyking)
