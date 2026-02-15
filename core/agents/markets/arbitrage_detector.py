@@ -172,6 +172,16 @@ Output Format:
                 except Exception as learn_err:
                     logger.debug(f"Learning outcome recording skipped: {learn_err}")
 
+                # Session 1006: Persist output to Deliverable
+                self._save_to_deliverable(
+                    title=f"Arbitrage Detection: {task[:80]}",
+                    content=response,
+                    deliverable_type='analysis',
+                    category='Arbitrage Detection',
+                    tags=['arbitrage', 'sports'],
+                    metadata={'task': task[:200], 'total_arbs': len(arb_opps), 'events_scanned': len(events)},
+                )
+
                 return AgentResult(
                     success=True,
                     message=response,
