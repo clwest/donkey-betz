@@ -19678,14 +19678,34 @@ and {spider_data_total:,} collected data points. Use this as credibility context
                 'evolved_agents': evolved_agents,
             }
 
+            # Dedup check — skip if a blog with same title exists in last 7 days
+            proposed_title = content_data.get('title', blog_topic or 'AI Insights')
+            from datetime import timedelta as _td
+            recent_cutoff = now - _td(days=7)
+            if SelfBlog.objects.filter(title=proposed_title, created_at__gte=recent_cutoff).exists():
+                logger.info(f"🤖 [SELF-BLOG] Skipping duplicate title: {proposed_title[:60]}")
+                return {'success': False, 'error': 'Duplicate title — skipped'}
+
+            # Sanitize tags — strip prompt-leaked or oversized entries
+            raw_tags = content_data.get('tags', [])
+            _tag_blacklist = ['##', 'REVIEW', 'Write an article', 'Write a blog',
+                              'Real-Time Research', 'research data', 'BLOG POST',
+                              'stage ', '[stage', 'spider data', '\n']
+            clean_tags = [
+                t.strip() for t in raw_tags
+                if isinstance(t, str) and t.strip()
+                and len(t.strip()) <= 50
+                and not any(f.lower() in t.lower() for f in _tag_blacklist)
+            ][:8]
+
             blog = SelfBlog.objects.create(
-                title=content_data.get('title', blog_topic or 'AI Insights'),  # Session 572: Use topic as fallback
-                author='ScheduledTask',  # Session 998: Author tracking
+                title=content_data.get('title', blog_topic or 'AI Insights'),
+                author='ScheduledTask',
                 meta_description=content_data.get('meta_description', ''),
                 intro=content_data.get('intro', ''),
                 sections=content_data.get('sections', []),
                 conclusion=content_data.get('conclusion', ''),
-                tags=content_data.get('tags', []),
+                tags=clean_tags,
                 full_text=content_data.get('full_text', json.dumps(result.data)),
                 tone=tone,
                 word_count=blog_data.get('metadata', {}).get('actual_word_count', 0),

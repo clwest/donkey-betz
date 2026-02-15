@@ -41,8 +41,8 @@ class PublishGate:
     """
 
     # Thresholds for publishing
-    QUALITY_THRESHOLD = 0.65  # Session 1008: Lowered from 0.75 to unblock publish pipeline
-    NOVELTY_THRESHOLD = 0.5   # Session 1008: Lowered from 0.6 to reduce false-negative rejections
+    QUALITY_THRESHOLD = 0.70  # Session 1009: Raised from 0.65 back toward 0.75 — quality > throughput
+    NOVELTY_THRESHOLD = 0.50  # Session 1008: Lowered from 0.6 to reduce false-negative rejections
     STRUCTURE_THRESHOLD = 0.55  # Session 864: Lowered from 0.65 to catch more legitimate content
     # Session 1003: Lowered from 0.5 — MythologyDetectionService gives 0.55-1.0 risk
     # on ALL AI-generated content, blocking every blog from publishing.
@@ -71,6 +71,7 @@ class PublishGate:
         'internally', 'team reflection', 'build log',
         'action items:', 'next steps for us',
         'system reference:', 'internal note:',
+        'donkey betz', 'donkeybetz',  # Platform brand name = internal
     ]
 
     # Signals indicating public content
@@ -204,14 +205,15 @@ class PublishGate:
         """
         score = 0.5  # Base score
 
-        # Word count scoring
+        # Word count scoring — hard reject under 300 words
         word_count = blog.word_count or len(full_text.split())
-        if 500 <= word_count <= 1500:
+        if word_count < 300:
+            # Thin content can never pass quality gate
+            return max(0.0, 0.3 - (300 - word_count) * 0.002)
+        elif 500 <= word_count <= 1500:
             score += 0.15
         elif 300 <= word_count < 500 or 1500 < word_count <= 2500:
             score += 0.10
-        elif word_count < 200:
-            score -= 0.15
 
         # Has intro
         if blog.intro and len(blog.intro) > 50:
