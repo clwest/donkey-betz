@@ -172,26 +172,20 @@ Session 1002B centralized `delegate_to_specialist`, `web_search`, and `spider_qu
 
 ## Known Issues / Open Items
 
-### collect_real_opportunities Infinite Loop — MITIGATED
-`ai_core/tasks.py` — `JobIncomeBridge.sync_to_income_builder()` cycles through the same jobs endlessly. **Mitigated** with `soft_time_limit=300, time_limit=360` (PR #1149) and moved to `default` queue (PR #1145). Root cause loop in `sync_to_income_builder` not yet fixed.
+### collect_real_opportunities — MITIGATED
+`ai_core/tasks.py` — Time limits (PR #1149) + dedup via `get_or_create` (PR #1160). No longer cycles through same jobs. Deeper `processed` flag on OpportunityActionPlan would be ideal but not urgent.
 
-### Initiative Auto-Progression Rate Limit
-Auto-progression rate-limited at 40/day. 19 initiatives failed with rate limit in a single run. May need to increase limit or stagger execution.
-
-### Profile Loading in Async Context
-`Failed to load profile: You cannot call this from an async context` -- Profile loading fails in Celery PA worker. Need `sync_to_async` wrapper or thread-based approach.
+### CoinGecko Spider Not Crawling
+Generic `normalize_item()` in `real_data_collector.py` doesn't properly extract CoinGecko JSON fields. Needs spider-specific parser or field mapping.
 
 ### Agent Knowledge Freshness -- Monitor Impact
 14-day cutoff may be too aggressive. Monitor agent conversation quality.
 
-### CoinGecko Spider Not Crawling
-Crypto price intent works but returns 0 items. CoinGecko spider may need manual trigger or schedule check.
-
 ### Railway Deploy: Migration Lock Risk
 `AddConstraint` during blue-green deploy can hang on lock.
 
-### Legacy Routes Expire in ~2-4 Weeks
-26 legacy routes redirect to workspace tabs. Remove after transition period.
+### Legacy Routes — Remove After Feb 22
+26 legacy redirects in `App.tsx:78-114` (added Feb 8, Session 971b). 9 hardcoded links in components still reference legacy paths — update those FIRST, then remove redirects.
 
 ### Billing + Analytics Orphaned
 `/billing` and `/analytics` need an Admin tab.
@@ -199,26 +193,14 @@ Crypto price intent works but returns 0 items. CoinGecko spider may need manual 
 ### ToolCallRecord Analytics Dashboard
 Data is flowing but no dashboard exists yet.
 
-### FailureSignature Table Empty
-Diagnostic pipeline (Session 856) has 0 records. May need activation.
-
 ### Disconnected Dots Audit (Session 972) -- Ongoing
 Many items remain from the audit: agent output persistence, orphan endpoints, enrichment data loss.
 
 ### sync_celery_beat Parser -- Mitigated
 `--create-only` flag prevents overwrites (PR #1139), but the parser still can't update existing schedules. DB fixes must be applied directly. Full parser rewrite still needed for robustness.
 
-### 89 Initiatives Can't Auto-Progress -- BY DESIGN
-All 89 are `fast_track` at their `max_stage`. Fast-track initiatives intentionally cap at a lower stage count. No fix needed.
-
 ### Blog Topic Diversity -- Fix Deployed
 19/40 published blogs about Security/Homeland due to weak novelty scoring. PR #1141 strengthens scoring — verify after next batch.
-
-### Blog Factual Accuracy
-LLM uses stale training data ("former President Trump" when Trump is current president in 2026). Need to add current context (year, current events) to blog generation system prompt.
-
-### 1208 DRAFT Stages Without Documents
-Stage document generation produced 103 documents but 1208 DRAFT stages still have no document. The `generate_initiative_stage_document` task may need to run more frequently or process more per batch.
 
 ---
 
@@ -245,9 +227,6 @@ Session 972 identified ~200+ items. High-impact remaining items:
 
 ### Fix sync_celery_beat Parser
 Replace regex-based parsing with direct Python import to prevent beat schedule drift.
-
-### Fix Profile Loading Async Issue
-Wrap profile loading in `sync_to_async` or use thread pool to avoid async context errors.
 
 ### Auto-Revision Loop
 If deliberation pipeline returns REVISE verdict, loop back through EditorAgent automatically.

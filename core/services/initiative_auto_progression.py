@@ -49,7 +49,8 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 # Session 914.4: Rate Limit Configuration
-DEFAULT_DAILY_PROGRESSION_LIMIT = 40  # Max stage progressions per day
+# Session 1006: Bumped from 40 → 100 (19 initiatives hit limit in single run)
+DEFAULT_DAILY_PROGRESSION_LIMIT = 100  # Max stage progressions per day
 RATE_LIMIT_CACHE_KEY = "initiative_progression_daily_count"
 RATE_LIMIT_DATE_KEY = "initiative_progression_date"
 
