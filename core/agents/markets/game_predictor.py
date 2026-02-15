@@ -175,8 +175,22 @@ Only assign high confidence (>75) when the market consensus is overwhelming."""
 
         return odds_events, source_info
 
+    @staticmethod
+    def _remove_vig(home_prob: float, away_prob: float) -> tuple:
+        """Remove bookmaker vig to get fair probabilities.
+        Raw implied probs sum > 100% due to vig. Normalize to 100%."""
+        total = home_prob + away_prob
+        if total <= 0:
+            return home_prob, away_prob
+        return home_prob / total, away_prob / total
+
+    @staticmethod
+    def _detect_value(fair_prob: float, market_prob: float, threshold: float = 3.0) -> bool:
+        """Detect if market odds offer value (fair prob exceeds market by threshold %)."""
+        return fair_prob - market_prob >= threshold
+
     def _generate_predictions(self, events: List[Dict]) -> List[Dict]:
-        """Generate predictions from odds data using market consensus."""
+        """Generate predictions from odds data using market consensus with vig removal."""
         predictions = []
 
         for event in events:
@@ -191,13 +205,22 @@ Only assign high confidence (>75) when the market consensus is overwhelming."""
             total_line = event.get('total_line')
             home_spread = event.get('home_spread')
 
-            # Determine predicted winner
-            if home_prob > away_prob:
+            # Remove vig to get fair probabilities
+            fair_home, fair_away = self._remove_vig(home_prob, away_prob)
+
+            # Determine predicted winner from fair probabilities
+            if fair_home > fair_away:
                 predicted_winner = home_team
-                win_confidence = home_prob
+                fair_winner_prob = fair_home
+                raw_winner_prob = home_prob
             else:
                 predicted_winner = away_team
-                win_confidence = away_prob
+                fair_winner_prob = fair_away
+                raw_winner_prob = away_prob
+
+            # Detect value: fair probability meaningfully exceeds raw market probability
+            is_value_pick = self._detect_value(fair_winner_prob, raw_winner_prob)
+            pick_type = 'value' if is_value_pick else 'consensus'
 
             # Estimate scores from total and spread
             predicted_home_score = None
@@ -213,17 +236,15 @@ Only assign high confidence (>75) when the market consensus is overwhelming."""
                 except (ValueError, TypeError):
                     pass
 
-            # Calibrate confidence based on odds consensus
+            # Calibrate confidence based on odds consensus (no favorite inflation)
             bookmaker_count = event.get('bookmaker_count', 1)
-            prob_gap = abs(home_prob - away_prob)
+            prob_gap = abs(fair_home - fair_away) * 100  # Convert to percentage points
 
-            # Higher confidence when: more books agree, wider probability gap
             confidence = min(95, int(
-                30 +  # base
-                min(prob_gap * 0.5, 30) +  # probability gap (max 30)
-                min(bookmaker_count * 3, 20) +  # bookmaker consensus (max 20)
-                (15 if prob_gap > 20 else 0)  # clear favorite bonus
-            ))
+                30 +                                    # base
+                min(prob_gap * 0.5, 30) +               # probability gap (max 30)
+                min(bookmaker_count * 3, 20)             # bookmaker consensus (max 20)
+            ))                                          # max = 80, no favorite inflation
 
             predictions.append({
                 'event_id': event.get('event_id'),
@@ -235,32 +256,39 @@ Only assign high confidence (>75) when the market consensus is overwhelming."""
                 'predicted_winner': predicted_winner,
                 'home_win_probability': round(home_prob, 1),
                 'away_win_probability': round(away_prob, 1),
+                'fair_home_prob': round(fair_home * 100, 1),
+                'fair_away_prob': round(fair_away * 100, 1),
                 'predicted_home_score': predicted_home_score,
                 'predicted_away_score': predicted_away_score,
                 'confidence': confidence,
+                'is_value_pick': is_value_pick,
+                'pick_type': pick_type,
                 'home_odds': event.get('home_odds'),
                 'away_odds': event.get('away_odds'),
                 'total_line': total_line,
                 'spread': home_spread,
                 'bookmaker_count': bookmaker_count,
                 'commence_time': event.get('commence_time'),
-                'key_factors': self._identify_factors(event, prob_gap),
+                'key_factors': self._identify_factors(event, prob_gap, is_value_pick),
             })
 
         # Sort by confidence descending
         predictions.sort(key=lambda x: x['confidence'], reverse=True)
         return predictions
 
-    def _identify_factors(self, event: Dict, prob_gap: float) -> List[str]:
+    def _identify_factors(self, event: Dict, prob_gap: float, is_value_pick: bool = False) -> List[str]:
         """Identify key factors for a prediction."""
         factors = []
 
         if prob_gap > 30:
-            factors.append("Heavy favorite — market consensus overwhelming")
+            factors.append("Strong market lean — consensus overwhelming")
         elif prob_gap > 15:
-            factors.append("Clear favorite — solid market edge")
+            factors.append("Market leans this way — solid edge")
         elif prob_gap < 5:
             factors.append("Toss-up — extremely close matchup")
+
+        if is_value_pick:
+            factors.append("Value detected — fair probability exceeds raw market odds")
 
         if event.get('bookmaker_count', 0) >= 8:
             factors.append(f"Strong consensus across {event['bookmaker_count']} bookmakers")

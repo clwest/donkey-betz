@@ -2983,6 +2983,34 @@ def _american_to_probability(odds: int) -> float:
     else:
         return abs(odds) / (abs(odds) + 100)
 
+
+def _predict_from_odds(home_odds, away_odds, home_team, away_team):
+    """Generate prediction from American odds with vig removal."""
+    home_raw = _american_to_probability(home_odds)
+    away_raw = _american_to_probability(away_odds)
+    total = home_raw + away_raw
+    if total <= 0:
+        return None
+    # Remove vig
+    home_fair = home_raw / total
+    away_fair = away_raw / total
+    # Pick winner from fair probs
+    if home_fair > away_fair:
+        winner, confidence = home_team, round(home_fair * 100)
+    else:
+        winner, confidence = away_team, round(away_fair * 100)
+    # Only predict if meaningful edge (>55% fair)
+    if max(home_fair, away_fair) <= 0.55:
+        return None
+    is_value = abs(home_fair - home_raw) > 0.03 or abs(away_fair - away_raw) > 0.03
+    return {
+        'predicted_winner': winner,
+        'confidence': confidence,
+        'is_value_pick': is_value,
+        'pick_type': 'value' if is_value else 'consensus',
+    }
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_todays_games(request):
@@ -3023,27 +3051,19 @@ def get_todays_games(request):
             except Exception:
                 pass
 
-        # Generate predictions from moneyline odds consensus
+        # Generate predictions from moneyline odds consensus (with vig removal)
         predictions_by_event = {}
         for event in odds_events:
             eid = event.get('event_id', '')
             home_odds = event.get('home_odds')
             away_odds = event.get('away_odds')
             if home_odds and away_odds:
-                home_prob = _american_to_probability(home_odds)
-                away_prob = _american_to_probability(away_odds)
-                if home_prob > away_prob:
-                    winner = event.get('home_team', '')
-                    confidence = round(home_prob * 100)
-                else:
-                    winner = event.get('away_team', '')
-                    confidence = round(away_prob * 100)
-                # Only predict if there's meaningful edge (>55%)
-                if max(home_prob, away_prob) > 0.55:
-                    predictions_by_event[eid] = {
-                        'predicted_winner': winner,
-                        'confidence': confidence,
-                    }
+                pred = _predict_from_odds(
+                    home_odds, away_odds,
+                    event.get('home_team', ''), event.get('away_team', '')
+                )
+                if pred:
+                    predictions_by_event[eid] = pred
 
         # Build response
         games = []
@@ -3085,6 +3105,8 @@ def get_todays_games(request):
                 # Prediction from odds consensus
                 'predicted_winner': prediction.get('predicted_winner', ''),
                 'confidence': prediction.get('confidence', 0),
+                'is_value_pick': prediction.get('is_value_pick', False),
+                'pick_type': prediction.get('pick_type', ''),
             }
 
             # Determine prediction outcome for completed games
@@ -3192,4 +3214,63 @@ def get_sharp_action(request):
 
     except Exception as e:
         logger.error(f"Error getting sharp action: {e}", exc_info=True)
+        return Response({'success': False, 'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_ai_track_record(request):
+    """AI prediction performance history."""
+    import logging
+    logger = logging.getLogger(__name__)
+
+    try:
+        sport = request.GET.get('sport')
+        days = int(request.GET.get('days', 30))
+
+        from sports.prediction_evaluator import PredictionEvaluator
+        from sports.models import MLPrediction
+
+        evaluator = PredictionEvaluator()
+        summary = evaluator.get_model_performance_summary(sport_type=sport, days_back=days)
+        by_sport = evaluator._calculate_accuracy_by_sport()
+
+        recent_qs = MLPrediction.objects.filter(
+            was_correct__isnull=False
+        ).select_related('game', 'predicted_winner', 'game__home_team', 'game__away_team')
+
+        if sport:
+            recent_qs = recent_qs.filter(sport_type=sport)
+
+        recent = recent_qs.order_by('-evaluated_at')[:50]
+
+        recent_list = []
+        for p in recent:
+            try:
+                matchup = f"{p.game.away_team.abbreviation} @ {p.game.home_team.abbreviation}" if p.game else ''
+                game_date = p.game.scheduled_start.date().isoformat() if p.game and p.game.scheduled_start else ''
+            except Exception:
+                matchup = ''
+                game_date = ''
+
+            recent_list.append({
+                'id': p.id,
+                'sport_type': p.sport_type,
+                'predicted_winner': p.predicted_winner.name if p.predicted_winner else '',
+                'confidence': p.confidence,
+                'was_correct': p.was_correct,
+                'game_date': game_date,
+                'matchup': matchup,
+                'evaluated_at': p.evaluated_at.isoformat() if p.evaluated_at else '',
+            })
+
+        return Response({
+            'success': True,
+            'summary': summary,
+            'by_sport': by_sport,
+            'recent_predictions': recent_list,
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting AI track record: {e}", exc_info=True)
         return Response({'success': False, 'error': str(e)}, status=500)
