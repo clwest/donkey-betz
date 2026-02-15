@@ -158,6 +158,9 @@ class ContentDeliberationRunner:
         if result['status'] != 'published':
             if decision == 'KILL':
                 result['status'] = 'killed'
+            elif decision == 'REVISE':
+                # Session 1007: REVISE blogs → needs_enhancement for auto-revision loop
+                result['status'] = 'needs_enhancement'
             else:
                 result['status'] = 'draft'
 
@@ -354,7 +357,8 @@ class ContentDeliberationRunner:
             status = 'pending_review'
             content_type = 'public'
         else:
-            status = 'draft'
+            # Session 1007: REVISE → needs_enhancement so EditorAgent picks them up
+            status = 'needs_enhancement'
             content_type = 'public'
 
         # Check if all reviewers failed
