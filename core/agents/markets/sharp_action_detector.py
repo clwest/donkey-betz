@@ -206,6 +206,10 @@ Focus on ACTIONABLE signals where soft books still have stale lines."""
             if home_o is None or away_o is None:
                 continue
 
+            # Filter out extreme/junk American odds (e.g. -100000)
+            if abs(home_o) > 10000 or abs(away_o) > 10000:
+                continue
+
             home_odds_list.append(home_o)
             away_odds_list.append(away_o)
 
