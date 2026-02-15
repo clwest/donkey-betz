@@ -142,7 +142,7 @@ class ContentDeliberationRunner:
                     'mythology_score': gate_result.mythology_score,
                 }
                 if gate_result.decision == 'publish':
-                    blog.status = 'pending_review'
+                    blog.status = 'approved'  # Session 1008: Direct to approved (was pending_review, blocking auto-publish)
                     blog.content_type = 'public'
                     blog.publish_ready = True  # Session 998: Gate passed → mark publish-ready
                     blog.save(update_fields=['status', 'content_type', 'publish_ready'])
