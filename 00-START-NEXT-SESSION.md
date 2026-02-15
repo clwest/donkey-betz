@@ -159,7 +159,7 @@ Session 1002B centralized `delegate_to_specialist`, `web_search`, and `spider_qu
 | long_running Queue Tasks | 7 (was 55+) |
 | Intelligence Desks | 4 (Stocks, Sports, Blockchain, Narrative) — ALL RUNNING |
 | Workspace Tabs | 9 |
-| Frontend Routes | 37 (15 standalone + 22 redirects) |
+| Frontend Routes | 24 (21 pages + 3 redirects) |
 | PA Tools | 97 |
 | PA Intents | 38 |
 | Enrichment Services | 8 |
