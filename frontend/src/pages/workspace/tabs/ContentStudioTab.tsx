@@ -37,6 +37,7 @@ import {
   Send,
   AlertCircle,
   Sparkles,  // Session 865: For Enhance button
+  Megaphone,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { api, contentApi, podcastApi, distributionApi, blogsApi, voiceMarketplaceApi, type Blog } from '@/lib/api'
@@ -46,6 +47,7 @@ import { PanelDebugDrawer } from '@/components/PanelDebugDrawer'
 import { ConceptForgeTab } from './ConceptForgeTab'
 import { VoiceMarketplaceTab } from './VoiceMarketplaceTab'
 import { FilesTab } from './FilesTab'
+import { CampaignTab } from './CampaignTab'
 import type { ContentStudioSubTab } from '../types'
 
 // Sub-tab configuration
@@ -64,6 +66,7 @@ const subTabs: Array<{ id: ContentSubTab; label: string; icon: typeof Image; des
   { id: 'dossiers', label: 'Dossiers', icon: Sparkles, description: 'ConceptForge pipeline' },
   { id: 'voices', label: 'Voices', icon: Music, description: 'Voice marketplace' },
   { id: 'files', label: 'Files', icon: FileText, description: 'Workspace file browser' },
+  { id: 'campaigns', label: 'Campaigns', icon: Megaphone, description: 'Marketing campaign orchestrator' },
 ]
 
 interface ContentStudioTabProps {
@@ -111,6 +114,7 @@ export function ContentStudioTab({ initialSubTab, activeWorkspaceId }: ContentSt
       {activeSubTab === 'dossiers' && <ConceptForgeTab />}
       {activeSubTab === 'voices' && <VoiceMarketplaceTab />}
       {activeSubTab === 'files' && <FilesTab activeWorkspaceId={activeWorkspaceId} />}
+      {activeSubTab === 'campaigns' && <CampaignTab />}
 
       <PanelDebugDrawer scope="workspace:content" />
     </div>

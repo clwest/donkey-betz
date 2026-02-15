@@ -32,10 +32,10 @@ export type OrchestrationSubTab = 'monitor' | 'workflows' | 'automation' | 'hive
 export type ConsciousnessSubTab = 'memory' | 'orchestra' | 'mood' | 'relationships' | 'capsules' | 'timetravel'
 export type IntelligenceSubTab = 'reasoning' | 'safety' | 'collective'
 export type DataSourcesSubTab = 'spiders' | 'feed' | 'learning'
-export type ContentStudioSubTab = 'gallery' | 'channels' | 'blogs' | 'podcast' | 'distribution' | 'dossiers' | 'voices' | 'files'
+export type ContentStudioSubTab = 'gallery' | 'channels' | 'blogs' | 'podcast' | 'distribution' | 'dossiers' | 'voices' | 'files' | 'campaigns'
 
 // Session 971b: New merged tab sub-tab types
-export type SystemSubTab = 'health' | 'integration' | 'services' | 'llm' | 'monitor' | 'workflows' | 'hivemind' | 'triggers'
+export type SystemSubTab = 'health' | 'integration' | 'services' | 'llm' | 'monitor' | 'workflows' | 'hivemind' | 'triggers' | 'toolcalls'
 export type DataIntelSubTab = 'spiders' | 'feed' | 'learning' | 'reasoning' | 'collective' | 'safety'
 
 /**
