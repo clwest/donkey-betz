@@ -367,12 +367,13 @@ app.conf.beat_schedule = {
         }
     },
     # Session 915: Stage Document Backfill - Generate missing stage documents
+    # Session 1006: Increased batch 50→200, frequency */30→*/15 to clear 1208 backlog
     'backfill-stage-documents': {
         'task': 'core.tasks.backfill_stage_documents',
-        'schedule': crontab(minute='*/30'),  # Every 30 minutes
-        'kwargs': {'stage_num': 1, 'limit': 50},
+        'schedule': crontab(minute='*/15'),  # Every 15 minutes
+        'kwargs': {'stage_num': 1, 'limit': 200},
         'options': {
-            'expires': 1800,  # Expire after 30 minutes
+            'expires': 900,  # Expire after 15 minutes
             'queue': 'default',
         }
     },
