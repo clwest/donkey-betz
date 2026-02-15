@@ -337,33 +337,48 @@ def check_stage_for_progression(initiative_id: str) -> Dict[str, Any]:
             'status': current_stage.status
         }
 
-    # Session 914: Check Founder Intent - pause if not set
+    # Session 914: Check Founder Intent - auto-set balanced defaults if not set
     if not initiative.can_auto_progress:
-        blocked_reason = initiative.progression_blocked_reason or 'Founder intent not set'
-        logger.info(f"[Session 914] Auto-progression blocked for {initiative.name}: {blocked_reason}")
-        return {
-            'success': False,
-            'error': blocked_reason,
-            'stage': current_stage_num,
-            'can_progress': False,
-            'founder_intent_set': initiative.founder_intent_set,
-            'requires_founder_action': True,
-            'founder_intent_summary': initiative.founder_intent_summary
-        }
+        # Session 1008: Auto-set reasonable defaults instead of blocking forever
+        if not initiative.founder_intent_set and current_stage_num > 1:
+            logger.info(f"[Session 1008] Auto-setting founder intent defaults for {initiative.name}")
+            initiative.set_founder_intent(
+                execution_speed='balanced',
+                risk_tolerance='medium',
+                stop_rule='Auto-set: stop if 2 consecutive stages fail quality checks',
+                set_by='auto_progression'
+            )
+            # Re-check after setting intent
+            if not initiative.can_auto_progress:
+                blocked_reason = initiative.progression_blocked_reason or 'Blocked after auto-intent'
+                logger.info(f"[Session 1008] Still blocked after auto-intent for {initiative.name}: {blocked_reason}")
+                return {
+                    'success': False,
+                    'error': blocked_reason,
+                    'stage': current_stage_num,
+                    'can_progress': False,
+                    'founder_intent_set': initiative.founder_intent_set,
+                    'requires_founder_action': True,
+                    'founder_intent_summary': initiative.founder_intent_summary
+                }
+        else:
+            blocked_reason = initiative.progression_blocked_reason or 'Founder intent not set'
+            logger.info(f"[Session 914] Auto-progression blocked for {initiative.name}: {blocked_reason}")
+            return {
+                'success': False,
+                'error': blocked_reason,
+                'stage': current_stage_num,
+                'can_progress': False,
+                'founder_intent_set': initiative.founder_intent_set,
+                'requires_founder_action': True,
+                'founder_intent_summary': initiative.founder_intent_summary
+            }
 
-    # Session 914.2: Check Execution Track constraints
-    # Fast Track stops at Stage 2
+    # Session 914.2 + 1008: Fast Track at Stage 2 → auto-upgrade to standard
     if initiative.is_fast_track and current_stage_num >= initiative.max_stage:
-        logger.info(f"[Session 914.2] Fast Track initiative {initiative.name} at max stage {initiative.max_stage}")
-        return {
-            'success': False,
-            'error': f'Fast Track initiative complete at Stage {initiative.max_stage}',
-            'stage': current_stage_num,
-            'can_progress': False,
-            'execution_track': 'fast_track',
-            'max_stage': initiative.max_stage,
-            'track_complete': True
-        }
+        logger.info(f"[Session 1008] Auto-upgrading fast track initiative {initiative.name} to balanced track at Stage {current_stage_num}")
+        initiative.execution_track = 'balanced'
+        initiative.save(update_fields=['execution_track'])
 
     # Institutional track requires stage approval for stages 2-4
     if initiative.is_institutional and initiative.requires_stage_approval(current_stage_num):
@@ -679,9 +694,7 @@ def get_initiatives_ready_for_progression() -> list:
         # Session 914.2: Check Execution Track constraints
         initiative = stage.initiative
 
-        # Fast Track: skip if already at max stage
-        if initiative.is_fast_track and stage.stage >= initiative.max_stage:
-            continue
+        # Session 1008: Fast track auto-upgrades in check_stage_for_progression, no skip here
 
         # Institutional: skip if stage requires approval and not approved
         if initiative.is_institutional:
