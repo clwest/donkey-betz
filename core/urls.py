@@ -1459,9 +1459,10 @@ except ImportError:
 router = DefaultRouter()
 
 # Session 972: Audit trail ViewSets
-from core.views_audit_api import DecisionRecordViewSet, ToolCallRecordViewSet, SignalClusterViewSet
+from core.views_audit_api import DecisionRecordViewSet, ToolCallRecordViewSet, ToolCallAggregateViewSet, SignalClusterViewSet
 router.register(r'decision-records', DecisionRecordViewSet, basename='decision-record')
 router.register(r'tool-call-records', ToolCallRecordViewSet, basename='tool-call-record')
+router.register(r'tool-call-aggregates', ToolCallAggregateViewSet, basename='tool-call-aggregate')  # Session 1007
 router.register(r'signal-clusters', SignalClusterViewSet, basename='signal-cluster')
 
 from core.views_diagnostics import (
