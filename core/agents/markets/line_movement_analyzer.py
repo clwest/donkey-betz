@@ -337,7 +337,7 @@ Rate movements: STEAM (urgent), SHARP (high value), DRIFT (moderate), NOISE (ign
                 )}
             ]
 
-            request = LLMRequest(messages=messages, max_tokens=500, temperature=0.3)
+            request = LLMRequest(prompt="", messages=messages, max_tokens=500, temperature=0.3)
             response = registry.generate(request, preferred_providers=['openai', 'anthropic'])
             return response.content if response else "LLM analysis unavailable"
 
