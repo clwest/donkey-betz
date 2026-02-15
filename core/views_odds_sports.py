@@ -3272,7 +3272,7 @@ def get_ai_track_record(request):
 
         def _serialize_prediction(p, include_result=True):
             try:
-                matchup = f"{p.game.away_team.abbreviation} @ {p.game.home_team.abbreviation}" if p.game else ''
+                matchup = f"{p.game.away_team.name} @ {p.game.home_team.name}" if p.game else ''
                 game_date = p.game.scheduled_start.date().isoformat() if p.game and p.game.scheduled_start else ''
             except Exception:
                 matchup = ''
