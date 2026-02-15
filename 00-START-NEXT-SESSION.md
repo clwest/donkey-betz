@@ -194,7 +194,7 @@ Generic `normalize_item()` in `real_data_collector.py` doesn't properly extract 
 Data is flowing but no dashboard exists yet.
 
 ### Disconnected Dots Audit (Sessions 646/735/972) -- Ongoing
-Decision execution system is fully wired (DecisionEnforcerAgent + ConversationOrchestrator). ImageAgent now persists to Deliverable (PR #1162). Remaining: 87+ orphan API endpoints (no frontend consumers), 28 agents without `_save_to_deliverable()` calls, 85-95% enrichment data truncation, 8 orphaned services (recommendation_engine, ab_testing, discord_voice, etc), 6 empty model tables.
+Decision execution system is fully wired (DecisionEnforcerAgent + ConversationOrchestrator). 7 agents now persist to Deliverable (PRs #1162, #1163). Enrichment truncation fixed (PR #1164). Remaining: 87+ orphan API endpoints (no frontend consumers), ~21 agents without `_save_to_deliverable()` calls, 2 empty model tables (PodcastShow — broken write path, Campaign — feature not activated). "8 orphaned services" were re-audited: 7 of 8 are actively used, only `decision_executor.py` is truly orphaned (already in `_deprecated/`).
 
 ### sync_celery_beat Parser -- Mitigated
 `--create-only` flag prevents overwrites (PR #1139), but the parser still can't update existing schedules. DB fixes must be applied directly. Full parser rewrite still needed for robustness.
@@ -220,10 +220,9 @@ Decision execution system is fully wired (DecisionEnforcerAgent + ConversationOr
 
 ### Continue Disconnected Dots Audit
 Session 972 identified ~200+ items. High-impact remaining items:
-- Agent output persistence (ResearchAgent, ImageAgent, TrendAnalysisAgent outputs vanish)
-- DecisionEnforcerAgent has `DecisionRecord` model but wiring incomplete
-- 85-95% enrichment data loss from truncation
+- ~21 agents still without `_save_to_deliverable()` (7 done in PRs #1162, #1163)
 - Orphan API endpoints with no frontend consumers
+- PodcastShow model never created (PodcastEpisode FK references nonexistent parent)
 
 ### Fix sync_celery_beat Parser
 Replace regex-based parsing with direct Python import to prevent beat schedule drift.
