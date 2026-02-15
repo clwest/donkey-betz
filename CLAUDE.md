@@ -1,6 +1,6 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** February 12, 2026 - Session 1000C
+**Last Updated:** February 14, 2026 - Session 1007
 
 ## Quick Start
 
@@ -19,25 +19,25 @@ open http://localhost:8000/ai-studio/
 
 | Component | Count | Details |
 |-----------|-------|---------|
-| **Agents** | 82 | 54 routable, 25 non-routable, 26 provenance-tracked |
+| **Agents** | 92 | 54 routable, 25 non-routable, 26 provenance-tracked |
 | **Spiders** | 79 | 74 working, 5 need API keys |
 | **PA Tools** | 97 | 38 intents, 53 tool handlers, 8 enrichment services |
 | **LLM Providers** | 6 | OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini |
-| **Database Models** | 386+ | PostgreSQL + pgvector |
-| **Celery Tasks** | 331 | 7 workers, dedicated PA queue |
+| **Database Models** | 395+ | PostgreSQL + pgvector |
+| **Celery Tasks** | 268 | 7 workers, dedicated PA queue |
 | **Services** | 134 | Signal aggregation, content deliberation, auto-spawning |
 | **Body Systems** | 9 | HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR, BRAIN, SKIN |
 | **Advisors** | 25 | Famous figures + domain experts |
-| **Frontend** | 2,253 KB | 9 workspace tabs, 24 routes |
+| **Frontend** | 4,400 KB | 9 workspace tabs, 24 routes |
 
 ## Project Structure
 
 ### Key Directories
-- `core/agents/` - 82 agents with learning hooks
+- `core/agents/` - 92 agents with learning hooks
 - `core/services/` - 134 service classes
 - `ai_core/spiders/` - 77 spiders
 - `docs/topics/` - Embedding-optimized subsystem docs (current state)
-- `docs/handoffs/` - 616 session handoff documents (build history)
+- `docs/handoffs/` - 625 session handoff documents (build history)
 
 ### Key Files
 | File | Purpose |
@@ -61,7 +61,7 @@ Detailed current-state docs for each subsystem (designed for embedding):
 |------------|--------|
 | [docs/topics/personal-assistant.md](docs/topics/personal-assistant.md) | PA intent routing, 50 tools, enrichment, async flow |
 | [docs/topics/content-pipeline.md](docs/topics/content-pipeline.md) | ClaimsPack, deliberation, reviewers, PublishGate |
-| [docs/topics/agent-system.md](docs/topics/agent-system.md) | 76 agents, routing, ToolCallRecord, provenance |
+| [docs/topics/agent-system.md](docs/topics/agent-system.md) | 92 agents, routing, ToolCallRecord, provenance |
 | [docs/topics/initiative-pipeline.md](docs/topics/initiative-pipeline.md) | Dreams, 5-stage pipeline, signals, action items |
 | [docs/topics/celery-workers.md](docs/topics/celery-workers.md) | 7 workers, queues, memory management, observability |
 | [docs/topics/body-systems.md](docs/topics/body-systems.md) | 9 health systems, coordinator, scoring |
