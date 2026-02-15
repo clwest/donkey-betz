@@ -1,6 +1,6 @@
 # Frontend & UI
 
-React + TypeScript single-page application with 9 workspace tabs, collapsible sidebar, Command Center hub, and PA chat integration. Bundle: 2,376 KB.
+React + TypeScript single-page application with 9 workspace tabs, collapsible sidebar, Command Center hub, and PA chat integration. Bundle: 2,836 KB.
 
 ## Workspace Architecture
 
@@ -9,7 +9,7 @@ React + TypeScript single-page application with 9 workspace tabs, collapsible si
 | Tab | Sub-tabs | Purpose |
 |-----|----------|---------|
 | **Command Center** | "Now" hub + PA chat | 3-panel strip: Attention Queue, Active Work, System Pulse |
-| **Content Studio** | Content, Blogs, Podcasts, Calendar, Dossiers, Voices, Files | Content creation and management |
+| **Content Studio** | Content, Blogs, Podcasts, Calendar, Dossiers, Voices, Files, Campaigns, Deliverables | Content creation and management |
 | **Orchestration** | Monitor, Sessions, Execution | Agent orchestration and HiveMind sessions |
 | **Intelligence** | Data Sources, Intelligence | Spider data and signal clusters |
 | **Markets** | Predictions, Odds, Arbitrage | Market analysis and predictions |

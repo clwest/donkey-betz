@@ -50,7 +50,7 @@ curl -X POST /api/v1/auth/login/ \
 | `/api/public-stats/` | GET | Public platform statistics |
 | `/api/spider-intelligence/dashboard-stats/` | GET | Spider network statistics |
 | `/api/spider-intelligence/detail/<name>/` | GET | Spider detail with articles |
-| `/api/agent-intelligence/detail/<name>/` | GET | Agent detail with stats/transfers |
+| `/api/agent-intelligence/detail/<name>/` | GET | ~~Removed Session 1009~~ |
 | `/api/situation-intelligence/detail/<type>/` | GET | Situation detail with triggers |
 | `/api/intelligence/cross-references/` | GET | Cross-reference mappings |
 
@@ -66,7 +66,7 @@ curl -X POST /api/v1/auth/login/ \
 | `/api/agents/<id>/` | GET | Get agent details | Required |
 | `/api/agent-dashboard/` | GET | Agent dashboard data | Required |
 | `/api/agent-evolution/` | GET | Agent evolution status | Required |
-| `/api/agent-mood/` | GET | Agent mood data | Required |
+| `/api/agent-mood/` | GET | ~~Removed Session 1009~~ | N/A |
 | `/api/agent-relationships/` | GET | Agent relationships | Required |
 | `/api/agent-conversations/` | GET | Agent conversations | Required |
 | `/api/agent-dreams/` | GET | Agent dreams | Required |
@@ -111,7 +111,7 @@ curl -X POST /api/v1/auth/login/ \
 |----------|--------|-------------|------|
 | `/api/spider-intelligence/dashboard-stats/` | GET | Spider counts by category | Public |
 | `/api/spider-intelligence/detail/<name>/` | GET | Spider articles/data | Public |
-| `/api/agent-intelligence/detail/<name>/` | GET | Agent stats, knowledge, transfers | Public |
+| `/api/agent-intelligence/detail/<name>/` | GET | ~~Removed Session 1009~~ | N/A |
 | `/api/situation-intelligence/detail/<type>/` | GET | Situation triggers, fires, events | Public |
 | `/api/intelligence/cross-references/` | GET | Spider→Agent→Situation mappings | Public |
 

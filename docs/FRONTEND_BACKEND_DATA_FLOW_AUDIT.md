@@ -188,17 +188,9 @@
 
 ---
 
-### 11. AgentMoodPage.tsx
-**Location:** `frontend/src/pages/AgentMoodPage.tsx` (Session 749)
-**Data Coverage:** ~90%
+### ~~11. AgentMoodPage.tsx~~ — Removed Session 1009
 
-| Component | API Endpoint | Backend View | Database Model | Status |
-|-----------|--------------|--------------|----------------|--------|
-| Overview | `GET /agent-mood/` | views_agent_learning.py | AgentMood | ✅ Live |
-| Agent Mood | `GET /agent-mood/agent/{id}/` | views_agent_learning.py | AgentMood | ✅ Live |
-| Mood History | `GET /agent-mood/agent/{id}/history/` | views_agent_learning.py | MoodHistory | ✅ Live |
-| Rules | `GET /agent-mood/rules/` | views_agent_learning.py | MoodRule | ✅ Live |
-| Set Mood | `POST /agent-mood/agent/{id}/set/` | views_agent_learning.py | AgentMood | ✅ Live |
+All `/api/agent-mood/` endpoints and `views_agent_mood.py` deleted in orphan cleanup. Frontend page is a legacy redirect.
 
 ---
 

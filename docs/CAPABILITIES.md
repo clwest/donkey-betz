@@ -2245,7 +2245,7 @@ The Command Center tab in AI Studio provides a unified view of the platform's in
 | Panel | API Endpoint | Shows |
 |-------|--------------|-------|
 | **Spider Detail** | `/api/spider-intelligence/detail/<name>/` | Actual articles with clickable links, metadata |
-| **Agent Detail** | `/api/agent-intelligence/detail/<name>/` | Stats, knowledge sources, transfer relationships |
+| **Agent Detail** | ~~`/api/agent-intelligence/detail/<name>/`~~ | Removed Session 1009 |
 | **Situation Detail** | `/api/situation-intelligence/detail/<type>/` | Triggers, total fires, recent events |
 
 ### Features
@@ -2263,7 +2263,7 @@ The Command Center tab in AI Studio provides a unified view of the platform's in
 ```
 GET /api/spider-intelligence/dashboard-stats/
 GET /api/spider-intelligence/detail/<spider_name>/
-GET /api/agent-intelligence/detail/<agent_name>/
+# GET /api/agent-intelligence/detail/<agent_name>/  # Removed Session 1009
 GET /api/situation-intelligence/detail/<situation_type>/
 GET /api/intelligence/cross-references/
 ```
