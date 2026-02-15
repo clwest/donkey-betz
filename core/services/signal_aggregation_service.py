@@ -484,6 +484,15 @@ class SignalAggregationService:
             if existing:
                 continue
 
+            # Skip clusters with no meaningful keywords (all stopwords)
+            meaningful = [
+                kw for kw in cluster.keywords[:6]
+                if kw.lower() not in self._TOPIC_STOPWORDS and len(kw) > 2
+            ]
+            if not meaningful:
+                logger.debug(f"Skipping cluster {cluster.id}: no meaningful keywords in {cluster.keywords[:5]}")
+                continue
+
             # Generate topic name and description
             topic_name = self._generate_topic_name(cluster)
             description = self._generate_topic_description(cluster)
@@ -515,10 +524,22 @@ class SignalAggregationService:
 
         return created_topics
 
+    # Stopwords that produce garbled topic names when joined
+    _TOPIC_STOPWORDS = {
+        'new', 'now', 'before', 'how to', 'want', 'need', 'explain',
+        'help with', 'looking for', 'instead', 'struggling with',
+        'trending', 'growing', 'rising', 'with', 'and', 'the', 'for',
+        'what', 'why', 'where', 'when', 'how', 'can', 'should', 'would',
+        'get', 'make', 'use', 'find', 'best', 'top', 'good', 'more',
+    }
+
     def _generate_topic_name(self, cluster: SignalCluster) -> str:
         """Generate a discussion topic name from cluster."""
-        # Use cluster keywords to form topic
-        keywords = cluster.keywords[:3]
+        # Filter out stopwords that produce word-salad titles
+        keywords = [
+            kw for kw in cluster.keywords[:6]
+            if kw.lower() not in self._TOPIC_STOPWORDS and len(kw) > 2
+        ][:3]
 
         topic_templates = {
             'demand_spike': "Addressing {} demand",
@@ -531,7 +552,12 @@ class SignalAggregationService:
         }
 
         template = topic_templates.get(cluster.pattern_type, "Analyzing {}")
-        topic_phrase = ' and '.join(keywords) if keywords else cluster.name
+
+        if keywords:
+            topic_phrase = ', '.join(keywords)
+        else:
+            # All keywords were stopwords — use cluster name as fallback
+            topic_phrase = cluster.name
 
         return template.format(topic_phrase)
 
