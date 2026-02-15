@@ -126,12 +126,12 @@ The following endpoints were migrated from `/api/v1/` to `/api/`:
 | Endpoint | Status | Frontend Updates |
 |----------|--------|------------------|
 | `/api/llm-routing/*` | MIGRATED | InfrastructureTab.tsx (3 calls) |
-| `/api/style-memory/*` | MIGRATED | None needed |
-| `/api/coleadership/*` | MIGRATED | None needed |
-| `/api/render-jobs/*` | MIGRATED | None needed |
+| `/api/style-memory/*` | REMOVED (Session 1009) | None needed |
+| `/api/coleadership/*` | REMOVED (Session 1009) | None needed |
+| `/api/render-jobs/*` | REMOVED (Session 1009) | None needed |
 | `/api/pipelines/*` | MIGRATED | None needed |
 | `/api/mythology/*` | MIGRATED | IntelligenceTab.tsx (2 calls) |
-| `/api/odds-calc/*` | MIGRATED | None needed |
+| `/api/odds-calc/*` | REMOVED (Session 1009) | None needed |
 | `/api/initiatives/*` | MIGRATED | None needed |
 
 **Note:** Research and Reasoning APIs remain at `/api/v1/` due to heavy frontend usage - will require dedicated migration session.
