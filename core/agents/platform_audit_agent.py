@@ -244,6 +244,16 @@ Include counts, categorizations, and actionable findings."""
 
             execution_time = int((time.time() - start_time) * 1000)
 
+            # Session 1006: Persist output to Deliverable
+            self._save_to_deliverable(
+                title=f"Platform Audit: {task[:80]}",
+                content=result.get('message', 'Audit completed'),
+                deliverable_type='analysis',
+                category='Platform Audit',
+                tags=['audit', 'platform'],
+                metadata={'task': task[:200]},
+            )
+
             return AgentResult(
                 success=True,
                 message=result.get('message', 'Audit completed'),

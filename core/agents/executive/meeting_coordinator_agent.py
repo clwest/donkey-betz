@@ -250,6 +250,16 @@ You facilitate but don't make decisions - you synthesize and document."""
                         tool_calls=tool_calls_made
                     )
 
+                    # Session 1006: Persist output to Deliverable
+                    self._save_to_deliverable(
+                        title=f"Meeting Coordination: {task[:80]}",
+                        content=result.message,
+                        deliverable_type='document',
+                        category='Meeting Coordination',
+                        tags=['meeting', 'executive'],
+                        metadata={'task': task[:200]},
+                    )
+
                     # Session 380: Learning hooks for collective intelligence
                     self._record_learning_outcome(
                         result=result,
