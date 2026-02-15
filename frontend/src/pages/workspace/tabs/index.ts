@@ -48,3 +48,7 @@ export { BoardroomTab } from './BoardroomTab'
 // Session 971b: Merged adapter tabs (9-tab model)
 export { SystemTab } from './SystemTab'
 export { DataIntelTab } from './DataIntelTab'
+
+// Session 1008: Campaign Orchestrator + ToolCall Analytics
+export { CampaignTab } from './CampaignTab'
+export { ToolCallAnalyticsTab } from './ToolCallAnalyticsTab'

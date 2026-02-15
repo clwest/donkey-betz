@@ -15,11 +15,13 @@ import {
   Workflow,
   Brain,
   Zap,
+  BarChart3,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { InfrastructureTab } from './InfrastructureTab'
 import { OrchestrationTab } from './OrchestrationTab'
 import { TriggersTab } from './TriggersTab'
+import { ToolCallAnalyticsTab } from './ToolCallAnalyticsTab'
 import type { SystemSubTab } from '../types'
 
 interface SystemTabProps {
@@ -29,7 +31,7 @@ interface SystemTabProps {
 }
 
 // Which merged sub-tab should render which original component
-type DelegateView = 'infra' | 'orch' | 'triggers'
+type DelegateView = 'infra' | 'orch' | 'triggers' | 'toolcalls'
 
 const subTabs: Array<{
   id: SystemSubTab
@@ -48,6 +50,8 @@ const subTabs: Array<{
   { id: 'hivemind', label: 'HiveMind', icon: Brain, delegate: 'orch' },
   // From Triggers
   { id: 'triggers', label: 'Triggers', icon: Zap, delegate: 'triggers' },
+  // Session 1008: Tool Call Analytics
+  { id: 'toolcalls', label: 'Tool Calls', icon: BarChart3, delegate: 'toolcalls' },
 ]
 
 export function SystemTab({ initialSubTab, showSuccess, showError }: SystemTabProps) {
@@ -87,6 +91,7 @@ export function SystemTab({ initialSubTab, showSuccess, showError }: SystemTabPr
       {delegate === 'triggers' && (
         <TriggersTab showSuccess={showSuccess} showError={showError} />
       )}
+      {delegate === 'toolcalls' && <ToolCallAnalyticsTab />}
     </div>
   )
 }
