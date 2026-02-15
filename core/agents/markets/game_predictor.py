@@ -158,7 +158,7 @@ Only assign high confidence (>75) when the market consensus is overwhelming."""
 
         source_info = SourceInfo(
             name='TheOddsSpider',
-            data_type='sports_odds',
+            source_type='spider_data',
             record_count=len(odds_events),
             freshness_hours=0.0,
         )
