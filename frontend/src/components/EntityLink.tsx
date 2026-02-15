@@ -49,7 +49,7 @@ const ENTITY_ROUTES: Record<EntityType, string> = {
   gate: '/intelligence',
   pilot: '/intelligence',
   prediction: '/intelligence',
-  body_system: '/body-health',
+  body_system: '/workspace?tab=system',
   workflow: '/intelligence',
 }
 
