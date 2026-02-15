@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
-type BettingTab = 'hub' | 'overview' | 'games' | 'top_plays' | 'sharp' | 'arbitrage' | 'markets' | 'odds' | 'bankroll' | 'wagers' | 'watching'
+type BettingTab = 'hub' | 'overview' | 'games' | 'top_plays' | 'sharp' | 'arbitrage' | 'markets' | 'odds' | 'bankroll' | 'wagers' | 'watching' | 'track_record'
 
 const tabs = [
   { id: 'hub' as BettingTab, label: 'Hub', icon: Newspaper },
@@ -23,6 +23,7 @@ const tabs = [
   { id: 'odds' as BettingTab, label: 'Live Odds', icon: Activity },
   { id: 'bankroll' as BettingTab, label: 'Bankroll', icon: DollarSign },
   { id: 'wagers' as BettingTab, label: 'My Wagers', icon: Trophy },
+  { id: 'track_record' as BettingTab, label: 'AI Record', icon: BarChart3 },
 ]
 
 interface StatCardProps {
@@ -678,6 +679,13 @@ export default function BettingPage() {
     queryKey: ['hub-sports-injuries'],
     queryFn: () => sportsHubApi.getFeed('sports_injuries', 10),
     enabled: activeTab === 'hub',
+  })
+
+  // AI Track Record
+  const { data: trackRecordData, isLoading: trackRecordLoading } = useQuery({
+    queryKey: ['betting-track-record'],
+    queryFn: () => bettingApi.trackRecord(),
+    enabled: activeTab === 'track_record',
   })
 
   const stats: Partial<BettingStatsData> = statsData?.data?.stats || statsData?.data || {}
@@ -1349,6 +1357,9 @@ export default function BettingPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-accent-purple">{game.confidence}%</span>
+                          {game.pick_type === 'value' && (
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-accent-amber/20 text-accent-amber font-bold">VALUE</span>
+                          )}
                           {game.prediction_correct === true && (
                             <span className="text-xs px-1.5 py-0.5 rounded bg-accent-green/20 text-accent-green font-bold">W</span>
                           )}
@@ -2161,6 +2172,140 @@ export default function BettingPage() {
               <p className="text-gray-400">Start placing bets to track your performance</p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* AI Track Record Tab */}
+      {activeTab === 'track_record' && (
+        <div className="space-y-6">
+          {trackRecordLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 size={32} className="animate-spin text-primary-400" />
+            </div>
+          ) : (() => {
+            const summary = trackRecordData?.data?.summary || {}
+            const bySport = trackRecordData?.data?.by_sport || {}
+            const recentPreds = trackRecordData?.data?.recent_predictions || []
+
+            return (
+              <>
+                {/* Summary Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <StatCard
+                    label="Accuracy"
+                    value={`${summary.accuracy_percent ?? 0}%`}
+                    icon={Target}
+                    color="bg-accent-green"
+                  />
+                  <StatCard
+                    label="Total Predictions"
+                    value={summary.total_predictions ?? 0}
+                    icon={Brain}
+                    color="bg-primary-600"
+                  />
+                  <StatCard
+                    label="Avg Confidence"
+                    value={`${summary.average_confidence ?? 0}%`}
+                    icon={Activity}
+                    color="bg-accent-purple"
+                  />
+                  <StatCard
+                    label="Calibration"
+                    value={`${summary.calibration_score ?? 0}%`}
+                    icon={BarChart3}
+                    color={summary.is_well_calibrated ? 'bg-accent-green' : 'bg-accent-amber'}
+                  />
+                </div>
+
+                {/* By Sport Breakdown */}
+                {Object.keys(bySport).length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">By Sport</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {Object.entries(bySport).map(([sport, data]: [string, any]) => (
+                        <div key={sport} className="card p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium uppercase text-sm">{sport}</span>
+                            <span className={cn(
+                              'text-lg font-bold',
+                              data.accuracy >= 60 ? 'text-accent-green' :
+                              data.accuracy >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                            )}>{data.accuracy}%</span>
+                          </div>
+                          <div className="flex items-center gap-3 text-sm text-gray-400 mb-2">
+                            <span className="text-accent-green">{data.correct}W</span>
+                            <span className="text-accent-red">{data.incorrect}L</span>
+                            <span>{data.total} total</span>
+                          </div>
+                          <div className="w-full bg-dark-border rounded-full h-2">
+                            <div
+                              className={cn(
+                                'h-2 rounded-full',
+                                data.accuracy >= 60 ? 'bg-accent-green' :
+                                data.accuracy >= 50 ? 'bg-accent-amber' : 'bg-accent-red'
+                              )}
+                              style={{ width: `${Math.min(data.accuracy, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recent Predictions Table */}
+                {recentPreds.length > 0 ? (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Recent Predictions</h3>
+                    <div className="card overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-dark-border text-gray-400 text-left">
+                            <th className="py-3 px-4">Date</th>
+                            <th className="py-3 px-4">Sport</th>
+                            <th className="py-3 px-4">Matchup</th>
+                            <th className="py-3 px-4">Pick</th>
+                            <th className="py-3 px-4">Confidence</th>
+                            <th className="py-3 px-4">Result</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {recentPreds.map((pred: any) => (
+                            <tr key={pred.id} className="border-b border-dark-border hover:bg-dark-bg/50">
+                              <td className="py-3 px-4 text-gray-400">{pred.game_date || '\u2014'}</td>
+                              <td className="py-3 px-4 uppercase">{pred.sport_type}</td>
+                              <td className="py-3 px-4">{pred.matchup || '\u2014'}</td>
+                              <td className="py-3 px-4 font-medium">{pred.predicted_winner}</td>
+                              <td className="py-3 px-4">
+                                <span className={cn(
+                                  'font-medium',
+                                  pred.confidence >= 75 ? 'text-accent-green' :
+                                  pred.confidence >= 60 ? 'text-accent-amber' : 'text-gray-400'
+                                )}>{pred.confidence}%</span>
+                              </td>
+                              <td className="py-3 px-4">
+                                {pred.was_correct ? (
+                                  <CheckCircle size={18} className="text-accent-green" />
+                                ) : (
+                                  <XCircle size={18} className="text-accent-red" />
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="card p-12 text-center">
+                    <BarChart3 size={48} className="mx-auto mb-4 text-gray-500" />
+                    <h3 className="text-lg font-medium mb-2">No Evaluated Predictions Yet</h3>
+                    <p className="text-gray-400">Predictions will appear here after games are completed and evaluated</p>
+                  </div>
+                )}
+              </>
+            )
+          })()}
         </div>
       )}
     </div>
