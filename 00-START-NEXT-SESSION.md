@@ -193,8 +193,8 @@ Generic `normalize_item()` in `real_data_collector.py` doesn't properly extract 
 ### ToolCallRecord Analytics Dashboard
 Data is flowing but no dashboard exists yet.
 
-### Disconnected Dots Audit (Session 972) -- Ongoing
-Many items remain from the audit: agent output persistence, orphan endpoints, enrichment data loss.
+### Disconnected Dots Audit (Sessions 646/735/972) -- Ongoing
+Decision execution system is fully wired (DecisionEnforcerAgent + ConversationOrchestrator). ImageAgent now persists to Deliverable (PR #1162). Remaining: 87+ orphan API endpoints (no frontend consumers), 28 agents without `_save_to_deliverable()` calls, 85-95% enrichment data truncation, 8 orphaned services (recommendation_engine, ab_testing, discord_voice, etc), 6 empty model tables.
 
 ### sync_celery_beat Parser -- Mitigated
 `--create-only` flag prevents overwrites (PR #1139), but the parser still can't update existing schedules. DB fixes must be applied directly. Full parser rewrite still needed for robustness.

@@ -378,6 +378,21 @@ you already have, then call generate_image immediately. Do not delegate first.""
                                     contribution_score=1.0
                                 )
 
+                        # Session 1006: Persist output to Deliverable model
+                        image_urls = [img.get('url', '') for img in all_images if img.get('url')]
+                        self._save_to_deliverable(
+                            title=f"Generated Images: {task[:80]}",
+                            content='\n'.join(image_urls) if image_urls else result.message,
+                            deliverable_type='image',
+                            category='Image Generation',
+                            tags=['image', 'generated'],
+                            metadata={
+                                'image_count': len(all_images),
+                                'images': all_images,
+                                'task': task[:200],
+                            },
+                        )
+
                         # Share knowledge about what styles/prompts worked
                         if tool_calls_made:
                             for tc in tool_calls_made:
