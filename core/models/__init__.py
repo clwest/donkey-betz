@@ -102,12 +102,6 @@ from ..models_decision_records import (
     DecisionAggregate,
 )
 
-# Import spider aggregation models (Session 861 - Spider Aggregation Caching)
-from ..models_spider_aggregation import (
-    SpiderAggregation,
-    TrendDataPoint,
-)
-
 # Import pipeline feedback model (Session 861 - Feedback Processing)
 from ..models_pipeline_feedback import (
     PipelineStageFeedback,
@@ -316,10 +310,6 @@ __all__ = [
     # Decision Recording (Session 861)
     'DecisionRecord',
     'DecisionAggregate',
-
-    # Spider Aggregation Caching (Session 861)
-    'SpiderAggregation',
-    'TrendDataPoint',
 
     # Pipeline Feedback (Session 861)
     'PipelineStageFeedback',
