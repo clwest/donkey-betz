@@ -3933,3 +3933,30 @@ export function clearRequestLog() {
   requestLog.length = 0
   notify()
 }
+
+// Session 1008: Campaign Orchestrator API
+export const campaignApi = {
+  list: (params?: { status?: string; limit?: number; offset?: number }) =>
+    api.get('/campaigns/', { params }),
+  create: (data: Record<string, unknown>) =>
+    api.post('/campaigns/create/', data),
+  detail: (id: string) => api.get(`/campaigns/${id}/`),
+  start: (id: string) => api.post(`/campaigns/${id}/start/`),
+  status: (id: string) => api.get(`/campaigns/${id}/status/`),
+  deliverables: (id: string, params?: { type?: string; status?: string; platform?: string }) =>
+    api.get(`/campaigns/${id}/deliverables/`, { params }),
+  delete: (id: string) => api.delete(`/campaigns/${id}/delete/`),
+  budgetTiers: () => api.get('/campaigns/budget-tiers/'),
+}
+
+// Session 1008: ToolCall Analytics / Audit API
+export const auditApi = {
+  toolCallRecords: (params?: { agent_name?: string; tool_name?: string; success?: boolean; page?: number }) =>
+    api.get('/v1/tool-call-records/', { params }),
+  toolCallAggregates: (params?: { agent_name?: string; tool_name?: string; date?: string; page?: number }) =>
+    api.get('/v1/tool-call-aggregates/', { params }),
+  decisionRecords: (params?: { agent_name?: string; decision_type?: string; was_successful?: boolean; page?: number }) =>
+    api.get('/v1/decision-records/', { params }),
+  signalClusters: (params?: { pattern_type?: string; status?: string; page?: number }) =>
+    api.get('/v1/signal-clusters/', { params }),
+}
