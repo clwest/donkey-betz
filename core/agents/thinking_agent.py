@@ -1153,6 +1153,16 @@ If you cite ANY number that doesn't match the MANDATORY DATA REFERENCE table, yo
 
         execution_time = int((time.time() - start_time) * 1000)
 
+        # Session 1006: Persist output to Deliverable
+        self._save_to_deliverable(
+            title=f"Thinking Analysis: {task[:80]}",
+            content=thinking_result.get('reflection', 'Thinking cycle complete'),
+            deliverable_type='analysis',
+            category='Thinking',
+            tags=['thinking', 'reflection'],
+            metadata={'task': task[:200]},
+        )
+
         # Return proper AgentResult
         return AgentResult(
             success=True,
