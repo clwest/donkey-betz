@@ -470,6 +470,16 @@ Only use these tools when explicitly asked to generate configs. For questions or
                             knowledge_attribution=knowledge_attribution
                         )
 
+                        # Session 1006: Persist output to Deliverable
+                        self._save_to_deliverable(
+                            title=f"DevOps: {task[:80]}",
+                            content=descriptive_msg,
+                            deliverable_type='analysis',
+                            category='DevOps',
+                            tags=['devops', tool_used or 'operations'],
+                            metadata={'task': task[:200], 'tool_used': tool_used},
+                        )
+
                         self._record_learning_outcome(
                             result=result,
                             task=task,
