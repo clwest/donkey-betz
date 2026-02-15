@@ -995,15 +995,8 @@ app.conf.beat_schedule = {
             'expires': 3600,  # 1 hour
         }
     },
-    # Session 1007: Removed duplicate 'autonomous-content-studio-loop' (hourly).
-    # Consolidated into 'run-autonomous-content-studio' (every 4h, content queue).
-    'track-content-performance-daily': {
-        'task': 'autonomous_studio.track_performance',
-        'schedule': crontab(hour=20, minute=0),  # Daily at 8 PM
-        'options': {
-            'expires': 7200,  # 2 hours
-        }
-    },
+    # Session 1009: Removed phantom 'track-content-performance-daily' (autonomous_studio.track_performance doesn't exist)
+    # Session 1007: Previously removed duplicate 'autonomous-content-studio-loop' (hourly).
     # Session 470: ML Scoring Engine (Market Intelligence Architecture - Phase 1)
     # Weekly model retraining and daily performance evaluation
     'ml-scoring-weekly-retrain': {
@@ -2165,12 +2158,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/30'),  # Every 30 minutes
         'options': {'expires': 1800, 'queue': 'long_running'}
     },
-    # Autonomous content studio - Every 4 hours to generate content for due channels
-    'run-autonomous-content-studio': {
-        'task': 'autonomous_studio.run_main_loop',
-        'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours at :00
-        'options': {'expires': 14400, 'queue': 'content'}
-    },
+    # Session 1009: Removed phantom 'run-autonomous-content-studio' (autonomous_studio.run_main_loop doesn't exist)
 
     # ==================== SESSION 820: AUTONOMOUS REMEDIATION SYSTEM ====================
     # Self-Healing Orchestration - system automatically discovers audits, assigns findings
@@ -2254,15 +2242,7 @@ app.conf.beat_schedule = {
     # Auto-enhance blogs marked as 'needs_enhancement' using EditorAgent
     # Improves structure, hooks, headers, engagement, and conclusions
 
-    'enhance-content': {
-        'task': 'core.tasks.enhance_all_blogs_needing_enhancement',  # Session 919: Fixed task name mismatch
-        'schedule': crontab(hour='*/4', minute=15),  # Session 1007: Every 4h (was daily) for auto-revision loop
-        'kwargs': {'limit': 10, 'save': True},
-        'options': {
-            'expires': 14400,
-            'queue': 'content',  # Session 1007: content queue (was long_running)
-        }
-    },
+    # Session 1009: Removed phantom 'enhance-content' (core.tasks.enhance_all_blogs_needing_enhancement doesn't exist)
 
     # ==================== SESSION 866: INITIATIVE PIPELINE AUTOMATION ====================
     # Advance initiatives through their 5-stage pipeline automatically
