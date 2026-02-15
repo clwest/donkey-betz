@@ -399,7 +399,7 @@ Only assign high confidence (>75) when the market consensus is overwhelming."""
                 home_team = self._get_or_create_team(league, home_name)
                 away_team = self._get_or_create_team(league, away_name)
 
-                # 3) Game
+                # 3) Game — skip games >14 days out (early futures are noise)
                 commence_time = pred.get('commence_time')
                 if commence_time:
                     try:
@@ -408,6 +408,10 @@ Only assign high confidence (>75) when the market consensus is overwhelming."""
                         scheduled_start = timezone.now()
                 else:
                     scheduled_start = timezone.now()
+
+                from datetime import timedelta
+                if hasattr(scheduled_start, 'date') and scheduled_start > timezone.now() + timedelta(days=14):
+                    continue
 
                 game, _ = Game.objects.get_or_create(
                     external_id=str(event_id),

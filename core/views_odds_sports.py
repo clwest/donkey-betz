@@ -3297,10 +3297,10 @@ def get_ai_track_record(request):
         for p in eval_recent:
             recent_list.append(_serialize_prediction(p))
 
-        # Pending predictions (not yet evaluated)
+        # Pending predictions (soonest game first)
         pending_qs = base_qs.filter(was_correct__isnull=True).select_related(
             'game', 'predicted_winner', 'game__home_team', 'game__away_team'
-        ).order_by('-created_at')[:20]
+        ).order_by('game__scheduled_start')[:20]
         for p in pending_qs:
             recent_list.append(_serialize_prediction(p, include_result=False))
 
