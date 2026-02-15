@@ -50,8 +50,16 @@ Verified all 4 intelligence desks running, fixed sports agent crashes, and purge
 | Blockchain | 490.1s | Full audit brief |
 | Narrative | 5.2s | Completed |
 
-**PRs:** #1148-#1157
+**PRs:** #1148-#1159
 **Handoff:** `docs/handoffs/SESSION_1005_DESK_FIXES_AND_QUEUE_PURGE.md`
+
+#### PR #1158: Entry Point Update
+- Updated entry point with sports desk 5/5 results
+
+#### PR #1159: Quick Fixes
+- Fixed `MemoryCluster.objects.create()` using wrong field name (`clustering_method` → `cluster_method`) and non-existent field (`is_active`)
+- Created `docs/USER_FEEDBACK_QUEUE.md` — referenced by `docs_context_builder` as critical doc but missing
+- Data migration `0244` registers GamePredictor, LineMovementAnalyzer, SharpActionDetector in Agent DB — enables MLPrediction storage
 
 ---
 
@@ -157,7 +165,7 @@ Session 1002B centralized `delegate_to_specialist`, `web_search`, and `spider_qu
 | Enrichment Services | 8 |
 | Attention Sections | 7 |
 | LLM Providers | 6 (OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini) |
-| Migrations | Through 0243 |
+| Migrations | Through 0244 |
 | Standalone Pages | `/stocks`, `/advisors`, `/betting`, `/neural-orchestra`, `/conversation-contract`, `/mythology-lab`, `/billing`, `/analytics`, `/docs-index` |
 
 ---
@@ -167,23 +175,11 @@ Session 1002B centralized `delegate_to_specialist`, `web_search`, and `spider_qu
 ### collect_real_opportunities Infinite Loop — MITIGATED
 `ai_core/tasks.py` — `JobIncomeBridge.sync_to_income_builder()` cycles through the same jobs endlessly. **Mitigated** with `soft_time_limit=300, time_limit=360` (PR #1149) and moved to `default` queue (PR #1145). Root cause loop in `sync_to_income_builder` not yet fixed.
 
-### Sports Desk: GamePredictor Not in Agent DB
-`Agent 'GamePredictor' not found in DB — skipping MLPrediction storage`. Agent runs fine but can't store predictions for outcome tracking. Need to create Agent DB record.
-
-### MemoryCluster Unexpected kwargs
-`MemoryCluster()` receives unexpected kwargs `clustering_method`, `is_active` — recurring error in Railway logs.
-
 ### Initiative Auto-Progression Rate Limit
 Auto-progression rate-limited at 40/day. 19 initiatives failed with rate limit in a single run. May need to increase limit or stagger execution.
 
-### chat_conversations.platform Column Missing
-`Failed to persist PA conversation: column chat_conversations.platform does not exist` -- ChatConversation model has a `platform` field that hasn't been migrated. Create and run migration.
-
 ### Profile Loading in Async Context
 `Failed to load profile: You cannot call this from an async context` -- Profile loading fails in Celery PA worker. Need `sync_to_async` wrapper or thread-based approach.
-
-### docs/USER_FEEDBACK_QUEUE.md Missing
-Referenced by `docs_context_builder` as a critical doc but doesn't exist. Create it or remove from critical docs list.
 
 ### Agent Knowledge Freshness -- Monitor Impact
 14-day cutoff may be too aggressive. Monitor agent conversation quality.
@@ -249,9 +245,6 @@ Session 972 identified ~200+ items. High-impact remaining items:
 
 ### Fix sync_celery_beat Parser
 Replace regex-based parsing with direct Python import to prevent beat schedule drift.
-
-### Fix chat_conversations.platform Migration
-Create migration for the missing `platform` column to fix PA conversation persistence.
 
 ### Fix Profile Loading Async Issue
 Wrap profile loading in `sync_to_async` or use thread pool to avoid async context errors.
