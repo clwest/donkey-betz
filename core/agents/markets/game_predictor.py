@@ -339,57 +339,162 @@ Only assign high confidence (>75) when the market consensus is overwhelming."""
             logger.warning(f"GamePredictor LLM analysis failed: {e}")
             return f"LLM analysis unavailable: {str(e)}"
 
+    # ── League name/abbreviation mapping for auto-creation ──
+    LEAGUE_MAP = {
+        'nfl': ('National Football League', 'NFL'),
+        'ncaaf': ('NCAA Football', 'NCAAF'),
+        'nba': ('National Basketball Association', 'NBA'),
+        'ncaab': ('NCAA Basketball', 'NCAAB'),
+        'mlb': ('Major League Baseball', 'MLB'),
+        'nhl': ('National Hockey League', 'NHL'),
+        'soccer': ('Soccer', 'SOC'),
+        'mma': ('Mixed Martial Arts', 'MMA'),
+        'tennis': ('Tennis', 'TEN'),
+        'golf': ('Golf', 'GOLF'),
+        'boxing': ('Boxing', 'BOX'),
+        'esports': ('E-Sports', 'ESP'),
+    }
+
     def _store_predictions(self, predictions: List[Dict], context: Dict) -> int:
-        """Store predictions in MLPrediction model for later evaluation."""
+        """Store predictions in MLPrediction model via auto-created League/Team/Game chain."""
         try:
-            from sports.models import MLPrediction, Game
-            from core.models_unified_system import Agent
+            from sports.models import MLPrediction, Game, Team, League
             from django.utils import timezone
+            from dateutil.parser import parse as parse_dt
+        except ImportError:
+            logger.warning("sports models not available — skipping MLPrediction storage")
+            return 0
 
-            agent_obj = Agent.objects.filter(name=self.name).first()
-            if not agent_obj:
-                logger.warning(f"Agent '{self.name}' not found in DB — skipping MLPrediction storage")
-                return 0
+        stored = 0
+        for pred in predictions:
+            event_id = pred.get('event_id')
+            if not event_id:
+                continue
 
-            stored = 0
-            for pred in predictions:
-                if not pred.get('event_id'):
+            sport_key = pred.get('sport_key', '')
+            sport_type = sport_key.split('_')[-1] if '_' in sport_key else sport_key
+            if sport_type not in self.LEAGUE_MAP:
+                logger.debug(f"Unknown sport_type '{sport_type}' — skipping")
+                continue
+
+            home_name = (pred.get('home_team') or '').strip()
+            away_name = (pred.get('away_team') or '').strip()
+            winner_name = (pred.get('predicted_winner') or '').strip()
+            if not home_name or not away_name or not winner_name:
+                continue
+
+            try:
+                # 1) League
+                league_info = self.LEAGUE_MAP.get(sport_type, (sport_type.upper(), sport_type.upper()[:10]))
+                league, _ = League.objects.get_or_create(
+                    abbreviation=league_info[1],
+                    defaults={
+                        'name': league_info[0],
+                        'sport_type': sport_type,
+                        'current_season': '2025-2026',
+                    },
+                )
+
+                # 2) Teams
+                home_team = self._get_or_create_team(league, home_name)
+                away_team = self._get_or_create_team(league, away_name)
+
+                # 3) Game
+                commence_time = pred.get('commence_time')
+                if commence_time:
+                    try:
+                        scheduled_start = parse_dt(commence_time) if isinstance(commence_time, str) else commence_time
+                    except (ValueError, TypeError):
+                        scheduled_start = timezone.now()
+                else:
+                    scheduled_start = timezone.now()
+
+                game, _ = Game.objects.get_or_create(
+                    external_id=str(event_id),
+                    defaults={
+                        'league': league,
+                        'home_team': home_team,
+                        'away_team': away_team,
+                        'scheduled_start': scheduled_start,
+                        'season': '2025-2026',
+                    },
+                )
+
+                # 4) Predicted winner team
+                if winner_name == home_name:
+                    winner_team = home_team
+                else:
+                    winner_team = away_team
+
+                # 5) Normalise probabilities to 0-100 range
+                home_prob = pred.get('home_win_probability', 50)
+                away_prob = pred.get('away_win_probability', 50)
+                if home_prob <= 1.0:
+                    home_prob *= 100
+                if away_prob <= 1.0:
+                    away_prob *= 100
+
+                # 6) Create MLPrediction (skip if already exists today for this game+model)
+                model_used = 'market_consensus'
+                exists = MLPrediction.objects.filter(
+                    game=game,
+                    model_used=model_used,
+                    created_at__date=timezone.now().date(),
+                ).exists()
+                if exists:
+                    stored += 1  # count as stored (already there)
                     continue
 
-                sport_key = pred.get('sport_key', '')
-                # Extract short sport type (e.g., 'basketball_nba' -> 'nba')
-                sport_type = sport_key.split('_')[-1] if '_' in sport_key else sport_key
+                MLPrediction.objects.create(
+                    game=game,
+                    predicted_winner=winner_team,
+                    confidence=min(pred.get('confidence', 50), 100),
+                    home_win_probability=min(home_prob, 100),
+                    away_win_probability=min(away_prob, 100),
+                    predicted_home_score=pred.get('predicted_home_score'),
+                    predicted_away_score=pred.get('predicted_away_score'),
+                    model_used=model_used,
+                    sport_type=sport_type,
+                    key_factors=pred.get('key_factors', []),
+                    ai_reasoning=f"Market consensus from {pred.get('bookmaker_count', 0)} bookmakers",
+                )
+                stored += 1
+            except Exception as e:
+                logger.warning(f"Could not store prediction for {pred.get('matchup')}: {e}")
 
-                try:
-                    MLPrediction.objects.update_or_create(
-                        agent=agent_obj,
-                        sport_type=sport_type,
-                        predicted_winner=pred['predicted_winner'],
-                        game_date=timezone.now().date(),
-                        defaults={
-                            'confidence': pred['confidence'],
-                            'home_win_probability': pred['home_win_probability'],
-                            'away_win_probability': pred['away_win_probability'],
-                            'predicted_home_score': pred.get('predicted_home_score'),
-                            'predicted_away_score': pred.get('predicted_away_score'),
-                            'model_used': 'market_consensus',
-                            'key_factors': pred.get('key_factors', []),
-                            'ai_reasoning': f"Market consensus from {pred.get('bookmaker_count', 0)} bookmakers",
-                        }
-                    )
-                    stored += 1
-                except Exception as e:
-                    logger.debug(f"Could not store prediction for {pred.get('matchup')}: {e}")
+        logger.info(f"GamePredictor stored {stored}/{len(predictions)} predictions in MLPrediction")
+        return stored
 
-            logger.info(f"GamePredictor stored {stored} predictions in MLPrediction")
-            return stored
+    @staticmethod
+    def _get_or_create_team(league, team_name: str):
+        """Get or create a Team record from a team name string."""
+        from sports.models import Team
 
-        except ImportError:
-            logger.warning("sports.models.MLPrediction not available — skipping storage")
-            return 0
-        except Exception as e:
-            logger.warning(f"Failed to store predictions: {e}")
-            return 0
+        # Generate abbreviation: last word, uppercased, max 10 chars
+        words = team_name.split()
+        abbr = words[-1][:10].upper() if words else team_name[:10].upper()
+
+        team = Team.objects.filter(league=league, name=team_name).first()
+        if team:
+            return team
+
+        # Try creating — handle abbreviation collision within league
+        try:
+            team = Team.objects.create(
+                league=league,
+                name=team_name,
+                abbreviation=abbr,
+                city='',
+            )
+        except Exception:
+            # Abbreviation collision — append first letter of first word
+            abbr = (words[0][0] + abbr)[:10].upper() if len(words) > 1 else (abbr + '2')[:10]
+            team, _ = Team.objects.get_or_create(
+                league=league,
+                name=team_name,
+                defaults={'abbreviation': abbr, 'city': ''},
+            )
+        return team
 
     def _elapsed_ms(self, start_time):
         return int((datetime.now() - start_time).total_seconds() * 1000)

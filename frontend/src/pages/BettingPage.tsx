@@ -2186,7 +2186,6 @@ export default function BettingPage() {
             const summary = trackRecordData?.data?.summary || {}
             const bySport = trackRecordData?.data?.by_sport || {}
             const recentPreds = trackRecordData?.data?.recent_predictions || []
-            const isStockData = trackRecordData?.data?.data_source === 'stock_predictions'
 
             return (
               <>
@@ -2211,17 +2210,17 @@ export default function BettingPage() {
                     color="bg-accent-purple"
                   />
                   <StatCard
-                    label={isStockData ? 'Pending Eval' : 'Calibration'}
-                    value={isStockData ? (summary.pending_predictions ?? 0) : `${summary.calibration_score ?? 0}%`}
+                    label="Calibration"
+                    value={`${summary.calibration_score ?? 0}%`}
                     icon={BarChart3}
-                    color={isStockData ? 'bg-primary-600' : (summary.is_well_calibrated ? 'bg-accent-green' : 'bg-accent-amber')}
+                    color={summary.is_well_calibrated ? 'bg-accent-green' : 'bg-accent-amber'}
                   />
                 </div>
 
                 {/* By Category Breakdown */}
                 {Object.keys(bySport).length > 0 && (
                   <div>
-                    <h3 className="text-lg font-semibold mb-3">{isStockData ? 'By Category' : 'By Sport'}</h3>
+                    <h3 className="text-lg font-semibold mb-3">By Sport</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {Object.entries(bySport).map(([sport, data]: [string, any]) => (
                         <div key={sport} className="card p-4">
@@ -2263,8 +2262,8 @@ export default function BettingPage() {
                         <thead>
                           <tr className="border-b border-dark-border text-gray-400 text-left">
                             <th className="py-3 px-4">Date</th>
-                            <th className="py-3 px-4">{isStockData ? 'Type' : 'Sport'}</th>
-                            <th className="py-3 px-4">{isStockData ? 'Ticker' : 'Matchup'}</th>
+                            <th className="py-3 px-4">Sport</th>
+                            <th className="py-3 px-4">Matchup</th>
                             <th className="py-3 px-4">Pick</th>
                             <th className="py-3 px-4">Confidence</th>
                             <th className="py-3 px-4">Result</th>
