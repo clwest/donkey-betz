@@ -4,6 +4,7 @@ import { contentApi } from '@/lib/api'
 import {
   Film, Type, Image, Loader2, Heart, Download, ChevronDown, ChevronUp,
   Maximize2, Clock, Trash2, X, Check, AlertCircle, Play, Sparkles,
+  Scissors, Palette, Music, ArrowUp, ArrowDown, Link2, Upload,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -37,6 +38,8 @@ interface ActionResult {
   message: string
 }
 
+type StudioMode = 'generate' | 'edit' | 'chain'
+
 // ── Constants ───────────────────────────────────────────────────────────────
 
 const DURATION_OPTIONS = [2, 4, 6, 8, 10]
@@ -58,6 +61,16 @@ const STYLE_OPTIONS = [
   'documentary', 'slow_motion', 'timelapse', 'abstract',
 ]
 
+const COLOR_GRADE_OPTIONS = [
+  { value: 'cinematic_warm', label: 'Cinematic Warm', desc: 'Warm orange tones' },
+  { value: 'cinematic_cool', label: 'Cinematic Cool', desc: 'Cool blue tones' },
+  { value: 'vintage', label: 'Vintage', desc: 'Retro film look' },
+  { value: 'modern', label: 'Modern', desc: 'Clean and balanced' },
+  { value: 'high_contrast', label: 'High Contrast', desc: 'Bold dramatic' },
+  { value: 'soft', label: 'Soft', desc: 'Gentle diffused' },
+  { value: 'vibrant', label: 'Vibrant', desc: 'Punchy saturated' },
+]
+
 function formatStyleLabel(style: string): string {
   return style.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
@@ -72,7 +85,10 @@ function formatElapsed(startedAt: number): string {
 export default function VideoStudioPage() {
   const queryClient = useQueryClient()
 
-  // Mode
+  // Studio mode
+  const [studioMode, setStudioMode] = useState<StudioMode>('generate')
+
+  // Generate > Mode
   const [mode, setMode] = useState<'text' | 'image'>('text')
 
   // Text-to-video
@@ -100,6 +116,22 @@ export default function VideoStudioPage() {
   const [actionResult, setActionResult] = useState<ActionResult | null>(null)
   const [generatePanelOpen, setGeneratePanelOpen] = useState(true)
 
+  // Edit mode
+  const [editVideoId, setEditVideoId] = useState<string | null>(null)
+  const [editTool, setEditTool] = useState<'text' | 'color' | 'audio'>('text')
+  const [overlayText, setOverlayText] = useState('')
+  const [overlayPosition, setOverlayPosition] = useState('center')
+  const [overlayFontSize, setOverlayFontSize] = useState(72)
+  const [overlayStart, setOverlayStart] = useState(0)
+  const [overlayDuration, setOverlayDuration] = useState(3)
+  const [colorStyle, setColorStyle] = useState('cinematic_warm')
+  const [audioFile, setAudioFile] = useState<File | null>(null)
+  const [audioVolume, setAudioVolume] = useState(0.3)
+
+  // Chain mode
+  const [chainVideos, setChainVideos] = useState<GalleryVideo[]>([])
+  const [chainTransitions, setChainTransitions] = useState(true)
+
   // Auto-switch quality default when mode changes
   useEffect(() => {
     setQuality(mode === 'text' ? 'veo3.1_fast' : 'gen4_turbo')
@@ -121,6 +153,9 @@ export default function VideoStudioPage() {
 
   const videos: GalleryVideo[] = galleryData?.data?.videos || galleryData?.data?.results || []
   const totalCount: number = galleryData?.data?.total || galleryData?.data?.count || videos.length
+
+  // Resolve editVideo from gallery
+  const editVideo = editVideoId ? videos.find(v => v.id === editVideoId) || null : null
 
   // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -252,6 +287,65 @@ export default function VideoStudioPage() {
     },
   })
 
+  const textOverlayMutation = useMutation({
+    mutationFn: () => {
+      if (!editVideoId) throw new Error('No video selected')
+      return contentApi.addTextOverlay(editVideoId, overlayText, {
+        position: overlayPosition,
+        font_size: overlayFontSize,
+        start_second: overlayStart,
+        duration: overlayDuration,
+      })
+    },
+    onSuccess: () => {
+      refetchGallery()
+      showFeedback('success', 'Text overlay applied!')
+      setEditVideoId(null)
+      setOverlayText('')
+    },
+    onError: () => showFeedback('error', 'Failed to apply text overlay'),
+  })
+
+  const colorGradingMutation = useMutation({
+    mutationFn: () => {
+      if (!editVideoId) throw new Error('No video selected')
+      return contentApi.applyColorGrading(editVideoId, colorStyle)
+    },
+    onSuccess: () => {
+      refetchGallery()
+      showFeedback('success', 'Color grade applied!')
+      setEditVideoId(null)
+    },
+    onError: () => showFeedback('error', 'Failed to apply color grade'),
+  })
+
+  const audioMutation = useMutation({
+    mutationFn: () => {
+      if (!editVideoId || !audioFile) throw new Error('No video or audio selected')
+      return contentApi.addAudioToVideo(editVideoId, audioFile, audioVolume)
+    },
+    onSuccess: () => {
+      refetchGallery()
+      showFeedback('success', 'Audio added!')
+      setEditVideoId(null)
+      setAudioFile(null)
+    },
+    onError: () => showFeedback('error', 'Failed to add audio'),
+  })
+
+  const chainMutation = useMutation({
+    mutationFn: () => {
+      const urls = chainVideos.map(v => v.url)
+      return contentApi.chainVideos(urls, { add_transitions: chainTransitions })
+    },
+    onSuccess: () => {
+      refetchGallery()
+      showFeedback('success', 'Videos chained!')
+      setChainVideos([])
+    },
+    onError: () => showFeedback('error', 'Failed to chain videos'),
+  })
+
   // ── Handlers ──────────────────────────────────────────────────────────
 
   const handleGenerate = () => {
@@ -296,11 +390,32 @@ export default function VideoStudioPage() {
   }
 
   const handleVideoClick = (video: GalleryVideo) => {
-    setSelectedVideo(video)
-    contentApi.incrementVideoView(video.id).catch(() => {})
+    if (studioMode === 'edit') {
+      setEditVideoId(editVideoId === video.id ? null : video.id)
+    } else if (studioMode === 'chain') {
+      setChainVideos(prev => {
+        const exists = prev.find(v => v.id === video.id)
+        if (exists) return prev.filter(v => v.id !== video.id)
+        return [...prev, video]
+      })
+    } else {
+      setSelectedVideo(video)
+      contentApi.incrementVideoView(video.id).catch(() => {})
+    }
+  }
+
+  const moveChainVideo = (index: number, direction: 'up' | 'down') => {
+    setChainVideos(prev => {
+      const next = [...prev]
+      const swapIdx = direction === 'up' ? index - 1 : index + 1
+      if (swapIdx < 0 || swapIdx >= next.length) return prev
+      ;[next[index], next[swapIdx]] = [next[swapIdx], next[index]]
+      return next
+    })
   }
 
   const isGenerating = textToVideoMutation.isPending || imageToVideoMutation.isPending
+  const isChaining = chainMutation.isPending
 
   // ── Render ────────────────────────────────────────────────────────────
 
@@ -308,9 +423,33 @@ export default function VideoStudioPage() {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-dark-border px-6 py-4">
-        <div className="flex items-center gap-3">
-          <Film className="text-primary-400" size={24} />
-          <h1 className="text-xl font-bold text-white">Video Studio</h1>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <Film className="text-primary-400" size={24} />
+            <h1 className="text-xl font-bold text-white">Video Studio</h1>
+          </div>
+          {/* Mode tabs */}
+          <div className="flex gap-1 bg-dark-bg rounded-lg p-0.5">
+            {[
+              { key: 'generate' as StudioMode, label: 'Generate', icon: Sparkles },
+              { key: 'edit' as StudioMode, label: 'Edit', icon: Scissors },
+              { key: 'chain' as StudioMode, label: 'Chain', icon: Link2 },
+            ].map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => setStudioMode(key)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
+                  studioMode === key
+                    ? 'bg-primary-600 text-white'
+                    : 'text-gray-400 hover:text-white'
+                )}
+              >
+                <Icon size={13} />
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
         {actionResult && (
           <div
@@ -329,7 +468,7 @@ export default function VideoStudioPage() {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* ── Generate Panel (left) ──────────────────────────────────── */}
+        {/* ── Left Panel ──────────────────────────────────────────────── */}
         <div
           className={cn(
             'border-b lg:border-b-0 lg:border-r border-dark-border overflow-y-auto',
@@ -341,230 +480,558 @@ export default function VideoStudioPage() {
             className="lg:hidden w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-300 hover:text-white"
             onClick={() => setGeneratePanelOpen(!generatePanelOpen)}
           >
-            Generate
+            {studioMode === 'generate' ? 'Generate' : studioMode === 'edit' ? 'Edit' : 'Chain'}
             {generatePanelOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
 
           <div className={cn('p-4 space-y-4', !generatePanelOpen && 'hidden lg:block')}>
-            {/* Mode tabs */}
-            <div className="flex border-b border-dark-border">
-              <button
-                onClick={() => setMode('text')}
-                className={cn(
-                  'flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
-                  mode === 'text'
-                    ? 'border-primary-500 text-primary-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-300'
-                )}
-              >
-                <Type size={14} />
-                Text to Video
-              </button>
-              <button
-                onClick={() => setMode('image')}
-                className={cn(
-                  'flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
-                  mode === 'image'
-                    ? 'border-primary-500 text-primary-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-300'
-                )}
-              >
-                <Image size={14} />
-                Image to Video
-              </button>
-            </div>
 
-            {/* Text-to-video inputs */}
-            {mode === 'text' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5">Prompt</label>
-                <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Describe your video..."
-                  rows={4}
-                  className="w-full rounded-lg bg-dark-bg border border-dark-border px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500 resize-none"
-                />
-              </div>
-            )}
-
-            {/* Image-to-video inputs */}
-            {mode === 'image' && (
+            {/* ════════════════ GENERATE MODE ════════════════ */}
+            {studioMode === 'generate' && (
               <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Image URL</label>
-                  <input
-                    type="text"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    placeholder="https://example.com/image.jpg"
-                    className="w-full rounded-lg bg-dark-bg border border-dark-border px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  />
+                {/* Mode tabs */}
+                <div className="flex border-b border-dark-border">
+                  <button
+                    onClick={() => setMode('text')}
+                    className={cn(
+                      'flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
+                      mode === 'text'
+                        ? 'border-primary-500 text-primary-400'
+                        : 'border-transparent text-gray-500 hover:text-gray-300'
+                    )}
+                  >
+                    <Type size={14} />
+                    Text to Video
+                  </button>
+                  <button
+                    onClick={() => setMode('image')}
+                    className={cn(
+                      'flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
+                      mode === 'image'
+                        ? 'border-primary-500 text-primary-400'
+                        : 'border-transparent text-gray-500 hover:text-gray-300'
+                    )}
+                  >
+                    <Image size={14} />
+                    Image to Video
+                  </button>
                 </div>
+
+                {/* Text-to-video inputs */}
+                {mode === 'text' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1.5">Prompt</label>
+                    <textarea
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      placeholder="Describe your video..."
+                      rows={4}
+                      className="w-full rounded-lg bg-dark-bg border border-dark-border px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500 resize-none"
+                    />
+                  </div>
+                )}
+
+                {/* Image-to-video inputs */}
+                {mode === 'image' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1.5">Image URL</label>
+                      <input
+                        type="text"
+                        value={imageUrl}
+                        onChange={(e) => setImageUrl(e.target.value)}
+                        placeholder="https://example.com/image.jpg"
+                        className="w-full rounded-lg bg-dark-bg border border-dark-border px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1.5">Motion Prompt</label>
+                      <textarea
+                        value={motionPrompt}
+                        onChange={(e) => setMotionPrompt(e.target.value)}
+                        placeholder="Describe the motion or camera movement..."
+                        rows={3}
+                        className="w-full rounded-lg bg-dark-bg border border-dark-border px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500 resize-none"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Duration */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Motion Prompt</label>
-                  <textarea
-                    value={motionPrompt}
-                    onChange={(e) => setMotionPrompt(e.target.value)}
-                    placeholder="Describe the motion or camera movement..."
-                    rows={3}
-                    className="w-full rounded-lg bg-dark-bg border border-dark-border px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500 resize-none"
-                  />
+                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Duration</label>
+                  <div className="flex gap-1.5">
+                    {DURATION_OPTIONS.map((d) => (
+                      <button
+                        key={d}
+                        onClick={() => setDuration(d)}
+                        className={cn(
+                          'flex-1 rounded-lg border px-2 py-1.5 text-center text-xs transition-colors',
+                          duration === d
+                            ? 'border-primary-500 bg-primary-500/10 text-primary-300'
+                            : 'border-dark-border text-gray-400 hover:border-gray-600 hover:text-gray-200'
+                        )}
+                      >
+                        {d}s
+                      </button>
+                    ))}
+                  </div>
                 </div>
+
+                {/* Quality / Model */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Quality</label>
+                  <div className="space-y-1.5">
+                    {QUALITY_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setQuality(opt.value)}
+                        className={cn(
+                          'w-full rounded-lg border px-3 py-2 text-left transition-colors',
+                          quality === opt.value
+                            ? 'border-primary-500 bg-primary-500/10'
+                            : 'border-dark-border hover:border-gray-600'
+                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className={cn('text-sm font-medium', quality === opt.value ? 'text-primary-300' : 'text-gray-300')}>
+                            {opt.label}
+                          </span>
+                          <span className="text-[10px] text-gray-500">{opt.desc}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Aspect Ratio */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Aspect Ratio</label>
+                  <div className="flex gap-2">
+                    {RATIO_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setRatio(opt.value)}
+                        className={cn(
+                          'flex-1 rounded-lg border px-2 py-1.5 text-center transition-colors',
+                          ratio === opt.value
+                            ? 'border-primary-500 bg-primary-500/10 text-primary-300'
+                            : 'border-dark-border text-gray-400 hover:border-gray-600 hover:text-gray-200'
+                        )}
+                      >
+                        <div className="text-xs font-medium">{opt.label}</div>
+                        <div className="text-[10px] text-gray-500">{opt.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Style */}
+                {mode === 'text' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1.5">Style</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {STYLE_OPTIONS.map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => setStyle(style === s ? null : s)}
+                          className={cn(
+                            'px-2 py-0.5 rounded-full text-xs border transition-colors',
+                            style === s
+                              ? 'border-primary-500 bg-primary-500/20 text-primary-300'
+                              : 'border-dark-border text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                          )}
+                        >
+                          {formatStyleLabel(s)}
+                        </button>
+                      ))}
+                    </div>
+                    {style && (
+                      <button
+                        onClick={() => setStyle(null)}
+                        className="mt-1.5 text-xs text-gray-500 hover:text-gray-300"
+                      >
+                        Clear style
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Enhance prompt */}
+                {mode === 'text' && (
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={enhancePrompt}
+                      onChange={(e) => setEnhancePrompt(e.target.checked)}
+                      className="rounded border-dark-border bg-dark-bg text-primary-500 focus:ring-primary-500 focus:ring-offset-0"
+                    />
+                    <span className="text-sm text-gray-300">Enhance prompt</span>
+                  </label>
+                )}
+
+                {/* Generate Button */}
+                <button
+                  onClick={handleGenerate}
+                  disabled={isGenerating || (mode === 'text' ? !prompt.trim() : !imageUrl.trim())}
+                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary-600 hover:bg-primary-500 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2.5 text-sm font-medium text-white transition-colors"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Starting...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={16} />
+                      Generate Video
+                    </>
+                  )}
+                </button>
+
+                {/* Active Generations */}
+                {activeGenerations.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-xs text-gray-500">In Progress</span>
+                    {activeGenerations.map((gen) => (
+                      <div
+                        key={gen.taskId}
+                        className="flex items-center gap-2 rounded-lg border border-dark-border bg-dark-bg px-3 py-2"
+                      >
+                        <Loader2 size={14} className="animate-spin text-primary-400 flex-shrink-0" />
+                        <span className="text-xs text-gray-300 truncate flex-1">
+                          {gen.prompt || 'Generating...'}
+                        </span>
+                        <span className="text-[10px] text-gray-500 flex-shrink-0">
+                          {formatElapsed(gen.startedAt)} / ~{gen.estimatedTime}s
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </>
             )}
 
-            {/* Duration */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">Duration</label>
-              <div className="flex gap-1.5">
-                {DURATION_OPTIONS.map((d) => (
-                  <button
-                    key={d}
-                    onClick={() => setDuration(d)}
-                    className={cn(
-                      'flex-1 rounded-lg border px-2 py-1.5 text-center text-xs transition-colors',
-                      duration === d
-                        ? 'border-primary-500 bg-primary-500/10 text-primary-300'
-                        : 'border-dark-border text-gray-400 hover:border-gray-600 hover:text-gray-200'
-                    )}
-                  >
-                    {d}s
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Quality / Model */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">Quality</label>
-              <div className="space-y-1.5">
-                {QUALITY_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setQuality(opt.value)}
-                    className={cn(
-                      'w-full rounded-lg border px-3 py-2 text-left transition-colors',
-                      quality === opt.value
-                        ? 'border-primary-500 bg-primary-500/10'
-                        : 'border-dark-border hover:border-gray-600'
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className={cn('text-sm font-medium', quality === opt.value ? 'text-primary-300' : 'text-gray-300')}>
-                        {opt.label}
-                      </span>
-                      <span className="text-[10px] text-gray-500">{opt.desc}</span>
+            {/* ════════════════ EDIT MODE ════════════════ */}
+            {studioMode === 'edit' && (
+              <>
+                {/* Selected video */}
+                <div>
+                  <span className="text-xs text-gray-500">Selected Video</span>
+                  {editVideo ? (
+                    <div className="mt-1.5 flex items-center gap-3 rounded-lg border border-primary-500/50 bg-primary-500/5 p-2">
+                      <div className="w-16 h-10 rounded overflow-hidden bg-dark-bg flex-shrink-0">
+                        {editVideo.thumbnail_url ? (
+                          <img src={editVideo.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Film size={14} className="text-gray-700" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs text-gray-300 truncate">{editVideo.prompt || 'Video'}</p>
+                        <p className="text-[10px] text-gray-500">
+                          {editVideo.duration ? `${editVideo.duration}s` : ''}{editVideo.duration && editVideo.model ? ' \u00B7 ' : ''}{editVideo.model || ''}
+                        </p>
+                      </div>
+                      <button onClick={() => setEditVideoId(null)} className="text-gray-500 hover:text-white flex-shrink-0">
+                        <X size={14} />
+                      </button>
                     </div>
-                  </button>
-                ))}
-              </div>
-            </div>
+                  ) : (
+                    <p className="mt-1.5 text-sm text-gray-500 italic">Click a gallery video to select it</p>
+                  )}
+                </div>
 
-            {/* Aspect Ratio */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">Aspect Ratio</label>
-              <div className="flex gap-2">
-                {RATIO_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setRatio(opt.value)}
-                    className={cn(
-                      'flex-1 rounded-lg border px-2 py-1.5 text-center transition-colors',
-                      ratio === opt.value
-                        ? 'border-primary-500 bg-primary-500/10 text-primary-300'
-                        : 'border-dark-border text-gray-400 hover:border-gray-600 hover:text-gray-200'
-                    )}
-                  >
-                    <div className="text-xs font-medium">{opt.label}</div>
-                    <div className="text-[10px] text-gray-500">{opt.desc}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Style */}
-            {mode === 'text' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5">Style</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {STYLE_OPTIONS.map((s) => (
+                {/* Tool tabs */}
+                <div className="flex border-b border-dark-border">
+                  {[
+                    { key: 'text' as const, label: 'Text', icon: Type },
+                    { key: 'color' as const, label: 'Color', icon: Palette },
+                    { key: 'audio' as const, label: 'Audio', icon: Music },
+                  ].map(({ key, label, icon: Icon }) => (
                     <button
-                      key={s}
-                      onClick={() => setStyle(style === s ? null : s)}
+                      key={key}
+                      onClick={() => setEditTool(key)}
                       className={cn(
-                        'px-2 py-0.5 rounded-full text-xs border transition-colors',
-                        style === s
-                          ? 'border-primary-500 bg-primary-500/20 text-primary-300'
-                          : 'border-dark-border text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                        'flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
+                        editTool === key
+                          ? 'border-primary-500 text-primary-400'
+                          : 'border-transparent text-gray-500 hover:text-gray-300'
                       )}
                     >
-                      {formatStyleLabel(s)}
+                      <Icon size={13} />
+                      {label}
                     </button>
                   ))}
                 </div>
-                {style && (
-                  <button
-                    onClick={() => setStyle(null)}
-                    className="mt-1.5 text-xs text-gray-500 hover:text-gray-300"
-                  >
-                    Clear style
-                  </button>
-                )}
-              </div>
-            )}
 
-            {/* Enhance prompt */}
-            {mode === 'text' && (
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={enhancePrompt}
-                  onChange={(e) => setEnhancePrompt(e.target.checked)}
-                  className="rounded border-dark-border bg-dark-bg text-primary-500 focus:ring-primary-500 focus:ring-offset-0"
-                />
-                <span className="text-sm text-gray-300">Enhance prompt</span>
-              </label>
-            )}
-
-            {/* Generate Button */}
-            <button
-              onClick={handleGenerate}
-              disabled={isGenerating || (mode === 'text' ? !prompt.trim() : !imageUrl.trim())}
-              className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary-600 hover:bg-primary-500 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2.5 text-sm font-medium text-white transition-colors"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Starting...
-                </>
-              ) : (
-                <>
-                  <Sparkles size={16} />
-                  Generate Video
-                </>
-              )}
-            </button>
-
-            {/* Active Generations */}
-            {activeGenerations.length > 0 && (
-              <div className="space-y-2">
-                <span className="text-xs text-gray-500">In Progress</span>
-                {activeGenerations.map((gen) => (
-                  <div
-                    key={gen.taskId}
-                    className="flex items-center gap-2 rounded-lg border border-dark-border bg-dark-bg px-3 py-2"
-                  >
-                    <Loader2 size={14} className="animate-spin text-primary-400 flex-shrink-0" />
-                    <span className="text-xs text-gray-300 truncate flex-1">
-                      {gen.prompt || 'Generating...'}
-                    </span>
-                    <span className="text-[10px] text-gray-500 flex-shrink-0">
-                      {formatElapsed(gen.startedAt)} / ~{gen.estimatedTime}s
-                    </span>
+                {/* ── Text Overlay Tool ── */}
+                {editTool === 'text' && (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1">Text</label>
+                      <textarea
+                        value={overlayText}
+                        onChange={(e) => setOverlayText(e.target.value)}
+                        placeholder="Enter overlay text..."
+                        rows={2}
+                        disabled={!editVideoId}
+                        className="w-full rounded-lg bg-dark-bg border border-dark-border px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500 resize-none disabled:opacity-40"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1">Position</label>
+                      <div className="flex gap-1.5">
+                        {[
+                          { value: 'upper_third', label: 'Top' },
+                          { value: 'center', label: 'Center' },
+                          { value: 'lower_third', label: 'Bottom' },
+                        ].map((pos) => (
+                          <button
+                            key={pos.value}
+                            onClick={() => setOverlayPosition(pos.value)}
+                            disabled={!editVideoId}
+                            className={cn(
+                              'flex-1 rounded-lg border px-2 py-1.5 text-center text-xs transition-colors disabled:opacity-40',
+                              overlayPosition === pos.value
+                                ? 'border-primary-500 bg-primary-500/10 text-primary-300'
+                                : 'border-dark-border text-gray-400 hover:border-gray-600'
+                            )}
+                          >
+                            {pos.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1">
+                        Font Size: {overlayFontSize}
+                      </label>
+                      <input
+                        type="range"
+                        min={36}
+                        max={144}
+                        value={overlayFontSize}
+                        onChange={(e) => setOverlayFontSize(Number(e.target.value))}
+                        disabled={!editVideoId}
+                        className="w-full accent-primary-500 disabled:opacity-40"
+                      />
+                    </div>
+                    <div className="flex gap-3">
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium text-gray-400 mb-1">Start (s)</label>
+                        <input
+                          type="number"
+                          min={0}
+                          step={0.5}
+                          value={overlayStart}
+                          onChange={(e) => setOverlayStart(Number(e.target.value))}
+                          disabled={!editVideoId}
+                          className="w-full rounded-lg bg-dark-bg border border-dark-border px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-40"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium text-gray-400 mb-1">Duration (s)</label>
+                        <input
+                          type="number"
+                          min={0.5}
+                          step={0.5}
+                          value={overlayDuration}
+                          onChange={(e) => setOverlayDuration(Number(e.target.value))}
+                          disabled={!editVideoId}
+                          className="w-full rounded-lg bg-dark-bg border border-dark-border px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-40"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => textOverlayMutation.mutate()}
+                      disabled={!editVideoId || !overlayText.trim() || textOverlayMutation.isPending}
+                      className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary-600 hover:bg-primary-500 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 text-sm font-medium text-white transition-colors"
+                    >
+                      {textOverlayMutation.isPending ? (
+                        <><Loader2 size={14} className="animate-spin" /> Applying...</>
+                      ) : (
+                        <><Type size={14} /> Apply Text</>
+                      )}
+                    </button>
                   </div>
-                ))}
-              </div>
+                )}
+
+                {/* ── Color Grading Tool ── */}
+                {editTool === 'color' && (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {COLOR_GRADE_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => setColorStyle(opt.value)}
+                          disabled={!editVideoId}
+                          className={cn(
+                            'rounded-lg border px-2.5 py-2 text-left transition-colors disabled:opacity-40',
+                            colorStyle === opt.value
+                              ? 'border-primary-500 bg-primary-500/10'
+                              : 'border-dark-border hover:border-gray-600'
+                          )}
+                        >
+                          <div className={cn('text-xs font-medium', colorStyle === opt.value ? 'text-primary-300' : 'text-gray-300')}>
+                            {opt.label}
+                          </div>
+                          <div className="text-[10px] text-gray-500">{opt.desc}</div>
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => colorGradingMutation.mutate()}
+                      disabled={!editVideoId || colorGradingMutation.isPending}
+                      className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary-600 hover:bg-primary-500 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 text-sm font-medium text-white transition-colors"
+                    >
+                      {colorGradingMutation.isPending ? (
+                        <><Loader2 size={14} className="animate-spin" /> Applying...</>
+                      ) : (
+                        <><Palette size={14} /> Apply Grade</>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* ── Audio Tool ── */}
+                {editTool === 'audio' && (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1">Audio File</label>
+                      <label
+                        className={cn(
+                          'flex items-center gap-2 rounded-lg border border-dashed px-3 py-3 cursor-pointer transition-colors',
+                          !editVideoId ? 'opacity-40 cursor-not-allowed' : 'border-dark-border hover:border-gray-500'
+                        )}
+                      >
+                        <Upload size={16} className="text-gray-400" />
+                        <span className="text-xs text-gray-400 truncate">
+                          {audioFile ? audioFile.name : 'Choose audio file...'}
+                        </span>
+                        <input
+                          type="file"
+                          accept="audio/*"
+                          onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
+                          disabled={!editVideoId}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1">
+                        Volume: {Math.round(audioVolume * 100)}%
+                      </label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        value={audioVolume}
+                        onChange={(e) => setAudioVolume(Number(e.target.value))}
+                        disabled={!editVideoId}
+                        className="w-full accent-primary-500 disabled:opacity-40"
+                      />
+                    </div>
+                    <button
+                      onClick={() => audioMutation.mutate()}
+                      disabled={!editVideoId || !audioFile || audioMutation.isPending}
+                      className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary-600 hover:bg-primary-500 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 text-sm font-medium text-white transition-colors"
+                    >
+                      {audioMutation.isPending ? (
+                        <><Loader2 size={14} className="animate-spin" /> Adding...</>
+                      ) : (
+                        <><Music size={14} /> Add Audio</>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ════════════════ CHAIN MODE ════════════════ */}
+            {studioMode === 'chain' && (
+              <>
+                <div>
+                  <span className="text-xs text-gray-500">
+                    Selected Videos ({chainVideos.length})
+                  </span>
+                  {chainVideos.length === 0 ? (
+                    <p className="mt-1.5 text-sm text-gray-500 italic">Click gallery videos to add them to the chain</p>
+                  ) : (
+                    <div className="mt-1.5 space-y-1">
+                      {chainVideos.map((video, idx) => (
+                        <div
+                          key={video.id}
+                          className="flex items-center gap-2 rounded-lg border border-dark-border bg-dark-bg p-1.5"
+                        >
+                          <span className="w-5 h-5 rounded-full bg-primary-600 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                            {idx + 1}
+                          </span>
+                          <div className="w-12 h-7 rounded overflow-hidden bg-dark-card flex-shrink-0">
+                            {video.thumbnail_url ? (
+                              <img src={video.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Film size={10} className="text-gray-700" />
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-gray-400 truncate flex-1">
+                            {video.prompt || 'Video'}
+                          </span>
+                          <div className="flex items-center gap-0.5 flex-shrink-0">
+                            <button
+                              onClick={() => moveChainVideo(idx, 'up')}
+                              disabled={idx === 0}
+                              className="p-0.5 text-gray-500 hover:text-white disabled:opacity-20"
+                            >
+                              <ArrowUp size={12} />
+                            </button>
+                            <button
+                              onClick={() => moveChainVideo(idx, 'down')}
+                              disabled={idx === chainVideos.length - 1}
+                              className="p-0.5 text-gray-500 hover:text-white disabled:opacity-20"
+                            >
+                              <ArrowDown size={12} />
+                            </button>
+                            <button
+                              onClick={() => setChainVideos(prev => prev.filter(v => v.id !== video.id))}
+                              className="p-0.5 text-gray-500 hover:text-red-400"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={chainTransitions}
+                    onChange={(e) => setChainTransitions(e.target.checked)}
+                    className="rounded border-dark-border bg-dark-bg text-primary-500 focus:ring-primary-500 focus:ring-offset-0"
+                  />
+                  <span className="text-sm text-gray-300">Add transitions between clips</span>
+                </label>
+
+                <button
+                  onClick={() => chainMutation.mutate()}
+                  disabled={chainVideos.length < 2 || isChaining}
+                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary-600 hover:bg-primary-500 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2.5 text-sm font-medium text-white transition-colors"
+                >
+                  {isChaining ? (
+                    <><Loader2 size={16} className="animate-spin" /> Stitching...</>
+                  ) : (
+                    <><Link2 size={16} /> Stitch {chainVideos.length} Video{chainVideos.length !== 1 ? 's' : ''}</>
+                  )}
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -600,6 +1067,17 @@ export default function VideoStudioPage() {
             </span>
           </div>
 
+          {/* Hint for edit/chain mode */}
+          {studioMode !== 'generate' && (
+            <div className="px-4 py-2 bg-primary-500/5 border-b border-dark-border">
+              <p className="text-xs text-primary-400">
+                {studioMode === 'edit'
+                  ? 'Click a video to select it for editing'
+                  : 'Click videos to add them to the chain'}
+              </p>
+            </div>
+          )}
+
           {/* Grid */}
           <div className="flex-1 overflow-y-auto p-4">
             {galleryLoading ? (
@@ -618,56 +1096,87 @@ export default function VideoStudioPage() {
             ) : (
               <>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                  {videos.map((video) => (
-                    <button
-                      key={video.id}
-                      onClick={() => handleVideoClick(video)}
-                      className="group relative aspect-video rounded-lg overflow-hidden border border-dark-border hover:border-primary-500/50 transition-colors text-left"
-                    >
-                      {video.thumbnail_url ? (
-                        <img
-                          src={video.thumbnail_url}
-                          alt={video.prompt || 'Generated video'}
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-dark-bg flex items-center justify-center">
-                          <Film size={32} className="text-gray-700" />
-                        </div>
-                      )}
-                      {/* Play overlay */}
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="w-12 h-12 rounded-full bg-black/60 flex items-center justify-center">
-                          <Play size={20} className="text-white ml-0.5" />
-                        </div>
-                      </div>
-                      {/* Bottom gradient bar */}
-                      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-2 flex items-end justify-between">
-                        <div className="flex items-center gap-2 min-w-0">
-                          {video.duration && (
-                            <span className="text-[10px] text-gray-300 flex-shrink-0">
-                              {video.duration}s
-                            </span>
-                          )}
-                          {video.prompt && (
-                            <span className="text-[10px] text-gray-400 truncate">
-                              {video.prompt}
-                            </span>
-                          )}
-                        </div>
-                        {video.is_favorite && (
-                          <Heart size={12} className="text-red-400 fill-red-400 flex-shrink-0" />
+                  {videos.map((video) => {
+                    const isEditSelected = studioMode === 'edit' && editVideoId === video.id
+                    const chainIndex = studioMode === 'chain'
+                      ? chainVideos.findIndex(v => v.id === video.id)
+                      : -1
+                    const isChainSelected = chainIndex >= 0
+
+                    return (
+                      <button
+                        key={video.id}
+                        onClick={() => handleVideoClick(video)}
+                        className={cn(
+                          'group relative aspect-video rounded-lg overflow-hidden border transition-colors text-left',
+                          isEditSelected
+                            ? 'border-primary-400 ring-2 ring-primary-500/50'
+                            : isChainSelected
+                              ? 'border-primary-400 ring-2 ring-primary-500/50'
+                              : 'border-dark-border hover:border-primary-500/50'
                         )}
-                      </div>
-                      {/* Model badge */}
-                      {video.model && (
-                        <span className="absolute top-1.5 right-1.5 text-[9px] bg-black/70 text-gray-400 px-1.5 py-0.5 rounded">
-                          {video.model}
-                        </span>
-                      )}
-                    </button>
-                  ))}
+                      >
+                        {video.thumbnail_url ? (
+                          <img
+                            src={video.thumbnail_url}
+                            alt={video.prompt || 'Generated video'}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-dark-bg flex items-center justify-center">
+                            <Film size={32} className="text-gray-700" />
+                          </div>
+                        )}
+                        {/* Play overlay (generate mode only) */}
+                        {studioMode === 'generate' && (
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="w-12 h-12 rounded-full bg-black/60 flex items-center justify-center">
+                              <Play size={20} className="text-white ml-0.5" />
+                            </div>
+                          </div>
+                        )}
+                        {/* Chain number badge */}
+                        {isChainSelected && (
+                          <div className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full bg-primary-600 text-white text-xs font-bold flex items-center justify-center">
+                            {chainIndex + 1}
+                          </div>
+                        )}
+                        {/* Edit selected indicator */}
+                        {isEditSelected && (
+                          <div className="absolute top-1.5 left-1.5">
+                            <div className="w-6 h-6 rounded-full bg-primary-600 text-white flex items-center justify-center">
+                              <Check size={14} />
+                            </div>
+                          </div>
+                        )}
+                        {/* Bottom gradient bar */}
+                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-2 flex items-end justify-between">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {video.duration && (
+                              <span className="text-[10px] text-gray-300 flex-shrink-0">
+                                {video.duration}s
+                              </span>
+                            )}
+                            {video.prompt && (
+                              <span className="text-[10px] text-gray-400 truncate">
+                                {video.prompt}
+                              </span>
+                            )}
+                          </div>
+                          {video.is_favorite && (
+                            <Heart size={12} className="text-red-400 fill-red-400 flex-shrink-0" />
+                          )}
+                        </div>
+                        {/* Model badge */}
+                        {video.model && (
+                          <span className="absolute top-1.5 right-1.5 text-[9px] bg-black/70 text-gray-400 px-1.5 py-0.5 rounded">
+                            {video.model}
+                          </span>
+                        )}
+                      </button>
+                    )
+                  })}
                 </div>
 
                 {/* Load more */}
@@ -688,7 +1197,7 @@ export default function VideoStudioPage() {
       </div>
 
       {/* ── Video Detail Modal ────────────────────────────────────────── */}
-      {selectedVideo && (
+      {selectedVideo && studioMode === 'generate' && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
           onClick={(e) => {
