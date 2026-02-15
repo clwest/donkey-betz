@@ -343,6 +343,17 @@ If asked to create something new, explain you can only edit existing images."""
                             confidence=0.8
                         )
 
+                        # Session 1006: Persist output to Deliverable
+                        args = successful_calls[0].get('arguments', {})
+                        self._save_to_deliverable(
+                            title=f"Image Edit ({tool_used}): {task[:80]}",
+                            content=result.message,
+                            deliverable_type='image',
+                            category='Image Editing',
+                            tags=['image_edit', tool_used],
+                            metadata={'task': task[:200], 'tool_used': tool_used, 'image_id': args.get('image_id')},
+                        )
+
                         return result
                     else:
                         result = AgentResult(
