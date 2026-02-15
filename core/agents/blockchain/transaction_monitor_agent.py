@@ -479,6 +479,16 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
                             scifi_context_used=bool(scifi_context)
                         )
 
+                        # Session 1006: Persist output to Deliverable
+                        self._save_to_deliverable(
+                            title=f"Transaction Monitor: {task[:80]}",
+                            content=result.message,
+                            deliverable_type='analysis',
+                            category='Blockchain Monitoring',
+                            tags=['blockchain', 'transactions'],
+                            metadata={'task': task[:200]},
+                        )
+
                         return result
 
                 # No tool calls

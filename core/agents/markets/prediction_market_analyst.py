@@ -197,6 +197,16 @@ Remember: Markets are forward-looking. Look for what others are missing."""
                 # Session 763: Create Mission Control attention item
                 self._maybe_create_attention_item(result, task, context)
 
+                # Session 1006: Persist output to Deliverable
+                self._save_to_deliverable(
+                    title=f"Prediction Market: {task[:80]}",
+                    content=result.message,
+                    deliverable_type='analysis',
+                    category='Prediction Markets',
+                    tags=['prediction', 'markets'],
+                    metadata={'task': task[:200]},
+                )
+
                 return result
 
             except Exception as e:

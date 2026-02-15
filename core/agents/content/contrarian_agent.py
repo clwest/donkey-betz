@@ -243,6 +243,16 @@ CRITICAL: Use tools to check actual saturation data. Don't just assume."""
                     except Exception as e:
                         logger.warning(f"Failed to record learning outcome: {e}")
 
+                    # Session 1006: Persist output to Deliverable
+                    self._save_to_deliverable(
+                        title=f"Contrarian Analysis: {task[:80]}",
+                        content=result.message,
+                        deliverable_type='analysis',
+                        category='Contrarian Analysis',
+                        tags=['contrarian', 'content'],
+                        metadata={'task': task[:200]},
+                    )
+
                     return result
                 else:
                     # No tools called, return content

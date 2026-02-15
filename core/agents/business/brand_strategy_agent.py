@@ -667,6 +667,16 @@ Return a comprehensive brand strategy report that builds on existing project res
                             contribution_score=1.0
                         )
 
+                    # Session 1006: Persist output to Deliverable
+                    self._save_to_deliverable(
+                        title=f"Brand Strategy: {task[:80]}",
+                        content=result.message,
+                        deliverable_type='analysis',
+                        category='Brand Strategy',
+                        tags=['brand', 'strategy'],
+                        metadata={'task': task[:200]},
+                    )
+
                     return result
 
                 else:

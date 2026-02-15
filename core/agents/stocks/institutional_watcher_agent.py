@@ -337,6 +337,16 @@ Focus on transactions that diverge from normal patterns."""
                 except Exception as le:
                     logger.warning(f"Failed to record learning outcome: {le}")
 
+                # Session 1006: Persist output to Deliverable
+                self._save_to_deliverable(
+                    title=f"Institutional Activity: {task[:80]}",
+                    content=result.message,
+                    deliverable_type='analysis',
+                    category='Institutional Analysis',
+                    tags=['institutional', 'stocks'],
+                    metadata={'task': task[:200]},
+                )
+
                 return result
 
             except Exception as e:

@@ -111,6 +111,16 @@ Rate movements: STEAM (urgent), SHARP (high value), DRIFT (moderate), NOISE (ign
                     'llm_analysis': llm_analysis,
                 }
 
+                # Session 1006: Persist output to Deliverable
+                self._save_to_deliverable(
+                    title=f"Line Movement: {task[:80]}",
+                    content=f"Analyzed {len(current_events)} games: {result_data.get('steam_moves', 0)} steam, {result_data.get('sharp_moves', 0)} sharp moves",
+                    deliverable_type='analysis',
+                    category='Line Movement',
+                    tags=['line_movement', 'sports'],
+                    metadata={'task': task[:200]},
+                )
+
                 return AgentResult(
                     success=True,
                     message=(

@@ -787,4 +787,14 @@ Provide clear, analytical responses about narrative shifts."""
         except Exception as le:
             logger.warning(f"Failed to record learning outcome: {le}")
 
+        # Session 1006: Persist output to Deliverable
+        self._save_to_deliverable(
+            title=f"Trend Break Detection: {task[:80]}",
+            content=result.message,
+            deliverable_type='analysis',
+            category='Trend Analysis',
+            tags=['trend_break', 'narrative'],
+            metadata={'task': task[:200]},
+        )
+
         return result

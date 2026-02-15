@@ -108,6 +108,16 @@ Focus on ACTIONABLE signals where soft books still have stale lines."""
                     'llm_analysis': llm_analysis,
                 }
 
+                # Session 1006: Persist output to Deliverable
+                self._save_to_deliverable(
+                    title=f"Sharp Action: {task[:80]}",
+                    content=f"Scanned {len(events)} events: {len(hot_signals)} HOT, {result_data.get('warm_signals', 0)} WARM signals",
+                    deliverable_type='analysis',
+                    category='Sharp Action Detection',
+                    tags=['sharp_action', 'sports'],
+                    metadata={'task': task[:200], 'hot_signals': len(hot_signals)},
+                )
+
                 return AgentResult(
                     success=True,
                     message=(
