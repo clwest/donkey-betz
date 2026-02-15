@@ -949,20 +949,20 @@ CELERY_TASK_ROUTES = {
     'core.tasks.advance_initiative_pipeline': {'queue': 'content'},
     'core.tasks.auto_kickstart_stuck_initiatives': {'queue': 'content'},
     'core.tasks.execute_dream_implementations': {'queue': 'content'},
-    'autonomous_studio.run_main_loop': {'queue': 'content'},
-    # Session 885: Podcast and media generation
-    'core.tasks.generate_podcast_task': {'queue': 'content'},
-    'core.tasks.generate_image_task': {'queue': 'content'},
-    'core.tasks.generate_video_task': {'queue': 'content'},
+    # Session 1009: Removed 4 phantom routes (tasks don't exist):
+    #   autonomous_studio.run_main_loop, generate_podcast_task, generate_image_task, generate_video_task
     'content.tasks.poll_pending_trainings': {'queue': 'content'},
-    # Session 885: Workspace-writing tasks (Operations tab)
-    'core.tasks.agent_daily_summary': {'queue': 'content'},
-    'core.tasks.agent_workspace_status_report': {'queue': 'content'},
-    'core.tasks.agent_research_to_workspace': {'queue': 'content'},
-    'core.tasks.agent_content_to_workspace': {'queue': 'content'},
-    'core.tasks.universal_agent_workspace_output': {'queue': 'content'},
-    'core.tasks.agent_category_rotation': {'queue': 'content'},
-    'core.tasks.full_agent_rotation': {'queue': 'content'},
+    # Session 1009: Moved workspace/rotation tasks from content → long_running
+    # These run ALL agents in a category (~20-74 agents) and caused OOM on content worker (512MB).
+    # .delay() calls in views_platform_command.py and views_workspace_triggers.py route via
+    # CELERY_TASK_ROUTES, so they must point to long_running (not content).
+    'core.tasks.agent_daily_summary': {'queue': 'long_running'},
+    'core.tasks.agent_workspace_status_report': {'queue': 'long_running'},
+    'core.tasks.agent_research_to_workspace': {'queue': 'long_running'},
+    'core.tasks.agent_content_to_workspace': {'queue': 'long_running'},
+    'core.tasks.universal_agent_workspace_output': {'queue': 'long_running'},
+    'core.tasks.agent_category_rotation': {'queue': 'long_running'},
+    'core.tasks.full_agent_rotation': {'queue': 'long_running'},
     'autonomous.blockchain_security_monitor': {'queue': 'agents'},  # Session 1004: LLM API calls
     # Session 989: Removed phantom autonomous.stock_market_intelligence routing (task didn't exist)
 
@@ -1054,7 +1054,7 @@ CELERY_TASK_ROUTES = {
     'core.tasks.process_initiative_auto_progression': {'queue': 'content'},
     'core.tasks.evaluate_unscored_blogs': {'queue': 'content'},
     # Session 1004: Content Review Automation Pipeline — LLM calls, moved to content
-    'core.tasks.enhance_all_blogs_needing_enhancement': {'queue': 'content'},  # EditorAgent = LLM calls
+    # Session 1009: Removed phantom enhance_all_blogs_needing_enhancement (task doesn't exist)
     'core.tasks.reevaluate_enhanced_blogs': {'queue': 'content'},  # PublishGate = heuristic only
     'core.tasks.auto_publish_approved_blogs': {'queue': 'content'},  # Simple status update
     # Session 1004: Narrative/pipeline module tasks — LLM calls, moved to default
@@ -1065,7 +1065,7 @@ CELERY_TASK_ROUTES = {
     'narrative_drift.process_shifts_for_content': {'queue': 'content'},
     'unified_pipeline.run_complete_cycle': {'queue': 'default'},
     'unified_pipeline.health_check': {'queue': 'default'},
-    'autonomous_studio.track_performance': {'queue': 'content'},
+    # Session 1009: Removed phantom autonomous_studio.track_performance (task doesn't exist)
 }
 
 # Celery Worker Settings
