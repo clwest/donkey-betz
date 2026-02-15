@@ -2557,14 +2557,15 @@ def celery_debug_view(request):
         except Exception as e:
             beat_db_tasks = {'error': str(e)}
 
-        # Also get settings schedule for reference
+        # Session 1007: Read from celery.py's app.conf.beat_schedule (authoritative source)
         try:
-            schedule = getattr(settings, 'CELERY_BEAT_SCHEDULE', {})
+            from core.celery import app as celery_app
+            schedule = getattr(celery_app.conf, 'beat_schedule', {})
             for name, config in schedule.items():
                 if 'cleanup' in name.lower() or 'stale' in name.lower():
                     beat_schedule[name] = {
                         'task': config.get('task'),
-                        'schedule_seconds': config.get('schedule'),
+                        'schedule': str(config.get('schedule', '')),
                     }
         except Exception as e:
             beat_schedule = {'error': str(e)}
