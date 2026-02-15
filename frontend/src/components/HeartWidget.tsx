@@ -375,7 +375,7 @@ export default function HeartWidget({ compact = false, showRefresh = true, onRef
               </button>
             )}
             <a
-              href="/body-health"
+              href="/workspace?tab=system"
               className="btn btn-secondary btn-sm flex items-center gap-2"
             >
               <ExternalLink size={14} />

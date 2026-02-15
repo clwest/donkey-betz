@@ -368,7 +368,7 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
         {/* Quick action: View Body Health */}
         <div className="pt-2 border-t border-dark-border">
           <a
-            href="/body-health"
+            href="/workspace?tab=system"
             className="text-sm text-accent-red hover:text-accent-red/80 flex items-center gap-2"
             onClick={(e) => e.stopPropagation()}
           >
@@ -451,7 +451,7 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
         {/* Quick action: View Content Channels */}
         <div className="pt-2 border-t border-dark-border">
           <a
-            href="/content-channels"
+            href="/workspace?tab=content"
             className="text-sm text-accent-purple hover:text-accent-purple/80 flex items-center gap-2"
             onClick={(e) => e.stopPropagation()}
           >
@@ -474,7 +474,7 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
             <div className="col-span-2">
               <p className="text-xs text-gray-500">Spider</p>
               <a
-                href="/spiders"
+                href="/workspace?tab=dataintel"
                 className="font-medium text-primary-400 hover:text-primary-300 hover:underline inline-flex items-center gap-1"
                 onClick={(e) => e.stopPropagation()}
               >
@@ -509,7 +509,7 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
         {/* Quick action: View Spider Integration */}
         <div className="pt-2 border-t border-dark-border">
           <a
-            href="/spiders"
+            href="/workspace?tab=dataintel"
             className="text-sm text-primary-400 hover:text-primary-300 flex items-center gap-2"
             onClick={(e) => e.stopPropagation()}
           >
@@ -1112,7 +1112,7 @@ export default function HumanPage() {
       {/* Session 712: Body Health Card - Consciousness connected to Body */}
       {bodyVitals && (
         <a
-          href="/body-health"
+          href="/workspace?tab=system"
           className="card hover:border-primary-500/50 transition-colors group cursor-pointer block"
         >
           <div className="flex items-center justify-between">

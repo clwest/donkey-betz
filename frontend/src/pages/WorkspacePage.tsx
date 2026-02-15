@@ -3129,7 +3129,7 @@ export default function WorkspacePage() {
                         </span>
                       </div>
                       <a
-                        href="/body-health"
+                        href="/workspace?tab=system"
                         className="flex items-center gap-1 text-sm text-primary-400 hover:text-primary-300 transition-colors"
                       >
                         <span>View Details</span>

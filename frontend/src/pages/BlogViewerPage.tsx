@@ -73,7 +73,7 @@ export default function BlogViewerPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['blogs-page'] })
-      navigate('/blogs')
+      navigate('/workspace?tab=content')
     },
   })
 
@@ -125,7 +125,7 @@ export default function BlogViewerPage() {
         <p className="text-gray-400 mb-4">
           {error instanceof Error ? error.message : 'The requested blog could not be loaded.'}
         </p>
-        <Link to="/blogs" className="btn btn-primary">
+        <Link to="/workspace?tab=content" className="btn btn-primary">
           Back to Blogs
         </Link>
       </div>
@@ -185,7 +185,7 @@ export default function BlogViewerPage() {
 
       {/* Back button */}
       <Link
-        to="/blogs"
+        to="/workspace?tab=content"
         className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
       >
         <ArrowLeft size={18} />
@@ -370,7 +370,7 @@ export default function BlogViewerPage() {
 
       {/* Action buttons */}
       <div className="flex justify-between items-center">
-        <Link to="/blogs" className="btn btn-secondary">
+        <Link to="/workspace?tab=content" className="btn btn-secondary">
           <ArrowLeft size={16} className="mr-2" />
           Back to Blogs
         </Link>
