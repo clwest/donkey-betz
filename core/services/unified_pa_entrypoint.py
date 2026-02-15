@@ -571,10 +571,12 @@ class UnifiedPAEntrypoint:
         # Add conversation history (last 5 turns)
         context['conversation_history'] = self._conversation_history[-10:]
 
-        # Add profile data
+        # Add profile data (must use asyncio.to_thread for sync ORM in async context)
         try:
             from core.models import ExtendedUserProfile
-            profile = ExtendedUserProfile.objects.filter(user=self.user).first()
+            profile = await asyncio.to_thread(
+                lambda: ExtendedUserProfile.objects.filter(user=self.user).first()
+            )
             if profile:
                 context['profile'] = {
                     'skills': profile.skills or [],

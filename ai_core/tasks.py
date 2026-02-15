@@ -42,9 +42,12 @@ def collect_real_opportunities():
             JobIncomeBridge.sync_to_income_builder(jobs)
 
             # Store top opportunities in database for persistence
+            # Session 1006: Only create NEW opportunities, skip already-known ones
+            new_count = 0
             for job in jobs[:20]:  # Store top 20
-                OpportunityActionPlan.objects.update_or_create(
-                    opportunity_id=f"spider_{job.get('id', '')}",
+                opp_id = f"spider_{job.get('id', '')}"
+                _, created = OpportunityActionPlan.objects.get_or_create(
+                    opportunity_id=opp_id,
                     defaults={
                         'platform': job.get('source', 'spider'),
                         'opportunity_data': job,
@@ -52,9 +55,12 @@ def collect_real_opportunities():
                         'ml_confidence': job.get('aiScore', 0.75),
                         'revenue_potential': _extract_salary_amount(job.get('salary', '$3000')),
                         'status': 'identified',
-                        'created_at': timezone.now()
                     }
                 )
+                if created:
+                    new_count += 1
+            if new_count:
+                logger.info(f"📝 Stored {new_count} new opportunities (skipped {len(jobs[:20]) - new_count} existing)")
 
             return {'success': True, 'jobs_collected': len(jobs)}
         else:
