@@ -48,6 +48,7 @@ const navItems = [
 
   // Main Hub - Primary entry point
   { path: '/workspace', label: 'Workspace', icon: FolderCog },
+  { path: '/image-studio', label: 'Image Studio', icon: Palette },
 
   // Core Navigation
   { path: '/agents', label: 'Agents', icon: Bot },

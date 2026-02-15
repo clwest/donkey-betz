@@ -24,6 +24,7 @@ import AnalyticsDashboardPage from '@/pages/AnalyticsDashboardPage'  // Session 
 import DocsIndexPage from '@/pages/DocsIndexPage'  // Session 784: Documentation Index Browser
 import StockIntelligencePage from '@/pages/StockIntelligencePage'
 import DocumentsPage from '@/pages/DocumentsPage'
+import ImageStudioPage from '@/pages/ImageStudioPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -77,6 +78,7 @@ function App() {
 
         {/* Standalone content pages */}
         <Route path="documents" element={<DocumentsPage />} />
+        <Route path="image-studio" element={<ImageStudioPage />} />
       </Route>
     </Routes>
   )

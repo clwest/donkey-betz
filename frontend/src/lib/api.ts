@@ -884,6 +884,18 @@ export const contentApi = {
   videoGallery: () => api.get('/v1/gallery/videos/'),
   toggleFavorite: (itemId: string) => api.post('/v1/gallery/toggle-favorite/', { item_id: itemId }),
 
+  // Image History & Editing
+  imageHistory: (params?: Record<string, unknown>) =>
+    api.get('/images/history/', { params }),
+  upscaleImage: (imageId: string) =>
+    api.post('/stability/upscale/', { image_id: imageId }),
+  removeBackground: (imageId: string) =>
+    api.post('/stability/remove-background/', { image_id: imageId }),
+  createVariations: (imageId: string, count = 3) =>
+    api.post('/stability/create-variations/', { image_id: imageId, count }),
+  deleteImage: (imageId: string) =>
+    api.delete(`/images/${imageId}/delete/`),
+
   // Image Generation
   generateImage: (prompt: string, options?: Record<string, unknown>) =>
     api.post('/v1/gallery/generate/', { prompt, ...options }),
