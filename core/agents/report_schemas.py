@@ -516,6 +516,9 @@ def build_provenance(
     latest_data = None
 
     for src in sources:
+        # Accept both SourceInfo dataclass and plain dict inputs
+        if isinstance(src, SourceInfo):
+            src = asdict(src)
         retrieved_at = src.get('retrieved_at')
         if retrieved_at:
             if isinstance(retrieved_at, str):
