@@ -28579,6 +28579,92 @@ def auto_publish_approved_blogs():
     return {'published': count, 'blog_ids': published_ids}
 
 
+@shared_task(name='core.tasks.aggregate_tool_call_stats')
+def aggregate_tool_call_stats(days_back: int = 1):
+    """
+    Session 1007: Populate ToolCallAggregate from ToolCallRecord.
+
+    Aggregates tool call stats (counts, latency percentiles, errors)
+    per agent/tool/day for efficient dashboard queries.
+    """
+    from django.utils import timezone
+    from django.db.models import Count, Avg, Min, Max, Q
+    from datetime import timedelta
+
+    from core.models_tool_calls import ToolCallRecord, ToolCallAggregate
+
+    cutoff = timezone.now() - timedelta(days=days_back)
+
+    # Group by agent_name, tool_name, date
+    records = (
+        ToolCallRecord.objects.filter(created_at__gte=cutoff)
+        .extra(select={'day': "DATE(created_at)"})
+        .values('agent_name', 'tool_name', 'day')
+        .annotate(
+            total=Count('id'),
+            successes=Count('id', filter=Q(success=True)),
+            failures=Count('id', filter=Q(success=False)),
+            avg_lat=Avg('latency_ms'),
+            min_lat=Min('latency_ms'),
+            max_lat=Max('latency_ms'),
+        )
+    )
+
+    created = 0
+    updated = 0
+
+    for row in records:
+        # Calculate p95 for this group
+        group_qs = ToolCallRecord.objects.filter(
+            agent_name=row['agent_name'],
+            tool_name=row['tool_name'],
+            created_at__date=row['day'],
+            latency_ms__isnull=False,
+        ).order_by('latency_ms')
+        count = group_qs.count()
+        p95_idx = int(count * 0.95) if count > 0 else 0
+        p95_val = 0
+        if count > 0:
+            p95_record = group_qs.values_list('latency_ms', flat=True)[min(p95_idx, count - 1)]
+            p95_val = p95_record or 0
+
+        # Top errors
+        top_errors = list(
+            ToolCallRecord.objects.filter(
+                agent_name=row['agent_name'],
+                tool_name=row['tool_name'],
+                created_at__date=row['day'],
+                success=False,
+            )
+            .values('error_type')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:5]
+        )
+
+        obj, is_new = ToolCallAggregate.objects.update_or_create(
+            agent_name=row['agent_name'],
+            tool_name=row['tool_name'],
+            date=row['day'],
+            defaults={
+                'total_calls': row['total'],
+                'success_calls': row['successes'],
+                'failed_calls': row['failures'],
+                'avg_latency_ms': int(row['avg_lat'] or 0),
+                'min_latency_ms': row['min_lat'] or 0,
+                'max_latency_ms': row['max_lat'] or 0,
+                'p95_latency_ms': p95_val,
+                'top_errors': top_errors,
+            },
+        )
+        if is_new:
+            created += 1
+        else:
+            updated += 1
+
+    logger.info(f"[TOOL-CALL-AGGREGATE] Created {created}, updated {updated} aggregate rows")
+    return {'created': created, 'updated': updated}
+
+
 @shared_task(name='core.tasks.agent_daily_summary')
 def agent_daily_summary():
     """
