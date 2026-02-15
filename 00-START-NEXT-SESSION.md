@@ -154,14 +154,14 @@ Data is flowing but no dashboard exists yet.
 - Desk-specific alert thresholds (e.g., whale alert > $1M)
 - PA integration: "What did the blockchain desk find today?"
 
-### Auto-Revision Loop
-If deliberation pipeline returns REVISE verdict, loop back through EditorAgent automatically.
+### Auto-Revision Loop -- FIXED
+REVISE blogs now set to `needs_enhancement` (was `draft`). EditorAgent picks them up every 4h, PublishGate re-evaluates every 3h, auto-publish every 2h. Full loop: REVISE → needs_enhancement → EditorAgent → PublishGate → approved → published (PR #1177).
 
-### Scheduled Task Visibility
-PA has no visibility into Celery Beat scheduled tasks. Add `scheduled_tasks_tool`.
+### Scheduled Task Visibility -- FIXED
+Added `scheduled_tasks_tool` PA intent + handler. Users can ask "what's scheduled?" or "show celery beat tasks" (PR #1176).
 
-### Agent Introspection
-PA can invoke agents but can't describe their capabilities. Add "what can [agent name] do?" intent.
+### Agent Introspection -- FIXED
+Added `agent_introspection` PA intent + handler. Users can ask "what can [agent] do?" (PR #1176).
 
 ---
 
