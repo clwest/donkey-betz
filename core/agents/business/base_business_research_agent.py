@@ -429,6 +429,16 @@ Research Type: {self.research_type}""")
                 # Step 7: Save to BusinessResearchResult
                 saved_result = self._save_research_result(task, synthesis, all_data, project_context)
 
+                # Session 1006: Persist output to Deliverable
+                self._save_to_deliverable(
+                    title=f"{self.name}: {task[:80]}",
+                    content=synthesis.get('analysis', str(synthesis)),
+                    deliverable_type='research',
+                    category='Business Research',
+                    tags=[self.research_type, 'business'],
+                    metadata={'task': task[:200], 'research_type': self.research_type, 'data_sources': len(all_data)},
+                )
+
                 # Step 8: Build and return AgentResult
                 execution_time = int((time.time() - start_time) * 1000)
 

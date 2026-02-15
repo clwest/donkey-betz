@@ -1136,6 +1136,16 @@ Return comprehensive customer research with personas, pain points, and real quot
                             contribution_score=1.0
                         )
 
+                    # Session 1006: Persist output to Deliverable
+                    self._save_to_deliverable(
+                        title=f"Customer Research: {task[:80]}",
+                        content=synthesis.get('analysis', str(synthesis)) if isinstance(synthesis, dict) else str(synthesis),
+                        deliverable_type='research',
+                        category='Customer Research',
+                        tags=['customer_research', 'business'],
+                        metadata={'task': task[:200], 'discussions_analyzed': synthesis.get('discussions_analyzed', 0) if isinstance(synthesis, dict) else 0},
+                    )
+
                     # Share knowledge about customer insights
                     if synthesis.get('analysis'):
                         self._share_knowledge(
