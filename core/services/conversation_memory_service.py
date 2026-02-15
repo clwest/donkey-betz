@@ -332,8 +332,7 @@ class ConversationMemoryService:
                 icon='🤝',
                 coherence_score=0.8,
                 stability_score=0.7,
-                clustering_method='manual',
-                is_active=True,
+                cluster_method='manual',
             )
 
             # Link memories from all participants to this cluster
