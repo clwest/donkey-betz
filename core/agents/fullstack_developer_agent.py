@@ -471,6 +471,16 @@ Provide complete, working code that can be directly used."""
                             scifi_context_used=bool(scifi_context)
                         )
 
+                        # Session 1006: Persist output to Deliverable
+                        self._save_to_deliverable(
+                            title=f"Full-Stack: {tool_data.get('feature_name', task[:80])}",
+                            content=result.message,
+                            deliverable_type='code',
+                            category='Full-Stack Development',
+                            tags=['fullstack', tool_used],
+                            metadata={'task': task[:200], 'tool_used': tool_used, 'feature_name': tool_data.get('feature_name')},
+                        )
+
                         return result
 
                 # No tool calls - return GPT content directly

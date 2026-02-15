@@ -972,6 +972,17 @@ For this {content_type}, ensure:
                 # Session 763: Create Mission Control attention item
                 self._maybe_create_attention_item(result, task, context)
 
+                # Session 1006: Persist output to Deliverable
+                full_text = generated_content.get('full_text', '') if isinstance(generated_content, dict) else str(generated_content)
+                self._save_to_deliverable(
+                    title=f"{content_type}: {task[:80]}",
+                    content=full_text or result.message,
+                    deliverable_type='document',
+                    category='Content Writing',
+                    tags=[content_type, tone],
+                    metadata={'task': task[:200], 'content_type': content_type, 'tone': tone, 'word_count': word_count},
+                )
+
                 return result
 
             except Exception as e:
