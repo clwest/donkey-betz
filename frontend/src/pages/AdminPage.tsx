@@ -6,12 +6,14 @@ import { adminApi, dashboardApi, heartApi, bodyApi } from '@/lib/api'
 import {
   Server, Activity, CheckCircle, XCircle,
   Loader2, RefreshCw, Settings, Play, Bug, Bot, Clock, Globe,
-  Heart, Wind, Bone, Shield, Utensils, Dumbbell, Droplets, ExternalLink
+  Heart, Wind, Bone, Shield, Utensils, Dumbbell, Droplets, ExternalLink,
+  CreditCard, BarChart3
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
 // Session 712: Simplified tab types after removing redundant body system tabs
-type TabType = 'heart' | 'health' | 'celery' | 'spiders' | 'agents'
+// Session 1007: Added billing + analytics tabs
+type TabType = 'heart' | 'health' | 'celery' | 'spiders' | 'agents' | 'billing' | 'analytics'
 
 interface ActionResult {
   type: 'success' | 'error'
@@ -26,6 +28,8 @@ const tabs = [
   { id: 'celery' as TabType, label: 'Celery', icon: Clock },
   { id: 'spiders' as TabType, label: 'Spiders', icon: Bug },
   { id: 'agents' as TabType, label: 'Agents', icon: Bot },
+  { id: 'billing' as TabType, label: 'Billing', icon: CreditCard },
+  { id: 'analytics' as TabType, label: 'Analytics', icon: BarChart3 },
 ]
 
 // Session 712: Updated to actual 7 body systems
@@ -1131,6 +1135,34 @@ export default function AdminPage() {
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* Session 1007: Billing Tab — link to standalone page */}
+      {activeTab === 'billing' && (
+        <div className="space-y-6">
+          <div className="card text-center py-12">
+            <CreditCard className="mx-auto mb-4 text-primary-400" size={48} />
+            <h3 className="text-xl font-semibold mb-2">Billing & Subscriptions</h3>
+            <p className="text-gray-400 mb-6">Manage API keys, subscription tiers, and usage limits.</p>
+            <a href="/billing" className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-500 rounded-lg font-medium transition-colors">
+              Open Billing Dashboard <ExternalLink size={16} />
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* Session 1007: Analytics Tab — link to standalone page */}
+      {activeTab === 'analytics' && (
+        <div className="space-y-6">
+          <div className="card text-center py-12">
+            <BarChart3 className="mx-auto mb-4 text-accent-cyan" size={48} />
+            <h3 className="text-xl font-semibold mb-2">Analytics Dashboard</h3>
+            <p className="text-gray-400 mb-6">View platform metrics, agent performance, and usage analytics.</p>
+            <a href="/analytics" className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-500 rounded-lg font-medium transition-colors">
+              Open Analytics Dashboard <ExternalLink size={16} />
+            </a>
+          </div>
         </div>
       )}
 
