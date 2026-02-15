@@ -2,7 +2,7 @@
 
 **Previous Session:** 1005 (Desk Intelligence Fixes + Queue Purge)
 **Date:** February 14, 2026
-**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **40 PUBLISHED BLOGS** | **1,089 SIGNAL CLUSTERS** | **INITIATIVE STAGES 1-5 ACTIVE** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 38+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING** | **long_running QUEUE CLEAN** | **Celery Tasks: 268** | **PURGE ENDPOINT LIVE**
+**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **40 PUBLISHED BLOGS** | **1,089 SIGNAL CLUSTERS** | **INITIATIVE STAGES 1-5 ACTIVE** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 38+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **long_running QUEUE CLEAN** | **Celery Tasks: 268** | **PURGE ENDPOINT LIVE**
 
 ---
 
@@ -32,15 +32,25 @@ Verified all 4 intelligence desks running, fixed sports agent crashes, and purge
 - Allowed queues: `long_running`, `ml`, `broadcast`, `content`, `agents`, `sports`
 - **Purged 3,857 stale messages** — circulatory flow_score hit 100%, all 9 routes healthy
 
-#### Desk Intelligence Full Run Results
+#### PR #1156: Fix build_provenance SourceInfo Crash
+- `GamePredictor` passes `SourceInfo` dataclass to `build_provenance()` which calls `.get()` (dict-only)
+- Hidden by PR #1151's constructor crash — once that was fixed, this second bug surfaced
+- Fix: convert `SourceInfo` to dict via `asdict()` in `build_provenance` loop
+
+#### PR #1157: Fix LLMRequest Missing prompt Arg
+- `GamePredictor`, `SharpActionDetector`, `LineMovementAnalyzer` call `LLMRequest(messages=...)` without required `prompt` positional arg
+- Agents succeeded without LLM analysis (graceful fallback) but missed enhanced insights
+- Fix: pass `prompt=""` since these use `messages` for chat-based calls
+
+#### Desk Intelligence Full Run Results (After All Fixes)
 | Desk | Time | Result |
 |------|------|--------|
-| Stocks | 507s | 10 stocks, ElevenLabs audio brief, Discord notification |
-| Sports | 20.8s | 2/5 agents succeeded, 5 top plays |
-| Blockchain | 69.4s | Full audit brief |
-| Narrative | 4.9s | Completed |
+| Stocks | 468.5s | Full brief with audio + Discord |
+| Sports | 13.8s | **5/5 agents, 10 top plays** |
+| Blockchain | 490.1s | Full audit brief |
+| Narrative | 5.2s | Completed |
 
-**PRs:** #1148-#1154
+**PRs:** #1148-#1157
 **Handoff:** `docs/handoffs/SESSION_1005_DESK_FIXES_AND_QUEUE_PURGE.md`
 
 ---
@@ -157,8 +167,8 @@ Session 1002B centralized `delegate_to_specialist`, `web_search`, and `spider_qu
 ### collect_real_opportunities Infinite Loop — MITIGATED
 `ai_core/tasks.py` — `JobIncomeBridge.sync_to_income_builder()` cycles through the same jobs endlessly. **Mitigated** with `soft_time_limit=300, time_limit=360` (PR #1149) and moved to `default` queue (PR #1145). Root cause loop in `sync_to_income_builder` not yet fixed.
 
-### Sports Desk: 3/5 Agents Still Failing
-SourceInfo crash fixed (PR #1151), but only 2/5 sports agents succeed. Remaining 3 may need additional fixes beyond the SourceInfo kwarg.
+### Sports Desk: GamePredictor Not in Agent DB
+`Agent 'GamePredictor' not found in DB — skipping MLPrediction storage`. Agent runs fine but can't store predictions for outcome tracking. Need to create Agent DB record.
 
 ### MemoryCluster Unexpected kwargs
 `MemoryCluster()` receives unexpected kwargs `clustering_method`, `is_active` — recurring error in Railway logs.
@@ -219,8 +229,7 @@ Stage document generation produced 103 documents but 1208 DRAFT stages still hav
 ## What Could Come Next
 
 ### Monitor Session 1005 Results
-- All 4 desks running: verify briefs continue generating on beat schedule
-- Sports desk: investigate remaining 3/5 agent failures
+- All 4 desks running with **5/5 sports agents** — verify briefs continue on beat schedule
 - Blog novelty scoring: verify topic diversity improves (was 19/40 same topic)
 - Queue health: long_running depth 0 after purge, monitor for re-accumulation
 - Purge endpoint: set `PURGE_SECRET` env var on Railway (currently uses default)
