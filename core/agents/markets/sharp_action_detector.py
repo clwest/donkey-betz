@@ -151,7 +151,7 @@ Focus on ACTIONABLE signals where soft books still have stale lines."""
 
         source_info = SourceInfo(
             name='TheOddsSpider',
-            data_type='sports_odds_multibook',
+            source_type='spider_data',
             record_count=len(multi_book_events),
             freshness_hours=0.0,
         )
