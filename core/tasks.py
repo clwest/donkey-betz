@@ -17418,6 +17418,110 @@ def create_default_triggers():
 # =============================================================================
 
 
+@shared_task(bind=True, max_retries=3)
+def start_resolve_render(self, job_id: str, video_ids: list, template: str, color_grade: str,
+                         spider_trends: dict = None, user_id: int = None):
+    """
+    Start an async render job on the DaVinci Resolve node.
+
+    Session 478: DaVinci Resolve Full Utilization
+
+    This task sends the render request to the resolve_node FastAPI server
+    and schedules status polling.
+
+    Args:
+        job_id: ResolveRenderJob UUID
+        video_ids: List of video IDs to render
+        template: Render template (default_mp4, prores_4444, dnxhr_hq)
+        color_grade: Color grade preset name
+        spider_trends: Spider trends data used for grade selection
+        user_id: Django User ID
+
+    Returns:
+        Dict with render job status
+    """
+    logger.info(f"🎬 [RESOLVE] Starting render job {job_id}")
+
+    try:
+        import requests
+        import os
+        from core.models_unified_system import ResolveRenderJob
+
+        # Update job status to rendering
+        job = ResolveRenderJob.objects.get(id=job_id)
+        job.status = 'rendering'
+        job.save()
+
+        # Get resolve node URL
+        resolve_url = os.environ.get('RESOLVE_NODE_URL', 'http://localhost:5001')
+        token = os.environ.get('RENDER_NODE_TOKEN', '')
+
+        # Prepare render request
+        render_payload = {
+            'video_ids': video_ids,
+            'template': template,
+            'color_grade': color_grade,
+            'callback_url': f"{os.environ.get('BASE_URL', 'http://localhost:8000')}/api/resolve/callback/{job_id}/",
+        }
+
+        # Send to resolve node
+        headers = {'X-Render-Token': token} if token else {}
+        response = requests.post(
+            f'{resolve_url}/render/start',
+            json=render_payload,
+            headers=headers,
+            timeout=30
+        )
+
+        if response.status_code == 200:
+            result = response.json()
+            resolve_job_id = result.get('job_id', str(job_id)[:8])
+
+            # Update job with resolve's job ID
+            job.resolve_job_id = resolve_job_id
+            job.save()
+
+            # Schedule status polling
+            poll_resolve_job_status.apply_async(
+                args=[str(job.id)],
+                countdown=10  # Check after 10 seconds
+            )
+
+            logger.info(f"🎬 [RESOLVE] Render started: {resolve_job_id}")
+            return {
+                'status': 'started',
+                'job_id': str(job.id),
+                'resolve_job_id': resolve_job_id,
+            }
+        else:
+            error_msg = f"Resolve node error: {response.status_code} - {response.text[:200]}"
+            job.status = 'error'
+            job.error_message = error_msg
+            job.save()
+            logger.error(f"🎬 [RESOLVE] Render failed: {error_msg}")
+            return {'status': 'error', 'error': error_msg}
+
+    except requests.exceptions.ConnectionError as e:
+        # Resolve node not available - retry
+        logger.warning(f"🎬 [RESOLVE] Connection error, retrying: {e}")
+        raise self.retry(exc=e, countdown=30)
+
+    except ResolveRenderJob.DoesNotExist:
+        logger.error(f"🎬 [RESOLVE] Job not found: {job_id}")
+        return {'status': 'error', 'error': 'Job not found'}
+
+    except Exception as e:
+        logger.error(f"🎬 [RESOLVE] Unexpected error: {e}")
+        try:
+            job = ResolveRenderJob.objects.get(id=job_id)
+            job.status = 'error'
+            job.error_message = str(e)
+            job.save()
+        except Exception as e2:
+            logger.warning(f"🎬 [RESOLVE] Failed to mark job {job_id} as error: {e2}")
+        return {'status': 'error', 'error': str(e)}
+
+
 @shared_task(bind=True, max_retries=60)  # Max 60 retries = 30 minutes
 def poll_resolve_job_status(self, job_id: str):
     """
