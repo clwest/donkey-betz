@@ -1171,7 +1171,7 @@ export default function AssistantPage() {
                         </span>
                       </div>
                       <a
-                        href="/body-health"
+                        href="/workspace?tab=system"
                         className="flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300 transition-colors"
                       >
                         <span>Details</span>

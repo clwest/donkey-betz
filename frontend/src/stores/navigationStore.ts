@@ -120,9 +120,7 @@ export function getPageLabel(path: string): string {
     '/human': 'Human',
     '/agents': 'Agents',
     '/intelligence': 'Intelligence',
-    '/body-health': 'Body Health',
     '/workspace': 'Workspace',
-    '/llm-routing': 'LLM Routing',
   }
 
   return pageLabels[path] || path.replace('/', '').replace(/-/g, ' ') || 'Unknown'

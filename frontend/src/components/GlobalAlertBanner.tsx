@@ -103,7 +103,7 @@ export default function GlobalAlertBanner({ className }: GlobalAlertBannerProps)
           {/* Right: Actions */}
           <div className="flex items-center gap-3">
             <Link
-              to="/body-health"
+              to="/workspace?tab=system"
               className={cn(
                 'flex items-center gap-1 px-3 py-1 rounded-md text-sm font-medium transition-colors',
                 isCritical
@@ -140,7 +140,7 @@ export default function GlobalAlertBanner({ className }: GlobalAlertBannerProps)
               ))}
               {criticalAlerts.length > 3 && (
                 <Link
-                  to="/body-health"
+                  to="/workspace?tab=system"
                   className="px-2 py-1 rounded bg-black/20 text-xs hover:bg-black/30"
                 >
                   +{criticalAlerts.length - 3} more alerts
@@ -186,7 +186,7 @@ export function CompactHealthIndicator({ className }: { className?: string }) {
 
   return (
     <Link
-      to="/body-health"
+      to="/workspace?tab=system"
       className={cn(
         'flex items-center gap-2 px-2 py-1 rounded-md transition-colors hover:opacity-80',
         statusColor,
