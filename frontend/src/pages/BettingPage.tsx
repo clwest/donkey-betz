@@ -2186,13 +2186,14 @@ export default function BettingPage() {
             const summary = trackRecordData?.data?.summary || {}
             const bySport = trackRecordData?.data?.by_sport || {}
             const recentPreds = trackRecordData?.data?.recent_predictions || []
+            const isStockData = trackRecordData?.data?.data_source === 'stock_predictions'
 
             return (
               <>
                 {/* Summary Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <StatCard
-                    label="Accuracy"
+                    label="Accuracy (7d)"
                     value={`${summary.accuracy_percent ?? 0}%`}
                     icon={Target}
                     color="bg-accent-green"
@@ -2210,17 +2211,17 @@ export default function BettingPage() {
                     color="bg-accent-purple"
                   />
                   <StatCard
-                    label="Calibration"
-                    value={`${summary.calibration_score ?? 0}%`}
+                    label={isStockData ? 'Pending Eval' : 'Calibration'}
+                    value={isStockData ? (summary.pending_predictions ?? 0) : `${summary.calibration_score ?? 0}%`}
                     icon={BarChart3}
-                    color={summary.is_well_calibrated ? 'bg-accent-green' : 'bg-accent-amber'}
+                    color={isStockData ? 'bg-primary-600' : (summary.is_well_calibrated ? 'bg-accent-green' : 'bg-accent-amber')}
                   />
                 </div>
 
-                {/* By Sport Breakdown */}
+                {/* By Category Breakdown */}
                 {Object.keys(bySport).length > 0 && (
                   <div>
-                    <h3 className="text-lg font-semibold mb-3">By Sport</h3>
+                    <h3 className="text-lg font-semibold mb-3">{isStockData ? 'By Category' : 'By Sport'}</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {Object.entries(bySport).map(([sport, data]: [string, any]) => (
                         <div key={sport} className="card p-4">
@@ -2262,8 +2263,8 @@ export default function BettingPage() {
                         <thead>
                           <tr className="border-b border-dark-border text-gray-400 text-left">
                             <th className="py-3 px-4">Date</th>
-                            <th className="py-3 px-4">Sport</th>
-                            <th className="py-3 px-4">Matchup</th>
+                            <th className="py-3 px-4">{isStockData ? 'Type' : 'Sport'}</th>
+                            <th className="py-3 px-4">{isStockData ? 'Ticker' : 'Matchup'}</th>
                             <th className="py-3 px-4">Pick</th>
                             <th className="py-3 px-4">Confidence</th>
                             <th className="py-3 px-4">Result</th>
@@ -2274,7 +2275,7 @@ export default function BettingPage() {
                             <tr key={pred.id} className="border-b border-dark-border hover:bg-dark-bg/50">
                               <td className="py-3 px-4 text-gray-400">{pred.game_date || '\u2014'}</td>
                               <td className="py-3 px-4 uppercase">{pred.sport_type}</td>
-                              <td className="py-3 px-4">{pred.matchup || '\u2014'}</td>
+                              <td className="py-3 px-4 font-medium">{pred.matchup || '\u2014'}</td>
                               <td className="py-3 px-4 font-medium">{pred.predicted_winner}</td>
                               <td className="py-3 px-4">
                                 <span className={cn(
@@ -2284,7 +2285,9 @@ export default function BettingPage() {
                                 )}>{pred.confidence}%</span>
                               </td>
                               <td className="py-3 px-4">
-                                {pred.was_correct ? (
+                                {pred.was_correct === null ? (
+                                  <span className="text-xs text-gray-500">Pending</span>
+                                ) : pred.was_correct ? (
                                   <CheckCircle size={18} className="text-accent-green" />
                                 ) : (
                                   <XCircle size={18} className="text-accent-red" />
@@ -2300,7 +2303,7 @@ export default function BettingPage() {
                   <div className="card p-12 text-center">
                     <BarChart3 size={48} className="mx-auto mb-4 text-gray-500" />
                     <h3 className="text-lg font-medium mb-2">No Evaluated Predictions Yet</h3>
-                    <p className="text-gray-400">Predictions will appear here after games are completed and evaluated</p>
+                    <p className="text-gray-400">Predictions will appear here after outcomes are evaluated</p>
                   </div>
                 )}
               </>
