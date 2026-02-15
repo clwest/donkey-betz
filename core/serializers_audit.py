@@ -9,7 +9,7 @@ calls but previously had no way to query them via API.
 from rest_framework import serializers
 
 from core.models_decision_records import DecisionRecord
-from core.models_tool_calls import ToolCallRecord
+from core.models_tool_calls import ToolCallRecord, ToolCallAggregate
 from core.models_signal_intelligence import SignalCluster
 
 
@@ -59,6 +59,21 @@ class ToolCallRecordDetailSerializer(serializers.ModelSerializer):
             'tool_name', 'parameters', 'result_summary', 'result_hash',
             'result_size_bytes', 'success', 'error_message', 'error_type',
             'latency_ms', 'task_summary', 'created_at',
+        ]
+
+
+# ── ToolCallAggregate ──
+
+class ToolCallAggregateSerializer(serializers.ModelSerializer):
+    success_rate = serializers.FloatField(read_only=True)
+
+    class Meta:
+        model = ToolCallAggregate
+        fields = [
+            'id', 'agent_name', 'tool_name', 'date',
+            'total_calls', 'success_calls', 'failed_calls',
+            'avg_latency_ms', 'min_latency_ms', 'max_latency_ms',
+            'p95_latency_ms', 'top_errors', 'success_rate', 'updated_at',
         ]
 
 
