@@ -112,8 +112,8 @@ Fixed blog pipeline (deliberation), initiative founder intent (auto-set), signal
 ### collect_real_opportunities — MITIGATED
 `ai_core/tasks.py` — Time limits (PR #1149) + dedup via `get_or_create` (PR #1160). No longer cycles through same jobs.
 
-### CoinGecko Spider Not Crawling
-Generic `normalize_item()` in `real_data_collector.py` doesn't properly extract CoinGecko JSON fields. Needs spider-specific parser or field mapping.
+### CoinGecko Spider Not Crawling — FIXED
+Added `current_price` to `normalize_item()` field mapping in `real_data_collector.py` (PR #1173). CoinGecko's `current_price` now maps to standard `price` field.
 
 ### Agent Knowledge Freshness -- Monitor Impact
 14-day cutoff may be too aggressive. Monitor agent conversation quality.
