@@ -184,8 +184,8 @@ Generic `normalize_item()` in `real_data_collector.py` doesn't properly extract 
 ### Railway Deploy: Migration Lock Risk
 `AddConstraint` during blue-green deploy can hang on lock.
 
-### Legacy Routes — Remove After Feb 22
-26 legacy redirects in `App.tsx:78-114` (added Feb 8, Session 971b). 9 hardcoded links in components still reference legacy paths — update those FIRST, then remove redirects.
+### Legacy Routes — Safe to Remove
+26 legacy redirects in `App.tsx:78-114` (added Feb 8, Session 971b). All 21 internal hardcoded links updated to new paths (PR #1165). Redirects now only serve external bookmarks — can be removed anytime.
 
 ### Billing + Analytics Orphaned
 `/billing` and `/analytics` need an Admin tab.
@@ -222,7 +222,7 @@ Decision execution system is fully wired (DecisionEnforcerAgent + ConversationOr
 Session 972 identified ~200+ items. High-impact remaining items:
 - ~21 agents still without `_save_to_deliverable()` (7 done in PRs #1162, #1163)
 - Orphan API endpoints with no frontend consumers
-- PodcastShow model never created (PodcastEpisode FK references nonexistent parent)
+- PodcastShow model never created (FK is nullable so episodes work, but Show grouping is unused)
 
 ### Fix sync_celery_beat Parser
 Replace regex-based parsing with direct Python import to prevent beat schedule drift.

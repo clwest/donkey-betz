@@ -442,7 +442,7 @@ function MetricDetailModal({ metric, onClose }: MetricDetailModalProps) {
       case 'agents':
         return { href: '/agents', label: 'View All Agents' }
       case 'spiders':
-        return { href: '/spiders', label: 'View Spider Network' }
+        return { href: '/workspace?tab=dataintel', label: 'View Spider Network' }
       case 'findings':
         return { href: '/workspace?tab=governance', label: 'View Governance' }
       case 'revenue':
