@@ -521,7 +521,7 @@ def normalize_item(item: Dict[str, Any], source: str) -> Dict[str, Any]:
         'published': ['published', 'created_at', 'date', 'timestamp', 'posted_at', 'published_at'],
         'image': ['image', 'thumbnail', 'cover', 'logo', 'avatar'],
         'tags': ['tags', 'categories', 'skills', 'keywords'],
-        'price': ['price', 'salary', 'budget', 'cost', 'amount'],
+        'price': ['price', 'current_price', 'salary', 'budget', 'cost', 'amount'],
         'location': ['location', 'remote', 'region', 'country'],
     }
 
