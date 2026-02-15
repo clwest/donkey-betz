@@ -250,8 +250,7 @@ from core.views_agent_dashboard import (
     all_agents_list
 )
 
-# Session 794: Import Production Agent Collaboration API views
-from core import views_agent_collaboration_api
+# Session 1009: Removed views_agent_collaboration_api import (orphan cleanup)
 
 # Import spider dashboard views
 from core.views_spider_dashboard import (
@@ -328,45 +327,13 @@ from core.views_docs_index import (
     docs_stats,
 )
 
-# Session 219: Import agent intelligence views (Phase A)
-from core.views_agent_intelligence import (
-    list_agents as ai_agents_list,
-    get_agent_feed as ai_agent_feed,
-    get_trends as ai_trends,
-    get_suggestions as ai_suggestions,
-    get_stats as ai_stats,
-    get_categories as ai_categories,
-    get_capabilities as ai_capabilities,
-    get_bridge_status as ai_bridge_status,
-    inject_test_data as ai_inject_test
-)
+# Session 1009: Removed views_agent_intelligence import (orphan cleanup)
 
-# Session 219 Phase B: Import agent collaboration views
-from core.views_agent_collaboration import (
-    send_message as collab_send_message,
-    get_messages as collab_get_messages,
-    initiate_collaboration as collab_initiate,
-    consult_expert as collab_consult,
-    request_consensus as collab_request_consensus,
-    submit_vote as collab_submit_vote,
-    get_consensus_status as collab_consensus_status,
-    share_knowledge as collab_share_knowledge,
-    query_knowledge as collab_query_knowledge,
-    get_collaboration_stats as collab_stats,
-    get_agent_activity as collab_agent_activity
-)
+# Session 1009: Removed views_agent_collaboration import (orphan cleanup)
 
 # Session 219 Phase C: Import agent learning views
+# Session 1009: Removed orphaned learning aliases (learning_record, etc.)
 from core.views_agent_learning import (
-    record_interaction as learning_record,
-    get_preferences as learning_preferences,
-    get_adaptive_context as learning_context,
-    get_learning_stats as learning_stats,
-    apply_preferences as learning_apply,
-    clear_preferences as learning_clear,
-    get_preferences_summary as learning_summary,
-    share_learning as learning_share,
-    get_all_preferences as learning_all,
     # Session 244: Agent Conversations
     get_agent_conversations,
     get_agent_conversation_detail,  # Session 835: Single conversation detail
@@ -521,18 +488,7 @@ from core.views_memory_palace import (
     list_all_memories,  # Session 860
 )
 
-# Session 252: Agent Mood System
-from core.views_agent_mood import (
-    get_mood_overview,
-    get_agent_mood,
-    set_agent_mood,
-    get_mood_history,
-    get_mood_rules,
-    create_mood_rule,
-    delete_mood_rule,
-    trigger_mood_from_memory,
-    get_mood_prompt_context,
-)
+# Session 1009: Removed views_agent_mood import (orphan cleanup)
 
 # Session 253: Agent Relationships (Session 871: Alliance/Rivalry removed)
 from core.views_agent_relationships import (
@@ -1119,11 +1075,10 @@ from core.views_enhanced_profile import (
     get_user_memories, get_profile_suggestions
 )
 # Session 430: Import Interview views
+# Session 1009: Removed orphaned certification imports
 from core.views_interview import (
     start_interview, respond_interview, interview_status,
     resume_interview, get_user_profile_summary,
-    # Session 457: Certification endpoints
-    list_certifications, add_certification, delete_certification
 )
 # Import Unified Bridge views for REAL money-making functionality
 from core.views_unified_bridge import (
@@ -1503,12 +1458,8 @@ from core.views_discord import (
 )
 
 # Session 641: Agent Analytics API
+# Session 1009: Removed orphaned agent_analytics_* imports
 from core.views_agent_analytics import (
-    agent_analytics_stats,
-    agent_analytics_top_performers,
-    agent_analytics_needs_attention,
-    agent_analytics_activity,
-    agent_analytics_executions,
     system_health_check,
     test_agent_execution,
     celery_status,  # Session 642: Celery monitoring
@@ -1647,8 +1598,7 @@ urlpatterns = [
     # AI Building Products page (moved up to ensure it's matched first)
     path('ai-building-products/', ai_building_products, name='ai-building-products'),
 
-    # Agent Deployment System for AI Building Products
-    path('api/agent-deployment/', include('agents.urls_deployment')),
+    # Session 1009: Removed agent-deployment include (orphan cleanup)
 
     # Session 295: Content Provenance, Audit, Originality & Marketplace APIs
     path('api/provenance/', include('core.urls_provenance')),
@@ -2022,12 +1972,7 @@ urlpatterns = [
     path('api/agents/<uuid:agent_id>/profile/', get_agent_profile, name='agent-profile'),  # Session 417: Agent Profile
     path('api/agents/test/', test_agent_execution, name='agent-test'),  # Session 641: Test agent execution
 
-    # Session 641: Agent Analytics API
-    path('api/agent-analytics/stats/', agent_analytics_stats, name='agent-analytics-stats'),
-    path('api/agent-analytics/top-performers/', agent_analytics_top_performers, name='agent-analytics-top-performers'),
-    path('api/agent-analytics/needs-attention/', agent_analytics_needs_attention, name='agent-analytics-needs-attention'),
-    path('api/agent-analytics/activity/', agent_analytics_activity, name='agent-analytics-activity'),
-    path('api/agent-analytics/executions/', agent_analytics_executions, name='agent-analytics-executions'),
+    # Session 1009: Removed agent-analytics endpoints (orphan cleanup)
     path('api/system-health/', system_health_check, name='system-health'),
     path('api/celery/status/', celery_status, name='celery-status'),  # Session 642: Celery monitoring
 
@@ -2454,10 +2399,7 @@ urlpatterns = [
     path('api/interview/voice/', voice_interview_response, name='interview-voice'),
     path('api/transcribe/', transcribe_only, name='transcribe-only'),
 
-    # Session 457: Certifications
-    path('api/certifications/', list_certifications, name='certifications-list'),
-    path('api/certifications/add/', add_certification, name='certifications-add'),
-    path('api/certifications/<int:cert_id>/delete/', delete_certification, name='certifications-delete'),
+    # Session 1009: Removed certifications endpoints (orphan cleanup)
 
     # ===== UNIFIED BRIDGE: REAL MONEY-MAKING ENDPOINTS =====
     # These endpoints connect all components and enable actual revenue generation
@@ -2969,10 +2911,7 @@ urlpatterns = [
     # Note: Some modules use /api/v1/ to avoid path conflicts with core/urls.py endpoints
     path('api/v1/workflows/', include('workflows.urls')),  # REAL workflows - conflicts with /api/workflows/
     # Session 872: Removed dashboard.urls include - endpoints unused (frontend uses /api/dashboard/ from core)
-    path('api/style-memory/', include('style_memory.urls')),  # Style Memory module (Session 871: migrated to /api/)
-    path('api/v1/agents/', include('agents.urls')),  # Agent Orchestra - conflicts with /api/agents/
-    path('api/coleadership/', include('coleadership.urls')),  # AI-Human Co-Leadership (Session 871: migrated to /api/)
-    path('api/render-jobs/', include('rendering.urls')),  # Render Jobs & DaVinci (Session 871: migrated to /api/)
+    # Session 1009: Removed style-memory, agents.urls, coleadership, render-jobs includes (orphan cleanup)
     path('api/pipelines/', include('pipelines.urls')),  # Creative Pipelines (Session 871: migrated to /api/)
     path('api/v1/sports/', include('sports.urls')),  # Sports/Betting module - conflicts with /api/sports/
     path('api/v1/content/', include('content.urls')),  # Content Generation - conflicts with /api/content/
@@ -3069,7 +3008,7 @@ urlpatterns = [
     path('api/v1/research/stats/', views_research_demo.stats_api, name='research-stats'),
     path('api/v1/research/mythology-gate/', views_research_demo.mythology_gate_api, name='research-mythology-gate'),
 
-    path('api/odds-calc/', include('odds_calc.urls')),  # Odds calculation (Session 871: migrated to /api/)
+    # Session 1009: Removed odds-calc include (orphan cleanup)
     path('api/v1/intelligence/', include('intelligence.urls')),  # Intelligence module with action plan execution
     path('api/v1/persistence/', include('persistence.urls')),  # Data Persistence Infrastructure
 
@@ -3178,7 +3117,7 @@ urlpatterns = [
     # Session 536: Cross-references for Intelligence Command Center
     path('api/intelligence/cross-references/', intelligence_cross_references, name='intelligence-cross-references'),
     path('api/spider-intelligence/detail/<str:spider_name>/', spider_detail, name='spider-intelligence-detail'),
-    path('api/agent-intelligence/detail/<str:agent_name>/', agent_detail, name='agent-intelligence-detail'),  # Session 537
+    # Session 1009: Removed agent-intelligence/detail endpoint (orphan cleanup)
     path('api/situation-intelligence/detail/<str:situation_type>/', situation_detail, name='situation-intelligence-detail'),  # Session 537
 
     # Session 558: Prediction Markets API
@@ -3193,51 +3132,11 @@ urlpatterns = [
     path('api/income/statistics/', income_get_statistics, name='income-statistics'),
     path('api/income/quick-apply/', income_quick_apply, name='income-quick-apply'),
 
-    # Session 219: Agent Intelligence API - Phase A Spider-Agent Integration
-    path('api/agent-intelligence/agents/', ai_agents_list, name='ai-agents-list'),
-    path('api/agent-intelligence/feed/<str:agent_name>/', ai_agent_feed, name='ai-agent-feed'),
-    path('api/agent-intelligence/trends/', ai_trends, name='ai-trends'),
-    path('api/agent-intelligence/suggestions/', ai_suggestions, name='ai-suggestions'),
-    path('api/agent-intelligence/stats/', ai_stats, name='ai-stats'),
-    path('api/agent-intelligence/categories/', ai_categories, name='ai-categories'),
-    path('api/agent-intelligence/capabilities/', ai_capabilities, name='ai-capabilities'),
-    path('api/agent-intelligence/bridge/', ai_bridge_status, name='ai-bridge-status'),
-    path('api/agent-intelligence/test/', ai_inject_test, name='ai-inject-test'),
+    # Session 1009: Removed agent-intelligence endpoints (orphan cleanup)
 
-    # Session 219 Phase B: Agent Collaboration API
-    path('api/agent-collab/message/', collab_send_message, name='collab-send-message'),
-    path('api/agent-collab/messages/', get_all_messages, name='collab-all-messages'),  # Session 782: All messages
-    path('api/agent-collab/messages/<str:agent_name>/', collab_get_messages, name='collab-get-messages'),
-    path('api/agent-collab/collaborate/', collab_initiate, name='collab-initiate'),
-    path('api/agent-collab/consult/', collab_consult, name='collab-consult'),
-    path('api/agent-collab/consensus/', collab_request_consensus, name='collab-request-consensus'),
-    path('api/agent-collab/vote/', collab_submit_vote, name='collab-submit-vote'),
-    path('api/agent-collab/consensus/<str:consensus_id>/', collab_consensus_status, name='collab-consensus-status'),
-    path('api/agent-collab/knowledge/', collab_share_knowledge, name='collab-share-knowledge'),
-    path('api/agent-collab/knowledge/query/', collab_query_knowledge, name='collab-query-knowledge'),
-    path('api/agent-collab/stats/', collab_stats, name='collab-stats'),
-    path('api/agent-collab/activity/<str:agent_name>/', collab_agent_activity, name='collab-agent-activity'),
+    # Session 1009: Removed agent-collab endpoints (orphan cleanup)
 
-    # Session 794: Production Agent Collaboration API (for 213 agents + 25 advisors)
-    path('api/agent-collab/agents/', views_agent_collaboration_api.agents_list, name='agent-collab-agents'),
-    path('api/agent-collab/active/', views_agent_collaboration_api.active_collaborations, name='agent-collab-active'),
-    path('api/agent-collab/stats-v2/', views_agent_collaboration_api.collaboration_stats, name='agent-collab-stats-v2'),
-    path('api/agent-collab/recent-messages/', views_agent_collaboration_api.recent_messages, name='agent-collab-recent-messages'),
-    path('api/agent-collab/detail/<str:collaboration_id>/', views_agent_collaboration_api.collaboration_detail, name='agent-collab-detail'),
-    path('api/agent-collab/initiate/', views_agent_collaboration_api.initiate_collaboration, name='agent-collab-initiate'),
-
-    # Session 219 Phase C: Agent Learning API
-    path('api/agent-learning/interaction/', learning_record, name='learning-record'),
-    path('api/agent-learning/preferences/<str:agent_name>/', learning_preferences, name='learning-preferences'),
-    path('api/agent-learning/context/<str:agent_name>/', learning_context, name='learning-context'),
-    path('api/agent-learning/stats/', learning_stats, name='learning-stats'),
-    path('api/agent-learning/apply/', learning_apply, name='learning-apply'),
-    path('api/agent-learning/clear/', learning_clear, name='learning-clear'),
-    path('api/agent-learning/summary/<str:agent_name>/', learning_summary, name='learning-summary'),
-    path('api/agent-learning/share/<str:agent_name>/', learning_share, name='learning-share'),
-    path('api/agent-learning/all-preferences/', learning_all, name='learning-all'),
-    # Session 248: Knowledge Transfer Activity Feed
-    path('api/agent-learning/activity/', get_knowledge_transfer_feed, name='learning-activity'),
+    # Session 1009: Removed agent-learning endpoints (orphan cleanup)
 
     # Session 244: Agent Conversations API
     path('api/agent-conversations/', get_agent_conversations, name='agent-conversations'),
@@ -3367,16 +3266,7 @@ urlpatterns = [
     path('api/memory-palace/assign/', assign_memory_to_room, name='memory-assign-room'),
     path('api/memory-palace/connect/', connect_memories, name='memory-connect'),
 
-    # Session 252: Agent Mood System API
-    path('api/agent-mood/', get_mood_overview, name='agent-mood-overview'),
-    path('api/agent-mood/agent/<uuid:agent_id>/', get_agent_mood, name='agent-mood-detail'),
-    path('api/agent-mood/agent/<uuid:agent_id>/set/', set_agent_mood, name='agent-mood-set'),
-    path('api/agent-mood/agent/<uuid:agent_id>/history/', get_mood_history, name='agent-mood-history'),
-    path('api/agent-mood/agent/<uuid:agent_id>/prompt-context/', get_mood_prompt_context, name='agent-mood-prompt'),
-    path('api/agent-mood/rules/', get_mood_rules, name='agent-mood-rules'),
-    path('api/agent-mood/rules/create/', create_mood_rule, name='agent-mood-rule-create'),
-    path('api/agent-mood/rules/<uuid:rule_id>/delete/', delete_mood_rule, name='agent-mood-rule-delete'),
-    path('api/agent-mood/trigger-from-memory/', trigger_mood_from_memory, name='agent-mood-from-memory'),
+    # Session 1009: Removed agent-mood endpoints (orphan cleanup)
 
     # Session 253: Agent Relationships API (Session 871: Alliance/Rivalry routes removed)
     path('api/agent-relationships/', get_relationships_overview, name='agent-relationships-overview'),
@@ -3656,27 +3546,8 @@ urlpatterns = [
     path('api/voice-marketplace/<uuid:voice_id>/reviews/', add_review, name='voice-marketplace-add-review'),
 ]
 
-# =============================================================================
-# Session 450: Stripe Voice Checkout API
-# =============================================================================
-from core.views_stripe_voice import (
-    create_checkout, price_estimate, stripe_webhook,
-    checkout_status, checkout_success, checkout_cancel,
-    simulate_purchase
-)
 
-urlpatterns += [
-    # Checkout
-    path('api/voice-checkout/create/', create_checkout, name='voice-checkout-create'),
-    path('api/voice-checkout/price/', price_estimate, name='voice-checkout-price'),
-    path('api/voice-checkout/webhook/', stripe_webhook, name='voice-checkout-webhook'),
-    path('api/voice-checkout/status/<str:session_id>/', checkout_status, name='voice-checkout-status'),
-    path('api/voice-checkout/simulate/', simulate_purchase, name='voice-checkout-simulate'),
-
-    # Success/Cancel pages
-    path('voice-checkout/success/', checkout_success, name='voice-checkout-success'),
-    path('voice-checkout/cancel/', checkout_cancel, name='voice-checkout-cancel'),
-]
+# Session 1009: Removed voice-checkout endpoints (orphan cleanup)
 
 # =============================================================================
 # Session 451: User Upload API
