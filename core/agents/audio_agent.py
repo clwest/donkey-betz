@@ -349,6 +349,16 @@ If asked to do something outside audio generation, politely explain you can only
                             confidence=0.8
                         )
 
+                        # Session 1006: Persist output to Deliverable
+                        self._save_to_deliverable(
+                            title=f"Generated Audio: {task[:80]}",
+                            content=result.message,
+                            deliverable_type='audio',
+                            category='Audio Generation',
+                            tags=['audio', tool_used],
+                            metadata={'task': task[:200], 'tool_used': tool_used, 'voice': args.get('voice')},
+                        )
+
                         return result
                     else:
                         # Session 840: Include actual error details for better debugging
