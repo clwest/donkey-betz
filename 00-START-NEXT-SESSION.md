@@ -2,7 +2,7 @@
 
 **Previous Session:** 1006 (Systematic Cleanup & Agent Persistence)
 **Date:** February 14, 2026
-**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **40 PUBLISHED BLOGS** | **1,089 SIGNAL CLUSTERS** | **INITIATIVE STAGES 1-5 ACTIVE** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 38+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **30 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 268** | **Frontend Routes: 24**
+**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **40 PUBLISHED BLOGS** | **1,089 SIGNAL CLUSTERS** | **INITIATIVE STAGES 1-5 ACTIVE** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 38+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 268** | **Frontend Routes: 24**
 
 ---
 
@@ -96,7 +96,7 @@ Fixed blog pipeline (deliberation), initiative founder intent (auto-set), signal
 | Intelligence Desks | 4 (Stocks, Sports, Blockchain, Narrative) — ALL RUNNING |
 | Workspace Tabs | 9 |
 | Frontend Routes | 24 (21 pages + 3 redirects) |
-| Agents Persisting Output | 30 (via `_save_to_deliverable()`) |
+| Agents Persisting Output | 43 (via `_save_to_deliverable()`) |
 | PA Tools | 97 |
 | PA Intents | 38 |
 | Enrichment Services | 8 |
@@ -143,8 +143,8 @@ Data is flowing but no dashboard exists yet.
 - Monitor queue health (long_running depth was 0 after purge)
 
 ### Remaining Disconnected Dots
-- 87+ orphan API endpoints with no frontend consumers — audit and prune
-- 3 agents without persistence (need `BaseBusinessResearchAgent` parent edit)
+- v1/ API namespace (185 endpoints): NOT orphaned — it's the primary API surface used by frontend and PA agent. DO NOT remove.
+- Remaining orphan API endpoints need careful audit (many are actually consumed via API client, not direct path references)
 - PodcastShow model never created (FK nullable, episodes work, Show grouping unused)
 - Campaign model empty (feature not activated)
 
