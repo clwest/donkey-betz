@@ -390,10 +390,11 @@ class ContentDeliberationRunner:
         tags = generated_content.get('keywords', [])
         if topic and topic not in tags:
             tags.append(topic)
+        tags = self._sanitize_tags(tags)
 
         blog = SelfBlog.objects.create(
             title=title[:255],
-            author='ContentDeliberation',  # Session 998: Author tracking
+            author='ContentDeliberation',
             category='blog',
             content_type=content_type,
             status=status,
@@ -402,7 +403,7 @@ class ContentDeliberationRunner:
             intro=intro,
             sections=sections,
             conclusion=conclusion,
-            tags=tags[:10],
+            tags=tags,
             full_text=draft_text,
             tone=voice or 'professional',
             stats_snapshot={'deliberation': deliberation_meta},
@@ -413,6 +414,25 @@ class ContentDeliberationRunner:
             f"decision={decision}, title={title[:50]}"
         )
         return blog
+
+    @staticmethod
+    def _sanitize_tags(tags, max_tags=8):
+        """Strip prompt-leaked, oversized, or empty tags."""
+        blacklist = ['##', 'REVIEW', 'Write an article', 'Write a blog',
+                     'Real-Time Research', 'research data', 'BLOG POST',
+                     'stage ', '[stage', 'spider data', '\n']
+        clean = []
+        for tag in tags:
+            if not isinstance(tag, str) or not tag.strip():
+                continue
+            tag = tag.strip()
+            if len(tag) > 50:
+                continue
+            tag_lower = tag.lower()
+            if any(frag.lower() in tag_lower for frag in blacklist):
+                continue
+            clean.append(tag)
+        return clean[:max_tags]
 
     def _run_publish_gate(self, blog):
         """Run PublishGate and return GateResult."""
