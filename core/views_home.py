@@ -239,3 +239,35 @@ def trigger_desks(request):
         'task_id': str(result.id),
         'queue': queue,
     })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def purge_queue(request):
+    """
+    POST /api/home/purge-queue/
+    Body: {"queue": "long_running"}
+
+    Purges all messages from the specified Celery queue.
+    Use to clear stale/expired task backlogs.
+    """
+    from kombu import Queue as KombuQueue
+    from core.celery import app
+
+    queue_name = request.data.get('queue')
+    if not queue_name:
+        return Response({'success': False, 'error': 'queue parameter required'}, status=400)
+
+    allowed_queues = ['long_running', 'ml', 'broadcast', 'content', 'agents', 'sports']
+    if queue_name not in allowed_queues:
+        return Response({'success': False, 'error': f'queue must be one of: {allowed_queues}'}, status=400)
+
+    with app.connection_or_acquire() as conn:
+        q = KombuQueue(queue_name, channel=conn.default_channel)
+        count = q.purge()
+
+    return Response({
+        'success': True,
+        'queue': queue_name,
+        'messages_purged': count,
+    })
