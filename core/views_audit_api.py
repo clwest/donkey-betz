@@ -20,13 +20,14 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from core.views.agents import StandardResultsSetPagination
 from core.models_decision_records import DecisionRecord
-from core.models_tool_calls import ToolCallRecord
+from core.models_tool_calls import ToolCallRecord, ToolCallAggregate
 from core.models_signal_intelligence import SignalCluster
 from core.serializers_audit import (
     DecisionRecordListSerializer,
     DecisionRecordDetailSerializer,
     ToolCallRecordListSerializer,
     ToolCallRecordDetailSerializer,
+    ToolCallAggregateSerializer,
     SignalClusterListSerializer,
     SignalClusterDetailSerializer,
 )
@@ -56,6 +57,16 @@ class ToolCallRecordViewSet(ReadOnlyModelViewSet):
         if self.action == 'retrieve':
             return ToolCallRecordDetailSerializer
         return ToolCallRecordListSerializer
+
+
+class ToolCallAggregateViewSet(ReadOnlyModelViewSet):
+    """Session 1007: Pre-aggregated tool call stats for dashboard queries."""
+    queryset = ToolCallAggregate.objects.order_by('-date', '-total_calls')
+    serializer_class = ToolCallAggregateSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['agent_name', 'tool_name', 'date']
 
 
 class SignalClusterViewSet(ReadOnlyModelViewSet):

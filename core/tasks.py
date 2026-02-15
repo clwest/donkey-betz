@@ -27705,24 +27705,7 @@ def process_gate_progression(
         return {'success': False, 'error': str(e)}
 
 
-@shared_task(name='core.tasks.get_gate_statistics')
-def get_gate_statistics():
-    """
-    Session 766: Get current gate and pilot statistics.
-
-    Returns counts by status and risk level for monitoring dashboards.
-    """
-    from core.services.gate_progression_pipeline import gate_progression_pipeline
-
-    try:
-        stats = gate_progression_pipeline.get_gate_statistics()
-        logger.info(f"🚦 [GATE PIPELINE] Stats: {stats}")
-        return stats
-
-    except Exception as e:
-        logger.error(f"🚦 [GATE PIPELINE] Failed to get stats: {e}", exc_info=True)
-        return {'success': False, 'error': str(e)}
-
+# Session 1007: Removed unreachable get_gate_statistics task (never called or scheduled).
 
 # =============================================================================
 # Session 766: Content Idea Pipeline Tasks
@@ -27785,24 +27768,7 @@ def process_content_ideas(
         return {'success': False, 'error': str(e)}
 
 
-@shared_task(name='core.tasks.get_content_pipeline_stats')
-def get_content_pipeline_stats():
-    """
-    Session 766: Get current content pipeline statistics.
-
-    Returns counts of content ideas, channels, and episodes for monitoring.
-    """
-    from core.services.content_idea_pipeline import content_idea_pipeline
-
-    try:
-        stats = content_idea_pipeline.get_statistics()
-        logger.info(f"🎬 [CONTENT PIPELINE] Stats: {stats}")
-        return stats
-
-    except Exception as e:
-        logger.error(f"🎬 [CONTENT PIPELINE] Failed to get stats: {e}", exc_info=True)
-        return {'success': False, 'error': str(e)}
-
+# Session 1007: Removed unreachable get_content_pipeline_stats task (never called or scheduled).
 
 # =============================================================================
 # Session 767: Learning Pattern Mining Tasks
