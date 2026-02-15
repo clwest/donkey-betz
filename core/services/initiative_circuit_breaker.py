@@ -65,7 +65,7 @@ def is_creation_paused_by_db() -> bool:
 def get_backlog_threshold() -> int:
     """Get the max allowed pending initiatives before auto-pause."""
     try:
-        threshold = int(os.environ.get('INITIATIVE_BACKLOG_THRESHOLD', '50'))
+        threshold = int(os.environ.get('INITIATIVE_BACKLOG_THRESHOLD', '20'))
         return max(10, threshold)  # Minimum 10
     except (ValueError, TypeError):
         return 50
@@ -86,11 +86,11 @@ def get_pending_initiative_count() -> int:
     try:
         from core.models_document_registry import Initiative
 
-        # Count ACTIVE or TRIAGE initiatives that have never had meaningful activity
-        # Session 994: Include TRIAGE status in backlog count
+        # Count ALL ACTIVE or TRIAGE initiatives (not just those with no activity)
+        # Previously only counted last_activity_at IS NULL, which let the backlog
+        # grow unbounded since auto-generated initiatives get immediate activity
         count = Initiative.objects.filter(
             status__in=['ACTIVE', 'TRIAGE'],
-            last_activity_at__isnull=True,
         ).count()
 
         _backlog_cache['count'] = count
@@ -195,9 +195,9 @@ def find_similar_initiative(name: str, threshold: float = 0.6) -> Optional[Any]:
         if not new_keywords:
             return None
 
-        # Only check active, low-stage initiatives (the ones that would be duplicated)
+        # Check ACTIVE and TRIAGE initiatives at low stages (the ones that would be duplicated)
         candidates = Initiative.objects.filter(
-            status='ACTIVE',
+            status__in=['ACTIVE', 'TRIAGE'],
             current_stage__lte=2,
         ).values_list('id', 'name')[:200]  # Cap scan for performance
 
