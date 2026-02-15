@@ -200,6 +200,15 @@ app.conf.beat_schedule = {
             'queue': 'content',
         },
     },
+    # Session 1008: Score unscored legacy blogs so they can enter the publish pipeline
+    'evaluate-unscored-blogs': {
+        'task': 'core.tasks.evaluate_unscored_blogs',
+        'schedule': crontab(hour='*/4', minute=15),
+        'options': {
+            'expires': 14400,
+            'queue': 'content',
+        },
+    },
     # Session 1003: Auto-publish approved blogs
     'auto-publish-approved-blogs': {
         'task': 'core.tasks.auto_publish_approved_blogs',
