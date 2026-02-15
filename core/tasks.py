@@ -21727,6 +21727,24 @@ def generate_daily_betting_brief(self):
         except Exception as e:
             logger.warning(f"[BETTING-BRIEF] Could not persist to SportsBettingBrief: {e}")
 
+        # Safety net: if GamePredictor._store_predictions() failed,
+        # extract predictions from brief data and persist them now.
+        try:
+            from sports.models import MLPrediction
+            today_count = MLPrediction.objects.filter(
+                created_at__date=timezone.now().date()
+            ).count()
+            if today_count == 0:
+                preds_data = brief.get('predictions') or {}
+                pred_list = preds_data.get('predictions') or []
+                if pred_list:
+                    from core.agents.markets.game_predictor import GamePredictor
+                    gp = GamePredictor()
+                    stored = gp._store_predictions(pred_list, {})
+                    logger.info(f"[BETTING-BRIEF] Safety-net stored {stored} MLPredictions")
+        except Exception as e:
+            logger.warning(f"[BETTING-BRIEF] Safety-net MLPrediction storage failed: {e}")
+
         return {
             'status': 'success',
             'agents_run': agents_run,
