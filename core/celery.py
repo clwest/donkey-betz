@@ -2324,13 +2324,13 @@ app.conf.beat_schedule = {
     # Auto-enhance blogs marked as 'needs_enhancement' using EditorAgent
     # Improves structure, hooks, headers, engagement, and conclusions
 
-    'enhance-content-daily': {
+    'enhance-content': {
         'task': 'core.tasks.enhance_all_blogs_needing_enhancement',  # Session 919: Fixed task name mismatch
-        'schedule': crontab(hour=3, minute=0),  # Daily at 3 AM
-        'kwargs': {'limit': 20, 'save': True},
+        'schedule': crontab(hour='*/4', minute=15),  # Session 1007: Every 4h (was daily) for auto-revision loop
+        'kwargs': {'limit': 10, 'save': True},
         'options': {
-            'expires': 7200,  # 2 hours
-            'queue': 'long_running',
+            'expires': 14400,
+            'queue': 'content',  # Session 1007: content queue (was long_running)
         }
     },
 
