@@ -288,6 +288,7 @@ Only assign high confidence (>75) when the market consensus is overwhelming."""
             ]
 
             request = LLMRequest(
+                prompt="",
                 messages=messages,
                 max_tokens=500,
                 temperature=0.3,

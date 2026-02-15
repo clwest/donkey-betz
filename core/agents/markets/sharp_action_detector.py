@@ -318,7 +318,7 @@ Focus on ACTIONABLE signals where soft books still have stale lines."""
                 )}
             ]
 
-            request = LLMRequest(messages=messages, max_tokens=500, temperature=0.3)
+            request = LLMRequest(prompt="", messages=messages, max_tokens=500, temperature=0.3)
             response = registry.generate(request, preferred_providers=['openai', 'anthropic'])
             return response.content if response else "LLM analysis unavailable"
 
