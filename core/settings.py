@@ -903,13 +903,6 @@ if env_bool('VALIDATE_ENVIRONMENT', not DEBUG):
 # Environment indicator
 ENVIRONMENT = os.environ.get('ENVIRONMENT', 'development' if DEBUG else 'production')
 
-# Agent System Configuration
-AGENT_SYSTEM = {
-    'ENABLED': os.environ.get('AGENT_SYSTEM_ENABLED', 'True') == 'True',
-    'MAX_AGENTS': int(os.environ.get('MAX_AGENTS', '100')),
-    'AGENT_TIMEOUT': int(os.environ.get('AGENT_TIMEOUT', '30')),
-}
-
 # Sports API Keys
 SPORTRADAR_API_KEY = os.environ.get('SPORTRADAR_API_KEY', '')
 SPORTSDB_API_KEY = os.environ.get('SPORTSDB_API_KEY', '')
@@ -917,25 +910,10 @@ THE_ODDS_API_KEY = os.environ.get('THE_ODDS_API_KEY', '')
 ODDS_API_KEY = os.environ.get('ODDS_API_KEY', '')
 WEATHER_API_KEY = os.environ.get('WEATHER_API_KEY', '')
 
-# API Rate Limits
-API_RATE_LIMITS = {
-    'DEFAULT': '100/hour',
-    'AUTHENTICATED': '1000/hour',
-    'PREMIUM': '10000/hour',
-}
-
 # Additional Redis Configuration
 REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
 REDIS_PORT = int(os.environ.get('REDIS_PORT', '6379'))
 REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', '')
-
-# Redis key patterns for caching
-REDIS_KEY_PATTERNS = {
-    'agents': 'agents:*',
-    'sports': 'sports:*',
-    'content': 'content:*',
-    'ml': 'ml:*',
-}
 
 # Celery Task Routing
 # Session 573: Added dedicated queues to prevent bottlenecks
