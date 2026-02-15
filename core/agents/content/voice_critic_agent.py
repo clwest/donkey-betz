@@ -304,6 +304,16 @@ Output your analysis as structured JSON with scores and reasoning."""
                     scifi_context_used=bool(scifi_context)
                 )
 
+                # Session 1006: Persist output to Deliverable
+                self._save_to_deliverable(
+                    title=f"Voice Critique: {task[:80]}",
+                    content=result.message,
+                    deliverable_type='analysis',
+                    category='Voice Critique',
+                    tags=['voice', 'critique'],
+                    metadata={'task': task[:200]},
+                )
+
                 return result
 
             except Exception as e:

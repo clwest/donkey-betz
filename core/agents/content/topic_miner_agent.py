@@ -252,6 +252,16 @@ CRITICAL: Always use tools to get real spider data. Never make up trends or fake
                     except Exception as e:
                         logger.warning(f"Failed to record learning outcome: {e}")
 
+                    # Session 1006: Persist output to Deliverable
+                    self._save_to_deliverable(
+                        title=f"Topic Mining: {task[:80]}",
+                        content=result.message,
+                        deliverable_type='analysis',
+                        category='Topic Mining',
+                        tags=['topics', 'content'],
+                        metadata={'task': task[:200]},
+                    )
+
                     return result
                 else:
                     # No tools called, return content
