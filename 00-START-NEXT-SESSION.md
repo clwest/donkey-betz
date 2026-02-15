@@ -11,13 +11,17 @@
 ### Session 1008: Campaign Orchestrator + ToolCall Analytics Frontend
 Connected Campaign Orchestrator and ToolCall Analytics dashboards to frontend (PR #1186). Removed dead `synthetic_user_generator` service (PR #1187).
 
-### Session 1009: Deliverables Tab + Orphan Cleanup
+### Session 1009: Deliverables Tab + Orphan Cleanup + celery-content OOM Fix
 - **Deliverables Tab**: New Content Studio sub-tab with list/detail views, filtering, pagination, save/clone/templateize/export (PR #1188)
 - **Orphan Cleanup**: Removed ~65 orphaned API endpoints from `core/urls.py` across 12 groups (voice-checkout, agent-mood, agent-collab, agent-intelligence, agent-learning, render-jobs, coleadership, agents.urls, style-memory, certifications, agent-analytics, agent-deployment, odds-calc)
 - **Deleted**: `core/views_agent_mood.py` (679 lines), dead `agentCollaborationApi` from frontend
 - **Docs**: Updated 8 docs with stale reference cleanup, created handoff doc
+- **celery-content OOM Fix** (PR #1190): Root cause was `agent_category_rotation` and `full_agent_rotation` routed to `content` queue via `CELERY_TASK_ROUTES`. Views called `.delay()` without explicit queue, so these heavy tasks (running 20-74 agents each) landed on the content worker. With `-c 2`, two heavy tasks simultaneously pushed the 512MB container past its limit.
+  - Moved 7 workspace/rotation tasks from `content` → `long_running` queue in `CELERY_TASK_ROUTES`
+  - Reduced content worker from `-c 2` → `-c 1` (350MB peak vs 500MB)
+  - Removed 6 phantom task routes + 3 phantom beat schedules for tasks that don't exist
 
-**PRs:** #1186-#1188
+**PRs:** #1186-#1190
 
 ---
 
