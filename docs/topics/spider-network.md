@@ -87,6 +87,14 @@ Feeds into Boardroom with dedup on `source_type + item_type + title`. Auto-appro
 
 As of Session 998B, `fetch_scores()` returns both completed (`completed: True`) and in-progress (`completed: False`) games. Previously it filtered out live games.
 
-## Odds-Consensus Predictions (Session 998B)
+## Sports Prediction Persistence (Session 1010)
 
-`get_todays_games()` in `views_odds_sports.py` generates AI predictions from moneyline odds consensus rather than the `MLPrediction` model (which lacked `event_id`). `_american_to_probability()` converts American odds to implied probability; favorites > 55% implied probability get a prediction. Completed games include `prediction_correct: True/False`.
+`GamePredictor._store_predictions()` auto-creates League → Team → Game → MLPrediction chain from Odds API data. Uses `SPORT_KEY_LEAGUE` (21 full Odds API key → league tuple mappings) for proper league resolution. Fallback: `SPORT_PREFIX_MAP` (prefix-based). Predictions >14 days in the future are filtered out.
+
+**Active leagues:** NFL, NCAAF, NBA, NCAAB (+ All-Stars), MLB, NHL, EPL, La Liga, Bundesliga, Serie A, Ligue 1, MLS, Champions League, Europa League, Liga MX, UFC/MMA, Boxing.
+
+`SharpActionDetector` analyzes per-bookmaker odds divergence. Filters extreme odds (abs > 10000) before computing ranges. Classifies signals as HOT (divergence >= 30) or WARM (>= 15).
+
+## Odds-Consensus Predictions (Session 998B — Superseded by Session 1010)
+
+Previously, `get_todays_games()` generated predictions from moneyline odds consensus. Session 1010 replaced this with persistent `MLPrediction` records stored by `GamePredictor` via `SPORT_KEY_LEAGUE` mapping.

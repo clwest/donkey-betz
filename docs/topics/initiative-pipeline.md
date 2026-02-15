@@ -50,6 +50,18 @@ SpiderData (raw, 72h)
 
 **7 Pattern Types:** demand_spike, trend_emergence, sentiment_shift, opportunity_window, knowledge_gap, skill_demand, content_gap
 
+**Topic Quality Gate (Session 1010):**
+- `_generate_topic_name()` filters stopwords (new, now, before, how to, want, need, etc.) from cluster keywords
+- Clusters with ALL stopword keywords are skipped entirely (no AutoTopic created)
+- Uses comma separator instead of "and" for multi-keyword topics
+- Falls back to cluster name when no meaningful keywords remain
+
+**Circuit Breaker (Session 1010):**
+- Counts ALL active + triage initiatives (not just those with no activity)
+- Default threshold: 20 (env var: `INITIATIVE_BACKLOG_THRESHOLD`)
+- Dedup check includes TRIAGE status (was only ACTIVE)
+- Blocks new initiative creation when backlog >= threshold
+
 **Cluster Metrics:**
 - **Strength:** signal count (40%) + source diversity (40%) + relevance (20%)
 - **Confidence:** source count / 4 (min 2 sources for > 0.3)

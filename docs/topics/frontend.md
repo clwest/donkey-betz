@@ -24,12 +24,14 @@ React + TypeScript single-page application with 9 workspace tabs, collapsible si
 
 ## Route Structure
 
-36 active routes (down from 62). 26 legacy standalone routes redirect via `<Navigate replace>` to workspace tabs. Key routes:
-- `/` — AI OS Boot (home page)
-- `/ai-studio/` — Main workspace
-- `/stocks/` — Stock Intelligence dashboard
-- `/betting/` — Betting Dashboard (11 tabs: Hub, Overview, Games, Top Plays, Sharp, Arbitrage, Watching, Odds, Bankroll, Wagers, Markets). Games tab shows live scores, odds-consensus AI picks with W/L outcome badges.
-- `/command-center/` — Command Center with PA
+26 routes (24 pages + 2 redirects). Key routes:
+- `/` — Command Center (home, PA chat)
+- `/workspace` — 9-tab modular workspace
+- `/stocks` — Stock Intelligence dashboard
+- `/betting` — Betting Dashboard (11 tabs: Hub, Overview, Games, Top Plays, Sharp, Arbitrage, Watching, Odds, Bankroll, Wagers, Markets). AI Record tab shows MLPrediction history across 6 leagues (NCAAB, NHL, EPL, La Liga, MLS, NCAAF).
+- `/image-studio` — Image generation (DALL-E 3 / Flux, style picker, gallery)
+- `/video-studio` — Video generation (RunwayML, text/image-to-video, async polling, gallery)
+- `/documents` — Document management
 
 ## Command Center "Now" Hub
 

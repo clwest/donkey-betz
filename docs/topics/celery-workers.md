@@ -8,7 +8,7 @@
 |--------|----------|------|-------------|----------------|---------|
 | celery-worker | default, agents, sports | prefork (Railway) / threads (macOS) | 200MB | 10 tasks | Lightweight DB-query tasks only (~28 tasks) |
 | celery-pa | pa | prefork | 200MB | 50 tasks | PA chat queries (dedicated to prevent queue starvation) |
-| celery-content | content | prefork | 200MB | 30 tasks | Blog generation, podcasts, initiative stages (~19 tasks) |
+| celery-content | content | prefork | 150MB | 10 tasks | Blog generation, podcasts, initiative stages (~19 tasks) |
 | celery-long-running | long_running, ml | prefork | 300MB | 10 tasks | Agent exercises, LLM calls, embeddings, spiders (~52 tasks) |
 | celery-broadcast | broadcast | threads | 200MB | 50 tasks | High-frequency status updates (60-180s, ~4 tasks) |
 | celery-beat | (scheduler) | — | — | — | Drives 108 beat schedule entries from settings.py |
