@@ -52,3 +52,6 @@ export { DataIntelTab } from './DataIntelTab'
 // Session 1008: Campaign Orchestrator + ToolCall Analytics
 export { CampaignTab } from './CampaignTab'
 export { ToolCallAnalyticsTab } from './ToolCallAnalyticsTab'
+
+// Session 1009: Deliverables Library
+export { DeliverablesTab } from './DeliverablesTab'
