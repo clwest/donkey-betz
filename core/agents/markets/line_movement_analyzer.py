@@ -151,7 +151,7 @@ Rate movements: STEAM (urgent), SHARP (high value), DRIFT (moderate), NOISE (ign
 
         source_info = SourceInfo(
             name='TheOddsSpider',
-            data_type='sports_odds',
+            source_type='spider_data',
             record_count=len(odds_events),
             freshness_hours=0.0,
         )
