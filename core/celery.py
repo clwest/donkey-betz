@@ -209,6 +209,15 @@ app.conf.beat_schedule = {
             'queue': 'content',
         },
     },
+    # Session 1007: Aggregate tool call stats daily for dashboard queries
+    'aggregate-tool-call-stats': {
+        'task': 'core.tasks.aggregate_tool_call_stats',
+        'schedule': crontab(hour=2, minute=30),  # Daily at 2:30 AM
+        'options': {
+            'expires': 7200,
+            'queue': 'default',
+        },
+    },
     # Sports Prediction Evaluation & Bet Settlement
     # Updated Session 23: Using new PredictionEvaluator system
     'evaluate-completed-predictions': {
@@ -986,16 +995,8 @@ app.conf.beat_schedule = {
             'expires': 3600,  # 1 hour
         }
     },
-    # Session 466: Autonomous Content Studio (Tier 1 Autonomous Situation)
-    # Property #5: Self-Renewal - system runs forever without intervention
-    # Session 539: Increased frequency from 4 hours to 1 hour for timely content
-    'autonomous-content-studio-loop': {
-        'task': 'autonomous_studio.run_main_loop',
-        'schedule': crontab(minute=0),  # Every hour at :00
-        'options': {
-            'expires': 3600,  # 1 hour
-        }
-    },
+    # Session 1007: Removed duplicate 'autonomous-content-studio-loop' (hourly).
+    # Consolidated into 'run-autonomous-content-studio' (every 4h, content queue).
     'track-content-performance-daily': {
         'task': 'autonomous_studio.track_performance',
         'schedule': crontab(hour=20, minute=0),  # Daily at 8 PM
@@ -1106,14 +1107,8 @@ app.conf.beat_schedule = {
     # Session 471: Narrative Drift Detector (Tier 1 Autonomous Situation #2)
     # "The system watches the world for story shifts"
     # =========================================================================
-    # Main detection cycle - scans for narrative shifts
-    'narrative-drift-detector-cycle': {
-        'task': 'narrative_drift.run_detector_cycle',
-        'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours at :00
-        'options': {
-            'expires': 14400,  # 4 hours
-        }
-    },
+    # Session 1007: Removed duplicate 'narrative-drift-detector-cycle' (every 4h).
+    # Consolidated into 'run-narrative-drift-cycle' (every 6h, long_running queue).
     # Process spider data for narrative signals
     'narrative-process-spider-data': {
         'task': 'narrative_drift.process_spider_data',
@@ -1130,14 +1125,8 @@ app.conf.beat_schedule = {
             'expires': 21600,  # 6 hours
         }
     },
-    # Daily narrative digest to Discord
-    'narrative-daily-digest': {
-        'task': 'narrative_drift.send_daily_digest',
-        'schedule': crontab(hour=9, minute=0),  # Daily at 9 AM
-        'options': {
-            'expires': 3600,  # 1 hour
-        }
-    },
+    # Session 1007: Removed duplicate 'narrative-daily-digest' (9 AM).
+    # Consolidated into 'send-narrative-daily-digest' (8 AM).
 
     # Session 473: Process narrative shifts for content creation
     # Runs 30 min after narrative status updates to catch new shifts
@@ -1153,24 +1142,10 @@ app.conf.beat_schedule = {
     # Session 474: Unified Intelligence Pipeline
     # =========================================================================
 
-    # Full pipeline run - comprehensive cycle through all 3 Tier 1 Autonomous Situations
-    # Spider → ML Score → Narrative Check → Content Gen → Revenue Track
-    'unified-pipeline-complete-cycle': {
-        'task': 'unified_pipeline.run_complete_cycle',
-        'schedule': crontab(minute=0, hour='*/12'),  # Every 12 hours at :00
-        'options': {
-            'expires': 43200,  # 12 hours
-        }
-    },
-
-    # Quick health check - lightweight verification all systems are operational
-    'unified-pipeline-health-check': {
-        'task': 'unified_pipeline.health_check',
-        'schedule': crontab(minute=15, hour='*/2'),  # Every 2 hours at :15
-        'options': {
-            'expires': 7200,  # 2 hours
-        }
-    },
+    # Session 1007: Removed duplicate 'unified-pipeline-complete-cycle' (every 12h).
+    # Consolidated into 'run-unified-intelligence-pipeline' (every 6h, long_running queue).
+    # Session 1007: Removed duplicate 'unified-pipeline-health-check' (every 2h).
+    # Consolidated into same key at line ~1633 (every 30 min).
 
     # =========================================================================
     # Session 475: ROI Metrics & Intelligence Briefs
@@ -1200,16 +1175,8 @@ app.conf.beat_schedule = {
     # These send REAL alerts to Discord channels!
     # =========================================================================
 
-    # Blockchain Security Monitor - Session 539: increased to hourly
-    # Analyzes etherscan/coingecko data for whale movements, price manipulation, unusual volume
-    # Sends alerts to #blockchain-alerts Discord channel
-    'autonomous-blockchain-security-monitor': {
-        'task': 'autonomous.blockchain_security_monitor',
-        'schedule': crontab(minute=5),  # Every hour at :05
-        'options': {
-            'expires': 3600,  # 1 hour
-        }
-    },
+    # Session 1007: Removed duplicate 'autonomous-blockchain-security-monitor' (hourly).
+    # Consolidated into 'run-blockchain-security-monitor' (every 4h, long_running queue).
 
     # Session 989: Removed phantom 'autonomous.stock_market_intelligence' schedule.
     # That task name has no registered @shared_task — celery rejected it every hour.
@@ -1598,16 +1565,7 @@ app.conf.beat_schedule = {
         }
     },
 
-    # Autonomous Content Studio - Content generation system
-    # Session 799: Fixed task name to match @shared_task(name=...) decorator
-    'run-autonomous-content-studio': {
-        'task': 'autonomous_studio.run_main_loop',
-        'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours at :00
-        'options': {
-            'expires': 14400,  # 4 hours
-            'queue': 'long_running',
-        }
-    },
+    # Session 1007: Removed duplicate 'run-autonomous-content-studio' (overwritten by Session 808 entry).
 
     # Narrative Drift Cycle - Trend and narrative analysis
     'run-narrative-drift-cycle': {
@@ -1852,14 +1810,7 @@ app.conf.beat_schedule = {
             'queue': 'long_running',
         }
     },
-    'run-business-strategy-agents': {
-        'task': 'core.tasks.run_business_strategy_agents',
-        'schedule': crontab(hour=8, minute=0),  # Daily at 8 AM
-        'options': {
-            'expires': 7200,  # 2 hours
-            'queue': 'long_running',
-        }
-    },
+    # Session 1007: Removed duplicate 'run-business-strategy-agents' (overwritten by Session 807 entry).
     # =========================================================================
     # Session 787: Comprehensive Agent Scheduling
     # All 73 agents run autonomously on appropriate schedules
@@ -1880,14 +1831,7 @@ app.conf.beat_schedule = {
             'queue': 'long_running',
         }
     },
-    'run-research-analysis-agents': {
-        'task': 'core.tasks.run_research_analysis_agents',
-        'schedule': crontab(minute=30, hour='*/2'),  # Every 2 hours at :30
-        'options': {
-            'expires': 7200,  # 2 hours
-            'queue': 'agents',
-        }
-    },
+    # Session 1007: Removed duplicate 'run-research-analysis-agents' (overwritten by Session 807 entry).
     'run-stock-financial-agents': {
         'task': 'core.tasks.run_stock_financial_agents',
         'schedule': crontab(minute=40, hour='*/3'),  # Every 3 hours at :40
@@ -1936,22 +1880,8 @@ app.conf.beat_schedule = {
             'queue': 'long_running',
         }
     },
-    'run-content-studio-agents': {
-        'task': 'core.tasks.run_content_studio_agents',
-        'schedule': crontab(minute=55, hour='*/4'),  # Every 4 hours at :55
-        'options': {
-            'expires': 14400,  # 4 hours
-            'queue': 'content',
-        }
-    },
-    'run-campaign-series-agents': {
-        'task': 'core.tasks.run_campaign_series_agents',
-        'schedule': crontab(minute=5, hour='*/6'),  # Every 6 hours at :05
-        'options': {
-            'expires': 21600,  # 6 hours
-            'queue': 'long_running',
-        }
-    },
+    # Session 1007: Removed duplicate 'run-content-studio-agents' (overwritten by Session 807 entry).
+    # Session 1007: Removed duplicate 'run-campaign-series-agents' (overwritten by Session 807 entry).
     'run-system-orchestration-agents': {
         'task': 'core.tasks.run_system_orchestration_agents',
         'schedule': crontab(minute=0, hour='*/2'),  # Every 2 hours at :00
