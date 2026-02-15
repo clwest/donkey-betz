@@ -121,8 +121,8 @@ Added `current_price` to `normalize_item()` field mapping in `real_data_collecto
 ### Railway Deploy: Migration Lock Risk
 `AddConstraint` during blue-green deploy can hang on lock.
 
-### Billing + Analytics Orphaned
-`/billing` and `/analytics` need an Admin tab.
+### Billing + Analytics Orphaned — FIXED
+Added Billing and Analytics tabs to Admin page (PR #1176).
 
 ### ToolCallRecord Analytics Dashboard
 Data is flowing but no dashboard exists yet.

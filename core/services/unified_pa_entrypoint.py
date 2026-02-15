@@ -101,6 +101,9 @@ class UnifiedPAEntrypoint:
         'surgical_moves_status': [],
         # Session 973: Broad system overview — light enrichment
         'system_overview': ['intelligence_enricher', 'proactive_intelligence', 'platform_briefing'],
+        # Session 1007: Agent introspection + scheduled tasks — pure data
+        'agent_introspection': [],
+        'scheduled_tasks': [],
     }
 
     # Alias map: normalize variant intent names to canonical names
@@ -1016,6 +1019,29 @@ class UnifiedPAEntrypoint:
         ]):
             return ('pipeline_status', 'pipeline_orchestrator_tool')
 
+        # Session 1007: Agent introspection — "what can [agent] do?"
+        if any(phrase in message_lower for phrase in [
+            'what can ', 'what does ', 'describe agent', 'agent capabilities',
+            'tell me about agent', 'how does agent', 'what is the ',
+            'agent info', 'agent details',
+        ]) and any(word in message_lower for word in [
+            'agent', 'do', 'does',
+        ]):
+            # Only if it's asking about a specific agent, not "what can you do"
+            if not any(phrase in message_lower for phrase in [
+                'what can you', 'what do you', 'your capabilities',
+            ]):
+                return ('agent_introspection', 'agent_introspection_tool')
+
+        # Session 1007: Scheduled tasks visibility — "what tasks are scheduled?"
+        if any(phrase in message_lower for phrase in [
+            'scheduled task', 'scheduled tasks', 'celery beat', 'beat schedule',
+            'what is scheduled', 'what runs automatically', 'cron', 'periodic task',
+            'periodic tasks', 'when does', 'what runs', 'automated tasks',
+            'background schedule', 'recurring tasks', 'task schedule',
+        ]):
+            return ('scheduled_tasks', 'scheduled_tasks_tool')
+
         # Session 987/988: Self-awareness — PA knows its own capabilities
         # Note: removed 'have access to' (too broad, catches "access to internet")
         if any(phrase in message_lower for phrase in [
@@ -1545,6 +1571,31 @@ class UnifiedPAEntrypoint:
                 payload['action'] = 'stats'
             else:
                 payload['action'] = 'recent'
+
+        # Session 1007: Agent introspection payload — extract agent name from message
+        elif intent == 'agent_introspection':
+            import re
+            msg_lower = message.lower()
+            # Try to extract agent name: "what can ImageAgent do?" or "describe the research agent"
+            agent_match = re.search(
+                r'(?:what (?:can|does) |describe |tell me about |agent info |about )(?:the )?(\w+(?:\s?\w+)?)\s*(?:agent|do\??|does\??)?',
+                msg_lower,
+            )
+            payload['agent_name'] = agent_match.group(1).strip() if agent_match else msg_lower
+            payload['action'] = 'describe'
+
+        # Session 1007: Scheduled tasks payload
+        elif intent == 'scheduled_tasks':
+            msg_lower = message.lower()
+            if any(w in msg_lower for w in ['blog', 'content']):
+                payload['filter'] = 'content'
+            elif any(w in msg_lower for w in ['spider', 'crawl']):
+                payload['filter'] = 'spider'
+            elif any(w in msg_lower for w in ['desk', 'intelligence', 'brief']):
+                payload['filter'] = 'intelligence'
+            else:
+                payload['filter'] = ''
+            payload['action'] = 'list'
 
         # Session 979: Spider data default — override 'list' which is not a valid action
         elif intent == 'spider_data':

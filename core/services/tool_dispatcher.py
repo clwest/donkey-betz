@@ -180,6 +180,10 @@ class ToolDispatcher:
         # Session 973: Status snapshot for broad system overview
         self.register("status_snapshot_tool", self._handle_status_snapshot)
 
+        # Session 1007: Agent introspection + scheduled tasks
+        self.register("agent_introspection_tool", self._handle_agent_introspection)
+        self.register("scheduled_tasks_tool", self._handle_scheduled_tasks)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):
@@ -5039,6 +5043,142 @@ class ToolDispatcher:
         cache.set(cache_key, snapshot, 60)
         logger.info(f"[{trace_id}] Status snapshot generated and cached")
         return snapshot
+
+    def _handle_agent_introspection(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Session 1007: Agent introspection — describe what an agent can do.
+
+        Searches the Agent DB model and agent classes for capabilities,
+        description, tools, and recent execution stats.
+        """
+        from core.models_unified_system import Agent, AgentExecution
+        from django.utils import timezone
+        from datetime import timedelta
+
+        agent_query = payload.get('agent_name', '').strip().lower()
+        if not agent_query:
+            return {'error': 'No agent name provided'}
+
+        # Search by name (fuzzy)
+        agents = Agent.objects.filter(name__icontains=agent_query, is_active=True)
+        if not agents.exists():
+            # Try without "agent" suffix
+            clean_query = agent_query.replace('agent', '').strip()
+            if clean_query:
+                agents = Agent.objects.filter(name__icontains=clean_query, is_active=True)
+
+        if not agents.exists():
+            # List available agents as suggestions
+            all_agents = list(
+                Agent.objects.filter(is_active=True)
+                .values_list('name', flat=True)
+                .order_by('name')[:20]
+            )
+            return {
+                'found': False,
+                'query': agent_query,
+                'message': f'No agent found matching "{agent_query}".',
+                'suggestions': all_agents,
+            }
+
+        agent = agents.first()
+        now = timezone.now()
+
+        # Get recent execution stats
+        recent_executions = AgentExecution.objects.filter(
+            agent=agent,
+            created_at__gte=now - timedelta(days=7),
+        )
+        total_recent = recent_executions.count()
+        successful_recent = recent_executions.filter(status='completed').count()
+
+        # Try to get the agent class for system_prompt and tools
+        agent_class_info = {}
+        try:
+            from core.agent_router import get_agent_router
+            router = get_agent_router()
+            agent_class = router.get_agent_class(agent.name)
+            if agent_class:
+                agent_class_info['system_prompt'] = getattr(agent_class, 'system_prompt', '')[:500]
+                tools = getattr(agent_class, 'tools', [])
+                if tools:
+                    agent_class_info['tools'] = [
+                        t.get('function', {}).get('name', 'unknown')
+                        for t in tools if isinstance(t, dict)
+                    ]
+        except Exception:
+            pass
+
+        return {
+            'found': True,
+            'agent': {
+                'name': agent.name,
+                'type': agent.agent_type,
+                'description': agent.description,
+                'specialization': agent.specialization,
+                'capabilities': agent.capabilities,
+                'effectiveness_score': agent.effectiveness_score,
+                'total_executions': agent.total_executions,
+            },
+            'recent_7d': {
+                'total': total_recent,
+                'successful': successful_recent,
+                'success_rate': f"{(successful_recent / total_recent * 100):.0f}%" if total_recent > 0 else 'N/A',
+            },
+            'class_info': agent_class_info,
+        }
+
+    def _handle_scheduled_tasks(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Session 1007: Scheduled tasks visibility — list Celery Beat periodic tasks.
+
+        Shows what tasks are scheduled, their intervals, and last run times.
+        """
+        from django_celery_beat.models import PeriodicTask
+
+        filter_keyword = payload.get('filter', '')
+        tasks = PeriodicTask.objects.filter(enabled=True).order_by('name')
+
+        if filter_keyword:
+            tasks = tasks.filter(name__icontains=filter_keyword)
+
+        results = []
+        for task in tasks[:50]:
+            schedule_info = ''
+            if task.crontab:
+                c = task.crontab
+                schedule_info = f"cron({c.minute} {c.hour} {c.day_of_week} {c.day_of_month} {c.month_of_year})"
+            elif task.interval:
+                i = task.interval
+                schedule_info = f"every {i.every} {i.period}"
+
+            results.append({
+                'name': task.name,
+                'task': task.task,
+                'schedule': schedule_info,
+                'queue': task.queue or 'default',
+                'last_run': task.last_run_at.isoformat() if task.last_run_at else None,
+                'total_runs': task.total_run_count,
+            })
+
+        return {
+            'total_enabled': PeriodicTask.objects.filter(enabled=True).count(),
+            'showing': len(results),
+            'filter': filter_keyword or 'all',
+            'tasks': results,
+        }
 
 
 # Singleton instance
