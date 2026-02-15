@@ -1,12 +1,55 @@
-# Session 1007 - Start Here
+# Session 1008 - Start Here
 
-**Previous Session:** 1006 (Systematic Cleanup & Agent Persistence)
+**Previous Session:** 1007 (Dead Code Purge & Pipeline Fixes)
 **Date:** February 14, 2026
-**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **40 PUBLISHED BLOGS** | **1,089 SIGNAL CLUSTERS** | **INITIATIVE STAGES 1-5 ACTIVE** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 38+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 268** | **Frontend Routes: 24**
+**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **40 PUBLISHED BLOGS** | **1,089 SIGNAL CLUSTERS** | **INITIATIVE STAGES 1-5 ACTIVE** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 38+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 238** | **Frontend Routes: 24**
 
 ---
 
-## Session 1006 Summary (Just Completed)
+## Session 1007 Summary (Just Completed)
+
+### Dead Code Purge & Pipeline Fixes
+
+Massive cleanup session: ~10,350 lines of dead code removed across 8 PRs, plus auto-revision loop fix and ToolCallRecord analytics infrastructure.
+
+#### PR #1177: Auto-Revision Loop Fix
+- REVISE blogs now set to `needs_enhancement` (was `draft` — EditorAgent never picked them up)
+- Beat schedule: `enhance-content` now every 4h (was daily 3 AM), moved to `content` queue
+
+#### PR #1178: Beat Schedule Dedup + ToolCallAggregate Task
+- Removed 11 duplicate beat entries (5 tasks were double-executing)
+- Added `aggregate_tool_call_stats` task (daily 2:30 AM) populating `ToolCallAggregate` model
+
+#### PR #1179: Dead Tasks + ToolCallAggregate API
+- Removed 2 unreachable tasks (`get_gate_statistics`, `get_content_pipeline_stats`)
+- Added `ToolCallAggregateViewSet` at `/api/v1/tool-call-aggregates/`
+
+#### PR #1180: Dead CELERY_BEAT_SCHEDULE (605 lines)
+- Removed ~600 lines of dead `CELERY_BEAT_SCHEDULE` from settings.py (overwritten by celery.py)
+- Updated 2 views to read from `celery_app.conf.beat_schedule`
+
+#### PR #1181: 30 Dead Tasks (1,672 lines)
+- Removed 30 `@shared_task` functions never called, scheduled, or referenced
+- Removed 3 unused settings dicts (`AGENT_SYSTEM`, `API_RATE_LIMITS`, `REDIS_KEY_PATTERNS`)
+
+#### PR #1182: 5 Dead Modules (2,534 lines)
+- Deleted `views_assistant_intelligent.py`, `views_assistant_rag_enhanced.py`, `views_unified_backend.py`
+- Deleted `services/experiment_collision_service.py`, `services/_deprecated/decision_executor.py`
+- Fixed duplicate `import os` and duplicate dict keys in `AI_CONFIG`
+
+#### PR #1183: 21 Dead Commands + Dead Models (5,497 lines)
+- Deleted 21 management commands (sports/ML, spider, core utilities)
+- Deleted `models_spider_aggregation.py` (entirely dead file)
+
+#### PR #1184: Restore DaVinci Resolve Task
+- Restored `start_resolve_render` task accidentally removed in #1181
+
+**PRs:** #1177-#1184
+**Net lines removed:** ~10,350
+
+---
+
+## Session 1006 Summary
 
 ### Systematic Cleanup & Agent Persistence
 
@@ -91,7 +134,7 @@ Fixed blog pipeline (deliberation), initiative founder intent (auto-set), signal
 | Advisors | 25 |
 | Database Models | 395+ |
 | Services | 134 |
-| Celery Tasks | 268 |
+| Celery Tasks | 238 (was 268 — 30 dead tasks removed) |
 | long_running Queue Tasks | 7 (was 55+) |
 | Intelligence Desks | 4 (Stocks, Sports, Blockchain, Narrative) — ALL RUNNING |
 | Workspace Tabs | 9 |
