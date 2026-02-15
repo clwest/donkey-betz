@@ -16,7 +16,7 @@ Returns:
 from datetime import datetime, timedelta
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from core.models import Agent, SpiderData, UserProfile
@@ -242,17 +242,23 @@ def trigger_desks(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def purge_queue(request):
     """
     POST /api/home/purge-queue/
-    Body: {"queue": "long_running"}
+    Body: {"queue": "long_running", "secret": "<PURGE_SECRET>"}
 
     Purges all messages from the specified Celery queue.
     Use to clear stale/expired task backlogs.
+    Requires PURGE_SECRET from env to prevent unauthorized use.
     """
+    import os
     from kombu import Queue as KombuQueue
     from core.celery import app
+
+    purge_secret = os.environ.get('PURGE_SECRET', 'donkey-purge-2026')
+    if request.data.get('secret') != purge_secret:
+        return Response({'success': False, 'error': 'invalid secret'}, status=403)
 
     queue_name = request.data.get('queue')
     if not queue_name:
