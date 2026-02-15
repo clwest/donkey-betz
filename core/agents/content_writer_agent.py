@@ -97,6 +97,31 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# Prompt fragments that indicate LLM output leaking into tags
+_TAG_BLACKLIST_FRAGMENTS = [
+    '##', 'REVIEW', 'Write an article', 'Write a blog',
+    'Real-Time Research', 'research data', 'BLOG POST',
+    'stage ', '[stage', 'spider data', '\n',
+]
+
+
+def _sanitize_tags(tags: List[str], max_tags: int = 8) -> List[str]:
+    """Strip prompt-leaked, oversized, or empty tags."""
+    clean = []
+    for tag in tags:
+        if not isinstance(tag, str) or not tag.strip():
+            continue
+        tag = tag.strip()
+        # Skip oversized tags (real tags are short keywords)
+        if len(tag) > 50:
+            continue
+        # Skip tags containing prompt fragments
+        tag_lower = tag.lower()
+        if any(frag.lower() in tag_lower for frag in _TAG_BLACKLIST_FRAGMENTS):
+            continue
+        clean.append(tag)
+    return clean[:max_tags]
+
 
 def analyze_content_with_ml(content_data: dict) -> dict:
     """Analyze content using ML models (Text)."""
@@ -1123,6 +1148,16 @@ Word Count: {word_count} words | Time: {execution_time_ms}ms
         """
         try:
             from core.models_unified_system import SelfBlog
+            from datetime import timedelta
+            from django.utils import timezone
+
+            # Dedup check — skip if same title exists in last 7 days
+            if SelfBlog.objects.filter(
+                title=content_title,
+                created_at__gte=timezone.now() - timedelta(days=7)
+            ).exists():
+                logger.info(f"Session 860: Skipping duplicate blog title: {content_title[:60]}")
+                return
 
             # Extract structured content
             intro = generated_content.get('intro', '')
@@ -1191,18 +1226,30 @@ Word Count: {word_count} words | Time: {execution_time_ms}ms
                     'time_ms': review_result.execution_time_ms,
                 }
 
+            # Sanitize tags — strip prompt leakage, oversized entries
+            clean_tags = _sanitize_tags(tags)
+
+            # Ensure full_text is populated (assemble from sections if needed)
+            if not full_text and sections:
+                full_text = '\n\n'.join(
+                    s.get('content', '') if isinstance(s, dict) else str(s)
+                    for s in sections
+                )
+
             # Create the SelfBlog record
             blog = SelfBlog.objects.create(
                 title=content_title,
+                author='ContentWriterAgent',
                 meta_description=meta_description or f"{content_title} - {topic}",
                 intro=intro or (full_text[:500] if full_text else ""),
                 sections=sections if sections else [{'header': 'Content', 'content': full_text}],
                 conclusion=conclusion or "",
+                full_text=full_text or "",
                 word_count=word_count,
                 category='blog',
                 status=initial_status,
                 content_type=content_type_val,
-                tags=tags,
+                tags=clean_tags,
                 stats_snapshot=stats_snapshot,
             )
 
