@@ -624,6 +624,18 @@ IMPORTANT: You MUST use read_file and edit_file on these specific files. Do NOT 
                     scifi_context_used=bool(scifi_context)
                 )
 
+                # Session 1006: Persist output to Deliverable
+                if all_results:
+                    tools_used = list(set(tc['tool'] for tc in tool_calls_made))
+                    self._save_to_deliverable(
+                        title=f"Generated Code: {task[:80]}",
+                        content=result.message,
+                        deliverable_type='code',
+                        category='Code Generation',
+                        tags=['code'] + tools_used[:3],
+                        metadata={'task': task[:200], 'tools_used': tools_used, 'iterations': iteration},
+                    )
+
                 return result
 
             except Exception as e:

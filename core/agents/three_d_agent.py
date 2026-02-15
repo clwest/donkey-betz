@@ -233,6 +233,16 @@ If asked to do something outside 3D generation, politely explain you can only cr
                             confidence=0.8
                         )
 
+                        # Session 1006: Persist output to Deliverable
+                        self._save_to_deliverable(
+                            title=f"Generated 3D Model: {task[:80]}",
+                            content=result.message,
+                            deliverable_type='3d_model',
+                            category='3D Generation',
+                            tags=['3d', args.get('output_format', 'glb')],
+                            metadata={'task': task[:200], 'output_format': args.get('output_format', 'glb')},
+                        )
+
                         return result
                     else:
                         # Session 840: Include actual error details for better debugging
