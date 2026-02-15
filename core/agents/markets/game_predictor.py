@@ -122,6 +122,16 @@ Only assign high confidence (>75) when the market consensus is overwhelming."""
                     'provenance': provenance.to_dict() if hasattr(provenance, 'to_dict') else str(provenance),
                 }
 
+                # Session 1006: Persist output to Deliverable
+                self._save_to_deliverable(
+                    title=f"Game Predictions: {task[:80]}",
+                    content=f"Generated {len(predictions)} predictions from {len(events)} events",
+                    deliverable_type='analysis',
+                    category='Game Predictions',
+                    tags=['predictions', 'sports'],
+                    metadata={'task': task[:200], 'predictions_count': len(predictions)},
+                )
+
                 return AgentResult(
                     success=True,
                     message=f"Generated {len(predictions)} game predictions from {len(events)} events",

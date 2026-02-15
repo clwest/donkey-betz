@@ -341,6 +341,16 @@ Focus on stocks without corresponding news explanations for moves."""
             except Exception as le:
                 logger.warning(f"Failed to record learning outcome: {le}")
 
+            # Session 1006: Persist output to Deliverable
+            self._save_to_deliverable(
+                title=f"Market Movement: {task[:80]}",
+                content=result.message,
+                deliverable_type='analysis',
+                category='Market Movement',
+                tags=['market', 'stocks'],
+                metadata={'task': task[:200]},
+            )
+
             return result
 
         except Exception as e:

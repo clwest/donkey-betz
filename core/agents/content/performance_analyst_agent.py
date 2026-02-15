@@ -325,6 +325,16 @@ Always use tools to get real performance data. Never make up statistics."""
                     except Exception as e:
                         logger.warning(f"Failed to record learning outcome: {e}")
 
+                    # Session 1006: Persist output to Deliverable
+                    self._save_to_deliverable(
+                        title=f"Performance Analysis: {task[:80]}",
+                        content=result.message,
+                        deliverable_type='analysis',
+                        category='Performance Analysis',
+                        tags=['performance', 'content'],
+                        metadata={'task': task[:200]},
+                    )
+
                     return result
                 else:
                     # No tools called, return content

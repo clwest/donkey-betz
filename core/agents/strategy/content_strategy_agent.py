@@ -510,6 +510,16 @@ the user should use ImageAgent, VideoAgent, etc."""
                         importance=0.7
                     )
 
+                    # Session 1006: Persist output to Deliverable
+                    self._save_to_deliverable(
+                        title=f"Content Strategy: {task[:80]}",
+                        content=result.message,
+                        deliverable_type='analysis',
+                        category='Content Strategy',
+                        tags=['content', 'strategy'],
+                        metadata={'task': task[:200]},
+                    )
+
                     return result
 
                 else:
