@@ -276,6 +276,16 @@ Remember: Sharp money moves lines. Look for where the line went AGAINST public b
                 # Session 763: Create Mission Control attention item
                 self._maybe_create_attention_item(result, task, context)
 
+                # Session 1006: Persist output to Deliverable
+                self._save_to_deliverable(
+                    title=f"Sports Odds Analysis: {task[:80]}",
+                    content=result.message,
+                    deliverable_type='analysis',
+                    category='Sports Analysis',
+                    tags=['odds', 'sports'],
+                    metadata={'task': task[:200], 'events_analyzed': len(events)},
+                )
+
                 return result
 
             except Exception as e:

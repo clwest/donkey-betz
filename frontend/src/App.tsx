@@ -75,43 +75,8 @@ function App() {
         <Route path="docs-index" element={<DocsIndexPage />} />
         <Route path="blog/:blogId" element={<BlogViewerPage />} />
 
-        {/* Session 971b C: Legacy routes → workspace tab redirects.
-            Old bookmarks keep working for 2-4 weeks, then these can be removed. */}
-
-        {/* → System tab */}
-        <Route path="body-health" element={<Navigate to="/workspace?tab=system" replace />} />
-        <Route path="llm-routing" element={<Navigate to="/workspace?tab=system" replace />} />
-        <Route path="integration-health" element={<Navigate to="/workspace?tab=system" replace />} />
-        <Route path="orchestration" element={<Navigate to="/workspace?tab=system" replace />} />
-        <Route path="agent-monitor" element={<Navigate to="/workspace?tab=system" replace />} />
-        <Route path="autonomous" element={<Navigate to="/workspace?tab=system" replace />} />
-        <Route path="hive-mind" element={<Navigate to="/workspace?tab=system" replace />} />
-
-        {/* → DataIntel tab */}
-        <Route path="spiders" element={<Navigate to="/workspace?tab=dataintel" replace />} />
-        <Route path="spider-feed" element={<Navigate to="/workspace?tab=dataintel" replace />} />
-        <Route path="reasoning" element={<Navigate to="/workspace?tab=dataintel" replace />} />
-        <Route path="collective" element={<Navigate to="/workspace?tab=dataintel" replace />} />
-
-        {/* → Content tab */}
-        <Route path="podcast" element={<Navigate to="/workspace?tab=content" replace />} />
-        <Route path="content-channels" element={<Navigate to="/workspace?tab=content" replace />} />
-        <Route path="distribution" element={<Navigate to="/workspace?tab=content" replace />} />
+        {/* Standalone content pages */}
         <Route path="documents" element={<DocumentsPage />} />
-        <Route path="voice-marketplace" element={<Navigate to="/workspace?tab=content" replace />} />
-        <Route path="blogs" element={<Navigate to="/workspace?tab=content" replace />} />
-
-        {/* → Knowledge tab */}
-        <Route path="memory-palace" element={<Navigate to="/workspace?tab=knowledge" replace />} />
-        <Route path="evolution" element={<Navigate to="/workspace?tab=knowledge" replace />} />
-        <Route path="agent-mood" element={<Navigate to="/workspace?tab=knowledge" replace />} />
-        <Route path="time-capsules" element={<Navigate to="/workspace?tab=knowledge" replace />} />
-        <Route path="time-travel" element={<Navigate to="/workspace?tab=knowledge" replace />} />
-        <Route path="agent-social" element={<Navigate to="/workspace?tab=knowledge" replace />} />
-        <Route path="relationships" element={<Navigate to="/workspace?tab=knowledge" replace />} />
-
-        {/* → Learning tab */}
-        <Route path="learning-journey" element={<Navigate to="/workspace?tab=learning" replace />} />
       </Route>
     </Routes>
   )

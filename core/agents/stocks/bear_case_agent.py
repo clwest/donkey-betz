@@ -359,6 +359,16 @@ Always acknowledge bull arguments but emphasize potential risks."""
                 except Exception as le:
                     logger.warning(f"Failed to record learning outcome: {le}")
 
+                # Session 1006: Persist output to Deliverable
+                self._save_to_deliverable(
+                    title=f"Bear Case Analysis: {task[:80]}",
+                    content=result.message,
+                    deliverable_type='analysis',
+                    category='Stock Analysis',
+                    tags=['bear_case', 'stocks'],
+                    metadata={'task': task[:200], 'tickers_analyzed': len(bear_cases)},
+                )
+
                 return result
 
             except Exception as e:
