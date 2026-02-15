@@ -48,6 +48,7 @@ import { ConceptForgeTab } from './ConceptForgeTab'
 import { VoiceMarketplaceTab } from './VoiceMarketplaceTab'
 import { FilesTab } from './FilesTab'
 import { CampaignTab } from './CampaignTab'
+import { DeliverablesTab } from './DeliverablesTab'
 import type { ContentStudioSubTab } from '../types'
 
 // Sub-tab configuration
@@ -67,6 +68,7 @@ const subTabs: Array<{ id: ContentSubTab; label: string; icon: typeof Image; des
   { id: 'voices', label: 'Voices', icon: Music, description: 'Voice marketplace' },
   { id: 'files', label: 'Files', icon: FileText, description: 'Workspace file browser' },
   { id: 'campaigns', label: 'Campaigns', icon: Megaphone, description: 'Marketing campaign orchestrator' },
+  { id: 'deliverables', label: 'Deliverables', icon: FileText, description: 'Agent output library' },
 ]
 
 interface ContentStudioTabProps {
@@ -115,6 +117,7 @@ export function ContentStudioTab({ initialSubTab, activeWorkspaceId }: ContentSt
       {activeSubTab === 'voices' && <VoiceMarketplaceTab />}
       {activeSubTab === 'files' && <FilesTab activeWorkspaceId={activeWorkspaceId} />}
       {activeSubTab === 'campaigns' && <CampaignTab />}
+      {activeSubTab === 'deliverables' && <DeliverablesTab />}
 
       <PanelDebugDrawer scope="workspace:content" />
     </div>
