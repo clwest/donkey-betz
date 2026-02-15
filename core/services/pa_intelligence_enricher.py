@@ -100,7 +100,8 @@ class PAIntelligenceEnricher:
         self.include_system_state = self.config.get('include_system_state', True)  # Session 573
         self.include_platform_briefing = self.config.get('include_platform_briefing', True)  # Session 574
         self.include_learning_insights = self.config.get('include_learning_insights', True)  # Session 605
-        self.max_context_chars = self.config.get('max_context_chars', 3000)  # Increased for briefing
+        # Session 1006: Raised from 3000 → 12000; old cap truncated combined enrichment to ~1 section
+        self.max_context_chars = self.config.get('max_context_chars', 12000)
 
         self.intelligence_service = IntelligenceQueryService()
         self.spider_service = SpiderIntelligenceService()

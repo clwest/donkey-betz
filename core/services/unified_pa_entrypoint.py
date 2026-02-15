@@ -139,16 +139,17 @@ class UnifiedPAEntrypoint:
     }
 
     # Per-section character caps to prevent any one source dominating
+    # Session 1006: Raised from 300-600 → 1500-2000; old caps discarded 85-95% of enrichment data
     ENRICHMENT_CAPS = {
-        'system_brief':     600,
-        'spider_trends':    600,
-        'blog_performance': 600,
-        'domain_context':   600,
-        'advisor':          300,
-        'strategic_memory':  400,
-        'learning_insights': 600,  # Session 972: Explicit cap for learning insights
-        'proactive_intelligence': 500,
-        'platform_briefing': 500,
+        'system_brief':     1500,
+        'spider_trends':    2000,
+        'blog_performance': 1500,
+        'domain_context':   2000,
+        'advisor':          1000,
+        'strategic_memory':  1500,
+        'learning_insights': 1500,
+        'proactive_intelligence': 1500,
+        'platform_briefing': 1500,
     }
 
     # Stop words for relevance gating
@@ -1805,9 +1806,10 @@ Only describe features and capabilities that actually exist. Never fabricate con
                 parts.append(knowledge_text)
 
         # Add the data to analyze
+        # Session 1006: Raised from 3000 → 8000; tool results were losing most of their data
         tool_str = str(tool_result)
-        if len(tool_str) > 3000:
-            tool_str = tool_str[:3000] + '...'
+        if len(tool_str) > 8000:
+            tool_str = tool_str[:8000] + '...'
 
         parts.append(f'\n=== DATA TO ANALYZE ===\nUser asked: "{message}"\nTool returned: {tool_str}')
 
