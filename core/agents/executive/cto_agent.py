@@ -266,6 +266,16 @@ You CANNOT execute code or make changes - only analyze and plan."""
                         tool_calls=tool_calls_made
                     )
 
+                    # Session 1006: Persist output to Deliverable
+                    self._save_to_deliverable(
+                        title=f"CTO Analysis: {task[:80]}",
+                        content=result.message,
+                        deliverable_type='analysis',
+                        category='Executive Technical',
+                        tags=['cto', 'technical'],
+                        metadata={'task': task[:200]},
+                    )
+
                     # Session 380: Learning hooks for collective intelligence
                     self._record_learning_outcome(
                         result=result,
