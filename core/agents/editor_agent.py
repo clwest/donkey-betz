@@ -232,6 +232,16 @@ Output Format:
 
             execution_time = int((time.time() - start_time) * 1000)
 
+            # Session 1006: Persist output to Deliverable
+            self._save_to_deliverable(
+                title=f"Edited Content: {content.get('title', task[:80])}",
+                content=enhanced_content.get('enhanced_body', '') if isinstance(enhanced_content, dict) else str(enhanced_content),
+                deliverable_type='edited_content',
+                category='Content Editing',
+                tags=['editing'] + focus_areas[:3],
+                metadata={'task': task[:200], 'focus_areas': focus_areas, 'blog_id': str(blog_id) if blog_id else None},
+            )
+
             return AgentResult(
                 success=True,
                 message=f"Enhanced content with focus on: {', '.join(focus_areas)}",
