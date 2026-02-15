@@ -276,12 +276,17 @@ Always delegate tasks you cannot perform yourself rather than refusing or making
         # Add temporal awareness
         prompt_parts.append(f"""
 
-## TEMPORAL AWARENESS (Session 523)
+## TEMPORAL AWARENESS (Session 523 / Strengthened Session 1006)
 - Current Date: {today}
 - Current Year: {year}
 - CRITICAL: All content must be current and relevant to {month_year}
 - DO NOT reference outdated years like {year-2} or {year-1} unless discussing historical context
-- Use phrases like "in {year}" and "this {month_year}" to ensure freshness""")
+- Use phrases like "in {year}" and "this {month_year}" to ensure freshness
+- Your training data may be outdated. When writing about current events, politics,
+  or any time-sensitive topic, ground your claims ONLY in the source data provided.
+  Do NOT rely on your training data for who currently holds political office,
+  recent legislation, or market conditions. If no source data is provided for a
+  claim, state the fact without temporal qualifiers rather than guessing.""")
 
         # Add agent mood influence from scifi_context
         if scifi_context:
