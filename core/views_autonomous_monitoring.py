@@ -601,9 +601,10 @@ def api_celery_schedules(request):
     Returns all active schedules.
     """
     try:
-        from django.conf import settings
+        # Session 1007: Read from celery.py's app.conf.beat_schedule (authoritative source)
+        from core.celery import app as celery_app
 
-        schedules = settings.CELERY_BEAT_SCHEDULE
+        schedules = getattr(celery_app.conf, 'beat_schedule', {})
 
         schedule_data = []
         for name, config in schedules.items():
