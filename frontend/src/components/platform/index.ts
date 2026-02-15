@@ -10,9 +10,6 @@
 export { MissionCard } from './MissionCard'
 export { MetricsGrid } from './MetricsGrid'
 export { EmergencyControls } from './EmergencyControls'
-export { CanonBrowser } from './CanonBrowser'
-export { PlaybookBrowser } from './PlaybookBrowser'
-export { AuditsBrowser } from './AuditsBrowser'
 export { DocumentViewer } from './DocumentViewer'
 // Session 824: Live Metrics & Self-Execution Control
 export { LiveMetricsDashboard } from './LiveMetricsDashboard'
