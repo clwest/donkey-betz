@@ -673,19 +673,9 @@ The Skin monitors **workspace output** - file writes and project changes.
 | `/assign/` | POST | Assigns memory to a room |
 | `/connect/` | POST | Connects two memories |
 
-#### Agent Mood Endpoints (`/api/agent-mood/`)
+#### ~~Agent Mood Endpoints (`/api/agent-mood/`)~~ — Removed Session 1009
 
-**What they do:** Manage agent emotional states.
-
-| Endpoint | Method | What It Does |
-|----------|--------|--------------|
-| `/` | GET | Returns mood overview for all agents |
-| `/agent/<agent_id>/` | GET/PUT | Get or set agent mood |
-| `/agent/<agent_id>/history/` | GET | Returns mood history |
-| `/rules/` | GET/POST | Manage mood rules |
-| `/rules/<rule_id>/` | DELETE | Delete a mood rule |
-| `/trigger/` | POST | Trigger a mood change |
-| `/prompt-context/` | GET | Get mood context for prompts |
+Endpoints and `views_agent_mood.py` deleted in orphan cleanup.
 
 #### Agent Relationships Endpoints (`/api/agent-relationships/`)
 

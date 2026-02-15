@@ -68,7 +68,7 @@ class AgentResult:
 |-----|-------------|------------------|
 | **Directory** | `/v1/agents/comprehensive/` | All 73 agents with status, execution count |
 | **Activity** | `/recent-activity/` | Real-time execution feed |
-| **Learning** | `/agent-learning/activity/` | Learning patterns, insights |
+| **Learning** | ~~`/agent-learning/activity/`~~ | Removed Session 1009 |
 | **Channels** | `/v1/agent-channels/` | Agent communication |
 | **Monitoring** | `/v1/agents/monitoring/` | Avg execution time, success rate |
 | **Tools** | `/v1/agents/tools/` | Tool definitions, usage stats |
