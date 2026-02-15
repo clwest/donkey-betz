@@ -930,6 +930,39 @@ export const contentApi = {
   upscaleVideo: (videoUrl: string, prompt: string) =>
     api.post('/v1/video/upscale/', { video_url: videoUrl, prompt }),
 
+  // Video Editing (DaVinci/ffmpeg)
+  davinciStatus: () =>
+    api.get('/v1/davinci/status/'),
+  chainVideos: (videoClips: string[], options?: { add_transitions?: boolean }) => {
+    const formData = new FormData()
+    formData.append('video_clips', JSON.stringify(videoClips))
+    if (options?.add_transitions !== undefined) formData.append('add_transitions', String(options.add_transitions))
+    return api.post('/v1/davinci/chain-videos/', formData)
+  },
+  addTextOverlay: (videoId: string, text: string, options?: { position?: string; font_size?: number; start_second?: number; duration?: number }) => {
+    const formData = new FormData()
+    formData.append('video_id', videoId)
+    formData.append('text', text)
+    if (options?.position) formData.append('position', options.position)
+    if (options?.font_size !== undefined) formData.append('font_size', String(options.font_size))
+    if (options?.start_second !== undefined) formData.append('start_second', String(options.start_second))
+    if (options?.duration !== undefined) formData.append('duration', String(options.duration))
+    return api.post('/v1/davinci/add-text-overlay/', formData)
+  },
+  applyColorGrading: (videoId: string, style: string) => {
+    const formData = new FormData()
+    formData.append('video_id', videoId)
+    formData.append('style', style)
+    return api.post('/v1/davinci/apply-color-grading/', formData)
+  },
+  addAudioToVideo: (videoId: string, audioFile: File, volume?: number) => {
+    const formData = new FormData()
+    formData.append('video_id', videoId)
+    formData.append('audio_file', audioFile)
+    if (volume !== undefined) formData.append('audio_volume', String(volume))
+    return api.post('/v1/davinci/add-audio-to-video/', formData)
+  },
+
   // Content Creation
   create: (data: { type: string; prompt: string; options?: Record<string, unknown> }) =>
     api.post('/v1/content/create/', data),
