@@ -25,6 +25,7 @@ import DocsIndexPage from '@/pages/DocsIndexPage'  // Session 784: Documentation
 import StockIntelligencePage from '@/pages/StockIntelligencePage'
 import DocumentsPage from '@/pages/DocumentsPage'
 import ImageStudioPage from '@/pages/ImageStudioPage'
+import VideoStudioPage from '@/pages/VideoStudioPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -79,6 +80,7 @@ function App() {
         {/* Standalone content pages */}
         <Route path="documents" element={<DocumentsPage />} />
         <Route path="image-studio" element={<ImageStudioPage />} />
+        <Route path="video-studio" element={<VideoStudioPage />} />
       </Route>
     </Routes>
   )
