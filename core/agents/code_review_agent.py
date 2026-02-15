@@ -508,6 +508,16 @@ Be constructive and brief."""
                             scifi_context_used=bool(scifi_context)
                         )
 
+                        # Session 1006: Persist output to Deliverable
+                        self._save_to_deliverable(
+                            title=f"Code Review: {task[:80]}",
+                            content=result.message,
+                            deliverable_type='code_review',
+                            category='Code Review',
+                            tags=['code_review'],
+                            metadata={'task': task[:200]},
+                        )
+
                         return result
 
                 # No tool calls - return GPT content directly

@@ -361,6 +361,16 @@ and call generate_video immediately. Do not delegate for research first."""
                             confidence=0.8
                         )
 
+                        # Session 1006: Persist output to Deliverable
+                        self._save_to_deliverable(
+                            title=f"Generated Video: {task[:80]}",
+                            content=result.message,
+                            deliverable_type='video',
+                            category='Video Generation',
+                            tags=['video', tool_used],
+                            metadata={'task': task[:200], 'tool_used': tool_used, 'duration': args.get('duration')},
+                        )
+
                         return result
                     else:
                         # Session 840: Include actual error details for better debugging
