@@ -339,20 +339,47 @@ Only assign high confidence (>75) when the market consensus is overwhelming."""
             logger.warning(f"GamePredictor LLM analysis failed: {e}")
             return f"LLM analysis unavailable: {str(e)}"
 
-    # ── League name/abbreviation mapping for auto-creation ──
-    LEAGUE_MAP = {
-        'nfl': ('National Football League', 'NFL'),
-        'ncaaf': ('NCAA Football', 'NCAAF'),
-        'nba': ('National Basketball Association', 'NBA'),
-        'ncaab': ('NCAA Basketball', 'NCAAB'),
-        'mlb': ('Major League Baseball', 'MLB'),
-        'nhl': ('National Hockey League', 'NHL'),
-        'soccer': ('Soccer', 'SOC'),
-        'mma': ('Mixed Martial Arts', 'MMA'),
-        'tennis': ('Tennis', 'TEN'),
-        'golf': ('Golf', 'GOLF'),
-        'boxing': ('Boxing', 'BOX'),
-        'esports': ('E-Sports', 'ESP'),
+    # ── Sport key → (league_name, abbreviation, sport_type) ──
+    # Maps full Odds API sport_key to league info + SportType enum value.
+    SPORT_KEY_LEAGUE = {
+        'americanfootball_nfl': ('National Football League', 'NFL', 'nfl'),
+        'americanfootball_ncaaf': ('NCAA Football', 'NCAAF', 'ncaaf'),
+        'basketball_nba': ('National Basketball Association', 'NBA', 'nba'),
+        'basketball_ncaab': ('NCAA Basketball', 'NCAAB', 'ncaab'),
+        'basketball_nba_all_stars': ('NBA All-Stars', 'NBAAS', 'nba'),
+        'baseball_mlb': ('Major League Baseball', 'MLB', 'mlb'),
+        'icehockey_nhl': ('National Hockey League', 'NHL', 'nhl'),
+        'soccer_epl': ('English Premier League', 'EPL', 'soccer'),
+        'soccer_spain_la_liga': ('La Liga', 'LALIGA', 'soccer'),
+        'soccer_germany_bundesliga': ('Bundesliga', 'BUND', 'soccer'),
+        'soccer_italy_serie_a': ('Serie A', 'SERIEA', 'soccer'),
+        'soccer_france_ligue_one': ('Ligue 1', 'LIGUE1', 'soccer'),
+        'soccer_usa_mls': ('Major League Soccer', 'MLS', 'soccer'),
+        'soccer_uefa_champs_league': ('Champions League', 'UCL', 'soccer'),
+        'soccer_uefa_europa_league': ('Europa League', 'UEL', 'soccer'),
+        'soccer_mexico_ligamx': ('Liga MX', 'LIGAMX', 'soccer'),
+        'soccer_england_league1': ('English League One', 'EFL1', 'soccer'),
+        'soccer_england_efl_cup': ('EFL Cup', 'EFLCUP', 'soccer'),
+        'soccer_brazil_campeonato': ('Brasileirao', 'BRAZ', 'soccer'),
+        'soccer_australia_aleague': ('A-League', 'ALEAG', 'soccer'),
+        'mma_mixed_martial_arts': ('UFC/MMA', 'UFC', 'mma'),
+        'boxing_boxing': ('Boxing', 'BOX', 'boxing'),
+    }
+
+    # Fallback: map sport_key prefix → sport_type for keys not in SPORT_KEY_LEAGUE
+    SPORT_PREFIX_MAP = {
+        'americanfootball': 'nfl',
+        'basketball': 'nba',
+        'icehockey': 'nhl',
+        'baseball': 'mlb',
+        'soccer': 'soccer',
+        'mma': 'mma',
+        'boxing': 'boxing',
+        'tennis': 'tennis',
+        'golf': 'golf',
+        'esports': 'esports',
+        'rugbyleague': 'soccer',
+        'cricket': 'soccer',
     }
 
     def _store_predictions(self, predictions: List[Dict], context: Dict) -> int:
@@ -372,10 +399,20 @@ Only assign high confidence (>75) when the market consensus is overwhelming."""
                 continue
 
             sport_key = pred.get('sport_key', '')
-            sport_type = sport_key.split('_')[-1] if '_' in sport_key else sport_key
-            if sport_type not in self.LEAGUE_MAP:
-                logger.debug(f"Unknown sport_type '{sport_type}' — skipping")
-                continue
+
+            # Resolve sport_type and league info from sport_key
+            league_tuple = self.SPORT_KEY_LEAGUE.get(sport_key)
+            if league_tuple:
+                league_name, league_abbr, sport_type = league_tuple
+            else:
+                # Fallback: prefix-based mapping
+                prefix = sport_key.split('_')[0] if '_' in sport_key else sport_key
+                sport_type = self.SPORT_PREFIX_MAP.get(prefix)
+                if not sport_type:
+                    logger.debug(f"Unknown sport_key '{sport_key}' — skipping")
+                    continue
+                league_name = sport_key.replace('_', ' ').title()
+                league_abbr = sport_key.split('_')[-1][:10].upper()
 
             home_name = (pred.get('home_team') or '').strip()
             away_name = (pred.get('away_team') or '').strip()
@@ -385,11 +422,10 @@ Only assign high confidence (>75) when the market consensus is overwhelming."""
 
             try:
                 # 1) League
-                league_info = self.LEAGUE_MAP.get(sport_type, (sport_type.upper(), sport_type.upper()[:10]))
                 league, _ = League.objects.get_or_create(
-                    abbreviation=league_info[1],
+                    abbreviation=league_abbr,
                     defaults={
-                        'name': league_info[0],
+                        'name': league_name,
                         'sport_type': sport_type,
                         'current_season': '2025-2026',
                     },
