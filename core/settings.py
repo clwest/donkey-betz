@@ -21,8 +21,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load environment variables
 load_dotenv(BASE_DIR / '.env')
 
-import os
-
 # --- LLM Router defaults (prep only; no behavior change yet) ---
 LLM_DEFAULT_PROVIDER = os.getenv("LLM_DEFAULT_PROVIDER", "ollama")  # "ollama" or "openai"
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
@@ -360,17 +358,13 @@ AI_CONFIG = {
     # Token Limits
     'MAX_INPUT_TOKENS': {
         'gpt-5': 272000,
-        'gpt-5-mini': 272000,
-        'gpt-5-nano': 272000,
         'gpt-5-mini': 128000,
-        'gpt-5-nano': 16385
+        'gpt-5-nano': 16385,
     },
     'MAX_OUTPUT_TOKENS': {
         'gpt-5': 128000,
-        'gpt-5-mini': 128000,
-        'gpt-5-nano': 128000,
         'gpt-5-mini': 4096,
-        'gpt-5-nano': 4096
+        'gpt-5-nano': 4096,
     },
     # Prompt Caching
     'ENABLE_PROMPT_CACHING': True,
