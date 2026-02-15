@@ -410,6 +410,16 @@ You CANNOT create content - just optimize for discoverability."""
                         importance=0.7
                     )
 
+                    # Session 1006: Persist output to Deliverable
+                    self._save_to_deliverable(
+                        title=f"SEO Optimization: {task[:80]}",
+                        content=result.message,
+                        deliverable_type='analysis',
+                        category='SEO Strategy',
+                        tags=['seo', 'strategy'],
+                        metadata={'task': task[:200]},
+                    )
+
                     return result
 
                 else:

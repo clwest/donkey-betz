@@ -353,6 +353,16 @@ You CANNOT create content - just provide platform strategy."""
                         importance=0.7
                     )
 
+                    # Session 1006: Persist output to Deliverable
+                    self._save_to_deliverable(
+                        title=f"Social Media Strategy: {task[:80]}",
+                        content=result.message,
+                        deliverable_type='analysis',
+                        category='Social Media Strategy',
+                        tags=['social_media', 'strategy'],
+                        metadata={'task': task[:200]},
+                    )
+
                     return result
 
                 else:
