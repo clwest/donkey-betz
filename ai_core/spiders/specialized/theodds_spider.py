@@ -55,6 +55,9 @@ class TheOddsSpider:
         'americanfootball_ncaaf_championship_winner': {'name': 'CFP Champion', 'category': 'futures', 'priority': 2},
         'basketball_ncaab_championship_winner': {'name': 'March Madness Winner', 'category': 'futures', 'priority': 2},
 
+        # ===== NBA EVENTS =====
+        'basketball_nba_all_stars': {'name': 'NBA All-Stars', 'category': 'basketball', 'priority': 1},
+
         # ===== COLLEGE SPORTS =====
         'americanfootball_ncaaf': {'name': 'NCAAF', 'category': 'american_football', 'priority': 1},
         'basketball_ncaab': {'name': 'NCAAB', 'category': 'basketball', 'priority': 1},
