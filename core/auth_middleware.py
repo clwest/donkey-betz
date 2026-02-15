@@ -474,6 +474,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
     # These specific endpoints are public, but their sub-paths require auth
     PUBLIC_PATHS_EXACT = [
         '/api/platform/triggers/',  # GET list is public, but /run-now/ and /toggle/ require auth
+        '/api/home/purge-queue/',  # Session 1005: Uses secret-based auth (PURGE_SECRET)
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
