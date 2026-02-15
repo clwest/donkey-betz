@@ -3220,7 +3220,7 @@ def get_sharp_action(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_ai_track_record(request):
-    """AI prediction performance history."""
+    """AI prediction performance history — sports (MLPrediction) + stocks (PredictionOutcome)."""
     import logging
     logger = logging.getLogger(__name__)
 
@@ -3231,41 +3231,135 @@ def get_ai_track_record(request):
         from sports.prediction_evaluator import PredictionEvaluator
         from sports.models import MLPrediction
 
-        evaluator = PredictionEvaluator()
-        summary = evaluator.get_model_performance_summary(sport_type=sport, days_back=days)
-        by_sport = evaluator._calculate_accuracy_by_sport()
+        # Check if we have sports ML predictions
+        has_ml = MLPrediction.objects.filter(was_correct__isnull=False).exists()
 
-        recent_qs = MLPrediction.objects.filter(
-            was_correct__isnull=False
-        ).select_related('game', 'predicted_winner', 'game__home_team', 'game__away_team')
+        if has_ml:
+            evaluator = PredictionEvaluator()
+            summary = evaluator.get_model_performance_summary(sport_type=sport, days_back=days)
+            by_sport = evaluator._calculate_accuracy_by_sport()
 
-        if sport:
-            recent_qs = recent_qs.filter(sport_type=sport)
+            recent_qs = MLPrediction.objects.filter(
+                was_correct__isnull=False
+            ).select_related('game', 'predicted_winner', 'game__home_team', 'game__away_team')
 
-        recent = recent_qs.order_by('-evaluated_at')[:50]
+            if sport:
+                recent_qs = recent_qs.filter(sport_type=sport)
+
+            recent = recent_qs.order_by('-evaluated_at')[:50]
+
+            recent_list = []
+            for p in recent:
+                try:
+                    matchup = f"{p.game.away_team.abbreviation} @ {p.game.home_team.abbreviation}" if p.game else ''
+                    game_date = p.game.scheduled_start.date().isoformat() if p.game and p.game.scheduled_start else ''
+                except Exception:
+                    matchup = ''
+                    game_date = ''
+
+                recent_list.append({
+                    'id': p.id,
+                    'sport_type': p.sport_type,
+                    'predicted_winner': p.predicted_winner.name if p.predicted_winner else '',
+                    'confidence': p.confidence,
+                    'was_correct': p.was_correct,
+                    'game_date': game_date,
+                    'matchup': matchup,
+                    'evaluated_at': p.evaluated_at.isoformat() if p.evaluated_at else '',
+                })
+
+            return Response({
+                'success': True,
+                'summary': summary,
+                'by_sport': by_sport,
+                'recent_predictions': recent_list,
+            })
+
+        # Fallback: use stock PredictionOutcome data
+        from core.models_unified_system import PredictionOutcome
+        from django.utils import timezone
+        from datetime import timedelta
+
+        cutoff = timezone.now() - timedelta(days=days)
+        base_qs = PredictionOutcome.objects.filter(created_at__gte=cutoff)
+        total = base_qs.count()
+
+        # Evaluated predictions (7-day window)
+        evaluated_qs = base_qs.filter(was_correct_7_days__isnull=False)
+        evaluated = evaluated_qs.count()
+        correct = evaluated_qs.filter(was_correct_7_days=True).count()
+        accuracy = round((correct / evaluated * 100), 2) if evaluated > 0 else 0
+
+        # Map conviction to confidence %
+        conviction_map = {'HIGH': 85, 'MEDIUM': 65, 'LOW': 45}
+        avg_confidence_qs = base_qs.values_list('conviction_level', flat=True)
+        conviction_vals = [conviction_map.get(c, 50) for c in avg_confidence_qs]
+        avg_confidence = round(sum(conviction_vals) / len(conviction_vals), 2) if conviction_vals else 0
+
+        calibration = round(abs(accuracy - avg_confidence), 2)
+
+        summary = {
+            'sport_type': 'stocks',
+            'days_analyzed': days,
+            'total_predictions': total,
+            'correct_predictions': correct,
+            'incorrect_predictions': evaluated - correct,
+            'pending_predictions': total - evaluated,
+            'accuracy_percent': accuracy,
+            'average_confidence': avg_confidence,
+            'calibration_score': calibration,
+            'is_well_calibrated': calibration < 10.0,
+        }
+
+        # Breakdown by prediction type (BULL/BEAR) — mapped to by_sport shape
+        by_sport = {}
+        for ptype in ['BULL', 'BEAR']:
+            type_qs = evaluated_qs.filter(prediction_type=ptype)
+            type_total = type_qs.count()
+            type_correct = type_qs.filter(was_correct_7_days=True).count()
+            if type_total > 0:
+                by_sport[ptype] = {
+                    'accuracy': round(type_correct / type_total * 100, 2),
+                    'total': type_total,
+                    'correct': type_correct,
+                    'incorrect': type_total - type_correct,
+                }
+
+        # Also break down by conviction level
+        for conv in ['HIGH', 'MEDIUM', 'LOW']:
+            conv_qs = evaluated_qs.filter(conviction_level=conv)
+            conv_total = conv_qs.count()
+            conv_correct = conv_qs.filter(was_correct_7_days=True).count()
+            if conv_total > 0:
+                by_sport[f'{conv} Conviction'] = {
+                    'accuracy': round(conv_correct / conv_total * 100, 2),
+                    'total': conv_total,
+                    'correct': conv_correct,
+                    'incorrect': conv_total - conv_correct,
+                }
+
+        # Recent predictions — evaluated first, then pending
+        recent_evaluated = list(evaluated_qs.order_by('-prediction_date')[:30])
+        recent_pending = list(
+            base_qs.filter(was_correct_7_days__isnull=True).order_by('-prediction_date')[:20]
+        )
+        recent_combined = recent_evaluated + recent_pending
 
         recent_list = []
-        for p in recent:
-            try:
-                matchup = f"{p.game.away_team.abbreviation} @ {p.game.home_team.abbreviation}" if p.game else ''
-                game_date = p.game.scheduled_start.date().isoformat() if p.game and p.game.scheduled_start else ''
-            except Exception:
-                matchup = ''
-                game_date = ''
-
+        for p in recent_combined:
             recent_list.append({
-                'id': p.id,
-                'sport_type': p.sport_type,
-                'predicted_winner': p.predicted_winner.name if p.predicted_winner else '',
-                'confidence': p.confidence,
-                'was_correct': p.was_correct,
-                'game_date': game_date,
-                'matchup': matchup,
-                'evaluated_at': p.evaluated_at.isoformat() if p.evaluated_at else '',
+                'id': str(p.id),
+                'sport_type': p.prediction_type,  # BULL or BEAR
+                'predicted_winner': f"{p.prediction_type} {p.predicted_move:+.1f}%",
+                'confidence': conviction_map.get(p.conviction_level, 50),
+                'was_correct': p.was_correct_7_days,
+                'game_date': p.prediction_date.isoformat() if p.prediction_date else '',
+                'matchup': p.ticker,
             })
 
         return Response({
             'success': True,
+            'data_source': 'stock_predictions',
             'summary': summary,
             'by_sport': by_sport,
             'recent_predictions': recent_list,
