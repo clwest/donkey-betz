@@ -908,6 +908,28 @@ export const contentApi = {
   imageToVideo: (imageUrl: string, options?: Record<string, unknown>) =>
     api.post('/v1/video/image-to-video/', { image_url: imageUrl, ...options }),
 
+  // Video Status & History
+  videoStatus: (taskId: string) =>
+    api.get(`/v1/video/status/${taskId}/`),
+  videoHistory: (params?: Record<string, unknown>) =>
+    api.get('/v1/video/history/', { params }),
+
+  // Video Management
+  toggleVideoFavorite: (videoId: string) =>
+    api.post(`/v1/video/history/${videoId}/favorite/`),
+  deleteVideo: (videoId: string) =>
+    api.delete(`/v1/video/history/${videoId}/`),
+  incrementVideoView: (videoId: string) =>
+    api.post(`/v1/video/history/${videoId}/view/`),
+  incrementVideoDownload: (videoId: string) =>
+    api.post(`/v1/video/history/${videoId}/download/`),
+
+  // Video Editing (async — returns task_id, poll via videoStatus)
+  extendVideo: (videoUrl: string, options?: Record<string, unknown>) =>
+    api.post('/v1/video/extend/', { video_url: videoUrl, ...options }),
+  upscaleVideo: (videoUrl: string, prompt: string) =>
+    api.post('/v1/video/upscale/', { video_url: videoUrl, prompt }),
+
   // Content Creation
   create: (data: { type: string; prompt: string; options?: Record<string, unknown> }) =>
     api.post('/v1/content/create/', data),

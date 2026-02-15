@@ -22,6 +22,7 @@ import {
   PanelLeft,
   Home,
   Command,
+  Film,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -49,6 +50,7 @@ const navItems = [
   // Main Hub - Primary entry point
   { path: '/workspace', label: 'Workspace', icon: FolderCog },
   { path: '/image-studio', label: 'Image Studio', icon: Palette },
+  { path: '/video-studio', label: 'Video Studio', icon: Film },
 
   // Core Navigation
   { path: '/agents', label: 'Agents', icon: Bot },
