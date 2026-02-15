@@ -124,8 +124,8 @@ Added `current_price` to `normalize_item()` field mapping in `real_data_collecto
 ### Billing + Analytics Orphaned — FIXED
 Added Billing and Analytics tabs to Admin page (PR #1176).
 
-### ToolCallRecord Analytics Dashboard
-Data is flowing but no dashboard exists yet.
+### ToolCallRecord Analytics Dashboard -- PARTIALLY FIXED
+Aggregation task populates `ToolCallAggregate` daily (PR #1178). REST API at `/api/v1/tool-call-aggregates/` (PR #1179). Frontend dashboard page not yet built.
 
 ### sync_celery_beat Parser -- Mitigated
 `--create-only` flag prevents overwrites (PR #1139), but parser can't update existing schedules. DB fixes must be applied directly.
