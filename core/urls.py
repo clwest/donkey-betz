@@ -4347,6 +4347,15 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Session 1015: Government & Legislation Hub
+# =========================================================================
+from core.views_government import government_hub
+
+urlpatterns += [
+    path('api/government/hub/', government_hub, name='government-hub'),
+]
+
+# =========================================================================
 # Session 971b: Page-View Telemetry
 # =========================================================================
 from core.views_telemetry import page_view_api
