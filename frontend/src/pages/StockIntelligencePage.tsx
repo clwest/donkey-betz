@@ -155,6 +155,7 @@ interface StockHubData {
     description: string
     link: string
     published: string | null
+    filing_type: string
   }>
 }
 
@@ -173,15 +174,16 @@ function HubTab({ setActiveTab }: { setActiveTab: (tab: SubTab) => void }) {
     <div className="space-y-4">
       {/* Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Market Briefs" value={s.total_briefs} icon={<FileText size={18} />} />
-        <StatCard label="Active Alerts" value={s.total_alerts} icon={<AlertTriangle size={18} />} />
+        <StatCard label="Market Briefs" value={s.total_briefs} icon={<FileText size={18} />} accent="border-l-blue-500" />
+        <StatCard label="Predictions" value={s.total_predictions} icon={<Target size={18} />} accent="border-l-purple-500" />
         <StatCard
           label="7D Accuracy"
           value={s.accuracy_7d != null ? `${s.accuracy_7d}%` : 'N/A'}
           icon={<Target size={18} />}
-          color={s.accuracy_7d != null && s.accuracy_7d >= 60 ? 'text-green-400' : undefined}
+          color={s.accuracy_7d != null ? (s.accuracy_7d >= 60 ? 'text-green-400' : 'text-yellow-400') : undefined}
+          accent="border-l-green-500"
         />
-        <StatCard label="SEC Filings" value={s.sec_filings_count} icon={<FileText size={18} />} />
+        <StatCard label="SEC Filings" value={s.sec_filings_count} icon={<FileText size={18} />} accent="border-l-amber-500" />
       </div>
 
       {/* Two-column layout */}
@@ -200,7 +202,7 @@ function HubTab({ setActiveTab }: { setActiveTab: (tab: SubTab) => void }) {
                 <span className="text-sm font-medium text-white">{data.latest_brief.brief_date}</span>
                 <HealthBadge health={data.latest_brief.situation_health} />
               </div>
-              <p className="text-sm text-gray-400 leading-relaxed line-clamp-4">{data.latest_brief.executive_summary}</p>
+              <p className="text-sm text-gray-400 leading-relaxed line-clamp-4">{formatBriefText(data.latest_brief.executive_summary)}</p>
               <div className="flex gap-4 mt-3 text-xs text-gray-500">
                 <span>{data.latest_brief.total_stocks_analyzed} stocks analyzed</span>
                 <span>{data.latest_brief.debate_zone_count} in debate zone</span>
@@ -251,9 +253,9 @@ function HubTab({ setActiveTab }: { setActiveTab: (tab: SubTab) => void }) {
                       </td>
                       <td className="py-1.5">
                         {p.was_correct_7_days === true
-                          ? <span className="text-green-400 font-medium">W</span>
+                          ? <span className="inline-block px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 font-medium text-xs">W</span>
                           : p.was_correct_7_days === false
-                            ? <span className="text-red-400 font-medium">L</span>
+                            ? <span className="inline-block px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 font-medium text-xs">L</span>
                             : <span className="text-gray-600">--</span>
                         }
                       </td>
@@ -267,15 +269,15 @@ function HubTab({ setActiveTab }: { setActiveTab: (tab: SubTab) => void }) {
           )}
         </div>
 
-        {/* Top Alerts */}
-        <div className="bg-dark-card border border-dark-border rounded-lg p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Top Alerts</h3>
-            <button onClick={() => setActiveTab('alerts')} className="text-xs text-primary-400 hover:text-primary-300">
-              View all <ArrowUpRight size={10} className="inline" />
-            </button>
-          </div>
-          {data.top_alerts.length > 0 ? (
+        {/* Top Alerts — hidden when empty */}
+        {data.top_alerts.length > 0 && (
+          <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Top Alerts</h3>
+              <button onClick={() => setActiveTab('alerts')} className="text-xs text-primary-400 hover:text-primary-300">
+                View all <ArrowUpRight size={10} className="inline" />
+              </button>
+            </div>
             <div className="space-y-2">
               {data.top_alerts.map((a) => {
                 const typeConf = alertTypeConfig[a.alert_type] || { label: a.alert_type, color: 'bg-gray-500/20 text-gray-400' }
@@ -297,13 +299,11 @@ function HubTab({ setActiveTab }: { setActiveTab: (tab: SubTab) => void }) {
                 )
               })}
             </div>
-          ) : (
-            <p className="text-sm text-gray-500">No alerts yet.</p>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Market News */}
-        <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+        {/* Market News — spans full width when alerts are empty */}
+        <div className={cn('bg-dark-card border border-dark-border rounded-lg p-4', data.top_alerts.length === 0 && 'lg:col-span-2')}>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
               <Newspaper size={12} /> Market News
@@ -351,9 +351,14 @@ function HubTab({ setActiveTab }: { setActiveTab: (tab: SubTab) => void }) {
           </button>
         </div>
         {data.sec_recent.length > 0 ? (
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {data.sec_recent.map((f, idx) => (
-              <div key={idx} className="flex items-center gap-3 text-xs">
+              <div key={idx} className="flex items-center gap-3 text-xs bg-gray-800/40 rounded-lg px-3 py-2">
+                {f.filing_type && (
+                  <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-medium flex-shrink-0">
+                    {f.filing_type}
+                  </span>
+                )}
                 <a
                   href={f.link}
                   target="_blank"
@@ -395,6 +400,15 @@ const sourceColorMap: Record<string, string> = {
 function SourceBadge({ source }: { source: string }) {
   const color = sourceColorMap[source] || 'bg-gray-500/20 text-gray-400'
   return <span className={cn('px-1.5 py-0.5 rounded text-xs', color)}>{source}</span>
+}
+
+function formatBriefText(text: string): string {
+  // Strip emoji unicode ranges and markdown bold markers
+  return text
+    .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1FA00}-\u{1FAFF}]/gu, '')
+    .replace(/\*\*/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
 }
 
 function timeAgo(dateStr: string): string {
@@ -1403,9 +1417,9 @@ function PredictionsTab() {
 // Shared Components
 // =============================================================================
 
-function StatCard({ label, value, icon, color }: { label: string; value: number | string; icon: React.ReactNode; color?: string }) {
+function StatCard({ label, value, icon, color, accent }: { label: string; value: number | string; icon: React.ReactNode; color?: string; accent?: string }) {
   return (
-    <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+    <div className={cn('bg-dark-card border border-dark-border rounded-lg p-4', accent && `border-l-2 ${accent}`)}>
       <div className="flex items-center gap-2 text-gray-400 mb-1">
         {icon}
         <span className="text-xs">{label}</span>
