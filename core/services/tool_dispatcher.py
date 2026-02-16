@@ -5385,10 +5385,22 @@ class ToolDispatcher:
 
             # Fallback: keyword search if no embedding results
             if not source_bills:
-                kw_matches = qs.filter(
-                    Q(embedding_text__icontains=question.split()[-1]) |
-                    Q(raw_data__title__icontains=question.split()[-1])
-                )[:5]
+                import re as _re
+                # Extract meaningful keywords (strip stopwords)
+                stopwords = {'what', 'which', 'how', 'does', 'will', 'are', 'is', 'the',
+                             'a', 'an', 'in', 'on', 'about', 'any', 'do', 'can', 'to',
+                             'of', 'for', 'and', 'or', 'this', 'that', 'my', 'me', 'us',
+                             'being', 'been', 'bills', 'bill', 'legislation', 'congress',
+                             'congressional', 'affect', 'impact', 'explain', 'tell'}
+                words = _re.findall(r'[a-zA-Z]+', question.lower())
+                keywords = [w for w in words if w not in stopwords and len(w) > 1]
+                # Build Q filter from keywords
+                q_filter = Q()
+                for kw in keywords[:4]:
+                    q_filter |= Q(embedding_text__icontains=kw) | Q(raw_data__title__icontains=kw)
+                if not q_filter:
+                    q_filter = Q(embedding_text__icontains=question[:20])
+                kw_matches = qs.filter(q_filter)[:5]
                 for item in kw_matches:
                     raw = _bill_data(item)
                     bn = raw.get('bill_number', '')
@@ -5409,10 +5421,22 @@ class ToolDispatcher:
                     })
 
             if not source_bills:
+                # If we have legislation data but no matches, say so specifically
+                if total_tracked > 0:
+                    no_match_msg = (
+                        f"I searched {total_tracked} tracked bills but couldn't find any "
+                        f"matching your question. Try asking about specific topics like "
+                        f"healthcare, immigration, education, environment, or technology."
+                    )
+                else:
+                    no_match_msg = (
+                        "No legislation data is available yet. The legislation spider "
+                        "may not have run yet."
+                    )
                 return {
                     'action': 'ask',
                     'question': question,
-                    'answer': 'No legislation data is available yet. The legislation spider may not have run, or bills have not been embedded yet.',
+                    'answer': no_match_msg,
                     'source_bills': [],
                     'sources_count': 0,
                 }
