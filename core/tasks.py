@@ -32827,13 +32827,32 @@ def process_initiative_auto_progression(self):
 
     Runs every 10 minutes to find DRAFT stages ready for progression and
     automatically approves them, triggering next stage generation.
+
+    Session 1016: Also sweeps ACTIVE initiatives missing owner/next_action
+    and demotes them to TRIAGE.
     """
     from core.services.initiative_auto_progression import (
         get_initiatives_ready_for_progression,
         progress_initiative_stage
     )
 
-    logger.info("📊 [AUTO-PROGRESSION] Checking initiatives for auto-progression")
+    logger.info("[AUTO-PROGRESSION] Checking initiatives for auto-progression")
+
+    # Session 1016: Sweep ACTIVE initiatives that don't meet quality gate
+    try:
+        from core.models_document_registry import Initiative
+        from core.services.initiative_circuit_breaker import can_promote_to_active
+        demoted = 0
+        for init in Initiative.objects.filter(status='ACTIVE'):
+            if not can_promote_to_active(init):
+                init.status = 'TRIAGE'
+                init.save(skip_invariant_check=True)
+                demoted += 1
+                logger.info(f"[AUTO-PROGRESSION] Demoted '{init.name[:50]}' to TRIAGE (missing owner/evidence)")
+        if demoted:
+            logger.info(f"[AUTO-PROGRESSION] Demoted {demoted} ACTIVE initiatives to TRIAGE")
+    except Exception as e:
+        logger.warning(f"[AUTO-PROGRESSION] ACTIVE sweep failed: {e}")
 
     ready_initiatives = get_initiatives_ready_for_progression()
     logger.info(f"📊 [AUTO-PROGRESSION] Found {len(ready_initiatives)} initiatives ready")

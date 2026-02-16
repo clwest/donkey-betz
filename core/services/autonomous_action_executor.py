@@ -1120,7 +1120,7 @@ class AutonomousActionExecutor:
                         initiative = Initiative.objects.create(
                             name=initiative_name,
                             description=f"Auto-created from blocked research. {reasoning[:500]}",
-                            status='ACTIVE',
+                            status='TRIAGE',  # Session 1016: TRIAGE not ACTIVE — must pass quality gate
                             purpose='learning',
                             current_stage=1,
                             created_by='ResearchAgent'

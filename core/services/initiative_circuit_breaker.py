@@ -224,6 +224,57 @@ def find_similar_initiative(name: str, threshold: float = 0.6) -> Optional[Any]:
     return None
 
 
+def can_promote_to_active(initiative) -> bool:
+    """
+    Session 1016: Quality gate for TRIAGE-to-ACTIVE promotion.
+
+    An initiative must have:
+    1. owner_agent (required)
+    2. At least one of: next_action, signal_cluster/source_decision_id, or
+       substantive parent_topic
+
+    Returns True if initiative qualifies for ACTIVE status.
+    """
+    # Must have an owner — no orphan ACTIVE initiatives
+    if not getattr(initiative, 'owner_agent', None):
+        logger.debug(
+            f"[quality_gate] Blocked ACTIVE promotion for '{initiative.name[:50]}': "
+            f"no owner_agent"
+        )
+        return False
+
+    # Need at least one evidence indicator beyond owner
+    checks_passed = 0
+
+    # Has a concrete next action
+    if getattr(initiative, 'next_action', None):
+        checks_passed += 1
+
+    # Has evidence link (signal cluster or source decision)
+    if getattr(initiative, 'signal_cluster_id', None) or getattr(initiative, 'source_decision_id', None):
+        checks_passed += 1
+
+    # Has substantive parent_topic (not just empty or trivial)
+    parent_topic = getattr(initiative, 'parent_topic', '') or ''
+    if len(parent_topic.strip()) > 20:
+        checks_passed += 1
+
+    # Has deliverable indicators in description
+    description = getattr(initiative, 'description', '') or ''
+    deliverable_keywords = ['deliverable', 'output', 'produce', 'create', 'build', 'implement', 'publish']
+    if any(kw in description.lower() for kw in deliverable_keywords):
+        checks_passed += 1
+
+    if checks_passed < 1:
+        logger.debug(
+            f"[quality_gate] Blocked ACTIVE promotion for '{initiative.name[:50]}': "
+            f"owner present but no evidence (next_action/signal_cluster/parent_topic)"
+        )
+        return False
+
+    return True
+
+
 def clear_cache():
     """Clear the backlog cache (for testing)."""
     global _backlog_cache
