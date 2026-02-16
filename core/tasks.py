@@ -33072,8 +33072,12 @@ def generate_initiative_stage_document(self, initiative_id: str, stage_num: int)
         logger.info(f"📝 [STAGE-GEN] Stage 1 research topic: {research_topic[:100]}...")
 
         # Session 923: Be explicit about using EXTERNAL research, not internal data queries
+        # Session 1016: Binding directive to prevent stage doc drift
         prompt = f"""Research this topic using EXTERNAL sources (web_search, spider_query).
 DO NOT use query_internal_data - this is NOT about internal system analysis.
+
+BINDING DIRECTIVE: Your output must directly advance THIS initiative: "{initiative.name}".
+If you cannot find relevant data for this specific topic, return "BLOCKED: [reason]" instead of writing about something else.
 
 ## Research Topic
 {research_topic}
@@ -33096,7 +33100,11 @@ Provide a research brief with:
 IMPORTANT: Use web_search as your PRIMARY tool. This is external market/topic research, NOT internal system analysis."""
     else:
         # Stages 2-5 use content-generating agents
+        # Session 1016: Binding directive to prevent stage doc drift
         prompt = f"""Generate a {config['template']} document for this initiative.
+
+BINDING DIRECTIVE: Stay narrowly focused on this initiative. Do not write about tangential topics.
+Your output must directly advance THIS initiative: "{initiative.name}".
 
 ## Initiative
 **Name:** {initiative.name}
@@ -33175,17 +33183,35 @@ Stage {stage_num} ({config['template']}) should include:
         stage.status = 'DRAFT'
         stage.save()
 
+        # Session 1016: Post-generation semantic drift check
+        try:
+            from core.services.semantic_drift_detector import check_semantic_drift
+            drift_result = check_semantic_drift(stage)
+            if drift_result.get('has_drift'):
+                drift_score = drift_result.get('drift_score', 0)
+                drift_reason = drift_result.get('drift_reason', 'unknown')
+                logger.warning(
+                    f"[STAGE-GEN] Drift detected for Stage {stage_num} of "
+                    f"'{initiative.name[:50]}': score={drift_score:.2f}, reason={drift_reason}"
+                )
+                stage.status = 'BLOCKED'
+                stage.notes = (stage.notes or '') + f"\n[Drift detected] score={drift_score:.2f}: {drift_reason}"
+                stage.save()
+        except Exception as e:
+            logger.debug(f"[STAGE-GEN] Drift check skipped: {e}")
+
         # Session 994: Record activity when stage document is created
         initiative.update_activity()
 
-        logger.info(f"📝 [STAGE-GEN] ✅ Created document {document.id} for Stage {stage_num}")
+        logger.info(f"[STAGE-GEN] Created document {document.id} for Stage {stage_num}")
 
         return {
             'success': True,
             'document_id': str(document.id),
             'stage': stage_num,
             'initiative_id': str(initiative_id),
-            'initiative_name': initiative.name
+            'initiative_name': initiative.name,
+            'drift_checked': True,
         }
 
     except Exception as e:
