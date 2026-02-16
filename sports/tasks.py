@@ -348,3 +348,69 @@ def cleanup_old_predictions(days=90):
         'deleted': count,
         'cutoff_days': days
     }
+
+
+@shared_task(name='sports.generate_game_predictions')
+def generate_game_predictions():
+    """
+    Run GamePredictor to generate MLPrediction rows from current odds.
+
+    Fetches odds for priority-1 sports (NFL, NBA, MLB, NHL, NCAAB, NCAAF,
+    EPL, La Liga, MLS, etc.), generates win-probability predictions, and
+    stores them in MLPrediction. Duplicates are skipped automatically by
+    GamePredictor._store_predictions().
+    """
+    from core.agents.markets.game_predictor import GamePredictor
+
+    logger.info("Starting scheduled prediction generation")
+
+    predictor = GamePredictor()
+    result = predictor.execute(
+        task="Scheduled prediction run: generate predictions for upcoming games",
+        context={},
+    )
+
+    stored = result.data.get('predictions_stored', 0) if result.data else 0
+    total = result.data.get('predictions_generated', 0) if result.data else 0
+
+    logger.info(
+        f"Prediction generation complete: {total} generated, "
+        f"{stored} stored (success={result.success})"
+    )
+
+    return {
+        'success': result.success,
+        'predictions_generated': total,
+        'predictions_stored': stored,
+        'total_games': result.data.get('total_games', 0) if result.data else 0,
+    }
+
+
+@shared_task(name='sports.verify_betting_outcomes')
+def verify_betting_outcomes():
+    """
+    Verify outcomes for pending PlacedWager legs and watching arb items.
+
+    Fetches scores for games that should have finished, settles wager legs
+    (won/lost/push), settles parent wagers (parlays), and verifies arb items.
+    """
+    from core.services.betting_outcome_verifier import BettingOutcomeVerifier
+
+    logger.info("Starting betting outcome verification")
+
+    verifier = BettingOutcomeVerifier()
+    summary = verifier.verify_all_pending()
+
+    logger.info(
+        f"Outcome verification complete: "
+        f"{summary['wagers_settled']} wagers settled, "
+        f"{summary['legs_settled']} legs settled, "
+        f"{summary['arb_items_verified']} arb items verified"
+    )
+
+    if summary['errors']:
+        logger.error(f"{len(summary['errors'])} errors during verification")
+        for err in summary['errors'][:5]:
+            logger.error(f"  - {err}")
+
+    return summary
