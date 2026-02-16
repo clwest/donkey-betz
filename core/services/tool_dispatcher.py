@@ -5210,6 +5210,16 @@ class ToolDispatcher:
         bill_number = payload.get('bill_number', '')
         limit = min(payload.get('limit', 10), 20)
 
+        def _bill_data(item):
+            """Unwrap bill dict from raw_data (handles spider-network envelope)."""
+            raw = item.raw_data if isinstance(item.raw_data, dict) else {}
+            if raw.get('bill_number'):
+                return raw
+            inner = raw.get('raw_data')
+            if isinstance(inner, dict) and inner.get('bill_number'):
+                return inner
+            return raw
+
         qs = SpiderData.objects.filter(spider_name='legislation').order_by('-created_at')
         total_tracked = qs.count()
 
@@ -5220,7 +5230,7 @@ class ToolDispatcher:
             states: set = set()
             status_counts: Dict[str, int] = {}
             for item in recent:
-                raw = item.raw_data if isinstance(item.raw_data, dict) else {}
+                raw = _bill_data(item)
                 for t in raw.get('topics', []):
                     topic_counts[t] = topic_counts.get(t, 0) + 1
                 state = raw.get('state', '')
@@ -5243,7 +5253,7 @@ class ToolDispatcher:
         elif action == 'trending':
             items = []
             for item in qs[:limit]:
-                raw = item.raw_data if isinstance(item.raw_data, dict) else {}
+                raw = _bill_data(item)
                 items.append({
                     'bill_number': raw.get('bill_number', ''),
                     'title': raw.get('title', ''),
@@ -5345,7 +5355,7 @@ class ToolDispatcher:
 
                     scored.sort(key=lambda x: x[0], reverse=True)
                     for sim, item in scored[:5]:
-                        raw = item.raw_data if isinstance(item.raw_data, dict) else {}
+                        raw = _bill_data(item)
                         bn = raw.get('bill_number', '')
                         title = raw.get('title', '')
                         desc = raw.get('description', '')
@@ -5380,7 +5390,7 @@ class ToolDispatcher:
                     Q(raw_data__title__icontains=question.split()[-1])
                 )[:5]
                 for item in kw_matches:
-                    raw = item.raw_data if isinstance(item.raw_data, dict) else {}
+                    raw = _bill_data(item)
                     bn = raw.get('bill_number', '')
                     title = raw.get('title', '')
                     desc = raw.get('description', '')
@@ -5450,7 +5460,7 @@ class ToolDispatcher:
             )[:limit]
             items = []
             for item in matches:
-                raw = item.raw_data if isinstance(item.raw_data, dict) else {}
+                raw = _bill_data(item)
                 items.append({
                     'bill_number': raw.get('bill_number', ''),
                     'title': raw.get('title', ''),

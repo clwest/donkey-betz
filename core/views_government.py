@@ -14,24 +14,66 @@ from core.models_unified_system import SpiderData
 logger = logging.getLogger(__name__)
 
 
+def _extract_bill(raw_data):
+    """Extract bill dict from raw_data, handling nested spider-network envelope.
+
+    SpiderData.raw_data can be:
+    1. Flat bill data: {bill_number, title, ...}
+    2. Spider-network envelope: {raw_data: {bill_number, title, ...}, ...}
+    3. Celery bundle: {items: [{raw_data: {...}}, ...]}
+    """
+    if not isinstance(raw_data, dict):
+        return None
+    # Case 1: flat — bill_number at top level
+    if raw_data.get('bill_number'):
+        return raw_data
+    # Case 2: spider-network envelope
+    inner = raw_data.get('raw_data')
+    if isinstance(inner, dict) and inner.get('bill_number'):
+        return inner
+    return None
+
+
+def _extract_bills_from_row(item):
+    """Extract one or more bills from a SpiderData row."""
+    raw = item.raw_data if isinstance(item.raw_data, dict) else {}
+    # Case 3: Celery bundle with items list
+    items_list = raw.get('items', [])
+    if isinstance(items_list, list) and items_list:
+        bills = []
+        for entry in items_list:
+            bill = _extract_bill(entry) if isinstance(entry, dict) else None
+            if bill:
+                bills.append((bill, item))
+        if bills:
+            return bills
+    # Cases 1 & 2: single bill per row
+    bill = _extract_bill(raw)
+    if bill:
+        return [(bill, item)]
+    return []
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def government_hub(request):
     """Consolidated hub — stats, top topics, recent bills."""
     try:
         qs = SpiderData.objects.filter(spider_name='legislation').order_by('-created_at')
-        total_bills = qs.count()
 
-        # Scan recent bills for stats
-        recent = qs[:100]
+        # Extract all bills from rows (handles flat, envelope, and bundle formats)
+        all_bills = []
+        for item in qs[:100]:
+            all_bills.extend(_extract_bills_from_row(item))
+
+        total_bills = len(all_bills)
         house_count = 0
         senate_count = 0
         status_breakdown = {}
         topic_counts = {}
 
         bills_list = []
-        for item in recent:
-            raw = item.raw_data if isinstance(item.raw_data, dict) else {}
+        for raw, item in all_bills:
             bn = raw.get('bill_number', '')
 
             # Chamber detection from bill number prefix
