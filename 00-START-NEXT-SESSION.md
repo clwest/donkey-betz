@@ -1,43 +1,61 @@
-# Session 1011 - Start Here
+# Session 1012 - Start Here
 
-**Previous Session:** 1010 (Sports Predictions, Sharp Action Fix & System Cleanup)
+**Previous Session:** 1011 (Sports Pipeline Full Automation)
 **Date:** February 15, 2026
-**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **40+ PUBLISHED BLOGS** | **1,131 SIGNAL CLUSTERS** | **INITIATIVE STAGES 1-5 ACTIVE** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 38+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 238** | **Frontend Routes: 26** | **6 Sports Leagues w/ Predictions**
+**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **40+ PUBLISHED BLOGS** | **1,131 SIGNAL CLUSTERS** | **INITIATIVE STAGES 1-5 ACTIVE** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 38+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 241** | **Frontend Routes: 26** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED**
 
 ---
 
-## Session 1010 Summary (Just Completed)
+## Session 1011 Summary (Just Completed)
+
+### Sports Prediction Pipeline — Full Automation (PRs #1208-#1212)
+
+Closed the entire sports prediction loop. Previously, `update_game_scores` was a placeholder, predictions were never evaluated, and the learning loop was broken.
+
+**What was built/fixed:**
+1. **`update_game_scores`** — fetches final scores from TheOddsSpider, marks Games as FINAL (every 30 min)
+2. **`generate_game_predictions`** — runs GamePredictor to create MLPredictions from odds (every 2h)
+3. **`verify_betting_outcomes`** — settles PlacedWager legs and verifies arb items (every 30 min)
+4. **PredictionEvaluator bug fixes** — wrong field names (`evaluation_date`, `evaluation_metadata`)
+5. **SportsBettingLearningBridge bug fixes** — `game_date` AttributeError, `FeedbackItem` constructor, serialization
+
+**Results verified on Railway:**
+- 47 games updated with final scores
+- 47 predictions evaluated: **33 correct, 14 incorrect (70.2% accuracy)**
+- NCAAB: 69.6% (32/46), Soccer: 100% (1/1)
+- 99 new predictions generated, 88 stored
+- Learning loop integration working end-to-end
+
+**Complete automated pipeline (8 scheduled tasks):**
+| Step | Task | Schedule |
+|------|------|----------|
+| Odds ingestion | `collect_sports_odds` | Every 20 min |
+| Prediction generation | `generate_game_predictions` | Every 2h |
+| Score fetching | `update_game_scores` | Every 30 min |
+| Prediction evaluation | `evaluate_completed_predictions` | Hourly |
+| Wager verification | `verify_betting_outcomes` | Every 30 min |
+| Bet settlement | `settle_user_bets` | Every 15 min |
+| Accuracy report | `generate_accuracy_report` | Daily 9 AM |
+| Cleanup | `cleanup_old_predictions` | Weekly Mon 3 AM |
+
+**Branch cleanup:** Deleted 67 stale local branches, pruned 55 remote refs.
+
+**PRs:** #1208-#1212
+
+---
+
+## Session 1010 Summary
 
 ### Sports Prediction Persistence (PRs #1198-#1202)
 - **Fixed MLPrediction storage:** GamePredictor._store_predictions() was silently failing (wrong fields, string vs FK, empty tables). Rewrote to auto-create League → Team → Game → MLPrediction chain.
-- **Fixed sport key mapping:** `split('_')[-1]` produced wrong values for multi-word keys (soccer_epl→"epl", mma_mixed_martial_arts→"arts"). Replaced `LEAGUE_MAP` with `SPORT_KEY_LEAGUE` (21 full key mappings) + `SPORT_PREFIX_MAP` fallback.
-- **Added NBA All-Stars** to spider SPORTS dict
-- **Added 14-day filter** — no far-future predictions (NCAAF Aug/Sep)
+- **Fixed sport key mapping:** `split('_')[-1]` produced wrong values for multi-word keys. Replaced `LEAGUE_MAP` with `SPORT_KEY_LEAGUE` (21 full key mappings) + `SPORT_PREFIX_MAP` fallback.
 - **Result:** 108 predictions across 6 leagues (NCAAB: 53, EPL: 21, La Liga: 23, NHL: 8, MLS: 3)
 
 ### Sharp Action Divergence Fix (PR #1203)
-Filtered extreme odds (abs > 10000) from divergence calculation. Was showing 100K+ pts from junk -100000 bookmaker values.
+Filtered extreme odds (abs > 10000) from divergence calculation.
 
 ### Initiative Spam Fix (PRs #1204-#1205)
-- Circuit breaker: counts ALL active/triage (was only no-activity), threshold 50→20, dedup includes TRIAGE
-- Topic generator: stopword filter prevents "Developing before and developer and trending skills" word salad
-- Quality gate: skip clusters with all-stopword keywords
-
-### Full System Database Cleanup (~26,868 rows deleted)
-| Table | Before | After | Deleted |
-|-------|--------|-------|---------|
-| Initiatives | 971 | 28 | 943 |
-| InitiativeStages | 4,852 | 140 | 4,712 |
-| AutoTopics | 490 | 0 | 490 |
-| HiveMindSessions | 606 | 231 | 375 |
-| AgentDreams | 5,553 | 935 | 4,618 |
-| AgentExecutions | 14,945 | 6,505 | 8,440 |
-| Deliverables | 14,284 | 7,436 | 6,848 |
-| SelfBlogs | 1,151 | 344 | 807 |
-
-### Other Fixes
-- Matchup display: full team names instead of abbreviations (PR #1199)
-- Celery-content OOM: max-tasks-per-child 30→10 (PR #1200)
+Circuit breaker threshold 50→20, stopword filter on auto-topics, quality gate on clusters.
 
 **PRs:** #1198-#1205
 
@@ -54,13 +72,6 @@ Filtered extreme odds (abs > 10000) from divergence calculation. Was showing 100
 
 ---
 
-## Session 1008 Summary
-
-### Campaign Orchestrator + ToolCall Analytics Frontend
-Connected Campaign Orchestrator and ToolCall Analytics dashboards to frontend (PR #1186). Removed dead `synthetic_user_generator` service (PR #1187).
-
----
-
 ## Current System State
 
 | Metric | Count |
@@ -70,7 +81,7 @@ Connected Campaign Orchestrator and ToolCall Analytics dashboards to frontend (P
 | Advisors | 25 |
 | Database Models | 395+ |
 | Services | 134 |
-| Celery Tasks | 238 |
+| Celery Tasks | 241 |
 | Intelligence Desks | 4 (Stocks, Sports, Blockchain, Narrative) — ALL RUNNING |
 | Workspace Tabs | 9 |
 | Frontend Routes | 26 (Image Studio, Video Studio, Documents added) |
@@ -79,6 +90,7 @@ Connected Campaign Orchestrator and ToolCall Analytics dashboards to frontend (P
 | PA Intents | 38 |
 | Enrichment Services | 8 |
 | Sports Leagues | 6 with predictions (NCAAB, NHL, EPL, La Liga, MLS, NCAAF) |
+| Sports Pipeline Tasks | 8 (all scheduled, all verified on Railway) |
 | Active Initiatives | 20 (circuit breaker threshold) |
 | LLM Providers | 6 (OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini) |
 | Standalone Pages | `/stocks`, `/advisors`, `/betting`, `/neural-orchestra`, `/conversation-contract`, `/mythology-lab`, `/billing`, `/analytics`, `/docs-index`, `/image-studio`, `/video-studio`, `/documents` |
@@ -90,17 +102,17 @@ Connected Campaign Orchestrator and ToolCall Analytics dashboards to frontend (P
 ### Initiative Circuit Breaker — DEPLOYED
 Threshold at 20 active initiatives. Stopword filter + quality gate on auto-topics. Monitor to ensure meaningful initiatives still get created.
 
-### Sports Prediction Evaluation — NOT YET AUTOMATED
-MLPredictions are stored but `was_correct` is never set. Need to implement automated evaluation via `PredictionEvaluator` after games complete (using TheOddsSpider.fetch_scores()).
-
 ### NBA All-Star Break
 `basketball_nba` returns 0 events (All-Star break). `basketball_nba_all_stars` was added. Regular NBA season should resume soon.
 
-### Blog Topic Diversity -- Monitor
+### Blog Topic Diversity — Monitor
 19/40 published blogs about Security/Homeland due to weak novelty scoring. PR #1141 strengthens scoring — verify after next batch.
 
 ### collect_real_opportunities — MITIGATED
 Time limits (PR #1149) + dedup via `get_or_create` (PR #1160).
+
+### Sports Prediction Accuracy — MONITOR
+Initial accuracy is 70.2% (mostly NCAAB). As more leagues return data and predictions accumulate, monitor by sport/model. Retraining candidates flagged automatically when accuracy < 55% with 50+ samples.
 
 ---
 
@@ -130,8 +142,13 @@ Time limits (PR #1149) + dedup via `get_or_create` (PR #1160).
 - `League`: name (unique), abbreviation (unique), sport_type, current_season
 - `Team`: name, abbreviation, league (FK), city. unique_together: `(league, abbreviation)`
 - `Game`: external_id (unique), league (FK), home_team (FK), away_team (FK), scheduled_start, season
-- `MLPrediction`: game (FK), predicted_winner (FK to Team), confidence (0-100), sport_type, model_used
+- `MLPrediction`: game (FK, related_name='ml_predictions'), predicted_winner (FK to Team), confidence (0-100), sport_type, model_used, was_correct, evaluated_at
 - `SPORT_KEY_LEAGUE` in game_predictor.py maps full Odds API keys to league tuples
+
+**MLPrediction gotchas (Session 1011):**
+- `evaluated_at` (NOT `evaluation_date`)
+- `metadata` for evaluation data (inherited from UnifiedBaseModel, NOT `evaluation_metadata`)
+- Reverse relation from Game: `ml_predictions` (NOT `mlprediction`)
 
 **SelfBlog model:**
 - Import from `core.models_unified_system`
