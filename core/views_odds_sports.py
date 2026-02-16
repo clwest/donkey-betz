@@ -739,19 +739,24 @@ def list_betting_markets(request):
 @permission_classes([AllowAny])  # Session 688: Allow public access for React frontend
 def get_bankroll_management(request):
     """
-    Get user bankroll management information - migrated from DBAO
+    Get user bankroll management information from real wager data.
     """
-    user = request.user
-    
+    from core.models_betting import PlacedWager
+    from django.db.models import Sum, Q
+
+    wagers = PlacedWager.objects.all()
+    total_staked = float(wagers.aggregate(s=Sum('stake'))['s'] or 0)
+    total_returned = float(wagers.filter(status='won').aggregate(s=Sum('potential_payout'))['s'] or 0)
+    pending_risk = float(wagers.filter(status='pending').aggregate(s=Sum('stake'))['s'] or 0)
+    total_profit = total_returned - total_staked + pending_risk  # pending not lost yet
+
     return Response({
         'success': True,
         'bankroll': {
-            'starting_bankroll': 5000.00,
-            'current_bankroll': 5247.83,
-            'peak_bankroll': 5389.12,
-            'total_wagered': 12450.00,
-            'total_profit': 247.83,
-            'roi': 4.96,
+            'total_wagered': round(total_staked, 2),
+            'total_profit': round(total_profit, 2),
+            'roi': round((total_profit / total_staked * 100) if total_staked > 0 else 0, 2),
+            'at_risk': round(pending_risk, 2),
             'last_updated': datetime.now().isoformat()
         }
     })
@@ -760,33 +765,58 @@ def get_bankroll_management(request):
 @permission_classes([AllowAny])  # Session 688: Allow public access for React frontend
 def get_bankroll_stats(request):
     """
-    Detailed bankroll performance statistics - migrated from DBAO
+    Detailed bankroll performance statistics from real wager data.
     """
-    user = request.user
-    
+    from core.models_betting import PlacedWager
+    from django.db.models import Sum, Count, Avg, Q, F
+
+    wagers = PlacedWager.objects.all()
+    total = wagers.count()
+    won = wagers.filter(status='won').count()
+    lost = wagers.filter(status='lost').count()
+    pending = wagers.filter(status='pending').count()
+    pushed = wagers.filter(status='push').count()
+
+    total_staked = float(wagers.aggregate(s=Sum('stake'))['s'] or 0)
+    total_returned = float(wagers.filter(status='won').aggregate(s=Sum('potential_payout'))['s'] or 0)
+    pending_risk = float(wagers.filter(status='pending').aggregate(s=Sum('stake'))['s'] or 0)
+    total_profit = total_returned - total_staked + pending_risk
+    avg_stake = float(wagers.aggregate(a=Avg('stake'))['a'] or 0)
+
+    # Biggest win/loss
+    biggest_win = 0
+    biggest_loss = 0
+    for w in wagers.filter(status__in=['won', 'lost']):
+        if w.status == 'won':
+            pl = float(w.potential_payout) - float(w.stake)
+            biggest_win = max(biggest_win, pl)
+        else:
+            biggest_loss = min(biggest_loss, -float(w.stake))
+
+    win_rate = (won / (won + lost)) if (won + lost) > 0 else 0
+    roi = (total_profit / total_staked * 100) if total_staked > 0 else 0
+
+    # Kelly criterion suggestion: edge / odds
+    kelly_pct = max(0, min(25, (win_rate - (1 - win_rate)) * 100)) if win_rate > 0 else 0
+
     return Response({
         'success': True,
         'stats': {
-            'roi': 4.96,
-            'win_rate': 0.567,
-            'avg_bet_size': 87.50,
-            'sharpe_ratio': 1.34,
-            'current_streak': 3,
-            'longest_winning_streak': 8,
-            'longest_losing_streak': 4,
-            'total_bets': 142,
-            'winning_bets': 80,
-            'losing_bets': 62,
-            'biggest_win': 456.78,
-            'biggest_loss': -234.50,
-            'profit_by_month': {
-                'january': 123.45,
-                'february': -45.67,
-                'march': 234.56,
-                'april': 87.23,
-                'may': -123.45,
-                'june': 156.78
-            }
+            'total': round(total_staked, 2),
+            'at_risk': round(pending_risk, 2),
+            'available': round(max(0, total_staked - pending_risk + total_profit), 2),
+            'kelly_percent': round(kelly_pct, 1),
+            'roi': round(roi, 2),
+            'win_rate': round(win_rate, 3),
+            'avg_bet_size': round(avg_stake, 2),
+            'total_bets': total,
+            'winning_bets': won,
+            'losing_bets': lost,
+            'pending_bets': pending,
+            'pushes': pushed,
+            'total_profit': round(total_profit, 2),
+            'biggest_win': round(biggest_win, 2),
+            'biggest_loss': round(biggest_loss, 2),
         }
     })
 
@@ -3065,6 +3095,42 @@ def get_todays_games(request):
                 if pred:
                     predictions_by_event[eid] = pred
 
+        # Fetch ESPN live game details (period, clock) for live games
+        espn_live_details = {}
+        espn_sport_map = {
+            'americanfootball_nfl': 'nfl', 'americanfootball_ncaaf': 'ncaaf',
+            'basketball_nba': 'nba', 'basketball_ncaab': 'ncaab',
+            'baseball_mlb': 'mlb', 'icehockey_nhl': 'nhl',
+        }
+        if DATA_PROVIDERS_AVAILABLE and sports_data_manager:
+            for sk in list(sport_keys_seen)[:6]:
+                espn_key = espn_sport_map.get(sk)
+                if not espn_key:
+                    continue
+                try:
+                    scoreboard = sports_data_manager.espn.get_scoreboard(espn_key)
+                    for ev in scoreboard.get('events', []):
+                        competitors = ev.get('competitions', [{}])[0].get('competitors', [])
+                        status_info = ev.get('status', {})
+                        status_type = status_info.get('type', {})
+                        home_name = away_name = ''
+                        for comp in competitors:
+                            tn = comp.get('team', {}).get('displayName', '')
+                            if comp.get('homeAway') == 'home':
+                                home_name = tn
+                            else:
+                                away_name = tn
+                        if home_name and away_name:
+                            key = f"{home_name}|{away_name}".lower()
+                            espn_live_details[key] = {
+                                'period': status_info.get('period', 0),
+                                'clock': status_info.get('displayClock', ''),
+                                'status_detail': status_type.get('shortDetail', ''),
+                                'status_state': status_type.get('state', 'pre'),
+                            }
+                except Exception:
+                    pass
+
         # Build response
         games = []
         for event in odds_events:
@@ -3072,12 +3138,15 @@ def get_todays_games(request):
             score = scores_by_event.get(eid, {})
             prediction = predictions_by_event.get(eid, {})
 
+            home_team = event.get('home_team', '')
+            away_team = event.get('away_team', '')
+
             game = {
                 'event_id': eid,
                 'sport_key': event.get('sport_key', ''),
                 'sport_name': event.get('sport_name', ''),
-                'home_team': event.get('home_team', ''),
-                'away_team': event.get('away_team', ''),
+                'home_team': home_team,
+                'away_team': away_team,
                 'commence_time': event.get('commence_time', ''),
                 # Moneyline
                 'home_odds': event.get('home_odds'),
@@ -3097,6 +3166,8 @@ def get_todays_games(request):
                 # Bookmaker info
                 'bookmaker_count': event.get('bookmaker_count', 0),
                 'best_bookmaker': event.get('best_bookmaker'),
+                # Per-bookmaker odds for comparison
+                'h2h_odds': event.get('h2h_odds', []),
                 # Score (completed or live)
                 'completed': score.get('completed', False),
                 'home_score': score.get('home_score'),
@@ -3108,6 +3179,19 @@ def get_todays_games(request):
                 'is_value_pick': prediction.get('is_value_pick', False),
                 'pick_type': prediction.get('pick_type', ''),
             }
+
+            # Merge ESPN live details (period, clock) via fuzzy team name match
+            espn_key = f"{home_team}|{away_team}".lower()
+            espn_data = espn_live_details.get(espn_key)
+            if not espn_data:
+                for ek, ed in espn_live_details.items():
+                    if home_team.lower() in ek or away_team.lower() in ek:
+                        espn_data = ed
+                        break
+            if espn_data:
+                game['period'] = espn_data.get('period', 0)
+                game['clock'] = espn_data.get('clock', '')
+                game['status_detail'] = espn_data.get('status_detail', '')
 
             # Determine prediction outcome for completed games
             if (game['completed'] and game['home_score'] is not None
