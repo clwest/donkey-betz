@@ -1,12 +1,42 @@
-# Session 1013 - Start Here
+# Session 1014 - Start Here
 
-**Previous Session:** 1012 (Betting Tabs Polish & Bug Fixes)
+**Previous Session:** 1013 (Image/Video/Audio Pipeline + Agent Failure Fix)
 **Date:** February 15, 2026
-**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **40+ PUBLISHED BLOGS** | **1,131 SIGNAL CLUSTERS** | **INITIATIVE STAGES 1-5 ACTIVE** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 38+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 241** | **Frontend Routes: 26** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED** | **BETTING DASHBOARD: 12 TABS POLISHED**
+**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **40+ PUBLISHED BLOGS** | **1,131 SIGNAL CLUSTERS** | **INITIATIVE STAGES 1-5 ACTIVE** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 38+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 241** | **Frontend Routes: 26** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED** | **BETTING DASHBOARD: 12 TABS POLISHED** | **VIDEO STUDIO: 5 EDIT TOOLS**
 
 ---
 
-## Session 1012 Summary (Just Completed)
+## Session 1013 Summary (Just Completed)
+
+### Seamless Image → Video → Audio Pipeline (PR #1223)
+
+Connected Image Studio, Video Studio, and ElevenLabs audio into a single creative workflow.
+
+**Backend:**
+- New `POST /api/tool/add-sfx-to-video/` — generates SFX via ElevenLabs `text_to_sound()`, mixes with video via FFmpeg `amix` filter, falls back to simple overlay if video has no audio track
+
+**Frontend API:**
+- `contentApi.addVoiceoverToVideo()` — wraps existing voiceover endpoint
+- `contentApi.addSfxToVideo()` — wraps new SFX endpoint
+
+**Frontend UI (VideoStudioPage):**
+- **Image Gallery Picker** — "Browse" button in Image-to-Video mode opens modal showing `ImageHistory` thumbnails
+- **Voice Tool Tab** — Script textarea, 12 ElevenLabs voice presets, volume slider
+- **SFX Tool Tab** — Description input, duration slider (0.5–22s), volume slider
+- Edit tools expanded: `text | color | audio | voice | sfx`
+
+### Agent Failure Fix + Spinner Fix (PR #1224)
+
+- **Root cause:** `execute_agent_task()` in `tasks.py:1349` accessed `result.metadata` on `AgentResult` which has no `.metadata` field (correct field: `.data`). Fixed to `getattr(result, 'data', {})`.
+- **Impact:** This single bug caused **154 of 221 daily failures (70%)**, hitting `OpportunityScoringAgent` (79 failures) and `SystemIntelligenceAgent` (75 failures)
+- **Post-fix:** Zero metadata errors in all subsequent agent runs. Failure rate expected to drop from ~15.6% to ~4.7%.
+- **Spinner fix:** Replaced perpetual `Loader2` spinner with static `Workflow` icon in Command Center Active Work card
+
+**PRs:** #1223, #1224
+
+---
+
+## Session 1012 Summary
 
 ### Betting Dashboard Polish & Bug Fixes (PRs #1215-#1219)
 
@@ -55,34 +85,6 @@ Closed the entire sports prediction loop. 8 scheduled tasks fully automated.
 
 ---
 
-## Session 1010 Summary
-
-### Sports Prediction Persistence (PRs #1198-#1202)
-- **Fixed MLPrediction storage:** GamePredictor._store_predictions() was silently failing (wrong fields, string vs FK, empty tables). Rewrote to auto-create League → Team → Game → MLPrediction chain.
-- **Fixed sport key mapping:** `split('_')[-1]` produced wrong values for multi-word keys. Replaced `LEAGUE_MAP` with `SPORT_KEY_LEAGUE` (21 full key mappings) + `SPORT_PREFIX_MAP` fallback.
-- **Result:** 108 predictions across 6 leagues (NCAAB: 53, EPL: 21, La Liga: 23, NHL: 8, MLS: 3)
-
-### Sharp Action Divergence Fix (PR #1203)
-Filtered extreme odds (abs > 10000) from divergence calculation.
-
-### Initiative Spam Fix (PRs #1204-#1205)
-Circuit breaker threshold 50→20, stopword filter on auto-topics, quality gate on clusters.
-
-**PRs:** #1198-#1205
-
----
-
-## Session 1009 Summary
-
-### Deliverables Tab + Orphan Cleanup + celery-content OOM Fix
-- **Deliverables Tab**: New Content Studio sub-tab with list/detail views, filtering, pagination, save/clone/templateize/export (PR #1188)
-- **Orphan Cleanup**: Removed ~65 orphaned API endpoints from `core/urls.py` across 12 groups
-- **celery-content OOM Fix** (PR #1190): Moved 7 heavy tasks from `content` → `long_running` queue, reduced content worker from `-c 2` → `-c 1`
-
-**PRs:** #1186-#1190
-
----
-
 ## Current System State
 
 | Metric | Count |
@@ -104,11 +106,17 @@ Circuit breaker threshold 50→20, stopword filter on auto-topics, quality gate 
 | Sports Pipeline Tasks | 8 (all scheduled, all verified on Railway) |
 | Active Initiatives | 20 (circuit breaker threshold) |
 | LLM Providers | 6 (OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini) |
+| Video Studio Edit Tools | 5 (Text, Color, Audio, Voice, SFX) |
 | Standalone Pages | `/stocks`, `/advisors`, `/betting`, `/neural-orchestra`, `/conversation-contract`, `/mythology-lab`, `/billing`, `/analytics`, `/docs-index`, `/image-studio`, `/video-studio`, `/documents` |
 
 ---
 
 ## Known Issues / Open Items
+
+### Remaining Agent Failures (~4.7% rate) — INVESTIGATE
+Post-metadata-fix, ~67 failures/day remain from other agents:
+- ContentWriterAgent (15), AudioAgent (12), ResearchAgent (10), WorkflowAgent (6), TrendAnalysisAgent (4), VideoAgent (4)
+- Each has a different root cause — needs individual investigation
 
 ### Initiative Circuit Breaker — DEPLOYED
 Threshold at 20 active initiatives. Stopword filter + quality gate on auto-topics. Monitor to ensure meaningful initiatives still get created.
@@ -139,6 +147,11 @@ Initial accuracy is 70.2% (mostly NCAAB). As more leagues return data and predic
 - `agent` is FK to Agent -- use `agent__name` in `.values()` and `agent__name__icontains` in filters
 - No `success` field -- use `status='completed'` / `status='failed'`
 - No `agent_name` field, no `started_at` field -- use `created_at`
+
+**AgentResult fields (Session 1013):**
+- `success`, `message`, `data`, `error`, `agent_name`, `execution_time_ms`, `tool_calls`, `tokens_used`, `cost`
+- `.content` is a @property alias for `.message`
+- **NO `.metadata` field** — use `.data` instead
 
 **CeleryTaskEvent fields:**
 - `duration_seconds`, `error_message`, `error_type`, `finished_at`, `id`, `queue`, `started_at`, `status`, `task_id`, `task_name`, `worker`
