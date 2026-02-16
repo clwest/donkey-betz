@@ -157,6 +157,9 @@ from ..models_deliberation import (
 # Import Celery telemetry models (Session 983 - Celery Observability)
 from ..models_celery_telemetry import CeleryTaskEvent
 
+# Import code artifact models (Session 1012 - Patch-First Workflow)
+from ..models_code_artifacts import CodeArtifact
+
 # Import learning journey models (Session 773 - Learning Journeys)
 from ..models_learning_journey import (
     LearningJourneyTemplate,
@@ -363,4 +366,7 @@ __all__ = [
     # Desk Intelligence Briefs (Session 1003)
     'SportsBettingBrief',
     'BlockchainAuditBrief',
+
+    # Code Artifacts - Patch-First Workflow (Session 1012)
+    'CodeArtifact',
 ]
