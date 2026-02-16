@@ -3320,7 +3320,7 @@ def get_ai_track_record(request):
         from sports.models import MLPrediction
         from django.utils import timezone
         from datetime import timedelta
-        from django.db.models import Max, Avg, Count, Q
+        from django.db.models import Avg, Count, Q
 
         cutoff = timezone.now() - timedelta(days=days)
         base_qs = MLPrediction.objects.filter(created_at__gte=cutoff)
@@ -3328,12 +3328,13 @@ def get_ai_track_record(request):
             base_qs = base_qs.filter(sport_type=sport)
 
         # Dedup: only latest prediction per game
-        latest_ids = list(
-            base_qs.values('game_id')
-            .annotate(latest_id=Max('id'))
-            .values_list('latest_id', flat=True)
+        # id is UUID so Max('id') doesn't give latest — use DISTINCT ON (PostgreSQL)
+        deduped_ids = list(
+            base_qs.order_by('game_id', '-created_at')
+            .distinct('game_id')
+            .values_list('id', flat=True)
         )
-        deduped_qs = MLPrediction.objects.filter(id__in=latest_ids)
+        deduped_qs = MLPrediction.objects.filter(id__in=deduped_ids)
         total = deduped_qs.count()
 
         # Evaluated predictions (deduped)
