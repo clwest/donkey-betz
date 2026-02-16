@@ -1346,6 +1346,8 @@ export const stockApi = {
     api.get('/stocks/sec-filings/', { params }),
   tickerLookup: (symbol: string) =>
     api.get<TickerLookupResult>(`/stocks/ticker/${symbol.toUpperCase()}/`),
+  marketNews: (params?: { limit?: number; offset?: number; source?: string }) =>
+    api.get('/stocks/market-news/', { params }),
 }
 
 // Legacy learning API (older endpoints - kept for backwards compatibility)
