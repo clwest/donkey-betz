@@ -474,7 +474,7 @@ function AskABillChat({ fullWidth = false }: { fullWidth?: boolean }) {
 
   const sendMessage = useMutation({
     mutationFn: (message: string) =>
-      assistantApi.paChat(`About legislation: ${message}`, {
+      assistantApi.paChat(`legislation ${message}`, {
         context: { source: 'government_page' },
       }),
     onSuccess: (response) => {
