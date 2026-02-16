@@ -1346,7 +1346,7 @@ def execute_agent_task(
             execution_record.execution_time_ms = execution_time_ms
             execution_record.output_data = {
                 'content': result.content[:5000] if result.content else None,
-                'metadata': result.metadata or {},
+                'metadata': getattr(result, 'data', {}) or {},
             }
             if not result.success:
                 execution_record.error_message = result.error or 'Unknown error'

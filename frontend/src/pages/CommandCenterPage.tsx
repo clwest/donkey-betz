@@ -391,7 +391,7 @@ function NowHub({ pendingDecisions, activeWork, bodyHealthScore, agentsActive, s
             {/* Top recent initiative */}
             {(activeWork?.initiatives?.recent?.length || 0) > 0 && (
               <div className="flex items-center gap-2 text-sm">
-                <Loader2 size={12} className="animate-spin text-blue-400 shrink-0" />
+                <Workflow size={12} className="text-blue-400 shrink-0" />
                 <span className="text-gray-300 truncate text-xs">{activeWork!.initiatives.recent[0].name}</span>
               </div>
             )}
