@@ -229,8 +229,22 @@ app.conf.beat_schedule = {
     },
     # Sports Prediction Evaluation & Bet Settlement
     # Updated Session 23: Using new PredictionEvaluator system
+    'generate-game-predictions': {
+        'task': 'sports.generate_game_predictions',
+        'schedule': crontab(minute=15, hour='*/2'),  # Every 2 hours at :15
+        'options': {
+            'expires': 7200,
+        }
+    },
     'update-game-scores': {
         'task': 'sports.update_game_scores',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'options': {
+            'expires': 1800,
+        }
+    },
+    'verify-betting-outcomes': {
+        'task': 'sports.verify_betting_outcomes',
         'schedule': crontab(minute='*/30'),  # Every 30 minutes
         'options': {
             'expires': 1800,
