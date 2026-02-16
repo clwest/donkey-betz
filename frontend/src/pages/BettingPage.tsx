@@ -6,7 +6,7 @@ import {
   RefreshCw, Loader2, Trophy, Activity, PieChart, BarChart3,
   Clock, CheckCircle, Flame, Search, Eye, XCircle, CircleDot,
   Award, Layers, ChevronDown, ChevronUp, History, Crosshair,
-  Star, Swords, Brain, Newspaper, HeartPulse
+  Star, Swords, Brain, Newspaper, HeartPulse, Calendar
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -1581,9 +1581,18 @@ export default function BettingPage() {
             >
               <option value="all">All Sports</option>
               <option value="americanfootball_nfl">NFL</option>
+              <option value="americanfootball_ncaaf">NCAAF</option>
               <option value="basketball_nba">NBA</option>
+              <option value="basketball_ncaab">NCAAB</option>
               <option value="baseball_mlb">MLB</option>
               <option value="icehockey_nhl">NHL</option>
+              <option value="soccer_epl">EPL</option>
+              <option value="soccer_spain_la_liga">La Liga</option>
+              <option value="soccer_germany_bundesliga">Bundesliga</option>
+              <option value="soccer_italy_serie_a">Serie A</option>
+              <option value="soccer_usa_mls">MLS</option>
+              <option value="soccer_uefa_champs_league">Champions League</option>
+              <option value="mma_mixed_martial_arts">UFC / MMA</option>
             </select>
             <button className="btn btn-primary flex items-center gap-2" onClick={() => refetchSharp()}>
               <Crosshair size={16} />
@@ -1604,9 +1613,28 @@ export default function BettingPage() {
             <div className="card p-4 border-l-4 border-l-accent-amber">
               <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
                 <Brain size={14} className="text-accent-amber" />
-                AI Analysis
+                AI Sharp Action Analysis
               </h4>
-              <p className="text-sm text-gray-300 whitespace-pre-wrap">{sharpData.data.llm_analysis}</p>
+              <div className="text-sm text-gray-300 space-y-1">
+                {sharpData.data.llm_analysis.split('\n').map((line: string, idx: number) => {
+                  if (!line.trim()) return <div key={idx} className="h-2" />
+                  // Bold: **text**
+                  const parts = line.split(/(\*\*[^*]+\*\*)/).map((part: string, pi: number) =>
+                    part.startsWith('**') && part.endsWith('**')
+                      ? <strong key={pi} className="text-white">{part.slice(2, -2)}</strong>
+                      : <span key={pi}>{part}</span>
+                  )
+                  // Bullet lines
+                  if (line.trim().startsWith('- ') || line.trim().startsWith('• ')) {
+                    return <div key={idx} className="pl-4 flex gap-2"><span className="text-accent-amber">•</span><span>{parts}</span></div>
+                  }
+                  // Numbered lines
+                  if (/^\d+\./.test(line.trim())) {
+                    return <div key={idx} className="pl-2">{parts}</div>
+                  }
+                  return <div key={idx}>{parts}</div>
+                })}
+              </div>
             </div>
           )}
 
@@ -1616,77 +1644,117 @@ export default function BettingPage() {
               <Loader2 size={32} className="animate-spin text-primary-400" />
             </div>
           ) : sharpSignals.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {sharpSignals.map((signal: any, i: number) => {
                 const isHot = signal.rating === 'HOT'
                 const svs = signal.sharp_vs_soft || {}
+                const homeTeam = signal.home_team || signal.matchup?.split(' @ ')[1] || 'Home'
+                const awayTeam = signal.away_team || signal.matchup?.split(' @ ')[0] || 'Away'
+                const bestStale = (signal.stale_lines || [])[0]
+                const favoredSide = svs.sharp_favors
+                const favoredTeam = favoredSide === 'home' ? homeTeam : favoredSide === 'away' ? awayTeam : null
+                const gameTime = signal.commence_time ? new Date(signal.commence_time).toLocaleString([], {
+                  month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+                }) : null
 
                 return (
                   <div key={i} className={cn(
                     'card p-4 border-l-4',
                     isHot ? 'border-l-accent-red' : 'border-l-accent-amber'
                   )}>
+                    {/* Header: matchup, rating badge, game time */}
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-medium">{signal.matchup}</h4>
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className={cn(
-                            'text-xs px-2 py-0.5 rounded',
+                            'text-xs font-bold px-2 py-0.5 rounded',
                             isHot ? 'bg-accent-red/20 text-accent-red' : 'bg-accent-amber/20 text-accent-amber'
                           )}>
                             {signal.rating}
                           </span>
+                          <h4 className="font-medium">{awayTeam} @ {homeTeam}</h4>
                         </div>
-                        <p className="text-sm text-gray-400">{signal.sport_name}</p>
+                        <div className="flex items-center gap-3 mt-1 text-sm text-gray-400">
+                          <span>{signal.sport_name}</span>
+                          <span>•</span>
+                          <span>{signal.bookmaker_count} bookmakers</span>
+                          {gameTime && (
+                            <>
+                              <span>•</span>
+                              <span className="flex items-center gap-1">
+                                <Calendar size={12} />
+                                {gameTime}
+                              </span>
+                            </>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm text-gray-400">Max Divergence</p>
-                        <p className={cn('text-xl font-bold', isHot ? 'text-accent-red' : 'text-accent-amber')}>
-                          {signal.max_divergence} pts
-                        </p>
+                      <div className={cn(
+                        'text-sm font-mono px-2 py-1 rounded',
+                        isHot ? 'bg-accent-red/10 text-accent-red' : 'bg-accent-amber/10 text-accent-amber'
+                      )}>
+                        {signal.max_divergence} pts div
                       </div>
                     </div>
 
-                    {/* Odds Ranges */}
-                    <div className="grid grid-cols-2 gap-4 mb-3 text-sm">
-                      <div>
-                        <span className="text-gray-400">Home Range: </span>
-                        <span className="font-mono">{signal.home_odds_range}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400">Away Range: </span>
-                        <span className="font-mono">{signal.away_odds_range}</span>
-                      </div>
-                    </div>
-
-                    {/* Sharp vs Soft */}
-                    {svs.sharp_favors && (
-                      <div className="p-3 rounded-lg bg-dark-bg flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Crosshair size={14} className="text-accent-amber" />
-                          <span className="text-sm">
-                            Sharp books favor <span className="font-medium text-accent-amber">{svs.sharp_favors}</span>
+                    {/* Recommendation Box */}
+                    {favoredTeam && (
+                      <div className={cn(
+                        'p-3 rounded-lg border mb-3',
+                        isHot ? 'border-accent-red/30 bg-accent-red/5' : 'border-accent-amber/30 bg-accent-amber/5'
+                      )}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Crosshair size={14} className={isHot ? 'text-accent-red' : 'text-accent-amber'} />
+                          <span className="text-sm font-semibold text-white">
+                            Sharp money on: <span className={isHot ? 'text-accent-red' : 'text-accent-amber'}>{favoredTeam} ({favoredSide} ML)</span>
                           </span>
                         </div>
-                        <div className="text-right text-sm">
-                          <span className="text-gray-400">Sharp avg: </span>
-                          <span className="font-mono">{svs.sharp_avg_home}</span>
-                          <span className="text-gray-500 mx-2">|</span>
-                          <span className="text-gray-400">Soft avg: </span>
-                          <span className="font-mono">{svs.soft_avg_home}</span>
-                        </div>
+                        {bestStale && (
+                          <p className="text-sm text-gray-300 pl-6">
+                            Best value: Bet {bestStale.better_side} ML at <span className="font-medium text-white">{bestStale.bookmaker}</span>
+                            {' — '}{Math.max(bestStale.home_diff || 0, bestStale.away_diff || 0)} pts off market
+                          </p>
+                        )}
                       </div>
                     )}
 
-                    {/* Stale Lines */}
+                    {/* Sharp vs Soft inline + Odds Ranges */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3 text-sm">
+                      {svs.sharp_favors && (
+                        <div className="flex items-center gap-4">
+                          <span><span className="text-gray-400">Sharp:</span> <span className="font-mono">{svs.sharp_avg_home}</span> avg</span>
+                          <span>•</span>
+                          <span><span className="text-gray-400">Soft:</span> <span className="font-mono">{svs.soft_avg_home}</span> avg</span>
+                          <span>•</span>
+                          <span><span className="text-gray-400">Gap:</span> <span className="font-mono font-medium">{svs.divergence}</span> pts</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-4">
+                        <span><span className="text-gray-400">Home ML:</span> <span className="font-mono">{signal.home_odds_range}</span></span>
+                        <span className="text-gray-600">|</span>
+                        <span><span className="text-gray-400">Away ML:</span> <span className="font-mono">{signal.away_odds_range}</span></span>
+                      </div>
+                    </div>
+
+                    {/* Stale Lines — prominent */}
                     {signal.stale_lines && signal.stale_lines.length > 0 && (
-                      <div className="mt-2 flex items-center gap-2 flex-wrap">
-                        <span className="text-xs text-gray-500">Stale lines at:</span>
-                        {signal.stale_lines.slice(0, 3).map((sl: any, j: number) => (
-                          <span key={j} className="text-xs px-2 py-0.5 rounded bg-accent-red/10 text-accent-red">
-                            {sl.bookmaker} ({sl.better_side})
-                          </span>
-                        ))}
+                      <div className="border-t border-dark-border pt-2">
+                        <p className="text-xs font-semibold text-accent-red mb-1.5 flex items-center gap-1">
+                          <AlertTriangle size={12} />
+                          Stale Lines (act fast)
+                        </p>
+                        <div className="space-y-1">
+                          {signal.stale_lines.slice(0, 4).map((sl: any, j: number) => (
+                            <div key={j} className="flex items-center justify-between text-sm bg-dark-bg rounded px-3 py-1.5">
+                              <span className="font-medium">{sl.bookmaker}</span>
+                              <span className="text-gray-400">
+                                {sl.better_side} side
+                                {sl.home_diff ? ` — home ${sl.home_diff} pts off` : ''}
+                                {sl.away_diff ? `, away ${sl.away_diff} pts off` : ''}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
