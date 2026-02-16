@@ -5,6 +5,7 @@ import {
   Film, Type, Image, Loader2, Heart, Download, ChevronDown, ChevronUp,
   Maximize2, Clock, Trash2, X, Check, AlertCircle, Play, Sparkles,
   Scissors, Palette, Music, ArrowUp, ArrowDown, Link2, Upload,
+  Mic, Volume2, Grid,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -71,6 +72,19 @@ const COLOR_GRADE_OPTIONS = [
   { value: 'vibrant', label: 'Vibrant', desc: 'Punchy saturated' },
 ]
 
+const VOICE_PRESETS = [
+  'Rachel', 'Antoni', 'Bella', 'Callum', 'Charlotte', 'Daniel',
+  'Domi', 'Elli', 'Emily', 'George', 'Matilda', 'Sam',
+]
+
+interface ImageHistoryItem {
+  id: string
+  image_url?: string
+  url?: string
+  prompt?: string
+  created_at?: string
+}
+
 function formatStyleLabel(style: string): string {
   return style.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
@@ -118,7 +132,7 @@ export default function VideoStudioPage() {
 
   // Edit mode
   const [editVideoId, setEditVideoId] = useState<string | null>(null)
-  const [editTool, setEditTool] = useState<'text' | 'color' | 'audio'>('text')
+  const [editTool, setEditTool] = useState<'text' | 'color' | 'audio' | 'voice' | 'sfx'>('text')
   const [overlayText, setOverlayText] = useState('')
   const [overlayPosition, setOverlayPosition] = useState('center')
   const [overlayFontSize, setOverlayFontSize] = useState(72)
@@ -127,6 +141,19 @@ export default function VideoStudioPage() {
   const [colorStyle, setColorStyle] = useState('cinematic_warm')
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [audioVolume, setAudioVolume] = useState(0.3)
+
+  // Voice tool
+  const [voiceText, setVoiceText] = useState('')
+  const [voicePreset, setVoicePreset] = useState('Rachel')
+  const [voiceVolume, setVoiceVolume] = useState(0.8)
+
+  // SFX tool
+  const [sfxDescription, setSfxDescription] = useState('')
+  const [sfxDuration, setSfxDuration] = useState(5)
+  const [sfxVolume, setSfxVolume] = useState(0.5)
+
+  // Image gallery picker
+  const [showImageGallery, setShowImageGallery] = useState(false)
 
   // Chain mode
   const [chainVideos, setChainVideos] = useState<GalleryVideo[]>([])
@@ -153,6 +180,14 @@ export default function VideoStudioPage() {
 
   const videos: GalleryVideo[] = galleryData?.data?.videos || galleryData?.data?.results || []
   const totalCount: number = galleryData?.data?.total || galleryData?.data?.count || videos.length
+
+  // Image history for gallery picker
+  const { data: imageHistoryData } = useQuery({
+    queryKey: ['image-history-picker'],
+    queryFn: () => contentApi.imageHistory({ limit: 40 }),
+    enabled: showImageGallery,
+  })
+  const imageHistoryItems: ImageHistoryItem[] = imageHistoryData?.data?.images || imageHistoryData?.data?.results || []
 
   // Resolve editVideo from gallery
   const editVideo = editVideoId ? videos.find(v => v.id === editVideoId) || null : null
@@ -331,6 +366,40 @@ export default function VideoStudioPage() {
       setAudioFile(null)
     },
     onError: () => showFeedback('error', 'Failed to add audio'),
+  })
+
+  const voiceoverMutation = useMutation({
+    mutationFn: () => {
+      if (!editVideoId || !voiceText.trim()) throw new Error('No video or text')
+      return contentApi.addVoiceoverToVideo(editVideoId, voiceText, voicePreset, voiceVolume)
+    },
+    onSuccess: (res) => {
+      refetchGallery()
+      showFeedback('success', 'Voiceover added!')
+      if (res.data?.video_url && selectedVideo) {
+        setSelectedVideo({ ...selectedVideo, url: res.data.video_url })
+      }
+      setEditVideoId(null)
+      setVoiceText('')
+    },
+    onError: () => showFeedback('error', 'Failed to add voiceover'),
+  })
+
+  const sfxMutation = useMutation({
+    mutationFn: () => {
+      if (!editVideoId || !sfxDescription.trim()) throw new Error('No video or description')
+      return contentApi.addSfxToVideo(editVideoId, sfxDescription, sfxDuration, sfxVolume)
+    },
+    onSuccess: (res) => {
+      refetchGallery()
+      showFeedback('success', 'Sound effect added!')
+      if (res.data?.video_url && selectedVideo) {
+        setSelectedVideo({ ...selectedVideo, url: res.data.video_url })
+      }
+      setEditVideoId(null)
+      setSfxDescription('')
+    },
+    onError: () => showFeedback('error', 'Failed to add sound effect'),
   })
 
   const chainMutation = useMutation({
@@ -536,13 +605,33 @@ export default function VideoStudioPage() {
                   <>
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-1.5">Image URL</label>
-                      <input
-                        type="text"
-                        value={imageUrl}
-                        onChange={(e) => setImageUrl(e.target.value)}
-                        placeholder="https://example.com/image.jpg"
-                        className="w-full rounded-lg bg-dark-bg border border-dark-border px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                      />
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={imageUrl}
+                          onChange={(e) => setImageUrl(e.target.value)}
+                          placeholder="https://example.com/image.jpg"
+                          className="flex-1 rounded-lg bg-dark-bg border border-dark-border px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        />
+                        <button
+                          onClick={() => setShowImageGallery(true)}
+                          className="flex items-center gap-1.5 rounded-lg border border-dark-border px-3 py-2 text-sm text-gray-300 hover:text-white hover:border-gray-500 transition-colors flex-shrink-0"
+                          title="Browse generated images"
+                        >
+                          <Grid size={14} />
+                          Browse
+                        </button>
+                      </div>
+                      {imageUrl && (
+                        <div className="mt-2 rounded-lg overflow-hidden border border-dark-border bg-dark-bg">
+                          <img
+                            src={imageUrl}
+                            alt="Selected"
+                            className="w-full h-32 object-contain"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                          />
+                        </div>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-1.5">Motion Prompt</label>
@@ -745,11 +834,13 @@ export default function VideoStudioPage() {
                 </div>
 
                 {/* Tool tabs */}
-                <div className="flex border-b border-dark-border">
+                <div className="flex flex-wrap border-b border-dark-border">
                   {[
                     { key: 'text' as const, label: 'Text', icon: Type },
                     { key: 'color' as const, label: 'Color', icon: Palette },
                     { key: 'audio' as const, label: 'Audio', icon: Music },
+                    { key: 'voice' as const, label: 'Voice', icon: Mic },
+                    { key: 'sfx' as const, label: 'SFX', icon: Volume2 },
                   ].map(({ key, label, icon: Icon }) => (
                     <button
                       key={key}
@@ -944,6 +1035,131 @@ export default function VideoStudioPage() {
                         <><Loader2 size={14} className="animate-spin" /> Adding...</>
                       ) : (
                         <><Music size={14} /> Add Audio</>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* ── Voice Tool ── */}
+                {editTool === 'voice' && (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1">Voiceover Script</label>
+                      <textarea
+                        value={voiceText}
+                        onChange={(e) => setVoiceText(e.target.value)}
+                        placeholder="Type the voiceover narration..."
+                        rows={3}
+                        disabled={!editVideoId}
+                        className="w-full rounded-lg bg-dark-bg border border-dark-border px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500 resize-none disabled:opacity-40"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1">Voice</label>
+                      <div className="grid grid-cols-3 gap-1">
+                        {VOICE_PRESETS.map((v) => (
+                          <button
+                            key={v}
+                            onClick={() => setVoicePreset(v)}
+                            disabled={!editVideoId}
+                            className={cn(
+                              'rounded-lg border px-2 py-1.5 text-xs transition-colors disabled:opacity-40',
+                              voicePreset === v
+                                ? 'border-primary-500 bg-primary-500/10 text-primary-300'
+                                : 'border-dark-border text-gray-400 hover:border-gray-600'
+                            )}
+                          >
+                            {v}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1">
+                        Volume: {Math.round(voiceVolume * 100)}%
+                      </label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        value={voiceVolume}
+                        onChange={(e) => setVoiceVolume(Number(e.target.value))}
+                        disabled={!editVideoId}
+                        className="w-full accent-primary-500 disabled:opacity-40"
+                      />
+                    </div>
+                    <button
+                      onClick={() => voiceoverMutation.mutate()}
+                      disabled={!editVideoId || !voiceText.trim() || voiceoverMutation.isPending}
+                      className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary-600 hover:bg-primary-500 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 text-sm font-medium text-white transition-colors"
+                    >
+                      {voiceoverMutation.isPending ? (
+                        <><Loader2 size={14} className="animate-spin" /> Generating...</>
+                      ) : (
+                        <><Mic size={14} /> Add Voiceover</>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* ── SFX Tool ── */}
+                {editTool === 'sfx' && (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1">Sound Description</label>
+                      <input
+                        type="text"
+                        value={sfxDescription}
+                        onChange={(e) => setSfxDescription(e.target.value)}
+                        placeholder="e.g. thunderstorm, crowd cheering, ocean waves..."
+                        disabled={!editVideoId}
+                        className="w-full rounded-lg bg-dark-bg border border-dark-border px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-40"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1">
+                        Duration: {sfxDuration}s
+                      </label>
+                      <input
+                        type="range"
+                        min={0.5}
+                        max={22}
+                        step={0.5}
+                        value={sfxDuration}
+                        onChange={(e) => setSfxDuration(Number(e.target.value))}
+                        disabled={!editVideoId}
+                        className="w-full accent-primary-500 disabled:opacity-40"
+                      />
+                      <div className="flex justify-between text-[10px] text-gray-600">
+                        <span>0.5s</span>
+                        <span>22s</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1">
+                        Volume: {Math.round(sfxVolume * 100)}%
+                      </label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        value={sfxVolume}
+                        onChange={(e) => setSfxVolume(Number(e.target.value))}
+                        disabled={!editVideoId}
+                        className="w-full accent-primary-500 disabled:opacity-40"
+                      />
+                    </div>
+                    <button
+                      onClick={() => sfxMutation.mutate()}
+                      disabled={!editVideoId || !sfxDescription.trim() || sfxMutation.isPending}
+                      className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary-600 hover:bg-primary-500 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 text-sm font-medium text-white transition-colors"
+                    >
+                      {sfxMutation.isPending ? (
+                        <><Loader2 size={14} className="animate-spin" /> Generating...</>
+                      ) : (
+                        <><Volume2 size={14} /> Add Sound Effect</>
                       )}
                     </button>
                   </div>
@@ -1195,6 +1411,69 @@ export default function VideoStudioPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Image Gallery Picker Modal ───────────────────────────────── */}
+      {showImageGallery && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowImageGallery(false)
+          }}
+        >
+          <div className="bg-dark-card rounded-xl border border-dark-border max-w-3xl w-full max-h-[80vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-dark-border">
+              <h3 className="text-sm font-medium text-white">Select Image</h3>
+              <button
+                onClick={() => setShowImageGallery(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {imageHistoryItems.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-48 text-gray-500">
+                  <Image size={40} className="mb-3 opacity-40" />
+                  <p className="text-sm">No generated images yet</p>
+                  <p className="text-xs text-gray-600 mt-1">Generate images in Image Studio first</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  {imageHistoryItems.map((img) => {
+                    const imgSrc = img.image_url || img.url
+                    if (!imgSrc) return null
+                    return (
+                      <button
+                        key={img.id}
+                        onClick={() => {
+                          setImageUrl(imgSrc)
+                          setShowImageGallery(false)
+                        }}
+                        className="group relative aspect-square rounded-lg overflow-hidden border border-dark-border hover:border-primary-500 transition-colors"
+                      >
+                        <img
+                          src={imgSrc}
+                          alt={img.prompt || 'Generated image'}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                          <Check size={24} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                        {img.prompt && (
+                          <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-1.5">
+                            <span className="text-[9px] text-gray-300 line-clamp-2">{img.prompt}</span>
+                          </div>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Video Detail Modal ────────────────────────────────────────── */}
       {selectedVideo && studioMode === 'generate' && (

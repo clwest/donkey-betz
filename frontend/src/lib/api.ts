@@ -963,6 +963,12 @@ export const contentApi = {
     return api.post('/v1/davinci/add-audio-to-video/', formData)
   },
 
+  // Voiceover & SFX (ElevenLabs)
+  addVoiceoverToVideo: (videoId: string, text: string, voice: string, volume?: number) =>
+    api.post('/tool/add-voiceover/', { video_id: videoId, text, voice, volume: volume ?? 0.8 }),
+  addSfxToVideo: (videoId: string, description: string, duration?: number, volume?: number) =>
+    api.post('/tool/add-sfx-to-video/', { video_id: videoId, description, duration, volume: volume ?? 0.5 }),
+
   // Content Creation
   create: (data: { type: string; prompt: string; options?: Record<string, unknown> }) =>
     api.post('/v1/content/create/', data),
