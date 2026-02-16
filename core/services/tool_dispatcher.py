@@ -5308,6 +5308,138 @@ class ToolDispatcher:
                 'congress_gov_url': raw.get('congress_gov_url', ''),
             }
 
+        elif action == 'ask':
+            # Session 1015: RAG-powered "Ask A Bill" — semantic search + LLM answer
+            question = query or payload.get('question', '')
+            if not question:
+                return {'action': 'ask', 'error': 'Provide a question about legislation'}
+
+            source_bills = []
+            context_parts = []
+
+            # Try embedding-based semantic search first
+            try:
+                from core.rag_integration import create_embedding
+                import numpy as np
+
+                q_embedding = create_embedding(question)
+                if q_embedding:
+                    embedded_bills = qs.filter(embedding__isnull=False)[:200]
+                    scored = []
+                    q_vec = np.array(q_embedding, dtype=np.float32)
+                    q_norm = np.linalg.norm(q_vec)
+                    if q_norm > 0:
+                        q_vec = q_vec / q_norm
+
+                    for item in embedded_bills:
+                        try:
+                            b_vec = np.array(item.embedding, dtype=np.float32)
+                            b_norm = np.linalg.norm(b_vec)
+                            if b_norm > 0:
+                                b_vec = b_vec / b_norm
+                            sim = float(np.dot(q_vec, b_vec))
+                            if sim >= 0.25:
+                                scored.append((sim, item))
+                        except Exception:
+                            continue
+
+                    scored.sort(key=lambda x: x[0], reverse=True)
+                    for sim, item in scored[:5]:
+                        raw = item.raw_data if isinstance(item.raw_data, dict) else {}
+                        bn = raw.get('bill_number', '')
+                        title = raw.get('title', '')
+                        desc = raw.get('description', '')
+                        plain = raw.get('plain_summary', '')
+                        sponsors = raw.get('sponsors', [])
+                        topics = raw.get('topics', [])
+                        sponsor_names = [s.get('name', '') for s in sponsors[:3]] if sponsors else []
+
+                        bill_ctx = f"Bill: {bn} — {title}\n"
+                        if desc:
+                            bill_ctx += f"Description: {desc}\n"
+                        if plain:
+                            bill_ctx += f"Summary: {plain}\n"
+                        if sponsor_names:
+                            bill_ctx += f"Sponsors: {', '.join(sponsor_names)}\n"
+                        if topics:
+                            bill_ctx += f"Topics: {', '.join(topics[:5])}\n"
+                        context_parts.append(bill_ctx)
+                        source_bills.append({
+                            'bill_number': bn,
+                            'title': title,
+                            'score': round(sim, 3),
+                            'url': raw.get('url', ''),
+                        })
+            except Exception as e:
+                logger.warning(f"Embedding search failed for ask action: {e}")
+
+            # Fallback: keyword search if no embedding results
+            if not source_bills:
+                kw_matches = qs.filter(
+                    Q(embedding_text__icontains=question.split()[-1]) |
+                    Q(raw_data__title__icontains=question.split()[-1])
+                )[:5]
+                for item in kw_matches:
+                    raw = item.raw_data if isinstance(item.raw_data, dict) else {}
+                    bn = raw.get('bill_number', '')
+                    title = raw.get('title', '')
+                    desc = raw.get('description', '')
+                    plain = raw.get('plain_summary', '')
+                    bill_ctx = f"Bill: {bn} — {title}\n"
+                    if desc:
+                        bill_ctx += f"Description: {desc}\n"
+                    if plain:
+                        bill_ctx += f"Summary: {plain}\n"
+                    context_parts.append(bill_ctx)
+                    source_bills.append({
+                        'bill_number': bn,
+                        'title': title,
+                        'score': 0,
+                        'url': raw.get('url', ''),
+                    })
+
+            if not source_bills:
+                return {
+                    'action': 'ask',
+                    'question': question,
+                    'answer': 'No legislation data is available yet. The legislation spider may not have run, or bills have not been embedded yet.',
+                    'source_bills': [],
+                    'sources_count': 0,
+                }
+
+            # Build RAG prompt and call LLM
+            bill_context = "\n---\n".join(context_parts)
+            system_prompt = (
+                "You are a nonpartisan legislative analyst. Answer the user's question based ONLY "
+                "on the bill text provided below. Quote specific bill numbers when referencing legislation. "
+                "Explain in plain language that anyone can understand. Be factual and nonpartisan. "
+                "If the provided bills do not address the question, say so honestly.\n\n"
+                f"BILLS:\n{bill_context}"
+            )
+
+            try:
+                from core.llm_enforcer import LLMEnforcer
+                enforcer = LLMEnforcer()
+                result = enforcer.enforce_real_ai(
+                    prompt=question,
+                    context=system_prompt,
+                    agent_name="AskABill",
+                    task_type="legislation_rag",
+                    max_tokens=1500,
+                )
+                answer = result.get('content', '') if isinstance(result, dict) else str(result)
+            except Exception as e:
+                logger.error(f"LLM call failed for Ask A Bill: {e}")
+                answer = f"I found {len(source_bills)} relevant bill(s) but could not generate an AI analysis right now. Please try again."
+
+            return {
+                'action': 'ask',
+                'question': question,
+                'answer': answer,
+                'source_bills': source_bills,
+                'sources_count': len(source_bills),
+            }
+
         else:
             # Default: search by keyword
             if not query:

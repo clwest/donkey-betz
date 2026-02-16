@@ -1338,6 +1338,42 @@ export interface TickerLookupResult {
   spider_data: { results: Array<{ id: string; spider_name: string; source_url: string; data_type: string; summary: string; relevance_score: number; created_at: string | null }>; total: number }
 }
 
+// Session 1015: Government & Legislation Hub
+export interface GovernmentBill {
+  id: string
+  bill_number: string
+  title: string
+  description: string
+  plain_summary: string
+  status: string
+  state: string
+  last_action: string
+  last_action_date: string
+  sponsors: Array<{ name: string; party: string }>
+  sponsor_count: number
+  committee: string
+  topics: string[]
+  url: string
+  congress_gov_url: string
+  created_at: string | null
+}
+
+export interface GovernmentHubData {
+  success: boolean
+  stats: {
+    total_bills: number
+    house_count: number
+    senate_count: number
+    status_breakdown: Record<string, number>
+  }
+  top_topics: Array<{ topic: string; count: number }>
+  bills: GovernmentBill[]
+}
+
+export const governmentApi = {
+  hub: () => api.get<GovernmentHubData>('/government/hub/'),
+}
+
 export const stockApi = {
   hub: () => api.get('/stocks/hub/'),
   dashboard: () => api.get('/stocks/dashboard/'),

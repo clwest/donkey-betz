@@ -934,6 +934,7 @@ class UnifiedPAEntrypoint:
             return ('stock_intelligence', 'stock_intelligence_tool')
 
         # Session 1014: Legislation / congressional bill patterns
+        # Session 1015: Added "ask a bill" / RAG question patterns
         if any(phrase in message_lower for phrase in [
             'legislation', 'bills in congress', 'congressional',
             'senate bill', 'house bill', 'what bills', 'any bills',
@@ -941,6 +942,8 @@ class UnifiedPAEntrypoint:
             'congress is working', 'congressional hearing',
             'passed the senate', 'passed the house', 'bill status',
             'sponsor of', 'cosponsors', 'committee hearing',
+            'how does this bill', 'bill affect me', 'ask a bill',
+            'explain the bill', 'what does the bill', 'bill impact',
         ]):
             return ('legislation', 'legislation_tool')
 
@@ -1532,29 +1535,39 @@ class UnifiedPAEntrypoint:
                 payload['action'] = 'overview'
 
         # Session 1014: Legislation payload
+        # Session 1015: Added ask action for RAG-powered Q&A
         elif intent == 'legislation':
             msg_lower = message.lower()
             import re as _re
             bill_match = _re.search(r'(HR|S|HB|SB|HJR|SJR|HRES|SRES)\s*(\d+)', message.upper())
             if bill_match:
                 payload['bill_number'] = f"{bill_match.group(1)} {bill_match.group(2)}"
-            if any(w in msg_lower for w in ['trending', 'recent', 'latest', 'active', 'working on']):
+            # Ask action — conversational questions about bills (RAG)
+            if any(w in msg_lower for w in [
+                'how does', 'how will', 'what does', 'what will',
+                'affect me', 'affect us', 'impact on', 'explain the',
+                'ask a bill', 'bill affect', 'bill impact',
+            ]):
+                payload['action'] = 'ask'
+                payload['query'] = message  # Full message for RAG context
+            elif any(w in msg_lower for w in ['trending', 'recent', 'latest', 'active', 'working on']):
                 payload['action'] = 'trending'
             elif any(w in msg_lower for w in ['status', 'where is', 'progress']):
                 payload['action'] = 'status'
-            elif any(w in msg_lower for w in ['summary', 'explain', 'plain english', 'what does', 'what is']):
+            elif any(w in msg_lower for w in ['summary', 'plain english']):
                 payload['action'] = 'summary'
             elif any(w in msg_lower for w in ['overview', 'dashboard', 'stats']):
                 payload['action'] = 'overview'
             else:
                 payload['action'] = 'search'
-            # Extract query: strip common preamble words
-            query_text = _re.sub(
-                r'\b(what|which|are|is|any|about|regarding|on|the|bills?|legislation|congress|congressional|in)\b',
-                '', msg_lower
-            ).strip()
-            if query_text and not payload.get('bill_number'):
-                payload['query'] = query_text
+            # Extract query for non-ask actions: strip common preamble words
+            if payload['action'] != 'ask':
+                query_text = _re.sub(
+                    r'\b(what|which|are|is|any|about|regarding|on|the|bills?|legislation|congress|congressional|in)\b',
+                    '', msg_lower
+                ).strip()
+                if query_text and not payload.get('bill_number'):
+                    payload['query'] = query_text
 
         # Session 995B: Sports betting payload
         elif intent == 'sports_betting':
@@ -3479,6 +3492,26 @@ Address the user by name occasionally."""
                         response += f"- **Sponsors:** {', '.join(sponsors[:5])}\n"
                     if url:
                         response += f"- [Full text]({url})\n"
+                    return response
+
+                elif action == 'ask':
+                    # Session 1015: Ask A Bill RAG answer formatting
+                    if tool_result.get('error'):
+                        return f"I need a question about legislation, {user_name}. Try: \"How does the healthcare bill affect me?\""
+                    answer = tool_result.get('answer', '')
+                    sources = tool_result.get('source_bills', [])
+                    count = tool_result.get('sources_count', 0)
+                    response = f"{answer}\n"
+                    if sources:
+                        response += f"\n**Sources** ({count} bill{'s' if count != 1 else ''}):\n"
+                        for s in sources:
+                            bn = s.get('bill_number', '?')
+                            title = s.get('title', '')[:60]
+                            url = s.get('url', '')
+                            if url:
+                                response += f"- [{bn}]({url}): {title}\n"
+                            else:
+                                response += f"- **{bn}**: {title}\n"
                     return response
 
                 elif action == 'summary':

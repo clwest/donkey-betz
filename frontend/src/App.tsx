@@ -26,6 +26,7 @@ import StockIntelligencePage from '@/pages/StockIntelligencePage'
 import DocumentsPage from '@/pages/DocumentsPage'
 import ImageStudioPage from '@/pages/ImageStudioPage'
 import VideoStudioPage from '@/pages/VideoStudioPage'
+import GovernmentPage from '@/pages/GovernmentPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -64,6 +65,7 @@ function App() {
         <Route path="legal" element={<LegalPage />} />
         <Route path="portfolio" element={<PortfolioPage />} />
         <Route path="stocks" element={<StockIntelligencePage />} />
+        <Route path="government" element={<GovernmentPage />} />
         <Route path="admin" element={<AdminPage />} />
         <Route path="workspace" element={<WorkspacePage />} />
 
