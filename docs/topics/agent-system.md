@@ -18,7 +18,7 @@
 | Orchestration | 6 | AISeriesWorkflowAgent, AutonomousContentStudioCoordinator, ContentDiversityOrchestrator, ResolveAgent, WorkflowAgent, CampaignOrchestrator |
 | Podcast | 4 | PodcastCoordinatorAgent, DebateAdvocateAgent, DebateSkepticAgent, ModeratorAgent |
 | Narrative | 4 | NarrativeDriftCoordinator, NarrativeHistorianAgent, TrendBreakDetector, CulturalImpactAgent |
-| Markets | 7 | PredictionMarketAnalyst, SportsOddsAnalyst, ArbitrageDetector, GamePredictor, LineMovementAnalyzer, SharpActionDetector, BookmakerAgent (Session 1000) |
+| Markets | 7 | PredictionMarketAnalyst, SportsOddsAnalyst, ArbitrageDetector, GamePredictor, LineMovementAnalyzer, SharpActionDetector (Session 1012: structured recs), BookmakerAgent |
 | Development | 5 | CodeGeneratorAgent, FullStackDeveloperAgent, CodeReviewAgent, DevOpsAgent, PromptEngineeringAgent |
 | Legal | 1 | LegalDocDrafterAgent |
 | Training | 2 | CharacterTrainingAgent, TrainedCreationAgent |

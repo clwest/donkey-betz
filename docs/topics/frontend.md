@@ -1,6 +1,6 @@
 # Frontend & UI
 
-React + TypeScript single-page application with 9 workspace tabs, collapsible sidebar, Command Center hub, and PA chat integration. Bundle: 2,836 KB.
+React + TypeScript single-page application with 9 workspace tabs, collapsible sidebar, Command Center hub, and PA chat integration. Bundle: ~2,500 KB.
 
 ## Workspace Architecture
 
@@ -28,7 +28,7 @@ React + TypeScript single-page application with 9 workspace tabs, collapsible si
 - `/` — Command Center (home, PA chat)
 - `/workspace` — 9-tab modular workspace
 - `/stocks` — Stock Intelligence dashboard
-- `/betting` — Betting Dashboard (11 tabs: Hub, Overview, Games, Top Plays, Sharp, Arbitrage, Watching, Odds, Bankroll, Wagers, Markets). AI Record tab shows MLPrediction history across 6 leagues (NCAAB, NHL, EPL, La Liga, MLS, NCAAF).
+- `/betting` — Betting Dashboard (12 tabs: Hub, Overview, Games, Top Plays, Sharp, Arbitrage, Watching, Odds, Bankroll, Wagers, Markets, AI Record). See Betting Dashboard section below.
 - `/image-studio` — Image generation (DALL-E 3 / Flux, style picker, gallery)
 - `/video-studio` — Video generation (RunwayML, text/image-to-video, async polling, gallery)
 - `/documents` — Document management
@@ -64,6 +64,27 @@ All three use the same async flow: dispatch task → poll status → display res
 ## Page Telemetry
 
 `usePageTracking()` hook fires fire-and-forget Redis counters via `POST /api/v1/telemetry/page-view/` on every page navigation.
+
+## Betting Dashboard (`/betting` — Session 1012)
+
+12 tabs with real data from TheOddsSpider, ESPN, PlacedWager, and MLPrediction models:
+
+| Tab | Key Features |
+|-----|-------------|
+| **Hub** | Summary cards: total bets, win rate, pending, today's picks |
+| **Overview** | Overall stats, sport breakdown |
+| **Today's Games** | Live scores + ESPN period/clock/status_detail, expandable per-bookmaker odds comparison grid, quick-pick buttons |
+| **Top Plays** | AI-generated top picks with confidence scores |
+| **Sharp Action** | 13 sport filters (NFL, NBA, MLB, NHL, NCAAB, NCAAF, EPL, La Liga, Bundesliga, Serie A, MLS, Champions League, UFC). Redesigned signal cards: recommendation box ("Sharp money on: TEAM, Best value: bet at BOOK"), game time, stale line diffs with pts-off-market, sharp vs soft averages. LLM analysis rendered with markdown formatting. |
+| **Arbitrage** | Detected arb opportunities with stake calculator (enter total stake, see per-leg amounts + guaranteed profit) |
+| **Watching** | Tracked items with verification (won/lost/push/cancelled) |
+| **Live Odds** | Full per-bookmaker odds grid with scores, LIVE/FINAL badges, period info |
+| **Bankroll** | Real data from PlacedWager: total wagered, net P/L, ROI, at risk, win rate, wins/losses, avg bet, biggest win/loss, Kelly criterion |
+| **My Wagers** | Wager list + "Log Wager" manual entry form (matchup, pick, odds, stake, sport, bookmaker, payout calculator) |
+| **Markets** | Market data overview |
+| **AI Record** | MLPrediction history deduped by game (latest prediction per game). By-sport accuracy breakdown (e.g., NCAAB W/L%), pending predictions list (no duplicates), confidence calibration score |
+
+**Backend endpoints:** `core/views_odds_sports.py` — `get_todays_games()` merges ESPN scoreboards for live game details, `get_ai_track_record()` deduplicates by game_id via `Max('id')` per game.
 
 ## Key Frontend Patterns
 
