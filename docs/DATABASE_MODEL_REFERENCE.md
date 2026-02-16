@@ -545,6 +545,32 @@ Initiative priority scoring and action item tracking. Import from `core.models_d
 
 ---
 
+## Session 1012 Models - Code Artifacts
+
+Patch-first workflow for autonomous code generation. When agents write code on Railway (no writable workspace), outputs are captured as reviewable artifacts.
+
+| Purpose | Model | Import | Description |
+|---------|-------|--------|-------------|
+| Code capture | `CodeArtifact` | `core.models_code_artifacts` | Captured code output with review status |
+
+**Key fields:** `agent_name`, `kind` (file_create/file_edit/patch), `status` (pending/approved/rejected/applied/stale), `target_path`, `content`, `content_before`, `description`, `reviewed_by`, `reviewed_at`, `review_note`, `trace_id`
+
+**FKs:** `agent_execution` (AgentExecution), `initiative` (Initiative), `reviewed_by` (User) — all nullable
+
+**API:** `/api/code-artifacts/` — list (filterable by status, agent_name, initiative, kind), detail, approve, reject
+
+```python
+from core.models_code_artifacts import CodeArtifact
+
+# Pending review
+CodeArtifact.objects.filter(status='pending').count()
+
+# By agent
+CodeArtifact.objects.filter(agent_name='CodeGeneratorAgent')
+```
+
+---
+
 ## Session 964 Models - Content Deliberation
 
 Multi-agent content review pipeline. No new migrations — uses existing `SelfBlog.stats_snapshot['deliberation']` JSON field.
