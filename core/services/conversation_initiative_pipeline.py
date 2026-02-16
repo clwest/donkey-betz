@@ -475,6 +475,13 @@ class ConversationInitiativePipeline:
                 from core.services.initiative_integration_service import InitiativeIntegrationService
                 InitiativeIntegrationService()._auto_assign_owner(initiative)
 
+                # Session 1016: Auto-link to signal cluster
+                try:
+                    from core.services.initiative_signal_linker import auto_link_initiative_signals
+                    auto_link_initiative_signals(initiative)
+                except Exception as e:
+                    logger.debug(f"Signal auto-link skipped: {e}")
+
                 result.initiative_id = str(initiative.id)
                 result.initiative_name = initiative_name
 

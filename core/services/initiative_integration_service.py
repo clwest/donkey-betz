@@ -174,6 +174,13 @@ class InitiativeIntegrationService:
             # Session 996: Auto-assign owner
             self._auto_assign_owner(initiative)
 
+            # Session 1016: Auto-link to signal cluster
+            try:
+                from core.services.initiative_signal_linker import auto_link_initiative_signals
+                auto_link_initiative_signals(initiative)
+            except Exception as e:
+                self.logger.debug(f"Signal auto-link skipped: {e}")
+
             return initiative, True
 
         except InitiativeCreationBlocked:
