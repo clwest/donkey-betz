@@ -182,7 +182,7 @@ def update_game_scores():
     pending_games = (
         Game.objects.filter(
             scheduled_start__gte=cutoff,
-            mlprediction__isnull=False,
+            ml_predictions__isnull=False,
         )
         .exclude(status=GameStatus.FINAL)
         .select_related('league')
