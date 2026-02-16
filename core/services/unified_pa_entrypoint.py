@@ -1537,20 +1537,19 @@ class UnifiedPAEntrypoint:
         # Session 1014: Legislation payload
         # Session 1015: Added ask action for RAG-powered Q&A
         elif intent == 'legislation':
-            msg_lower = message.lower()
             import re as _re
-            bill_match = _re.search(r'(HR|S|HB|SB|HJR|SJR|HRES|SRES)\s*(\d+)', message.upper())
+            # Strip routing prefix added by GovernmentPage chat
+            clean_msg = _re.sub(r'^(about\s+)?legislation\s*:?\s*', '', message, flags=_re.IGNORECASE).strip()
+            if not clean_msg:
+                clean_msg = message  # Fallback if stripping removed everything
+            msg_lower = clean_msg.lower()
+
+            bill_match = _re.search(r'(HR|S|HB|SB|HJR|SJR|HRES|SRES)\s*(\d+)', clean_msg.upper())
             if bill_match:
                 payload['bill_number'] = f"{bill_match.group(1)} {bill_match.group(2)}"
-            # Ask action — conversational questions about bills (RAG)
-            if any(w in msg_lower for w in [
-                'how does', 'how will', 'what does', 'what will',
-                'affect me', 'affect us', 'impact on', 'explain the',
-                'ask a bill', 'bill affect', 'bill impact',
-            ]):
-                payload['action'] = 'ask'
-                payload['query'] = message  # Full message for RAG context
-            elif any(w in msg_lower for w in ['trending', 'recent', 'latest', 'active', 'working on']):
+
+            # Detect action from phrasing
+            if any(w in msg_lower for w in ['trending', 'recent', 'latest', 'active', 'working on']):
                 payload['action'] = 'trending'
             elif any(w in msg_lower for w in ['status', 'where is', 'progress']):
                 payload['action'] = 'status'
@@ -1559,13 +1558,20 @@ class UnifiedPAEntrypoint:
             elif any(w in msg_lower for w in ['overview', 'dashboard', 'stats']):
                 payload['action'] = 'overview'
             else:
-                payload['action'] = 'search'
-            # Extract query for non-ask actions: strip common preamble words
-            if payload['action'] != 'ask':
+                # Default to ask (RAG) for questions, search for keywords
+                # Ask: conversational questions; Search: bare keyword lookups
+                payload['action'] = 'ask'
+                payload['query'] = clean_msg
+
+            # For non-ask/non-query actions, extract keyword
+            if payload['action'] not in ('ask',) and 'query' not in payload:
                 query_text = _re.sub(
-                    r'\b(what|which|are|is|any|about|regarding|on|the|bills?|legislation|congress|congressional|in)\b',
+                    r'\b(what|which|are|is|any|about|regarding|on|the|bills?|legislation|congress|congressional|in|tell|me|show|find|search|for)\b',
                     '', msg_lower
                 ).strip()
+                # Clean up leftover punctuation/whitespace
+                query_text = _re.sub(r'[^\w\s]', '', query_text).strip()
+                query_text = _re.sub(r'\s+', ' ', query_text).strip()
                 if query_text and not payload.get('bill_number'):
                     payload['query'] = query_text
 
