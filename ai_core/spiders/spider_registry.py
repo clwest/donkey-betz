@@ -65,6 +65,7 @@ from .specialized.teachable_spider import TeachableSpider
 from .specialized.udemy_spider import UdemySpider
 
 # Session 218: FINANCIAL spiders (Session 397: Removed opensea, seekingalpha, bloomberg, reuters - no public API)
+from .specialized.financial_spider import FinancialIntelligenceSpider
 from .specialized.etherscan_spider import EtherscanSpider
 
 # Session 461: BLOCKCHAIN AUDIT spiders
@@ -287,6 +288,14 @@ class SpiderRegistry:
             'priority': 1,
             'rate_limit': 1.0,
             'targets': ['query1.finance.yahoo.com/v8', 'query2.finance.yahoo.com/v10']
+        })
+
+        # Session 1013: Re-registered — RSS news from Yahoo, MarketWatch, Investing.com
+        self.register_spider('financial', FinancialIntelligenceSpider, {
+            'category': 'financial',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['finance.yahoo.com/rss', 'feeds.marketwatch.com', 'investing.com/rss']
         })
 
         self.register_spider('etherscan', EtherscanSpider, {
