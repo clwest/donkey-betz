@@ -1,44 +1,55 @@
-# Session 1012 - Start Here
+# Session 1013 - Start Here
 
-**Previous Session:** 1011 (Sports Pipeline Full Automation)
+**Previous Session:** 1012 (Betting Tabs Polish & Bug Fixes)
 **Date:** February 15, 2026
-**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **40+ PUBLISHED BLOGS** | **1,131 SIGNAL CLUSTERS** | **INITIATIVE STAGES 1-5 ACTIVE** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 38+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 241** | **Frontend Routes: 26** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED**
+**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **40+ PUBLISHED BLOGS** | **1,131 SIGNAL CLUSTERS** | **INITIATIVE STAGES 1-5 ACTIVE** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 38+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 241** | **Frontend Routes: 26** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED** | **BETTING DASHBOARD: 12 TABS POLISHED**
 
 ---
 
-## Session 1011 Summary (Just Completed)
+## Session 1012 Summary (Just Completed)
+
+### Betting Dashboard Polish & Bug Fixes (PRs #1215-#1219)
+
+Comprehensive overhaul of all 12 betting tabs plus bug fixes for console errors.
+
+**PR #1215 — Sharp Action Redesign:**
+- Backend: Added `home_team`/`away_team` to signal dict, improved LLM prompt with structured recommendations (side/book/urgency)
+- Frontend: Expanded sport filter (4 → 13 sports: NFL, NBA, MLB, NHL, NCAAB, NCAAF, EPL, La Liga, Bundesliga, Serie A, MLS, Champions League, UFC)
+- Redesigned signal cards: recommendation box, game times, stale line diffs with pts-off-market, markdown LLM analysis
+
+**PR #1216 — Betting Tabs Overhaul (6 improvements):**
+1. **Today's Games** — ESPN score merge for period/clock/quarter, expandable per-bookmaker odds comparison grid
+2. **Live Odds** — Full redesign with scores, LIVE/FINAL badges, period info, per-bookmaker odds grid
+3. **Bankroll** — Replaced 100% hardcoded mock data with real PlacedWager queries (total wagered, net P/L, ROI, at risk, win rate, avg bet, biggest win/loss, Kelly criterion)
+4. **My Wagers** — Manual "Log Wager" entry form (matchup, pick, odds, stake, sport, bookmaker, payout calculator)
+5. **Arbitrage** — Stake calculator (enter total stake, see per-leg amounts + guaranteed profit)
+6. **Today's Games** — `h2h_odds` passed to frontend for comparison grid
+
+**PR #1217 — Console Error Fixes (4 bugs):**
+- `/api/orchestration/active-work/` 500: `completion_percentage` is a `@property`, not DB field — `.values()` threw FieldError
+- `/api/agent-learning/stats/` 404: URL removed in Session 1009 but frontend still called it
+- `/api/learning/patterns/` 401: Returns empty data for unauthenticated instead of 401
+- `/api/learning/insights/` 401: Same fix
+
+**PR #1218 — Today's Games Crash Fix:**
+- `eid` undefined variable → replaced with `game.event_id` in bookmaker toggle
+
+**PR #1219 — AI Track Record Dedup:**
+- Prediction task creates multiple MLPredictions per game (different days). Deduped by `game_id` via `Max('id')` — fixes inflated W/L stats and duplicate pending rows
+
+---
+
+## Session 1011 Summary
 
 ### Sports Prediction Pipeline — Full Automation (PRs #1208-#1212)
 
-Closed the entire sports prediction loop. Previously, `update_game_scores` was a placeholder, predictions were never evaluated, and the learning loop was broken.
-
-**What was built/fixed:**
-1. **`update_game_scores`** — fetches final scores from TheOddsSpider, marks Games as FINAL (every 30 min)
-2. **`generate_game_predictions`** — runs GamePredictor to create MLPredictions from odds (every 2h)
-3. **`verify_betting_outcomes`** — settles PlacedWager legs and verifies arb items (every 30 min)
-4. **PredictionEvaluator bug fixes** — wrong field names (`evaluation_date`, `evaluation_metadata`)
-5. **SportsBettingLearningBridge bug fixes** — `game_date` AttributeError, `FeedbackItem` constructor, serialization
+Closed the entire sports prediction loop. 8 scheduled tasks fully automated.
 
 **Results verified on Railway:**
 - 47 games updated with final scores
 - 47 predictions evaluated: **33 correct, 14 incorrect (70.2% accuracy)**
 - NCAAB: 69.6% (32/46), Soccer: 100% (1/1)
 - 99 new predictions generated, 88 stored
-- Learning loop integration working end-to-end
-
-**Complete automated pipeline (8 scheduled tasks):**
-| Step | Task | Schedule |
-|------|------|----------|
-| Odds ingestion | `collect_sports_odds` | Every 20 min |
-| Prediction generation | `generate_game_predictions` | Every 2h |
-| Score fetching | `update_game_scores` | Every 30 min |
-| Prediction evaluation | `evaluate_completed_predictions` | Hourly |
-| Wager verification | `verify_betting_outcomes` | Every 30 min |
-| Bet settlement | `settle_user_bets` | Every 15 min |
-| Accuracy report | `generate_accuracy_report` | Daily 9 AM |
-| Cleanup | `cleanup_old_predictions` | Weekly Mon 3 AM |
-
-**Branch cleanup:** Deleted 67 stale local branches, pruned 55 remote refs.
 
 **PRs:** #1208-#1212
 

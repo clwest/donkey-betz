@@ -93,7 +93,19 @@ As of Session 998B, `fetch_scores()` returns both completed (`completed: True`) 
 
 **Active leagues:** NFL, NCAAF, NBA, NCAAB (+ All-Stars), MLB, NHL, EPL, La Liga, Bundesliga, Serie A, Ligue 1, MLS, Champions League, Europa League, Liga MX, UFC/MMA, Boxing.
 
-`SharpActionDetector` analyzes per-bookmaker odds divergence. Filters extreme odds (abs > 10000) before computing ranges. Classifies signals as HOT (divergence >= 30) or WARM (>= 15).
+`SharpActionDetector` analyzes per-bookmaker odds divergence. Filters extreme odds (abs > 10000) before computing ranges. Classifies signals as HOT (divergence >= 30) or WARM (>= 15). Session 1012: Signal dict includes `home_team`/`away_team` for frontend recommendation rendering. LLM prompt asks for structured advice: which side to bet, best bookmaker (stale line), why (sharp/soft divergence), urgency (ACT NOW / MONITOR / WAIT). Supports 13 sport keys via frontend filter.
+
+## Today's Games ESPN Merge (Session 1012)
+
+`get_todays_games()` in `views_odds_sports.py` merges ESPN scoreboard data into odds events:
+- Fetches ESPN scoreboards per sport_key that has live games
+- Matches by fuzzy team name (substring match)
+- Adds `period`, `clock`, `status_detail` to each game response
+- Includes `h2h_odds` (per-bookmaker odds array) for comparison grids
+
+## AI Track Record Dedup (Session 1012)
+
+`get_ai_track_record()` deduplicates MLPredictions by game to prevent duplicate pending rows and inflated W/L stats when the prediction task runs multiple times for the same game. Uses `Max('id')` per `game_id` to select only the latest prediction.
 
 ## Odds-Consensus Predictions (Session 998B — Superseded by Session 1010)
 
