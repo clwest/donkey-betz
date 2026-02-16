@@ -993,14 +993,15 @@ class ActiveWorkView(View):
             )
 
             # Top 5 most recent active initiatives
-            top_initiatives = list(
-                active_initiatives.order_by('-updated_at')[:5].values(
-                    'id', 'name', 'current_stage', 'completion_percentage'
-                )
-            )
-            for init in top_initiatives:
-                init['id'] = str(init['id'])
-                init['name'] = (init['name'] or '')[:80]
+            # completion_percentage is a @property, not a DB field — compute in Python
+            top_initiatives = []
+            for init in active_initiatives.order_by('-updated_at')[:5]:
+                top_initiatives.append({
+                    'id': str(init.id),
+                    'name': (init.name or '')[:80],
+                    'current_stage': init.current_stage,
+                    'completion_percentage': init.completion_percentage,
+                })
 
             # Agent executions in last 24h
             recent_execs = AgentExecution.objects.filter(created_at__gte=cutoff)

@@ -740,7 +740,7 @@ export const learningApi = {
   dashboard: () => api.get('/learning/dashboard/'),
   feed: () => api.get('/learning/feed/'),
   activity: () => api.get('/agent-learning/activity/'),
-  stats: () => api.get('/agent-learning/stats/'),
+  stats: () => api.get('/learning/stats/'),
   velocity: () => api.get('/learning/velocity/'),
   // Session 860: Added patterns and insights endpoints
   patterns: (limit = 50) => api.get('/learning/patterns/', { params: { limit } }),

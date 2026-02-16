@@ -46,7 +46,7 @@ def list_success_patterns(request):
     List discovered success patterns for the user.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status=401)
+        return api_success({"patterns": [], "count": 0})
 
     try:
         pattern_type = request.GET.get('type')  # Filter by pattern type
@@ -606,7 +606,7 @@ def list_insights(request):
     List AI-generated insights for the user.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status=401)
+        return api_success({"insights": [], "count": 0})
 
     try:
         insight_type = request.GET.get('type')
