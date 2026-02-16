@@ -337,6 +337,8 @@ class SportsBettingLearningBridge:
             rating = 0.4 - (prediction.confidence / 100.0 * 0.3)
 
         feedback = FeedbackItem(
+            id=str(prediction.id),
+            timestamp=timezone.now(),
             source="sports_prediction_evaluator",
             category="prediction_accuracy",
             target=prediction.agent.name if prediction.agent else "sports_betting_system",
