@@ -273,6 +273,8 @@ Focus on ACTIONABLE signals where soft books still have stale lines."""
         return {
             'event_id': event.get('event_id'),
             'matchup': f"{away_team} @ {home_team}",
+            'home_team': home_team,
+            'away_team': away_team,
             'sport_name': event.get('sport_name'),
             'sport_key': event.get('sport_key'),
             'rating': rating,
@@ -313,22 +315,39 @@ Focus on ACTIONABLE signals where soft books still have stale lines."""
 
             registry = get_llm_provider_registry()
 
-            signals_text = "\n".join(
-                f"- [{s['rating']}] {s['matchup']} ({s['sport_name']}): "
-                f"Odds range home {s['home_odds_range']}, away {s['away_odds_range']}"
-                + (f" | Sharp favors {s['sharp_vs_soft']['sharp_favors']}" if s.get('sharp_vs_soft') else "")
-                + (f" | Stale: {', '.join(sl['bookmaker'] for sl in s['stale_lines'][:3])}" if s.get('stale_lines') else "")
-                for s in hot_signals[:6]
-            )
+            signal_parts = []
+            for s in hot_signals[:6]:
+                svs = s.get('sharp_vs_soft') or {}
+                lines = [
+                    f"- **[{s['rating']}] {s['matchup']}** ({s['sport_name']})",
+                    f"  Home ({s.get('home_team', '?')}): {s['home_odds_range']}  |  "
+                    f"Away ({s.get('away_team', '?')}): {s['away_odds_range']}",
+                ]
+                if svs:
+                    lines.append(
+                        f"  Sharp avg: {svs.get('sharp_avg_home', '?')} | "
+                        f"Soft avg: {svs.get('soft_avg_home', '?')} | "
+                        f"Sharp favors: {svs.get('sharp_favors', '?')}"
+                    )
+                for sl in (s.get('stale_lines') or [])[:3]:
+                    lines.append(
+                        f"  STALE LINE: {sl['bookmaker']} — {sl['better_side']} side, "
+                        f"home {sl['home_diff']} pts off mkt, away {sl['away_diff']} pts off mkt"
+                    )
+                signal_parts.append("\n".join(lines))
+            signals_text = "\n\n".join(signal_parts)
 
             messages = [
                 {"role": "system", "content": self.system_prompt},
                 {"role": "user", "content": (
                     f"Task: {task}\n\n"
-                    f"HOT sharp action signals:\n{signals_text}\n\n"
-                    "Which of these signals is most actionable? "
-                    "Identify the best value bets from stale lines. "
-                    "Keep it concise and decisive."
+                    f"HOT sharp action signals:\n\n{signals_text}\n\n"
+                    "For each signal, give a concrete recommendation:\n"
+                    "1. **Which side to bet** (team name, home/away ML)\n"
+                    "2. **Best bookmaker** to place it at (the stale line with biggest edge)\n"
+                    "3. **Why** — what the sharp/soft divergence tells us\n"
+                    "4. **Urgency** — stale lines close fast, rate as ACT NOW / MONITOR / WAIT\n\n"
+                    "Be specific: name the team, the book, and the odds. No hedging."
                 )}
             ]
 
