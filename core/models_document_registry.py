@@ -424,6 +424,16 @@ class Initiative(models.Model):
         help_text='Session 914.5: Reason for manual priority override'
     )
 
+    # Session 1016: Quality gate fields
+    next_action = models.TextField(
+        blank=True, default='',
+        help_text='Session 1016: Concrete next action for this initiative'
+    )
+    blocking_reason = models.TextField(
+        blank=True, default='',
+        help_text='Session 1016: Why this initiative is blocked/stalled'
+    )
+
     class Meta:
         ordering = ['-updated_at']
         verbose_name = 'Initiative'
@@ -594,6 +604,7 @@ class Initiative(models.Model):
     def save(self, *args, **kwargs):
         """
         Session 943: Override save to enforce stage progression invariant.
+        Session 1016: Also enforce ACTIVE quality gate.
 
         Use skip_invariant_check=True in kwargs to bypass (for migrations/fixes).
         """
@@ -602,23 +613,45 @@ class Initiative(models.Model):
 
         skip_check = kwargs.pop('skip_invariant_check', False)
 
-        # Only check invariant for existing records (have pk) and if not skipped
-        if self.pk and not skip_check:
-            # Check if current_stage is being modified
-            try:
-                old_instance = Initiative.objects.get(pk=self.pk)
-                if old_instance.current_stage != self.current_stage:
-                    is_valid, error_msg = self.validate_stage_invariant()
-                    if not is_valid:
-                        logger.error(f"🚫 [INVARIANT] {error_msg} for Initiative: {self.name[:50]}")
-                        # Instead of raising, auto-correct to max_allowed
-                        max_approved = self.get_max_approved_stage()
-                        self.current_stage = min(self.current_stage, max_approved + 1)
-                        logger.warning(
-                            f"🔧 [INVARIANT] Auto-corrected current_stage to {self.current_stage}"
-                        )
-            except Initiative.DoesNotExist:
-                pass  # New record being created
+        if not skip_check:
+            # Session 1016: ACTIVE quality gate — demote to TRIAGE if requirements not met
+            if self.status == 'ACTIVE':
+                try:
+                    # Check if transitioning TO active (new record or status change)
+                    is_new = not self.pk
+                    old_status = None
+                    if self.pk:
+                        try:
+                            old_status = Initiative.objects.filter(pk=self.pk).values_list('status', flat=True).first()
+                        except Exception:
+                            pass
+
+                    if is_new or (old_status and old_status != 'ACTIVE'):
+                        from core.services.initiative_circuit_breaker import can_promote_to_active
+                        if not can_promote_to_active(self):
+                            logger.warning(
+                                f"[QUALITY_GATE] Demoting '{self.name[:50]}' to TRIAGE: "
+                                f"missing owner_agent or evidence"
+                            )
+                            self.status = 'TRIAGE'
+                except Exception as e:
+                    logger.warning(f"[QUALITY_GATE] Check failed, allowing save: {e}")
+
+            # Only check stage invariant for existing records
+            if self.pk:
+                try:
+                    old_instance = Initiative.objects.get(pk=self.pk)
+                    if old_instance.current_stage != self.current_stage:
+                        is_valid, error_msg = self.validate_stage_invariant()
+                        if not is_valid:
+                            logger.error(f"[INVARIANT] {error_msg} for Initiative: {self.name[:50]}")
+                            max_approved = self.get_max_approved_stage()
+                            self.current_stage = min(self.current_stage, max_approved + 1)
+                            logger.warning(
+                                f"[INVARIANT] Auto-corrected current_stage to {self.current_stage}"
+                            )
+                except Initiative.DoesNotExist:
+                    pass
 
         super().save(*args, **kwargs)
 

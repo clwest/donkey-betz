@@ -9103,6 +9103,14 @@ class AgentDream(models.Model):
             notes=f"Created from Dream: {self.title}\n\nDream Content:\n{self.content}\n\nDream Type: {self.dream_type}\nApproved By: {approved_by}",
         )
 
+        # Session 1016: Auto-link to signal cluster
+        try:
+            from core.services.initiative_signal_linker import auto_link_initiative_signals
+            auto_link_initiative_signals(initiative)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).debug(f"Signal auto-link skipped: {e}")
+
         # Link dream to initiative and mark as promoted
         self.initiative = initiative
         self.promoted_to_decision = True
