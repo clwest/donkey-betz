@@ -3304,7 +3304,12 @@ def get_sharp_action(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_ai_track_record(request):
-    """AI prediction performance history — sports MLPrediction data."""
+    """AI prediction performance history — sports MLPrediction data.
+
+    Deduplicates by game: only the latest prediction per game counts
+    toward accuracy stats and the predictions list, so re-running the
+    prediction task doesn't inflate W/L numbers or show duplicate rows.
+    """
     import logging
     logger = logging.getLogger(__name__)
 
@@ -3315,28 +3320,66 @@ def get_ai_track_record(request):
         from sports.models import MLPrediction
         from django.utils import timezone
         from datetime import timedelta
+        from django.db.models import Max, Avg, Count, Q
 
         cutoff = timezone.now() - timedelta(days=days)
         base_qs = MLPrediction.objects.filter(created_at__gte=cutoff)
         if sport:
             base_qs = base_qs.filter(sport_type=sport)
 
-        total = base_qs.count()
+        # Dedup: only latest prediction per game
+        latest_ids = list(
+            base_qs.values('game_id')
+            .annotate(latest_id=Max('id'))
+            .values_list('latest_id', flat=True)
+        )
+        deduped_qs = MLPrediction.objects.filter(id__in=latest_ids)
+        total = deduped_qs.count()
 
-        # Evaluated predictions
-        evaluated_qs = base_qs.filter(was_correct__isnull=False)
+        # Evaluated predictions (deduped)
+        evaluated_qs = deduped_qs.filter(was_correct__isnull=False)
         has_evaluated = evaluated_qs.exists()
 
         if has_evaluated:
-            from sports.prediction_evaluator import PredictionEvaluator
-            evaluator = PredictionEvaluator()
-            summary = evaluator.get_model_performance_summary(sport_type=sport, days_back=days)
-            by_sport = evaluator._calculate_accuracy_by_sport()
+            eval_total = evaluated_qs.count()
+            eval_correct = evaluated_qs.filter(was_correct=True).count()
+            accuracy = (eval_correct / eval_total * 100) if eval_total > 0 else 0
+            avg_conf = evaluated_qs.aggregate(a=Avg('confidence'))['a'] or 0
+            calibration = abs(accuracy - avg_conf)
+
+            summary = {
+                'sport_type': sport or 'all',
+                'days_analyzed': days,
+                'total_predictions': total,
+                'correct_predictions': eval_correct,
+                'incorrect_predictions': eval_total - eval_correct,
+                'pending_predictions': total - eval_total,
+                'accuracy_percent': round(accuracy, 2),
+                'average_confidence': round(avg_conf, 2),
+                'calibration_score': round(calibration, 2),
+                'is_well_calibrated': calibration < 10.0,
+            }
+
+            # By sport (deduped)
+            by_sport = {}
+            sport_stats = evaluated_qs.values('sport_type').annotate(
+                total=Count('id'),
+                correct=Count('id', filter=Q(was_correct=True))
+            )
+            for s in sport_stats:
+                st = s['sport_type']
+                t = s['total']
+                c = s['correct']
+                by_sport[st] = {
+                    'accuracy': round((c / t * 100) if t > 0 else 0, 2),
+                    'total': t,
+                    'correct': c,
+                    'incorrect': t - c,
+                }
         else:
             avg_conf = 0
             if total > 0:
-                from django.db.models import Avg
-                avg_conf = round(base_qs.aggregate(a=Avg('confidence'))['a'] or 0, 1)
+                avg_conf = round(deduped_qs.aggregate(a=Avg('confidence'))['a'] or 0, 1)
             summary = {
                 'sport_type': sport or 'all',
                 'days_analyzed': days,
@@ -3374,15 +3417,15 @@ def get_ai_track_record(request):
                 entry['evaluated_at'] = p.evaluated_at.isoformat()
             return entry
 
-        # Evaluated predictions
+        # Evaluated predictions (deduped)
         eval_recent = evaluated_qs.select_related(
             'game', 'predicted_winner', 'game__home_team', 'game__away_team'
         ).order_by('-evaluated_at')[:30]
         for p in eval_recent:
             recent_list.append(_serialize_prediction(p))
 
-        # Pending predictions (soonest game first)
-        pending_qs = base_qs.filter(was_correct__isnull=True).select_related(
+        # Pending predictions (deduped, soonest game first)
+        pending_qs = deduped_qs.filter(was_correct__isnull=True).select_related(
             'game', 'predicted_winner', 'game__home_team', 'game__away_team'
         ).order_by('game__scheduled_start')[:20]
         for p in pending_qs:
