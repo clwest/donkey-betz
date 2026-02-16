@@ -23,6 +23,7 @@ import {
   Home,
   Command,
   Film,
+  Landmark,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -55,6 +56,7 @@ const navItems = [
   // Core Navigation
   { path: '/agents', label: 'Agents', icon: Bot },
   { path: '/stocks', label: 'Stock Intelligence', icon: TrendingUp },
+  { path: '/government', label: 'Government', icon: Landmark },
 
   // Domain Features - Session 899/997B: Betting re-enabled
   { path: '/betting', label: 'Betting', icon: DollarSign },

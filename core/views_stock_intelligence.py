@@ -91,17 +91,19 @@ def stock_hub(request):
                 'detected_at': a.detected_at.isoformat() if a.detected_at else None,
             })
 
-        # Top predictions (8 most recent with results)
+        # Top predictions (8 most recent with results, one per ticker+type)
         top_predictions = []
         for p in PredictionOutcome.objects.filter(
             was_correct_7_days__isnull=False
-        ).order_by('-prediction_date')[:8]:
+        ).order_by('ticker', 'prediction_type', '-prediction_date').distinct(
+            'ticker', 'prediction_type'
+        )[:8]:
             top_predictions.append({
                 'id': str(p.id),
                 'ticker': p.ticker,
                 'prediction_type': p.prediction_type,
                 'predicted_move': float(p.predicted_move),
-                'actual_move_7_days': float(p.actual_move_7_days) if p.actual_move_7_days else None,
+                'actual_move_7_days': float(p.actual_move_7_days) if p.actual_move_7_days is not None else None,
                 'was_correct_7_days': p.was_correct_7_days,
                 'prediction_date': p.prediction_date.isoformat(),
             })
@@ -144,6 +146,7 @@ def stock_hub(request):
                     'description': (entry.get('description') or '')[:200],
                     'link': entry.get('link') or row.source_url,
                     'published': entry.get('published') or spider_ts,
+                    'filing_type': entry.get('filing_type') or entry.get('form_type') or '',
                 })
                 if len(sec_recent) >= 5:
                     break
