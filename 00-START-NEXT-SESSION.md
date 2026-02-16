@@ -1,54 +1,66 @@
-# Session 1016 - Start Here
+# Session 1017 - Start Here
 
-**Previous Session:** 1015 (Government Page + Image Studio Fix + DNS)
+**Previous Session:** 1016 (CodeArtifact Patch-First Workflow + Deep Agent Audit)
 **Date:** February 16, 2026
-**Status:** 82 Agents (routable) | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **40+ PUBLISHED BLOGS** | **1,131 SIGNAL CLUSTERS** | **INITIATIVE STAGES 1-5 ACTIVE** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 39+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 241** | **Frontend Routes: 27** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED** | **BETTING DASHBOARD: 12 TABS POLISHED** | **VIDEO STUDIO: 5 EDIT TOOLS** | **GOVERNMENT PAGE: 3 TABS + ASK A BILL RAG**
+**Status:** 92 Agents | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **40+ PUBLISHED BLOGS** | **1,131 SIGNAL CLUSTERS** | **INITIATIVE STAGES 1-5 ACTIVE** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 39+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 268** | **Frontend Routes: 27** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED** | **BETTING DASHBOARD: 12 TABS POLISHED** | **VIDEO STUDIO: 5 EDIT TOOLS** | **GOVERNMENT PAGE: 3 TABS + ASK A BILL RAG** | **CodeArtifact: PATCH-FIRST WORKFLOW LIVE**
 
 ---
 
-## Session 1015 Summary (Just Completed)
+## Session 1016 Summary (Just Completed)
+
+### CodeArtifact: Patch-First Workflow (PRs #1232, #1233)
+
+When agents generate code on Railway (no writable workspace), the output was silently lost. Now captured as reviewable `CodeArtifact` records.
+
+**New model:** `CodeArtifact` (`core/models_code_artifacts.py`)
+- Fields: agent_name, kind (file_create/file_edit/patch), status (pending/approved/rejected/applied/stale), target_path, content, content_before, description
+- FKs: agent_execution, initiative, reviewed_by (all nullable)
+- Migration: `0246_code_artifact_model` — applied on Railway
+
+**New API:** `/api/code-artifacts/`
+- `GET /` — list with `?status=`, `?agent_name=`, `?initiative=`, `?kind=` filters
+- `GET /{id}/` — full detail with code content
+- `POST /{id}/approve/` — approve with optional review_note
+- `POST /{id}/reject/` — reject with optional review_note
+
+**CodeGeneratorAgent:** `_write_file()` and `_edit_file()` capture artifacts at all workspace-unavailability failure points. NOT captured for logic errors (file-not-found, old_text-not-found).
+
+### Deep Agent Audit + Fixes (PR #1234)
+
+Audited all 92 agents for silent failure patterns. Found 5 agents beyond CodeGeneratorAgent silently losing output on Railway.
+
+**Fix 1 — BaseAgent._write_files_to_workspace():** Added CodeArtifact capture at all 3 failure points (no manager, no workspace, no write permission) + individual file write failures. Covers: FullStackDeveloperAgent, DevOpsAgent, TechnicalDocumentAgent, CodeReviewAgent.
+
+**Fix 2 — CodeReviewAgent._read_file():** Now tries WorkspaceManager first before falling back to direct `open()`. Works on Railway where filesystem is empty.
+
+**Fix 3 — BaseAgent._regenerate_docs_index():** Replaced `subprocess.run(['.venv/bin/python', ...])` with `django.core.management.call_command()`. Works on any environment.
+
+### Activity Feed Gap Root Cause
+
+Investigated 11-hour gap in Activity Feed. Root cause: `can_auto_progress` returns `False` when `execution_speed == 'fast' AND current_stage >= 2`. Since ALL initiatives default to `fast`, nothing auto-progresses past Stage 2. Celery tasks ran fine (2000/hour) but found nothing eligible. Documented in `docs/topics/initiative-pipeline.md`.
+
+### Docs Updated (PR #1233)
+- `docs/topics/agent-system.md` — CodeArtifact section, agent count to 92
+- `docs/topics/initiative-pipeline.md` — fast-track stall behavior documented
+- `docs/DATABASE_MODEL_REFERENCE.md` — CodeArtifact model section
+- `docs/API_PATH_POLICY.md` — `/api/code-artifacts/` endpoint
+- `docs/BACKEND_REFERENCE.md` — Code Artifacts endpoints
+- `docs/INDEX.md` — regenerated
+
+**PRs:** #1232, #1233, #1234
+
+---
+
+## Session 1015 Summary
 
 ### Government & Legislation Page (PRs #1226-#1229)
-
 Full-stack `/government` page with Hub, Bills, and Ask A Bill tabs.
 
-**Backend:**
-- `views_government.py` — REST hub endpoint with stats, topics, recent bills
-- `tool_dispatcher.py` — `ask` action: RAG over bill embeddings + keyword fallback with stopword filtering
-- `unified_pa_entrypoint.py` — legislation ask intent, payload builder, formatter with source citations
-- Handles flat, spider-network envelope, and Celery bundle data formats
-
-**Frontend:**
-- Hub tab: stat cards, recent bills, top topics, Ask A Bill sidebar
-- Bills tab: filterable list with chamber/status filters, expandable cards
-- Ask A Bill tab: full PA chat with suggested questions
-
-**Data fixes:** Flattened nested spider data, fixed `embedding_text`, rewrote keyword extraction
-
 ### Image Studio Cloudinary Fix (PR #1230)
-
-Images were generated but never saved to gallery. Root cause: `default_storage.path()` fails on Cloudinary backend. Fixed `save_watermarked_image` to return `default_storage.url()` directly, and `save_to_history` to handle cloud URLs.
+Images were generated but never saved to gallery. Fixed `save_watermarked_image` to return `default_storage.url()` directly.
 
 ### Custom Domain DNS (IN PROGRESS)
-
-`www.donkeybetz.com` custom domain added to Railway. CNAME updated to `7sce0gjg.up.railway.app`. SSL cert provisioning pending — Railway DNS cache was still stale at session end. Should auto-resolve.
-
-**PRs:** #1226, #1227, #1228, #1229, #1230
-
----
-
-## Session 1014 Summary
-
-### Stock Intelligence Hub Polish (PR #1222)
-- News tab with source diversity scoring
-- Deduped predictions, styled cards, adaptive layout
-
-### Agent Failure Fix (PR #1224)
-- Fixed `AgentResult.metadata` crash (correct field: `.data`) — eliminated 70% of daily failures
-
-### Image/Video/Audio Pipeline (PR #1223)
-- Connected Image Studio → Video Studio → ElevenLabs audio
-- Voice and SFX tool tabs in Video Studio
+`www.donkeybetz.com` custom domain added to Railway. SSL cert provisioning pending.
 
 ---
 
@@ -56,62 +68,65 @@ Images were generated but never saved to gallery. Root cause: `default_storage.p
 
 | Metric | Count |
 |--------|-------|
-| Agents | 82 routable, 25 non-routable, 26+ provenance-tracked |
+| Agents | 92 (54 routable, 25 non-routable, 26+ provenance-tracked) |
 | Spiders | 79 (74 working, 5 need API keys) |
 | Advisors | 25 |
-| Database Models | 395+ |
+| Database Models | 396+ (added CodeArtifact) |
 | Services | 134 |
-| Celery Tasks | 241 |
+| Celery Tasks | 268 |
 | Intelligence Desks | 4 (Stocks, Sports, Blockchain, Narrative) — ALL RUNNING |
 | Workspace Tabs | 9 |
-| Frontend Routes | 27 (added `/government`) |
+| Frontend Routes | 27 |
 | Agents Persisting Output | 43 (via `_save_to_deliverable()`) |
+| Agents with CodeArtifact Capture | 6 (CodeGenerator, FullStack, DevOps, TechDoc, CodeReview + all BaseAgent subclasses) |
 | PA Tools | 97 |
-| PA Intents | 39 (added legislation ask) |
+| PA Intents | 39 |
 | Enrichment Services | 8 |
 | Sports Leagues | 6 with predictions (NCAAB, NHL, EPL, La Liga, MLS, NCAAF) |
-| Sports Pipeline Tasks | 8 (all scheduled, all verified on Railway) |
-| Active Initiatives | 20 (circuit breaker threshold) |
+| Active Initiatives | ~34 (most stalled at Stage 2 — fast-track gate) |
 | LLM Providers | 6 (OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini) |
-| Video Studio Edit Tools | 5 (Text, Color, Audio, Voice, SFX) |
-| Standalone Pages | `/stocks`, `/government`, `/advisors`, `/betting`, `/neural-orchestra`, `/conversation-contract`, `/mythology-lab`, `/billing`, `/analytics`, `/docs-index`, `/image-studio`, `/video-studio`, `/documents` |
 
 ---
 
 ## Verify Before Starting
 
-### 1. Image Studio Fix (PR #1230)
-- Go to Image Studio, generate an image
-- Should appear in gallery with Cloudinary URL
-- If still broken, check Railway logs for `save_watermarked_image` / `save_to_history` errors
+### 1. CodeArtifact API
+- `curl $RAILWAY_URL/api/code-artifacts/ -H "Authorization: Token 0cdc1c72dba99ea637485076ee952d571440aa30"` — should return JSON list
+- After an autonomous agent chain runs, check for new artifacts
 
 ### 2. Custom Domain SSL
 - Try `https://www.donkeybetz.com` — should show login page with valid cert
-- If still cert error: delete domain in Railway dashboard → re-add → update CNAME in Squarespace
+- If still cert error: delete domain in Railway dashboard → re-add → update CNAME
 
-### 3. Ask A Bill Embeddings
-- Run: `railway run python manage.py shell -c "from core.models_unified_system import SpiderData; print(SpiderData.objects.filter(spider_name='legislation', embedding__isnull=False).count())"`
-- If 0, trigger: `railway run python manage.py shell -c "from core.tasks import backfill_spider_embeddings; backfill_spider_embeddings.delay()"`
+### 3. Initiative Fast-Track Gate
+- 8 ACTIVE initiatives stuck at Stage 2 with `execution_speed='fast'`
+- Decision needed: relax the gate, change default execution_speed, or add manual promotion flow
 
 ---
 
 ## Known Issues / Open Items
 
+### Initiative Fast-Track Stall — DECISION NEEDED
+`can_auto_progress` blocks ALL fast-track initiatives at Stage 2. Since every initiative defaults to `fast`, nothing auto-progresses beyond Stage 1→2. Options:
+1. Change default `execution_speed` for new initiatives (e.g. to `standard`)
+2. Relax the gate so `fast` doesn't block at Stage 2
+3. Add PA command to batch-promote eligible initiatives
+4. Keep as-is (human must explicitly advance each one)
+
 ### PA Context Awareness — NEEDS WORK
-PA doesn't understand page context. When user says "I just created an image but it's not displaying" from Image Studio, PA asks generic clarifying questions instead of checking ImageHistory or knowing the user was on Image Studio. Needs:
-- Page-context awareness (which page the user is on)
-- Image-specific intent/enrichment to check recent ImageHistory
-- Potentially a new `image_studio` intent in PA
+PA doesn't understand page context. When user says "I just created an image but it's not displaying" from Image Studio, PA asks generic clarifying questions instead of checking ImageHistory.
 
 ### Remaining Agent Failures (~4.7% rate) — INVESTIGATE
 Post-metadata-fix, ~67 failures/day remain from other agents:
 - ContentWriterAgent (15), AudioAgent (12), ResearchAgent (10), WorkflowAgent (6), TrendAnalysisAgent (4), VideoAgent (4)
 
+### CodeArtifact v2 — DEFERRED
+- **PatchApplier service**: Auto-applying approved artifacts to git tree
+- **Frontend UI**: Dedicated code review panel in workspace
+- **Initiative FK wiring**: Auto-linking artifacts to triggering initiative
+
 ### Initiative Circuit Breaker — DEPLOYED
 Threshold at 20 active initiatives. Monitor to ensure meaningful initiatives still get created.
-
-### NBA All-Star Break
-`basketball_nba` returns 0 events (All-Star break). Regular NBA season should resume soon.
 
 ### Blog Topic Diversity — Monitor
 19/40 published blogs about Security/Homeland due to weak novelty scoring. PR #1141 strengthens scoring — verify after next batch.
@@ -124,6 +139,13 @@ Initial accuracy is 70.2% (mostly NCAAB). Monitor by sport/model as more leagues
 ## Critical Patterns & Gotchas
 
 **Django settings module:** `core.settings` (NOT `config.settings`).
+
+**CodeArtifact model (Session 1016):**
+- Import from `core.models_code_artifacts` (or `core.models`)
+- `kind`: file_create, file_edit, patch
+- `status`: pending, approved, rejected, applied, stale
+- BaseAgent captures via `_capture_files_as_artifacts()` / `_capture_single_file_artifact()`
+- CodeGeneratorAgent captures via `_capture_code_artifact()`
 
 **SpiderData actual fields (Session 989):**
 - `spider_name`, `source_url`, `data_type`, `raw_data`, `processed_data`, `embedding_text`, `relevance_score`, `insights`, `is_processed`, `is_actionable`, `created_at`, `processed_at`
@@ -147,28 +169,12 @@ Initial accuracy is 70.2% (mostly NCAAB). Monitor by sport/model as more leagues
 - Status values are UPPERCASE: `'ACTIVE'`, `'ARCHIVED'`, `'COMPLETED'`, `'TRIAGE'`
 - Import from `core.models` (NOT `core.models_unified_system`)
 - Field `name` (NOT `title`)
-
-**Sports models (Session 1010):**
-- `League`: name (unique), abbreviation (unique), sport_type, current_season
-- `Team`: name, abbreviation, league (FK), city. unique_together: `(league, abbreviation)`
-- `Game`: external_id (unique), league (FK), home_team (FK), away_team (FK), scheduled_start, season
-- `MLPrediction`: game (FK, related_name='ml_predictions'), predicted_winner (FK to Team), confidence (0-100), sport_type, model_used, was_correct, evaluated_at
-
-**MLPrediction gotchas (Session 1011):**
-- `evaluated_at` (NOT `evaluation_date`)
-- `metadata` for evaluation data (inherited from UnifiedBaseModel, NOT `evaluation_metadata`)
-- Reverse relation from Game: `ml_predictions` (NOT `mlprediction`)
-
-**SelfBlog model:**
-- Import from `core.models_unified_system`
-- Has `created_at` but NO `updated_at`
+- `can_auto_progress` returns False for `execution_speed='fast'` at stage >= 2
 
 **Cloudinary storage (Session 1015):**
-- `DEFAULT_FILE_STORAGE` is `cloudinary_storage.storage.MediaCloudinaryStorage` on Railway
 - `default_storage.save()` uploads directly to Cloudinary
 - `default_storage.url()` returns `https://res.cloudinary.com/...` URLs
-- `default_storage.path()` RAISES `This backend doesn't support absolute paths` — NEVER use on Railway
-- Image `file_path` in DB may be a Cloudinary URL (starts with `http`) or relative local path
+- `default_storage.path()` RAISES — NEVER use on Railway
 
 **Railway multi-service deployment:**
 - Each Procfile process is a SEPARATE Railway service
