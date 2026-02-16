@@ -1249,6 +1249,8 @@ from core.views_video import (
     # Session 171: ElevenLabs Audio Integration
     generate_voice_view,
     add_voiceover_view,
+    # Session 1013: SFX-to-Video Pipeline
+    add_sfx_to_video_view,
     # Session 479: DaVinci Resolve Gallery
     get_resolve_renders,
     download_resolve_render,
@@ -2569,6 +2571,7 @@ urlpatterns = [
     # Session 171: ElevenLabs Audio Integration
     path('api/tool/generate-voice/', generate_voice_view, name='generate-voice'),
     path('api/tool/add-voiceover/', add_voiceover_view, name='add-voiceover'),
+    path('api/tool/add-sfx-to-video/', add_sfx_to_video_view, name='add-sfx-to-video'),
     # Session 66 Part 2: Video extension for longer videos (up to 40 seconds!)
     path('api/v1/video/extend/', lambda r: __import__('core.views_video', fromlist=['extend_video_endpoint']).extend_video_endpoint(r), name='video-extend'),
     path('api/v1/video/status/<str:task_id>/', check_video_status, name='video-status'),
