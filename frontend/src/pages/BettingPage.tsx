@@ -6,7 +6,8 @@ import {
   RefreshCw, Loader2, Trophy, Activity, PieChart, BarChart3,
   Clock, CheckCircle, Flame, Search, Eye, XCircle, CircleDot,
   Award, Layers, ChevronDown, ChevronUp, History, Crosshair,
-  Star, Swords, Brain, Newspaper, HeartPulse, Calendar
+  Star, Swords, Brain, Newspaper, HeartPulse, Calendar, Plus,
+  Calculator, ChevronRight
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -268,10 +269,21 @@ interface ArbitrageCardProps {
   }
 }
 
-function ArbitrageCard({ arb }: ArbitrageCardProps) {
+function ArbitrageCard({ arb, totalStake }: ArbitrageCardProps & { totalStake?: number }) {
   const profitPercent = arb.profit_percent ?? 0
   const isHot = profitPercent >= 1.5
   const bookmakers = arb.bookmakers ?? []
+  const stake = totalStake || 100
+
+  // Calculate optimal stakes for each leg
+  const decimalOdds = bookmakers.map(b => {
+    const o = b.odds ?? 0
+    return o > 0 ? 1 + o / 100 : 1 + 100 / Math.abs(o || 1)
+  })
+  const inverseSum = decimalOdds.reduce((acc, d) => acc + 1 / d, 0)
+  const legStakes = decimalOdds.map(d => stake / (d * inverseSum))
+  const guaranteedReturn = legStakes.length > 0 ? legStakes[0] * decimalOdds[0] : 0
+  const guaranteedProfit = guaranteedReturn - stake
 
   return (
     <div className={cn(
@@ -300,17 +312,36 @@ function ArbitrageCard({ arb }: ArbitrageCardProps) {
       <div className="space-y-2">
         {bookmakers.map((book, i) => (
           <div key={i} className="flex items-center justify-between p-2 rounded bg-dark-bg">
-            <div>
+            <div className="flex items-center gap-2">
               <span className="text-sm font-medium">{book.name || 'Unknown'}</span>
-              <span className="text-gray-400 mx-2">→</span>
+              <span className="text-gray-400">→</span>
               <span className="text-sm text-primary-400">{book.pick || '-'}</span>
             </div>
-            <span className="font-mono text-accent-green">
-              {(book.odds ?? 0) > 0 ? '+' : ''}{book.odds ?? 0}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-accent-green text-sm">
+                {(book.odds ?? 0) > 0 ? '+' : ''}{book.odds ?? 0}
+              </span>
+              {legStakes[i] > 0 && (
+                <span className="text-xs font-mono text-white bg-primary-600/30 px-2 py-0.5 rounded">
+                  ${legStakes[i].toFixed(2)}
+                </span>
+              )}
+            </div>
           </div>
         ))}
       </div>
+      {/* Profit summary */}
+      {guaranteedProfit > 0 && (
+        <div className="mt-3 p-2 rounded-lg bg-accent-green/5 border border-accent-green/20 flex items-center justify-between">
+          <span className="text-xs text-gray-400">
+            <Calculator size={12} className="inline mr-1" />
+            With ${stake} total stake
+          </span>
+          <span className="text-sm font-bold text-accent-green">
+            Profit: +${guaranteedProfit.toFixed(2)}
+          </span>
+        </div>
+      )}
     </div>
   )
 }
@@ -547,6 +578,10 @@ export default function BettingPage() {
   const [watchingFilter, setWatchingFilter] = useState<'all' | 'pending' | 'verified'>('all')
   const [expandedWagers, setExpandedWagers] = useState<Set<string>>(new Set())
   const [showDetailedStats, setShowDetailedStats] = useState(false)
+  const [expandedBookmakers, setExpandedBookmakers] = useState<Set<string>>(new Set())
+  const [showWagerForm, setShowWagerForm] = useState(false)
+  const [wagerForm, setWagerForm] = useState({ matchup: '', pick: '', odds: '-110', stake: '10', sport: '', bookmaker: '', market_type: 'h2h' })
+  const [arbStake, setArbStake] = useState('100')
   const queryClient = useQueryClient()
 
   const toggleWagerExpand = (wagerId: string) => {
@@ -590,6 +625,17 @@ export default function BettingPage() {
       const id = String(vars.event_id || vars.pick || '')
       setPickedId(id)
       setTimeout(() => setPickedId(null), 2000)
+    },
+  })
+
+  const placeBetMutation = useMutation({
+    mutationFn: (data: Record<string, unknown>) => bettingApi.placeBet(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['betting-wagers'] })
+      queryClient.invalidateQueries({ queryKey: ['betting-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['betting-bankroll'] })
+      setShowWagerForm(false)
+      setWagerForm({ matchup: '', pick: '', odds: '-110', stake: '10', sport: '', bookmaker: '', market_type: 'h2h' })
     },
   })
 
@@ -1236,6 +1282,16 @@ export default function BettingPage() {
                             <Activity size={10} /> LIVE
                           </span>
                         )}
+                        {isLive && game.status_detail && (
+                          <span className="text-xs font-medium text-accent-red">
+                            {game.status_detail}
+                          </span>
+                        )}
+                        {isLive && !game.status_detail && game.period > 0 && (
+                          <span className="text-xs font-medium text-accent-red">
+                            {game.period && game.clock ? `P${game.period} ${game.clock}` : `Period ${game.period}`}
+                          </span>
+                        )}
                         {game.completed && (
                           <span className="text-xs px-2 py-0.5 rounded bg-gray-500/20 text-gray-400">FINAL</span>
                         )}
@@ -1370,7 +1426,7 @@ export default function BettingPage() {
                       </div>
                     )}
 
-                    {/* Session 999B: Quick Pick buttons */}
+                    {/* Quick Pick buttons */}
                     {!game.completed && (
                       <div className="mt-3 flex items-center gap-2">
                         {[
@@ -1408,6 +1464,47 @@ export default function BettingPage() {
                             </button>
                           )
                         })}
+                      </div>
+                    )}
+
+                    {/* Bookmaker Odds Comparison */}
+                    {game.h2h_odds && game.h2h_odds.length > 1 && (
+                      <div className="mt-2">
+                        <button
+                          onClick={() => setExpandedBookmakers(prev => {
+                            const next = new Set(prev)
+                            next.has(eid) ? next.delete(eid) : next.add(eid)
+                            return next
+                          })}
+                          className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+                        >
+                          <ChevronRight size={12} className={cn('transition-transform', expandedBookmakers.has(eid) && 'rotate-90')} />
+                          Compare {game.h2h_odds.length} bookmakers
+                        </button>
+                        {expandedBookmakers.has(eid) && (
+                          <div className="mt-2 grid grid-cols-1 gap-1 max-h-48 overflow-y-auto">
+                            <div className="grid grid-cols-4 gap-2 text-[10px] text-gray-500 font-medium px-2 py-1">
+                              <span>Book</span>
+                              <span className="text-right">{game.away_team?.split(' ').pop()}</span>
+                              <span className="text-right">{game.home_team?.split(' ').pop()}</span>
+                              <span className="text-right">Draw</span>
+                            </div>
+                            {game.h2h_odds.map((book: any, bi: number) => (
+                              <div key={bi} className="grid grid-cols-4 gap-2 text-xs px-2 py-1.5 rounded bg-dark-bg">
+                                <span className="font-medium truncate">{book.bookmaker || book.bookmaker_key}</span>
+                                <span className={cn('text-right font-mono', book.away_odds > 0 ? 'text-accent-green' : 'text-gray-300')}>
+                                  {book.away_odds > 0 ? '+' : ''}{book.away_odds}
+                                </span>
+                                <span className={cn('text-right font-mono', book.home_odds > 0 ? 'text-accent-green' : 'text-gray-300')}>
+                                  {book.home_odds > 0 ? '+' : ''}{book.home_odds}
+                                </span>
+                                <span className="text-right font-mono text-gray-500">
+                                  {book.draw_odds ? (book.draw_odds > 0 ? '+' : '') + book.draw_odds : '—'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1825,6 +1922,22 @@ export default function BettingPage() {
             />
           </div>
 
+          {/* Stake Calculator Input */}
+          <div className="flex items-center gap-3">
+            <Calculator size={16} className="text-gray-400" />
+            <label className="text-sm text-gray-400">Total stake:</label>
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-gray-400">$</span>
+              <input
+                type="number"
+                value={arbStake}
+                onChange={(e) => setArbStake(e.target.value)}
+                className="w-24 px-2 py-1.5 text-sm rounded bg-dark-card border border-dark-border focus:border-primary-500 focus:outline-none font-mono"
+              />
+            </div>
+            <p className="text-xs text-gray-500">Bet sizes calculated per opportunity below</p>
+          </div>
+
           {/* Arbitrage Cards */}
           {arbLoading ? (
             <div className="flex items-center justify-center py-12">
@@ -1833,7 +1946,7 @@ export default function BettingPage() {
           ) : arbitrageOpps.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {arbitrageOpps.map((arb: ArbitrageCardProps['arb'], i: number) => (
-                <ArbitrageCard key={i} arb={arb} />
+                <ArbitrageCard key={i} arb={arb} totalStake={parseFloat(arbStake) || 100} />
               ))}
             </div>
           ) : (
@@ -1996,34 +2109,94 @@ export default function BettingPage() {
               <Loader2 size={32} className="animate-spin text-primary-400" />
             </div>
           ) : liveOdds.length > 0 ? (
-            <div className="space-y-4">
-              {liveOdds.map((game: { id: string; home_team: string; away_team: string; sport: string; home_odds: number; away_odds: number; commence_time: string }, i: number) => (
-                <div key={i} className="card p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs px-2 py-0.5 rounded bg-primary-600/20 text-primary-400">
-                      {game.sport}
-                    </span>
-                    <span className="text-xs text-gray-500">{game.commence_time}</span>
+            <div className="space-y-3">
+              {liveOdds.map((game: any, i: number) => {
+                const live = game.live || {}
+                const isLive = live.is_live
+                const isFinal = live.is_final
+                const hasScore = live.home_score != null && live.away_score != null
+                const bookmakers = game.bookmakers || []
+
+                return (
+                  <div key={i} className={cn('card p-4 border-l-4', isLive ? 'border-l-accent-red' : isFinal ? 'border-l-gray-500' : 'border-l-primary-500')}>
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs px-2 py-0.5 rounded bg-primary-600/20 text-primary-400">
+                          {(game.sport_key || game.sport || '').replace(/_/g, ' ')}
+                        </span>
+                        {isLive && (
+                          <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-accent-red/20 text-accent-red animate-pulse">
+                            <Activity size={10} /> LIVE
+                          </span>
+                        )}
+                        {isLive && live.status_detail && (
+                          <span className="text-xs font-medium text-accent-red">{live.status_detail}</span>
+                        )}
+                        {isLive && !live.status_detail && live.period > 0 && (
+                          <span className="text-xs font-medium text-accent-red">P{live.period} {live.clock || ''}</span>
+                        )}
+                        {isFinal && <span className="text-xs px-2 py-0.5 rounded bg-gray-500/20 text-gray-400">FINAL</span>}
+                      </div>
+                      <span className="text-xs text-gray-500">
+                        {game.commence_time ? new Date(game.commence_time).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}
+                      </span>
+                    </div>
+
+                    {/* Matchup with scores */}
+                    <div className="grid grid-cols-7 gap-2 items-center">
+                      <div className="col-span-2">
+                        <p className="font-medium">{game.away_team}</p>
+                      </div>
+                      <div className="col-span-3 text-center">
+                        {hasScore ? (
+                          <div>
+                            <span className={cn('text-2xl font-bold', live.away_score > live.home_score ? 'text-accent-green' : 'text-gray-300')}>
+                              {live.away_score}
+                            </span>
+                            <span className="text-gray-500 mx-3">-</span>
+                            <span className={cn('text-2xl font-bold', live.home_score > live.away_score ? 'text-accent-green' : 'text-gray-300')}>
+                              {live.home_score}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-500 text-sm">vs</span>
+                        )}
+                      </div>
+                      <div className="col-span-2 text-right">
+                        <p className="font-medium">{game.home_team}</p>
+                      </div>
+                    </div>
+
+                    {/* Bookmaker odds grid */}
+                    {bookmakers.length > 0 && (
+                      <div className="mt-3 space-y-1">
+                        <div className="grid grid-cols-4 gap-2 text-[10px] text-gray-500 font-medium px-2">
+                          <span>Bookmaker</span>
+                          <span className="text-right">ML Away</span>
+                          <span className="text-right">ML Home</span>
+                          <span className="text-right">Draw</span>
+                        </div>
+                        {bookmakers.slice(0, 6).map((bm: any, bi: number) => {
+                          const h2h = bm.markets?.h2h?.outcomes || []
+                          const awayOutcome = h2h.find((o: any) => o.name === game.away_team)
+                          const homeOutcome = h2h.find((o: any) => o.name === game.home_team)
+                          const drawOutcome = h2h.find((o: any) => o.name !== game.away_team && o.name !== game.home_team)
+                          if (!awayOutcome && !homeOutcome) return null
+                          return (
+                            <div key={bi} className="grid grid-cols-4 gap-2 text-xs px-2 py-1.5 rounded bg-dark-bg">
+                              <span className="font-medium truncate">{bm.title || bm.key}</span>
+                              <span className="text-right font-mono text-gray-300">{awayOutcome?.price ?? '—'}</span>
+                              <span className="text-right font-mono text-gray-300">{homeOutcome?.price ?? '—'}</span>
+                              <span className="text-right font-mono text-gray-500">{drawOutcome?.price ?? '—'}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
-                  <div className="grid grid-cols-3 gap-4 items-center">
-                    <div className="text-center">
-                      <p className="font-medium">{game.away_team}</p>
-                      <p className="text-lg font-bold text-accent-green mt-1">
-                        {game.away_odds > 0 ? '+' : ''}{game.away_odds}
-                      </p>
-                    </div>
-                    <div className="text-center text-gray-500">
-                      <span className="text-sm">@</span>
-                    </div>
-                    <div className="text-center">
-                      <p className="font-medium">{game.home_team}</p>
-                      <p className="text-lg font-bold text-accent-green mt-1">
-                        {game.home_odds > 0 ? '+' : ''}{game.home_odds}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           ) : (
             <div className="card p-12 text-center">
@@ -2103,46 +2276,105 @@ export default function BettingPage() {
       )}
 
       {/* Bankroll Tab */}
-      {activeTab === 'bankroll' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatCard
-              label="Total Bankroll"
-              value={`$${(bankroll.total || 0).toFixed(2)}`}
-              icon={DollarSign}
-              color="bg-accent-green"
-            />
-            <StatCard
-              label="At Risk"
-              value={`$${(bankroll.at_risk || 0).toFixed(2)}`}
-              icon={AlertTriangle}
-              color="bg-accent-amber"
-            />
-            <StatCard
-              label="Available"
-              value={`$${(bankroll.available || 0).toFixed(2)}`}
-              icon={CheckCircle}
-              color="bg-primary-600"
-            />
-            <StatCard
-              label="Kelly Suggested"
-              value={`${(bankroll.kelly_percent || 0).toFixed(1)}%`}
-              icon={Target}
-              color="bg-accent-purple"
-            />
-          </div>
+      {activeTab === 'bankroll' && (() => {
+        const bk = bankroll
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <StatCard
+                label="Total Wagered"
+                value={`$${(bk.total || bk.total_wagered || 0).toFixed(2)}`}
+                icon={DollarSign}
+                color="bg-primary-600"
+              />
+              <StatCard
+                label="Net P/L"
+                value={`${(bk.total_profit || 0) >= 0 ? '+' : ''}$${(bk.total_profit || 0).toFixed(2)}`}
+                icon={TrendingUp}
+                color={(bk.total_profit || 0) >= 0 ? 'bg-accent-green' : 'bg-accent-red'}
+              />
+              <StatCard
+                label="At Risk"
+                value={`$${(bk.at_risk || 0).toFixed(2)}`}
+                icon={AlertTriangle}
+                color="bg-accent-amber"
+              />
+              <StatCard
+                label="ROI"
+                value={`${(bk.roi || 0).toFixed(1)}%`}
+                icon={Target}
+                color={(bk.roi || 0) >= 0 ? 'bg-accent-green' : 'bg-accent-red'}
+              />
+            </div>
 
-          <div className="card">
-            <h3 className="text-lg font-semibold mb-4">Bankroll Management Tips</h3>
-            <div className="space-y-3 text-sm text-gray-400">
-              <p>• Never bet more than 5% of your bankroll on a single wager</p>
-              <p>• Use the Kelly Criterion to size your bets optimally</p>
-              <p>• Track all bets to understand your true ROI</p>
-              <p>• Set stop-loss limits to protect your bankroll</p>
+            {/* Detailed Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="card p-4 text-center">
+                <p className="text-2xl font-bold">{bk.total_bets || 0}</p>
+                <p className="text-xs text-gray-400">Total Bets</p>
+              </div>
+              <div className="card p-4 text-center">
+                <p className="text-2xl font-bold text-accent-green">{bk.winning_bets || 0}</p>
+                <p className="text-xs text-gray-400">Wins</p>
+              </div>
+              <div className="card p-4 text-center">
+                <p className="text-2xl font-bold text-accent-red">{bk.losing_bets || 0}</p>
+                <p className="text-xs text-gray-400">Losses</p>
+              </div>
+              <div className="card p-4 text-center">
+                <p className="text-2xl font-bold">
+                  {((bk.win_rate || 0) * 100).toFixed(1)}%
+                </p>
+                <p className="text-xs text-gray-400">Win Rate</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="card p-4">
+                <h4 className="text-sm font-semibold mb-3 text-gray-400">Performance</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Avg Bet Size</span>
+                    <span className="font-mono">${(bk.avg_bet_size || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Biggest Win</span>
+                    <span className="font-mono text-accent-green">+${(bk.biggest_win || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Biggest Loss</span>
+                    <span className="font-mono text-accent-red">${(bk.biggest_loss || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Pending Bets</span>
+                    <span className="font-mono">{bk.pending_bets || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Pushes</span>
+                    <span className="font-mono">{bk.pushes || 0}</span>
+                  </div>
+                  {bk.kelly_percent > 0 && (
+                    <div className="flex justify-between pt-2 border-t border-dark-border">
+                      <span className="text-gray-400">Kelly Bet Size</span>
+                      <span className="font-mono text-accent-purple">{(bk.kelly_percent || 0).toFixed(1)}% of bankroll</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="card p-4">
+                <h4 className="text-sm font-semibold mb-3 text-gray-400">Quick Tips</h4>
+                <div className="space-y-3 text-sm text-gray-400">
+                  <p>• Never bet more than 5% of your bankroll on a single wager</p>
+                  <p>• Use the Kelly Criterion to size your bets optimally</p>
+                  <p>• Track all bets to understand your true ROI</p>
+                  <p>• Set stop-loss limits to protect your bankroll</p>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* My Wagers Tab */}
       {activeTab === 'wagers' && (
@@ -2193,6 +2425,142 @@ export default function BettingPage() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Add Wager Button + Form */}
+          <div>
+            <button
+              onClick={() => setShowWagerForm(!showWagerForm)}
+              className="btn btn-primary flex items-center gap-2"
+            >
+              <Plus size={16} />
+              {showWagerForm ? 'Cancel' : 'Log Wager'}
+            </button>
+
+            {showWagerForm && (
+              <div className="card p-4 mt-3 border border-primary-500/30">
+                <h4 className="text-sm font-semibold mb-3">Log a New Wager</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Matchup / Event *</label>
+                    <input
+                      type="text"
+                      value={wagerForm.matchup}
+                      onChange={(e) => setWagerForm(f => ({ ...f, matchup: e.target.value }))}
+                      placeholder="e.g., Lakers vs Celtics"
+                      className="w-full px-3 py-2 text-sm rounded bg-dark-bg border border-dark-border focus:border-primary-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Your Pick *</label>
+                    <input
+                      type="text"
+                      value={wagerForm.pick}
+                      onChange={(e) => setWagerForm(f => ({ ...f, pick: e.target.value }))}
+                      placeholder="e.g., Lakers -5.5"
+                      className="w-full px-3 py-2 text-sm rounded bg-dark-bg border border-dark-border focus:border-primary-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Odds (American) *</label>
+                    <input
+                      type="text"
+                      value={wagerForm.odds}
+                      onChange={(e) => setWagerForm(f => ({ ...f, odds: e.target.value }))}
+                      placeholder="-110"
+                      className="w-full px-3 py-2 text-sm rounded bg-dark-bg border border-dark-border focus:border-primary-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Stake ($) *</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={wagerForm.stake}
+                      onChange={(e) => setWagerForm(f => ({ ...f, stake: e.target.value }))}
+                      placeholder="10.00"
+                      className="w-full px-3 py-2 text-sm rounded bg-dark-bg border border-dark-border focus:border-primary-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Sport</label>
+                    <select
+                      value={wagerForm.sport}
+                      onChange={(e) => setWagerForm(f => ({ ...f, sport: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm rounded bg-dark-bg border border-dark-border focus:border-primary-500 focus:outline-none"
+                    >
+                      <option value="">Select sport</option>
+                      <option value="basketball_nba">NBA</option>
+                      <option value="basketball_ncaab">NCAAB</option>
+                      <option value="americanfootball_nfl">NFL</option>
+                      <option value="americanfootball_ncaaf">NCAAF</option>
+                      <option value="baseball_mlb">MLB</option>
+                      <option value="icehockey_nhl">NHL</option>
+                      <option value="soccer_epl">EPL</option>
+                      <option value="mma_mixed_martial_arts">UFC/MMA</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Bookmaker</label>
+                    <select
+                      value={wagerForm.bookmaker}
+                      onChange={(e) => setWagerForm(f => ({ ...f, bookmaker: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm rounded bg-dark-bg border border-dark-border focus:border-primary-500 focus:outline-none"
+                    >
+                      <option value="">Select book</option>
+                      <option value="FanDuel">FanDuel</option>
+                      <option value="DraftKings">DraftKings</option>
+                      <option value="BetMGM">BetMGM</option>
+                      <option value="Caesars">Caesars</option>
+                      <option value="PointsBet">PointsBet</option>
+                      <option value="BetRivers">BetRivers</option>
+                      <option value="Bovada">Bovada</option>
+                      <option value="Pinnacle">Pinnacle</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center justify-between">
+                  <p className="text-xs text-gray-500">
+                    Potential payout: <span className="font-mono text-white">
+                      ${(() => {
+                        const odds = parseInt(wagerForm.odds) || -110
+                        const stake = parseFloat(wagerForm.stake) || 0
+                        const decimal = odds > 0 ? 1 + odds / 100 : 1 + 100 / Math.abs(odds)
+                        return (stake * decimal).toFixed(2)
+                      })()}
+                    </span>
+                  </p>
+                  <button
+                    onClick={() => {
+                      if (!wagerForm.matchup || !wagerForm.pick || !wagerForm.stake) return
+                      placeBetMutation.mutate({
+                        stake: parseFloat(wagerForm.stake),
+                        picks: [{
+                          event_id: '',
+                          sport: wagerForm.sport,
+                          matchup: wagerForm.matchup,
+                          market_type: wagerForm.market_type,
+                          pick: wagerForm.pick,
+                          odds: parseInt(wagerForm.odds) || -110,
+                          bookmaker: wagerForm.bookmaker,
+                        }]
+                      })
+                    }}
+                    disabled={placeBetMutation.isPending || !wagerForm.matchup || !wagerForm.pick}
+                    className="btn btn-primary flex items-center gap-2"
+                  >
+                    {placeBetMutation.isPending ? (
+                      <><Loader2 size={14} className="animate-spin" /> Logging...</>
+                    ) : (
+                      <><Plus size={14} /> Log Wager</>
+                    )}
+                  </button>
+                </div>
+                {placeBetMutation.isError && (
+                  <p className="text-xs text-accent-red mt-2">Failed to log wager. Please try again.</p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Help text */}
