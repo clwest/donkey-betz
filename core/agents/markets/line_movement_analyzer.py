@@ -348,8 +348,11 @@ Rate movements: STEAM (urgent), SHARP (high value), DRIFT (moderate), NOISE (ign
             ]
 
             request = LLMRequest(prompt="", messages=messages, max_tokens=500, temperature=0.3)
-            response = registry.generate(request, preferred_providers=['openai', 'anthropic'])
-            return response.content if response else "LLM analysis unavailable"
+            for provider, model in [('openai', 'gpt-4.1-mini'), ('anthropic', 'claude-sonnet-4-5-20250929')]:
+                response = registry.complete(provider=provider, model_id=model, request=request)
+                if response.success:
+                    return response.content
+            return "LLM analysis unavailable"
 
         except Exception as e:
             logger.warning(f"LineMovementAnalyzer LLM failed: {e}")
