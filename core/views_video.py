@@ -8829,6 +8829,197 @@ def add_voiceover_view(request):
 
 
 # ============================================================================
+# Session 1013: Add SFX to Video
+# ============================================================================
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def add_sfx_to_video_view(request):
+    """
+    Add sound effects to an existing video using ElevenLabs SFX + ffmpeg.
+
+    Session 1013: Generates SFX audio from a text description and mixes it
+    with an existing video, mirroring the voiceover flow.
+
+    Expected JSON body:
+        - video_id: str - Video to add SFX to
+        - description: str - Text description of the sound effect
+        - duration: float (optional) - Duration in seconds 0.5-22 (default 5.0)
+        - volume: float (optional) - SFX volume 0.0-1.0 (default 0.5)
+        - project_id: str (optional) - Project to associate result with
+
+    Returns:
+        - success: bool
+        - video_url: str - URL to new video with SFX
+        - video_id: str - ID of new video
+        - audio_url: str - URL to generated SFX audio
+    """
+    try:
+        data = json.loads(request.body) if request.body else {}
+
+        video_id = data.get('video_id')
+        description = data.get('description')
+        duration = float(data.get('duration', 5.0))
+        volume = float(data.get('volume', 0.5))
+        project_id = data.get('project_id')
+
+        if not video_id:
+            return JsonResponse({
+                'success': False,
+                'error_message': 'video_id is required'
+            }, status=400)
+
+        if not description:
+            return JsonResponse({
+                'success': False,
+                'error_message': 'description is required'
+            }, status=400)
+
+        # Clamp duration to ElevenLabs limits
+        duration = max(0.5, min(22.0, duration))
+
+        logger.info(f"🔊 [Session 1013] Adding SFX to video {video_id}...")
+        logger.info(f"   Description: {description[:60]}...")
+        logger.info(f"   Duration: {duration}s, Volume: {volume}")
+
+        # Get the video
+        video = _resolve_video_by_id(video_id, request.user, project_id)
+        if not video:
+            return JsonResponse({
+                'success': False,
+                'error_message': f'Video {video_id} not found'
+            }, status=404)
+
+        video_path = _get_video_local_path(video)
+        if not video_path or not os.path.exists(video_path):
+            return JsonResponse({
+                'success': False,
+                'error_message': 'Video file not found on disk'
+            }, status=404)
+
+        # Step 1: Generate SFX audio via ElevenLabs
+        logger.info(f"   Step 1: Generating SFX audio...")
+        from content.elevenlabs_provider import elevenlabs_provider
+
+        sfx_result = elevenlabs_provider.text_to_sound(
+            prompt=description,
+            duration=duration
+        )
+
+        if not sfx_result.get('success'):
+            return JsonResponse({
+                'success': False,
+                'error_message': f"SFX generation failed: {sfx_result.get('error_message')}"
+            }, status=500)
+
+        audio_url = sfx_result.get('audio_url')
+        logger.info(f"   ✅ SFX audio generated: {audio_url}")
+
+        # Step 2: Resolve audio file path
+        if audio_url.startswith('/media/'):
+            audio_path = os.path.join(settings.MEDIA_ROOT, audio_url.replace('/media/', ''))
+        else:
+            audio_path = audio_url
+
+        if not os.path.exists(audio_path):
+            return JsonResponse({
+                'success': False,
+                'error_message': 'Generated SFX audio file not found'
+            }, status=500)
+
+        # Step 3: Mix SFX with video using ffmpeg
+        logger.info(f"   Step 2: Mixing SFX with video...")
+        timestamp = int(time.time())
+        output_filename = f"sfx_{video.id}_{timestamp}.mp4"
+        output_path = os.path.join(settings.MEDIA_ROOT, 'videos', output_filename)
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        import subprocess
+
+        # Mix SFX audio with original video audio using amix filter
+        # This blends both tracks rather than replacing
+        cmd = [
+            'ffmpeg', '-y',
+            '-i', video_path,
+            '-i', audio_path,
+            '-filter_complex',
+            f'[1:a]volume={volume}[sfx];[0:a][sfx]amix=inputs=2:duration=first:dropout_transition=2[aout]',
+            '-map', '0:v',
+            '-map', '[aout]',
+            '-c:v', 'copy',
+            '-c:a', 'aac',
+            '-b:a', '192k',
+            output_path
+        ]
+
+        logger.info(f"   FFmpeg command: {' '.join(cmd)}")
+
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+
+        if result.returncode != 0:
+            # Fallback: video may have no audio track — use simpler command
+            logger.warning(f"   amix failed (video may lack audio), trying simple overlay...")
+            cmd_fallback = [
+                'ffmpeg', '-y',
+                '-i', video_path,
+                '-i', audio_path,
+                '-map', '0:v',
+                '-map', '1:a',
+                '-c:v', 'copy',
+                '-c:a', 'aac',
+                '-b:a', '192k',
+                '-shortest',
+                output_path
+            ]
+            result = subprocess.run(cmd_fallback, capture_output=True, text=True, timeout=120)
+            if result.returncode != 0:
+                logger.error(f"   FFmpeg error: {result.stderr}")
+                return JsonResponse({
+                    'success': False,
+                    'error_message': f'FFmpeg mixing failed: {result.stderr[:200]}'
+                }, status=500)
+
+        logger.info(f"   ✅ SFX mixed successfully!")
+
+        # Step 4: Create new video record
+        new_video = VideoHistory.objects.create(
+            user=request.user,
+            prompt=f"SFX ({description[:40]}) added to video {video.id}",
+            video_url=f'/media/videos/{output_filename}',
+            status='completed',
+            project=video.project if hasattr(video, 'project') else None
+        )
+
+        logger.info(f"✅ [Session 1013] SFX added successfully!")
+        logger.info(f"   New video ID: {new_video.id}")
+        logger.info(f"   Video URL: {new_video.video_url}")
+
+        return JsonResponse({
+            'success': True,
+            'video_id': str(new_video.id),
+            'video_url': new_video.video_url,
+            'audio_url': audio_url,
+            'description': description,
+            'original_video_id': str(video.id),
+            'agent': 'AudioGenerationAgent',
+            'operation': 'add_sfx',
+            'operation_display': f'SFX addition ({description[:30]})'
+        })
+
+    except subprocess.TimeoutExpired:
+        logger.error(f"❌ [Session 1013] FFmpeg timeout")
+        return JsonResponse({
+            'success': False,
+            'error_message': 'Audio mixing timed out'
+        }, status=500)
+    except Exception as e:
+        logger.error(f"❌ [Session 1013] Add SFX error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error_message': str(e)}, status=500)
+
+
+# ============================================================================
 # Session 479: DaVinci Resolve Renders Gallery API
 # ============================================================================
 
