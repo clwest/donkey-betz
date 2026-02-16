@@ -568,12 +568,29 @@ Be constructive and brief."""
         return super()._execute_tool_call(tool_name, arguments)
 
     def _read_file(self, file_path: str) -> Dict[str, Any]:
-        """Read a file from the project filesystem."""
+        """Read a file via WorkspaceManager, falling back to direct filesystem."""
         import os
 
-        # Handle relative paths - assume relative to project root
+        # Session 1012: Try WorkspaceManager first (works on Railway)
+        manager = self._get_workspace_manager()
+        if manager:
+            workspace = manager.get_codebase_workspace() or manager.get_active_workspace()
+            if workspace:
+                content = manager.read_file(workspace, file_path)
+                if content is not None:
+                    ext = os.path.splitext(file_path)[1].lower()
+                    language = self._detect_language(ext)
+                    return {
+                        "success": True,
+                        "file_path": file_path,
+                        "language": language,
+                        "content": content,
+                        "lines": content.count('\n') + 1,
+                        "size_bytes": len(content.encode('utf-8'))
+                    }
+
+        # Fallback to direct filesystem (works locally, not on Railway)
         if not os.path.isabs(file_path):
-            # Get project root (where manage.py is)
             project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             file_path = os.path.join(project_root, file_path)
 
@@ -587,28 +604,8 @@ Be constructive and brief."""
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
-            # Detect language from extension
             ext = os.path.splitext(file_path)[1].lower()
-            language_map = {
-                '.py': 'python',
-                '.js': 'javascript',
-                '.ts': 'typescript',
-                '.tsx': 'typescript',
-                '.jsx': 'javascript',
-                '.java': 'java',
-                '.go': 'go',
-                '.rs': 'rust',
-                '.rb': 'ruby',
-                '.php': 'php',
-                '.cs': 'csharp',
-                '.cpp': 'cpp',
-                '.c': 'c',
-                '.html': 'html',
-                '.css': 'css',
-                '.sql': 'sql',
-                '.sh': 'bash',
-            }
-            language = language_map.get(ext, 'text')
+            language = self._detect_language(ext)
 
             return {
                 "success": True,
@@ -624,6 +621,18 @@ Be constructive and brief."""
                 "success": False,
                 "error": f"Error reading file: {str(e)}"
             }
+
+    @staticmethod
+    def _detect_language(ext: str) -> str:
+        """Map file extension to language name."""
+        language_map = {
+            '.py': 'python', '.js': 'javascript', '.ts': 'typescript',
+            '.tsx': 'typescript', '.jsx': 'javascript', '.java': 'java',
+            '.go': 'go', '.rs': 'rust', '.rb': 'ruby', '.php': 'php',
+            '.cs': 'csharp', '.cpp': 'cpp', '.c': 'c', '.html': 'html',
+            '.css': 'css', '.sql': 'sql', '.sh': 'bash',
+        }
+        return language_map.get(ext, 'text')
 
     def _comprehensive_review(
         self,
