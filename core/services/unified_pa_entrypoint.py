@@ -86,6 +86,7 @@ class UnifiedPAEntrypoint:
         'boardroom':         ['intelligence_enricher', 'strategic_memory'],
         'system_health':     ['intelligence_enricher'],
         'stock_intelligence': ['domain_context', 'spider_trends', 'proactive_intelligence'],
+        'legislation':       ['domain_context', 'spider_trends'],
         'crypto_price':      ['domain_context'],
         'spider_data':       ['domain_context'],
         'execution_history': ['intelligence_enricher', 'strategic_memory', 'platform_briefing'],
@@ -932,6 +933,17 @@ class UnifiedPAEntrypoint:
         ]):
             return ('stock_intelligence', 'stock_intelligence_tool')
 
+        # Session 1014: Legislation / congressional bill patterns
+        if any(phrase in message_lower for phrase in [
+            'legislation', 'bills in congress', 'congressional',
+            'senate bill', 'house bill', 'what bills', 'any bills',
+            'legislation about', 'proposed law', 'legislat',
+            'congress is working', 'congressional hearing',
+            'passed the senate', 'passed the house', 'bill status',
+            'sponsor of', 'cosponsors', 'committee hearing',
+        ]):
+            return ('legislation', 'legislation_tool')
+
         # Session 948: Spider data patterns — removed bare 'intelligence' (too broad)
         if any(word in message_lower for word in [
             'spider', 'spiders', 'crawl', 'crawled', 'collected data',
@@ -1519,6 +1531,31 @@ class UnifiedPAEntrypoint:
             else:
                 payload['action'] = 'overview'
 
+        # Session 1014: Legislation payload
+        elif intent == 'legislation':
+            msg_lower = message.lower()
+            import re as _re
+            bill_match = _re.search(r'(HR|S|HB|SB|HJR|SJR|HRES|SRES)\s*(\d+)', message.upper())
+            if bill_match:
+                payload['bill_number'] = f"{bill_match.group(1)} {bill_match.group(2)}"
+            if any(w in msg_lower for w in ['trending', 'recent', 'latest', 'active', 'working on']):
+                payload['action'] = 'trending'
+            elif any(w in msg_lower for w in ['status', 'where is', 'progress']):
+                payload['action'] = 'status'
+            elif any(w in msg_lower for w in ['summary', 'explain', 'plain english', 'what does', 'what is']):
+                payload['action'] = 'summary'
+            elif any(w in msg_lower for w in ['overview', 'dashboard', 'stats']):
+                payload['action'] = 'overview'
+            else:
+                payload['action'] = 'search'
+            # Extract query: strip common preamble words
+            query_text = _re.sub(
+                r'\b(what|which|are|is|any|about|regarding|on|the|bills?|legislation|congress|congressional|in)\b',
+                '', msg_lower
+            ).strip()
+            if query_text and not payload.get('bill_number'):
+                payload['query'] = query_text
+
         # Session 995B: Sports betting payload
         elif intent == 'sports_betting':
             msg_lower = message.lower()
@@ -1805,6 +1842,7 @@ Only describe features and capabilities that actually exist. Never fabricate con
             'system_health': "Lead with critical issues and whether things are improving or declining.",
             'boardroom': "Highlight the most urgent item and suggest what to handle first.",
             'stock_intelligence': "Highlight the key bull/bear signal and one actionable step.",
+            'legislation': "Highlight the most impactful bill and explain why it matters to everyday people.",
             'system_overview': "Summarize the single most important observation and one action. End with: Want me to drill into any of these?",
             'learning_patterns': "Highlight the highest-confidence pattern and what it means.",
             'feedback': "Prioritize bugs over feature requests. Note recurring themes.",
@@ -1928,7 +1966,8 @@ Only describe features and capabilities that actually exist. Never fabricate con
         # Session 987: All intents with proper formatters skip generic LLM fallback
         if intent not in ['initiatives', 'brainstorming', 'content_review',
                           'boardroom', 'decision_management', 'opportunities',
-                          'spider_data', 'stock_intelligence', 'execution_history',
+                          'spider_data', 'stock_intelligence', 'legislation',
+                          'execution_history',
                           'learning_patterns', 'feedback', 'system_overview',
                           'gates', 'pilots', 'predictions', 'reasoning',
                           'system_health', 'crypto_price']:
@@ -3347,6 +3386,127 @@ Address the user by name occasionally."""
                             conf = p.get('confidence', 0)
                             matchup = p.get('matchup', '')
                             response += f"- [{source}] **{matchup}**: {pick} ({conf}%)\n"
+                    return response
+
+                else:
+                    return str(tool_result)
+
+            # Session 1014: Legislation results formatting
+            elif intent == 'legislation':
+                action = tool_result.get('action', '')
+
+                if action == 'overview':
+                    total = tool_result.get('total_tracked', 0)
+                    topics = tool_result.get('top_topics', [])
+                    states = tool_result.get('states_covered', [])
+                    breakdown = tool_result.get('status_breakdown', {})
+
+                    response = f"Legislation Dashboard, {user_name}:\n\n"
+                    response += f"- **Bills Tracked:** {total}\n"
+                    if breakdown:
+                        parts = [f"{s}: {c}" for s, c in breakdown.items()]
+                        response += f"- **Status:** {', '.join(parts)}\n"
+                    if states:
+                        response += f"- **States:** {', '.join(states[:10])}\n"
+                    if topics:
+                        response += "\n**Top Topics:**\n"
+                        for t in topics[:8]:
+                            response += f"- {t['topic']} ({t['count']} bills)\n"
+                    return response
+
+                elif action == 'trending':
+                    items = tool_result.get('items', [])
+                    total = tool_result.get('total', 0)
+                    if not items:
+                        return f"No legislation data available yet, {user_name}. The spider may not have run yet."
+                    response = f"Trending Bills ({total} tracked):\n\n"
+                    for i, b in enumerate(items[:10], 1):
+                        bn = b.get('bill_number', '?')
+                        state = b.get('state', '')
+                        title = b.get('title', '')[:60]
+                        status = b.get('status', '')
+                        last = b.get('last_action', '')[:50]
+                        response += f"{i}. **{bn}** ({state}) — {title}\n"
+                        response += f"   Status: {status}"
+                        if last:
+                            response += f" | Last: {last}"
+                        response += "\n"
+                    return response
+
+                elif action == 'search':
+                    if tool_result.get('error'):
+                        return f"I need a topic to search for, {user_name}. Try: \"What bills about healthcare?\""
+                    items = tool_result.get('items', [])
+                    query = tool_result.get('query', '')
+                    total = tool_result.get('total', 0)
+                    if total == 0:
+                        return f"No bills found matching \"{query}\", {user_name}. Try broader terms like healthcare, immigration, or technology."
+                    response = f"Bills matching \"{query}\" ({total} found):\n\n"
+                    for b in items[:10]:
+                        bn = b.get('bill_number', '?')
+                        state = b.get('state', '')
+                        title = b.get('title', '')[:60]
+                        status = b.get('status', '')
+                        sponsors = b.get('sponsor_count', 0)
+                        response += f"- **{bn}** ({state}): {title}\n"
+                        response += f"  Status: {status} | {sponsors} sponsor(s)\n"
+                    return response
+
+                elif action == 'status':
+                    if not tool_result.get('found'):
+                        bn = tool_result.get('bill_number', 'that bill')
+                        return f"Could not find {bn} in tracked legislation, {user_name}."
+                    bn = tool_result.get('bill_number', '')
+                    title = tool_result.get('title', '')
+                    state = tool_result.get('state', '')
+                    status = tool_result.get('status', '')
+                    last_action = tool_result.get('last_action', '')
+                    last_date = tool_result.get('last_action_date', '')
+                    sponsors = tool_result.get('sponsors', [])
+                    committee = tool_result.get('committee', '')
+                    url = tool_result.get('url', '')
+
+                    response = f"**{bn}** ({state}): {title}\n\n"
+                    response += f"- **Status:** {status}\n"
+                    if last_action:
+                        response += f"- **Last Action:** {last_action}"
+                        if last_date:
+                            response += f" ({last_date})"
+                        response += "\n"
+                    if committee:
+                        response += f"- **Committee:** {committee}\n"
+                    if sponsors:
+                        response += f"- **Sponsors:** {', '.join(sponsors[:5])}\n"
+                    if url:
+                        response += f"- [Full text]({url})\n"
+                    return response
+
+                elif action == 'summary':
+                    if not tool_result.get('found'):
+                        q = tool_result.get('query', 'that bill')
+                        return f"Could not find a bill matching \"{q}\", {user_name}."
+                    bn = tool_result.get('bill_number', '')
+                    title = tool_result.get('title', '')
+                    state = tool_result.get('state', '')
+                    status = tool_result.get('status', '')
+                    desc = tool_result.get('description', '')
+                    plain = tool_result.get('plain_summary', '')
+                    sponsors = tool_result.get('sponsors', [])
+                    topics = tool_result.get('topics', [])
+                    url = tool_result.get('url', '')
+
+                    response = f"**{bn}** ({state}): {title}\n\n"
+                    if plain:
+                        response += f"{plain}\n\n"
+                    elif desc:
+                        response += f"{desc}\n\n"
+                    response += f"- **Status:** {status}\n"
+                    if topics:
+                        response += f"- **Topics:** {', '.join(topics[:5])}\n"
+                    if sponsors:
+                        response += f"- **Sponsors:** {', '.join(sponsors[:5])}\n"
+                    if url:
+                        response += f"- [Full text]({url})\n"
                     return response
 
                 else:

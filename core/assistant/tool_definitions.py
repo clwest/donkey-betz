@@ -84,6 +84,7 @@ def get_tool_definitions() -> List[Dict]:
         _get_human_decisions_tool_definition(),       # Manage pending human decisions
         # Session 800: Reasoning Engine - Connect PA to ThinkingAgent
         _get_reasoning_engine_tool_definition(),      # Access autonomous reasoning system
+        _get_legislation_tool_definition(),            # Session 1014: Congressional bill tracking
         _get_workflow_orchestration_agent_definition(),  # LAST - only for explicit package requests
     ]
 
@@ -1640,6 +1641,48 @@ def _get_reasoning_engine_tool_definition() -> Dict:
                     "type": "boolean",
                     "default": False,
                     "description": "Include full context data in response (can be large)"
+                }
+            },
+            "required": ["action"]
+        }
+    }
+
+
+def _get_legislation_tool_definition() -> Dict:
+    """
+    Session 1014: Congressional legislation tracking tool.
+
+    Lets PA search bills, check status, get plain-English summaries,
+    and see trending legislation across all topics.
+    """
+    return {
+        "type": "function",
+        "name": "legislation_tool",
+        "description": get_tool_description("legislation_tool"),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["search", "status", "summary", "trending", "overview"],
+                    "description": "Action: 'search' (find bills by keyword), 'status' (bill status), 'summary' (plain-English explanation), 'trending' (most active bills), 'overview' (dashboard stats)"
+                },
+                "query": {
+                    "type": "string",
+                    "description": "Search keyword (e.g. healthcare, AI, immigration). Used with search and summary actions."
+                },
+                "bill_number": {
+                    "type": "string",
+                    "description": "Bill number (e.g. HR 1234, S 567). Used with status and summary actions."
+                },
+                "state": {
+                    "type": "string",
+                    "description": "Filter by state (e.g. US, CA, TX). Optional."
+                },
+                "limit": {
+                    "type": "integer",
+                    "default": 10,
+                    "description": "Maximum results to return (max 20)"
                 }
             },
             "required": ["action"]
