@@ -1,6 +1,6 @@
 # Agent System
 
-82 agents organized by category, routed deterministically via dictionary lookup, with automatic tool call recording and provenance tracking. Session 1000: 4 Intelligence Desks run 21 agents daily.
+92 agents organized by category, routed deterministically via dictionary lookup, with automatic tool call recording and provenance tracking. Session 1000: 4 Intelligence Desks run 21 agents daily.
 
 ## Agent Categories (82 Total)
 
@@ -125,6 +125,15 @@ Provenance fields: `generated_at`, `inputs_used`, `freshness_window`, `publishab
 - Rachel (Research/Analysis), Antoni (Financial), Bella (Content/Creative), Daniel (Development), George (Executive), Domi (Blockchain), Sam (Sports), Charlotte (Legal), Emily (Marketing), Callum (Strategy), Matilda (Health), Elli (Support)
 
 Assignment: explicit voice_id → keyword matching → category matching → default Rachel.
+
+## CodeArtifact Capture (Session 1012)
+
+When `CodeGeneratorAgent._write_file()` or `_edit_file()` fails due to workspace unavailability (no manager, no workspace, no write permission, or write operation failure), the code output is captured as a `CodeArtifact` record instead of being silently lost. This is critical on Railway where no writable workspace exists.
+
+- **Model:** `CodeArtifact` (`core.models_code_artifacts`) — kind (file_create/file_edit/patch), status (pending/approved/rejected/applied/stale), target_path, content, content_before
+- **API:** `GET /api/code-artifacts/` (list, filterable by status/agent_name/initiative/kind), `POST .../approve/`, `POST .../reject/`
+- **NOT captured:** File-not-found and old_text-not-found errors (logic errors, not workspace issues)
+- **Return dict:** Failed writes include `artifact_id` and `artifact_captured: True` so the agent's tool loop knows the code was saved
 
 ## Executive Function (Session 872)
 

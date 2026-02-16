@@ -133,6 +133,7 @@ The following endpoints were migrated from `/api/v1/` to `/api/`:
 | `/api/mythology/*` | MIGRATED | IntelligenceTab.tsx (2 calls) |
 | `/api/odds-calc/*` | REMOVED (Session 1009) | None needed |
 | `/api/initiatives/*` | MIGRATED | None needed |
+| `/api/code-artifacts/*` | NEW (Session 1012) | None needed |
 
 **Note:** Research and Reasoning APIs remain at `/api/v1/` due to heavy frontend usage - will require dedicated migration session.
 
