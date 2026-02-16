@@ -193,6 +193,12 @@ class AgentResult:
         """Alias for message - backwards compatibility with code expecting .content."""
         return self.message
 
+    # Session 1017: Backwards compatibility alias for .metadata
+    @property
+    def metadata(self) -> Dict[str, Any]:
+        """Alias for data - backwards compatibility with code expecting .metadata."""
+        return self.data
+
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
         result = {
