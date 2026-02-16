@@ -14,6 +14,7 @@ Two files handle everything:
 
 | Priority | Intent | Routes To | Triggers |
 |----------|--------|-----------|----------|
+| 0 | video/image/audio creation | agent tools | creation verb + media type (Session 1016 guard) |
 | 1 | boardroom | boardroom_tool | decision, attention, approve, triage |
 | 2 | recent_activity | recent_activity_tool | what's been going on, catch me up |
 | 3 | system_health_check | system_health_tool | how's the system, anything down |
