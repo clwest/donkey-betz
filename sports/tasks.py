@@ -160,22 +160,93 @@ def settle_user_bets():
 @shared_task(name='sports.update_game_scores')
 def update_game_scores():
     """
-    Update game scores from external API (placeholder for future implementation)
+    Fetch final scores from The Odds API and update Game rows.
 
-    This task would:
-    1. Query external sports data API for completed games
-    2. Update game scores in database
-    3. Update game status to FINAL
-    4. Trigger prediction evaluation
-
-    Currently just a placeholder - implement when API access is available
+    1. Build reverse map: league abbreviation → Odds API sport_key
+    2. Find non-FINAL Games from last 3 days that have predictions
+    3. Group by sport_key, call TheOddsSpider.fetch_scores() per group
+    4. Match by external_id, set home_score/away_score/status=FINAL
     """
-    logger.info("Game score update task - Not yet implemented (requires external API)")
-    logger.info("Manual score updates can be done via Django admin")
+    from collections import defaultdict
+    from core.agents.markets.game_predictor import GamePredictor
+    from ai_core.spiders.specialized.theodds_spider import TheOddsSpider
+    from sports.models import Game, GameStatus
+
+    # Build reverse map: league abbreviation → sport_key
+    abbr_to_sport_key = {}
+    for sport_key, (_, abbr, _) in GamePredictor.SPORT_KEY_LEAGUE.items():
+        abbr_to_sport_key[abbr] = sport_key
+
+    # Non-final games from last 3 days that have predictions
+    cutoff = timezone.now() - timedelta(days=3)
+    pending_games = (
+        Game.objects.filter(
+            scheduled_start__gte=cutoff,
+            mlprediction__isnull=False,
+        )
+        .exclude(status=GameStatus.FINAL)
+        .select_related('league')
+        .distinct()
+    )
+
+    if not pending_games.exists():
+        logger.info("No pending games with predictions to update")
+        return {'games_checked': 0, 'games_updated': 0, 'api_calls': 0}
+
+    # Group games by sport_key
+    games_by_sport_key = defaultdict(list)
+    for game in pending_games:
+        sport_key = abbr_to_sport_key.get(game.league.abbreviation)
+        if sport_key:
+            games_by_sport_key[sport_key].append(game)
+        else:
+            logger.debug(f"No sport_key mapping for league {game.league.abbreviation}")
+
+    spider = TheOddsSpider()
+    total_checked = 0
+    total_updated = 0
+    api_calls = 0
+    errors = []
+
+    for sport_key, games in games_by_sport_key.items():
+        try:
+            scores = spider.fetch_scores(sport_key, days_from=3)
+            api_calls += 1
+        except Exception as e:
+            errors.append(f"{sport_key}: {e}")
+            logger.error(f"Error fetching scores for {sport_key}: {e}")
+            continue
+
+        # Index scores by event_id for fast lookup
+        score_map = {s['event_id']: s for s in scores if s.get('completed')}
+
+        for game in games:
+            total_checked += 1
+            score_data = score_map.get(game.external_id)
+            if not score_data:
+                continue
+
+            game.home_score = score_data['home_score']
+            game.away_score = score_data['away_score']
+            game.status = GameStatus.FINAL
+            game.save(update_fields=['home_score', 'away_score', 'status', 'updated_at'])
+            total_updated += 1
+            logger.info(
+                f"Updated {game.external_id}: "
+                f"{game.home_team_id} {game.home_score} - "
+                f"{game.away_team_id} {game.away_score} FINAL"
+            )
+
+    logger.info(
+        f"Score update complete: {total_checked} checked, "
+        f"{total_updated} updated, {api_calls} API calls"
+    )
 
     return {
-        'status': 'not_implemented',
-        'message': 'Requires external sports data API integration'
+        'games_checked': total_checked,
+        'games_updated': total_updated,
+        'api_calls': api_calls,
+        'errors': errors,
     }
 
 

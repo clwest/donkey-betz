@@ -182,13 +182,10 @@ class PredictionEvaluator:
         # Update prediction with evaluation results
         with transaction.atomic():
             prediction.was_correct = was_correct
-            prediction.evaluation_date = timezone.now()
+            prediction.evaluated_at = timezone.now()
 
-            # Store additional evaluation metadata
-            if not hasattr(prediction, 'evaluation_metadata'):
-                prediction.evaluation_metadata = {}
-
-            prediction.evaluation_metadata = {
+            # Store evaluation details in inherited metadata JSONField
+            prediction.metadata = {
                 'outcome_type': outcome_type,
                 'actual_winner': actual_winner.name,
                 'predicted_confidence': float(prediction.confidence),
