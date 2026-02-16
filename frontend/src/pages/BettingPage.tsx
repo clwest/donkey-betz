@@ -1473,15 +1473,15 @@ export default function BettingPage() {
                         <button
                           onClick={() => setExpandedBookmakers(prev => {
                             const next = new Set(prev)
-                            next.has(eid) ? next.delete(eid) : next.add(eid)
+                            next.has(game.event_id) ? next.delete(game.event_id) : next.add(game.event_id)
                             return next
                           })}
                           className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
                         >
-                          <ChevronRight size={12} className={cn('transition-transform', expandedBookmakers.has(eid) && 'rotate-90')} />
+                          <ChevronRight size={12} className={cn('transition-transform', expandedBookmakers.has(game.event_id) && 'rotate-90')} />
                           Compare {game.h2h_odds.length} bookmakers
                         </button>
-                        {expandedBookmakers.has(eid) && (
+                        {expandedBookmakers.has(game.event_id) && (
                           <div className="mt-2 grid grid-cols-1 gap-1 max-h-48 overflow-y-auto">
                             <div className="grid grid-cols-4 gap-2 text-[10px] text-gray-500 font-medium px-2 py-1">
                               <span>Book</span>
