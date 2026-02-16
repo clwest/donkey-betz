@@ -1120,7 +1120,7 @@ class AutonomousActionExecutor:
                         initiative = Initiative.objects.create(
                             name=initiative_name,
                             description=f"Auto-created from blocked research. {reasoning[:500]}",
-                            status='ACTIVE',
+                            status='TRIAGE',  # Session 1016: TRIAGE not ACTIVE — must pass quality gate
                             purpose='learning',
                             current_stage=1,
                             created_by='ResearchAgent'
@@ -1134,6 +1134,13 @@ class AutonomousActionExecutor:
                         )
 
                         logger.info(f"[Session 906] Created new Initiative: {initiative.id}")
+
+                        # Session 1016: Auto-link to signal cluster
+                        try:
+                            from core.services.initiative_signal_linker import auto_link_initiative_signals
+                            auto_link_initiative_signals(initiative)
+                        except Exception as e:
+                            logger.debug(f"Signal auto-link skipped: {e}")
 
                         # Create all 5 stages
                         for stage_num in range(1, 6):
