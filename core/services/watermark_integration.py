@@ -159,7 +159,7 @@ def save_watermarked_image(
         generation_params=generation_params
     )
 
-    # Save to local storage first (for immediate access and backup)
+    # Save to storage (Cloudinary in production, local filesystem in dev)
     file_path = default_storage.save(filename, ContentFile(watermarked_bytes))
 
     if provenance_id:
@@ -167,37 +167,11 @@ def save_watermarked_image(
     else:
         logger.info(f"Saved image (no watermark): {file_path}")
 
-    # Session 800: Upload to Cloudinary for production persistence
-    # This ensures images survive Railway's ephemeral filesystem
-    cloudinary_api_key = os.environ.get('CLOUDINARY_API_KEY')
-    if upload_to_cloud and cloudinary_api_key:
-        try:
-            import cloudinary
-            import cloudinary.uploader
-
-            # Get the full path to the saved file
-            full_path = default_storage.path(file_path)
-
-            # Upload to Cloudinary
-            upload_result = cloudinary.uploader.upload(
-                full_path,
-                folder="ai-content-studio/generated",
-                public_id=filename.replace('/', '_').replace('.png', ''),
-                resource_type="image",
-                overwrite=True
-            )
-
-            cloud_url = upload_result.get('secure_url')
-            if cloud_url:
-                logger.info(f"☁️ Uploaded to Cloudinary: {cloud_url[:60]}...")
-                return cloud_url
-
-        except Exception as cloud_error:
-            logger.warning(f"⚠️ Cloudinary upload failed (using local): {cloud_error}")
-            # Fall through to return local path
-
-    # Return local path if cloud upload not enabled or failed
-    return file_path
+    # Return the URL — default_storage.url() works for both Cloudinary and local
+    url = default_storage.url(file_path)
+    if url.startswith('http'):
+        logger.info(f"☁️ Image stored in cloud: {url[:80]}...")
+    return url
 
 
 def verify_image_ownership(image_bytes: bytes, user) -> Dict[str, Any]:

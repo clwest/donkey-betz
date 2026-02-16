@@ -427,19 +427,27 @@ def save_to_history(user, file_path, image_type, prompt='', parameters=None,
         from content.models import ImageHistory
 
         # Get image dimensions and file size
-        full_path = default_storage.path(file_path)
-        try:
-            with PILImage.open(full_path) as img:
-                width, height = img.size
-        except Exception as e:
-            logger.warning(f"Could not read image dimensions: {e}")
-            width, height = None, None
-
-        try:
-            file_size = os.path.getsize(full_path)
-        except Exception as e:
-            logger.warning(f"Could not read file size: {e}")
-            file_size = None
+        width, height, file_size = None, None, None
+        if file_path.startswith('http'):
+            # Cloud-stored image (Cloudinary URL) — download to read metadata
+            try:
+                import requests as _req
+                resp = _req.get(file_path, timeout=10)
+                if resp.status_code == 200:
+                    from io import BytesIO
+                    with PILImage.open(BytesIO(resp.content)) as img:
+                        width, height = img.size
+                    file_size = len(resp.content)
+            except Exception as e:
+                logger.warning(f"Could not read cloud image metadata: {e}")
+        else:
+            try:
+                full_path = default_storage.path(file_path)
+                with PILImage.open(full_path) as img:
+                    width, height = img.size
+                file_size = os.path.getsize(full_path)
+            except Exception as e:
+                logger.warning(f"Could not read image metadata: {e}")
 
         # Session 119: BUGFIX - Assign project if session already has one
         # When resuming a session with existing project, images need to be linked immediately
