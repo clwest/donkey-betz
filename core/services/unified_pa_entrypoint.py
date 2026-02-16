@@ -665,6 +665,21 @@ class UnifiedPAEntrypoint:
         """
         message_lower = message.lower()
 
+        # Session 1016: Media creation guard — MUST be checked FIRST.
+        # "create a YouTube video", "make a video comparing...", "generate an image of..."
+        # must route to creation intents even when other keywords like "project" are present.
+        creation_verbs = ['create ', 'make ', 'generate ', 'produce ', "let's create",
+                          "let's make", "let's generate"]
+        if any(cv in message_lower for cv in creation_verbs):
+            if any(media in message_lower for media in ['video', 'youtube', 'animation', 'animate']):
+                return ('video_creation', 'video_generation_agent')
+            if any(media in message_lower for media in [
+                'image', 'picture', 'logo', 'banner', 'illustration', 'photo',
+            ]):
+                return ('image_creation', 'image_generation_agent')
+            if any(media in message_lower for media in ['audio', 'sound', 'voice', 'podcast']):
+                return ('audio_creation', 'audio_generation_agent')
+
         # Session 996: Initiative ownership patterns — check BEFORE generic initiative match
         if any(phrase in message_lower for phrase in [
             'assign owner', 'who owns', 'my initiatives', 'unowned initiative',
@@ -675,9 +690,14 @@ class UnifiedPAEntrypoint:
 
         # Session 988: Initiative/project patterns — check BEFORE boardroom
         # so "initiative" + "attention" routes to initiatives, not boardroom
+        # Session 1016: Tightened "project"/"projects" — bare words are too broad
+        # and match "other Agent based project that are popular" (external projects).
+        # Now requires context like "my project", "the project", "our projects".
         if any(word in message_lower for word in [
-            'initiative', 'initiatives', 'project', 'projects',
-            'what are we working on', 'active projects', 'current projects'
+            'initiative', 'initiatives',
+            'what are we working on', 'active projects', 'current projects',
+            'my project', 'my projects', 'our project', 'our projects',
+            'the project', 'the projects', 'this project',
         ]):
             return ('initiatives', 'initiative_tool')
 
