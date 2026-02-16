@@ -229,6 +229,13 @@ app.conf.beat_schedule = {
     },
     # Sports Prediction Evaluation & Bet Settlement
     # Updated Session 23: Using new PredictionEvaluator system
+    'update-game-scores': {
+        'task': 'sports.update_game_scores',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'options': {
+            'expires': 1800,
+        }
+    },
     'evaluate-completed-predictions': {
         'task': 'sports.evaluate_completed_predictions',
         'schedule': crontab(minute=0),  # Every hour on the hour
