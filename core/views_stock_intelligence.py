@@ -22,8 +22,18 @@ from core.models_autonomous_alerts import StockMarketAlert
 logger = logging.getLogger(__name__)
 
 FINANCIAL_NEWS_SPIDERS = [
-    'yahoo_finance', 'polygon', 'coingecko', 'finnhub', 'financial',
+    'polygon_finance', 'finnhub', 'financial',
 ]
+
+# Map spider_name → human-readable fallback; RSS items may carry their own 'source' field
+SPIDER_SOURCE_NAMES = {
+    'polygon_finance': 'Polygon',
+    'finnhub': 'Finnhub',
+    'financial': 'Financial News',
+    'yahoo_finance': 'Yahoo Finance',
+    'coingecko': 'CoinGecko',
+    'sec_edgar': 'SEC EDGAR',
+}
 
 
 @api_view(['GET'])
@@ -104,13 +114,16 @@ def stock_hub(request):
             raw = row.raw_data or {}
             entries = raw.get('items', [])
             spider_ts = row.created_at.isoformat() if row.created_at else None
+            fallback_source = SPIDER_SOURCE_NAMES.get(row.spider_name, row.spider_name)
             for entry in entries:
                 market_news.append({
                     'spider_name': row.spider_name,
+                    'source': entry.get('source') or fallback_source,
                     'title': entry.get('title', ''),
                     'description': (entry.get('description') or entry.get('summary') or '')[:200],
                     'link': entry.get('link') or row.source_url,
                     'published': entry.get('published') or spider_ts,
+                    'category': entry.get('category') or raw.get('category', ''),
                 })
                 if len(market_news) >= 10:
                     break
@@ -459,9 +472,59 @@ def stock_sec_filings(request):
         return Response({'success': False, 'error': str(e)}, status=500)
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def stock_market_news(request):
+    """Paginated market news feed from financial spiders with source filtering."""
+    try:
+        limit = min(int(request.GET.get('limit', 20)), 50)
+        offset = int(request.GET.get('offset', 0))
+        source_filter = request.GET.get('source', '').strip()
+
+        # Collect all news items from financial spiders
+        all_news = []
+        sources_seen = set()
+        for row in SpiderData.objects.filter(
+            spider_name__in=FINANCIAL_NEWS_SPIDERS
+        ).order_by('-created_at')[:200]:
+            raw = row.raw_data or {}
+            entries = raw.get('items', [])
+            spider_ts = row.created_at.isoformat() if row.created_at else None
+            fallback_source = SPIDER_SOURCE_NAMES.get(row.spider_name, row.spider_name)
+            for entry in entries:
+                source = entry.get('source') or fallback_source
+                sources_seen.add(source)
+                if source_filter and source != source_filter:
+                    continue
+                all_news.append({
+                    'spider_name': row.spider_name,
+                    'source': source,
+                    'title': entry.get('title', ''),
+                    'description': (entry.get('description') or entry.get('summary') or '')[:300],
+                    'link': entry.get('link') or row.source_url,
+                    'published': entry.get('published') or spider_ts,
+                    'category': entry.get('category') or raw.get('category', ''),
+                })
+
+        total = len(all_news)
+        page = all_news[offset:offset + limit]
+
+        return Response({
+            'success': True,
+            'results': page,
+            'total': total,
+            'limit': limit,
+            'offset': offset,
+            'sources': sorted(sources_seen),
+        })
+    except Exception as e:
+        logger.exception("Error fetching market news")
+        return Response({'success': False, 'error': str(e)}, status=500)
+
+
 # List of financial spider names whose raw_data may reference ticker symbols
 FINANCIAL_SPIDERS = [
-    'yahoo_finance', 'polygon', 'coingecko', 'sec_edgar',
+    'yahoo_finance', 'polygon_finance', 'coingecko', 'sec_edgar',
 ]
 
 # Brief JSON fields that contain per-ticker entries

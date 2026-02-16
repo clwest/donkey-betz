@@ -22,9 +22,10 @@ import { cn } from '@/lib/cn'
 import { stockApi, type StockDashboard, type MarketBrief, type MarketBriefDetail, type StockAlert, type PredictionOutcome, type TickerLookupResult } from '@/lib/api'
 
 // Sub-tab config
-type SubTab = 'hub' | 'ticker' | 'overview' | 'briefs' | 'alerts' | 'sec' | 'predictions'
+type SubTab = 'hub' | 'news' | 'ticker' | 'overview' | 'briefs' | 'alerts' | 'sec' | 'predictions'
 const subTabs: Array<{ id: SubTab; label: string; icon: typeof TrendingUp }> = [
   { id: 'hub', label: 'Hub', icon: Activity },
+  { id: 'news', label: 'News', icon: Newspaper },
   { id: 'ticker', label: 'Ticker Lookup', icon: Search },
   { id: 'overview', label: 'Overview', icon: BarChart2 },
   { id: 'briefs', label: 'Market Briefs', icon: FileText },
@@ -85,6 +86,7 @@ export default function StockIntelligencePage() {
 
       {/* Tab Content */}
       {activeTab === 'hub' && <HubTab setActiveTab={setActiveTab} />}
+      {activeTab === 'news' && <NewsTab />}
       {activeTab === 'ticker' && <TickerLookupTab />}
       {activeTab === 'overview' && <OverviewTab />}
       {activeTab === 'briefs' && <BriefsTab />}
@@ -141,10 +143,12 @@ interface StockHubData {
   }>
   market_news: Array<{
     spider_name: string
+    source: string
     title: string
     description: string
     link: string
     published: string | null
+    category: string
   }>
   sec_recent: Array<{
     title: string
@@ -304,6 +308,9 @@ function HubTab({ setActiveTab }: { setActiveTab: (tab: SubTab) => void }) {
             <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
               <Newspaper size={12} /> Market News
             </h3>
+            <button onClick={() => setActiveTab('news')} className="text-xs text-primary-400 hover:text-primary-300">
+              View all <ArrowUpRight size={10} className="inline" />
+            </button>
           </div>
           {data.market_news.length > 0 ? (
             <div className="space-y-2">
@@ -320,9 +327,9 @@ function HubTab({ setActiveTab }: { setActiveTab: (tab: SubTab) => void }) {
                       <ExternalLink size={9} className="inline ml-1 opacity-0 group-hover:opacity-100" />
                     </a>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-cyan-400/70">{item.spider_name}</span>
+                      <SourceBadge source={item.source} />
                       {item.published && (
-                        <span className="text-xs text-gray-600">{new Date(item.published).toLocaleDateString()}</span>
+                        <span className="text-xs text-gray-600">{timeAgo(item.published)}</span>
                       )}
                     </div>
                   </div>
@@ -366,6 +373,137 @@ function HubTab({ setActiveTab }: { setActiveTab: (tab: SubTab) => void }) {
           <p className="text-sm text-gray-500">No SEC filings yet.</p>
         )}
       </div>
+    </div>
+  )
+}
+
+// =============================================================================
+// News Tab
+// =============================================================================
+
+const sourceColorMap: Record<string, string> = {
+  'MarketWatch': 'bg-blue-500/20 text-blue-400',
+  'CNBC': 'bg-red-500/20 text-red-400',
+  'Seeking Alpha': 'bg-green-500/20 text-green-400',
+  'Investing.com': 'bg-orange-500/20 text-orange-400',
+  'Yahoo Finance': 'bg-purple-500/20 text-purple-400',
+  'Polygon': 'bg-cyan-500/20 text-cyan-400',
+  'Finnhub': 'bg-teal-500/20 text-teal-400',
+  'Financial News': 'bg-indigo-500/20 text-indigo-400',
+}
+
+function SourceBadge({ source }: { source: string }) {
+  const color = sourceColorMap[source] || 'bg-gray-500/20 text-gray-400'
+  return <span className={cn('px-1.5 py-0.5 rounded text-xs', color)}>{source}</span>
+}
+
+function timeAgo(dateStr: string): string {
+  const now = Date.now()
+  const then = new Date(dateStr).getTime()
+  if (isNaN(then)) return dateStr
+  const diffMs = now - then
+  const mins = Math.floor(diffMs / 60000)
+  if (mins < 1) return 'Just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  if (days === 1) return 'Yesterday'
+  if (days < 7) return `${days}d ago`
+  return new Date(dateStr).toLocaleDateString()
+}
+
+interface MarketNewsData {
+  success: boolean
+  results: Array<{
+    spider_name: string
+    source: string
+    title: string
+    description: string
+    link: string
+    published: string | null
+    category: string
+  }>
+  total: number
+  limit: number
+  offset: number
+  sources: string[]
+}
+
+function NewsTab() {
+  const [offset, setOffset] = useState(0)
+  const [sourceFilter, setSourceFilter] = useState('')
+  const limit = 20
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['stock-market-news', offset, sourceFilter],
+    queryFn: () => stockApi.marketNews({
+      limit,
+      offset,
+      source: sourceFilter || undefined,
+    }).then(r => r.data as MarketNewsData),
+  })
+
+  if (isLoading) return <LoadingSpinner />
+  if (!data?.success) return <div className="text-gray-400 text-center py-12">No news data available yet.</div>
+
+  const articles = data.results
+  const total = data.total
+
+  return (
+    <div className="space-y-4">
+      {/* Filters */}
+      <div className="flex items-center gap-3">
+        <select
+          value={sourceFilter}
+          onChange={(e) => { setSourceFilter(e.target.value); setOffset(0) }}
+          className="bg-gray-800 border border-dark-border rounded-lg px-3 py-1.5 text-sm text-gray-300"
+        >
+          <option value="">All Sources</option>
+          {(data.sources || []).map(s => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        <span className="text-xs text-gray-500 ml-auto">{total} articles</span>
+      </div>
+
+      {/* News List */}
+      {articles.length === 0 && <EmptyState message="No news articles match your filter." />}
+      <div className="space-y-3">
+        {articles.map((item, idx) => (
+          <div key={`${item.link}-${idx}`} className="bg-dark-card border border-dark-border rounded-lg p-4 group">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <a
+                  href={item.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-gray-200 hover:text-white font-medium group-hover:underline"
+                >
+                  {item.title || 'Untitled'}
+                  <ExternalLink size={11} className="inline ml-1.5 opacity-0 group-hover:opacity-100" />
+                </a>
+                {item.description && (
+                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">{item.description}</p>
+                )}
+                <div className="flex items-center gap-2 mt-2">
+                  <SourceBadge source={item.source} />
+                  {item.category && (
+                    <span className="px-1.5 py-0.5 rounded text-xs bg-gray-700/50 text-gray-400">{item.category}</span>
+                  )}
+                  {item.published && (
+                    <span className="text-xs text-gray-600">{timeAgo(item.published)}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {total > limit && (
+        <PaginationControls offset={offset} limit={limit} total={total} onChange={setOffset} />
+      )}
     </div>
   )
 }
