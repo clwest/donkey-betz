@@ -30,7 +30,7 @@
 | default | ~28 | Light DB queries, body system checks, attention lifecycle |
 | long_running | ~50 | Agent exercises (18), autonomous situations (14), pipeline execution, spider network, intelligence desks, blog enhancement |
 | content | ~21 | Blog generation, podcasts, initiative stages, content deliberation, blog re-evaluation, auto-publish |
-| sports | ~5 | Odds snapshots, arb scans, outcome verification, betting briefs |
+| sports | ~8 | Odds collection, prediction generation, score fetching, evaluation, verification, settlement, accuracy reports |
 | broadcast | ~4 | Status snapshots, heartbeat, nervous system |
 | ml | ~3 | Embedding backfills, ML model training/scoring |
 | pa | 1 | process_pa_chat_task |
@@ -49,7 +49,18 @@
 
 **Attention & Orchestration:** generate_human_attention_items (15m), process_human_attention_lifecycle (10m), enrich_boardroom_ml_predictions (15m), process_spider_actions (30m), process_gate_progression (15m)
 
-**Betting Verification (Session 995):** verify_betting_outcomes (2h) — fetches game scores, settles pending wagers, verifies watched arb items, feeds learning loop
+**Sports Pipeline (Sessions 1010-1011, 8 scheduled tasks — fully automated):**
+
+| Task | Schedule | Purpose |
+|------|----------|---------|
+| `collect_sports_odds` | Every 20 min | Ingest odds from TheOddsSpider |
+| `generate_game_predictions` | Every 2h | Run GamePredictor → MLPrediction rows |
+| `update_game_scores` | Every 30 min | Fetch final scores from TheOddsSpider, mark Games FINAL |
+| `evaluate_completed_predictions` | Hourly | Compare predictions to outcomes, set was_correct |
+| `verify_betting_outcomes` | Every 30 min | Settle PlacedWager legs, verify arb items |
+| `settle_user_bets` | Every 15 min | Update wager statuses |
+| `generate_accuracy_report` | Daily 9 AM | Model performance summary |
+| `cleanup_old_predictions` | Weekly Mon 3 AM | Remove stale data |
 
 ## Observability (Session 983)
 
