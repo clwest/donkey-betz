@@ -174,6 +174,9 @@ class ToolDispatcher:
         # Session 979: Stock intelligence tool for PA access to market data
         self.register("stock_intelligence_tool", self._handle_stock_intelligence)
 
+        # Session 1014: Legislation tool for congressional bill tracking
+        self.register("legislation_tool", self._handle_legislation)
+
         # Session 995B: Sports betting intelligence tool
         self.register("sports_betting_tool", self._handle_sports_betting)
 
@@ -5179,6 +5182,158 @@ class ToolDispatcher:
             'filter': filter_keyword or 'all',
             'tasks': results,
         }
+
+
+    def _handle_legislation(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Session 1014: Legislation tool — congressional bill tracking via SpiderData.
+
+        Actions:
+        - search: Find bills by keyword
+        - status: Status of a specific bill
+        - summary: Plain-English explanation of a bill
+        - trending: Most recently active bills
+        - overview: Dashboard stats
+        """
+        from core.models_unified_system import SpiderData
+        from django.db.models import Q
+        import json
+
+        action = payload.get('action', 'search')
+        query = payload.get('query', '')
+        bill_number = payload.get('bill_number', '')
+        limit = min(payload.get('limit', 10), 20)
+
+        qs = SpiderData.objects.filter(spider_name='legislation').order_by('-created_at')
+        total_tracked = qs.count()
+
+        if action == 'overview':
+            # Dashboard: total bills, top topics, recent activity
+            recent = qs[:50]
+            topic_counts: Dict[str, int] = {}
+            states: set = set()
+            status_counts: Dict[str, int] = {}
+            for item in recent:
+                raw = item.raw_data if isinstance(item.raw_data, dict) else {}
+                for t in raw.get('topics', []):
+                    topic_counts[t] = topic_counts.get(t, 0) + 1
+                state = raw.get('state', '')
+                if state:
+                    states.add(state)
+                st = raw.get('status', '')
+                if st:
+                    status_counts[st] = status_counts.get(st, 0) + 1
+
+            top_topics = sorted(topic_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+            return {
+                'action': 'overview',
+                'total_tracked': total_tracked,
+                'recent_count': len(recent),
+                'top_topics': [{'topic': t, 'count': c} for t, c in top_topics],
+                'states_covered': sorted(states),
+                'status_breakdown': status_counts,
+            }
+
+        elif action == 'trending':
+            items = []
+            for item in qs[:limit]:
+                raw = item.raw_data if isinstance(item.raw_data, dict) else {}
+                items.append({
+                    'bill_number': raw.get('bill_number', ''),
+                    'title': raw.get('title', ''),
+                    'state': raw.get('state', ''),
+                    'status': raw.get('status', ''),
+                    'last_action': raw.get('last_action', ''),
+                    'last_action_date': raw.get('last_action_date', ''),
+                    'sponsor_count': raw.get('sponsor_count', 0),
+                    'url': raw.get('url', ''),
+                })
+            return {'action': 'trending', 'items': items, 'total': total_tracked}
+
+        elif action == 'status' and bill_number:
+            match = qs.filter(
+                Q(raw_data__bill_number__icontains=bill_number) |
+                Q(embedding_text__icontains=bill_number)
+            ).first()
+            if not match:
+                return {'action': 'status', 'found': False, 'bill_number': bill_number}
+            raw = match.raw_data if isinstance(match.raw_data, dict) else {}
+            sponsors = raw.get('sponsors', [])
+            return {
+                'action': 'status',
+                'found': True,
+                'bill_number': raw.get('bill_number', bill_number),
+                'title': raw.get('title', ''),
+                'state': raw.get('state', ''),
+                'status': raw.get('status', ''),
+                'status_date': raw.get('status_date', ''),
+                'last_action': raw.get('last_action', ''),
+                'last_action_date': raw.get('last_action_date', ''),
+                'sponsors': [s.get('name', '') for s in sponsors[:5]],
+                'sponsor_count': raw.get('sponsor_count', 0),
+                'committee': raw.get('committee', ''),
+                'url': raw.get('url', ''),
+            }
+
+        elif action == 'summary':
+            target = bill_number or query
+            if not target:
+                return {'action': 'summary', 'error': 'Provide a bill_number or query'}
+            match = qs.filter(
+                Q(raw_data__bill_number__icontains=target) |
+                Q(embedding_text__icontains=target)
+            ).first()
+            if not match:
+                return {'action': 'summary', 'found': False, 'query': target}
+            raw = match.raw_data if isinstance(match.raw_data, dict) else {}
+            return {
+                'action': 'summary',
+                'found': True,
+                'bill_number': raw.get('bill_number', ''),
+                'title': raw.get('title', ''),
+                'state': raw.get('state', ''),
+                'status': raw.get('status', ''),
+                'description': raw.get('description', ''),
+                'plain_summary': raw.get('plain_summary', ''),
+                'sponsors': [s.get('name', '') for s in raw.get('sponsors', [])[:5]],
+                'committee': raw.get('committee', ''),
+                'topics': raw.get('topics', []),
+                'url': raw.get('url', ''),
+                'congress_gov_url': raw.get('congress_gov_url', ''),
+            }
+
+        else:
+            # Default: search by keyword
+            if not query:
+                return {'action': 'search', 'error': 'Provide a search query'}
+            matches = qs.filter(
+                Q(embedding_text__icontains=query) |
+                Q(raw_data__title__icontains=query)
+            )[:limit]
+            items = []
+            for item in matches:
+                raw = item.raw_data if isinstance(item.raw_data, dict) else {}
+                items.append({
+                    'bill_number': raw.get('bill_number', ''),
+                    'title': raw.get('title', ''),
+                    'state': raw.get('state', ''),
+                    'status': raw.get('status', ''),
+                    'sponsor_count': raw.get('sponsor_count', 0),
+                    'last_action_date': raw.get('last_action_date', ''),
+                    'url': raw.get('url', ''),
+                })
+            return {
+                'action': 'search',
+                'query': query,
+                'items': items,
+                'total': len(items),
+            }
 
 
 # Singleton instance

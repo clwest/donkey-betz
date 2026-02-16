@@ -146,6 +146,9 @@ from .specialized.business_news_spider import BusinessNewsSpider
 # Government (RSS - No Auth Required)
 from .specialized.government_spider import GovernmentSpider
 
+# Legislation (API - LegiScan + Congress.gov)
+from .specialized.legislation_spider import LegislationSpider
+
 # Lifestyle & Family (RSS - No Auth Required)
 from .specialized.parenting_spider import ParentingSpider
 from .specialized.food_spider import FoodSpider
@@ -758,6 +761,17 @@ class SpiderRegistry:
             'priority': 1,
             'rate_limit': 1.0,
             'targets': ['whitehouse.gov', 'federalregister.gov', 'bls.gov', 'sec.gov', 'sba.gov']
+        })
+
+        # Legislation - Congressional bill tracking (AUTH REQUIRED)
+        self.register_spider('legislation', LegislationSpider, {
+            'category': 'legislation',
+            'priority': 1,
+            'rate_limit': 2.0,
+            'requires_auth': True,
+            'api_key_env': 'LEGISCAN_API_KEY',
+            'targets': ['api.legiscan.com', 'api.congress.gov'],
+            'description': 'Congressional bill tracking: bills, sponsors, status, plain-language summaries'
         })
 
         # Parenting - Family & childcare (NO AUTH REQUIRED)
