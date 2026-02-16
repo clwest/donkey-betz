@@ -563,6 +563,17 @@ The Skin monitors **workspace output** - file writes and project changes.
 | `/is-healthy/` | GET | Checks if workspace is healthy |
 | `/workspaces/` | GET | Lists active workspaces |
 
+#### Code Artifacts Endpoints (`/api/code-artifacts/`) — Session 1012
+
+Patch-first workflow: when CodeGeneratorAgent can't write to the filesystem (e.g. Railway), code is captured as reviewable artifacts.
+
+| Endpoint | Method | What It Does |
+|----------|--------|--------------|
+| `/` | GET | Lists code artifacts (filter: `?status=`, `?agent_name=`, `?initiative=`, `?kind=`) |
+| `/{id}/` | GET | Full artifact detail with code content |
+| `/{id}/approve/` | POST | Approve artifact for later application |
+| `/{id}/reject/` | POST | Reject artifact with optional review_note |
+
 #### Unified Body Endpoints (`/api/body/`)
 
 **What they do:** Aggregate all body system data into unified views.

@@ -21,6 +21,7 @@ Dream (user idea or auto-topic)
 - Default for quick experiments
 - Only Stage 2 requires approval
 - Stops at Stage 2 awaiting founder decision
+- **Known behavior:** `can_auto_progress` returns `False` when `execution_speed == 'fast' AND current_stage >= 2`. Since all initiatives default to `fast`, auto-progression stalls at Stage 2 until a human promotes or changes execution_speed. This causes apparent "gaps" in the Activity Feed where Celery tasks run every 10 min but find nothing eligible to progress.
 
 **Institutional Track (Full 5-stage):**
 - Triggered by content flags: external_data, user_data, public_publishing, legal_compliance, financial, irreversible
