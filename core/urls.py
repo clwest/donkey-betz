@@ -3819,11 +3819,13 @@ from core.views_workspace_api import (
     file_history,
     pending_reviews,
 )
+from core.views_code_artifacts import CodeArtifactViewSet
 
 # Create dedicated router for workspace API
 workspace_router = WorkspaceRouter()
 workspace_router.register(r'workspaces', ProjectWorkspaceViewSet, basename='workspace')
 workspace_router.register(r'workspace-operations', WorkspaceOperationViewSet, basename='workspace-operation')
+workspace_router.register(r'code-artifacts', CodeArtifactViewSet, basename='code-artifact')
 
 urlpatterns += [
     # Specific Workspace Endpoints (must come BEFORE router to avoid {pk} pattern matching)
