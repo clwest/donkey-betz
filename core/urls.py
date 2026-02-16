@@ -4327,6 +4327,7 @@ from core.views_stock_intelligence import (
     stock_alerts,
     stock_predictions,
     stock_sec_filings,
+    stock_market_news,
     ticker_lookup,
 )
 
@@ -4338,6 +4339,7 @@ urlpatterns += [
     path('api/stocks/alerts/', stock_alerts, name='stock-alerts'),
     path('api/stocks/predictions/', stock_predictions, name='stock-predictions'),
     path('api/stocks/sec-filings/', stock_sec_filings, name='stock-sec-filings'),
+    path('api/stocks/market-news/', stock_market_news, name='stock-market-news'),
     path('api/stocks/ticker/<str:symbol>/', ticker_lookup, name='stock-ticker-lookup'),
 ]
 
