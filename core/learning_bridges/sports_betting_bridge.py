@@ -346,9 +346,9 @@ class SportsBettingLearningBridge:
                 'sport': prediction.sport_type,
                 'confidence': prediction.confidence,
                 'was_correct': prediction.was_correct,
-                'predicted_winner': prediction.predicted_winner,
-                'prediction_id': prediction.id,
-                'game_date': prediction.game_date.isoformat() if prediction.game_date else None
+                'predicted_winner': prediction.predicted_winner.name if prediction.predicted_winner_id else None,
+                'prediction_id': str(prediction.id),
+                'game_date': prediction.game.scheduled_start.isoformat() if prediction.game_id else None
             }
         )
 
