@@ -1132,6 +1132,26 @@ Generate complete, runnable test code."""
             "workspace_type": workspace_type
         }
 
+    def _capture_code_artifact(self, kind: str, target_path: str, content: str,
+                               content_before: str = '', description: str = ''):
+        """Persist code output as a reviewable CodeArtifact when workspace write fails."""
+        try:
+            from core.models_code_artifacts import CodeArtifact
+            artifact = CodeArtifact.objects.create(
+                agent_name=self.name,
+                trace_id=getattr(self, '_current_trace_id', ''),
+                kind=kind,
+                target_path=target_path,
+                content=content,
+                content_before=content_before,
+                description=description,
+            )
+            logger.info(f"Captured CodeArtifact {artifact.id} for {target_path} ({kind})")
+            return artifact
+        except Exception as e:
+            logger.error(f"Failed to capture CodeArtifact for {target_path}: {e}")
+            return None
+
     def _write_file(
         self,
         file_path: str,
@@ -1151,7 +1171,12 @@ Generate complete, runnable test code."""
 
         manager = self._get_workspace_manager()
         if not manager:
-            return {"success": False, "error": "WorkspaceManager not available"}
+            artifact = self._capture_code_artifact('file_create', file_path, content, description=description)
+            result = {"success": False, "error": "WorkspaceManager not available"}
+            if artifact:
+                result["artifact_id"] = str(artifact.id)
+                result["artifact_captured"] = True
+            return result
 
         # Session 884: Prefer codebase workspace for source files
         workspace = manager.get_codebase_workspace()
@@ -1163,18 +1188,28 @@ Generate complete, runnable test code."""
             workspace_type = "active"
 
         if not workspace:
-            return {
+            artifact = self._capture_code_artifact('file_create', file_path, content, description=description)
+            result = {
                 "success": False,
                 "error": "No workspace available. Run 'python manage.py setup_codebase_workspace' to enable codebase access."
             }
+            if artifact:
+                result["artifact_id"] = str(artifact.id)
+                result["artifact_captured"] = True
+            return result
 
         if not workspace.allow_file_write:
-            return {
+            artifact = self._capture_code_artifact('file_create', file_path, content, description=description)
+            result = {
                 "success": False,
                 "error": "Workspace does not allow file writes",
                 "workspace": workspace.name,
                 "hint": "Run 'python manage.py setup_codebase_workspace' without --read-only to enable writes"
             }
+            if artifact:
+                result["artifact_id"] = str(artifact.id)
+                result["artifact_captured"] = True
+            return result
 
         # Use WorkspaceManager to write with audit trail
         agent_task = description or f"Writing {file_path}"
@@ -1200,12 +1235,17 @@ Generate complete, runnable test code."""
             }
         else:
             logger.error(f"❌ {self.name} failed to write {file_path}: {operation.error_message}")
-            return {
+            artifact = self._capture_code_artifact('file_create', file_path, content, description=description)
+            result = {
                 "success": False,
                 "error": operation.error_message,
                 "file_path": file_path,
                 "workspace": workspace.name
             }
+            if artifact:
+                result["artifact_id"] = str(artifact.id)
+                result["artifact_captured"] = True
+            return result
 
     def _edit_file(
         self,
@@ -1226,7 +1266,12 @@ Generate complete, runnable test code."""
 
         manager = self._get_workspace_manager()
         if not manager:
-            return {"success": False, "error": "WorkspaceManager not available"}
+            artifact = self._capture_code_artifact('file_edit', file_path, new_text, content_before=old_text, description=description)
+            result = {"success": False, "error": "WorkspaceManager not available"}
+            if artifact:
+                result["artifact_id"] = str(artifact.id)
+                result["artifact_captured"] = True
+            return result
 
         # Session 884: Prefer codebase workspace for source files
         workspace = manager.get_codebase_workspace()
@@ -1238,22 +1283,33 @@ Generate complete, runnable test code."""
             workspace_type = "active"
 
         if not workspace:
-            return {
+            artifact = self._capture_code_artifact('file_edit', file_path, new_text, content_before=old_text, description=description)
+            result = {
                 "success": False,
                 "error": "No workspace available. Run 'python manage.py setup_codebase_workspace' to enable codebase access."
             }
+            if artifact:
+                result["artifact_id"] = str(artifact.id)
+                result["artifact_captured"] = True
+            return result
 
         if not workspace.allow_file_write:
-            return {
+            artifact = self._capture_code_artifact('file_edit', file_path, new_text, content_before=old_text, description=description)
+            result = {
                 "success": False,
                 "error": "Workspace does not allow file writes",
                 "workspace": workspace.name,
                 "hint": "Run 'python manage.py setup_codebase_workspace' without --read-only to enable writes"
             }
+            if artifact:
+                result["artifact_id"] = str(artifact.id)
+                result["artifact_captured"] = True
+            return result
 
         # Read current content
         current_content = manager.read_file(workspace, file_path)
         if current_content is None:
+            # Logic error, NOT workspace availability — don't capture artifact
             return {
                 "success": False,
                 "error": f"File not found: {file_path}",
@@ -1262,7 +1318,7 @@ Generate complete, runnable test code."""
 
         # Check if old_text exists in the file
         if old_text not in current_content:
-            # Try to provide helpful context
+            # Logic error, NOT workspace availability — don't capture artifact
             return {
                 "success": False,
                 "error": "old_text not found in file. The text must match exactly.",
@@ -1298,11 +1354,16 @@ Generate complete, runnable test code."""
                 "can_rollback": operation.can_rollback
             }
         else:
-            return {
+            artifact = self._capture_code_artifact('file_edit', file_path, new_text, content_before=old_text, description=description)
+            result = {
                 "success": False,
                 "error": operation.error_message,
                 "file_path": file_path
             }
+            if artifact:
+                result["artifact_id"] = str(artifact.id)
+                result["artifact_captured"] = True
+            return result
 
     def _list_files(
         self,
