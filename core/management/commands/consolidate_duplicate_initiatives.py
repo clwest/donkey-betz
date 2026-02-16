@@ -1,11 +1,15 @@
 """
 Session 906: Detect and consolidate duplicate initiatives.
+Session 1016: Enhanced with --snapshot flag and archive-instead-of-delete.
 
 Problem: Multiple research briefs with similar topics create duplicate initiatives
 like "Audit Failed Experiments", "Audit failed experiments", "Audit Recent Failed Experiments"
 that should be consolidated into a single initiative.
 
 Usage:
+    # Snapshot - show all ACTIVE/TRIAGE initiatives
+    python manage.py consolidate_duplicate_initiatives --snapshot
+
     # Dry run - show duplicate clusters
     python manage.py consolidate_duplicate_initiatives
 
@@ -138,9 +142,19 @@ class Command(BaseCommand):
             default=500,
             help='Maximum initiatives to analyze (default: 500)',
         )
+        parser.add_argument(
+            '--snapshot',
+            action='store_true',
+            help='Session 1016: Print all ACTIVE/TRIAGE initiatives and exit',
+        )
 
     def handle(self, *args, **options):
         from core.models_document_registry import Initiative, InitiativeStage
+
+        # Session 1016: Snapshot mode
+        if options['snapshot']:
+            self._print_snapshot()
+            return
 
         fix = options['fix']
         threshold = options['threshold']
@@ -152,7 +166,9 @@ class Command(BaseCommand):
         ))
 
         # Get initiatives
-        initiatives = Initiative.objects.order_by('-created_at')[:limit]
+        initiatives = Initiative.objects.filter(
+            status__in=['ACTIVE', 'TRIAGE']
+        ).order_by('-created_at')[:limit]
         self.stdout.write(f"Analyzing {initiatives.count()} initiatives...")
 
         # Find duplicate clusters
@@ -182,27 +198,56 @@ class Command(BaseCommand):
                 merged_count = self._merge_cluster(primary, duplicates)
                 total_merged += merged_count
                 total_kept += 1
-                self.stdout.write(self.style.SUCCESS(f"  -> Merged {merged_count} duplicates into primary"))
+                self.stdout.write(self.style.SUCCESS(f"  -> Archived {merged_count} duplicates, kept primary"))
             else:
                 total_merged += len(duplicates)
                 total_kept += 1
 
         self.stdout.write(self.style.NOTICE(f"\n--- Summary ---"))
         self.stdout.write(f"Clusters found: {len(clusters)}")
-        self.stdout.write(self.style.SUCCESS(f"{'Merged' if fix else 'Would merge'}: {total_merged} duplicates"))
+        self.stdout.write(self.style.SUCCESS(f"{'Archived' if fix else 'Would archive'}: {total_merged} duplicates"))
         self.stdout.write(f"Primary initiatives: {total_kept}")
+
+    def _print_snapshot(self):
+        """Session 1016: Print all ACTIVE/TRIAGE initiatives."""
+        from core.models_document_registry import Initiative
+
+        initiatives = Initiative.objects.filter(
+            status__in=['ACTIVE', 'TRIAGE']
+        ).order_by('status', '-created_at')
+
+        self.stdout.write(self.style.NOTICE(
+            f"\n=== Initiative Snapshot ({initiatives.count()} ACTIVE/TRIAGE) ===\n"
+        ))
+
+        self.stdout.write(f"{'ID':<38} {'Status':<8} {'Stage':<6} {'Owner':<25} {'Name'}")
+        self.stdout.write("-" * 120)
+
+        for init in initiatives:
+            owner = (init.owner_agent or '')[:24]
+            self.stdout.write(
+                f"{str(init.id):<38} {init.status:<8} {init.current_stage:<6} "
+                f"{owner:<25} {init.name[:50]}"
+            )
+
+        # Summary counts
+        active_count = initiatives.filter(status='ACTIVE').count()
+        triage_count = initiatives.filter(status='TRIAGE').count()
+        self.stdout.write(f"\nACTIVE: {active_count}  TRIAGE: {triage_count}  Total: {initiatives.count()}")
 
     def _merge_cluster(self, primary, duplicates) -> int:
         """
-        Merge duplicate initiatives into the primary.
+        Session 1016: Merge duplicate initiatives into the primary.
 
         - Move all stages/documents from duplicates to primary
-        - Delete the duplicate initiatives
+        - ARCHIVE the duplicate initiatives (not delete)
+        - Annotate primary's description with archived duplicate info
         """
         from core.models_document_registry import InitiativeStage
         from django.db import transaction
 
         merged_count = 0
+        archived_info = []
 
         with transaction.atomic():
             for dup in duplicates:
@@ -225,10 +270,20 @@ class Command(BaseCommand):
                 # Update primary's current_stage if duplicate was further along
                 if dup.current_stage > primary.current_stage:
                     primary.current_stage = dup.current_stage
-                    primary.save()
+                    primary.save(skip_invariant_check=True)
 
-                # Delete the duplicate
-                dup.delete()
+                # Session 1016: Archive instead of delete
+                archived_info.append(f"{str(dup.id)[:8]} ({dup.name[:40]}, created_by={dup.created_by or 'unknown'})")
+                dup.status = 'ARCHIVED'
+                dup.blocking_reason = f'Consolidated into {str(primary.id)[:8]}: {primary.name[:60]}'
+                dup.save(skip_invariant_check=True)
                 merged_count += 1
+
+            # Session 1016: Annotate primary with archived duplicate info
+            if archived_info:
+                annotation = f"\n\n[Consolidation] Archived {len(archived_info)} duplicates:\n"
+                annotation += "\n".join(f"  - {info}" for info in archived_info)
+                primary.description = (primary.description or '') + annotation
+                primary.save(skip_invariant_check=True)
 
         return merged_count

@@ -424,6 +424,16 @@ class Initiative(models.Model):
         help_text='Session 914.5: Reason for manual priority override'
     )
 
+    # Session 1016: Quality gate fields
+    next_action = models.TextField(
+        blank=True, default='',
+        help_text='Session 1016: Concrete next action for this initiative'
+    )
+    blocking_reason = models.TextField(
+        blank=True, default='',
+        help_text='Session 1016: Why this initiative is blocked/stalled'
+    )
+
     class Meta:
         ordering = ['-updated_at']
         verbose_name = 'Initiative'
