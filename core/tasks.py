@@ -32354,34 +32354,43 @@ def advance_initiative_pipeline(limit: int = 10, auto_approve: bool = True):
     logger.info(f"📋 [INITIATIVE PIPELINE] Starting advancement for up to {limit} initiatives...")
 
     # Find initiatives with pending stages that need documents or approval
+    # Session 1021: Only process the CURRENT stage — never skip ahead.
+    # Prior stages must be APPROVED before generating docs for the next one.
     initiatives_to_advance = []
     for init in Initiative.objects.filter(status='ACTIVE').order_by('-updated_at')[:limit * 2]:
-        # Find the current stage (or first pending stage)
-        for stage_num in range(1, 6):
-            stage = InitiativeStage.objects.filter(
-                initiative=init,
-                stage=stage_num
+        stage_num = init.current_stage
+        if stage_num < 1 or stage_num > 5:
+            continue
+
+        # Verify prior stage is APPROVED (skip Stage 1 — no prior stage)
+        if stage_num > 1:
+            prior = InitiativeStage.objects.filter(
+                initiative=init, stage=stage_num - 1
             ).first()
+            if not prior or prior.status != 'APPROVED':
+                continue  # Prior stage not approved yet — don't skip ahead
 
-            # If stage doesn't exist or has no document and is pending, this initiative needs work
-            if not stage or (stage.status == 'PENDING' and not stage.document_id):
-                initiatives_to_advance.append({
-                    'initiative': init,
-                    'stage_num': stage_num,
-                    'stage': stage,
-                    'needs_document': True,
-                })
-                break
+        stage = InitiativeStage.objects.filter(
+            initiative=init, stage=stage_num
+        ).first()
 
-            # Session 1021: Stage has document but is still DRAFT — needs approval only
-            if stage.status == 'DRAFT' and stage.document_id:
-                initiatives_to_advance.append({
-                    'initiative': init,
-                    'stage_num': stage_num,
-                    'stage': stage,
-                    'needs_document': False,
-                })
-                break
+        # Stage needs a document generated
+        if not stage or (stage.status in ('PENDING', 'DRAFT') and not stage.document_id):
+            initiatives_to_advance.append({
+                'initiative': init,
+                'stage_num': stage_num,
+                'stage': stage,
+                'needs_document': True,
+            })
+
+        # Session 1021: Stage has document but is still DRAFT — needs approval only
+        elif stage.status == 'DRAFT' and stage.document_id:
+            initiatives_to_advance.append({
+                'initiative': init,
+                'stage_num': stage_num,
+                'stage': stage,
+                'needs_document': False,
+            })
 
     if not initiatives_to_advance:
         logger.info("📋 [INITIATIVE PIPELINE] No initiatives need advancement")
