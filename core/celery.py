@@ -2354,13 +2354,15 @@ app.conf.beat_schedule = {
     },
 
     # Session 925: Cleanup Stuck Agent Executions
-    # Marks executions stuck in running/in_progress > 2 hours as failed
+    # Marks executions stuck in running/in_progress as failed
+    # Session 1020: Reduced from 120min/30min to 45min/15min — agents die at 30min
+    # hard limit, so 45min threshold gives 15min grace; 15min frequency catches faster
     'cleanup-stuck-agent-executions': {
         'task': 'core.tasks.cleanup_stale_agent_executions',
-        'schedule': crontab(minute='*/30'),  # Every 30 minutes
-        'kwargs': {'minutes_threshold': 120},  # 2 hours - conservative to avoid false positives
+        'schedule': crontab(minute='*/15'),  # Every 15 minutes (was 30)
+        'kwargs': {'minutes_threshold': 45},  # 45 min (was 120) — just past 30min hard limit
         'options': {
-            'expires': 1800,  # 30 minutes
+            'expires': 900,  # 15 minutes
         }
     },
 
