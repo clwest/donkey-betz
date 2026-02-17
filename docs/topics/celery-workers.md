@@ -1,6 +1,6 @@
 # Celery & Workers
 
-331 Celery tasks across 7 worker types with queue-based routing, memory management, and observability via CeleryTaskEvent signals. Session 1000C: Routed 60+ heavy tasks off default queue to prevent OOM.
+269 Celery tasks across 7 worker types with queue-based routing, memory management, and observability via CeleryTaskEvent signals. Session 1000C: Routed 60+ heavy tasks off default queue to prevent OOM. Session 1029: Rerouted 5 additional heavy tasks from default to long_running to fix recurring OOM crashes.
 
 ## Worker Types (7)
 
@@ -27,8 +27,8 @@
 
 | Queue | # Tasks | Categories |
 |-------|---------|------------|
-| default | ~28 | Light DB queries, body system checks, attention lifecycle |
-| long_running | ~50 | Agent exercises (18), autonomous situations (14), pipeline execution, spider network, intelligence desks, blog enhancement |
+| default | ~23 | Light DB queries, body system checks, attention lifecycle |
+| long_running | ~55 | Agent exercises (18), autonomous situations (14), pipeline execution, spider network, intelligence desks, blog enhancement, multi-agent conversations, hivemind sessions, dream execution |
 | content | ~21 | Blog generation, podcasts, initiative stages, content deliberation, blog re-evaluation, auto-publish |
 | sports | ~8 | Odds collection, prediction generation, score fetching, evaluation, verification, settlement, accuracy reports |
 | broadcast | ~4 | Status snapshots, heartbeat, nervous system |
@@ -36,6 +36,35 @@
 | pa | 1 | process_pa_chat_task |
 
 **Important:** `CELERY_BEAT_SCHEDULE` in settings.py overrides `app.conf.beat_schedule` in celery.py (lazy `config_from_object`). The celery.py beat schedule is effectively dead code — all beat entries live in settings.py.
+
+### OOM Fix — Heavy Tasks Rerouted (Session 1029, PR #1282)
+
+celery-worker (512MB container, ~200MB parent) was OOMing 3 times in 18 minutes. 5 tasks moved from `default` to `long_running`:
+
+| Task | Est. Memory | Why Heavy |
+|------|-------------|-----------|
+| `run_multi_agent_conversation` | 150-300MB | Loads up to 30 agents |
+| `run_autonomous_thinking_cycle` | 100-250MB | Gathers 24h system context |
+| `process_hivemind_sessions` | 100-250MB | 3 sessions x orchestration |
+| `execute_approved_dreams_via_orchestration` | 250-500MB | Up to 10 dreams |
+| `warm_up_spider_network` | 200-400MB | Initializes all 77 spiders |
+
+### Disabled Schedules (Sessions 1027, 1029)
+
+3 remediation execution schedules disabled (PR #1271) + 3 metric trigger rules disabled (PRs #1283, #1284). Discovery + assignment still run. Beat schedules persisted in DB — commenting out code alone does NOT disable them; must also `PeriodicTask.objects.filter(name='...').update(enabled=False)`.
+
+### Three Agent Dispatch Systems (Session 1029)
+
+Agents are dispatched from 3 independent paths (plus 3 secondary paths). Disabling one does NOT stop the others:
+
+| System | File | Mechanism |
+|--------|------|-----------|
+| A: `run_*_agents()` | `core/tasks.py` | 19 group schedules via `_run_agent_group()` |
+| B: `AGENT_WORKSPACE_REGISTRY` | `core/tasks.py` | `agent_category_rotation()` iterates registry |
+| C: `MetricsActionTrigger` | `core/services/metrics_action_trigger.py` | Condition-based triggers from live metrics |
+| +: `workspace_autopilot_tick()` | `core/tasks.py` | CATEGORY_AGENTS / TYPE_AGENTS maps |
+| +: Dream pipeline | `core/services/dream_execution_pipeline.py` | DREAM_TO_WORKFLOW agent lists |
+| +: Podcast generation | `core/tasks.py` | `auto_generate_podcast_episode()` |
 
 ## Key Task Categories
 

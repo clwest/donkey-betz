@@ -1,6 +1,6 @@
 # Agent System
 
-92 agents organized by category, routed deterministically via dictionary lookup, with automatic tool call recording and provenance tracking. Session 1000: 4 Intelligence Desks run 21 agents daily.
+92 agents organized by category, routed deterministically via dictionary lookup, with automatic tool call recording and provenance tracking. Session 1000: 4 Intelligence Desks run 21 agents daily. Session 1029: Agent health audit — 35 thriving, 6 bounded, 3 waste paths closed.
 
 ## Agent Categories (82 Total)
 
@@ -110,6 +110,43 @@ Automatic audit trail for all agents via `__init_subclass__()` in `BaseAgent`:
 | Standalone (2) | BookmakerAgent (2h), CreationAgent (24h) | varies |
 
 Provenance fields: `generated_at`, `inputs_used`, `freshness_window`, `publishable`, `validation_status`.
+
+## Agent Health Classification (Session 1029)
+
+Every agent is classified by its ability to fulfill its mission:
+
+| Classification | Count | Criteria |
+|---------------|-------|----------|
+| Thriving | 35 | >80% success rate, producing deliverables |
+| Struggling | 6 | 30-80% success, need bounded tasks or data |
+| Wasting | 3 | Running with no useful output (paths now closed) |
+
+### Waste Agents Removed (Sessions 1027, 1029)
+
+| Agent | Issue | Fix |
+|-------|-------|-----|
+| CodeGeneratorAgent | No codebase access on Railway, sandbox-only output | Removed from ALL 6 dispatch paths (PRs #1273, #1283, #1285) |
+| AudioAgent | ElevenLabs quota exceeded, 0% success | Removed from ALL dispatch paths + podcast TTS disabled (PRs #1273, #1283, #1285) |
+| OpportunityScoringAgent | No revenue loop, `zero_revenue_7d` trigger spawned 62+ runs/day | Trigger disabled (PR #1284) |
+
+### Bounded Task Pattern (Session 1029)
+
+Unbounded tasks cause 45-min timeouts and LLM reinterpretation. Bounded tasks complete in seconds:
+
+| Pattern | Example | Result |
+|---------|---------|--------|
+| Unbounded | "Analyze current market trends" | 45-min timeout, 0% success |
+| Bounded | "Top 3 trends, 500 words, do NOT delegate" | Completes in seconds, ~80% success |
+
+Rules for bounded tasks:
+- Specify scope (top N items)
+- Set length limit (under X words)
+- Add "do NOT delegate/spawn sub-tasks"
+- Add "if no data exists, report 'no data available'"
+
+### Data-Starved Agents
+
+CompetitorAnalysisAgent and CustomerResearchAgent evidence gates correctly block hallucination, but no competitive intelligence or customer data exists in the spider network. Need spiders configured to collect competitor and customer signals.
 
 ## AutoSpawnerService
 
