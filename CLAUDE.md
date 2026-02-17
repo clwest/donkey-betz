@@ -1,6 +1,6 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** February 15, 2026 - Session 1012
+**Last Updated:** February 17, 2026 - Session 1025
 
 ## Quick Start
 
@@ -23,9 +23,9 @@ open http://localhost:8000/ai-studio/
 | **Spiders** | 79 | 74 working, 5 need API keys |
 | **PA Tools** | 97 | 38 intents, 53 tool handlers, 8 enrichment services |
 | **LLM Providers** | 6 | OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini |
-| **Database Models** | 395+ | PostgreSQL + pgvector |
-| **Celery Tasks** | 268 | 7 workers, dedicated PA queue |
-| **Services** | 134 | Signal aggregation, content deliberation, auto-spawning |
+| **Database Models** | 397+ | PostgreSQL + pgvector |
+| **Celery Tasks** | 269 | 7 workers, dedicated PA queue |
+| **Services** | 135 | Signal aggregation, content scoring, content deliberation, auto-spawning |
 | **Body Systems** | 9 | HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR, BRAIN, SKIN |
 | **Advisors** | 25 | Famous figures + domain experts |
 | **Frontend** | ~2,500 KB | 9 workspace tabs, 26 routes, 12-tab betting dashboard |
@@ -37,7 +37,7 @@ open http://localhost:8000/ai-studio/
 - `core/services/` - 134 service classes
 - `ai_core/spiders/` - 77 spiders
 - `docs/topics/` - Embedding-optimized subsystem docs (current state)
-- `docs/handoffs/` - 625 session handoff documents (build history)
+- `docs/handoffs/` - 640 session handoff documents (build history)
 
 ### Key Files
 | File | Purpose |
@@ -49,6 +49,7 @@ open http://localhost:8000/ai-studio/
 | `core/services/unified_pa_entrypoint.py` | PA: 35 intents, enrichment pipeline |
 | `core/services/tool_dispatcher.py` | PA: 50 tool handlers |
 | `core/services/signal_aggregation_service.py` | Signal clustering & auto-topic generation |
+| `core/services/content_scoring_service.py` | Rule-based reach/intent/replicability scoring |
 | `core/services/content_deliberation_runner.py` | v2 content pipeline |
 | `frontend/src/pages/WorkspacePageNew.tsx` | 9-tab modular workspace |
 | `frontend/src/pages/CommandCenterPage.tsx` | Command Center with PA chat |
