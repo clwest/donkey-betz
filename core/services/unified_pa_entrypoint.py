@@ -1254,6 +1254,31 @@ class UnifiedPAEntrypoint:
                 ).strip()
                 payload['query'] = search_terms if search_terms else message
 
+        # Session 1030: Agent execution payload — extract agent_name from message
+        elif intent == 'agent_execution':
+            import re as _ae_re
+            msg_lower = message.lower()
+            # Match "run ResearchAgent" or "execute TrendAnalysisAgent" etc.
+            name_match = _ae_re.search(r'\b(\w+agent)\b', msg_lower)
+            if name_match:
+                # Convert to PascalCase: "researchagent" -> "ResearchAgent"
+                raw = name_match.group(1)
+                # Find the original case from the message
+                orig_match = _ae_re.search(r'\b(\w+[Aa]gent)\b', message)
+                payload['agent_name'] = orig_match.group(1) if orig_match else raw
+            # Extract the task description (everything after the agent name)
+            task_match = _ae_re.search(
+                r'\b(?:run|execute|invoke|trigger|use|ask)\b\s+\w*agent\b\s*(.*)',
+                msg_lower, _ae_re.IGNORECASE
+            )
+            if task_match and task_match.group(1).strip():
+                task_text = task_match.group(1).strip()
+                # Clean up common prepositions
+                task_text = _ae_re.sub(r'^(?:to|on|about|for|with)\s+', '', task_text)
+                payload['task'] = task_text
+            elif not payload.get('task'):
+                payload['task'] = message
+
         # Session 943: Content review tool payload
         elif intent == 'content_review':
             msg_lower = message.lower()
