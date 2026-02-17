@@ -7024,6 +7024,31 @@ def embed_agent_activity(hours: int = 2):
 
 
 # =============================================================================
+# Session 1020: Temporal context for conversation system prompts
+# =============================================================================
+
+def _conversation_temporal_context():
+    """
+    Return a temporal awareness block for conversation system prompts.
+
+    Individual agent execution gets date injection via build_intelligent_prompt()
+    and _build_system_prompt(), but conversation prompts build their own system
+    messages from scratch — they were missing date context entirely, causing agents
+    to reference 2023 dates from spider data as if current.
+    """
+    from django.utils import timezone
+    now = timezone.now()
+    year = now.year
+    return f"""
+TEMPORAL AWARENESS:
+- Today's date: {now.strftime('%B %d, %Y')}
+- Current year: {year}
+- All analysis must be current and relevant to {now.strftime('%B %Y')}
+- DO NOT treat data from {year-2} or {year-1} as "current" — note its age
+- If source data has a date, state how old it is relative to today"""
+
+
+# =============================================================================
 # Session 1019: Pre-flight agent data gathering for conversations
 # =============================================================================
 
@@ -7533,8 +7558,10 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
                 knowledge_context = '\n'.join(knowledge_context_parts) if knowledge_context_parts else 'No specific context'
 
                 # Create the prompt for the current speaker
+                temporal_ctx = _conversation_temporal_context()
                 system_prompt = f"""You are {current_speaker.name}, an AI agent specialized in {current_speaker.specialization or 'general knowledge'}.
 You are having a {template['type'].replace('_', ' ')} with {other_speaker.name} about: {topic}
+{temporal_ctx}
 
 Your knowledge context:
 {knowledge_context}
@@ -8429,9 +8456,11 @@ def run_multi_agent_conversation(self, max_conversations: int = 2, participants_
                         discourse_context = f"\n\nOVERUSED PHRASES (find alternatives): {markers_list}"
 
                     # Build system prompt
+                    temporal_ctx = _conversation_temporal_context()
                     system_prompt = f"""You are {current_agent.name}, an AI agent specializing in {current_agent.specialization or 'general topics'}.
 
 You are participating in a {template['type']} discussion about "{topic}".
+{temporal_ctx}
 
 Panel members: {', '.join([a.name for a in panel_agents])}
 
@@ -9084,7 +9113,9 @@ def trigger_spider_conversations(self, min_relevance: int = 70, max_conversation
             conversation.participants.add(initiator, responder)
 
             # Generate initial messages
+            temporal_ctx = _conversation_temporal_context()
             system_prompt = f"""You are {initiator.name}, an AI agent specializing in {initiator.specialization or 'analysis'}.
+{temporal_ctx}
 
 New intelligence has arrived from the {spider_data.spider_name} spider (relevance: {spider_data.relevance_score}/100).
 
@@ -9620,9 +9651,11 @@ def run_project_conversation(self, project_id: str, topic: str, max_messages: in
                 pass  # Non-critical
 
             # Build the system prompt with project context
+            temporal_ctx = _conversation_temporal_context()
             system_prompt = f"""You are {current_speaker.name}, an AI agent specialized in {current_speaker.specialization or 'general knowledge'}.
 
 You are having a {template['type'].replace('_', ' ')} with {other_speaker.name} about a project.
+{temporal_ctx}
 
 == PROJECT CONTEXT ==
 {project_context}
