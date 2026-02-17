@@ -465,12 +465,28 @@ def cleanup_boardroom_junk(spider_action_hours: int = 6):
         ).delete()
         stats['learned_decisions_deleted'] = learned_decisions[0]
 
+        # 5. Session 1017: Delete [Learned] junk conversations from AgentConversation
+        # These are circular meta-discussions where agents discuss their own instructions
+        from core.models_unified_system import AgentConversation
+        learned_convos = AgentConversation.objects.filter(
+            topic__icontains='[Learned]'
+        ).delete()
+        stats['learned_conversations_deleted'] = learned_convos[0]
+
+        # 6. Session 1017: Delete conversations with agent instructions as topics
+        instruction_convos = AgentConversation.objects.filter(
+            topic__icontains='EXTERNAL sources'
+        ).delete()
+        stats['instruction_conversations_deleted'] = instruction_convos[0]
+
         total = sum(stats.values())
         logger.info(f"🧹 [BOARDROOM-CLEANUP] Complete - deleted {total} items "
                    f"(spider: {stats['spider_actions_deleted']}, "
                    f"arbitrage: {stats['arbitrage_deleted']}, "
                    f"learned_attention: {stats['learned_attention_deleted']}, "
-                   f"learned_decisions: {stats['learned_decisions_deleted']})")
+                   f"learned_decisions: {stats['learned_decisions_deleted']}, "
+                   f"learned_convos: {stats.get('learned_conversations_deleted', 0)}, "
+                   f"instruction_convos: {stats.get('instruction_conversations_deleted', 0)})")
 
         return stats
 
@@ -7129,8 +7145,14 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
             responder = random.choice(possible_responders)
 
             # Get a knowledge item to discuss (or use agent's specialty if no knowledge yet)
+            # Session 1017: Exclude [Learned] items — they contain raw agent instructions
+            # that produce circular meta-discussions ("Research: Research this topic...")
             initiator_knowledge = AgentKnowledgeSource.objects.filter(
                 agent=initiator
+            ).exclude(
+                title__startswith='[Learned]'
+            ).exclude(
+                title__icontains='EXTERNAL sources'
             ).order_by('-last_updated_at')[:10]
 
             # Session 417: Allow agents without knowledge to participate using their specialty
@@ -7153,6 +7175,10 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
                 garbage_words = {'this', 'that', 'the', 'each', 'content', 'a', 'an', 'it', 'is', 'was', 'be', 'are', 'ai', 'brand', 'competitor', 'handmade', 'trends', 'market'}
                 if topic and (len(topic) <= 6 or topic.lower() in garbage_words or ' ' not in topic.strip()):
                     # Single-word or garbage topic - use knowledge type instead
+                    topic = f"{knowledge_item.knowledge_type.replace('_', ' ').title()} from {initiator.name}"
+                # Session 1017: Reject topics that are agent instructions, not real topics
+                instruction_markers = ['DO NOT', 'web_search', 'spider_query', 'query_internal', 'EXTERNAL sources', '[Learned]', '[Synthesis]']
+                if topic and any(marker in topic for marker in instruction_markers):
                     topic = f"{knowledge_item.knowledge_type.replace('_', ' ').title()} from {initiator.name}"
                 if not topic:
                     topic = f"{knowledge_item.knowledge_type.replace('_', ' ').title()} from {initiator.name}"
@@ -8021,9 +8047,14 @@ def run_multi_agent_conversation(self, max_conversations: int = 2, participants_
             total_participants += len(panel_agents)
 
             # Get a knowledge item to discuss
+            # Session 1017: Exclude [Learned] items — raw agent instructions, not real topics
             moderator = panel_agents[0]
             moderator_knowledge = AgentKnowledgeSource.objects.filter(
                 agent=moderator
+            ).exclude(
+                title__startswith='[Learned]'
+            ).exclude(
+                title__icontains='EXTERNAL sources'
             ).order_by('-last_updated_at')[:10]
 
             if not moderator_knowledge.exists():
@@ -8047,6 +8078,10 @@ def run_multi_agent_conversation(self, max_conversations: int = 2, participants_
             garbage_words = {'this', 'that', 'the', 'each', 'content', 'a', 'an', 'it', 'is', 'was', 'be', 'are', 'ai', 'brand', 'competitor', 'handmade', 'trends', 'market'}
             if topic and (len(topic) <= 6 or topic.lower() in garbage_words or ' ' not in topic.strip()):
                 # Single-word or garbage topic - use knowledge type instead
+                topic = f"{knowledge_item.knowledge_type.replace('_', ' ').title()} from {moderator.name}"
+            # Session 1017: Reject topics that are agent instructions, not real topics
+            instruction_markers = ['DO NOT', 'web_search', 'spider_query', 'query_internal', 'EXTERNAL sources', '[Learned]', '[Synthesis]']
+            if topic and any(marker in topic for marker in instruction_markers):
                 topic = f"{knowledge_item.knowledge_type.replace('_', ' ').title()} from {moderator.name}"
 
             # Choose panel template
