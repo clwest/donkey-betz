@@ -1,24 +1,33 @@
-# Session 1021 - Start Here
+# Session 1022 - Start Here
 
-**Previous Session:** 1020 (Initiative Stage 2 Stall, Dedup, Temporal Awareness)
+**Previous Session:** 1021 (Initiative Pipeline Integrity — DRAFT Approval, No Skip-Ahead, Real Data Gathering)
 **Date:** February 16, 2026
-**Status:** 92 Agents | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **497 BLOGS** | **1,488 SIGNAL CLUSTERS** | **INITIATIVE STAGES 1-5 UNBLOCKED** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 39+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 268** | **Frontend Routes: 27** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED** | **BETTING DASHBOARD: 12 TABS POLISHED** | **VIDEO STUDIO: 5 EDIT TOOLS** | **GOVERNMENT PAGE: 3 TABS + ASK A BILL RAG** | **CodeArtifact: PATCH-FIRST WORKFLOW LIVE** | **AGENT TIMEOUTS: FIXED** | **CONVERSATION JUNK: FIXED** | **FAST-TRACK STALL: FIXED** | **CONVERSATION DELEGATION: LIVE** | **INITIATIVE DEDUP: LIVE** | **TEMPORAL AWARENESS: LIVE**
+**Status:** 92 Agents | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **497 BLOGS** | **1,488 SIGNAL CLUSTERS** | **INITIATIVE PIPELINE INTEGRITY: FIXED** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 39+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 268** | **Frontend Routes: 27** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED** | **BETTING DASHBOARD: 12 TABS POLISHED** | **VIDEO STUDIO: 5 EDIT TOOLS** | **GOVERNMENT PAGE: 3 TABS + ASK A BILL RAG** | **CodeArtifact: PATCH-FIRST WORKFLOW LIVE** | **AGENT TIMEOUTS: FIXED** | **CONVERSATION JUNK: FIXED** | **FAST-TRACK STALL: FIXED** | **CONVERSATION DELEGATION: LIVE** | **INITIATIVE DEDUP: LIVE** | **TEMPORAL AWARENESS: LIVE** | **REAL DATA GATHERING: LIVE**
 
 ---
 
-## Session 1020 Summary (Just Completed)
+## Session 1021 Summary (Just Completed)
+
+### Initiative Pipeline Integrity (PRs #1250, #1251, #1252)
+
+**DRAFT stage approval (PR #1250):** `advance_initiative_pipeline` only matched `PENDING` stages without docs. After Session 1020 created SelfBlog docs for Stage 2+, stages with `DRAFT` status + existing document were silently skipped. Fixed by adding DRAFT+document detection path. Result: 2 initiatives reached Stage 5, 6 reached Stage 3 within 30 minutes.
+
+**No stage skip-ahead (PR #1251):** The `range(1, 6)` loop generated documents for ANY pending stage — even future stages beyond `current_stage`. This caused "rubber-stamping" (4 stages approved in 10 min with zero work). Fixed by anchoring to `init.current_stage` with prior stage approval check.
+
+**Real data gathering (PR #1252):** Deep audit revealed ALL Stage 1/2 documents contained garbage — parroted prompt instructions or random blog summaries. `TechnicalDocumentAgent` had no `topic`, no `research_context`, and no tools. Added `_gather_initiative_research()` that queries SpiderData, SignalClusters, AgentConversations, and Deliverables for real data before calling the agent. Also passes `topic` and `research_context` to agent context.
+
+### PRs: #1250, #1251, #1252
+
+---
+
+## Session 1020 Summary
 
 ### Initiative Stage 2 Stall + Dedup + Temporal Awareness (PRs #1247, #1248)
 
-**Stage 2 stall (19/21 initiatives stuck):** Stage 1 gets a SelfBlog document at initialization, but `handle_stage_task_completion()` never created documents for Stage 2+. The hard invariant `if stage.document:` blocked auto-approval permanently. Fixed by creating SelfBlog documents from task output when stages complete.
-
-**Initiative duplicates (4 "audit integrity" variants):** Added similarity dedup (`find_similar_initiative()`) to `AgentDream.promote_to_initiative()` and `InitiativeIntegrationService`. Added circuit breaker to `HiveMindExecutionPipeline` and `ConversationInitiativePipeline` (both were missing). Archived 5 duplicates on Railway (21 → 16).
-
-**Timeout tuning:** OpenAI client 120→60s, cleanup threshold 120→45min, frequency 30→15min.
-
-**Conversation date hallucination:** Agents citing "Oct 10, 2023" as current. Conversation prompts in `tasks.py` had no date context (unlike individual agent execution). Added `_conversation_temporal_context()` helper, injected into all 4 conversation prompt types.
-
-### PRs: #1247, #1248
+- Stage 2 stall fixed: `handle_stage_task_completion()` now creates SelfBlog documents for Stage 2+
+- Initiative dedup: similarity dedup on all 6 creation paths, circuit breaker on all paths
+- Timeout tuning: OpenAI 120→60s, cleanup 120→45min, frequency 30→15min
+- Temporal awareness: `_conversation_temporal_context()` injected into all 4 conversation prompt types
 
 ---
 
@@ -29,16 +38,6 @@
 - `_preflight_gather_agent_data()` scans topic for agent name references, invokes up to 2 agents, injects results as context
 - `CONVERSATION_DELEGATION_TOOL` allows LLM to request one mid-conversation delegation
 - ThreadPoolExecutor broke Django DB connections — fixed with direct calls
-
----
-
-## Session 1018 Summary
-
-### Conversation Junk Fix (PR #1239) + Initiative Fast-Track Stall Fix (PR #1240) + E2E Audit
-
-- Excluded `[Learned]` items from conversation topic pickers (junk 19% → 0%)
-- Changed initiative auto-creation from `execution_speed='fast'` to `'balanced'`
-- Comprehensive 24h audit: 99.94% Celery success, 83.5% agent success
 
 ---
 
@@ -60,7 +59,7 @@
 | PA Intents | 39 |
 | Enrichment Services | 8 |
 | Sports Leagues | 6 with predictions (NCAAB, NHL, EPL, La Liga, MLS, NCAAF) |
-| Active Initiatives | 16 (all `balanced` speed, Stage 2 fix deployed) |
+| Active Initiatives | ~10 (some reached Stage 5 via rubber-stamp, need audit) |
 | Blogs | 497 (28 published in last 24h) |
 | Signal Clusters | 1,488 |
 | Spider Data Records | 22,698 |
@@ -71,8 +70,29 @@
 
 ## Verify Before Starting
 
-### 1. Initiative Stage 2+ Progression (Session 1020 — CRITICAL)
-- Stage 2 fix deployed but needs time for new stage tasks to trigger. Check if any have progressed:
+### 1. Real Data Gathering in Stage Documents (Session 1021 — CRITICAL)
+- PR #1252 deployed. Check if new stage documents contain real spider data:
+  ```
+  railway run python manage.py shell -c "
+  from core.models_unified_system import SelfBlog
+  from django.utils import timezone; from datetime import timedelta
+  recent = SelfBlog.objects.filter(
+      category='initiative_stage',
+      created_at__gte=timezone.now()-timedelta(hours=12)
+  ).order_by('-created_at')[:5]
+  for b in recent:
+      print(f'{b.created_at.strftime(\"%H:%M\")} | {b.title[:60]}')
+      print(f'  Content length: {len(b.full_text)} chars')
+      has_data = 'Spider Intelligence' in b.full_text or 'Signal Clusters' in b.full_text or 'No data available' in b.full_text
+      print(f'  Has real data markers: {has_data}')
+      print(f'  First 200 chars: {b.full_text[:200]}')
+      print()
+  "
+  ```
+- Look for "Spider Intelligence", "Signal Clusters", or "No data available" markers — NOT parroted prompts or random blog content
+
+### 2. Initiative Stage Progression (Session 1021)
+- Verify stages advance one at a time (no skip-ahead):
   ```
   railway run python manage.py shell -c "
   from core.models import Initiative
@@ -80,19 +100,7 @@
   for i in active: print(f'Stage {i.current_stage} | {i.execution_speed} | {i.can_auto_progress} | {i.name[:50]}')
   "
   ```
-- Look for any at Stage 3+ (proves the fix is working)
-
-### 2. Temporal Awareness in Conversations (Session 1020)
-- Check recent conversations for date context:
-  ```
-  railway run python manage.py shell -c "
-  from core.models_unified_system import AgentConversation
-  from django.utils import timezone; from datetime import timedelta
-  recent = AgentConversation.objects.filter(started_at__gte=timezone.now()-timedelta(hours=12)).order_by('-started_at')[:5]
-  for c in recent: print(f'{c.started_at.strftime(\"%H:%M\")} | {c.topic[:60]}')
-  "
-  ```
-- Spot-check messages for "2024" or "2023" date references treated as current
+- Initiatives that reached Stage 5 via rubber-stamp may need their Stage 3-5 docs regenerated
 
 ### 3. Initiative Dedup (Session 1020)
 - Verify no new duplicates created:
@@ -109,7 +117,7 @@
   ```
 
 ### 4. Agent Timeout & Cleanup (Session 1020)
-- Cleanup now runs every 15min with 45min threshold:
+- Cleanup runs every 15min with 45min threshold:
   ```
   railway run python manage.py shell -c "
   from core.models_unified_system import AgentExecution
@@ -120,7 +128,7 @@
   ```
 
 ### 5. Conversation Delegation (Session 1019)
-- Check execution count stays modest (not runaway):
+- Check execution count stays modest:
   ```
   railway run python manage.py shell -c "
   from core.models_unified_system import AgentExecution
@@ -134,16 +142,24 @@
 
 ## Known Issues / Open Items
 
+### Rubber-Stamped Initiatives — NEEDS AUDIT
+Initiatives that reached Stage 5 via the skip-ahead bug (PR #1251) have Stage 3-5 docs that were generated out of order with no real data. Consider:
+- Invalidating Stage 3-5 docs for affected initiatives
+- Resetting them to Stage 2 (or wherever they last had real work)
+- Letting the new pipeline regenerate with real data
+
 ### PA Context Awareness — NEEDS WORK
 PA doesn't understand page context. When user says "I just created an image but it's not displaying" from Image Studio, PA asks generic clarifying questions instead of checking ImageHistory.
 
 ### Remaining Agent Failures — REDUCED
-Post all Session 1017-1020 fixes:
+Post all Session 1017-1021 fixes:
 - `.metadata` crashes: **0** (PR #1236 fixed)
 - False-positive timeouts: **0** (PR #1237 fixed)
 - Conversation junk: **0** (PR #1239 fixed)
-- Initiative stall: **FIXED** (PR #1247 — Stage 2+ doc creation)
+- Initiative stall: **FIXED** (PRs #1247, #1250 — Stage 2+ doc creation + DRAFT approval)
 - Initiative duplicates: **FIXED** (PR #1247 — dedup on all creation paths)
+- Initiative skip-ahead: **FIXED** (PR #1251 — current_stage anchoring)
+- Initiative garbage docs: **FIXED** (PR #1252 — real data gathering)
 - Conversation date hallucination: **FIXED** (PR #1248 — temporal awareness)
 - Remaining: AudioAgent (ElevenLabs quota, ~7/day), assorted others (~18/day)
 
@@ -167,6 +183,13 @@ Initial accuracy is 70.2% (mostly NCAAB). Monitor by sport/model as more leagues
 ## Critical Patterns & Gotchas
 
 **Django settings module:** `core.settings` (NOT `config.settings`).
+
+**Initiative pipeline (Session 1021):**
+- `advance_initiative_pipeline` only processes `init.current_stage` — never scans ahead
+- Prior stage must be `APPROVED` before current stage is processed
+- `_gather_initiative_research()` queries SpiderData, SignalClusters, AgentConversations, Deliverables
+- `TechnicalDocumentAgent` has NO tools — only works with data provided in prompt/context
+- Must pass `topic` and `research_context` in context dict (were missing before Session 1021)
 
 **Initiative 6 creation paths (Session 1020):**
 - `InitiativeIntegrationService` — has similarity dedup + circuit breaker
@@ -203,6 +226,7 @@ Initial accuracy is 70.2% (mostly NCAAB). Monitor by sport/model as more leagues
 
 **AgentConversation fields:**
 - Timestamp: `started_at` (NOT `created_at`)
+- Has `conclusion` field for summary (NOT `messages_data`)
 - Import from `core.models_unified_system`
 
 **ComponentStatus:**
@@ -229,6 +253,12 @@ Initial accuracy is 70.2% (mostly NCAAB). Monitor by sport/model as more leagues
 - Status values are UPPERCASE: `'ACTIVE'`, `'ARCHIVED'`, `'COMPLETED'`, `'TRIAGE'`
 - Import from `core.models` (NOT `core.models_unified_system`)
 - Field `name` (NOT `title`)
+
+**InitiativeStage model:**
+- Import from `core.models_document_registry` (NOT `core.models_unified_system`)
+
+**Deliverable model:**
+- Import from `core.models_deliverables` (NOT `core.models_document_registry`)
 
 **ThreadPoolExecutor + Django (Session 1019):**
 - Do NOT use `ThreadPoolExecutor` for `AgentRouter.route()` or other Django ORM operations
