@@ -1,31 +1,45 @@
-# Session 1025 - Start Here
+# Session 1026 - Start Here
 
-**Previous Session:** 1024 (Semantic Spider Search — Root Cause Fix for Evidence Gates)
+**Previous Session:** 1025 (Scoring Contract for SignalClusters)
 **Date:** February 17, 2026
-**Status:** 92 Agents | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **497 BLOGS** | **1,488 SIGNAL CLUSTERS** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 39+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 268** | **Frontend Routes: 27** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED** | **BETTING DASHBOARD: 12 TABS POLISHED** | **DELIVERABLE DEDUP: LIVE** | **CONVERSATION DEDUP: LIVE** | **REMEDIATION SYSTEM: PAUSED** | **COST SAVINGS: ~$14/day** | **SEMANTIC SPIDER SEARCH: LIVE** | **EVIDENCE GATES: COMPLETE (4 LAYERS)**
+**Status:** 92 Agents | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **497 BLOGS** | **1,573 SIGNAL CLUSTERS (ALL SCORED)** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 39+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 269** | **Frontend Routes: 27** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED** | **BETTING DASHBOARD: 12 TABS POLISHED** | **DELIVERABLE DEDUP: LIVE** | **CONVERSATION DEDUP: LIVE** | **REMEDIATION SYSTEM: PAUSED** | **COST SAVINGS: ~$14/day** | **SEMANTIC SPIDER SEARCH: LIVE** | **EVIDENCE GATES: COMPLETE (4 LAYERS)** | **SCORING CONTRACT: LIVE (2-TRACK PIPELINE)**
 
 ---
 
-## Session 1024 Summary (Just Completed)
+## Session 1025 Summary (Just Completed)
+
+### Scoring Contract: Reach, Intent & Replicability (PRs #1267, #1268, #1269)
+
+**Problem:** SignalClusters had strength/confidence/novelty/urgency but no way to distinguish attention signals (trending topics for content) from intent signals (actionable opportunities for micro-products). All signals treated the same.
+
+**Fix:** Added 5 new fields to `SignalCluster` + a rule-based `ContentScoringService` that scores every cluster on reach, intent, replicability, source confidence, and assigns a pipeline track (`attention`, `intent`, or `unclassified`).
+
+**Key files:**
+- `core/models_signal_intelligence.py` — 5 new fields
+- `core/services/content_scoring_service.py` — NEW, rule-based scoring (~150 lines, no LLM)
+- `core/services/signal_aggregation_service.py` — Auto-scores on cluster create/update
+- `core/tasks.py` — `backfill_signal_scores` task
+- Migration `0248`
+
+**Backfill results (Railway):** 1,573 clusters scored. Distribution: attention=604 (38%), intent=169 (11%), unclassified=800 (51%).
+
+**Evidence Pipeline Maturity Roadmap:**
+1. Semantic spider search — DONE (Session 1024)
+2. Evidence gates (4 layers) — DONE (Session 1023)
+3. Scoring contract — DONE (Session 1025)
+4. Auto-experiment generator — FUTURE
+
+See `docs/handoffs/SESSION_1025_SCORING_CONTRACT.md`
+
+---
+
+## Session 1024 Summary
 
 ### Semantic Spider Search — Root Cause Fix (PR #1265)
 
-**Problem:** `search_spider_data()` used word-boundary regex keyword matching over 300 most recent SpiderData rows. A HuggingFace ML page mentioning "blockchain" in a tag scored `relevance=1.0` for blockchain queries, drowning out actual blockchain data. This was the root cause behind all evidence gate work.
-
-**Fix:** `core/services/spider_intelligence.py` — `search_spider_data()` now uses pgvector `CosineDistance` semantic similarity as the primary search path, with keyword matching as automatic fallback only.
-
-**Architecture:**
-- `search_spider_data()` → `_semantic_search_db()` (primary) → `_keyword_search()` (fallback)
-- Generates query embedding via `SpiderSemanticSearch._generate_embedding()` (OpenAI `text-embedding-3-small`)
-- DB-side KNN using HNSW index (`spiderdata_embedding_hnsw_idx`)
-- Filters by `similarity >= 0.25`, returns top 50 results
-- Falls back to keyword matching when: pgvector ImportError, embedding API fails, no embedded data, any DB error
-
-**All 6 callers benefit automatically** — no code changes needed: `base_agent.py` spider_query, `base_business_research_agent.py`, `spider_context_builder.py`, `research_agent.py`, `views_spider_intelligence.py`, `context_aggregator.py`.
-
-**Verified on Railway:** 85% embedding coverage. Crypto queries return etherscan data, not huggingface. No keyword fallback in normal operation.
-
-See `docs/handoffs/SESSION_1024_SEMANTIC_SPIDER_SEARCH.md`
+- `search_spider_data()` replaced keyword matching with pgvector semantic similarity (primary), keyword fallback
+- All 6 callers benefit automatically
+- See `docs/handoffs/SESSION_1024_SEMANTIC_SPIDER_SEARCH.md`
 
 ---
 
@@ -33,19 +47,8 @@ See `docs/handoffs/SESSION_1024_SEMANTIC_SPIDER_SEARCH.md`
 
 ### Evidence Gate Layers 1-3 (PRs #1262, #1263, #1264)
 
-- **Layer 1:** CompetitorAnalysisAgent hard gates (< 3 data points or 0% domain match → `insufficient_evidence`)
-- **Layer 2:** BaseBusinessResearchAgent gate (affects ContentStrategy, MarketingStrategy)
-- **Layer 3:** `build_provenance()` infrastructure (`domain_match_rate` param, < 15% blocks publishing)
+- Layer 1-3 defensive gates + `build_provenance()` infrastructure
 - See `docs/handoffs/SESSION_1023_EVIDENCE_GATE_LAYERS.md`
-
----
-
-## Session 1022 Summary
-
-### Cost Optimization Audit (PRs #1253-#1258)
-
-- Deliverable dedup (4h window), conversation dedup (6h window), remediation paused, agent execution 500 fix
-- See `docs/handoffs/SESSION_1022_COST_OPTIMIZATION_AUDIT.md`
 
 ---
 
@@ -56,9 +59,9 @@ See `docs/handoffs/SESSION_1024_SEMANTIC_SPIDER_SEARCH.md`
 | Agents | 92 (54 routable, 25 non-routable, 26+ provenance-tracked) |
 | Spiders | 79 (74 working, 5 need API keys) |
 | Advisors | 25 |
-| Database Models | 396+ |
-| Services | 134 |
-| Celery Tasks | 268 (5 remediation schedules paused) |
+| Database Models | 397+ |
+| Services | 135 |
+| Celery Tasks | 269 (5 remediation schedules paused) |
 | Intelligence Desks | 4 (Stocks, Sports, Blockchain, Narrative) — ALL RUNNING |
 | Workspace Tabs | 9 |
 | Frontend Routes | 27 |
@@ -69,12 +72,13 @@ See `docs/handoffs/SESSION_1024_SEMANTIC_SPIDER_SEARCH.md`
 | Sports Leagues | 6 with predictions (NCAAB, NHL, EPL, La Liga, MLS, NCAAF) |
 | Active Initiatives | 3 (Stage 2, IN_REVIEW) + 1 TRIAGE |
 | Blogs | 497 |
-| Signal Clusters | 1,488 |
+| Signal Clusters | 1,573 (all scored: 604 attention, 169 intent, 800 unclassified) |
 | Deliverables | ~3,737 (cleaned from 9,577) |
 | Daily LLM Cost | ~$13/day → expected ~$6/day after fixes |
 | LLM Providers | 6 (OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini) |
 | Spider Search | Semantic (pgvector KNN) primary, keyword fallback |
 | Evidence Gates | 4 layers complete (Layers 1-3 defensive + root cause fix) |
+| Scoring Contract | Live — reach/intent/replicability/source_confidence/track on all clusters |
 
 ---
 
@@ -138,6 +142,18 @@ See `docs/handoffs/SESSION_1024_SEMANTIC_SPIDER_SEARCH.md`
   ```
 - Expect >80% coverage
 
+### 5. Scoring Contract (Session 1025)
+- Verify clusters are being scored on creation:
+  ```
+  railway run python manage.py shell -c "
+  from core.models import SignalCluster
+  for track in ['attention', 'intent', 'unclassified']:
+      count = SignalCluster.objects.filter(track=track).count()
+      print(f'{track}: {count}')
+  "
+  ```
+- Expect non-zero counts for all three tracks (backfill scored 1,573 clusters)
+
 ---
 
 ## Known Issues / Open Items
@@ -148,7 +164,7 @@ See `docs/handoffs/SESSION_1024_SEMANTIC_SPIDER_SEARCH.md`
 3. Scoring contract (reach, intent, replicability) — DONE (Session 1025)
 4. Auto-experiment generator — FUTURE
 
-**Next within this roadmap:** Track-based routing (consuming `SignalCluster.track` to route attention-track signals to content agents and intent-track signals to micro-product agents). Run `backfill_signal_scores` on Railway to score existing 1,488 clusters.
+**Next within this roadmap:** Track-based routing (consuming `SignalCluster.track` to route attention-track signals to content agents and intent-track signals to micro-product agents). Backfill complete — all 1,573 clusters scored.
 
 ### Evidence Gate Layer 3b — Per-Agent Adoption
 Each of 20+ provenance-tracked agents should compute `domain_match_rate` and pass it to `build_provenance()`. Currently only CompetitorAnalysisAgent and BaseBusinessResearchAgent subclasses enforce evidence gates. The `build_provenance()` infrastructure is ready (Session 1023, PR #1264).
@@ -206,6 +222,12 @@ Initial accuracy is 70.2% (mostly NCAAB). Monitor by sport/model.
 - Key file: `core/services/spider_intelligence.py`
 - Constants: `SEMANTIC_TOP_K=50`, `SEMANTIC_MIN_SIMILARITY=0.25`, `NOISY_SPIDERS`
 - Monitor logs for `[spider_search] keyword fallback` — should NOT appear in normal operation
+
+**Scoring contract (Session 1025):**
+- `SignalCluster` has `reach_score`, `intent_score`, `replicability_score`, `source_confidence`, `track`
+- `ContentScoringService` in `core/services/content_scoring_service.py` — rule-based, no LLM
+- Auto-applied in `SignalAggregationService._create_signal_clusters()` via `_apply_scores()`
+- Track values: `'attention'` (content), `'intent'` (micro-products), `'unclassified'`
 
 **Agent model confusion (Session 1022):**
 - `core.models_unified_system.Agent` — has `name`, used by `AgentExecution` FK
