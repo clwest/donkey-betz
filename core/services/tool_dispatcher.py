@@ -1838,6 +1838,16 @@ class ToolDispatcher:
             draft_count = base_qs.filter(status='draft').count()
             published_count = base_qs.filter(status='published').count()
 
+            # Session 1030: Also include SelfBlog counts for complete picture
+            try:
+                from core.models_unified_system import SelfBlog
+                blog_total = SelfBlog.objects.filter(category='blog').count()
+                blog_published = SelfBlog.objects.filter(category='blog', status='published').count()
+                blog_ready = SelfBlog.objects.filter(category='blog', publish_ready=True, status__in=['approved', 'pending_review']).count()
+                blog_draft = SelfBlog.objects.filter(category='blog', status='draft').count()
+            except Exception:
+                blog_total = blog_published = blog_ready = blog_draft = 0
+
             by_type = dict(
                 base_qs.filter(status='ready')
                 .values('deliverable_type')
@@ -1861,6 +1871,13 @@ class ToolDispatcher:
                 'published': published_count,
                 'by_type': by_type,
                 'by_category': by_category,
+                # Session 1030: SelfBlog counts (blogs are in SelfBlog, not Deliverable)
+                'blogs': {
+                    'total': blog_total,
+                    'published': blog_published,
+                    'publish_ready': blog_ready,
+                    'drafts': blog_draft,
+                },
             }
 
         elif action == 'details':
@@ -3504,15 +3521,24 @@ class ToolDispatcher:
                 }
 
             # Session 989: Use actual SpiderData fields
-            items = list(
-                SpiderData.objects.filter(
-                    spider_name__icontains=spider_name,
-                    created_at__gte=cutoff
-                ).order_by('-created_at')[:limit].values(
-                    'id', 'spider_name', 'data_type', 'source_url',
-                    'embedding_text', 'relevance_score', 'created_at'
-                )
-            )
+            # Session 1030: Include processed_data for first 3 items (crypto prices live there)
+            qs = SpiderData.objects.filter(
+                spider_name__icontains=spider_name,
+                created_at__gte=cutoff
+            ).order_by('-created_at')[:limit]
+
+            items = list(qs.values(
+                'id', 'spider_name', 'data_type', 'source_url',
+                'embedding_text', 'relevance_score', 'created_at'
+            ))
+
+            # Include processed_data for first 3 items only (keeps payload manageable)
+            detailed_items = list(qs[:3].values(
+                'id', 'processed_data'
+            ))
+            detail_map = {str(d['id']): d.get('processed_data') for d in detailed_items}
+            for item in items[:3]:
+                item['processed_data'] = detail_map.get(str(item['id']))
 
             return {
                 'action': 'by_spider',
