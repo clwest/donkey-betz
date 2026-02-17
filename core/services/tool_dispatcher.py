@@ -147,6 +147,9 @@ class ToolDispatcher:
         # Session 943: Initiative tool for PA access to project pipeline
         self.register("initiative_tool", self._handle_initiative)
 
+        # Session 1031: Dream browsing/approval via PA
+        self.register("dream_tool", self._handle_dream)
+
         # Workflow tools
         self.register("workflow_orchestration_agent", self._handle_agent_tool)
         self.register("create_brand_video", self._handle_agent_tool)
@@ -1381,6 +1384,21 @@ class ToolDispatcher:
                 except Exception as e:
                     logger.warning(f"Failed to record learning: {e}")
 
+            # Session 1031: Dream approval -> triggers existing signal chain
+            if item.source_type == 'dream_pipeline' and item.payload and item.payload.get('dream_id'):
+                try:
+                    from core.models_unified_system import AgentDream
+                    dream = AgentDream.objects.get(id=item.payload['dream_id'])
+                    dream.decision_outcome = 'approved'
+                    dream.user_reaction = 'loved'
+                    dream.user_feedback = feedback
+                    dream.save(update_fields=['decision_outcome', 'user_reaction', 'user_feedback'])
+                    # post_save signal (dream_signals.py:47) fires automatically:
+                    #   1. promote_to_initiative() -> Initiative + Stage 1
+                    #   2. execute_single_dream.delay() -> PartnershipProject + workflow
+                except Exception as e:
+                    logger.warning(f"Dream approval hook failed: {e}")
+
             return {
                 'action': 'approve_attention',
                 'id': str(item_id),
@@ -1425,6 +1443,18 @@ class ToolDispatcher:
                     )
                 except Exception as e:
                     logger.warning(f"Failed to record learning: {e}")
+
+            # Session 1031: Dream dismiss
+            if item.source_type == 'dream_pipeline' and item.payload and item.payload.get('dream_id'):
+                try:
+                    from core.models_unified_system import AgentDream
+                    dream = AgentDream.objects.get(id=item.payload['dream_id'])
+                    dream.decision_outcome = 'rejected'
+                    dream.user_reaction = 'dismissed'
+                    dream.user_feedback = feedback
+                    dream.save(update_fields=['decision_outcome', 'user_reaction', 'user_feedback'])
+                except Exception as e:
+                    logger.warning(f"Dream dismiss hook failed: {e}")
 
             return {
                 'action': 'ignore_attention',
@@ -5539,6 +5569,141 @@ class ToolDispatcher:
                 'items': items,
                 'total': len(items),
             }
+
+
+    # =========================================================================
+    # Session 1031: Dream Tool — browse, approve, dismiss dreams via PA
+    # =========================================================================
+
+    def _handle_dream(self, tool_name, payload, user_id, trace_id) -> Dict:
+        """Handle dream browsing and approval actions."""
+        from core.models_unified_system import AgentDream
+        from django.db.models import Avg, Count, Q
+
+        action = payload.get('action', 'list_top')
+        dream_id = payload.get('id')
+
+        if action == 'list_top':
+            limit = payload.get('limit', 10)
+            dreams = (
+                AgentDream.objects
+                .filter(composite_score__gte=0.5)
+                .select_related('agent')
+                .order_by('-composite_score', '-dreamed_at')[:limit]
+            )
+            return {
+                'action': 'list_top',
+                'dreams': [
+                    {
+                        'id': str(d.id),
+                        'title': d.title,
+                        'content_preview': d.content[:200],
+                        'dream_type': d.dream_type,
+                        'agent_name': d.agent.name if d.agent else 'Unknown',
+                        'composite_score': d.composite_score,
+                        'creativity_score': d.creativity_score,
+                        'actionability_score': d.actionability_score,
+                        'relevance_score': d.relevance_score,
+                        'decision_outcome': d.decision_outcome or 'none',
+                        'dreamed_at': d.dreamed_at.isoformat(),
+                    }
+                    for d in dreams
+                ],
+                'count': len(dreams),
+            }
+
+        elif action == 'details':
+            if not dream_id:
+                raise ValueError("id is required for dream details")
+            dream = AgentDream.objects.select_related('agent').get(id=dream_id)
+            return {
+                'action': 'details',
+                'dream': {
+                    'id': str(dream.id),
+                    'title': dream.title,
+                    'content': dream.content,
+                    'dream_type': dream.dream_type,
+                    'agent_name': dream.agent.name if dream.agent else 'Unknown',
+                    'origin': dream.origin,
+                    'inspiration_source': dream.inspiration_source,
+                    'related_topics': dream.related_topics,
+                    'composite_score': dream.composite_score,
+                    'creativity_score': dream.creativity_score,
+                    'actionability_score': dream.actionability_score,
+                    'relevance_score': dream.relevance_score,
+                    'vividness_score': dream.vividness_score,
+                    'promoted_to_decision': dream.promoted_to_decision,
+                    'decision_outcome': dream.decision_outcome or 'none',
+                    'user_reaction': dream.user_reaction,
+                    'shown_to_user': dream.shown_to_user,
+                    'initiative_id': str(dream.initiative_id) if dream.initiative_id else None,
+                    'dreamed_at': dream.dreamed_at.isoformat(),
+                },
+            }
+
+        elif action == 'approve':
+            if not dream_id:
+                raise ValueError("id is required to approve a dream")
+            dream = AgentDream.objects.get(id=dream_id)
+            dream.decision_outcome = 'approved'
+            dream.user_reaction = 'loved'
+            dream.user_feedback = payload.get('feedback', 'Approved via PA')
+            dream.save(update_fields=['decision_outcome', 'user_reaction', 'user_feedback'])
+            # post_save signal fires: promote_to_initiative() + execute_single_dream.delay()
+            return {
+                'action': 'approve',
+                'id': str(dream.id),
+                'title': dream.title,
+                'success': True,
+                'message': 'Dream approved — initiative creation and execution triggered.',
+            }
+
+        elif action == 'dismiss':
+            if not dream_id:
+                raise ValueError("id is required to dismiss a dream")
+            dream = AgentDream.objects.get(id=dream_id)
+            dream.decision_outcome = 'rejected'
+            dream.user_reaction = 'dismissed'
+            dream.user_feedback = payload.get('feedback', 'Dismissed via PA')
+            dream.save(update_fields=['decision_outcome', 'user_reaction', 'user_feedback'])
+            return {
+                'action': 'dismiss',
+                'id': str(dream.id),
+                'title': dream.title,
+                'success': True,
+            }
+
+        elif action == 'stats':
+            total = AgentDream.objects.count()
+            by_outcome = dict(
+                AgentDream.objects
+                .exclude(decision_outcome='')
+                .values_list('decision_outcome')
+                .annotate(c=Count('id'))
+                .values_list('decision_outcome', 'c')
+            )
+            shown_count = AgentDream.objects.filter(shown_to_user=True).count()
+            with_initiative = AgentDream.objects.filter(initiative__isnull=False).count()
+            avg_scores = AgentDream.objects.aggregate(
+                avg_composite=Avg('composite_score'),
+                avg_creativity=Avg('creativity_score'),
+                avg_actionability=Avg('actionability_score'),
+                avg_relevance=Avg('relevance_score'),
+            )
+            return {
+                'action': 'stats',
+                'total_dreams': total,
+                'by_outcome': by_outcome,
+                'shown_to_user': shown_count,
+                'with_initiative': with_initiative,
+                'avg_scores': {
+                    k: round(v, 3) if v else 0
+                    for k, v in avg_scores.items()
+                },
+            }
+
+        else:
+            raise ValueError(f"Unknown dream action: {action}")
 
 
 # Singleton instance

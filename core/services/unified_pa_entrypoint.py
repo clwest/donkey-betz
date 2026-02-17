@@ -105,6 +105,8 @@ class UnifiedPAEntrypoint:
         # Session 1007: Agent introspection + scheduled tasks — pure data
         'agent_introspection': [],
         'scheduled_tasks': [],
+        # Session 1031: Dream browsing — pure data
+        'dreams': [],
     }
 
     # Alias map: normalize variant intent names to canonical names
@@ -705,6 +707,13 @@ class UnifiedPAEntrypoint:
         ]):
             return ('initiatives', 'initiative_tool')
 
+        # Session 1031: Dream patterns — BEFORE boardroom because "approve dream" contains "approve"
+        if any(phrase in message_lower for phrase in [
+            'dream', 'dreams', 'dreaming', 'dreamed',
+            'what are agents dreaming', 'best ideas',
+        ]):
+            return ('dreams', 'dream_tool')
+
         # Session 940: Boardroom patterns (takes precedence for boardroom-specific requests)
         if 'boardroom' in message_lower or any(word in message_lower for word in [
             'draft decision', 'promote decision', 'reject decision', 'canonical'
@@ -1278,6 +1287,30 @@ class UnifiedPAEntrypoint:
                 payload['task'] = task_text
             elif not payload.get('task'):
                 payload['task'] = message
+
+        # Session 1031: Dream tool payload
+        elif intent == 'dreams':
+            import re as _dr_re
+            msg_lower = message.lower()
+
+            if 'approve' in msg_lower:
+                payload['action'] = 'approve'
+            elif any(w in msg_lower for w in ['dismiss', 'reject', 'ignore']):
+                payload['action'] = 'dismiss'
+            elif any(w in msg_lower for w in ['stats', 'pipeline', 'statistics']):
+                payload['action'] = 'stats'
+            elif any(w in msg_lower for w in ['detail', 'tell me more', 'full', 'expand']):
+                payload['action'] = 'details'
+            else:
+                payload['action'] = 'list_top'
+
+            # Extract UUID if present
+            uuid_match = _dr_re.search(
+                r'([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})',
+                msg_lower,
+            )
+            if uuid_match:
+                payload['id'] = uuid_match.group(1)
 
         # Session 943: Content review tool payload
         elif intent == 'content_review':
@@ -1950,6 +1983,7 @@ Only describe features and capabilities that actually exist. Never fabricate con
             'reasoning': "Summarize the key insight from thinking cycles.",
             'recent_activity': "Highlight the most significant recent activity.",
             'error_summary': "Lead with highest-severity issues and recommend fixes.",
+            'dreams': "Present dreams as creative proposals. Highlight what makes each interesting. Include the dream ID so the user can reference it.",
         }
 
         canonical_intent = self.INTENT_ALIASES.get(intent, intent)

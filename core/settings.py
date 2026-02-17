@@ -966,6 +966,9 @@ CELERY_TASK_ROUTES = {
     'autonomous.blockchain_security_monitor': {'queue': 'agents'},  # Session 1004: LLM API calls
     # Session 989: Removed phantom autonomous.stock_market_intelligence routing (task didn't exist)
 
+    # Session 1031: Dream surfacing — lightweight DB queries only
+    'core.tasks.surface_top_dreams': {'queue': 'default'},
+
     # Session 976: PA chat — dedicated queue so user isn't blocked by spider/body-system traffic
     'core.tasks.process_pa_chat_task': {'queue': 'pa'},
 

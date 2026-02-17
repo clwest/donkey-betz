@@ -2180,5 +2180,24 @@ I'm ready to discuss the project details and answer any questions you might have
             return False
 
 
-# Global income builder instance
-income_builder = AIIncomeBuilder()
+# Session 1031: Lazy singleton — AIIncomeBuilder.__init__ loads MLEngine (~800MB torch+transformers).
+# Module-level instantiation caused OOM on every Celery worker at startup because urls.py
+# imports core.intelligence_api which imports this module.
+_income_builder = None
+
+
+def get_income_builder():
+    global _income_builder
+    if _income_builder is None:
+        _income_builder = AIIncomeBuilder()
+    return _income_builder
+
+
+# Backward-compat: code that does `from ... import income_builder` and calls it
+# as an object will still work via this lazy proxy.
+class _LazyIncomeBuilder:
+    """Proxy that defers AIIncomeBuilder() creation until first attribute access."""
+    def __getattr__(self, name):
+        return getattr(get_income_builder(), name)
+
+income_builder = _LazyIncomeBuilder()
