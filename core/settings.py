@@ -1066,6 +1066,16 @@ CELERY_TASK_ROUTES = {
     'unified_pipeline.run_complete_cycle': {'queue': 'default'},
     'unified_pipeline.health_check': {'queue': 'default'},
     # Session 1009: Removed phantom autonomous_studio.track_performance (task doesn't exist)
+    # Session 1028: Route unrouted tasks off celery-worker to prevent OOM
+    # These 7 tasks had no routing and all landed on default queue,
+    # causing repeated OOM crashes (4 restarts in 2 hours).
+    'core.tasks.check_celery_health': {'queue': 'broadcast'},
+    'core.tasks.process_core_spider_data': {'queue': 'long_running'},
+    'core.tasks.batch_extract_artifacts': {'queue': 'long_running'},
+    'core.tasks.collect_kalshi_prediction_markets': {'queue': 'long_running'},
+    'core.tasks.run_stock_audit_cycle': {'queue': 'long_running'},
+    'core.tasks.process_agent_activity_xp': {'queue': 'broadcast'},
+    'core.tasks.monitor_running_experiments': {'queue': 'broadcast'},
 }
 
 # Celery Worker Settings
