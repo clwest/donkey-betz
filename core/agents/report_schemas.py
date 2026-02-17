@@ -102,6 +102,9 @@ class ReportProvenance:
     validation_status: str = "unverified"  # verified/partially_verified/unverified/stale
     validation_notes: List[str] = field(default_factory=list)
 
+    # Domain relevance (Session 1023 Layer 3)
+    domain_match_rate: Optional[float] = None  # 0.0-1.0, None = not scored
+
     # Publishing gate
     publishable: bool = False
     publish_blockers: List[str] = field(default_factory=list)
@@ -124,6 +127,7 @@ class ReportProvenance:
             'avg_data_age_hours': round(self.avg_data_age_hours, 2),
             'validation_status': self.validation_status,
             'validation_notes': self.validation_notes,
+            'domain_match_rate': self.domain_match_rate,
             'publishable': self.publishable,
             'publish_blockers': self.publish_blockers,
             'disclaimer': self.disclaimer,
@@ -158,6 +162,9 @@ class ReportProvenance:
             f"**Max Data Age:** {self.max_data_age_hours:.1f} hours",
             f"**Validation:** {self.validation_status.upper()}",
         ])
+
+        if self.domain_match_rate is not None:
+            lines.append(f"**Domain Relevance:** {self.domain_match_rate:.0%}")
 
         if self.validation_notes:
             lines.append("")
@@ -486,6 +493,8 @@ def build_provenance(
     sources: List[Dict[str, Any]],
     stale_threshold_hours: float = 4.0,
     internal_sources: Optional[List['SourceInfo']] = None,
+    min_source_records: int = 0,
+    domain_match_rate: Optional[float] = None,
 ) -> ReportProvenance:
     """
     Session 918: Build a provenance block from source data.
@@ -596,6 +605,26 @@ def build_provenance(
     if total_records == 0:
         provenance.publishable = False
         provenance.publish_blockers.append("No data records to analyze")
+
+    # Session 1023 Layer 3: Minimum source records gate
+    if min_source_records > 0 and total_records < min_source_records:
+        provenance.publishable = False
+        provenance.publish_blockers.append(
+            f"Only {total_records} records (minimum: {min_source_records})"
+        )
+
+    # Session 1023 Layer 3: Domain relevance gate
+    if domain_match_rate is not None:
+        provenance.domain_match_rate = domain_match_rate
+        if domain_match_rate < 0.15 and total_records > 0:
+            provenance.publishable = False
+            provenance.publish_blockers.append(
+                f"Domain relevance too low: {domain_match_rate:.0%} (minimum: 15%)"
+            )
+        elif domain_match_rate >= 0.15:
+            provenance.validation_notes.append(
+                f"Domain relevance: {domain_match_rate:.0%}"
+            )
 
     # Session 960 Phase 0: Merge internal doc sources (SourceInfo objects or dicts)
     if internal_sources:
