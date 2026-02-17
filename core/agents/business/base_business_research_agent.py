@@ -426,6 +426,44 @@ Research Type: {self.research_type}""")
                 # Step 6: Extract source articles for frontend
                 source_articles, sources_used = self._extract_source_articles(all_data)
 
+                # Session 1023: Minimum Evidence Gate — block when data is insufficient
+                # Prevents synthesis from thin air (e.g., 0-1 source articles)
+                MIN_SOURCE_ARTICLES = 3
+                if len(source_articles) < MIN_SOURCE_ARTICLES:
+                    execution_time = int((time.time() - start_time) * 1000)
+                    gate_reason = (
+                        f"Only {len(source_articles)} usable source articles collected "
+                        f"(minimum: {MIN_SOURCE_ARTICLES}). "
+                        f"Tools used: {list(sources_used) if sources_used else 'none'}"
+                    )
+                    logger.warning(f"[Evidence Gate] {self.name}: {gate_reason}")
+                    return AgentResult(
+                        success=True,  # Not an error — just insufficient data
+                        message=(
+                            f"Insufficient data to produce reliable {self.research_type} analysis. "
+                            f"{gate_reason}\n\n"
+                            f"Recommendations:\n"
+                            f"- Expand spider network coverage for this domain\n"
+                            f"- Try broader or more specific search queries\n"
+                            f"- Run targeted primary research first"
+                        ),
+                        data={
+                            'type': 'insufficient_evidence',
+                            'research_type': self.research_type,
+                            'source_articles_found': len(source_articles),
+                            'sources_used': list(sources_used),
+                            'raw_data': all_data,
+                            'gate_reason': gate_reason,
+                            'recommended_actions': [
+                                'Expand spider network coverage for this domain',
+                                'Try broader or more specific search queries',
+                                'Run targeted primary research first',
+                            ],
+                        },
+                        agent_name=self.name,
+                        execution_time_ms=execution_time,
+                    )
+
                 # Step 7: Save to BusinessResearchResult
                 saved_result = self._save_research_result(task, synthesis, all_data, project_context)
 
