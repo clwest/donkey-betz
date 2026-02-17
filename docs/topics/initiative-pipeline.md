@@ -111,12 +111,15 @@ Methods: `start()`, `complete()`, `block(reason)`. Properties: `is_overdue`, `da
 
 Prevents initiative creation when the system is overloaded. Config: `INITIATIVE_BACKLOG_THRESHOLD=50` (env) or `SystemConfiguration` key `initiative_creation_paused`.
 
-**Enforcement points (Session 994):** ALL 5 creation paths check the circuit breaker:
-- `InitiativeIntegrationService.get_or_create_initiative()` — raises `InitiativeCreationBlocked`
-- `ConversationInitiativePipeline.process()` — quality gate + circuit breaker
-- `HiveMindExecutionPipeline` — circuit breaker check
+**Enforcement points (Session 994, updated Session 1020):** ALL 6 creation paths check the circuit breaker + similarity dedup:
+- `InitiativeIntegrationService.get_or_create_initiative()` — similarity dedup + circuit breaker
+- `ConversationInitiativePipeline.process()` — quality gate + circuit breaker (Session 1020)
+- `HiveMindExecutionPipeline` — circuit breaker (Session 1020)
 - `DecisionExtractor.auto_link_initiative_for_decision()` — catches `InitiativeCreationBlocked`
-- `AgentDream.promote_to_initiative()` — circuit breaker check
+- `AgentDream.promote_to_initiative()` — similarity dedup + circuit breaker (Session 1020)
+- `create_initiative_from_deliverables()` — circuit breaker
+
+**Similarity dedup (Session 1020):** `find_similar_initiative()` in `initiative_circuit_breaker.py` uses Jaccard keyword similarity at 0.6 threshold.
 
 **Backlog count:** ACTIVE + TRIAGE initiatives with `last_activity_at IS NULL`. Cached 60s.
 
@@ -153,6 +156,23 @@ Each initiative can have an **owner** (human FK) or **owner_agent** (agent name 
 **PROGRAM_OWNER_MAP:** content_pipeline → ContentStrategyAgent, growth_intelligence → MarketIntelligenceAgent, monetization → OpportunityScoringAgent, platform_health → SystemIntelligenceAgent, ai_capabilities → ThinkingAgent, infrastructure → DevOpsAgent, research/experiments → ResearchAgent
 
 **PA commands:** "show my initiatives", "unowned initiatives", "who owns [X]?", "assign [X] to [Agent]", "take ownership of [X]"
+
+## Stage Pipeline Integrity (Session 1021)
+
+Three systemic bugs found and fixed in `advance_initiative_pipeline`:
+
+**DRAFT stages silently skipped (PR #1250):** Pipeline only matched `PENDING` stages without docs. After Session 1020 created docs for Stage 2+, stages with `DRAFT` status + existing document were never approved. Fixed by adding DRAFT+document detection path.
+
+**Future stage document generation (PR #1251):** The `range(1, 6)` loop generated documents for ANY pending stage regardless of whether prior stages were approved. This caused "rubber-stamping" — 4 stages approved in 10 minutes with zero work when Stage 2 was unblocked. Fixed by anchoring to `init.current_stage` with prior stage approval check.
+
+**Garbage document content (PR #1252):** ALL Stage 1 and Stage 2 documents contained garbage — parroted prompt instructions or random blog summaries. Root cause: `TechnicalDocumentAgent` called without `topic` or `research_context`, and has no tools to do research. Fixed by adding `_gather_initiative_research()` that queries SpiderData, SignalClusters, AgentConversations, and Deliverables for real data before calling the agent.
+
+**Current pipeline behavior (post Session 1021):**
+1. Only processes `init.current_stage` (never scans ahead)
+2. Verifies prior stage is `APPROVED` before proceeding
+3. Gathers real system data (spider intelligence, signal clusters, conversations, deliverables) via keyword search
+4. Injects real data into task prompt with anti-hallucination instructions
+5. Passes `topic` and `research_context` to agent context
 
 ## PA Flow Metrics (Session 994)
 
