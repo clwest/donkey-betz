@@ -142,7 +142,15 @@ See `docs/handoffs/SESSION_1024_SEMANTIC_SPIDER_SEARCH.md`
 
 ## Known Issues / Open Items
 
-### Evidence Gate Layer 3b — Per-Agent Adoption (NEXT)
+### Evidence Pipeline Maturity Roadmap
+1. Semantic spider search — DONE (Session 1024, PR #1265)
+2. Evidence gates (4 layers) — DONE (Session 1023, PRs #1262-1264)
+3. Scoring contract (reach, intent, replicability) — DONE (Session 1025)
+4. Auto-experiment generator — FUTURE
+
+**Next within this roadmap:** Track-based routing (consuming `SignalCluster.track` to route attention-track signals to content agents and intent-track signals to micro-product agents). Run `backfill_signal_scores` on Railway to score existing 1,488 clusters.
+
+### Evidence Gate Layer 3b — Per-Agent Adoption
 Each of 20+ provenance-tracked agents should compute `domain_match_rate` and pass it to `build_provenance()`. Currently only CompetitorAnalysisAgent and BaseBusinessResearchAgent subclasses enforce evidence gates. The `build_provenance()` infrastructure is ready (Session 1023, PR #1264).
 
 ### Rubber-Stamped Initiatives — NEEDS AUDIT
