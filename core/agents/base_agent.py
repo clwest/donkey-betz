@@ -3744,10 +3744,37 @@ Consider this current data when formulating your response."""
         try:
             from core.models_deliverables import Deliverable
             from django.utils.text import slugify
+            from django.utils import timezone as tz
+            from datetime import timedelta
             import uuid
 
+            resolved_title = title or f"{self.name} Output"
+
+            # Session 1022: Dedup — if same agent produced same title in last 4h, update it
+            dedup_window = tz.now() - timedelta(hours=4)
+            existing = Deliverable.objects.filter(
+                title=resolved_title,
+                agent_name=self.name,
+                created_at__gte=dedup_window,
+            ).order_by('-created_at').first()
+
+            if existing:
+                # Update content in-place instead of creating a duplicate
+                preview = content[:500] if content else ''
+                if len(content or '') > 500:
+                    preview += '...'
+                existing.content = content or ''
+                existing.preview_content = preview
+                existing.metadata = metadata or {}
+                existing.quality_score = quality_score
+                existing.confidence_score = confidence_score
+                existing.agent_task = getattr(self, '_current_task', '')[:1000] if hasattr(self, '_current_task') else ''
+                existing.save(update_fields=['content', 'preview_content', 'metadata', 'quality_score', 'confidence_score', 'agent_task', 'updated_at'])
+                logger.info(f"📦 Session 1022: Updated existing Deliverable {existing.id} (dedup) - {resolved_title[:50]}")
+                return existing
+
             # Generate unique slug
-            base_slug = slugify(title[:100]) if title else 'untitled'
+            base_slug = slugify(resolved_title[:100]) if resolved_title else 'untitled'
             unique_slug = f"{base_slug}-{uuid.uuid4().hex[:8]}"
 
             # Determine category if not provided
@@ -3760,7 +3787,7 @@ Consider this current data when formulating your response."""
                 preview += '...'
 
             deliverable = Deliverable.objects.create(
-                title=title or f"{self.name} Output",
+                title=resolved_title,
                 slug=unique_slug,
                 deliverable_type=deliverable_type,
                 category=category,
@@ -3778,7 +3805,7 @@ Consider this current data when formulating your response."""
                 status='ready',
             )
 
-            logger.info(f"📦 Session 861: Saved Deliverable {deliverable.id} - {title[:50] if title else 'Untitled'}")
+            logger.info(f"📦 Session 861: Saved Deliverable {deliverable.id} - {resolved_title[:50]}")
 
             # Session 930: Trigger auto-learning from deliverable
             self._trigger_deliverable_learning(deliverable, user)
