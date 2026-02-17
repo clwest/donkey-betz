@@ -503,7 +503,7 @@ def execution_detail(request, execution_id):
                 'execution': {
                     'id': str(execution.id),
                     'agent_name': execution.agent.name if execution.agent else 'Unknown',
-                    'agent_display_name': execution.agent.display_name if execution.agent else None,
+                    'agent_display_name': execution.agent.name if execution.agent else None,
                     'task': execution.task,
                     'status': execution.status,
                     'output_data': execution.output_data,
@@ -893,7 +893,7 @@ def monitoring_agent_detail(request, agent_name):
                 'agent': {
                     'id': str(agent.id),
                     'name': agent.name,
-                    'display_name': agent.display_name,
+                    'display_name': agent.name,
                     'specialization': agent.specialization,
                 },
                 'period': period,
