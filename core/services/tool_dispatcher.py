@@ -3005,16 +3005,30 @@ class ToolDispatcher:
                 if ai.get('due_date'):
                     ai['due_date'] = ai['due_date'].isoformat()
 
-            # Get stage info
+            # Get stage info — Session 1021: fixed field names (stage, not stage_number)
             stages = list(
                 initiative.stages.all()
-                .order_by('stage_number')
-                .values('stage_number', 'status', 'completed_at')
+                .order_by('stage')
+                .values('stage', 'status', 'approved_at', 'document_id')
             )
 
+            stage_labels = {1: 'Research Brief', 2: 'Prototype Plan', 3: 'Evaluation Protocol', 4: 'Technical Design', 5: 'Pilot Execution'}
             for s in stages:
-                if s.get('completed_at'):
-                    s['completed_at'] = s['completed_at'].isoformat()
+                s['stage_name'] = stage_labels.get(s['stage'], f"Stage {s['stage']}")
+                if s.get('approved_at'):
+                    s['approved_at'] = s['approved_at'].isoformat()
+                # Session 1021: Include stage document preview
+                if s.get('document_id'):
+                    try:
+                        from core.models_unified_system import SelfBlog
+                        doc = SelfBlog.objects.filter(id=s['document_id']).first()
+                        if doc:
+                            s['document_title'] = doc.title
+                            s['document_preview'] = (doc.full_text or '')[:300]
+                            s['document_length'] = len(doc.full_text or '')
+                    except Exception:
+                        pass
+                s['document_id'] = str(s['document_id']) if s.get('document_id') else None
 
             # Session 996: Resolve owner
             owner_display = initiative.owner_agent or None
