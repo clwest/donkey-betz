@@ -1,35 +1,51 @@
-# Session 1023 - Start Here
+# Session 1025 - Start Here
 
-**Previous Session:** 1022 (Cost Optimization Audit — Deliverable Dedup, Remediation Pause, Conversation Dedup)
-**Date:** February 16, 2026
-**Status:** 92 Agents | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **497 BLOGS** | **1,488 SIGNAL CLUSTERS** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 39+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 268** | **Frontend Routes: 27** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED** | **BETTING DASHBOARD: 12 TABS POLISHED** | **DELIVERABLE DEDUP: LIVE** | **CONVERSATION DEDUP: LIVE** | **REMEDIATION SYSTEM: PAUSED** | **COST SAVINGS: ~$14/day**
+**Previous Session:** 1024 (Semantic Spider Search — Root Cause Fix for Evidence Gates)
+**Date:** February 17, 2026
+**Status:** 92 Agents | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **497 BLOGS** | **1,488 SIGNAL CLUSTERS** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 39+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 268** | **Frontend Routes: 27** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED** | **BETTING DASHBOARD: 12 TABS POLISHED** | **DELIVERABLE DEDUP: LIVE** | **CONVERSATION DEDUP: LIVE** | **REMEDIATION SYSTEM: PAUSED** | **COST SAVINGS: ~$14/day** | **SEMANTIC SPIDER SEARCH: LIVE** | **EVIDENCE GATES: COMPLETE (4 LAYERS)**
 
 ---
 
-## Session 1022 Summary (Just Completed)
+## Session 1024 Summary (Just Completed)
+
+### Semantic Spider Search — Root Cause Fix (PR #1265)
+
+**Problem:** `search_spider_data()` used word-boundary regex keyword matching over 300 most recent SpiderData rows. A HuggingFace ML page mentioning "blockchain" in a tag scored `relevance=1.0` for blockchain queries, drowning out actual blockchain data. This was the root cause behind all evidence gate work.
+
+**Fix:** `core/services/spider_intelligence.py` — `search_spider_data()` now uses pgvector `CosineDistance` semantic similarity as the primary search path, with keyword matching as automatic fallback only.
+
+**Architecture:**
+- `search_spider_data()` → `_semantic_search_db()` (primary) → `_keyword_search()` (fallback)
+- Generates query embedding via `SpiderSemanticSearch._generate_embedding()` (OpenAI `text-embedding-3-small`)
+- DB-side KNN using HNSW index (`spiderdata_embedding_hnsw_idx`)
+- Filters by `similarity >= 0.25`, returns top 50 results
+- Falls back to keyword matching when: pgvector ImportError, embedding API fails, no embedded data, any DB error
+
+**All 6 callers benefit automatically** — no code changes needed: `base_agent.py` spider_query, `base_business_research_agent.py`, `spider_context_builder.py`, `research_agent.py`, `views_spider_intelligence.py`, `context_aggregator.py`.
+
+**Verified on Railway:** 85% embedding coverage. Crypto queries return etherscan data, not huggingface. No keyword fallback in normal operation.
+
+See `docs/handoffs/SESSION_1024_SEMANTIC_SPIDER_SEARCH.md`
+
+---
+
+## Session 1023 Summary
+
+### Evidence Gate Layers 1-3 (PRs #1262, #1263, #1264)
+
+- **Layer 1:** CompetitorAnalysisAgent hard gates (< 3 data points or 0% domain match → `insufficient_evidence`)
+- **Layer 2:** BaseBusinessResearchAgent gate (affects ContentStrategy, MarketingStrategy)
+- **Layer 3:** `build_provenance()` infrastructure (`domain_match_rate` param, < 15% blocks publishing)
+- See `docs/handoffs/SESSION_1023_EVIDENCE_GATE_LAYERS.md`
+
+---
+
+## Session 1022 Summary
 
 ### Cost Optimization Audit (PRs #1253-#1258)
 
-**Agent Execution 500 fix (PR #1255):** `views_agent_execution.py` accessed `execution.agent.display_name` but `core.models_unified_system.Agent` only has `name`. Fixed in 3 locations.
-
-**Deliverable dedup (PR #1256):** `_save_to_deliverable()` always created new rows — intelligence desk agents (ArbitrageDetector, StockAnalystAgent, etc.) running every 5-15 min produced 1,500+ identical deliverables/day. Added 4-hour dedup window. Cleaned up 5,850 duplicate rows (9,577 → 3,737).
-
-**Remediation system paused (PR #1257):** CodeGeneratorAgent burned $7.10/day (54% of total cost) on 86 remediation tasks it can't complete — runs in empty sandbox with no real codebase access. Cancelled 26 stuck tasks, paused all 5 remediation Celery Beat schedules.
-
-**Conversation dedup (PR #1258):** `run_agent_conversation` and `run_multi_agent_conversation` had zero dedup — same topics repeated 41x/day. 293 conversations/24h, only 121 unique (59% dupes), wasting ~$7/day. Added 6-hour dedup window on both `related_knowledge` FK and topic string.
-
-**Initiative cleanup:** Deleted 32 ARCHIVED initiatives (zero activity), promoted 4 TRIAGE → ACTIVE. Current: 3 ACTIVE (Stage 2), 1 TRIAGE.
-
-### PRs: #1253, #1254, #1255, #1256, #1257, #1258
-
----
-
-## Session 1021 Summary
-
-### Initiative Pipeline Integrity (PRs #1250, #1251, #1252)
-
-- DRAFT stage approval fix, no stage skip-ahead, real data gathering for stage documents
-- See `docs/handoffs/SESSION_1021_INITIATIVE_PIPELINE_INTEGRITY.md`
+- Deliverable dedup (4h window), conversation dedup (6h window), remediation paused, agent execution 500 fix
+- See `docs/handoffs/SESSION_1022_COST_OPTIMIZATION_AUDIT.md`
 
 ---
 
@@ -57,12 +73,30 @@
 | Deliverables | ~3,737 (cleaned from 9,577) |
 | Daily LLM Cost | ~$13/day → expected ~$6/day after fixes |
 | LLM Providers | 6 (OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini) |
+| Spider Search | Semantic (pgvector KNN) primary, keyword fallback |
+| Evidence Gates | 4 layers complete (Layers 1-3 defensive + root cause fix) |
 
 ---
 
 ## Verify Before Starting
 
-### 1. Cost Reduction (Session 1022 — CRITICAL)
+### 1. Semantic Search Health (Session 1024)
+- Verify semantic search is active (NOT falling back to keyword):
+  ```
+  railway run python manage.py shell -c "
+  from core.services.spider_intelligence import SpiderIntelligenceService
+  svc = SpiderIntelligenceService()
+  results = svc.search_spider_data('blockchain security vulnerabilities', limit=3)
+  print(f'Results: {len(results)}')
+  for r in results:
+      print(f'  {r[\"source\"]:20} rel={r[\"relevance\"]:.3f} terms={r[\"matching_terms\"]}')
+  print()
+  print('PASS' if results and results[0]['matching_terms'] == ['semantic_match'] else 'FAIL - using keyword fallback')
+  "
+  ```
+- Expect results with `matching_terms=['semantic_match']`, NOT keyword terms
+
+### 2. Cost Reduction (Session 1022)
 - Verify deliverable count stabilized (should NOT grow by 1,500/day anymore):
   ```
   railway run python manage.py shell -c "
@@ -76,13 +110,12 @@
   ```
 - Expect ~150-300 new/day (down from 1,500+)
 
-### 2. Conversation Dedup (Session 1022)
+### 3. Conversation Dedup (Session 1022)
 - Verify conversation count dropped:
   ```
   railway run python manage.py shell -c "
   from core.models_unified_system import AgentConversation
   from django.utils import timezone; from datetime import timedelta
-  from collections import Counter
   cutoff = timezone.now() - timedelta(hours=24)
   topics = list(AgentConversation.objects.filter(started_at__gte=cutoff).values_list('topic', flat=True))
   unique = len(set(topics))
@@ -91,42 +124,26 @@
   ```
 - Expect <150 total, <20% dupe rate (down from 293 / 59%)
 
-### 3. CodeGeneratorAgent Cost (Session 1022)
-- Verify CodeGeneratorAgent executions dropped to near-zero:
+### 4. Embedding Coverage (Session 1024)
+- Check embedding backfill is running:
   ```
   railway run python manage.py shell -c "
-  from core.models_unified_system import AgentExecution
+  from core.models_unified_system import SpiderData
   from django.utils import timezone; from datetime import timedelta
-  cutoff = timezone.now() - timedelta(hours=24)
-  cg = AgentExecution.objects.filter(agent__name='CodeGeneratorAgent', created_at__gte=cutoff)
-  print(f'CodeGeneratorAgent executions (24h): {cg.count()}')
-  cost = sum(float(e.cost or 0) for e in cg)
-  print(f'Cost: \${cost:.2f}')
+  since = timezone.now() - timedelta(hours=72)
+  total = SpiderData.objects.filter(created_at__gte=since).count()
+  with_emb = SpiderData.objects.filter(created_at__gte=since, embedding__isnull=False).count()
+  print(f'SpiderData (72h): {total} total, {with_emb} with embeddings ({100*with_emb//max(total,1)}%)')
   "
   ```
-- Expect near $0 (down from $7.10/day)
-
-### 4. Real Data Gathering in Stage Documents (Session 1021)
-- Check if new stage documents contain real spider data:
-  ```
-  railway run python manage.py shell -c "
-  from core.models_unified_system import SelfBlog
-  from django.utils import timezone; from datetime import timedelta
-  recent = SelfBlog.objects.filter(
-      category='initiative_stage',
-      created_at__gte=timezone.now()-timedelta(hours=24)
-  ).order_by('-created_at')[:3]
-  for b in recent:
-      print(f'{b.created_at.strftime(\"%H:%M\")} | {b.title[:60]}')
-      has_data = 'Spider Intelligence' in b.full_text or 'Signal Clusters' in b.full_text or 'No data available' in b.full_text
-      print(f'  Has real data markers: {has_data}')
-      print(f'  First 200 chars: {b.full_text[:200]}')
-  "
-  ```
+- Expect >80% coverage
 
 ---
 
 ## Known Issues / Open Items
+
+### Evidence Gate Layer 3b — Per-Agent Adoption (NEXT)
+Each of 20+ provenance-tracked agents should compute `domain_match_rate` and pass it to `build_provenance()`. Currently only CompetitorAnalysisAgent and BaseBusinessResearchAgent subclasses enforce evidence gates. The `build_provenance()` infrastructure is ready (Session 1023, PR #1264).
 
 ### Rubber-Stamped Initiatives — NEEDS AUDIT
 Initiatives that reached Stage 5 via the skip-ahead bug (PR #1251) have Stage 3-5 docs generated out of order with no real data. May need doc regeneration.
@@ -143,7 +160,7 @@ All 5 Celery Beat schedules commented out. 86 tasks in DB contain some valuable 
 Re-enable when agents have real workspace access. Consider surfacing valuable findings via HumanAttentionItem/Boardroom.
 
 ### Dream Pipeline — NO-OP
-Zero approved dreams, zero DreamImplementations. Only $0.54/day so not urgent, but the entire dream→implementation pipeline is non-functional.
+Zero approved dreams, zero DreamImplementations. Only $0.54/day so not urgent, but the entire dream->implementation pipeline is non-functional.
 
 ### Remaining Agent Failures — REDUCED
 - `.metadata` crashes: **0** (PR #1236)
@@ -157,6 +174,7 @@ Zero approved dreams, zero DreamImplementations. Only $0.54/day so not urgent, b
 - Deliverable spam: **FIXED** (PR #1256)
 - Conversation duplication: **FIXED** (PR #1258)
 - Remediation waste: **FIXED** (PR #1257)
+- Evidence gate (irrelevant data): **FIXED** (PRs #1262-#1265)
 - Remaining: AudioAgent (ElevenLabs quota, ~7/day), assorted others (~18/day)
 
 ### CodeArtifact v2 — DEFERRED
@@ -174,6 +192,12 @@ Initial accuracy is 70.2% (mostly NCAAB). Monitor by sport/model.
 ## Critical Patterns & Gotchas
 
 **Django settings module:** `core.settings` (NOT `config.settings`).
+
+**Spider search (Session 1024):**
+- `search_spider_data()` uses pgvector semantic similarity (primary) → keyword matching (fallback)
+- Key file: `core/services/spider_intelligence.py`
+- Constants: `SEMANTIC_TOP_K=50`, `SEMANTIC_MIN_SIMILARITY=0.25`, `NOISY_SPIDERS`
+- Monitor logs for `[spider_search] keyword fallback` — should NOT appear in normal operation
 
 **Agent model confusion (Session 1022):**
 - `core.models_unified_system.Agent` — has `name`, used by `AgentExecution` FK
