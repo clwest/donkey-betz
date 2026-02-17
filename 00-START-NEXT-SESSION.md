@@ -1,66 +1,58 @@
-# Session 1017 - Start Here
+# Session 1018 - Start Here
 
-**Previous Session:** 1016 (CodeArtifact Patch-First Workflow + Deep Agent Audit)
+**Previous Session:** 1017 (Agent Execution Pipeline Audit — Timeouts + .metadata Fix)
 **Date:** February 16, 2026
-**Status:** 92 Agents | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **40+ PUBLISHED BLOGS** | **1,131 SIGNAL CLUSTERS** | **INITIATIVE STAGES 1-5 ACTIVE** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 39+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 268** | **Frontend Routes: 27** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED** | **BETTING DASHBOARD: 12 TABS POLISHED** | **VIDEO STUDIO: 5 EDIT TOOLS** | **GOVERNMENT PAGE: 3 TABS + ASK A BILL RAG** | **CodeArtifact: PATCH-FIRST WORKFLOW LIVE**
+**Status:** 92 Agents | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **40+ PUBLISHED BLOGS** | **1,131 SIGNAL CLUSTERS** | **INITIATIVE STAGES 1-5 ACTIVE** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 39+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 268** | **Frontend Routes: 27** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED** | **BETTING DASHBOARD: 12 TABS POLISHED** | **VIDEO STUDIO: 5 EDIT TOOLS** | **GOVERNMENT PAGE: 3 TABS + ASK A BILL RAG** | **CodeArtifact: PATCH-FIRST WORKFLOW LIVE** | **AGENT TIMEOUTS: FIXED**
 
 ---
 
-## Session 1016 Summary (Just Completed)
+## Session 1017 Summary (Just Completed)
+
+### AgentResult `.metadata` Backward-Compat Fix (PR #1236)
+
+`AgentResult` has `.data` but NOT `.metadata`. Some code path was calling `.metadata` causing `AttributeError` crashes on OpportunityScoringAgent and SystemIntelligenceAgent (~67 failures/day).
+
+**Fix:** Added `.metadata` property alias on `AgentResult` in `core/agents/base_agent.py` that returns `.data`.
+
+**Exhaustive search:** Searched all code paths (`agent_router.py`, `tasks.py`, `tool_dispatcher.py`, all BaseAgent methods) — couldn't find the `.metadata` access in current code. The property is a permanent defensive fix.
+
+### Agent Timeout Pipeline Fix (PR #1237)
+
+Investigated 28 agent timeouts across 15 agents in 24 hours. Found two root causes:
+
+**Root Cause 1 — No Celery time limits:** Three agent dispatch tasks (`execute_agent_task`, `execute_initiative_stage_task`, `universal_agent_workspace_output`) had no `time_limit` or `soft_time_limit`. Hung agents ran indefinitely until the cleanup task caught them, leaving orphaned `in_progress` execution records.
+
+**Root Cause 2 — Cleanup threshold bug:** `cleanup_stale_agent_executions` had a 30-min default, but the Beat schedule intended 120 min via kwargs that weren't being passed. The 30-min threshold was too aggressive for legitimately slow agents:
+- WorkflowAgent: avg 6 min, max 22 min
+- MeetingCoordinatorAgent: avg 9 min, max 24 min
+
+**Two categories of timed-out agents identified:**
+| Category | Agents | Diagnosis |
+|----------|--------|-----------|
+| Legitimately slow | WorkflowAgent, MeetingCoordinatorAgent | Max runtime close to 30-min threshold — false positives |
+| Genuinely hung | CTOAgent (max 33s), CompetitorAnalysisAgent (max 37s) | Stuck on LLM API calls — true hangs |
+
+**Fixes applied:**
+1. Added `soft_time_limit=2700` (45 min) + `time_limit=3000` (50 min) to all 3 dispatch tasks
+2. Added `SoftTimeLimitExceeded` handlers that properly update `AgentExecution` records with `status='failed'`
+3. Changed cleanup default from 30 to 60 minutes
+
+**Deployed & verified on Railway:** New Celery workers confirmed running with updated thresholds. WorkflowAgent at 21 min no longer falsely killed.
+
+### PRs: #1236, #1237
+
+---
+
+## Session 1016 Summary
 
 ### CodeArtifact: Patch-First Workflow (PRs #1232, #1233)
-
 When agents generate code on Railway (no writable workspace), the output was silently lost. Now captured as reviewable `CodeArtifact` records.
 
-**New model:** `CodeArtifact` (`core/models_code_artifacts.py`)
-- Fields: agent_name, kind (file_create/file_edit/patch), status (pending/approved/rejected/applied/stale), target_path, content, content_before, description
-- FKs: agent_execution, initiative, reviewed_by (all nullable)
-- Migration: `0246_code_artifact_model` — applied on Railway
-
-**New API:** `/api/code-artifacts/`
-- `GET /` — list with `?status=`, `?agent_name=`, `?initiative=`, `?kind=` filters
-- `GET /{id}/` — full detail with code content
-- `POST /{id}/approve/` — approve with optional review_note
-- `POST /{id}/reject/` — reject with optional review_note
-
-**CodeGeneratorAgent:** `_write_file()` and `_edit_file()` capture artifacts at all workspace-unavailability failure points. NOT captured for logic errors (file-not-found, old_text-not-found).
-
 ### Deep Agent Audit + Fixes (PR #1234)
-
-Audited all 92 agents for silent failure patterns. Found 5 agents beyond CodeGeneratorAgent silently losing output on Railway.
-
-**Fix 1 — BaseAgent._write_files_to_workspace():** Added CodeArtifact capture at all 3 failure points (no manager, no workspace, no write permission) + individual file write failures. Covers: FullStackDeveloperAgent, DevOpsAgent, TechnicalDocumentAgent, CodeReviewAgent.
-
-**Fix 2 — CodeReviewAgent._read_file():** Now tries WorkspaceManager first before falling back to direct `open()`. Works on Railway where filesystem is empty.
-
-**Fix 3 — BaseAgent._regenerate_docs_index():** Replaced `subprocess.run(['.venv/bin/python', ...])` with `django.core.management.call_command()`. Works on any environment.
+Audited all 92 agents for silent failure patterns. Found 5 agents beyond CodeGeneratorAgent silently losing output. Added CodeArtifact capture to BaseAgent.
 
 ### Activity Feed Gap Root Cause
-
-Investigated 11-hour gap in Activity Feed. Root cause: `can_auto_progress` returns `False` when `execution_speed == 'fast' AND current_stage >= 2`. Since ALL initiatives default to `fast`, nothing auto-progresses past Stage 2. Celery tasks ran fine (2000/hour) but found nothing eligible. Documented in `docs/topics/initiative-pipeline.md`.
-
-### Docs Updated (PR #1233)
-- `docs/topics/agent-system.md` — CodeArtifact section, agent count to 92
-- `docs/topics/initiative-pipeline.md` — fast-track stall behavior documented
-- `docs/DATABASE_MODEL_REFERENCE.md` — CodeArtifact model section
-- `docs/API_PATH_POLICY.md` — `/api/code-artifacts/` endpoint
-- `docs/BACKEND_REFERENCE.md` — Code Artifacts endpoints
-- `docs/INDEX.md` — regenerated
-
-**PRs:** #1232, #1233, #1234
-
----
-
-## Session 1015 Summary
-
-### Government & Legislation Page (PRs #1226-#1229)
-Full-stack `/government` page with Hub, Bills, and Ask A Bill tabs.
-
-### Image Studio Cloudinary Fix (PR #1230)
-Images were generated but never saved to gallery. Fixed `save_watermarked_image` to return `default_storage.url()` directly.
-
-### Custom Domain DNS (IN PROGRESS)
-`www.donkeybetz.com` custom domain added to Railway. SSL cert provisioning pending.
+`can_auto_progress` returns False for `execution_speed='fast'` at stage >= 2. All initiatives default to `fast`, so nothing auto-progresses past Stage 2.
 
 ---
 
@@ -71,7 +63,7 @@ Images were generated but never saved to gallery. Fixed `save_watermarked_image`
 | Agents | 92 (54 routable, 25 non-routable, 26+ provenance-tracked) |
 | Spiders | 79 (74 working, 5 need API keys) |
 | Advisors | 25 |
-| Database Models | 396+ (added CodeArtifact) |
+| Database Models | 396+ |
 | Services | 134 |
 | Celery Tasks | 268 |
 | Intelligence Desks | 4 (Stocks, Sports, Blockchain, Narrative) — ALL RUNNING |
@@ -90,17 +82,17 @@ Images were generated but never saved to gallery. Fixed `save_watermarked_image`
 
 ## Verify Before Starting
 
-### 1. CodeArtifact API
-- `curl $RAILWAY_URL/api/code-artifacts/ -H "Authorization: Token 0cdc1c72dba99ea637485076ee952d571440aa30"` — should return JSON list
-- After an autonomous agent chain runs, check for new artifacts
+### 1. Agent Timeout Fix
+- `railway run python manage.py shell -c "from core.tasks import execute_agent_task; print(execute_agent_task.soft_time_limit)"` — should return `2700`
+- Check for `soft_time_limit` errors: `AgentExecution.objects.filter(error_message__icontains='soft_time_limit').count()` — any > 0 means a hung agent was properly killed
+- Cleanup threshold: `from core.tasks import cleanup_stale_agent_executions; import inspect; print(inspect.signature(cleanup_stale_agent_executions).parameters['minutes_threshold'].default)` — should return `60`
 
-### 2. Custom Domain SSL
+### 2. CodeArtifact API
+- `curl $RAILWAY_URL/api/code-artifacts/ -H "Authorization: Token 0cdc1c72dba99ea637485076ee952d571440aa30"` — should return JSON list
+
+### 3. Custom Domain SSL
 - Try `https://www.donkeybetz.com` — should show login page with valid cert
 - If still cert error: delete domain in Railway dashboard → re-add → update CNAME
-
-### 3. Initiative Fast-Track Gate
-- 8 ACTIVE initiatives stuck at Stage 2 with `execution_speed='fast'`
-- Decision needed: relax the gate, change default execution_speed, or add manual promotion flow
 
 ---
 
@@ -116,9 +108,14 @@ Images were generated but never saved to gallery. Fixed `save_watermarked_image`
 ### PA Context Awareness — NEEDS WORK
 PA doesn't understand page context. When user says "I just created an image but it's not displaying" from Image Studio, PA asks generic clarifying questions instead of checking ImageHistory.
 
-### Remaining Agent Failures (~4.7% rate) — INVESTIGATE
-Post-metadata-fix, ~67 failures/day remain from other agents:
-- ContentWriterAgent (15), AudioAgent (12), ResearchAgent (10), WorkflowAgent (6), TrendAnalysisAgent (4), VideoAgent (4)
+### Remaining Agent Failures — REDUCED
+Post-.metadata-fix and timeout-fix, failure rate should drop significantly. Monitor:
+- `.metadata` crashes: should be 0 (PR #1236 fixed)
+- False-positive timeouts: should be 0 (PR #1237 fixed)
+- Remaining failures: ContentWriterAgent, AudioAgent, VideoAgent (likely ElevenLabs quota / external API issues)
+
+### Genuinely Hung Agents — INVESTIGATE
+CTOAgent (max 33s normally) and CompetitorAnalysisAgent (max 37s) occasionally hang for 30+ min. Now properly killed by `soft_time_limit` at 45 min. Root cause likely: stuck on LLM API call or infinite tool loop. Investigate `httpx` timeout settings in LLM provider clients.
 
 ### CodeArtifact v2 — DEFERRED
 - **PatchApplier service**: Auto-applying approved artifacts to git tree
@@ -140,6 +137,18 @@ Initial accuracy is 70.2% (mostly NCAAB). Monitor by sport/model as more leagues
 
 **Django settings module:** `core.settings` (NOT `config.settings`).
 
+**Agent timeout limits (Session 1017):**
+- `execute_agent_task`: `soft_time_limit=2700` (45 min), `time_limit=3000` (50 min)
+- `execute_initiative_stage_task`: same
+- `universal_agent_workspace_output`: same
+- `cleanup_stale_agent_executions`: default 60 min (Beat kwargs: 120 min)
+- `SoftTimeLimitExceeded` handlers update `AgentExecution` records properly
+
+**AgentResult fields (Session 1017):**
+- `success`, `message`, `data`, `error`, `agent_name`, `execution_time_ms`, `tool_calls`, `tokens_used`, `cost`
+- `.content` is a @property alias for `.message`
+- `.metadata` is a @property alias for `.data` (backward-compat added Session 1017)
+
 **CodeArtifact model (Session 1016):**
 - Import from `core.models_code_artifacts` (or `core.models`)
 - `kind`: file_create, file_edit, patch
@@ -155,11 +164,6 @@ Initial accuracy is 70.2% (mostly NCAAB). Monitor by sport/model as more leagues
 - `agent` is FK to Agent -- use `agent__name` in `.values()` and `agent__name__icontains` in filters
 - No `success` field -- use `status='completed'` / `status='failed'`
 - No `agent_name` field, no `started_at` field -- use `created_at`
-
-**AgentResult fields (Session 1013):**
-- `success`, `message`, `data`, `error`, `agent_name`, `execution_time_ms`, `tool_calls`, `tokens_used`, `cost`
-- `.content` is a @property alias for `.message`
-- **NO `.metadata` field** — use `.data` instead
 
 **CeleryTaskEvent fields:**
 - `duration_seconds`, `error_message`, `error_type`, `finished_at`, `id`, `queue`, `started_at`, `status`, `task_id`, `task_name`, `worker`
@@ -181,6 +185,7 @@ Initial accuracy is 70.2% (mostly NCAAB). Monitor by sport/model as more leagues
 - `railway up` deploys only the linked service
 - `railway redeploy` during a build cancels build and redeploys OLD code
 - GitHub push auto-deploys ALL services
+- Celery workers can take up to 30 min to go live after push
 
 **Model registration:** Use `core/models/__init__.py` (NOT `core/models.py`). New model imports: `from ..models_xxx import ClassName` with `app_label = 'core'`.
 
