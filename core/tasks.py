@@ -32353,7 +32353,7 @@ def advance_initiative_pipeline(limit: int = 10, auto_approve: bool = True):
 
     logger.info(f"📋 [INITIATIVE PIPELINE] Starting advancement for up to {limit} initiatives...")
 
-    # Find initiatives with pending stages that need documents
+    # Find initiatives with pending stages that need documents or approval
     initiatives_to_advance = []
     for init in Initiative.objects.filter(status='ACTIVE').order_by('-updated_at')[:limit * 2]:
         # Find the current stage (or first pending stage)
@@ -32368,7 +32368,18 @@ def advance_initiative_pipeline(limit: int = 10, auto_approve: bool = True):
                 initiatives_to_advance.append({
                     'initiative': init,
                     'stage_num': stage_num,
-                    'stage': stage
+                    'stage': stage,
+                    'needs_document': True,
+                })
+                break
+
+            # Session 1021: Stage has document but is still DRAFT — needs approval only
+            if stage.status == 'DRAFT' and stage.document_id:
+                initiatives_to_advance.append({
+                    'initiative': init,
+                    'stage_num': stage_num,
+                    'stage': stage,
+                    'needs_document': False,
                 })
                 break
 
@@ -32391,15 +32402,23 @@ def advance_initiative_pipeline(limit: int = 10, auto_approve: bool = True):
         init = item['initiative']
         stage_num = item['stage_num']
         stage = item['stage']
+        needs_document = item.get('needs_document', True)
 
-        logger.info(f"📋 [INITIATIVE PIPELINE] Processing: {init.name[:50]}... Stage {stage_num}")
+        logger.info(f"📋 [INITIATIVE PIPELINE] Processing: {init.name[:50]}... Stage {stage_num} (needs_doc={needs_document})")
 
         try:
-            # Build the document generation task
             stage_name = STAGE_NAMES.get(stage_num, f'Stage {stage_num}')
-            doc_type = _get_stage_document_type(stage_num)
 
-            task_prompt = f"""Create a formal {stage_name} document for the initiative: {init.name}
+            # Session 1021: If stage already has a document (created by handle_stage_task_completion),
+            # skip document generation and go straight to auto-approval
+            if not needs_document and stage and stage.document_id:
+                logger.info(f"📋 [INITIATIVE PIPELINE] Stage {stage_num} already has document — skipping generation, approving")
+                results['processed'] += 1
+            else:
+                # Build the document generation task
+                doc_type = _get_stage_document_type(stage_num)
+
+                task_prompt = f"""Create a formal {stage_name} document for the initiative: {init.name}
 
 Initiative Description: {init.description or 'No description provided'}
 
@@ -32419,84 +32438,84 @@ Previous stage context:
 {_get_previous_stage_context(init, stage_num)}
 """
 
-            # Generate the document using TechnicalDocumentAgent
-            agent = TechnicalDocumentAgent()
-            result = agent.execute(
-                task=task_prompt,
-                context={
-                    'initiative_id': str(init.id),
-                    'initiative_name': init.name,
-                    'stage': stage_num,
-                    'doc_type': doc_type,
-                    'autonomous': True,
-                },
-                scifi_context={},
-                spider_context={}
-            )
-
-            # Extract content from result
-            content = ""
-            if hasattr(result, 'data') and result.data:
-                if isinstance(result.data, dict):
-                    content_data = result.data.get('content', {})
-                    if isinstance(content_data, dict):
-                        content = content_data.get('full_text', '')
-                    elif content_data:
-                        content = str(content_data)
-                else:
-                    content = str(result.data)
-            elif hasattr(result, 'message') and result.message:
-                content = result.message
-
-            if not content or len(content) < 100:
-                results['errors'].append(f"{init.name}: Stage {stage_num} - Generated content too short")
-                continue
-
-            # Create the SelfBlog document
-            doc_title = f"[Stage {stage_num} - {stage_name}] {init.name[:80]}"
-            blog = SelfBlog.objects.create(
-                id=uuid.uuid4(),
-                title=doc_title,
-                author='InitiativePipeline',  # Session 998: Author tracking
-                category='internal',  # Stage documents are internal
-                intro=f"Stage {stage_num} ({stage_name}) document for initiative: {init.name}",
-                full_text=content,
-                tone='formal',
-                stats_snapshot={
-                    'auto_generated': True,
-                    'parent_topic': init.parent_topic or init.name,
-                    'stage': stage_num,
-                    'stage_name': stage_name,
-                    'initiative_id': str(init.id),
-                    'doc_type': doc_type,
-                }
-            )
-
-            logger.info(f"📋 [INITIATIVE PIPELINE] Created document: {blog.id}")
-
-            # Create or update the stage record
-            if not stage:
-                stage = InitiativeStage.objects.create(
-                    initiative=init,
-                    stage=stage_num,
-                    status='DRAFT',
-                    document_id=blog.id,
+                # Generate the document using TechnicalDocumentAgent
+                agent = TechnicalDocumentAgent()
+                result = agent.execute(
+                    task=task_prompt,
+                    context={
+                        'initiative_id': str(init.id),
+                        'initiative_name': init.name,
+                        'stage': stage_num,
+                        'doc_type': doc_type,
+                        'autonomous': True,
+                    },
+                    scifi_context={},
+                    spider_context={}
                 )
-            else:
-                stage.document_id = blog.id
-                stage.status = 'DRAFT'
-                stage.save()
 
-            # Update initiative current_stage if needed
-            if init.current_stage < stage_num:
-                init.current_stage = stage_num
-                init.save()
+                # Extract content from result
+                content = ""
+                if hasattr(result, 'data') and result.data:
+                    if isinstance(result.data, dict):
+                        content_data = result.data.get('content', {})
+                        if isinstance(content_data, dict):
+                            content = content_data.get('full_text', '')
+                        elif content_data:
+                            content = str(content_data)
+                    else:
+                        content = str(result.data)
+                elif hasattr(result, 'message') and result.message:
+                    content = result.message
 
-            results['documents_created'] += 1
-            results['stages_updated'].append(f"{init.name[:30]}... Stage {stage_num}")
-            results['processed'] += 1
+                if not content or len(content) < 100:
+                    results['errors'].append(f"{init.name}: Stage {stage_num} - Generated content too short")
+                    continue
 
-            logger.info(f"✅ [INITIATIVE PIPELINE] Created document for: {init.name[:30]}... Stage {stage_num}")
+                # Create the SelfBlog document
+                doc_title = f"[Stage {stage_num} - {stage_name}] {init.name[:80]}"
+                blog = SelfBlog.objects.create(
+                    id=uuid.uuid4(),
+                    title=doc_title,
+                    author='InitiativePipeline',  # Session 998: Author tracking
+                    category='internal',  # Stage documents are internal
+                    intro=f"Stage {stage_num} ({stage_name}) document for initiative: {init.name}",
+                    full_text=content,
+                    tone='formal',
+                    stats_snapshot={
+                        'auto_generated': True,
+                        'parent_topic': init.parent_topic or init.name,
+                        'stage': stage_num,
+                        'stage_name': stage_name,
+                        'initiative_id': str(init.id),
+                        'doc_type': doc_type,
+                    }
+                )
+
+                logger.info(f"📋 [INITIATIVE PIPELINE] Created document: {blog.id}")
+
+                # Create or update the stage record
+                if not stage:
+                    stage = InitiativeStage.objects.create(
+                        initiative=init,
+                        stage=stage_num,
+                        status='DRAFT',
+                        document_id=blog.id,
+                    )
+                else:
+                    stage.document_id = blog.id
+                    stage.status = 'DRAFT'
+                    stage.save()
+
+                # Update initiative current_stage if needed
+                if init.current_stage < stage_num:
+                    init.current_stage = stage_num
+                    init.save()
+
+                results['documents_created'] += 1
+                results['stages_updated'].append(f"{init.name[:30]}... Stage {stage_num}")
+                results['processed'] += 1
+
+                logger.info(f"✅ [INITIATIVE PIPELINE] Created document for: {init.name[:30]}... Stage {stage_num}")
 
             # Session 880: Auto-approve the stage and advance to next
             # Session 916: Use approve() method which enforces invariants + logs
