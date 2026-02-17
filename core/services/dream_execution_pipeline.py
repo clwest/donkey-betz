@@ -76,7 +76,8 @@ class DreamExecutionPipeline:
         'improvement': [
             ('ResearchAgent', 'Research current state'),
             ('ContentStrategyAgent', 'Develop improvement plan'),
-            ('CodeGeneratorAgent', 'Implement improvements'),
+            # Session 1029: CodeGeneratorAgent replaced — no codebase access on Railway.
+            ('ContentWriterAgent', 'Write improvement proposal document'),
         ],
         'observation': [
             ('ResearchAgent', 'Deep dive research'),
