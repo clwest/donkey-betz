@@ -21,6 +21,39 @@ from core.api_helpers import smart_truncate
 
 logger = logging.getLogger(__name__)
 
+# --------------------------------------------------------------------------- #
+# Session 1031: Task-agent routing override                                    #
+# Prevents LLM-generated next_steps from sending specialist tasks to the       #
+# wrong agents (e.g. competitor audit -> WorkflowAgent).                       #
+# --------------------------------------------------------------------------- #
+import re as _re
+
+_TASK_ROUTING_OVERRIDES = [
+    (_re.compile(r'competitor\s+(audit|analysis|landscape|benchmark)', _re.I), 'CompetitorAnalysisAgent'),
+    (_re.compile(r'trend\s+(analysis|report|summary)', _re.I), 'TrendAnalysisAgent'),
+    (_re.compile(r'customer\s+(research|interview|persona)', _re.I), 'CustomerResearchAgent'),
+    (_re.compile(r'brand\s+(strategy|positioning|audit)', _re.I), 'BrandStrategyAgent'),
+    (_re.compile(r'market(ing)?\s+(strategy|plan|recommendation)', _re.I), 'MarketingStrategyAgent'),
+]
+
+_NON_RESEARCH_AGENTS = frozenset({
+    'WorkflowAgent', 'VideoAgent', 'CodeGeneratorAgent', 'DevOpsAgent',
+    'FullStackDeveloperAgent', 'CodeReviewAgent', 'ContentDistributionAgent',
+})
+
+
+def _apply_task_routing_override(agent_name: str, task_text: str) -> str:
+    """Reroute specialist tasks away from non-specialist agents."""
+    for pattern, correct_agent in _TASK_ROUTING_OVERRIDES:
+        if pattern.search(task_text):
+            if agent_name != correct_agent and agent_name in _NON_RESEARCH_AGENTS:
+                logger.info(
+                    f"[routing-override] Rerouting '{task_text[:60]}' "
+                    f"from {agent_name} -> {correct_agent}"
+                )
+                return correct_agent
+    return agent_name
+
 
 # Session 781: Import opener extraction for de-duplication
 def _extract_opener(text: str) -> str:
@@ -1344,6 +1377,35 @@ def execute_agent_task(
                 },
                 experiment=experiment,  # Session 841: Link to experiment for scoped metrics
             )
+
+        # Session 1031: Routing override — reroute specialist tasks away from
+        # non-specialist agents.  E.g. "competitor audit" should never go to
+        # WorkflowAgent, VideoAgent, etc.
+        agent_name = _apply_task_routing_override(agent_name, task)
+
+        # Session 1031: Dedup — skip if this agent already ran a very similar task recently
+        recent_dup = AgentExecution.objects.filter(
+            agent__name=agent_name,
+            created_at__gte=timezone.now() - timedelta(hours=2),
+            task__startswith=task[:80],
+        ).exists()
+        if recent_dup:
+            logger.info(
+                f"[execute_agent_task] Dedup skip: {agent_name} already ran "
+                f"'{task[:60]}' in the last 2h"
+            )
+            if execution_record:
+                execution_record.status = 'completed'
+                execution_record.output_data = {'skipped': 'dedup', 'reason': 'Similar task ran in last 2h'}
+                execution_record.completed_at = timezone.now()
+                execution_record.save()
+            return {
+                'success': True,
+                'agent_name': agent_name,
+                'task': task,
+                'skipped': 'dedup',
+                'conversation_id': conversation_id,
+            }
 
         # Route to agent
         router = AgentRouter()
