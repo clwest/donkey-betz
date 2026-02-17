@@ -73,13 +73,18 @@ SpiderData (72h, raw)
 
 Feeds into Boardroom with dedup on `source_type + item_type + title`. Auto-approve has 24h age gate.
 
-## Embeddings
+## Embeddings & Semantic Search (Session 1024)
 
-- Model: OpenAI `text-embedding-ada-002` (1536 dims)
-- Storage: pgvector `VectorField`
+- Model: OpenAI `text-embedding-3-small` (1536 dims)
+- Storage: pgvector `VectorField` with HNSW index (`spiderdata_embedding_hnsw_idx`)
 - Backfill: `backfill_spider_embeddings` task (every 10 min, batch 500)
-- ~88% of SpiderData records have embeddings
-- Query: `SpiderIntelligenceService.query_by_text(query)` for semantic search
+- ~85% of SpiderData records have embeddings
+
+**Primary search path (Session 1024):** `SpiderIntelligenceService.search_spider_data()` uses pgvector `CosineDistance` KNN as the primary search mechanism. Generates a query embedding, finds the 50 nearest neighbors, filters by `similarity >= 0.25`. Falls back to keyword matching only when pgvector/embeddings are unavailable.
+
+**Key constants:** `SEMANTIC_TOP_K = 50`, `SEMANTIC_MIN_SIMILARITY = 0.25`
+
+**Why:** Keyword matching (the old path) returned irrelevant results — e.g., a HuggingFace page mentioning "blockchain" in a tag scored `relevance=1.0` for blockchain queries. Semantic similarity fixes this at the root.
 
 ## TheOddsSpider Score Fetching (Session 995, updated 998B)
 
