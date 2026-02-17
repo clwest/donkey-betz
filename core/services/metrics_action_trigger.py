@@ -130,42 +130,32 @@ class MetricsActionTrigger:
 
             # =================================================================
             # AUTONOMOUS REMEDIATION
+            # Session 1029: Disabled — execution schedules disabled in Session 1026
+            # (CodeGeneratorAgent burns $9/day in empty Railway sandbox).
+            # Discovery + assignment still running; findings surfaced via
+            # `python manage.py show_remediation_findings`. Re-enable when
+            # CodeGeneratorAgent has workspace access.
             # =================================================================
-            TriggerRule(
-                condition=TriggerCondition(
-                    name="high_open_findings",
-                    description="More than 100 open audit findings",
-                    metric_path="remediation.open_findings",
-                    operator=">",
-                    threshold=100,
-                    priority=ActionPriority.MEDIUM,
-                    cooldown_hours=12,
-                ),
-                action=TriggerAction(
-                    name="run_remediation_cycle",
-                    action_type=ActionType.CELERY_TASK,
-                    target="core.tasks.run_autonomous_remediation_cycle",
-                    description="Trigger autonomous remediation cycle",
-                ),
-            ),
-
-            TriggerRule(
-                condition=TriggerCondition(
-                    name="stale_assigned_tasks",
-                    description="Assigned remediation tasks not executed",
-                    metric_path="remediation.tasks_by_status.assigned",
-                    operator=">",
-                    threshold=5,
-                    priority=ActionPriority.HIGH,
-                    cooldown_hours=4,
-                ),
-                action=TriggerAction(
-                    name="execute_remediation_tasks",
-                    action_type=ActionType.CELERY_TASK,
-                    target="core.tasks.execute_remediation_tasks",
-                    description="Execute pending remediation tasks",
-                ),
-            ),
+            # TriggerRule(
+            #     condition=TriggerCondition(
+            #         name="high_open_findings",
+            #         ...
+            #     ),
+            #     action=TriggerAction(
+            #         name="run_remediation_cycle",
+            #         target="core.tasks.run_autonomous_remediation_cycle",
+            #     ),
+            # ),
+            # TriggerRule(
+            #     condition=TriggerCondition(
+            #         name="stale_assigned_tasks",
+            #         ...
+            #     ),
+            #     action=TriggerAction(
+            #         name="execute_remediation_tasks",
+            #         target="core.tasks.execute_remediation_tasks",
+            #     ),
+            # ),
 
             # =================================================================
             # BODY SYSTEM HEALTH
