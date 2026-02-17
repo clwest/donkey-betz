@@ -154,7 +154,8 @@ class HiveMindExecutionPipeline:
                         session,
                         user
                     )
-                    logger.info(f"Created initiative: {initiative.name} (ID: {initiative.id})")
+                    if initiative:
+                        logger.info(f"Created initiative: {initiative.name} (ID: {initiative.id})")
 
                 # Session 866: Create workflow from Next Steps or fallback to template
                 next_steps = decision_summary.get('next_steps', [])
@@ -459,11 +460,16 @@ class HiveMindExecutionPipeline:
         )
 
         # Dedup check: reuse existing similar initiative instead of creating duplicate
-        from core.services.initiative_circuit_breaker import find_similar_initiative
+        from core.services.initiative_circuit_breaker import find_similar_initiative, can_create_initiative
         existing = find_similar_initiative(initiative_name)
         if existing:
             logger.info(f"[hivemind] Reusing similar initiative '{existing.name}' instead of creating duplicate")
             return existing
+
+        # Session 1020: Circuit breaker check (was missing — bypassed the breaker)
+        if not can_create_initiative():
+            logger.warning(f"[Session 1020] Circuit breaker blocked HiveMind initiative: {initiative_name[:60]}")
+            return None
 
         # Create the initiative
         # Session 913: Include signal_cluster and auto_topic from HiveMind session

@@ -9083,6 +9083,21 @@ class AgentDream(models.Model):
             use_llm=True
         )
 
+        # Session 1020: Dedup check — reuse similar initiative instead of creating duplicate
+        from core.services.initiative_circuit_breaker import find_similar_initiative
+        existing = find_similar_initiative(initiative_name)
+        if existing:
+            import logging
+            logging.getLogger(__name__).info(
+                f"[Session 1020] Dream '{self.title[:40]}' matched existing initiative '{existing.name[:40]}' — reusing"
+            )
+            self.initiative = existing
+            self.promoted_to_decision = True
+            self.promoted_at = timezone.now()
+            self.decision_outcome = 'approved'
+            self.save(update_fields=['initiative', 'promoted_to_decision', 'promoted_at', 'decision_outcome'])
+            return existing
+
         # Create the Initiative from Dream
         # Session 994: Auto-created → TRIAGE. Boardroom-approved dreams still go through triage.
         initiative = Initiative.objects.create(

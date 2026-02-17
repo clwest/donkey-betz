@@ -137,6 +137,16 @@ class InitiativeIntegrationService:
                 self.logger.info(f"[Session 847] Found existing Initiative: {normalized_topic}")
                 return existing, False
 
+            # Session 1020: Similarity dedup — catch near-duplicates that differ in wording
+            from core.services.initiative_circuit_breaker import find_similar_initiative
+            similar = find_similar_initiative(normalized_topic)
+            if similar:
+                self.logger.info(
+                    f"[Session 1020] Similar initiative found for '{normalized_topic[:40]}' "
+                    f"→ reusing '{similar.name[:40]}'"
+                )
+                return similar, False
+
             # Session 994: Circuit breaker at the lowest creation layer.
             # No caller can bypass this — if the breaker is tripped, we block.
             from core.services.initiative_circuit_breaker import can_create_initiative
