@@ -2194,35 +2194,33 @@ app.conf.beat_schedule = {
     # Self-Healing Orchestration - system automatically discovers audits, assigns findings
     # to agents, executes fixes, and verifies results. No human intervention required.
 
-    # Session 1022: PAUSED — remediation tasks can't succeed (CodeGeneratorAgent
-    # has no access to real codebase, just generates reports in empty sandbox).
-    # 86 tasks accumulated, burning ~$2-3/day in wasted LLM calls.
-    # Re-enable when agents have real workspace access.
-    # 'discover-and-import-audits': {
-    #     'task': 'core.tasks.discover_and_import_audits',
-    #     'schedule': crontab(hour=0, minute=0),
-    #     'options': {'expires': 3600, 'queue': 'long_running'}
-    # },
-    # 'assign-open-findings-to-agents': {
-    #     'task': 'core.tasks.assign_open_findings_to_agents',
-    #     'schedule': crontab(minute=0, hour='*/2'),
-    #     'options': {'expires': 7200, 'queue': 'agents'}
-    # },
-    # 'execute-remediation-tasks': {
-    #     'task': 'core.tasks.execute_remediation_tasks',
-    #     'schedule': crontab(minute=30, hour='*/4'),
-    #     'options': {'expires': 14400, 'queue': 'agents'}
-    # },
-    # 'verify-completed-fixes': {
-    #     'task': 'core.tasks.verify_completed_fixes',
-    #     'schedule': crontab(minute=0, hour='*/6'),
-    #     'options': {'expires': 21600, 'queue': 'long_running'}
-    # },
-    # 'run-autonomous-remediation-cycle': {
-    #     'task': 'core.tasks.run_autonomous_remediation_cycle',
-    #     'schedule': crontab(hour=2, minute=0),
-    #     'options': {'expires': 7200, 'queue': 'long_running'}
-    # },
+    # Session 822-823: Remediation pipeline
+    # Session 1022: Re-enabled — findings are valuable for tracking system improvements
+    'discover-and-import-audits': {
+        'task': 'core.tasks.discover_and_import_audits',
+        'schedule': crontab(hour=0, minute=0),
+        'options': {'expires': 3600, 'queue': 'long_running'}
+    },
+    'assign-open-findings-to-agents': {
+        'task': 'core.tasks.assign_open_findings_to_agents',
+        'schedule': crontab(minute=0, hour='*/2'),
+        'options': {'expires': 7200, 'queue': 'agents'}
+    },
+    'execute-remediation-tasks': {
+        'task': 'core.tasks.execute_remediation_tasks',
+        'schedule': crontab(minute=30, hour='*/4'),
+        'options': {'expires': 14400, 'queue': 'agents'}
+    },
+    'verify-completed-fixes': {
+        'task': 'core.tasks.verify_completed_fixes',
+        'schedule': crontab(minute=0, hour='*/6'),
+        'options': {'expires': 21600, 'queue': 'long_running'}
+    },
+    'run-autonomous-remediation-cycle': {
+        'task': 'core.tasks.run_autonomous_remediation_cycle',
+        'schedule': crontab(hour=2, minute=0),
+        'options': {'expires': 7200, 'queue': 'long_running'}
+    },
 
     # ==================== SESSION 823: PERIODIC SYSTEM SELF-AUDIT ====================
     # Generate comprehensive system audits using TechnicalDocumentAgent
