@@ -560,7 +560,9 @@ class PlatformMetrics(UnifiedBaseModel):
 
 class UserProfile(models.Model):
     """
-    Extended user profile information for persistent storage.
+    DEAD CODE — Session 1026: This file (core/models.py) is unreachable because
+    Python resolves `core.models` to the package `core/models/__init__.py`.
+    The canonical UserProfile lives in core/models/users/models.py.
     """
     ACCOUNT_TYPES = [
         ('free', 'Free'),
@@ -1608,7 +1610,9 @@ class ChatConversation(models.Model):
 
 class EnhancedUserProfile(models.Model):
     """
-    Comprehensive user profile for deep personalization and memory retrieval.
+    DEAD CODE — Session 1026: This file (core/models.py) is unreachable because
+    Python resolves `core.models` to the package `core/models/__init__.py`.
+    The canonical EnhancedUserProfile lives in core/models/users/models.py.
     """
 
     user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE, related_name='enhanced_profile')

@@ -3486,7 +3486,7 @@ class ContentCommands(commands.Cog):
                 if not web_user:
                     return {'error': 'not_linked'}
 
-                from core.models_unified_system import EnhancedUserProfile
+                from core.models import EnhancedUserProfile
 
                 profile, _ = EnhancedUserProfile.objects.get_or_create(user=web_user)
 
