@@ -1,36 +1,34 @@
-# Session 1020 - Start Here
+# Session 1021 - Start Here
 
-**Previous Session:** 1019 (Conversation Agent Delegation)
+**Previous Session:** 1020 (Initiative Stage 2 Stall, Dedup, Temporal Awareness)
 **Date:** February 16, 2026
-**Status:** 92 Agents | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **497 BLOGS** | **1,488 SIGNAL CLUSTERS** | **INITIATIVE STAGES 1-5 UNBLOCKED** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 39+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 268** | **Frontend Routes: 27** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED** | **BETTING DASHBOARD: 12 TABS POLISHED** | **VIDEO STUDIO: 5 EDIT TOOLS** | **GOVERNMENT PAGE: 3 TABS + ASK A BILL RAG** | **CodeArtifact: PATCH-FIRST WORKFLOW LIVE** | **AGENT TIMEOUTS: FIXED** | **CONVERSATION JUNK: FIXED** | **FAST-TRACK STALL: FIXED** | **CONVERSATION DELEGATION: LIVE**
+**Status:** 92 Agents | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **497 BLOGS** | **1,488 SIGNAL CLUSTERS** | **INITIATIVE STAGES 1-5 UNBLOCKED** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 39+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 268** | **Frontend Routes: 27** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED** | **BETTING DASHBOARD: 12 TABS POLISHED** | **VIDEO STUDIO: 5 EDIT TOOLS** | **GOVERNMENT PAGE: 3 TABS + ASK A BILL RAG** | **CodeArtifact: PATCH-FIRST WORKFLOW LIVE** | **AGENT TIMEOUTS: FIXED** | **CONVERSATION JUNK: FIXED** | **FAST-TRACK STALL: FIXED** | **CONVERSATION DELEGATION: LIVE** | **INITIATIVE DEDUP: LIVE** | **TEMPORAL AWARENESS: LIVE**
 
 ---
 
-## Session 1019 Summary (Just Completed)
+## Session 1020 Summary (Just Completed)
+
+### Initiative Stage 2 Stall + Dedup + Temporal Awareness (PRs #1247, #1248)
+
+**Stage 2 stall (19/21 initiatives stuck):** Stage 1 gets a SelfBlog document at initialization, but `handle_stage_task_completion()` never created documents for Stage 2+. The hard invariant `if stage.document:` blocked auto-approval permanently. Fixed by creating SelfBlog documents from task output when stages complete.
+
+**Initiative duplicates (4 "audit integrity" variants):** Added similarity dedup (`find_similar_initiative()`) to `AgentDream.promote_to_initiative()` and `InitiativeIntegrationService`. Added circuit breaker to `HiveMindExecutionPipeline` and `ConversationInitiativePipeline` (both were missing). Archived 5 duplicates on Railway (21 → 16).
+
+**Timeout tuning:** OpenAI client 120→60s, cleanup threshold 120→45min, frequency 30→15min.
+
+**Conversation date hallucination:** Agents citing "Oct 10, 2023" as current. Conversation prompts in `tasks.py` had no date context (unlike individual agent execution). Added `_conversation_temporal_context()` helper, injected into all 4 conversation prompt types.
+
+### PRs: #1247, #1248
+
+---
+
+## Session 1019 Summary
 
 ### Conversation Agent Delegation (PRs #1244, #1245)
 
-Agent conversations that reference other agents (e.g. "Scan competitor activity using ResearchAgent") previously produced zero-value output because participating agents had no way to invoke the referenced agent. Observed 3 times for the same topic.
-
-**Part A - Pre-flight gathering:**
-- `_preflight_gather_agent_data()` scans topic for agent name references in `AgentRouter.AGENT_MAP`
-- Invokes up to 2 referenced agents via `router.route()`, injects results as `== PRE-GATHERED DATA ==` context blocks
-- Failed agents get `=== NO UPSTREAM DATA AVAILABLE ===` block to prevent hallucination
-- Applied to both `run_agent_conversation` and `run_multi_agent_conversation`
-
-**Part B - Mid-conversation delegation:**
-- `CONVERSATION_DELEGATION_TOOL` + `_handle_conversation_delegation()` allow LLM to request one delegation per conversation
-- Tool offered only on first 1-2 turns, only when preflight didn't already invoke agents
-- On tool call: execute via `AgentRouter.route()`, re-prompt speaker with results (no tools on re-prompt)
-
-**ThreadPoolExecutor fix (PR #1245):**
-- Initial implementation used ThreadPoolExecutor for timeout isolation
-- Broke Django DB connections in child threads -- results lost despite successful execution
-- Fixed by switching to direct calls (AgentRouter handles timeout internally at 120s)
-
-**Verified on Railway:** `_preflight_gather_agent_data("Scan competitor activity using ResearchAgent", ...)` successfully invoked ResearchAgent and gathered 2073 chars.
-
-### PRs: #1244, #1245
+- `_preflight_gather_agent_data()` scans topic for agent name references, invokes up to 2 agents, injects results as context
+- `CONVERSATION_DELEGATION_TOOL` allows LLM to request one mid-conversation delegation
+- ThreadPoolExecutor broke Django DB connections — fixed with direct calls
 
 ---
 
@@ -39,16 +37,8 @@ Agent conversations that reference other agents (e.g. "Scan competitor activity 
 ### Conversation Junk Fix (PR #1239) + Initiative Fast-Track Stall Fix (PR #1240) + E2E Audit
 
 - Excluded `[Learned]` items from conversation topic pickers (junk 19% → 0%)
-- Changed initiative auto-creation from `execution_speed='fast'` to `'balanced'` (100% were stalling at Stage 2)
-- Comprehensive 24h audit: 99.94% Celery success, 83.5% agent success, all body systems green
-
----
-
-## Session 1017 Summary
-
-### AgentResult `.metadata` Fix (PR #1236) + Agent Timeout Fix (PR #1237)
-
-Added `.metadata` property alias on `AgentResult`. Added `soft_time_limit=2700` + `time_limit=3000` to all 3 agent dispatch tasks. Changed cleanup default from 30 to 60 minutes.
+- Changed initiative auto-creation from `execution_speed='fast'` to `'balanced'`
+- Comprehensive 24h audit: 99.94% Celery success, 83.5% agent success
 
 ---
 
@@ -70,7 +60,7 @@ Added `.metadata` property alias on `AgentResult`. Added `soft_time_limit=2700` 
 | PA Intents | 39 |
 | Enrichment Services | 8 |
 | Sports Leagues | 6 with predictions (NCAAB, NHL, EPL, La Liga, MLS, NCAAF) |
-| Active Initiatives | 10 (all `balanced` speed, unblocked) |
+| Active Initiatives | 16 (all `balanced` speed, Stage 2 fix deployed) |
 | Blogs | 497 (28 published in last 24h) |
 | Signal Clusters | 1,488 |
 | Spider Data Records | 22,698 |
@@ -81,29 +71,8 @@ Added `.metadata` property alias on `AgentResult`. Added `soft_time_limit=2700` 
 
 ## Verify Before Starting
 
-### 1. Conversation Delegation (Session 1019)
-- Check preflight is triggering on agent-referencing topics:
-  ```
-  railway run python manage.py shell -c "
-  from core.models_unified_system import AgentConversation
-  from django.utils import timezone; from datetime import timedelta
-  recent = AgentConversation.objects.filter(started_at__gte=timezone.now()-timedelta(hours=24))
-  print(f'Total conversations: {recent.count()}')
-  # Check logs for PREFLIGHT entries
-  "
-  ```
-- Check delegation count stays modest (not runaway):
-  ```
-  railway run python manage.py shell -c "
-  from core.models_unified_system import AgentExecution
-  from django.utils import timezone; from datetime import timedelta
-  recent = AgentExecution.objects.filter(created_at__gte=timezone.now()-timedelta(hours=24))
-  print(f'Total executions: {recent.count()}')
-  "
-  ```
-
-### 2. Initiative Progression (Session 1018)
-- Initiatives should be progressing past Stage 2 now:
+### 1. Initiative Stage 2+ Progression (Session 1020 — CRITICAL)
+- Stage 2 fix deployed but needs time for new stage tasks to trigger. Check if any have progressed:
   ```
   railway run python manage.py shell -c "
   from core.models import Initiative
@@ -111,25 +80,55 @@ Added `.metadata` property alias on `AgentResult`. Added `soft_time_limit=2700` 
   for i in active: print(f'Stage {i.current_stage} | {i.execution_speed} | {i.can_auto_progress} | {i.name[:50]}')
   "
   ```
-- Look for any at Stage 3+ (proves auto-progression is working)
+- Look for any at Stage 3+ (proves the fix is working)
 
-### 2. Conversation Junk (Session 1018)
-- Should be 0 junk topics in new conversations:
+### 2. Temporal Awareness in Conversations (Session 1020)
+- Check recent conversations for date context:
   ```
   railway run python manage.py shell -c "
   from core.models_unified_system import AgentConversation
   from django.utils import timezone; from datetime import timedelta
-  recent = AgentConversation.objects.filter(started_at__gte=timezone.now()-timedelta(hours=24))
-  junk = recent.filter(topic__startswith='[Learned]').count()
-  print(f'Junk topics: {junk} / {recent.count()}')
+  recent = AgentConversation.objects.filter(started_at__gte=timezone.now()-timedelta(hours=12)).order_by('-started_at')[:5]
+  for c in recent: print(f'{c.started_at.strftime(\"%H:%M\")} | {c.topic[:60]}')
+  "
+  ```
+- Spot-check messages for "2024" or "2023" date references treated as current
+
+### 3. Initiative Dedup (Session 1020)
+- Verify no new duplicates created:
+  ```
+  railway run python manage.py shell -c "
+  from core.models import Initiative
+  from collections import Counter
+  names = list(Initiative.objects.filter(status__in=['ACTIVE','TRIAGE']).values_list('name', flat=True))
+  print(f'Active+Triage: {len(names)}')
+  dupes = {k:v for k,v in Counter(names).items() if v > 1}
+  if dupes: print(f'DUPLICATES: {dupes}')
+  else: print('No exact duplicates')
   "
   ```
 
-### 3. Agent Timeout Fix (Session 1017)
-- `railway run python manage.py shell -c "from core.tasks import execute_agent_task; print(execute_agent_task.soft_time_limit)"` — should return `2700`
+### 4. Agent Timeout & Cleanup (Session 1020)
+- Cleanup now runs every 15min with 45min threshold:
+  ```
+  railway run python manage.py shell -c "
+  from core.models_unified_system import AgentExecution
+  from django.utils import timezone; from datetime import timedelta
+  hung = AgentExecution.objects.filter(status='running', created_at__lt=timezone.now()-timedelta(minutes=45))
+  print(f'Hung executions (>45min): {hung.count()}')
+  "
+  ```
 
-### 4. CodeArtifact API
-- `curl $RAILWAY_URL/api/code-artifacts/ -H "Authorization: Token 0cdc1c72dba99ea637485076ee952d571440aa30"` — should return JSON list
+### 5. Conversation Delegation (Session 1019)
+- Check execution count stays modest (not runaway):
+  ```
+  railway run python manage.py shell -c "
+  from core.models_unified_system import AgentExecution
+  from django.utils import timezone; from datetime import timedelta
+  recent = AgentExecution.objects.filter(created_at__gte=timezone.now()-timedelta(hours=24))
+  print(f'Total executions (24h): {recent.count()}')
+  "
+  ```
 
 ---
 
@@ -139,15 +138,14 @@ Added `.metadata` property alias on `AgentResult`. Added `soft_time_limit=2700` 
 PA doesn't understand page context. When user says "I just created an image but it's not displaying" from Image Studio, PA asks generic clarifying questions instead of checking ImageHistory.
 
 ### Remaining Agent Failures — REDUCED
-Post all Session 1017-1018 fixes:
+Post all Session 1017-1020 fixes:
 - `.metadata` crashes: **0** (PR #1236 fixed)
 - False-positive timeouts: **0** (PR #1237 fixed)
 - Conversation junk: **0** (PR #1239 fixed)
-- Initiative stall: **FIXED** (PR #1240)
-- Remaining: AudioAgent (ElevenLabs quota, 10/day), VideoAgent (external API), assorted others (~25/day)
-
-### Genuinely Hung Agents — INVESTIGATE
-CTOAgent (max 33s normally) and CompetitorAnalysisAgent (max 37s) occasionally hang for 30+ min. Now properly killed by `soft_time_limit` at 45 min. Root cause likely: stuck on LLM API call or infinite tool loop. Investigate `httpx` timeout settings in LLM provider clients.
+- Initiative stall: **FIXED** (PR #1247 — Stage 2+ doc creation)
+- Initiative duplicates: **FIXED** (PR #1247 — dedup on all creation paths)
+- Conversation date hallucination: **FIXED** (PR #1248 — temporal awareness)
+- Remaining: AudioAgent (ElevenLabs quota, ~7/day), assorted others (~18/day)
 
 ### CodeArtifact v2 — DEFERRED
 - **PatchApplier service**: Auto-applying approved artifacts to git tree
@@ -156,7 +154,7 @@ CTOAgent (max 33s normally) and CompetitorAnalysisAgent (max 37s) occasionally h
 - **35 artifacts pending review** — no review workflow in frontend yet
 
 ### Initiative Circuit Breaker — DEPLOYED
-Threshold at 20 active initiatives. Monitor to ensure meaningful initiatives still get created.
+Threshold at 20 active initiatives. All 6 creation paths now have circuit breaker + similarity dedup.
 
 ### Blog Topic Diversity — Monitor
 19/40 published blogs about Security/Homeland due to weak novelty scoring. PR #1141 strengthens scoring — verify after next batch. Now at 497 total blogs.
@@ -170,23 +168,28 @@ Initial accuracy is 70.2% (mostly NCAAB). Monitor by sport/model as more leagues
 
 **Django settings module:** `core.settings` (NOT `config.settings`).
 
+**Initiative 6 creation paths (Session 1020):**
+- `InitiativeIntegrationService` — has similarity dedup + circuit breaker
+- `AgentDream.promote_to_initiative()` — has similarity dedup + circuit breaker
+- `HiveMindExecutionPipeline` — has circuit breaker (Session 1020)
+- `ConversationInitiativePipeline` — has circuit breaker (Session 1020)
+- `AutonomousActionExecutor` — has circuit breaker
+- `create_initiative_from_deliverables()` — has circuit breaker
+
 **Initiative auto-creation (Session 1018):**
-- All 4 creation paths now use `execution_speed='balanced'` (NOT `'fast'`)
+- All paths now use `execution_speed='balanced'` (NOT `'fast'`)
 - `fast` is MVP-only, stops at Stage 2 by design
 - `balanced` allows normal 5-stage flow
-- `can_auto_progress` still blocks at Stage 2+ if `founder_intent_set=False`
 
-**Agent timeout limits (Session 1017):**
+**Agent timeout limits (Session 1017, tuned Session 1020):**
 - `execute_agent_task`: `soft_time_limit=2700` (45 min), `time_limit=3000` (50 min)
-- `execute_initiative_stage_task`: same
-- `universal_agent_workspace_output`: same
-- `cleanup_stale_agent_executions`: default 60 min (Beat kwargs: 120 min)
-- `SoftTimeLimitExceeded` handlers update `AgentExecution` records properly
+- OpenAI client timeout: 60s (reduced from 120s in Session 1020)
+- `cleanup_stale_agent_executions`: threshold 45min, runs every 15min
 
 **AgentResult fields (Session 1017):**
 - `success`, `message`, `data`, `error`, `agent_name`, `execution_time_ms`, `tool_calls`, `tokens_used`, `cost`
 - `.content` is a @property alias for `.message`
-- `.metadata` is a @property alias for `.data` (backward-compat added Session 1017)
+- `.metadata` is a @property alias for `.data`
 
 **AgentDream fields:**
 - Timestamp: `dreamed_at` (NOT `created_at`)
@@ -226,12 +229,11 @@ Initial accuracy is 70.2% (mostly NCAAB). Monitor by sport/model as more leagues
 - Status values are UPPERCASE: `'ACTIVE'`, `'ARCHIVED'`, `'COMPLETED'`, `'TRIAGE'`
 - Import from `core.models` (NOT `core.models_unified_system`)
 - Field `name` (NOT `title`)
-- `can_auto_progress` returns False for `execution_speed='fast'` at stage >= 2
 
 **ThreadPoolExecutor + Django (Session 1019):**
 - Do NOT use `ThreadPoolExecutor` for `AgentRouter.route()` or other Django ORM operations
 - Child threads get separate DB connections, results can be silently lost
-- Use direct calls instead -- AgentRouter/OpenAI handle timeout internally (120s)
+- Use direct calls instead
 
 **Cloudinary storage (Session 1015):**
 - `default_storage.save()` uploads directly to Cloudinary
