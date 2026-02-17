@@ -911,7 +911,9 @@ class UnifiedPAEntrypoint:
 
         # Research patterns
         if any(word in message_lower for word in [
-            'search', 'find', 'research', 'trending'
+            'search', 'find', 'research', 'trending',
+            'compare', 'comparison', 'vs', 'versus',
+            'look up', 'lookup',
         ]):
             return ('research', 'web_search')
 
@@ -3894,17 +3896,26 @@ Address the user by name occasionally."""
 
                 return f"**{agent}** completed successfully:\n\n{output_str}"
 
-            # Session 987: Web search / research formatter
+            # Session 987 / 1028: Web search / research formatter
             elif intent in ['web_search', 'research']:
                 query = tool_result.get('query', '')
-                results = tool_result.get('results', '')
+                results = tool_result.get('results', [])
 
-                results_str = str(results)
-                if len(results_str) > 800:
-                    results_str = results_str[:800] + '...'
+                if isinstance(results, list) and results:
+                    lines = []
+                    for r in results[:5]:
+                        title = r.get('title', 'Untitled')
+                        url = r.get('url', '')
+                        snippet = r.get('snippet', '')[:150]
+                        if url:
+                            lines.append(f"**[{title}]({url})**\n{snippet}")
+                        else:
+                            lines.append(f"**{title}**\n{snippet}")
+                    return f"Search results for **\"{query}\"**:\n\n" + "\n\n".join(lines)
 
-                response = f"Search results for **\"{query}\"**:\n\n{results_str}"
-                return response
+                # Fallback for string results or empty
+                results_str = str(results)[:800]
+                return f"Search results for **\"{query}\"**:\n\n{results_str}"
 
             # Session 987: Reasoning engine formatter
             elif intent == 'reasoning':
