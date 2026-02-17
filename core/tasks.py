@@ -26580,9 +26580,14 @@ def run_business_strategy_agents():
     }
 
     agents_to_run = [
-        ('TrendAnalysisAgent', 'Analyze current market and content trends from spider data'),
-        ('CompetitorAnalysisAgent', 'Research competitor activity and market positioning'),
-        ('CustomerResearchAgent', 'Analyze customer behavior patterns and preferences'),
+        # Session 1029: Bounded tasks to prevent timeouts and misinterpretation.
+        # Old TrendAnalysis task "Analyze current market and content trends" caused
+        # 100% timeout (0/10 success in 6h). Bounded to top-3 summary.
+        ('TrendAnalysisAgent', 'Summarize the top 3 market or technology trends from the last 24 hours of spider data. Keep the report under 500 words. Do NOT attempt comprehensive analysis — focus on the 3 strongest signals only.'),
+        # Old CompetitorAnalysis task was interpreted by LLM as "Step 3 competitor audit"
+        # which spawned duplicate competitor audit tasks across multiple agents.
+        ('CompetitorAnalysisAgent', 'List 3 recent competitor moves or product launches found in spider data from the last 7 days. Summarize each in 2-3 sentences. Do NOT produce a full audit — just report what the data shows.'),
+        ('CustomerResearchAgent', 'Summarize any customer behavior signals found in recent spider data. If no customer data exists, report "No customer data available" — do NOT hallucinate.'),
         ('BrandStrategyAgent', 'Review brand positioning and suggest improvements'),
         ('MarketingStrategyAgent', 'Develop marketing recommendations based on current data'),
     ]
@@ -30040,8 +30045,9 @@ def workspace_autopilot_tick(
         router = AgentRouter()
 
         # Category to agent mapping
+        # Session 1029: CodeGeneratorAgent replaced — no codebase access on Railway
         CATEGORY_AGENTS = {
-            'development': 'CodeGeneratorAgent',
+            'development': 'FullStackDeveloperAgent',
             'security': 'CodeReviewAgent',
             'research': 'ResearchAgent',
             'content': 'ContentWriterAgent',
@@ -30056,7 +30062,8 @@ def workspace_autopilot_tick(
             WorkspaceTriggerType.SPIDER_BEST_PRACTICE: 'CodeReviewAgent',
             WorkspaceTriggerType.SPIDER_CODE_INSIGHT: 'FullStackDeveloperAgent',
             WorkspaceTriggerType.AGENT_REFACTOR_SUGGESTION: 'CodeReviewAgent',
-            WorkspaceTriggerType.AGENT_TEST_NEEDED: 'CodeGeneratorAgent',
+            # Session 1029: CodeGeneratorAgent replaced — no codebase access on Railway
+            WorkspaceTriggerType.AGENT_TEST_NEEDED: 'FullStackDeveloperAgent',
             WorkspaceTriggerType.AGENT_DOC_NEEDED: 'TechnicalDocumentAgent',
             WorkspaceTriggerType.AGENT_OPTIMIZATION: 'CodeReviewAgent',
         }
@@ -30661,7 +30668,9 @@ def auto_generate_podcast_episode():
             generation_config={
                 'format': 'debate',
                 'participant_count': 3,
-                'generate_audio': True,  # Session 1003: Enable TTS audio generation
+                # Session 1029: Disabled audio generation — ElevenLabs quota exceeded,
+                # AudioAgent has 100% failure rate. Re-enable when quota resets.
+                'generate_audio': False,
             }
         )
         logger.info(f"🎙️ [AUTO-PODCAST] Created episode: {episode.id} - {topic[:50]}...")
@@ -30672,7 +30681,8 @@ def auto_generate_podcast_episode():
             topic=topic,
             format_type='debate',
             participants=3,
-            generate_audio=True  # Session 1003: Enable TTS audio generation
+            # Session 1029: Disabled audio — ElevenLabs quota exceeded
+            generate_audio=False,
         )
 
         return {
