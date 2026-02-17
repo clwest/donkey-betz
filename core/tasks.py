@@ -30345,13 +30345,17 @@ def _track_group_contribution(agent_name: str, group_name: str, project_id: str,
 def run_content_creation_agents():
     """
     Session 787: Run content creation agents every 3 hours.
+    Session 1027: Removed AudioAgent — ElevenLabs quota exceeded, 100% failure
+    rate ($0.41/day wasted). Re-add when quota is resolved.
 
-    Agents: ImageAgent, VideoAgent, AudioAgent, ThreeDAgent,
+    Agents: ImageAgent, VideoAgent, ThreeDAgent,
             ContentWriterAgent, ContentExecutorAgent,
             ImageEditingAgent, VideoEditingAgent, ResolveAgent
     """
     agents = [
-        'ImageAgent', 'VideoAgent', 'AudioAgent', 'ThreeDAgent',
+        'ImageAgent', 'VideoAgent',
+        # Session 1027: AudioAgent removed — ElevenLabs quota exceeded, 100% failure
+        'ThreeDAgent',
         'ContentWriterAgent', 'ContentExecutorAgent',
         'ImageEditingAgent', 'VideoEditingAgent', 'ResolveAgent'
     ]
@@ -30360,7 +30364,6 @@ def run_content_creation_agents():
         tasks = {
             'ImageAgent': 'Analyze recent trends and generate a creative image based on current popular topics',
             'VideoAgent': 'Create a short video concept based on trending content',
-            'AudioAgent': 'Generate audio content or music based on current themes',
             # Session 957: Give ThreeDAgent a specific 3D task using its native generate_3d_scene tool
             # instead of triggering research delegation that returns irrelevant generic tech trends
             'ThreeDAgent': 'Generate a 3D scene: A modern minimalist product display pedestal with ambient lighting - style: realistic, format: glb',
@@ -30497,18 +30500,21 @@ def run_narrative_culture_agents():
 def run_development_tech_agents():
     """
     Session 787: Run development and tech agents every 4 hours.
+    Session 1027: Removed CodeGeneratorAgent — runs in Railway sandbox with no
+    codebase access, can't write actual code. Was burning ~$8.76/day producing
+    analysis specs that go nowhere. Same issue as remediation fix (Session 1026).
 
-    Agents: CodeGeneratorAgent, CodeReviewAgent, FullStackDeveloperAgent,
+    Agents: CodeReviewAgent, FullStackDeveloperAgent,
             DevOpsAgent, TechnicalDocumentAgent
     """
     agents = [
-        'CodeGeneratorAgent', 'CodeReviewAgent', 'FullStackDeveloperAgent',
+        # Session 1027: CodeGeneratorAgent removed — sandbox can't write code
+        'CodeReviewAgent', 'FullStackDeveloperAgent',
         'DevOpsAgent', 'TechnicalDocumentAgent'
     ]
 
     def task_gen(agent):
         tasks = {
-            'CodeGeneratorAgent': 'Review tech trends and suggest code improvements for the platform',
             'CodeReviewAgent': 'Analyze recent code patterns and identify potential improvements',
             'FullStackDeveloperAgent': 'Identify development opportunities from spider tech data',
             'DevOpsAgent': 'Check system health and suggest infrastructure improvements',
@@ -30720,6 +30726,11 @@ def run_campaign_series_agents():
 def run_system_orchestration_agents():
     """
     Session 787: Run system and orchestration agents every 2 hours.
+    Session 1027: Rewrote WorkflowAgent and OpportunityPipelineAgent tasks.
+    Old WorkflowAgent task "Check pending workflows and advance ready items"
+    spawned unbounded sub-tasks to ResearchAgent (~30 "audit pending workflows"
+    runs/day). Old OpportunityPipelineAgent task triggered "no revenue" assessment
+    51x/day. New tasks are bounded — report only, do NOT delegate to sub-agents.
 
     Agents: SystemIntelligenceAgent, ThinkingAgent, WorkflowAgent,
             WorkflowOrchestrationAgent, OpportunityPipelineAgent
@@ -30733,9 +30744,13 @@ def run_system_orchestration_agents():
         tasks = {
             'SystemIntelligenceAgent': 'Generate a system health and intelligence report',
             'ThinkingAgent': 'Reflect on recent system activities and generate insights',
-            'WorkflowAgent': 'Check pending workflows and advance ready items',
+            # Session 1027: Bounded task — report status only, do NOT spawn sub-tasks
+            # or delegate to ResearchAgent/OpportunityScoringAgent
+            'WorkflowAgent': 'Report a brief summary of active workflow statuses from database records. Do NOT delegate to other agents or spawn sub-tasks. Just summarize what you can see directly.',
             'WorkflowOrchestrationAgent': 'Orchestrate cross-agent workflow coordination',
-            'OpportunityPipelineAgent': 'Review opportunity pipeline and prioritize actions',
+            # Session 1027: Changed from "Review opportunity pipeline and prioritize actions"
+            # which triggered 51x "no revenue" loop. New task is bounded.
+            'OpportunityPipelineAgent': 'Summarize the top 3 recent signal clusters by strength score. Do NOT analyze revenue status or delegate to other agents.',
         }
         return tasks.get(agent, f'Perform your primary function and report insights')
 
