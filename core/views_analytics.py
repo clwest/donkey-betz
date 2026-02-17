@@ -2330,7 +2330,7 @@ def top_performers_v2(request):
 
             performers.append({
                 'agent_name': agent.name,
-                'display_name': agent.display_name or agent.name,
+                'display_name': agent.name,
                 'category': agent.category or 'general',
                 'total_executions': total,
                 'successful_executions': successful,
