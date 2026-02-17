@@ -64,6 +64,16 @@ You have these tools:
 - reddit_search: Search ANY Reddit subreddit in real-time (use for specific communities!)
 - analyze_trends: Analyze trending topics from spider data
 - query_internal_data: Query DonkeyBetz internal database (experiments, executions, initiatives, learnings)
+- read_file: Read source code files from the codebase workspace
+- list_files: List files matching a glob pattern (e.g., '**/*.py', 'core/agents/*.py')
+- search_in_files: Search for text patterns across codebase files
+
+CODEBASE ANALYSIS (Session 1028):
+For tasks about code structure, memory usage, patterns, or implementation details:
+1. Use list_files to explore directory structure
+2. Use search_in_files to find relevant code patterns
+3. Use read_file to examine specific files
+These give you DIRECT access to the codebase — no need for external tools.
 
 INTERNAL DATA (Session 884):
 For tasks about system internals (experiments, failures, executions, initiatives), use query_internal_data:
@@ -294,6 +304,76 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                         }
                     },
                     "required": ["data_type"]
+                }
+            }
+        },
+        # ================================================================
+        # SESSION 1028: READ-ONLY CODEBASE TOOLS
+        # Copied from CodeGeneratorAgent — no write/edit tools
+        # ================================================================
+        {
+            "type": "function",
+            "function": {
+                "name": "read_file",
+                "description": "Read the contents of a file from the workspace. Use this to understand existing code before making changes.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path to the file relative to workspace root (e.g., 'core/models.py', 'frontend/src/App.tsx')"
+                        }
+                    },
+                    "required": ["file_path"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "list_files",
+                "description": "List files in the workspace matching a pattern. Use this to explore the codebase structure.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "pattern": {
+                            "type": "string",
+                            "description": "Glob pattern to match files (e.g., '**/*.py', 'core/agents/*.py', 'frontend/src/**/*.tsx')",
+                            "default": "**/*"
+                        },
+                        "directory": {
+                            "type": "string",
+                            "description": "Optional subdirectory to search in"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "search_in_files",
+                "description": "Search for a text pattern across files in the workspace. Use this to find where something is defined or used.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "search_text": {
+                            "type": "string",
+                            "description": "Text or pattern to search for"
+                        },
+                        "file_pattern": {
+                            "type": "string",
+                            "description": "Glob pattern to filter which files to search (e.g., '**/*.py')",
+                            "default": "**/*"
+                        },
+                        "max_results": {
+                            "type": "integer",
+                            "description": "Maximum number of results to return",
+                            "default": 20
+                        }
+                    },
+                    "required": ["search_text"]
                 }
             }
         }
@@ -1417,6 +1497,204 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
 
         return recommendations[:5]  # Max 5 recommendations
 
+    # ================================================================
+    # SESSION 1028: READ-ONLY CODEBASE TOOLS
+    # Copied from CodeGeneratorAgent — no write/edit methods
+    # ================================================================
+
+    def _read_file(self, file_path: str) -> Dict[str, Any]:
+        """
+        Read a file from the workspace.
+
+        Session 1028: Copied from CodeGeneratorAgent.
+        Prefers codebase workspace for reading actual source code.
+        Falls back to active workspace if codebase workspace not available.
+        """
+        if not file_path:
+            return {"success": False, "error": "file_path is required"}
+
+        manager = self._get_workspace_manager()
+        if not manager:
+            return {"success": False, "error": "WorkspaceManager not available"}
+
+        # Prefer codebase workspace for reading source files
+        workspace = manager.get_codebase_workspace()
+        workspace_type = "codebase"
+
+        # Fall back to active workspace if no codebase workspace
+        if not workspace:
+            workspace = manager.get_active_workspace()
+            workspace_type = "active"
+
+        if not workspace:
+            return {
+                "success": False,
+                "error": "No workspace available. Run 'python manage.py setup_codebase_workspace' to enable codebase access."
+            }
+
+        content = manager.read_file(workspace, file_path)
+        if content is None:
+            # If codebase workspace failed, try active workspace as fallback
+            if workspace_type == "codebase":
+                fallback_workspace = manager.get_active_workspace()
+                if fallback_workspace and fallback_workspace.id != workspace.id:
+                    content = manager.read_file(fallback_workspace, file_path)
+                    if content is not None:
+                        return {
+                            "success": True,
+                            "file_path": file_path,
+                            "content": content,
+                            "lines": len(content.split('\n')),
+                            "size": len(content),
+                            "workspace": fallback_workspace.name,
+                            "workspace_type": "fallback"
+                        }
+
+            return {
+                "success": False,
+                "error": f"File not found or unreadable: {file_path}",
+                "workspace": workspace.name,
+                "workspace_path": workspace.root_path,
+                "hint": "Ensure the file path is relative to the workspace root"
+            }
+
+        return {
+            "success": True,
+            "file_path": file_path,
+            "content": content,
+            "lines": len(content.split('\n')),
+            "size": len(content),
+            "workspace": workspace.name,
+            "workspace_type": workspace_type
+        }
+
+    def _list_files(
+        self,
+        pattern: str = "**/*",
+        directory: str = ""
+    ) -> Dict[str, Any]:
+        """List files in the workspace matching a pattern."""
+        manager = self._get_workspace_manager()
+        if not manager:
+            return {"success": False, "error": "WorkspaceManager not available"}
+
+        workspace = manager.get_codebase_workspace()
+        if not workspace:
+            workspace = manager.get_active_workspace()
+        if not workspace:
+            return {
+                "success": False,
+                "error": "No active workspace. Register a workspace first."
+            }
+
+        # Construct the full pattern
+        if directory:
+            full_pattern = f"{directory.rstrip('/')}/{pattern}"
+        else:
+            full_pattern = pattern
+
+        try:
+            files = manager.list_files(workspace, full_pattern)
+            return {
+                "success": True,
+                "pattern": full_pattern,
+                "files": files[:100],  # Limit to 100 files
+                "count": len(files),
+                "workspace": workspace.name,
+                "truncated": len(files) > 100
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "pattern": full_pattern
+            }
+
+    def _search_in_files(
+        self,
+        search_text: str,
+        file_pattern: str = "**/*",
+        max_results: int = 20
+    ) -> Dict[str, Any]:
+        """Search for text across files in the workspace."""
+        import re
+        from pathlib import Path
+
+        if not search_text:
+            return {"success": False, "error": "search_text is required"}
+
+        manager = self._get_workspace_manager()
+        if not manager:
+            return {"success": False, "error": "WorkspaceManager not available"}
+
+        workspace = manager.get_codebase_workspace()
+        if not workspace:
+            workspace = manager.get_active_workspace()
+        if not workspace:
+            return {
+                "success": False,
+                "error": "No active workspace. Register a workspace first."
+            }
+
+        results = []
+        root = Path(workspace.root_path)
+
+        # Skip common directories
+        skip_dirs = {'node_modules', '__pycache__', '.git', 'venv', '.venv', 'dist', 'build'}
+
+        try:
+            for file_path in root.glob(file_pattern):
+                if any(skip in file_path.parts for skip in skip_dirs):
+                    continue
+
+                if not file_path.is_file():
+                    continue
+
+                try:
+                    content = file_path.read_text(encoding='utf-8', errors='ignore')
+                    if search_text in content:
+                        rel_path = str(file_path.relative_to(root))
+                        lines = content.split('\n')
+
+                        # Find matching lines
+                        matches = []
+                        for i, line in enumerate(lines, 1):
+                            if search_text in line:
+                                matches.append({
+                                    'line_number': i,
+                                    'content': line.strip()[:200]  # Truncate long lines
+                                })
+                                if len(matches) >= 5:  # Max 5 matches per file
+                                    break
+
+                        results.append({
+                            'file': rel_path,
+                            'matches': matches,
+                            'match_count': len([1 for l in lines if search_text in l])
+                        })
+
+                        if len(results) >= max_results:
+                            break
+
+                except Exception:
+                    continue
+
+            return {
+                "success": True,
+                "search_text": search_text,
+                "pattern": file_pattern,
+                "results": results,
+                "total_files_with_matches": len(results),
+                "workspace": workspace.name,
+                "truncated": len(results) >= max_results
+            }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
     def _execute_tool_call(
         self,
         tool_name: str,
@@ -1527,6 +1805,23 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                 limit=arguments.get('limit', 20),
                 days_back=arguments.get('days_back', 7),
                 include_details=arguments.get('include_details', True)
+            )
+
+        # Session 1028: Read-only codebase tools
+        elif tool_name == "read_file":
+            return self._read_file(file_path=arguments.get("file_path", ""))
+
+        elif tool_name == "list_files":
+            return self._list_files(
+                pattern=arguments.get("pattern", "**/*"),
+                directory=arguments.get("directory", "")
+            )
+
+        elif tool_name == "search_in_files":
+            return self._search_in_files(
+                search_text=arguments.get("search_text", ""),
+                file_pattern=arguments.get("file_pattern", "**/*"),
+                max_results=arguments.get("max_results", 20)
             )
 
         # Session 1002C: Fall through to BaseAgent for web_search, spider_query, delegation
