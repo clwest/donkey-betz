@@ -106,13 +106,15 @@ def validate_agent_output(agent_name: str, output: str) -> str:
 
 
 @shared_task(bind=True)
-def cleanup_stale_agent_executions(self, minutes_threshold: int = 30):
+def cleanup_stale_agent_executions(self, minutes_threshold: int = 60):
     """
     Session 835: Clean up agent executions stuck in 'running'/'in_progress' status.
     Session 842: Added detailed logging for debugging.
     Session 911: Fixed to check both 'running' and 'in_progress' statuses.
-                 Changed default from 2 hours to 30 minutes.
     Session 925: Added to Celery Beat schedule - runs every 30 min with 2hr threshold.
+    Session 1017: Changed default from 30 to 60 min. Beat kwargs (120) weren't being
+                  passed — 30 min was too aggressive for slow agents (WorkflowAgent
+                  max 22 min, MeetingCoordinatorAgent max 24 min).
 
     Tasks that have been running for more than the threshold are
     marked as 'failed' since they clearly didn't complete properly.
@@ -1247,7 +1249,7 @@ def run_autonomy_cycle(user_id: int = None):
 # ==================== SESSION 811: CONVERSATION ACTION EXECUTION ====================
 
 
-@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+@shared_task(bind=True, max_retries=2, default_retry_delay=60, soft_time_limit=2700, time_limit=3000)
 def execute_agent_task(
     self,
     agent_name: str,
@@ -1256,6 +1258,7 @@ def execute_agent_task(
 ) -> Dict[str, Any]:
     """
     Session 811: Execute a task via a specific agent from conversation next_steps.
+    Session 1017: Added soft_time_limit=2700 (45 min) to kill hung agents.
 
     This task is queued by ConversationActionDispatcher when a conversation
     produces next_steps that should be executed.
@@ -1374,6 +1377,24 @@ def execute_agent_task(
             'conversation_id': conversation_id,
         }
 
+    except SoftTimeLimitExceeded:
+        execution_time_ms = int((time.time() - execution_start) * 1000)
+        logger.error(f"[execute_agent_task] KILLED by soft_time_limit: {agent_name} after {execution_time_ms}ms")
+        if execution_record:
+            execution_record.status = 'failed'
+            execution_record.error_message = 'Celery soft_time_limit exceeded (45 min)'
+            execution_record.execution_time_ms = execution_time_ms
+            execution_record.completed_at = timezone.now()
+            execution_record.save()
+        return {
+            'success': False,
+            'agent_name': agent_name,
+            'task': task,
+            'error': 'Celery soft_time_limit exceeded (45 min)',
+            'execution_time_ms': execution_time_ms,
+            'conversation_id': conversation_id,
+        }
+
     except Exception as e:
         execution_time_ms = int((time.time() - execution_start) * 1000)
         logger.error(f"[execute_agent_task] Failed: {agent_name} - {e}")
@@ -1403,7 +1424,7 @@ def execute_agent_task(
 # ==================== SESSION 884: INITIATIVE STAGE EXECUTION ====================
 
 
-@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+@shared_task(bind=True, max_retries=2, default_retry_delay=60, soft_time_limit=2700, time_limit=3000)
 def execute_initiative_stage_task(
     self,
     initiative_id: str,
@@ -1414,6 +1435,7 @@ def execute_initiative_stage_task(
 ) -> Dict[str, Any]:
     """
     Session 884: Execute a task linked to an Initiative stage.
+    Session 1017: Added soft_time_limit=2700 (45 min) to kill hung agents.
 
     This task is part of the Conversation-to-Initiative pipeline.
     When complete, it updates the stage and potentially advances the Initiative.
@@ -1525,6 +1547,28 @@ def execute_initiative_stage_task(
             'content': result.content[:1000] if result.content else None,
             'execution_time_ms': execution_time_ms,
             'stage_update': stage_update,
+        }
+
+    except SoftTimeLimitExceeded:
+        execution_time_ms = int((time.time() - execution_start) * 1000)
+        logger.error(f"[execute_initiative_stage_task] KILLED by soft_time_limit: {agent_name} after {execution_time_ms}ms")
+        try:
+            handle_stage_task_completion(
+                initiative_id=initiative_id,
+                stage_num=stage_num,
+                agent_name=agent_name,
+                task_result={'success': False, 'error': 'Celery soft_time_limit exceeded (45 min)'},
+            )
+        except Exception:
+            pass
+        return {
+            'success': False,
+            'agent_name': agent_name,
+            'initiative_id': initiative_id,
+            'stage_num': stage_num,
+            'task': task,
+            'error': 'Celery soft_time_limit exceeded (45 min)',
+            'execution_time_ms': execution_time_ms,
         }
 
     except Exception as e:
@@ -28822,7 +28866,7 @@ def _preflight_check_agent_data(agent_name: str, topic: str = '') -> dict:
     return {'proceed': True, 'reason': 'all data requirements met', 'counts': counts}
 
 
-@shared_task(name='core.tasks.universal_agent_workspace_output')
+@shared_task(name='core.tasks.universal_agent_workspace_output', soft_time_limit=2700, time_limit=3000)
 def universal_agent_workspace_output(
     agent_name: str,
     topic: str = None,
@@ -29023,6 +29067,26 @@ Trigger: {trigger}
             'trigger_source': trigger,
             'initiative_id': initiative_id,
         }
+
+    except SoftTimeLimitExceeded:
+        logger.error(f"🤖 [SKIN LAYER] {agent_name} KILLED by soft_time_limit (45 min)")
+        # Mark any in-progress execution records for this agent as failed
+        try:
+            from core.models_unified_system import AgentExecution
+            from django.utils import timezone as tz
+            stuck = AgentExecution.objects.filter(
+                agent__name=agent_name,
+                status__in=['running', 'in_progress'],
+            ).update(
+                status='failed',
+                error_message=f'Celery soft_time_limit exceeded (45 min)',
+                completed_at=tz.now(),
+            )
+            if stuck:
+                logger.info(f"🤖 [SKIN LAYER] Marked {stuck} execution(s) as failed for {agent_name}")
+        except Exception:
+            pass
+        return {'success': False, 'agent': agent_name, 'error': 'Celery soft_time_limit exceeded (45 min)', 'run_mode': run_mode}
 
     except Exception as e:
         logger.error(f"🤖 [SKIN LAYER] {agent_name} execution failed: {e}", exc_info=True)
