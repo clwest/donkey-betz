@@ -1120,7 +1120,7 @@ class AgentRouter:
                 error_message=str(e)
             )
 
-            logger.error(f"Agent execution error ({agent_name}): {e}")
+            logger.error(f"Agent execution error ({agent_name}): {e}", exc_info=True)
             return AgentResult(
                 success=False,
                 error=str(e),

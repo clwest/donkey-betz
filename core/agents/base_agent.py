@@ -4463,19 +4463,25 @@ Consider this current data when formulating your response."""
         # Extract files from result
         files_to_write = []
 
-        if result.data:
+        # Session 1028: Guard against result.data being a string (causes
+        # "'str' object has no attribute 'get'" — 9 failures on 2026-02-17)
+        if result.data and isinstance(result.data, dict):
             # Check for files in the results (from tool calls)
             results = result.data.get('results', [])
             for r in results:
+                if not isinstance(r, dict):
+                    continue
                 data = r.get('data', {})
-                if 'files' in data:
+                if isinstance(data, dict) and 'files' in data:
                     files_to_write.extend(data['files'])
 
             # Try to parse from raw code if no files found
             if not files_to_write:
                 for r in results:
+                    if not isinstance(r, dict):
+                        continue
                     data = r.get('data', {})
-                    if 'code' in data:
+                    if isinstance(data, dict) and 'code' in data:
                         parsed = self._parse_code_files(data['code'])
                         files_to_write.extend(parsed)
 
@@ -4486,7 +4492,7 @@ Consider this current data when formulating your response."""
 
         # Session 943: If still no files, check for report-style content
         # Financial agents produce structured_report or long messages that should be saved
-        if not files_to_write and result.data:
+        if not files_to_write and result.data and isinstance(result.data, dict):
             from django.utils import timezone
 
             # Check for structured_report field (used by stock/market agents)
@@ -4572,7 +4578,8 @@ Consider this current data when formulating your response."""
             )
 
             # Add workspace write info to result data
-            if result.data is None:
+            # Session 1028: Ensure result.data is a dict before subscript assignment
+            if not isinstance(result.data, dict):
                 result.data = {}
 
             result.data['workspace_write'] = write_result
