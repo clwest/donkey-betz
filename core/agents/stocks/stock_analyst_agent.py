@@ -22,7 +22,7 @@ import logging
 from typing import Dict, Any, List
 from datetime import datetime, timedelta, timezone
 
-from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig, WEB_SEARCH_TOOL
+from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig, WEB_SEARCH_TOOL, strip_simulated_tool_json
 from core.agents.report_schemas import (
     ReportProvenance, FinanceReportSchema, ScenarioAnalysis,
     Claim, Recommendation, RiskFlag, SourceInfo,
@@ -375,6 +375,9 @@ Alert on:
                 analysis = final_response.choices[0].message.content
             else:
                 analysis = assistant_message.content or "No analysis generated."
+
+            # Session 1018: Strip simulated JSON tool calls from text output
+            analysis = strip_simulated_tool_json(analysis)
 
             # Determine severity
             severity = self._assess_severity(analysis)
