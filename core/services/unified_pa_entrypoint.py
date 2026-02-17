@@ -2951,6 +2951,22 @@ Address the user by name occasionally."""
                     if description:
                         response += f"\n**Description:** {description}...\n"
 
+                    # Session 1021: Render stage pipeline with document status
+                    stages = tool_result.get('stages', [])
+                    if stages:
+                        response += f"\n**Stage Pipeline:**\n"
+                        for s in stages:
+                            stage_num = s.get('stage', '?')
+                            stage_name = s.get('stage_name', f'Stage {stage_num}')
+                            stage_status = s.get('status', 'PENDING')
+                            status_icon = {'APPROVED': '✅', 'DRAFT': '📝', 'IN_REVIEW': '👀', 'PENDING': '⏳', 'REJECTED': '❌', 'BLOCKED': '🚫'}.get(stage_status, '⏳')
+                            doc_len = s.get('document_length')
+                            doc_info = f" ({doc_len:,} chars)" if doc_len else " (no document)"
+                            response += f"{status_icon} Stage {stage_num}: {stage_name} — {stage_status}{doc_info}\n"
+                            doc_preview = s.get('document_preview', '')
+                            if doc_preview and stage_status in ('DRAFT', 'IN_REVIEW'):
+                                response += f"   Preview: {doc_preview[:150]}...\n"
+
                     if action_items:
                         response += f"\n**Action Items ({len(action_items)}):**\n"
                         for item in action_items[:5]:
