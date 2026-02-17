@@ -7401,13 +7401,34 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
             # Choose conversation type
             template = random.choice(conversation_templates)
 
+            # Session 1022: Dedup — skip if same knowledge item or same topic discussed recently
+            dedup_window = timezone.now() - timedelta(hours=6)
+            topic_prefix = f"Discussion: {topic[:100]}"
+            already_discussed = False
+
+            if knowledge_item:
+                already_discussed = AgentConversation.objects.filter(
+                    related_knowledge=knowledge_item,
+                    started_at__gte=dedup_window,
+                ).exists()
+
+            if not already_discussed:
+                already_discussed = AgentConversation.objects.filter(
+                    topic=topic_prefix,
+                    started_at__gte=dedup_window,
+                ).exists()
+
+            if already_discussed:
+                logger.info(f"💬 [CONVERSATIONS] Skipping duplicate topic: {topic[:60]}")
+                continue
+
             # Session 1019: Pre-flight agent data gathering
             preflight_data = _preflight_gather_agent_data(topic, {initiator.name, responder.name})
             preflight_context = preflight_data.get('injected_context', '') + preflight_data.get('no_data_block', '')
 
             # Create the conversation
             conversation = AgentConversation.objects.create(
-                topic=f"Discussion: {topic[:100]}",
+                topic=topic_prefix,
                 conversation_type=template['type'],
                 initiator=initiator,
                 trigger_type='scheduled',
@@ -8352,13 +8373,32 @@ def run_multi_agent_conversation(self, max_conversations: int = 2, participants_
             # Choose panel template
             template = random.choice(panel_templates)
 
+            # Session 1022: Dedup — skip if same knowledge item or same topic discussed recently
+            dedup_window = timezone.now() - timedelta(hours=6)
+            topic_prefix = f"Panel: {topic[:100]}"
+
+            already_discussed = AgentConversation.objects.filter(
+                related_knowledge=knowledge_item,
+                started_at__gte=dedup_window,
+            ).exists()
+
+            if not already_discussed:
+                already_discussed = AgentConversation.objects.filter(
+                    topic=topic_prefix,
+                    started_at__gte=dedup_window,
+                ).exists()
+
+            if already_discussed:
+                logger.info(f"👥 [MULTI-AGENT] Skipping duplicate topic: {topic[:60]}")
+                continue
+
             # Session 1019: Pre-flight agent data gathering
             preflight_data = _preflight_gather_agent_data(topic, {a.name for a in panel_agents})
             preflight_context = preflight_data.get('injected_context', '') + preflight_data.get('no_data_block', '')
 
             # Create the conversation
             conversation = AgentConversation.objects.create(
-                topic=f"Panel: {topic[:100]}",
+                topic=topic_prefix,
                 conversation_type=template['type'],
                 initiator=moderator,
                 trigger_type='scheduled',
