@@ -2326,8 +2326,8 @@ def process_core_spider_data():
 
     connector = SpiderAgentConnector()
 
-    # Get unprocessed spider data (500 per run to catch up with backlog)
-    unprocessed = SpiderData.objects.filter(is_processed=False).defer('embedding').order_by('created_at')[:500]
+    # Get unprocessed spider data (50 per run — still 1,500/hour at 2-min interval)
+    unprocessed = SpiderData.objects.filter(is_processed=False).defer('embedding').order_by('created_at')[:50]
     total_unprocessed = SpiderData.objects.filter(is_processed=False).defer('embedding').count()
 
     results = {
