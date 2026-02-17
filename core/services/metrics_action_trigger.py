@@ -238,25 +238,22 @@ class MetricsActionTrigger:
 
             # =================================================================
             # REVENUE TRACKING
+            # Session 1029: Disabled — revenue absence is expected (solo dev
+            # building the platform). This trigger fires every cycle and
+            # spawns 62+ OpportunityScoringAgent "no revenue" runs/day.
+            # Re-enable when revenue pipeline is active.
             # =================================================================
-            TriggerRule(
-                condition=TriggerCondition(
-                    name="zero_revenue_7d",
-                    description="No revenue recorded in 7 days",
-                    metric_path="revenue.last_7_days",
-                    operator="==",
-                    threshold=0.0,
-                    priority=ActionPriority.MEDIUM,
-                    cooldown_hours=24,
-                ),
-                action=TriggerAction(
-                    name="check_revenue_pipeline",
-                    action_type=ActionType.AGENT_EXECUTION,
-                    target="OpportunityScoringAgent",
-                    kwargs={"task": "Analyze why no revenue has been recorded and identify opportunities"},
-                    description="Use OpportunityScoringAgent to find revenue opportunities",
-                ),
-            ),
+            # TriggerRule(
+            #     condition=TriggerCondition(
+            #         name="zero_revenue_7d",
+            #         ...
+            #     ),
+            #     action=TriggerAction(
+            #         name="check_revenue_pipeline",
+            #         target="OpportunityScoringAgent",
+            #         kwargs={"task": "Analyze why no revenue..."},
+            #     ),
+            # ),
 
             # =================================================================
             # LLM COST MANAGEMENT
