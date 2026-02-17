@@ -466,7 +466,7 @@ class ConversationInitiativePipeline:
 
                 # Session 1003: Auto-set founder intent so auto-progression works
                 initiative.set_founder_intent(
-                    execution_speed='fast',
+                    execution_speed='balanced',
                     risk_tolerance='balanced',
                     set_by='system_auto'
                 )
