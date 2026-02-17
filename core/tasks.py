@@ -7024,6 +7024,209 @@ def embed_agent_activity(hours: int = 2):
 
 
 # =============================================================================
+# Session 1019: Pre-flight agent data gathering for conversations
+# =============================================================================
+
+def _preflight_gather_agent_data(topic, participant_names):
+    """
+    Detect agent name references in topic. If found, invoke those agents
+    via AgentRouter.route() and return their results for context injection.
+
+    Prevents dead-loop conversations where agents reference other agents
+    (e.g. "Scan competitor activity using ResearchAgent") but can't invoke them.
+
+    Args:
+        topic: Conversation topic string
+        participant_names: Set of participant agent names (skip these)
+    Returns:
+        dict with invoked_agents, injected_context, failed_agents, no_data_block
+    """
+    result = {
+        'invoked_agents': [],
+        'injected_context': '',
+        'failed_agents': [],
+        'no_data_block': '',
+    }
+
+    if not topic:
+        return result
+
+    try:
+        from core.agent_router import AgentRouter
+        agent_names = list(AgentRouter.AGENT_MAP.keys())
+    except Exception as e:
+        logger.warning(f"💬 [PREFLIGHT] Could not load AgentRouter: {e}")
+        return result
+
+    topic_lower = topic.lower()
+    referenced_agents = []
+
+    for name in agent_names:
+        if name in participant_names:
+            continue
+        # Check full name (e.g. "ResearchAgent") and base name (e.g. "research")
+        base_name = name.replace('Agent', '').lower()
+        if name.lower() in topic_lower or (len(base_name) > 3 and base_name in topic_lower):
+            referenced_agents.append(name)
+
+    if not referenced_agents:
+        return result
+
+    # Cap at 2 invocations to control cost
+    referenced_agents = referenced_agents[:2]
+    logger.info(f"💬 [PREFLIGHT] Detected agent references in topic: {referenced_agents}")
+
+    try:
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        system_user = User.objects.filter(username='system_autonomous').first()
+        if not system_user:
+            logger.warning("💬 [PREFLIGHT] No system_autonomous user found")
+            return result
+
+        router = AgentRouter(user=system_user)
+    except Exception as e:
+        logger.warning(f"💬 [PREFLIGHT] Could not create AgentRouter: {e}")
+        return result
+
+    context_parts = []
+    for agent_name in referenced_agents:
+        try:
+            from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
+
+            # 60-second timeout per agent (thread-safe, works in Celery --pool=threads)
+            agent_result = None
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(router.route, agent_name, topic)
+                try:
+                    agent_result = future.result(timeout=60)
+                except FuturesTimeout:
+                    logger.warning(f"💬 [PREFLIGHT] {agent_name} timed out after 60s")
+                    result['failed_agents'].append(agent_name)
+                    continue
+
+            if agent_result and agent_result.message:
+                # Truncate to 2000 chars to keep prompt manageable
+                msg = agent_result.message[:2000]
+                block = (
+                    f"\n\n== PRE-GATHERED DATA from {agent_name} ==\n"
+                    f"{msg}\n"
+                    f"== END PRE-GATHERED DATA =="
+                )
+                context_parts.append(block)
+                result['invoked_agents'].append(agent_name)
+                logger.info(f"💬 [PREFLIGHT] Successfully gathered {len(msg)} chars from {agent_name}")
+            else:
+                result['failed_agents'].append(agent_name)
+                logger.warning(f"💬 [PREFLIGHT] {agent_name} returned empty result")
+
+        except Exception as e:
+            result['failed_agents'].append(agent_name)
+            logger.warning(f"💬 [PREFLIGHT] {agent_name} invocation failed: {e}")
+
+    if context_parts:
+        result['injected_context'] = ''.join(context_parts)
+
+    if result['failed_agents']:
+        missing = ', '.join(result['failed_agents'])
+        result['no_data_block'] = (
+            f"\n\n=== NO UPSTREAM DATA AVAILABLE ===\n"
+            f"The following agents were referenced but returned ZERO results: {missing}.\n"
+            f"You MUST NOT invent data from these agents. Instead, reason from first principles and "
+            f"state clearly what data would be needed.\n"
+            f"=== END NO-DATA NOTICE ===\n"
+        )
+
+    logger.info(
+        f"💬 [PREFLIGHT] Pre-flight complete: invoked={result['invoked_agents']}, "
+        f"failed={result['failed_agents']}"
+    )
+    return result
+
+
+# Session 1019: Delegation tool for mid-conversation agent invocation
+CONVERSATION_DELEGATION_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "delegate_to_specialist",
+        "description": (
+            "Delegate a sub-task to a specialist agent to gather real data mid-conversation. "
+            "Use when you need specific data or analysis that another agent specializes in. "
+            "Available specialists include: ResearchAgent, TrendAnalysisAgent, "
+            "MarketIntelligenceAgent, ContentWriterAgent, StockAnalystAgent, "
+            "CompetitorAnalysisAgent, CustomerResearchAgent, and 40+ more."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "specialist_agent": {
+                    "type": "string",
+                    "description": "Name of the specialist agent to call (e.g., 'ResearchAgent')"
+                },
+                "task": {
+                    "type": "string",
+                    "description": "The specific task you want the specialist to perform"
+                }
+            },
+            "required": ["specialist_agent", "task"]
+        }
+    }
+}
+
+
+def _handle_conversation_delegation(tool_call, system_user):
+    """
+    Execute a delegation tool call from a conversation LLM response.
+
+    Args:
+        tool_call: The tool call object from the LLM response
+        system_user: Django User object for AgentRouter
+
+    Returns:
+        str: Formatted delegation result context, or empty string on failure
+    """
+    import json as json_mod
+    try:
+        args = json_mod.loads(tool_call.function.arguments)
+        specialist = args.get('specialist_agent', '')
+        task = args.get('task', '')
+
+        if not specialist or not task:
+            logger.warning("💬 [DELEGATION] Missing specialist_agent or task in tool call")
+            return ''
+
+        from core.agent_router import AgentRouter
+        from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
+        router = AgentRouter(user=system_user)
+
+        # Thread-safe timeout (works in Celery --pool=threads)
+        result = None
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(router.route, specialist, task)
+            try:
+                result = future.result(timeout=60)
+            except FuturesTimeout:
+                logger.warning(f"💬 [DELEGATION] {specialist} timed out after 60s")
+                return f"\n\n[Delegation to {specialist} timed out. Reason from first principles instead.]"
+
+        if result and result.message:
+            msg = result.message[:2000]
+            logger.info(f"💬 [DELEGATION] Successfully delegated to {specialist}: {len(msg)} chars")
+            return (
+                f"\n\n== DELEGATION RESULT from {specialist} ==\n"
+                f"{msg}\n"
+                f"== END DELEGATION RESULT =="
+            )
+        else:
+            logger.warning(f"💬 [DELEGATION] {specialist} returned empty result")
+            return f"\n\n[Delegation to {specialist} returned no data. Reason from first principles instead.]"
+
+    except Exception as e:
+        logger.warning(f"💬 [DELEGATION] Delegation failed: {e}")
+        return f"\n\n[Delegation failed: {e}. Reason from first principles instead.]"
+
+
+# =============================================================================
 # Session 244: Agent Conversations (Inter-Agent Chat)
 # =============================================================================
 
@@ -7190,6 +7393,10 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
             # Choose conversation type
             template = random.choice(conversation_templates)
 
+            # Session 1019: Pre-flight agent data gathering
+            preflight_data = _preflight_gather_agent_data(topic, {initiator.name, responder.name})
+            preflight_context = preflight_data.get('injected_context', '') + preflight_data.get('no_data_block', '')
+
             # Create the conversation
             conversation = AgentConversation.objects.create(
                 topic=f"Discussion: {topic[:100]}",
@@ -7210,6 +7417,16 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
             current_speaker = initiator
             other_speaker = responder
             consecutive_empty = 0  # Session 364: Track consecutive empty responses
+            delegation_used = False  # Session 1019: Track mid-conversation delegation
+
+            # Session 1019: Get system user for potential delegation
+            delegation_user = None
+            try:
+                from django.contrib.auth import get_user_model
+                DelegationUser = get_user_model()
+                delegation_user = DelegationUser.objects.filter(username='system_autonomous').first()
+            except Exception:
+                pass
 
             for msg_num in range(max_messages):
                 # Build the conversation context
@@ -7352,7 +7569,8 @@ Guidelines:
 - When citing data, mention the source (e.g., "from Notion spider data" or "based on HackerNews trends")
 {mood_context}
 {policy_context}
-{spider_context}"""
+{spider_context}
+{preflight_context}"""
 
                 # Build message history for context
                 history = []
@@ -7388,22 +7606,59 @@ Guidelines:
                     content = ""
                     last_error = None
 
+                    # Session 1019: Offer delegation tool on first turn only
+                    offer_tools = (
+                        not delegation_used
+                        and msg_num < 2
+                        and not preflight_data.get('invoked_agents')
+                        and delegation_user is not None
+                    )
+
                     for retry_attempt in range(3):
                         try:
                             # Session 875: CRITICAL FIX for empty content issue
                             # GPT-5 reasoning models use tokens for internal reasoning BEFORE output
                             # With only 1000 tokens, reasoning consumes everything → empty output
                             # Increased to 4000 to give 2000+ for reasoning AND 2000+ for output
-                            response = client.chat.completions.create(
-                                model="gpt-5-mini",
-                                messages=[
+                            create_kwargs = {
+                                "model": "gpt-5-mini",
+                                "messages": [
                                     {"role": "system", "content": system_prompt},
                                     {"role": "user", "content": user_content}
                                 ],
-                                max_completion_tokens=4000,  # Session 875: 4x increase for reasoning headroom
-                                timeout=120,  # Session 413: 2 min timeout for reasoning model
-                            )
-                            content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
+                                "max_completion_tokens": 4000,  # Session 875: 4x increase
+                                "timeout": 120,  # Session 413: 2 min timeout
+                            }
+                            if offer_tools:
+                                create_kwargs["tools"] = [CONVERSATION_DELEGATION_TOOL]
+                                create_kwargs["tool_choice"] = "auto"
+
+                            response = client.chat.completions.create(**create_kwargs)
+
+                            # Session 1019: Handle tool call response (delegation)
+                            resp_msg = response.choices[0].message
+                            if offer_tools and resp_msg.tool_calls:
+                                tool_call = resp_msg.tool_calls[0]
+                                if tool_call.function.name == 'delegate_to_specialist':
+                                    delegation_used = True
+                                    delegation_result = _handle_conversation_delegation(tool_call, delegation_user)
+                                    logger.info(f"💬 [CONVERSATIONS] {current_speaker.name} delegating mid-conversation")
+
+                                    # Re-prompt the same speaker with delegation results (NO tools)
+                                    reprompt_system = system_prompt + delegation_result
+                                    reprompt_response = client.chat.completions.create(
+                                        model="gpt-5-mini",
+                                        messages=[
+                                            {"role": "system", "content": reprompt_system},
+                                            {"role": "user", "content": user_content}
+                                        ],
+                                        max_completion_tokens=4000,
+                                        timeout=120,
+                                    )
+                                    content = reprompt_response.choices[0].message.content.strip() if reprompt_response.choices[0].message.content else ""
+                                    break
+                            else:
+                                content = resp_msg.content.strip() if resp_msg.content else ""
 
                             # Session 875: Log token usage for empty content debugging
                             if hasattr(response, 'usage') and response.usage:
@@ -8087,6 +8342,10 @@ def run_multi_agent_conversation(self, max_conversations: int = 2, participants_
             # Choose panel template
             template = random.choice(panel_templates)
 
+            # Session 1019: Pre-flight agent data gathering
+            preflight_data = _preflight_gather_agent_data(topic, {a.name for a in panel_agents})
+            preflight_context = preflight_data.get('injected_context', '') + preflight_data.get('no_data_block', '')
+
             # Create the conversation
             conversation = AgentConversation.objects.create(
                 topic=f"Panel: {topic[:100]}",
@@ -8111,6 +8370,16 @@ def run_multi_agent_conversation(self, max_conversations: int = 2, participants_
             used_discourse_markers = []  # Session 781 Level 3: Track discourse markers
             tension = template.get('tension_level', 'medium')
             prompts = template.get('prompts', {})
+            delegation_used = False  # Session 1019: Track mid-conversation delegation
+
+            # Session 1019: Get system user for potential delegation
+            delegation_user = None
+            try:
+                from django.contrib.auth import get_user_model
+                DelegationUser = get_user_model()
+                delegation_user = DelegationUser.objects.filter(username='system_autonomous').first()
+            except Exception:
+                pass
 
             for round_num in range(max_rounds):
                 for agent_idx, current_agent in enumerate(panel_agents):
@@ -8202,7 +8471,8 @@ VOICE RULES (Session 781):
 - NEVER say: "I'd push back slightly", "That's a great point", "Absolutely!", "I agree, but..."
 - Use YOUR distinct voice and expertise - don't hedge with corporate language
 - Start with a FRESH opening phrase, not a template{opener_context}{discourse_context}
-{mood_context}"""
+{mood_context}
+{preflight_context}"""
 
                     # Session 364: Add diversity prompts to avoid repetitive agreement
                     panel_diversity_prompts = [
@@ -8244,20 +8514,57 @@ VOICE RULES (Session 781):
                         content = ""
                         last_api_error = None
 
+                        # Session 1019: Offer delegation tool on first round only
+                        offer_tools = (
+                            not delegation_used
+                            and round_num == 0
+                            and not preflight_data.get('invoked_agents')
+                            and delegation_user is not None
+                        )
+
                         for retry_attempt in range(3):
                             try:
                                 # Session 413: Added timeout for reasoning model thinking time
-                                response = client.chat.completions.create(
-                                    model="gpt-5-mini",
-                                    messages=[
+                                create_kwargs = {
+                                    "model": "gpt-5-mini",
+                                    "messages": [
                                         {"role": "system", "content": system_prompt},
                                         {"role": "user", "content": user_prompt}
                                     ],
-                                    max_completion_tokens=2000,  # Session 364: Increased from 500 for reasoning models
-                                    timeout=120,  # Session 413: 2 min timeout for reasoning model
-                                )
+                                    "max_completion_tokens": 2000,  # Session 364: Increased
+                                    "timeout": 120,  # Session 413: 2 min timeout
+                                }
+                                if offer_tools:
+                                    create_kwargs["tools"] = [CONVERSATION_DELEGATION_TOOL]
+                                    create_kwargs["tool_choice"] = "auto"
 
-                                content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
+                                response = client.chat.completions.create(**create_kwargs)
+
+                                # Session 1019: Handle tool call response (delegation)
+                                resp_msg = response.choices[0].message
+                                if offer_tools and resp_msg.tool_calls:
+                                    tool_call = resp_msg.tool_calls[0]
+                                    if tool_call.function.name == 'delegate_to_specialist':
+                                        delegation_used = True
+                                        delegation_result = _handle_conversation_delegation(tool_call, delegation_user)
+                                        logger.info(f"👥 [MULTI-AGENT] {current_agent.name} delegating mid-conversation")
+
+                                        # Re-prompt same speaker with delegation results (NO tools)
+                                        reprompt_system = system_prompt + delegation_result
+                                        reprompt_response = client.chat.completions.create(
+                                            model="gpt-5-mini",
+                                            messages=[
+                                                {"role": "system", "content": reprompt_system},
+                                                {"role": "user", "content": user_prompt}
+                                            ],
+                                            max_completion_tokens=2000,
+                                            timeout=120,
+                                        )
+                                        content = reprompt_response.choices[0].message.content.strip() if reprompt_response.choices[0].message.content else ""
+                                    else:
+                                        content = resp_msg.content.strip() if resp_msg.content else ""
+                                else:
+                                    content = resp_msg.content.strip() if resp_msg.content else ""
 
                                 # Session 360: Validate output for mythology violations
                                 content = validate_agent_output(current_agent.name, content)
