@@ -263,6 +263,7 @@ class AuditRemediationTask(models.Model):
         ('pending', 'Pending'),
         ('assigned', 'Assigned'),
         ('in_progress', 'In Progress'),
+        ('spec_complete', 'Spec Complete'),
         ('completed', 'Completed'),
         ('failed', 'Failed'),
         ('cancelled', 'Cancelled'),
@@ -281,6 +282,28 @@ class AuditRemediationTask(models.Model):
     # Verification
     requires_verification = models.BooleanField(default=True)
     verification_command = models.TextField(blank=True)
+
+    # Evidence of real work (commit, PR, diff, etc.)
+    EVIDENCE_TYPE_CHOICES = [
+        ('none', 'No Evidence'),
+        ('commit', 'Git Commit'),
+        ('pr', 'Pull Request'),
+        ('diff', 'Diff/Patch'),
+        ('patch_artifact', 'Patch Artifact'),
+        ('manual_verify', 'Manually Verified'),
+    ]
+    evidence_type = models.CharField(
+        max_length=30, choices=EVIDENCE_TYPE_CHOICES, default='none'
+    )
+    evidence_ref = models.CharField(
+        max_length=500, blank=True,
+        help_text="Commit hash, PR URL, or CodeArtifact UUID"
+    )
+    verified_by = models.CharField(
+        max_length=100, blank=True,
+        help_text="User or agent that verified the evidence"
+    )
+    evidence_verified_at = models.DateTimeField(null=True, blank=True)
 
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
@@ -303,10 +326,25 @@ class AuditRemediationTask(models.Model):
         # Update finding status
         self.finding.mark_in_progress(agent_name)
 
-    def mark_completed(self, result: dict = None):
-        """Mark task as completed."""
+    def mark_spec_complete(self, result: dict = None):
+        """Mark task as spec complete (agent produced output but no real code artifacts)."""
+        self.status = 'spec_complete'
+        self.completed_at = timezone.now()
+        self.evidence_type = 'none'
+        if result:
+            self.execution_result = result
+        self.save()
+
+    def mark_completed(self, result: dict = None, evidence_type: str = 'manual_verify',
+                       evidence_ref: str = '', verified_by: str = ''):
+        """Mark task as completed with evidence of real work."""
         self.status = 'completed'
         self.completed_at = timezone.now()
+        self.evidence_type = evidence_type
+        self.evidence_ref = evidence_ref
+        self.verified_by = verified_by
+        if evidence_type != 'none':
+            self.evidence_verified_at = timezone.now()
         if result:
             self.execution_result = result
         self.save()

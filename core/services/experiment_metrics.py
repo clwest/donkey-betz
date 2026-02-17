@@ -38,9 +38,9 @@ class ExperimentMetricsService:
     ANOMALY_DETECTION_WINDOW_HOURS = 6
 
     # Session 841/855: Minimum thresholds to prevent premature halt decisions
-    # Session 855: Increased from 10 to 20 executions - small samples cause false positives
-    # (e.g., 2/7 = 28.57% looks like high error rate but is just noise)
-    MIN_EXECUTIONS_FOR_ERROR_RATE = 20  # Need at least 20 executions before calculating error rate
+    # Session 1023: Lowered from 20 to 5 — experiment FK rarely populated, so 20 is
+    # almost never reached and the method always returns 0.0
+    MIN_EXECUTIONS_FOR_ERROR_RATE = 5  # Need at least 5 executions before calculating error rate
     MIN_AGE_MINUTES = 30  # Session 855: Increased from 10 to 30 minutes grace period
 
     def __init__(self, experiment):
@@ -153,6 +153,18 @@ class ExperimentMetricsService:
             )
 
             total = executions.count()
+
+            # Session 1023: Fallback — experiment FK is rarely populated on AgentExecution,
+            # so try a time-window query scoped to the experiment's lifetime instead
+            if total < self.MIN_EXECUTIONS_FOR_ERROR_RATE:
+                logger.debug(
+                    f"[Session 1023] Experiment FK query returned only {total} rows, "
+                    f"falling back to time-window query for experiment {self.experiment.id}"
+                )
+                executions = AgentExecution.objects.filter(
+                    created_at__gte=effective_start,
+                )
+                total = executions.count()
 
             # Session 841: Require minimum sample size before calculating error rate
             if total < self.MIN_EXECUTIONS_FOR_ERROR_RATE:
