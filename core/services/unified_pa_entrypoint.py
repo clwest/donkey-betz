@@ -935,8 +935,9 @@ class UnifiedPAEntrypoint:
             'run agent', 'execute agent', 'use agent', 'ask agent',
         ]):
             return ('agent_execution', 'universal_agent_tool')
-        # Session 1030: "run/execute {Name}Agent" pattern
-        if _agent_re.search(r'\b(?:run|execute|invoke|trigger|use|ask)\b.*\bagent\b', message_lower):
+        # Session 1030: "run/execute SomethingAgent" — no \b before "agent" since
+        # "researchagent" is one word (no word boundary between "research" and "agent")
+        if _agent_re.search(r'\b(?:run|execute|invoke|trigger|use|ask)\b.*agent', message_lower):
             return ('agent_execution', 'universal_agent_tool')
 
         # Research patterns
@@ -1303,6 +1304,13 @@ class UnifiedPAEntrypoint:
                 id_match = re.search(r'([a-f0-9-]{36}|[a-f0-9]{8,})', msg_lower)
                 if id_match:
                     payload['id'] = id_match.group(1)
+            # Session 1030: "show me the latest blogs" / "recent blogs" → recent, not details
+            elif any(phrase in msg_lower for phrase in [
+                'latest', 'recent', 'newest', 'show me',
+                'list', 'all blogs', 'show blogs',
+            ]):
+                payload['action'] = 'recent'
+                payload['days'] = 30
             elif 'related' in msg_lower or 'similar' in msg_lower:
                 # Session 971: Related blog discovery
                 payload['action'] = 'related'
