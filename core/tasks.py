@@ -32427,6 +32427,10 @@ def advance_initiative_pipeline(limit: int = 10, auto_approve: bool = True):
                 # Build the document generation task
                 doc_type = _get_stage_document_type(stage_num)
 
+                # Session 1021: Gather REAL system data before asking agent to write
+                research_context = _gather_initiative_research(init, stage_num)
+                previous_context = _get_previous_stage_context(init, stage_num)
+
                 task_prompt = f"""Create a formal {stage_name} document for the initiative: {init.name}
 
 Initiative Description: {init.description or 'No description provided'}
@@ -32437,14 +32441,19 @@ This is Stage {stage_num} of 5 in the initiative pipeline.
 
 Document type: {doc_type}
 
-Requirements:
-1. Use formal, professional language
-2. Include specific, measurable criteria where applicable
-3. Be structured for executive review and decision-making
-4. Build upon any previous stage work (context will be provided)
+REAL DATA (use this as the basis for your document — do NOT invent data):
+{research_context}
 
 Previous stage context:
-{_get_previous_stage_context(init, stage_num)}
+{previous_context}
+
+Requirements:
+1. Use formal, professional language
+2. Reference SPECIFIC data points from the REAL DATA section above
+3. Be structured for executive review and decision-making
+4. If no real data was found, clearly state "No data available" — do NOT hallucinate
+5. Include specific, measurable criteria where applicable
+6. Do NOT produce blog-style content — this is a technical document
 """
 
                 # Generate the document using TechnicalDocumentAgent
@@ -32454,8 +32463,10 @@ Previous stage context:
                     context={
                         'initiative_id': str(init.id),
                         'initiative_name': init.name,
+                        'topic': init.name,
                         'stage': stage_num,
                         'doc_type': doc_type,
+                        'research_context': research_context,
                         'autonomous': True,
                     },
                     scifi_context={},
@@ -32595,6 +32606,122 @@ def _get_stage_document_type(stage_num: int) -> str:
         5: 'Pilot Execution Plan - Deployment strategy, monitoring, rollback procedures',
     }
     return doc_types.get(stage_num, f'Stage {stage_num} Document')
+
+
+def _gather_initiative_research(initiative, stage_num: int) -> str:
+    """
+    Session 1021: Gather REAL system data relevant to an initiative topic.
+
+    Queries SpiderData, SignalClusters, AgentConversations, and Deliverables
+    to build actual research context — not hallucinated content.
+
+    Returns a formatted string with real data for the TechnicalDocumentAgent.
+    """
+    from core.models_unified_system import SpiderData, AgentConversation
+    from core.models import SignalCluster
+    from django.utils import timezone
+    from datetime import timedelta
+
+    parts = []
+    topic = initiative.name
+    description = initiative.description or ''
+
+    # Extract search keywords from initiative name (words > 3 chars, skip common words)
+    stop_words = {'that', 'this', 'with', 'from', 'into', 'which', 'when', 'what',
+                  'have', 'been', 'will', 'would', 'could', 'should', 'does', 'also',
+                  'more', 'most', 'some', 'than', 'then', 'them', 'they', 'their',
+                  'each', 'about', 'over', 'such', 'after', 'before', 'between',
+                  'through', 'using', 'based', 'module', 'pipeline', 'component',
+                  'system', 'prototype', 'enhancement', 'create', 'build', 'implement',
+                  'deliver', 'initiate', 'focused', 'small', 'lightweight'}
+    keywords = [w for w in topic.lower().split() if len(w) > 3 and w not in stop_words][:6]
+
+    since = timezone.now() - timedelta(days=14)
+
+    # 1. Spider Data — real external intelligence
+    try:
+        spider_hits = []
+        for kw in keywords[:3]:
+            hits = SpiderData.objects.filter(
+                embedding_text__icontains=kw,
+                created_at__gte=since
+            ).order_by('-created_at')[:3]
+            for h in hits:
+                if h.id not in [x.id for x in spider_hits]:
+                    spider_hits.append(h)
+            if len(spider_hits) >= 5:
+                break
+
+        if spider_hits:
+            parts.append("## Recent Spider Intelligence")
+            for sd in spider_hits[:5]:
+                source = sd.source_url or 'internal'
+                text = (sd.embedding_text or sd.processed_data or '')[:300]
+                parts.append(f"- [{sd.spider_name}] ({sd.data_type}, {sd.created_at.strftime('%m/%d')}): {text}")
+    except Exception as e:
+        logger.warning(f"[Initiative research] Spider query failed: {e}")
+
+    # 2. Signal Clusters — detected patterns
+    try:
+        clusters = []
+        for kw in keywords[:3]:
+            hits = SignalCluster.objects.filter(
+                name__icontains=kw,
+                detected_at__gte=since
+            ).order_by('-detected_at')[:3]
+            for h in hits:
+                if h.id not in [x.id for x in clusters]:
+                    clusters.append(h)
+            if len(clusters) >= 3:
+                break
+
+        if clusters:
+            parts.append("## Related Signal Clusters")
+            for sc in clusters[:3]:
+                parts.append(f"- {sc.name} (type={sc.pattern_type}, detected={sc.detected_at.strftime('%m/%d')})")
+    except Exception as e:
+        logger.warning(f"[Initiative research] SignalCluster query failed: {e}")
+
+    # 3. Agent Conversations — what agents discussed about this topic
+    try:
+        convos = []
+        for kw in keywords[:2]:
+            hits = AgentConversation.objects.filter(
+                topic__icontains=kw,
+                started_at__gte=since
+            ).order_by('-started_at')[:3]
+            for h in hits:
+                if h.id not in [x.id for x in convos]:
+                    convos.append(h)
+            if len(convos) >= 3:
+                break
+
+        if convos:
+            parts.append("## Related Agent Conversations")
+            for ac in convos[:3]:
+                conclusion = (ac.conclusion or '')[:200]
+                conclusion_text = f" — conclusion: {conclusion}" if conclusion else ''
+                parts.append(f"- \"{ac.topic[:80]}\" ({ac.started_at.strftime('%m/%d')}){conclusion_text}")
+    except Exception as e:
+        logger.warning(f"[Initiative research] Conversation query failed: {e}")
+
+    # 4. Existing Deliverables — what's already been produced
+    try:
+        from core.models_deliverables import Deliverable
+        deliverables = Deliverable.objects.filter(initiative=initiative).order_by('-created_at')[:3]
+        if deliverables:
+            parts.append("## Existing Deliverables")
+            for d in deliverables:
+                meta = d.metadata or {}
+                parts.append(f"- {d.title[:80]} (type={meta.get('content_type', 'unknown')}, created={d.created_at.strftime('%m/%d')})")
+    except Exception as e:
+        logger.warning(f"[Initiative research] Deliverable query failed: {e}")
+
+    if not parts:
+        return f"No system data found for topic '{topic}'. The document should outline a plan based on the initiative description: {description[:500]}"
+
+    header = f"## Real System Data for: {topic}\nKeywords searched: {', '.join(keywords)}\nData window: last 14 days\n"
+    return header + "\n\n".join(parts)
 
 
 def _get_previous_stage_context(initiative, current_stage: int) -> str:
