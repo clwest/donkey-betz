@@ -24,7 +24,7 @@ import json
 import logging
 from typing import Dict, Any, List
 
-from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.base_agent import BaseAgent, AgentResult, strip_simulated_tool_json
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -310,7 +310,7 @@ and only important ones should be promoted. Don't treat this as a crisis."""
                         # Fallback: Generate report from tool results directly
                         result_text = self._generate_fallback_report(items, tool_calls_made)
                 else:
-                    result_text = assistant_message.content
+                    result_text = strip_simulated_tool_json(assistant_message.content)
                 execution_time_ms = int((time.time() - start_time) * 1000)
 
                 # Count by severity for metadata

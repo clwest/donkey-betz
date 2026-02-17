@@ -22,7 +22,7 @@ from django.utils import timezone
 from decimal import Decimal
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
-from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.base_agent import BaseAgent, AgentResult, strip_simulated_tool_json
 from ml.auto_selection import TaskType
 
 # Session 895: Timeout for sub-agent executions to prevent coordinator hangs
@@ -1425,13 +1425,15 @@ Your job is to keep this system running smoothly and surfacing valuable narrativ
             except Exception as e:
                 logger.warning(f"ML integration in execute failed: {e}")
 
+            cleaned_message = strip_simulated_tool_json(assistant_message.content) or "Task executed successfully"
+
             result = AgentResult(
                 success=True,
                 agent_name=self.name,
-                message=assistant_message.content or "Task executed successfully",
+                message=cleaned_message,
                 data={
                     'tool_calls': tool_calls_results,
-                    'response': assistant_message.content,
+                    'response': cleaned_message,
                     'ml_analysis': ml_analysis  # Session 683: ML insights
                 },
                 execution_time_ms=execution_time

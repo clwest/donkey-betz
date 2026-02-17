@@ -39,7 +39,7 @@ from datetime import datetime, timezone as dt_timezone
 from dataclasses import dataclass, field
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
-from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.base_agent import BaseAgent, AgentResult, strip_simulated_tool_json
 from core.agents.report_schemas import build_provenance, format_disclaimer
 
 logger = logging.getLogger(__name__)
@@ -357,7 +357,7 @@ You analyze and report - you do NOT give trading advice or recommendations."""
                     )
                     analysis = final_response.choices[0].message.content
                 else:
-                    analysis = assistant_message.content
+                    analysis = strip_simulated_tool_json(assistant_message.content)
 
                 # Session 683: Run ML analysis on collected market data
                 ml_insights = {}

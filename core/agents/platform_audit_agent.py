@@ -23,7 +23,7 @@ import os
 import time
 from typing import Dict, Any, List
 
-from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig, OutputCategory
+from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig, OutputCategory, strip_simulated_tool_json
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -342,7 +342,7 @@ Include counts, categorizations, and actionable findings."""
             }
 
         return {
-            'message': assistant_message.content,
+            'message': strip_simulated_tool_json(assistant_message.content),
             'data': {},
             'tool_calls': []
         }
