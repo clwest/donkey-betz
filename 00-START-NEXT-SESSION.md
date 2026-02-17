@@ -1,35 +1,53 @@
-# Session 1026 - Start Here
+# Session 1027 - Start Here
 
-**Previous Session:** 1025 (Scoring Contract for SignalClusters)
+**Previous Session:** 1026 (Remediation Redesign) + 1027 (Agent Execution Audit)
 **Date:** February 17, 2026
-**Status:** 92 Agents | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **497 BLOGS** | **1,573 SIGNAL CLUSTERS (ALL SCORED)** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 39+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 269** | **Frontend Routes: 27** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED** | **BETTING DASHBOARD: 12 TABS POLISHED** | **DELIVERABLE DEDUP: LIVE** | **CONVERSATION DEDUP: LIVE** | **REMEDIATION: DISCOVERY ONLY (exec disabled, $9/day saved)** | **COST SAVINGS: ~$23/day** | **SEMANTIC SPIDER SEARCH: LIVE** | **EVIDENCE GATES: COMPLETE (4 LAYERS)** | **SCORING CONTRACT: LIVE (2-TRACK PIPELINE)**
+**Status:** 92 Agents | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **497 BLOGS** | **1,573 SIGNAL CLUSTERS (ALL SCORED)** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 39+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 269** | **Frontend Routes: 27** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED** | **BETTING DASHBOARD: 12 TABS POLISHED** | **DELIVERABLE DEDUP: LIVE** | **CONVERSATION DEDUP: LIVE** | **REMEDIATION: DISCOVERY ONLY** | **AGENT WASTE REMOVED** | **COST SAVINGS: ~$10.81/day (target ~$6/day)** | **SEMANTIC SPIDER SEARCH: LIVE** | **EVIDENCE GATES: COMPLETE (4 LAYERS)** | **SCORING CONTRACT: LIVE (2-TRACK PIPELINE)**
 
 ---
 
-## Session 1025 Summary (Just Completed)
+## Session 1027 Summary (Just Completed)
+
+### Agent Execution Audit & Waste Removal (PRs #1271, #1272, #1273)
+
+**Problem:** Overnight agent executions: 589 runs, $16.76/day. Audit found 4 waste sources burning ~$10/day.
+
+**Fixes:**
+
+1. **PR #1271 — Remediation Redesign** ($9/day saved)
+   - Disabled 3 Celery Beat execution schedules (CodeGeneratorAgent running in empty sandbox)
+   - Kept discovery/assignment schedules (findings are real and valuable)
+   - Created `show_remediation_findings` management command
+   - Cancelled 79 stuck tasks, reset 69 findings to 'open' in Railway DB
+
+2. **PR #1272 — UserProfile Duplicate Fix**
+   - Renamed `unified_storage.UserProfile` to `StorageUserProfile` (prevented RuntimeError)
+   - Fixed broken import in `discord_bot.py` line 3489
+   - Marked 6 AuditFindings as fixed
+
+3. **PR #1273 — Agent Execution Waste** ($1.81/day saved)
+   - Removed CodeGeneratorAgent from `run_development_tech_agents` (sandbox, can't write code)
+   - Removed AudioAgent from `run_content_creation_agents` (ElevenLabs quota exceeded, 100% failure)
+   - Rewrote WorkflowAgent task — old task spawned ~30 unbounded ResearchAgent sub-tasks/day
+   - Rewrote OpportunityPipelineAgent task — old task triggered "no revenue" assessment 51x/day
+
+**Key files:**
+- `core/celery.py` — 3 execution schedules disabled
+- `core/tasks.py` — Agent groups cleaned up, bounded tasks
+- `core/unified_storage.py` — StorageUserProfile rename
+- `core/management/commands/show_remediation_findings.py` — NEW
+
+See `docs/handoffs/SESSION_1027_AGENT_EXECUTION_AUDIT.md`
+
+---
+
+## Session 1025 Summary
 
 ### Scoring Contract: Reach, Intent & Replicability (PRs #1267, #1268, #1269)
 
-**Problem:** SignalClusters had strength/confidence/novelty/urgency but no way to distinguish attention signals (trending topics for content) from intent signals (actionable opportunities for micro-products). All signals treated the same.
-
-**Fix:** Added 5 new fields to `SignalCluster` + a rule-based `ContentScoringService` that scores every cluster on reach, intent, replicability, source confidence, and assigns a pipeline track (`attention`, `intent`, or `unclassified`).
-
-**Key files:**
-- `core/models_signal_intelligence.py` — 5 new fields
-- `core/services/content_scoring_service.py` — NEW, rule-based scoring (~150 lines, no LLM)
-- `core/services/signal_aggregation_service.py` — Auto-scores on cluster create/update
-- `core/tasks.py` — `backfill_signal_scores` task
-- Migration `0248`
-
-**Backfill results (Railway):** 1,573 clusters scored. Distribution: attention=604 (38%), intent=169 (11%), unclassified=800 (51%).
-
-**Evidence Pipeline Maturity Roadmap:**
-1. Semantic spider search — DONE (Session 1024)
-2. Evidence gates (4 layers) — DONE (Session 1023)
-3. Scoring contract — DONE (Session 1025)
-4. Auto-experiment generator — FUTURE
-
-See `docs/handoffs/SESSION_1025_SCORING_CONTRACT.md`
+- Added 5 new fields to `SignalCluster` + rule-based `ContentScoringService`
+- 1,573 clusters scored: attention=604, intent=169, unclassified=800
+- See `docs/handoffs/SESSION_1025_SCORING_CONTRACT.md`
 
 ---
 
@@ -38,17 +56,7 @@ See `docs/handoffs/SESSION_1025_SCORING_CONTRACT.md`
 ### Semantic Spider Search — Root Cause Fix (PR #1265)
 
 - `search_spider_data()` replaced keyword matching with pgvector semantic similarity (primary), keyword fallback
-- All 6 callers benefit automatically
 - See `docs/handoffs/SESSION_1024_SEMANTIC_SPIDER_SEARCH.md`
-
----
-
-## Session 1023 Summary
-
-### Evidence Gate Layers 1-3 (PRs #1262, #1263, #1264)
-
-- Layer 1-3 defensive gates + `build_provenance()` infrastructure
-- See `docs/handoffs/SESSION_1023_EVIDENCE_GATE_LAYERS.md`
 
 ---
 
@@ -61,7 +69,7 @@ See `docs/handoffs/SESSION_1025_SCORING_CONTRACT.md`
 | Advisors | 25 |
 | Database Models | 397+ |
 | Services | 135 |
-| Celery Tasks | 269 (5 remediation schedules paused) |
+| Celery Tasks | 269 (3 remediation execution schedules disabled) |
 | Intelligence Desks | 4 (Stocks, Sports, Blockchain, Narrative) — ALL RUNNING |
 | Workspace Tabs | 9 |
 | Frontend Routes | 27 |
@@ -74,7 +82,7 @@ See `docs/handoffs/SESSION_1025_SCORING_CONTRACT.md`
 | Blogs | 497 |
 | Signal Clusters | 1,573 (all scored: 604 attention, 169 intent, 800 unclassified) |
 | Deliverables | ~3,737 (cleaned from 9,577) |
-| Daily LLM Cost | ~$13/day → expected ~$6/day after fixes |
+| Daily LLM Cost | ~$6/day (down from $17/day) |
 | LLM Providers | 6 (OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini) |
 | Spider Search | Semantic (pgvector KNN) primary, keyword fallback |
 | Evidence Gates | 4 layers complete (Layers 1-3 defensive + root cause fix) |
@@ -84,7 +92,26 @@ See `docs/handoffs/SESSION_1025_SCORING_CONTRACT.md`
 
 ## Verify Before Starting
 
-### 1. Semantic Search Health (Session 1024)
+### 1. Cost Reduction (Session 1027)
+- Verify agent execution waste is eliminated:
+  ```
+  railway run python manage.py shell -c "
+  from core.models_unified_system import AgentExecution
+  from django.utils import timezone; from datetime import timedelta
+  from django.db.models import Sum
+  since = timezone.now() - timedelta(hours=24)
+  execs = AgentExecution.objects.filter(created_at__gte=since)
+  total_cost = execs.aggregate(c=Sum('cost'))['c'] or 0
+  print(f'Total: {execs.count()} runs, \${total_cost:.2f}')
+  for name in ['CodeGeneratorAgent', 'AudioAgent', 'OpportunityScoringAgent', 'ResearchAgent']:
+      count = execs.filter(agent__name=name).count()
+      cost = execs.filter(agent__name=name).aggregate(c=Sum('cost'))['c'] or 0
+      print(f'  {name}: {count} runs, \${cost:.2f}')
+  "
+  ```
+- Expect: CodeGeneratorAgent=0, AudioAgent=0, OpportunityScoringAgent<10, total cost<$8
+
+### 2. Semantic Search Health (Session 1024)
 - Verify semantic search is active (NOT falling back to keyword):
   ```
   railway run python manage.py shell -c "
@@ -100,8 +127,8 @@ See `docs/handoffs/SESSION_1025_SCORING_CONTRACT.md`
   ```
 - Expect results with `matching_terms=['semantic_match']`, NOT keyword terms
 
-### 2. Cost Reduction (Session 1022)
-- Verify deliverable count stabilized (should NOT grow by 1,500/day anymore):
+### 3. Deliverable Count (Session 1022)
+- Verify deliverable count stabilized:
   ```
   railway run python manage.py shell -c "
   from core.models_deliverables import Deliverable
@@ -114,35 +141,7 @@ See `docs/handoffs/SESSION_1025_SCORING_CONTRACT.md`
   ```
 - Expect ~150-300 new/day (down from 1,500+)
 
-### 3. Conversation Dedup (Session 1022)
-- Verify conversation count dropped:
-  ```
-  railway run python manage.py shell -c "
-  from core.models_unified_system import AgentConversation
-  from django.utils import timezone; from datetime import timedelta
-  cutoff = timezone.now() - timedelta(hours=24)
-  topics = list(AgentConversation.objects.filter(started_at__gte=cutoff).values_list('topic', flat=True))
-  unique = len(set(topics))
-  print(f'Conversations (24h): {len(topics)}, Unique: {unique}, Dupe rate: {1 - unique/max(len(topics),1):.0%}')
-  "
-  ```
-- Expect <150 total, <20% dupe rate (down from 293 / 59%)
-
-### 4. Embedding Coverage (Session 1024)
-- Check embedding backfill is running:
-  ```
-  railway run python manage.py shell -c "
-  from core.models_unified_system import SpiderData
-  from django.utils import timezone; from datetime import timedelta
-  since = timezone.now() - timedelta(hours=72)
-  total = SpiderData.objects.filter(created_at__gte=since).count()
-  with_emb = SpiderData.objects.filter(created_at__gte=since, embedding__isnull=False).count()
-  print(f'SpiderData (72h): {total} total, {with_emb} with embeddings ({100*with_emb//max(total,1)}%)')
-  "
-  ```
-- Expect >80% coverage
-
-### 5. Scoring Contract (Session 1025)
+### 4. Scoring Contract (Session 1025)
 - Verify clusters are being scored on creation:
   ```
   railway run python manage.py shell -c "
@@ -152,7 +151,7 @@ See `docs/handoffs/SESSION_1025_SCORING_CONTRACT.md`
       print(f'{track}: {count}')
   "
   ```
-- Expect non-zero counts for all three tracks (backfill scored 1,573 clusters)
+- Expect non-zero counts for all three tracks
 
 ---
 
@@ -175,7 +174,7 @@ Initiatives that reached Stage 5 via the skip-ahead bug (PR #1251) have Stage 3-
 ### PA Context Awareness — NEEDS WORK
 PA doesn't understand page context. When user says "I just created an image but it's not displaying" from Image Studio, PA asks generic clarifying questions instead of checking ImageHistory.
 
-### Remediation System — REDESIGNED (Session 1026)
+### Remediation System — REDESIGNED (Session 1026/1027)
 Discovery + assignment still running (finds real issues). Execution disabled — CodeGeneratorAgent was burning $9/day in empty sandbox. 80 open findings now surfaced via:
 ```
 railway run python manage.py show_remediation_findings
@@ -184,6 +183,9 @@ railway run python manage.py show_remediation_findings --verbose --limit 10
 ```
 Fix findings in Claude Code sessions, then mark: `AuditFinding.objects.filter(id="<uuid>").update(status="fixed", fixed_by="Session XXXX")`
 See `docs/handoffs/SESSION_1026_REMEDIATION_REDESIGN.md`
+
+### Agent Group Schedules — MAPPED (Session 1027)
+19 agent group schedules drive all automated agent executions. Full map in `docs/handoffs/SESSION_1027_AGENT_EXECUTION_AUDIT.md`. Key pattern: `_run_agent_group()` (tasks.py:30247) calls `universal_agent_workspace_output()` for each agent. To stop an agent from running, remove it from its group list.
 
 ### Dream Pipeline — NO-OP
 Zero approved dreams, zero DreamImplementations. Only $0.54/day so not urgent, but the entire dream->implementation pipeline is non-functional.
@@ -199,9 +201,12 @@ Zero approved dreams, zero DreamImplementations. Only $0.54/day so not urgent, b
 - Conversation date hallucination: **FIXED** (PR #1248)
 - Deliverable spam: **FIXED** (PR #1256)
 - Conversation duplication: **FIXED** (PR #1258)
-- Remediation waste: **FIXED** (PR #1257)
+- Remediation waste: **FIXED** (PRs #1257, #1271)
+- Agent execution waste: **FIXED** (PR #1273)
+- UserProfile duplicates: **FIXED** (PR #1272)
 - Evidence gate (irrelevant data): **FIXED** (PRs #1262-#1265)
-- Remaining: AudioAgent (ElevenLabs quota, ~7/day), assorted others (~18/day)
+- AudioAgent: **REMOVED from schedule** (PR #1273, ElevenLabs quota)
+- Remaining: assorted agent failures (~18/day, low cost)
 
 ### CodeArtifact v2 — DEFERRED
 - PatchApplier service, frontend review panel, initiative FK wiring
@@ -219,8 +224,19 @@ Initial accuracy is 70.2% (mostly NCAAB). Monitor by sport/model.
 
 **Django settings module:** `core.settings` (NOT `config.settings`).
 
+**Agent group schedules (Session 1027):**
+- 19 schedules in `core/celery.py` drive all automated agent runs
+- All use `_run_agent_group()` (tasks.py:30247) -> `universal_agent_workspace_output()`
+- To stop an agent: remove from its group list in `run_*_agents()` function
+- Unbounded task descriptions ("check and advance", "review and prioritize") cause sub-task spawning
+- Bounded tasks ("report summary only, do NOT delegate") prevent cascading execution
+
+**django_celery_beat DB persistence (Session 1027):**
+- Commenting out schedule definitions in `celery.py` does NOT disable DB-persisted schedules
+- Must also run: `PeriodicTask.objects.filter(name='...').update(enabled=False)`
+
 **Spider search (Session 1024):**
-- `search_spider_data()` uses pgvector semantic similarity (primary) → keyword matching (fallback)
+- `search_spider_data()` uses pgvector semantic similarity (primary) -> keyword matching (fallback)
 - Key file: `core/services/spider_intelligence.py`
 - Constants: `SEMANTIC_TOP_K=50`, `SEMANTIC_MIN_SIMILARITY=0.25`, `NOISY_SPIDERS`
 - Monitor logs for `[spider_search] keyword fallback` — should NOT appear in normal operation
