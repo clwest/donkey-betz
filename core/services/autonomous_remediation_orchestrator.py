@@ -1298,10 +1298,8 @@ The finding should be resolved after your changes. The verification step will ch
                         agent_name=task.assigned_agent
                     )
 
-            # Record result
-            task.status = 'completed' if result.success else 'failed'
-            task.completed_at = timezone.now()
-            task.execution_result = {
+            # Record result with evidence gating
+            execution_data = {
                 'success': result.success,
                 'message': result.message[:2000] if result.message else '',
                 'data': result.data if hasattr(result, 'data') else {},
@@ -1309,23 +1307,55 @@ The finding should be resolved after your changes. The verification step will ch
                 'execution_time_ms': result.execution_time_ms if hasattr(result, 'execution_time_ms') else 0,
                 'skin_result': skin_result,  # Session 822: Track SKIN layer operations
             }
-            task.save()
 
-            # Update finding status
-            if result.success:
+            # Evidence-gated completion
+            has_files = skin_result and skin_result.get('written') and skin_result.get('total_written', 0) > 0
+            has_pr = skin_result and skin_result.get('pr', {}).get('pr_created')
+
+            if not result.success:
+                # Path A: Agent failed
+                task.status = 'failed'
+                task.completed_at = timezone.now()
+                task.execution_result = execution_data
+                task.save()
+            elif has_files or has_pr:
+                # Path B: Real artifacts exist — mark completed with evidence
+                evidence_type = 'pr' if has_pr else 'commit'
+                evidence_ref = ''
+                if has_pr:
+                    evidence_ref = skin_result.get('pr', {}).get('pr_url', '')
+                elif has_files:
+                    evidence_ref = f"wrote {skin_result.get('total_written', 0)} files"
+                task.status = 'completed'
+                task.completed_at = timezone.now()
+                task.evidence_type = evidence_type
+                task.evidence_ref = evidence_ref
+                task.verified_by = task.assigned_agent
+                task.evidence_verified_at = timezone.now()
+                task.execution_result = execution_data
+                task.save()
+
+                # Only mark finding as fixed when real evidence exists
                 task.finding.status = 'fixed'
                 task.finding.fixed_by = f"Auto-remediation via {task.assigned_agent}"
                 task.finding.fixed_at = timezone.now()
                 remediation_notes = result.message[:500] if result.message else ''
-                if skin_result and skin_result.get('written'):
+                if has_files:
                     remediation_notes += f"\n\nFiles written: {skin_result.get('total_written', 0)}"
+                if has_pr:
                     pr_info = skin_result.get('pr', {})
-                    if pr_info.get('pr_created'):
-                        remediation_notes += f"\n\nPR created: {pr_info.get('pr_url', 'unknown')}"
-                    elif pr_info.get('error'):
-                        remediation_notes += f"\n\nPR creation failed: {pr_info.get('error')}"
+                    remediation_notes += f"\n\nPR created: {pr_info.get('pr_url', 'unknown')}"
                 task.finding.remediation_notes = remediation_notes
                 task.finding.save()
+            else:
+                # Path C: Agent succeeded but no real artifacts — spec only
+                task.status = 'spec_complete'
+                task.completed_at = timezone.now()
+                task.evidence_type = 'none'
+                task.execution_result = execution_data
+                task.save()
+                # Finding stays in_progress — not fixed without evidence
+                self._route_spec_to_human_attention(task)
 
             return {
                 'success': result.success,
@@ -1344,6 +1374,62 @@ The finding should be resolved after your changes. The verification step will ch
                 'success': False,
                 'error': str(e),
             }
+
+    def _route_spec_to_human_attention(self, task):
+        """Route a spec_complete task to HumanAttentionItem for human review."""
+        try:
+            from core.models_human_interface import HumanAttentionItem
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+
+            user = User.objects.filter(is_staff=True, is_active=True).first()
+            if not user:
+                self.logger.warning("  ⚠️ No staff user found — cannot create HumanAttentionItem")
+                return
+
+            # Map finding priority to urgency
+            priority_map = {
+                'P0': ('critical', 9.0),
+                'P1': ('high', 7.0),
+                'P2': ('medium', 4.0),
+                'P3': ('low', 2.0),
+            }
+            urgency, priority_score = priority_map.get(
+                task.finding.priority, ('medium', 4.0)
+            )
+
+            spec_message = ''
+            if task.execution_result and isinstance(task.execution_result, dict):
+                spec_message = task.execution_result.get('message', '')[:1000]
+
+            HumanAttentionItem.objects.create(
+                user=user,
+                source_type='audit_remediation',
+                source_id=str(task.id),
+                source_agent=task.assigned_agent,
+                item_type='remediation_proposal',
+                title=f"Review spec: {task.title[:150]}",
+                summary=(
+                    f"Agent {task.assigned_agent} produced a spec/report for "
+                    f"finding '{task.finding.title[:100]}' but did not write any "
+                    f"code files or create a PR. Review the proposal and apply manually."
+                ),
+                payload={
+                    'task_id': str(task.id),
+                    'finding_id': str(task.finding.id),
+                    'finding_title': task.finding.title,
+                    'priority': task.finding.priority,
+                    'category': task.finding.category,
+                    'affected_files': task.finding.affected_files,
+                    'spec_message': spec_message,
+                },
+                urgency=urgency,
+                priority_score=priority_score,
+            )
+            self.logger.info(f"  📋 Routed spec to HumanAttentionItem (urgency={urgency})")
+
+        except Exception as e:
+            self.logger.error(f"  ⚠️ Failed to create HumanAttentionItem: {e}")
 
     # =========================================================================
     # PHASE 4: VERIFICATION

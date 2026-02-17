@@ -31594,6 +31594,62 @@ def assign_and_execute_remediation(limit: int = 20, write_files: bool = True):
         return {'error': str(e), **results}
 
 
+def _route_spec_to_human_attention_standalone(task, agent_name):
+    """Route a spec_complete remediation task to HumanAttentionItem for human review."""
+    try:
+        from core.models_human_interface import HumanAttentionItem
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
+        user = User.objects.filter(is_staff=True, is_active=True).first()
+        if not user:
+            logger.warning("  ⚠️ No staff user found — cannot create HumanAttentionItem")
+            return
+
+        priority_map = {
+            'P0': ('critical', 9.0),
+            'P1': ('high', 7.0),
+            'P2': ('medium', 4.0),
+            'P3': ('low', 2.0),
+        }
+        urgency, priority_score = priority_map.get(
+            task.finding.priority, ('medium', 4.0)
+        )
+
+        spec_message = ''
+        if task.execution_result and isinstance(task.execution_result, dict):
+            spec_message = task.execution_result.get('message', '')[:1000]
+
+        HumanAttentionItem.objects.create(
+            user=user,
+            source_type='audit_remediation',
+            source_id=str(task.id),
+            source_agent=agent_name,
+            item_type='remediation_proposal',
+            title=f"Review spec: {task.title[:150]}",
+            summary=(
+                f"Agent {agent_name} produced a spec/report for "
+                f"finding '{task.finding.title[:100]}' but did not write any "
+                f"code files or create a PR. Review the proposal and apply manually."
+            ),
+            payload={
+                'task_id': str(task.id),
+                'finding_id': str(task.finding.id),
+                'finding_title': task.finding.title,
+                'priority': task.finding.priority,
+                'category': task.finding.category,
+                'affected_files': task.finding.affected_files,
+                'spec_message': spec_message,
+            },
+            urgency=urgency,
+            priority_score=priority_score,
+        )
+        logger.info(f"  📋 Routed spec to HumanAttentionItem (urgency={urgency})")
+
+    except Exception as e:
+        logger.error(f"  ⚠️ Failed to create HumanAttentionItem: {e}")
+
+
 @shared_task
 def run_agent_remediation_batch(agent_name: str = 'CodeGeneratorAgent', limit: int = 20, write_files: bool = True):
     """
@@ -31761,17 +31817,38 @@ Recommendation:
                     result_data['skin_layer'] = write_result
                     files_written += len(write_result.get('files', []))
 
-            task.status = 'completed'
-            task.completed_at = timezone.now()
-            task.execution_result = result_data
-            task.save()
+            # Evidence-gated completion
+            skin = result_data.get('skin_layer', {})
+            has_files = skin.get('written') and len(skin.get('files', [])) > 0
+            has_pr = False  # Batch path doesn't create PRs
 
-            finding.status = 'resolved'
-            finding.resolved_at = timezone.now()
-            finding.save()
+            if has_files:
+                # Real artifacts exist — mark completed with evidence
+                task.status = 'completed'
+                task.completed_at = timezone.now()
+                task.evidence_type = 'commit'
+                task.evidence_ref = f"wrote {len(skin.get('files', []))} files"
+                task.verified_by = agent_name
+                task.evidence_verified_at = timezone.now()
+                task.execution_result = result_data
+                task.save()
+
+                finding.status = 'fixed'
+                finding.fixed_by = f"Auto-remediation via {agent_name}"
+                finding.fixed_at = timezone.now()
+                finding.save()
+            else:
+                # No real artifacts — spec only
+                task.status = 'spec_complete'
+                task.completed_at = timezone.now()
+                task.evidence_type = 'none'
+                task.execution_result = result_data
+                task.save()
+                # Finding stays in_progress — not fixed without evidence
+                _route_spec_to_human_attention_standalone(task, agent_name)
 
             succeeded += 1
-            logger.info(f"   ✅ Completed")
+            logger.info(f"   ✅ {task.status}")
 
         except Exception as e:
             task.status = 'failed'
