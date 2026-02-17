@@ -1375,7 +1375,9 @@ Generate complete, runnable test code."""
         if not manager:
             return {"success": False, "error": "WorkspaceManager not available"}
 
-        workspace = manager.get_active_workspace()
+        workspace = manager.get_codebase_workspace()
+        if not workspace:
+            workspace = manager.get_active_workspace()
         if not workspace:
             return {
                 "success": False,
@@ -1422,7 +1424,9 @@ Generate complete, runnable test code."""
         if not manager:
             return {"success": False, "error": "WorkspaceManager not available"}
 
-        workspace = manager.get_active_workspace()
+        workspace = manager.get_codebase_workspace()
+        if not workspace:
+            workspace = manager.get_active_workspace()
         if not workspace:
             return {
                 "success": False,
