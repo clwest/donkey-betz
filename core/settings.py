@@ -931,8 +931,8 @@ CELERY_TASK_ROUTES = {
     'core.tasks.process_approved_dreams': {'queue': 'long_running'},
     # Session 1004: Moved I/O-bound LLM API tasks off long_running (was saturating c=1)
     'core.tasks.run_agent_conversation': {'queue': 'default'},
-    'core.tasks.run_multi_agent_conversation': {'queue': 'default'},
-    'core.tasks.run_autonomous_thinking_cycle': {'queue': 'default'},
+    'core.tasks.run_multi_agent_conversation': {'queue': 'long_running'},  # Session 1029: OOM fix — loads 30 agents
+    'core.tasks.run_autonomous_thinking_cycle': {'queue': 'long_running'},  # Session 1029: OOM fix — heavy context gather
     'core.tasks.trigger_spider_conversations': {'queue': 'default'},
     'core.tasks.trigger_project_research': {'queue': 'default'},
     'core.tasks.agent_think_and_synthesize': {'queue': 'default'},
@@ -988,20 +988,19 @@ CELERY_TASK_ROUTES = {
     'core.tasks.backfill_conversation_embeddings': {'queue': 'ml'},
     # ML prediction enrichment — calls OpenAI embedding API per item
     'core.tasks.enrich_boardroom_ml_predictions': {'queue': 'ml'},
-    # Session 1004: Pipeline execution tasks — LLM calls, moved to default
+    # Session 1004: Pipeline execution tasks — LLM calls
     'core.tasks.process_high_scoring_opportunities': {'queue': 'default'},
     'core.tasks.process_spider_actions': {'queue': 'default'},
-    'core.tasks.process_hivemind_sessions': {'queue': 'default'},
-    'core.tasks.execute_approved_dreams_via_orchestration': {'queue': 'default'},
+    'core.tasks.process_hivemind_sessions': {'queue': 'long_running'},  # Session 1029: OOM fix — orchestration heavy
+    'core.tasks.execute_approved_dreams_via_orchestration': {'queue': 'long_running'},  # Session 1029: OOM fix — up to 10 dreams
     # Content pipeline tasks
     'core.tasks.process_content_ideas': {'queue': 'content'},
     'core.tasks.generate_weekly_opportunity_digest': {'queue': 'content'},
     # ai_core tasks — scrape external sites, initialize spiders
-    # Session 1004: Moved off long_running — I/O-bound scraping, not memory-bound.
-    # long_running (concurrency 1) was permanently blocked by these.
+    # Session 1004: Moved scraping off long_running — I/O-bound, not memory-bound.
     'ai_core.tasks.collect_real_opportunities': {'queue': 'default'},
     'ai_core.tasks.refresh_ai_content_opportunities': {'queue': 'default'},
-    'ai_core.tasks.warm_up_spider_network': {'queue': 'default'},
+    'ai_core.tasks.warm_up_spider_network': {'queue': 'long_running'},  # Session 1029: OOM fix — initializes 77 spiders
     # Session 1004: Agent exercise tasks — LLM API calls, moved to agents queue
     'core.tasks.run_market_monitoring_agents': {'queue': 'agents'},
     'core.tasks.run_blockchain_monitoring_agents': {'queue': 'agents'},
