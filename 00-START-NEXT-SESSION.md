@@ -2,7 +2,7 @@
 
 **Previous Session:** 1025 (Scoring Contract for SignalClusters)
 **Date:** February 17, 2026
-**Status:** 92 Agents | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **497 BLOGS** | **1,573 SIGNAL CLUSTERS (ALL SCORED)** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 39+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 269** | **Frontend Routes: 27** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED** | **BETTING DASHBOARD: 12 TABS POLISHED** | **DELIVERABLE DEDUP: LIVE** | **CONVERSATION DEDUP: LIVE** | **REMEDIATION SYSTEM: PAUSED** | **COST SAVINGS: ~$14/day** | **SEMANTIC SPIDER SEARCH: LIVE** | **EVIDENCE GATES: COMPLETE (4 LAYERS)** | **SCORING CONTRACT: LIVE (2-TRACK PIPELINE)**
+**Status:** 92 Agents | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **497 BLOGS** | **1,573 SIGNAL CLUSTERS (ALL SCORED)** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 39+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 269** | **Frontend Routes: 27** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED** | **BETTING DASHBOARD: 12 TABS POLISHED** | **DELIVERABLE DEDUP: LIVE** | **CONVERSATION DEDUP: LIVE** | **REMEDIATION: DISCOVERY ONLY (exec disabled, $9/day saved)** | **COST SAVINGS: ~$23/day** | **SEMANTIC SPIDER SEARCH: LIVE** | **EVIDENCE GATES: COMPLETE (4 LAYERS)** | **SCORING CONTRACT: LIVE (2-TRACK PIPELINE)**
 
 ---
 
@@ -175,13 +175,15 @@ Initiatives that reached Stage 5 via the skip-ahead bug (PR #1251) have Stage 3-
 ### PA Context Awareness — NEEDS WORK
 PA doesn't understand page context. When user says "I just created an image but it's not displaying" from Image Studio, PA asks generic clarifying questions instead of checking ImageHistory.
 
-### Remediation System — PAUSED (Session 1022)
-All 5 Celery Beat schedules commented out. 86 tasks in DB contain some valuable findings:
-- `_calculate_error_rate()` always returns 0.0
-- Multiple `AgentExecution` models across modules
-- `core/tasks.py` is 12,000+ lines
-- 1,200+ endpoints without docs
-Re-enable when agents have real workspace access. Consider surfacing valuable findings via HumanAttentionItem/Boardroom.
+### Remediation System — REDESIGNED (Session 1026)
+Discovery + assignment still running (finds real issues). Execution disabled — CodeGeneratorAgent was burning $9/day in empty sandbox. 80 open findings now surfaced via:
+```
+railway run python manage.py show_remediation_findings
+railway run python manage.py show_remediation_findings --priority P0 P1
+railway run python manage.py show_remediation_findings --verbose --limit 10
+```
+Fix findings in Claude Code sessions, then mark: `AuditFinding.objects.filter(id="<uuid>").update(status="fixed", fixed_by="Session XXXX")`
+See `docs/handoffs/SESSION_1026_REMEDIATION_REDESIGN.md`
 
 ### Dream Pipeline — NO-OP
 Zero approved dreams, zero DreamImplementations. Only $0.54/day so not urgent, but the entire dream->implementation pipeline is non-functional.
