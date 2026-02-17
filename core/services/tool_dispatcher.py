@@ -388,27 +388,26 @@ class ToolDispatcher:
         user_id: Optional[int],
         trace_id: str
     ) -> Dict[str, Any]:
-        """Handle web search tool."""
-        from core.agents.registry import get_agent_registry
+        """Handle web search tool — synchronous via Serper API."""
+        from core.tools.web_search import WebSearchTool
 
-        registry = get_agent_registry()
         query = payload.get('query', '')
+        search_tool = WebSearchTool()
+        result = search_tool.execute(query=query, max_results=5, search_type='text')
 
-        # Session 948: Use execute_agent instead of calling .run() on metadata dict
-        task_data = {'task': f"Search for: {query}"}
-        result = registry.execute_agent('ResearchAgent', task_data)
-
-        if result:
+        if result.get('success'):
+            data = result.get('data', {})
+            results = data.get('results', [])
             return {
                 'query': query,
-                'results': f'Research task queued (execution ID: {result}). '
-                           f'The ResearchAgent will process this asynchronously.',
-                'execution_id': result,
+                'results': results,
+                'total_results': len(results),
+                'search_methods_used': data.get('search_methods_used', []),
             }
         return {
             'query': query,
-            'results': 'ResearchAgent is not available. Try rephrasing your question '
-                       'for a direct answer.',
+            'results': [],
+            'error': result.get('error', 'Search failed'),
         }
 
     def _handle_opportunity_manager(
