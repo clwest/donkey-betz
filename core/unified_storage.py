@@ -30,8 +30,12 @@ class ComponentState(models.Model):
         return f"{self.component_name} - {self.user_id}"
 
 
-class UserProfile(models.Model):
-    """Unified user profile across all components"""
+class StorageUserProfile(models.Model):
+    """Unified user profile across all components.
+    Session 1026: Renamed from UserProfile to avoid RuntimeError conflict
+    with core.models.users.models.UserProfile (the canonical model).
+    This model has no DB table and is unused — kept for reference only.
+    """
     user_id = models.CharField(max_length=100, unique=True)
     profile_data = models.JSONField()
     completeness_score = models.FloatField(default=0.0)
@@ -189,7 +193,7 @@ class UnifiedStorageManager:
             completeness = self._calculate_profile_completeness(profile_data)
 
             # Update database
-            user_profile, created = UserProfile.objects.update_or_create(
+            user_profile, created = StorageUserProfile.objects.update_or_create(
                 user_id=user_id,
                 defaults={
                     'profile_data': profile_data,
@@ -229,11 +233,11 @@ class UnifiedStorageManager:
 
             # Load from database
             try:
-                user_profile = UserProfile.objects.get(user_id=user_id)
+                user_profile = StorageUserProfile.objects.get(user_id=user_id)
                 cache.set(f"profile_{user_id}", user_profile.profile_data, self.cache_timeout)
                 return user_profile.profile_data
 
-            except UserProfile.DoesNotExist:
+            except StorageUserProfile.DoesNotExist:
                 return None
 
         except Exception as e:
@@ -391,10 +395,10 @@ class UnifiedStorageManager:
         try:
             return {
                 'total_component_states': ComponentState.objects.count(),
-                'total_user_profiles': UserProfile.objects.count(),
+                'total_user_profiles': StorageUserProfile.objects.count(),
                 'total_actions': ActionHistory.objects.count(),
                 'pending_syncs': ComponentDataSync.objects.filter(sync_status='pending').count(),
-                'active_users_today': UserProfile.objects.filter(
+                'active_users_today': StorageUserProfile.objects.filter(
                     last_activity__gte=timezone.now() - timedelta(days=1)
                 ).count(),
                 'cache_status': 'connected' if cache.get('test_key') is None else 'connected'
