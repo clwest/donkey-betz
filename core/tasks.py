@@ -7092,18 +7092,9 @@ def _preflight_gather_agent_data(topic, participant_names):
     context_parts = []
     for agent_name in referenced_agents:
         try:
-            from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
-
-            # 60-second timeout per agent (thread-safe, works in Celery --pool=threads)
-            agent_result = None
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(router.route, agent_name, topic)
-                try:
-                    agent_result = future.result(timeout=60)
-                except FuturesTimeout:
-                    logger.warning(f"💬 [PREFLIGHT] {agent_name} timed out after 60s")
-                    result['failed_agents'].append(agent_name)
-                    continue
+            # Direct call — timeout handled by AgentRouter/OpenAI internally (120s).
+            # ThreadPoolExecutor breaks Django DB connections in child threads.
+            agent_result = router.route(agent_name, topic)
 
             if agent_result and agent_result.message:
                 # Truncate to 2000 chars to keep prompt manageable
@@ -7196,18 +7187,10 @@ def _handle_conversation_delegation(tool_call, system_user):
             return ''
 
         from core.agent_router import AgentRouter
-        from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
         router = AgentRouter(user=system_user)
 
-        # Thread-safe timeout (works in Celery --pool=threads)
-        result = None
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(router.route, specialist, task)
-            try:
-                result = future.result(timeout=60)
-            except FuturesTimeout:
-                logger.warning(f"💬 [DELEGATION] {specialist} timed out after 60s")
-                return f"\n\n[Delegation to {specialist} timed out. Reason from first principles instead.]"
+        # Direct call — timeout handled by AgentRouter/OpenAI internally (120s).
+        result = router.route(specialist, task)
 
         if result and result.message:
             msg = result.message[:2000]
