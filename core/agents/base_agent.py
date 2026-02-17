@@ -141,6 +141,61 @@ SPIDER_QUERY_TOOL = {
 }
 
 
+# Session 1018: JSON markers that indicate the LLM simulated tool calls as text
+# instead of using the proper tool_calls API
+_SIMULATED_TOOL_MARKERS = ['{"query":', '{"success":', '{"url":', '{"method":']
+
+
+def strip_simulated_tool_json(analysis: str) -> str:
+    """
+    Session 1018: Strip simulated JSON tool calls from LLM text output.
+
+    Some models (especially reasoning models) simulate tool calls as text
+    instead of using the API's tool_calls mechanism. This produces output
+    with raw JSON interspersed in the narrative. Detect and strip it.
+    """
+    if not analysis:
+        return analysis
+
+    # Check if analysis contains simulated tool markers
+    marker_count = sum(1 for m in _SIMULATED_TOOL_MARKERS if m in analysis)
+    if marker_count < 2:
+        return analysis  # Not enough markers to indicate simulation
+
+    # Strip lines that are pure JSON objects
+    cleaned_lines = []
+    in_json = False
+    brace_depth = 0
+
+    for line in analysis.split('\n'):
+        stripped = line.strip()
+        if not stripped:
+            if not in_json:
+                cleaned_lines.append(line)
+            continue
+
+        # Detect start of a simulated JSON tool block
+        if stripped.startswith('{') and any(m.lstrip('{') in stripped for m in _SIMULATED_TOOL_MARKERS):
+            brace_depth = stripped.count('{') - stripped.count('}')
+            in_json = brace_depth > 0  # Multi-line JSON continues; single-line ends here
+            continue
+
+        if in_json:
+            brace_depth += stripped.count('{') - stripped.count('}')
+            if brace_depth <= 0:
+                in_json = False
+            continue
+
+        cleaned_lines.append(line)
+
+    result = '\n'.join(cleaned_lines).strip()
+    # Collapse multiple blank lines
+    while '\n\n\n' in result:
+        result = result.replace('\n\n\n', '\n\n')
+
+    return result if result else analysis
+
+
 @dataclass
 class KnowledgeAttribution:
     """

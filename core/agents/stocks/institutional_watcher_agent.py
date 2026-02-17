@@ -17,7 +17,7 @@ import logging
 from typing import Dict, Any, List
 from datetime import datetime, timedelta, timezone as dt_timezone
 
-from core.agents.base_agent import BaseAgent, AgentResult, WEB_SEARCH_TOOL
+from core.agents.base_agent import BaseAgent, AgentResult, WEB_SEARCH_TOOL, strip_simulated_tool_json
 from core.agents.report_schemas import build_provenance, format_disclaimer
 from ml.auto_selection import TaskType
 
@@ -275,6 +275,9 @@ Focus on transactions that diverge from normal patterns."""
                     analysis = final_response.choices[0].message.content
                 else:
                     analysis = assistant_message.content or "No institutional analysis generated."
+
+                # Session 1018: Strip simulated JSON tool calls from text output
+                analysis = strip_simulated_tool_json(analysis)
 
                 execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
 
