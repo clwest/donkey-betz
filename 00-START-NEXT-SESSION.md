@@ -1,54 +1,46 @@
-# Session 1019 - Start Here
+# Session 1020 - Start Here
 
-**Previous Session:** 1018 (End-to-End Audit + Conversation Junk Fix + Initiative Fast-Track Fix)
+**Previous Session:** 1019 (Conversation Agent Delegation)
 **Date:** February 16, 2026
-**Status:** 92 Agents | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **497 BLOGS** | **1,488 SIGNAL CLUSTERS** | **INITIATIVE STAGES 1-5 UNBLOCKED** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 39+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 268** | **Frontend Routes: 27** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED** | **BETTING DASHBOARD: 12 TABS POLISHED** | **VIDEO STUDIO: 5 EDIT TOOLS** | **GOVERNMENT PAGE: 3 TABS + ASK A BILL RAG** | **CodeArtifact: PATCH-FIRST WORKFLOW LIVE** | **AGENT TIMEOUTS: FIXED** | **CONVERSATION JUNK: FIXED** | **FAST-TRACK STALL: FIXED**
+**Status:** 92 Agents | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **497 BLOGS** | **1,488 SIGNAL CLUSTERS** | **INITIATIVE STAGES 1-5 UNBLOCKED** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 39+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 268** | **Frontend Routes: 27** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED** | **BETTING DASHBOARD: 12 TABS POLISHED** | **VIDEO STUDIO: 5 EDIT TOOLS** | **GOVERNMENT PAGE: 3 TABS + ASK A BILL RAG** | **CodeArtifact: PATCH-FIRST WORKFLOW LIVE** | **AGENT TIMEOUTS: FIXED** | **CONVERSATION JUNK: FIXED** | **FAST-TRACK STALL: FIXED** | **CONVERSATION DELEGATION: LIVE**
 
 ---
 
-## Session 1018 Summary (Just Completed)
+## Session 1019 Summary (Just Completed)
 
-### Conversation Topic Junk Fix (PR #1239)
+### Conversation Agent Delegation (PRs #1244, #1245)
 
-20% of agent conversations (61/310 in 24h) were circular meta-discussions where agents discussed their own instructions as topics. Root cause: 751 `AgentKnowledgeSource` items with `[Learned]` prefix containing raw agent instructions were being selected as conversation topics.
+Agent conversations that reference other agents (e.g. "Scan competitor activity using ResearchAgent") previously produced zero-value output because participating agents had no way to invoke the referenced agent. Observed 3 times for the same topic.
 
-**Fix:**
-1. Excluded `[Learned]` and `EXTERNAL sources` items from knowledge source queries in both `run_agent_conversation` and `run_multi_agent_conversation` topic pickers
-2. Added instruction marker filter to reject topics containing `DO NOT`, `web_search`, `spider_query`, `[Synthesis]`, etc.
-3. Added cleanup of junk `AgentConversation` records to `cleanup_boardroom_junk` task
+**Part A - Pre-flight gathering:**
+- `_preflight_gather_agent_data()` scans topic for agent name references in `AgentRouter.AGENT_MAP`
+- Invokes up to 2 referenced agents via `router.route()`, injects results as `== PRE-GATHERED DATA ==` context blocks
+- Failed agents get `=== NO UPSTREAM DATA AVAILABLE ===` block to prevent hallucination
+- Applied to both `run_agent_conversation` and `run_multi_agent_conversation`
 
-**Result:** Junk topics dropped from 61 (19%) to 0 post-fix.
+**Part B - Mid-conversation delegation:**
+- `CONVERSATION_DELEGATION_TOOL` + `_handle_conversation_delegation()` allow LLM to request one delegation per conversation
+- Tool offered only on first 1-2 turns, only when preflight didn't already invoke agents
+- On tool call: execute via `AgentRouter.route()`, re-prompt speaker with results (no tools on re-prompt)
 
-### Initiative Fast-Track Stall Fix (PR #1240)
+**ThreadPoolExecutor fix (PR #1245):**
+- Initial implementation used ThreadPoolExecutor for timeout isolation
+- Broke Django DB connections in child threads -- results lost despite successful execution
+- Fixed by switching to direct calls (AgentRouter handles timeout internally at 120s)
 
-All 4 initiative auto-creation paths set `execution_speed='fast'`, which is designed to stop at Stage 2. Since every auto-created initiative got `fast`, 100% stalled at Stage 2.
+**Verified on Railway:** `_preflight_gather_agent_data("Scan competitor activity using ResearchAgent", ...)` successfully invoked ResearchAgent and gathered 2073 chars.
 
-**Root cause:** `can_auto_progress` returns False for `fast` speed at `stage >= 2`. All 4 creation services (ConversationInitiativePipeline, AutonomousActionExecutor, HiveMindExecutionPipeline, InitiativeIntegrationService) were hardcoding `execution_speed='fast'`.
+### PRs: #1244, #1245
 
-**Fix:**
-1. Changed all 4 creation paths from `'fast'` to `'balanced'` (normal 5-stage flow)
-2. Batch-updated 21 existing stalled initiatives (10 ACTIVE + 11 TRIAGE) from fast → balanced on Railway
+---
 
-**Result:** All 10 active initiatives now show `can_auto_progress=True`. Stages 3-5 should start progressing.
+## Session 1018 Summary
 
-### End-to-End System Audit
+### Conversation Junk Fix (PR #1239) + Initiative Fast-Track Stall Fix (PR #1240) + E2E Audit
 
-Comprehensive 24-hour audit of all autonomous subsystems:
-
-| Subsystem | 24h Activity | Health |
-|-----------|-------------|--------|
-| Agent Executions | 437 total, 83.5% success | Timeouts: 0 post-fix, .metadata: 0 post-fix |
-| Agent Conversations | 310 total, 309 legitimate | Junk topics: 0 post-fix (was 19%) |
-| Agent Dreams | 43 new, 949/982 promoted | Healthy |
-| Initiatives | 38 total, 10 ACTIVE unblocked | Fixed (was 100% stalled) |
-| Signal Clusters | 328 new (1,488 total) | Healthy |
-| Spider Data | 1,694 new (22,698 total) | All spider types active |
-| Celery Tasks | 49,676 events, 99.94% success | 0 failures |
-| Content Pipeline | 97 new blogs, 28 published | 101 deliberation sessions |
-| Body Systems | 1,431 heartbeats, 100% healthy | All 7 components green |
-| Code Artifacts | 35 pending review | Capture working |
-
-### PRs: #1239, #1240
+- Excluded `[Learned]` items from conversation topic pickers (junk 19% → 0%)
+- Changed initiative auto-creation from `execution_speed='fast'` to `'balanced'` (100% were stalling at Stage 2)
+- Comprehensive 24h audit: 99.94% Celery success, 83.5% agent success, all body systems green
 
 ---
 
@@ -89,7 +81,28 @@ Added `.metadata` property alias on `AgentResult`. Added `soft_time_limit=2700` 
 
 ## Verify Before Starting
 
-### 1. Initiative Progression (Session 1018)
+### 1. Conversation Delegation (Session 1019)
+- Check preflight is triggering on agent-referencing topics:
+  ```
+  railway run python manage.py shell -c "
+  from core.models_unified_system import AgentConversation
+  from django.utils import timezone; from datetime import timedelta
+  recent = AgentConversation.objects.filter(started_at__gte=timezone.now()-timedelta(hours=24))
+  print(f'Total conversations: {recent.count()}')
+  # Check logs for PREFLIGHT entries
+  "
+  ```
+- Check delegation count stays modest (not runaway):
+  ```
+  railway run python manage.py shell -c "
+  from core.models_unified_system import AgentExecution
+  from django.utils import timezone; from datetime import timedelta
+  recent = AgentExecution.objects.filter(created_at__gte=timezone.now()-timedelta(hours=24))
+  print(f'Total executions: {recent.count()}')
+  "
+  ```
+
+### 2. Initiative Progression (Session 1018)
 - Initiatives should be progressing past Stage 2 now:
   ```
   railway run python manage.py shell -c "
@@ -214,6 +227,11 @@ Initial accuracy is 70.2% (mostly NCAAB). Monitor by sport/model as more leagues
 - Import from `core.models` (NOT `core.models_unified_system`)
 - Field `name` (NOT `title`)
 - `can_auto_progress` returns False for `execution_speed='fast'` at stage >= 2
+
+**ThreadPoolExecutor + Django (Session 1019):**
+- Do NOT use `ThreadPoolExecutor` for `AgentRouter.route()` or other Django ORM operations
+- Child threads get separate DB connections, results can be silently lost
+- Use direct calls instead -- AgentRouter/OpenAI handle timeout internally (120s)
 
 **Cloudinary storage (Session 1015):**
 - `default_storage.save()` uploads directly to Cloudinary
