@@ -1,6 +1,6 @@
 # Personal Assistant (PA) System
 
-The PA is the platform's conversational interface — a single `UnifiedPAEntrypoint` that routes user queries through 37 intents to 51 tools, enriches responses with 8 intelligence services, and returns structured data + LLM analysis.
+The PA is the platform's conversational interface — a single `UnifiedPAEntrypoint` that routes user queries through 39 intents to 51 tools, enriches responses with 8 intelligence services, and returns structured data + LLM analysis. Session 1030: Production audit fixed 5 routing/payload issues — intent priority ordering, conversation memory persistence, and payload extraction for agent execution and crypto intents.
 
 ## Architecture
 
@@ -26,16 +26,17 @@ Two files handle everything:
 | 9 | pilots / gates | pilots_tool / gates_tool | experiment, pilot, gates |
 | 10 | user_feedback | (direct response) | not working, broken, bug |
 | 11 | reasoning | reasoning_engine_tool | analyze deeply, reflect on |
-| 12 | opportunities | opportunity_manager_tool | opportunity, job, gig, income |
-| 13 | content_review | content_review_tool | show blogs, blog titled, blog accuracy, triage blogs, batch publish |
+| 12 | sports_betting | sports_betting_tool | betting, odds, spread, moneyline, arbitrage, sharp action, wager, parlay (Session 1030: moved BEFORE opportunities) |
+| 13 | opportunities | opportunity_manager_tool | opportunity, job, gig, income |
+| 14 | content_review | content_review_tool | show blogs, latest blogs, blog titled, blog accuracy, triage blogs, batch publish, publish-ready (Session 1030: broadened patterns) |
 | 14 | generate_blog | generate_blog_tool | generate a blog, v2 blog, deliberated blog, generate content |
 | 15 | brainstorming | brainstorm_tool | brainstorm, panel, think tank |
 | 15 | image/video creation | agent tools | create image, generate video |
 | 16 | content_writing | content_writer_agent | write, draft, compose |
-| 17 | research | web_search | search, find, research, trending |
-| 18 | agent_execution | universal_agent_tool | run agent, execute agent |
+| 17 | agent_execution | universal_agent_tool | run/execute/invoke agent, {Name}Agent pattern (Session 1030: moved BEFORE research, added payload extraction) |
+| 18 | research | web_search | search, find, research, trending |
 | 19 | initiatives | initiative_tool | initiative, project, pipeline (runs BEFORE boardroom) |
-| 20 | crypto_price | spider_data_tool | btc, bitcoin, ethereum, crypto, coin price, how much is |
+| 20 | crypto_price | spider_data_tool | btc, bitcoin, ethereum, crypto, coin price, how much is (Session 1030: uses by_spider/coingecko, not keyword search) |
 | 21 | stock_intelligence | stock_intelligence_tool | stock, market brief, SEC filing |
 | 22 | spider_data | spider_data_tool | spider, crawled, news feed |
 | 23 | execution_history | execution_history_tool | agent history, agents been doing, agent conversations, deliberations |
@@ -94,6 +95,8 @@ PA queries run asynchronously to avoid Railway's ~30s proxy timeout:
 
 `ChatConversation` model with `conversation_id`, `session_title`, auto-title generation via LLM on first message. ChatGPT-style sidebar in GlobalPADock and CommandCenterPage.
 
+**Session 1030: DB-backed memory.** `_load_conversation_history_from_db()` loads last 10 `ChatConversation` rows on PA init, so conversation context survives Celery worker recycling (`max_tasks_per_child`). Previously, `_conversation_history` was in-memory only and lost on every worker restart.
+
 ## Key Tool Actions
 
 **boardroom_tool:** stats (top 10 critical/high items), list_attention, list_decisions, approve/ignore/promote/reject
@@ -102,7 +105,7 @@ PA queries run asynchronously to avoid Railway's ~30s proxy timeout:
 **initiative_tool:** list (with owner filter: me/unowned/agent), stats, detail (includes owner), audit (Jaccard similarity clustering), create, update_status (ACTIVE/ON_HOLD/COMPLETED/ARCHIVED), advance (next pipeline stage), complete_action_item, assign_owner (set owner agent or user)
 **opportunity_manager_tool:** list, get, stats, update_status (active/pending/applied/accepted/rejected/expired)
 **stock_intelligence_tool:** overview, briefs, alerts, predictions, sec_filings
-**spider_data_tool:** recent, by_type, summary, trigger (dispatch spider run by category via Celery)
+**spider_data_tool:** recent, by_type, by_spider (Session 1030: includes processed_data for first 3 items), summary, trigger (dispatch spider run by category via Celery)
 
 ## Triage Mode
 
