@@ -481,10 +481,12 @@ class BaseAgent(ABC, TimeTravelMixin):
         """Lazy-load OpenAI client with timeout to prevent hanging requests."""
         if self._client is None:
             from django.conf import settings
-            # Session 411: Add 120 second timeout to prevent indefinite hangs
+            # Session 411: Add timeout to prevent indefinite hangs
+            # Session 1020: Reduced from 120s to 60s — if OpenAI hasn't responded
+            # in 60s it's having issues; agents with tool loops compound this delay
             self._client = OpenAI(
                 api_key=settings.OPENAI_API_KEY,
-                timeout=120.0  # 2 minute timeout for API calls
+                timeout=60.0  # 1 minute timeout for API calls
             )
         return self._client
 

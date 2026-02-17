@@ -429,13 +429,18 @@ class ConversationInitiativePipeline:
                     return result
 
             # Dedup check: reuse existing similar initiative instead of creating duplicate
-            from core.services.initiative_circuit_breaker import find_similar_initiative
+            from core.services.initiative_circuit_breaker import find_similar_initiative, can_create_initiative
             existing = find_similar_initiative(initiative_name)
             if existing:
                 logger.info(f"[pipeline] Found similar initiative '{existing.name}' — reusing instead of creating duplicate")
                 initiative = existing
                 result.initiative_id = str(initiative.id)
                 result.initiative_name = initiative.name
+            elif not can_create_initiative():
+                # Session 1020: Circuit breaker check (was missing — bypassed the breaker)
+                logger.warning(f"[Session 1020] Circuit breaker blocked conversation initiative: {initiative_name[:60]}")
+                result.errors.append("Initiative creation blocked by circuit breaker")
+                return result
             else:
                 # Ensure unique name
                 base_name = initiative_name
@@ -686,6 +691,39 @@ def handle_stage_task_completion(
             if stage.status in ['PENDING', 'DRAFT']:
                 stage.status = 'IN_REVIEW'
                 result['stage_updated'] = True
+
+            # Session 1020: Create stage document if missing (fixes Stage 2+ stall)
+            # Stage 1 gets a document at initialization, but Stage 2+ never did.
+            # Without a document, the hard invariant at line 719 prevents auto-approval.
+            if not stage.document and task_output:
+                try:
+                    from core.models_unified_system import SelfBlog
+                    # Determine content type for stage name lookup
+                    content_type = 'document'
+                    try:
+                        deliv = Deliverable.objects.filter(initiative=initiative).first()
+                        if deliv and deliv.metadata and deliv.metadata.get('content_type'):
+                            content_type = deliv.metadata['content_type']
+                    except Exception:
+                        pass
+                    stage_config = CONTENT_TYPE_STAGES.get(content_type, CONTENT_TYPE_STAGES['document'])
+                    stage_info = stage_config.get(stage_num, {})
+                    stage_label = stage_info.get('name', f'Stage {stage_num}')
+
+                    stage_doc = SelfBlog.objects.create(
+                        title=f"{initiative.name} - Stage {stage_num}: {stage_label}",
+                        intro=task_output[:500],
+                        full_text=task_output,
+                        category='initiative_stage',
+                        content_type='internal',
+                        status='draft',
+                        initiative=initiative,
+                        initiative_stage=stage,
+                    )
+                    stage.document = stage_doc
+                    logger.info(f"[Session 1020] Created Stage {stage_num} document: {stage_doc.id}")
+                except Exception as doc_err:
+                    logger.warning(f"[Session 1020] Could not create Stage {stage_num} document: {doc_err}")
 
             # Enrich the Initiative's Deliverable with task output
             if task_output:
