@@ -949,6 +949,34 @@ Return a comprehensive competitive landscape analysis with DOMAIN-RELEVANT data.
                     # Session 350: Pass project_context for domain-aware synthesis
                     synthesis = self._synthesize_analysis(task, all_competitor_data, project_context)
 
+                    # Session 1023: Check if evidence gate blocked synthesis
+                    if synthesis.get('status') == 'insufficient_evidence':
+                        execution_time = int((time.time() - start_time) * 1000)
+                        gate_reason = synthesis.get('gate_reason', 'Insufficient evidence')
+                        logger.info(f"[Evidence Gate] Returning insufficient_evidence: {gate_reason}")
+                        return AgentResult(
+                            success=True,  # Not an error — just insufficient data
+                            message=(
+                                f"Insufficient domain-relevant data to synthesize analysis. "
+                                f"{gate_reason}\n\n"
+                                f"Recommendations:\n"
+                                + "\n".join(f"- {a}" for a in synthesis.get('recommended_actions', []))
+                            ),
+                            data={
+                                'type': 'insufficient_evidence',
+                                'domain_relevance': synthesis.get('domain_relevance', {}),
+                                'raw_data': synthesis.get('raw_data', []),
+                                'gate_reason': gate_reason,
+                                'recommended_actions': synthesis.get('recommended_actions', []),
+                                'data_points_analyzed': synthesis.get('data_points_analyzed', 0),
+                                'sources_used': synthesis.get('sources_used', 0),
+                            },
+                            agent_name=self.name,
+                            execution_time_ms=execution_time,
+                            decisions_made=self._tt_decision_count,
+                            tool_calls=tool_calls_made
+                        )
+
                     # Session 683: Run ML analysis on competitor data
                     ml_analysis = {'ml_used': False}
                     try:
@@ -1499,6 +1527,68 @@ Return as JSON with keys: strengths, weaknesses, opportunities, threats (each an
         data_relevance_score = 0
         if len(all_items) > 0:
             data_relevance_score = min(100, int((domain_relevant_count / len(all_items)) * 100))
+
+        # Session 1023: Minimum Evidence Gate — block synthesis when data is insufficient
+        # Prevents "beautiful nonsense": structured JSON analysis from zero-relevance data
+        MIN_DATA_POINTS = 3
+        MIN_DOMAIN_RELEVANCE = 15  # At least 15% of data must be domain-relevant
+
+        if len(all_items) < MIN_DATA_POINTS:
+            logger.warning(
+                f"[Evidence Gate] Blocking synthesis: only {len(all_items)} data points "
+                f"(minimum: {MIN_DATA_POINTS})"
+            )
+            return {
+                'status': 'insufficient_evidence',
+                'query': task,
+                'analysis': None,
+                'data_points_analyzed': len(all_items),
+                'sources_used': len(all_data),
+                'raw_data': all_items,
+                'domain_relevance': {
+                    'score': data_relevance_score,
+                    'domain_relevant_items': domain_relevant_count,
+                    'total_items': len(all_items),
+                    'primary_domain': (project_context or {}).get('primary_domain', 'general_startup'),
+                    'is_domain_specific': False,
+                },
+                'gate_reason': f'Only {len(all_items)} data points collected (minimum: {MIN_DATA_POINTS})',
+                'recommended_actions': [
+                    'Expand spider network coverage for this domain',
+                    'Try broader search queries',
+                    'Run targeted primary research',
+                ],
+            }
+
+        if domain_tags and data_relevance_score < MIN_DOMAIN_RELEVANCE and domain_relevant_count == 0:
+            logger.warning(
+                f"[Evidence Gate] Blocking synthesis: {data_relevance_score}% domain relevance "
+                f"({domain_relevant_count}/{len(all_items)} items), 0 domain matches"
+            )
+            return {
+                'status': 'insufficient_evidence',
+                'query': task,
+                'analysis': None,
+                'data_points_analyzed': len(all_items),
+                'sources_used': len(all_data),
+                'raw_data': all_items,
+                'domain_relevance': {
+                    'score': data_relevance_score,
+                    'domain_relevant_items': domain_relevant_count,
+                    'total_items': len(all_items),
+                    'primary_domain': (project_context or {}).get('primary_domain', 'general_startup'),
+                    'is_domain_specific': False,
+                },
+                'gate_reason': (
+                    f'0 of {len(all_items)} data points matched domain tags '
+                    f'{domain_tags[:5]}. Analysis would be hallucinated.'
+                ),
+                'recommended_actions': [
+                    'Add more relevant spiders for this domain',
+                    'Verify domain tags are correct for this project',
+                    'Consider targeted web search with domain-specific queries',
+                ],
+            }
 
         # Build analysis prompt
         items_text = "\n".join([
