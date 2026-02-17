@@ -2703,6 +2703,25 @@ def backfill_spider_embeddings(batch_size: int = 200):
         return {'success': False, 'error': str(e)}
 
 
+@shared_task(name='backfill_signal_scores')
+def backfill_signal_scores():
+    """Session 1025: Score all existing SignalClusters that have default scores."""
+    from core.models_signal_intelligence import SignalCluster
+    from core.services.content_scoring_service import ContentScoringService
+
+    scorer = ContentScoringService()
+    clusters = SignalCluster.objects.filter(reach_score=0.0, intent_score=0.0)
+    updated = 0
+    for cluster in clusters.iterator():
+        scores = scorer.score_cluster(cluster)
+        for field, value in scores.items():
+            setattr(cluster, field, value)
+        cluster.save(update_fields=list(scores.keys()))
+        updated += 1
+    logger.info(f"Scored {updated} signal clusters")
+    return f"Scored {updated} clusters"
+
+
 @shared_task
 def execute_single_spider_lightweight(spider_name: str):
     """
