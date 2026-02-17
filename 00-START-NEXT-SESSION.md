@@ -1,46 +1,52 @@
-# Session 1029 - Start Here
+# Session 1030 - Start Here
 
-**Previous Session:** 1029 (OOM Fix + Agent Health Audit)
+**Previous Session:** 1030 (PA Routing & Memory Fixes)
 **Date:** February 17, 2026
-**Status:** 92 Agents | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **497 BLOGS** | **1,573 SIGNAL CLUSTERS (ALL SCORED)** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 39+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 269** | **Frontend Routes: 27** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED** | **BETTING DASHBOARD: 12 TABS POLISHED** | **DELIVERABLE DEDUP: LIVE** | **CONVERSATION DEDUP: LIVE** | **REMEDIATION: DISCOVERY ONLY** | **AGENT WASTE: ALL PATHS CLOSED** | **COST TARGET: ~$6/day** | **SEMANTIC SPIDER SEARCH: LIVE** | **EVIDENCE GATES: COMPLETE (4 LAYERS)** | **SCORING CONTRACT: LIVE (2-TRACK PIPELINE)** | **OOM FIX: LIVE** | **35 THRIVING AGENTS, 6 BOUNDED**
+**Status:** 92 Agents | 79 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **497 BLOGS** | **1,573 SIGNAL CLUSTERS (ALL SCORED)** | **Workspace: 9 TABS** | **PA Tools: 97** | **PA Intents: 39+** | **Enrichment Services: 8** | **ALL 4 DESKS RUNNING (5/5 SPORTS AGENTS)** | **43 AGENTS PERSIST TO DELIVERABLE** | **Celery Tasks: 269** | **Frontend Routes: 27** | **6 Sports Leagues w/ Predictions** | **SPORTS PIPELINE 100% AUTOMATED** | **BETTING DASHBOARD: 12 TABS POLISHED** | **DELIVERABLE DEDUP: LIVE** | **CONVERSATION DEDUP: LIVE** | **REMEDIATION: DISCOVERY ONLY** | **AGENT WASTE: ALL PATHS CLOSED** | **COST TARGET: ~$6/day** | **SEMANTIC SPIDER SEARCH: LIVE** | **EVIDENCE GATES: COMPLETE (4 LAYERS)** | **SCORING CONTRACT: LIVE (2-TRACK PIPELINE)** | **OOM FIX: LIVE** | **35 THRIVING AGENTS, 6 BOUNDED** | **PA ROUTING: 5 FIXES LIVE** | **PA CONVERSATION MEMORY: DB-BACKED**
 
 ---
 
-## Session 1029 Summary (Just Completed)
+## Session 1030 Summary (Just Completed)
 
-### OOM Fix + Agent Health Audit (PRs #1282, #1283, #1284, #1285)
+### PA Routing & Memory Fixes (PRs #1287, #1288, #1289)
 
-**Problem 1: celery-worker OOM crashes** — 3 crashes in 18 min. 5 heavy tasks (150-500MB) on 512MB container.
+**Problem:** Production PA audit (12 test messages via Railway API) revealed 5 routing/payload failures — blog queries fell to `general`, agent execution routed to `research`, crypto search returned 0, conversation memory lost on worker recycle, sports betting misrouted to job opportunities.
 
-**Problem 2: Waste agents still running** — Session 1027 only fixed 1 of 3 dispatch paths. CodeGeneratorAgent still ran 96 times/day ($8.72) via `AGENT_WORKSPACE_REGISTRY` and `workspace_autopilot_tick`.
-
-**Problem 3: Struggling agents** — 6 agents below 80% success. Root cause: unbounded task descriptions causing 45-min timeouts, and missing spider data types.
+**Root causes:** Intent keyword priority ordering (generic terms matched before specific intents) and missing payload builders for `agent_execution` and `crypto_price`.
 
 **Fixes:**
 
-1. **PR #1282 — OOM Fix** (5 tasks rerouted default → long_running)
-   - `run_multi_agent_conversation`, `run_autonomous_thinking_cycle`, `process_hivemind_sessions`, `execute_approved_dreams_via_orchestration`, `warm_up_spider_network`
+1. **PR #1287 — Core 5 Fixes**
+   - Sports betting keywords check moved before generic "opportunities"
+   - Broader blog patterns + auto-set `type='blog'` for SelfBlog queries
+   - Publish-ready guard (routes to `recent`, not `publish` action)
+   - Agent execution check moved before research + regex pattern
+   - Crypto price switched to `by_spider` action (CoinGecko processed_data)
+   - Conversation memory: loads last 10 ChatConversation rows from DB on init
+   - SelfBlog counts added to stats response
+   - `processed_data` included in by_spider results (first 3 items)
 
-2. **PR #1283 — Close Secondary Waste Paths**
-   - Removed CodeGeneratorAgent + AudioAgent from `AGENT_WORKSPACE_REGISTRY`
-   - Disabled 2 remediation triggers in `metrics_action_trigger.py`
+2. **PR #1288 — Routing Refinements**
+   - Agent execution regex: removed `\b` before "agent" (no word boundary in "researchagent")
+   - Blog "show me" routing: added latest/recent/newest/show me as `recent` action before `details`
 
-3. **PR #1284 — Revenue Trigger**
-   - Disabled `zero_revenue_7d` trigger (spawned 62+ "no revenue" runs/day)
+3. **PR #1289 — Agent Execution Payload**
+   - Extracts `agent_name` (preserving PascalCase) and `task` from messages like "run ResearchAgent to find AI trends"
 
-4. **PR #1285 — Struggling Agent Fixes**
-   - Bounded TrendAnalysisAgent task (0% → expected ~80%): "Top 3 trends, 500 words"
-   - Bounded CompetitorAnalysisAgent task (prevent "Step 3 audit" reinterpretation)
-   - Bounded CustomerResearchAgent task (explicit "no data" instruction)
-   - Replaced CodeGeneratorAgent in workspace_autopilot + dream pipeline
-   - Disabled AudioAgent TTS in podcast auto-generation
+**All 5 tests verified on Railway production.**
 
-**Key discovery:** Three parallel scheduling systems dispatch agents independently:
-- System A: `run_*_agents()` group schedules
-- System B: `AGENT_WORKSPACE_REGISTRY` / `agent_category_rotation()`
-- System C: `MetricsActionTrigger` condition-based triggers
+See `docs/handoffs/SESSION_1030_PA_ROUTING_AND_MEMORY_FIXES.md`
 
-See `docs/handoffs/SESSION_1029_OOM_FIX_AND_AGENT_HEALTH.md`
+---
+
+## Session 1029 Summary
+
+### OOM Fix + Agent Health Audit (PRs #1282, #1283, #1284, #1285)
+
+- 5 heavy tasks rerouted default → long_running (celery-worker OOM fix)
+- All waste agent dispatch paths closed (CodeGeneratorAgent, AudioAgent, OpportunityScoringAgent)
+- 6 struggling agents bounded (TrendAnalysis, Competitor, Customer)
+- See `docs/handoffs/SESSION_1029_OOM_FIX_AND_AGENT_HEALTH.md`
 
 ---
 
@@ -53,16 +59,6 @@ See `docs/handoffs/SESSION_1029_OOM_FIX_AND_AGENT_HEALTH.md`
 - Removed AudioAgent from `run_content_creation_agents`
 - Bounded WorkflowAgent and OpportunityPipelineAgent tasks
 - See `docs/handoffs/SESSION_1027_AGENT_EXECUTION_AUDIT.md`
-
----
-
-## Session 1025 Summary
-
-### Scoring Contract: Reach, Intent & Replicability (PRs #1267, #1268, #1269)
-
-- Added 5 new fields to `SignalCluster` + rule-based `ContentScoringService`
-- 1,573 clusters scored: attention=604, intent=169, unclassified=800
-- See `docs/handoffs/SESSION_1025_SCORING_CONTRACT.md`
 
 ---
 
@@ -82,7 +78,7 @@ See `docs/handoffs/SESSION_1029_OOM_FIX_AND_AGENT_HEALTH.md`
 | Frontend Routes | 27 |
 | Agents Persisting Output | 43 (via `_save_to_deliverable()` with 4h dedup) |
 | PA Tools | 97 |
-| PA Intents | 39 |
+| PA Intents | 39+ (5 routing fixes in Session 1030) |
 | Enrichment Services | 8 |
 | Sports Leagues | 6 with predictions (NCAAB, NHL, EPL, La Liga, MLS, NCAAF) |
 | Active Initiatives | 3 (all Stage 2) |
@@ -94,12 +90,22 @@ See `docs/handoffs/SESSION_1029_OOM_FIX_AND_AGENT_HEALTH.md`
 | Spider Search | Semantic (pgvector KNN) primary, keyword fallback |
 | Evidence Gates | 4 layers complete (Layers 1-3 defensive + root cause fix) |
 | Scoring Contract | Live — reach/intent/replicability/source_confidence/track on all clusters |
+| PA Conversation Memory | DB-backed (last 10 turns survive worker recycle) |
 
 ---
 
 ## Verify Before Starting
 
-### 1. Agent Health (Session 1029)
+### 1. PA Routing (Session 1030)
+```
+curl -s -X POST "https://donkey-betz-platform-production.up.railway.app/api/pa/chat/" \
+  -H "Authorization: Token 0cdc1c72dba99ea637485076ee952d571440aa30" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"show me the latest blogs"}'
+# Poll with task_id, expect: intent=content_review, action=recent
+```
+
+### 2. Agent Health (Session 1029)
 ```
 railway run python manage.py shell -c "
 from core.models_unified_system import AgentExecution
@@ -119,21 +125,6 @@ for name in ['CodeGeneratorAgent', 'AudioAgent', 'TrendAnalysisAgent', 'Workflow
 "
 ```
 - Expect: CodeGeneratorAgent=0, AudioAgent=0, TrendAnalysis>50% success, total<$8
-
-### 2. Bounded Tasks Working (Session 1029)
-```
-railway run python manage.py shell -c "
-from core.models_unified_system import AgentExecution
-from django.utils import timezone; from datetime import timedelta
-since = timezone.now() - timedelta(hours=24)
-# Check for new bounded task format
-ta = AgentExecution.objects.filter(agent__name='TrendAnalysisAgent', task__startswith='Summarize the top 3', created_at__gte=since)
-print(f'TrendAnalysis bounded tasks: {ta.count()} ({ta.filter(status=\"completed\").count()} ok)')
-ca = AgentExecution.objects.filter(agent__name='CompetitorAnalysisAgent', task__startswith='List 3 recent', created_at__gte=since)
-print(f'CompetitorAnalysis bounded tasks: {ca.count()} ({ca.filter(status=\"completed\").count()} ok)')
-"
-```
-- Expect: Bounded tasks appearing with higher success rate than old tasks
 
 ### 3. Semantic Search Health (Session 1024)
 ```
@@ -155,6 +146,15 @@ print('PASS' if results and results[0]['matching_terms'] == ['semantic_match'] e
 ---
 
 ## Known Issues / Open Items
+
+### PA Tool Timeout — NEEDS WORK
+`universal_agent_tool` has 30s timeout — too short for LLM-based agents (ResearchAgent times out). Intent routing works but execution gets killed.
+
+### PA Context Awareness — NEEDS WORK
+PA doesn't understand page context. When user says "I just created an image but it's not displaying" from Image Studio, PA asks generic clarifying questions instead of checking ImageHistory.
+
+### PA Crypto Data Formatting — MINOR
+CoinGecko data returns but LLM summary shows top market cap coin (Hyperliquid) instead of extracting the specific coin the user asked about. Needs better prompt engineering or pre-filtering.
 
 ### Three Dispatch Systems (Session 1029) — MAPPED
 Agents are dispatched from 3 independent systems. ALL waste paths now closed:
@@ -181,9 +181,6 @@ Each of 20+ provenance-tracked agents should compute `domain_match_rate` and pas
 
 ### Rubber-Stamped Initiatives — NEEDS AUDIT
 Initiatives that reached Stage 5 via the skip-ahead bug (PR #1251) have Stage 3-5 docs generated out of order with no real data.
-
-### PA Context Awareness — NEEDS WORK
-PA doesn't understand page context. When user says "I just created an image but it's not displaying" from Image Studio, PA asks generic clarifying questions instead of checking ImageHistory.
 
 ### Remediation System — REDESIGNED (Session 1026/1027)
 Discovery + assignment still running. Execution disabled. 80 open findings surfaced via:
@@ -214,6 +211,7 @@ Zero approved dreams, zero DreamImplementations. Only $0.54/day so not urgent.
 - CodeGeneratorAgent: **ALL PATHS CLOSED** (PRs #1273, #1283, #1285)
 - Struggling agent timeouts: **BOUNDED** (PR #1285)
 - OOM crashes: **FIXED** (PR #1282)
+- PA routing failures: **FIXED** (PRs #1287, #1288, #1289)
 - Remaining: assorted agent failures (~10/day, low cost)
 
 ### CodeArtifact v2 — DEFERRED
@@ -231,6 +229,17 @@ Initial accuracy is 70.2% (mostly NCAAB). Monitor by sport/model.
 ## Critical Patterns & Gotchas
 
 **Django settings module:** `core.settings` (NOT `config.settings`).
+
+**PA intent ordering (Session 1030):**
+- `_detect_intent_and_route()` checks keywords top-to-bottom — earlier matches win
+- Specific intents (sports_betting, agent_execution) must come BEFORE generic ones (opportunities, research)
+- Compound agent names like "ResearchAgent" become "researchagent" in lowercase — no word boundary before "agent"
+- "show me" matches `details` action — specific phrases like "latest/recent/newest" must be checked first
+
+**PA conversation memory (Session 1030):**
+- `_load_conversation_history_from_db()` loads last 10 ChatConversation turns on init
+- Survives Celery worker recycling (previously lost on every `max_tasks_per_child` restart)
+- Each PA instance is user-scoped (stored in `_pa_instances` dict keyed by user)
 
 **Three agent dispatch systems (Session 1029):**
 - System A: `run_*_agents()` group schedules (tasks.py) — 19 schedules
