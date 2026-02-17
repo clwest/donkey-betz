@@ -25,6 +25,7 @@ from django.utils import timezone
 
 from core.models import SpiderData, Agent
 from core.models_signal_intelligence import SignalCluster, AutoTopic
+from core.services.content_scoring_service import ContentScoringService
 
 logger = logging.getLogger(__name__)
 
@@ -319,6 +320,8 @@ class SignalAggregationService:
                     existing.status = 'active'
                     existing.confirmed_at = timezone.now()
                 existing.save()
+                # Score the updated cluster
+                self._apply_scores(existing)
                 created.append(existing)
                 logger.info(f"Updated existing cluster: {existing.name}")
             else:
@@ -340,10 +343,23 @@ class SignalAggregationService:
                     confirmed_at=timezone.now() if (strength >= 0.5 and confidence >= 0.5) else None,
                     expires_at=timezone.now() + timedelta(days=3),
                 )
+                # Score the new cluster
+                self._apply_scores(cluster)
                 created.append(cluster)
-                logger.info(f"Created new cluster: {cluster.name} (strength={strength:.2f})")
+                logger.info(f"Created new cluster: {cluster.name} (strength={strength:.2f}, track={cluster.track})")
 
         return created
+
+    def _apply_scores(self, cluster: SignalCluster) -> None:
+        """Apply content scoring to a cluster and persist."""
+        try:
+            scorer = ContentScoringService()
+            scores = scorer.score_cluster(cluster)
+            for field, value in scores.items():
+                setattr(cluster, field, value)
+            cluster.save(update_fields=list(scores.keys()))
+        except Exception as e:
+            logger.warning(f"Failed to score cluster {cluster.id}: {e}")
 
     def _calculate_source_breakdown(self, signals: List[Dict]) -> Dict[str, int]:
         """Calculate signal count per source."""

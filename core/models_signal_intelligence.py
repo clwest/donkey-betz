@@ -109,6 +109,35 @@ class SignalCluster(models.Model):
         help_text="Time-sensitivity of this pattern (0-1)"
     )
 
+    # Scoring contract fields (Session 1025)
+    reach_score = models.FloatField(
+        default=0.0,
+        help_text="0-1: viral/audience potential"
+    )
+    intent_score = models.FloatField(
+        default=0.0,
+        help_text="0-1: commercial/actionable potential"
+    )
+    replicability_score = models.FloatField(
+        default=0.0,
+        help_text="0-1: can we act on this repeatedly"
+    )
+    source_confidence = models.FloatField(
+        default=0.0,
+        help_text="0-1: trustworthiness of sources"
+    )
+    TRACK_CHOICES = [
+        ('attention', 'Attention Radar'),
+        ('intent', 'Intent Engine'),
+        ('unclassified', 'Unclassified'),
+    ]
+    track = models.CharField(
+        max_length=20,
+        default='unclassified',
+        choices=TRACK_CHOICES,
+        help_text="Pipeline track: attention (content) or intent (micro-products)"
+    )
+
     # Keywords extracted from signals
     keywords = models.JSONField(
         default=list,
