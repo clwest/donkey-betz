@@ -37,6 +37,27 @@ logger = logging.getLogger(__name__)
 # Feature flag (also defined in conversation_orchestrator.py)
 ENABLE_ACTION_DISPATCH = True
 
+# Session 1031: Task-agent routing overrides.
+# When a task's text matches one of these patterns, force-reroute to the
+# specialist agent instead of whatever the LLM suggested.  Prevents
+# WorkflowAgent / VideoAgent / DevOpsAgent from receiving competitor audits,
+# trend analyses, etc. they cannot handle.
+TASK_ROUTING_OVERRIDES = [
+    # (compiled regex, correct agent name)
+    (re.compile(r'competitor\s+(audit|analysis|landscape|benchmark)', re.I), 'CompetitorAnalysisAgent'),
+    (re.compile(r'trend\s+(analysis|report|summary)', re.I), 'TrendAnalysisAgent'),
+    (re.compile(r'customer\s+(research|interview|persona)', re.I), 'CustomerResearchAgent'),
+    (re.compile(r'brand\s+(strategy|positioning|audit)', re.I), 'BrandStrategyAgent'),
+    (re.compile(r'market(ing)?\s+(strategy|plan|recommendation)', re.I), 'MarketingStrategyAgent'),
+]
+
+# Agents that should NEVER receive research/analysis tasks dispatched from
+# conversation next_steps.  These are infrastructure or production agents.
+NON_RESEARCH_AGENTS = frozenset({
+    'WorkflowAgent', 'VideoAgent', 'CodeGeneratorAgent', 'DevOpsAgent',
+    'FullStackDeveloperAgent', 'CodeReviewAgent', 'ContentDistributionAgent',
+})
+
 
 @dataclass
 class ParsedAction:
@@ -178,6 +199,47 @@ class ConversationActionDispatcher:
 
         return False, f"Unknown agent: {agent_name}"
 
+    @staticmethod
+    def _apply_routing_override(agent_name: str, task_text: str) -> str:
+        """
+        Session 1031: Force-reroute tasks to the correct specialist agent.
+
+        When the LLM assigns a specialist task (e.g. competitor audit) to a
+        non-specialist agent (e.g. WorkflowAgent), override the routing.
+        """
+        for pattern, correct_agent in TASK_ROUTING_OVERRIDES:
+            if pattern.search(task_text):
+                if agent_name != correct_agent and agent_name in NON_RESEARCH_AGENTS:
+                    logger.info(
+                        f"[routing-override] Rerouting '{task_text[:60]}' "
+                        f"from {agent_name} -> {correct_agent}"
+                    )
+                    return correct_agent
+        return agent_name
+
+    @staticmethod
+    def _recently_dispatched(agent_name: str, task_text: str) -> bool:
+        """
+        Session 1031: Check if the same agent already ran a very similar task
+        in the last 2 hours.  Prevents the same competitor audit from being
+        dispatched dozens of times.
+        """
+        try:
+            from django.utils import timezone as _tz
+            from datetime import timedelta
+            from core.models_unified_system import AgentExecution
+
+            cutoff = _tz.now() - timedelta(hours=2)
+            # Use the first 80 chars of the task as a similarity key
+            task_prefix = task_text[:80]
+            return AgentExecution.objects.filter(
+                agent__name=agent_name,
+                created_at__gte=cutoff,
+                task__startswith=task_prefix,
+            ).exists()
+        except Exception:
+            return False  # fail-open: don't block dispatches on DB errors
+
     def dispatch_actions(
         self,
         conversation_id: str,
@@ -227,6 +289,9 @@ class ConversationActionDispatcher:
 
         result.total_actions = len(next_steps)
 
+        # Session 1031: Track dispatched (agent, task_prefix) for dedup within this batch
+        dispatched_keys: set = set()
+
         # Parse and dispatch each action
         for step in next_steps:
             parsed = self.parse_next_step(step)
@@ -244,10 +309,30 @@ class ConversationActionDispatcher:
                 result.errors.append(agent_or_error)
                 continue
 
+            agent_name = agent_or_error
+            task_text = parsed.task
+
+            # Session 1031: Routing override — force-reroute specialist tasks
+            agent_name = self._apply_routing_override(agent_name, task_text)
+
+            # Session 1031: Dedup within this dispatch batch
+            dedup_key = (agent_name, task_text[:80].lower())
+            if dedup_key in dispatched_keys:
+                result.skipped_count += 1
+                logger.info(f"[dispatch] Dedup skip: {agent_name} already has similar task")
+                continue
+            dispatched_keys.add(dedup_key)
+
+            # Session 1031: Cross-batch dedup — skip if same agent ran similar task recently
+            if self._recently_dispatched(agent_name, task_text):
+                result.skipped_count += 1
+                logger.info(f"[dispatch] Recent-dedup skip: {agent_name} ran similar task in last 2h")
+                continue
+
             # Dispatch the action
             dispatch_result = self._dispatch_to_agent(
-                agent_name=agent_or_error,
-                task=parsed.task,
+                agent_name=agent_name,
+                task=task_text,
                 conversation_id=conversation_id,
                 participants=participants,
                 context=context
