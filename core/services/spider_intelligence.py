@@ -11,13 +11,17 @@ This service provides:
 - Data aggregation and summarization
 """
 
-from datetime import timedelta
-from collections import Counter, defaultdict
-from django.utils import timezone
-from django.db.models import Count
-from typing import Optional
 import json
+import logging
 import re
+from collections import Counter, defaultdict
+from datetime import timedelta
+from typing import Optional
+
+from django.db.models import Count
+from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 
 class SpiderIntelligenceService:
@@ -733,19 +737,20 @@ class SpiderIntelligenceService:
     # Prevents timeouts when searching through thousands of entries
     MAX_ENTRIES_TO_SCAN = 300
 
+    # Semantic search constants
+    SEMANTIC_TOP_K = 50
+    SEMANTIC_MIN_SIMILARITY = 0.25
+
+    # Noisy spiders to exclude from general search
+    NOISY_SPIDERS = frozenset({'noaa_weather', 'giphy', 'spotify', 'discord'})
+
     def search_spider_data(self, query: str, category: str = None,
                            hours: int = 72, limit: int = 50) -> list:
         """
         Full-text search across spider data.
 
-        Session 294: Enhanced to handle multi-word queries better.
-        - Strips boolean operators (OR, AND, quotes)
-        - Splits query into individual terms
-        - Matches if ANY term is found (OR logic)
-        - Scores by number of matching terms
-
-        Session 814: Performance optimization - limits entries scanned to MAX_ENTRIES_TO_SCAN
-        to prevent 10+ minute query times when spider data volume is high.
+        Primary path: pgvector semantic similarity (HNSW index).
+        Fallback: keyword matching (when pgvector/embeddings unavailable).
 
         Args:
             query: Search query
@@ -755,6 +760,106 @@ class SpiderIntelligenceService:
 
         Returns:
             List of matching items
+        """
+        if not query or not query.strip():
+            return []
+
+        # Primary: semantic similarity via pgvector
+        try:
+            results = self._semantic_search_db(query, category, hours, limit)
+            if results is not None:
+                return results
+        except Exception as e:
+            logger.warning(f"[spider_search] semantic error, falling back: {e}")
+
+        # Fallback: keyword matching
+        logger.info(f"[spider_search] keyword fallback: query='{query[:50]}'")
+        return self._keyword_search(query, category, hours, limit)
+
+    def _semantic_search_db(self, query: str, category: str = None,
+                            hours: int = 72, limit: int = 50) -> Optional[list]:
+        """pgvector KNN search. Returns List[dict] or None (=fall back to keyword)."""
+        try:
+            from pgvector.django import CosineDistance
+        except ImportError:
+            return None
+
+        from core.services.spider_semantic_search import SpiderSemanticSearch
+        sem_svc = SpiderSemanticSearch()
+        query_vec = sem_svc._generate_embedding(query)
+        if query_vec is None:
+            return None
+
+        since = timezone.now() - timedelta(hours=hours)
+
+        qs = self.SpiderData.objects.filter(
+            created_at__gte=since,
+            embedding__isnull=False,
+        ).exclude(
+            spider_name__in=self.NOISY_SPIDERS
+        )
+
+        if category:
+            spider_names = self.CATEGORY_MAPPINGS.get(category, [])
+            if spider_names:
+                qs = qs.filter(spider_name__in=spider_names)
+
+        qs = qs.annotate(
+            distance=CosineDistance('embedding', query_vec)
+        ).order_by('distance')[:self.SEMANTIC_TOP_K]
+
+        entries = list(qs)
+        if not entries:
+            return None  # No embedded data — trigger keyword fallback
+
+        results = []
+        seen = set()
+
+        for entry in entries:
+            similarity = 1.0 - (entry.distance or 1.0)
+            if similarity < self.SEMANTIC_MIN_SIMILARITY:
+                continue
+
+            raw_data = self._parse_raw_data(entry.raw_data)
+            if raw_data is None:
+                continue
+
+            items = raw_data.get('items', [])
+            for item in items:
+                title = item.get('title', '') or item.get('name', '')
+                if not title or title == '[NO_ITEMS]':
+                    continue
+
+                description = item.get('description', '') or item.get('summary', '')
+
+                item_key = f"{title}:{item.get('url', '')}".lower()
+                if item_key in seen:
+                    continue
+                seen.add(item_key)
+
+                results.append({
+                    'title': title,
+                    'description': description[:200] if description else '',
+                    'content': description,
+                    'url': item.get('url', ''),
+                    'source': entry.spider_name,
+                    'category': entry.data_type,
+                    'found_at': entry.created_at.isoformat(),
+                    'matching_terms': ['semantic_match'],
+                    'relevance': round(similarity, 4),
+                })
+
+        results.sort(key=lambda x: x['relevance'], reverse=True)
+        return results[:limit]
+
+    def _keyword_search(self, query: str, category: str = None,
+                        hours: int = 72, limit: int = 50) -> list:
+        """
+        Keyword-based search across spider data (fallback path).
+
+        Session 294: Enhanced to handle multi-word queries better.
+        Session 411: Word boundary matching, expanded stopwords.
+        Session 814: Performance optimization - limits entries scanned.
         """
         since = timezone.now() - timedelta(hours=hours)
 
@@ -803,10 +908,7 @@ class SpiderIntelligenceService:
             if spider_names:
                 queryset = queryset.filter(spider_name__in=spider_names)
 
-        # Session 411: Exclude noisy spiders from general search
-        # Weather, GIFs, and music don't help with business research
-        noisy_spiders = {'noaa_weather', 'giphy', 'spotify', 'discord'}
-        queryset = queryset.exclude(spider_name__in=noisy_spiders)
+        queryset = queryset.exclude(spider_name__in=self.NOISY_SPIDERS)
 
         results = []
         seen = set()
