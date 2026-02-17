@@ -170,6 +170,10 @@ class UnifiedPAEntrypoint:
         self._execution_count = 0
         self._conversation_history: List[Dict[str, Any]] = []
 
+        # Session 1030: Load recent conversation history from DB so context survives
+        # Celery worker recycling. ChatConversation stores all PA exchanges.
+        self._load_conversation_history_from_db()
+
         # Lazy-loaded services
         self._tool_dispatcher = None
         self._llm_enforcer = None
@@ -834,6 +838,17 @@ class UnifiedPAEntrypoint:
         ]):
             return ('reasoning', 'reasoning_engine_tool')
 
+        # Session 1030: Sports betting BEFORE generic opportunities — "sports betting opportunities"
+        # must route to sports_betting, not opportunities
+        if any(phrase in message_lower for phrase in [
+            'betting', 'sports betting', 'odds', 'spread', 'moneyline',
+            'arbitrage', 'arb ', 'arbs', 'sharp action', 'sharp money',
+            'line movement', 'steam move', 'wager', 'wagers', 'parlay',
+            'game prediction', 'who will win', 'betting brief',
+            'top plays', 'value bet', 'value bets', 'stale line',
+        ]):
+            return ('sports_betting', 'sports_betting_tool')
+
         # Opportunity patterns
         if any(word in message_lower for word in [
             'opportunity', 'opportunities', 'job', 'gig', 'income'
@@ -868,6 +883,11 @@ class UnifiedPAEntrypoint:
             'triage content', 'triage blogs', 'summarize all blogs',
             'blog triage', 'review all blogs', 'publish all',
             'batch publish', 'batch archive',
+            # Session 1030: Broader blog patterns — catch "latest blogs", "blog quality", etc.
+            'latest blogs', 'recent blogs', 'my blogs', 'our blogs',
+            'blog quality', 'blog stats', 'blog statistics',
+            'how many blogs', 'blog count', 'blog performance',
+            'publish-ready', 'publish ready',
         ]):
             return ('content_review', 'content_review_tool')
 
@@ -909,6 +929,16 @@ class UnifiedPAEntrypoint:
         ]):
             return ('content_writing', 'content_writer_agent')
 
+        # Session 1030: Agent invocation — BEFORE research (otherwise "ResearchAgent" matches "research")
+        import re as _agent_re
+        if any(word in message_lower for word in [
+            'run agent', 'execute agent', 'use agent', 'ask agent',
+        ]):
+            return ('agent_execution', 'universal_agent_tool')
+        # Session 1030: "run/execute {Name}Agent" pattern
+        if _agent_re.search(r'\b(?:run|execute|invoke|trigger|use|ask)\b.*\bagent\b', message_lower):
+            return ('agent_execution', 'universal_agent_tool')
+
         # Research patterns
         if any(word in message_lower for word in [
             'search', 'find', 'research', 'trending',
@@ -916,12 +946,6 @@ class UnifiedPAEntrypoint:
             'look up', 'lookup',
         ]):
             return ('research', 'web_search')
-
-        # Agent invocation patterns
-        if any(word in message_lower for word in [
-            'run agent', 'execute agent', 'use agent', 'ask agent'
-        ]):
-            return ('agent_execution', 'universal_agent_tool')
 
         # Session 943: Initiative-adjacent patterns (fallback for generic terms)
         if any(word in message_lower for word in [
@@ -937,15 +961,7 @@ class UnifiedPAEntrypoint:
         ]):
             return ('crypto_price', 'spider_data_tool')
 
-        # Session 995B: Sports betting intelligence patterns
-        if any(phrase in message_lower for phrase in [
-            'betting', 'sports betting', 'odds', 'spread', 'moneyline',
-            'arbitrage', 'arb ', 'arbs', 'sharp action', 'sharp money',
-            'line movement', 'steam move', 'wager', 'wagers', 'parlay',
-            'game prediction', 'who will win', 'betting brief',
-            'top plays', 'value bet', 'value bets', 'stale line',
-        ]):
-            return ('sports_betting', 'sports_betting_tool')
+        # Session 995B: Sports betting — moved to line ~841 (Session 1030, before opportunities)
 
         # Session 979: Stock intelligence patterns (before spider_data to avoid overlap)
         if any(phrase in message_lower for phrase in [
@@ -1241,8 +1257,16 @@ class UnifiedPAEntrypoint:
         elif intent == 'content_review':
             msg_lower = message.lower()
 
+            # Session 1030: If message mentions blogs, set type='blog' so handler queries SelfBlog
+            if any(bw in msg_lower for bw in ['blog', 'blogs', 'blog post', 'blog posts']):
+                payload['type'] = 'blog'
+
             # Determine action based on message
-            if 'stats' in msg_lower or 'statistics' in msg_lower or 'how many' in msg_lower:
+            # Session 1030: "publish-ready" / "publish ready" → list with filter, NOT publish action
+            if any(pr in msg_lower for pr in ['publish-ready', 'publish ready']):
+                payload['action'] = 'recent'
+                payload['days'] = 30
+            elif 'stats' in msg_lower or 'statistics' in msg_lower or 'how many' in msg_lower:
                 payload['action'] = 'stats'
             # Session 948: "what content has been created" -> recent action
             # Session 957: Added "written", "blogs", "reports" patterns
@@ -1618,9 +1642,11 @@ class UnifiedPAEntrypoint:
                 payload['action'] = 'overview'
 
         # Session 988: Crypto price lookup — search coingecko spider data
+        # Session 1030: Use by_spider (not keyword search) — coingecko stores JSON
+        # blobs where coin names may not appear in embedding_text
         elif intent == 'crypto_price':
             msg_lower = message.lower()
-            # Map common tickers/names to search keywords
+            # Map common tickers/names for context in LLM prompt
             crypto_map = {
                 'btc': 'bitcoin', 'eth': 'ethereum', 'sol': 'solana',
                 'doge': 'dogecoin', 'xrp': 'xrp', 'bnb': 'bnb',
@@ -1633,12 +1659,11 @@ class UnifiedPAEntrypoint:
                     search_term = name
                     break
             if not search_term:
-                # Fall back to extracting any capitalized term or just "crypto"
-                search_term = 'bitcoin'  # safe default for "how much is" queries
-            payload['action'] = 'search'
-            payload['keyword'] = search_term
+                search_term = 'bitcoin'
+            payload['action'] = 'by_spider'
             payload['spider_name'] = 'coingecko'
-            payload['days'] = 3  # recent data only
+            payload['keyword'] = search_term  # passed for LLM context
+            payload['days'] = 3
 
         # Session 989: Execution history payload — default to 'recent' (valid: recent, by_agent, stats, failures)
         elif intent == 'execution_history':
@@ -4549,6 +4574,43 @@ Be concise, conversational, and personalized. Address the user by name."""
         except Exception as e:
             logger.warning(f"[{trace_id}] TTS generation failed: {e}")
             return None
+
+    def _load_conversation_history_from_db(self):
+        """
+        Session 1030: Load recent PA conversation turns from ChatConversation DB.
+
+        This ensures context survives Celery worker recycling (max_tasks_per_child).
+        Without this, each new worker child starts with empty conversation_history
+        and can't handle follow-up references like "tell me more about those".
+        """
+        try:
+            from core.models import ChatConversation
+            recent = ChatConversation.objects.filter(
+                user=self.user,
+                platform='web',
+            ).order_by('-created_at')[:10]  # Last 10 exchanges
+
+            # Build history in chronological order (oldest first)
+            turns = []
+            for chat in reversed(list(recent)):
+                if chat.user_message:
+                    turns.append({
+                        'role': 'user',
+                        'content': chat.user_message,
+                        'timestamp': chat.created_at.isoformat() if chat.created_at else '',
+                    })
+                if chat.assistant_response:
+                    turns.append({
+                        'role': 'assistant',
+                        'content': chat.assistant_response[:500],  # Truncate to keep context lean
+                        'timestamp': chat.created_at.isoformat() if chat.created_at else '',
+                    })
+            self._conversation_history = turns
+            if turns:
+                logger.debug(f"Loaded {len(turns)} conversation turns from DB for user {self.user.id}")
+        except Exception as e:
+            logger.debug(f"Could not load conversation history from DB: {e}")
+            self._conversation_history = []
 
     def get_conversation_history(self) -> List[Dict[str, Any]]:
         """Get current conversation history."""
