@@ -10460,7 +10460,7 @@ def broadcast_dream_journal(self):
 # =============================================================================
 
 @shared_task(bind=True)
-def score_and_promote_dreams(self, max_dreams: int = 50, promote_threshold: float = 0.7):
+def score_and_promote_dreams(self, max_dreams: int = 50, promote_threshold: float = 0.85):
     """
     Session 366: Score unscored dreams and promote high-value ones to Boardroom.
 
@@ -22430,7 +22430,7 @@ def refresh_system_state_cache():
 
 @shared_task
 def auto_triage_dreams(
-    promote_threshold: float = 0.75,
+    promote_threshold: float = 0.85,
     archive_age_days: int = 7,
     archive_score_threshold: float = 0.4,
     max_promote: int = 20,
@@ -34577,3 +34577,98 @@ def run_all_desks_intelligence():
         'desks_failed': desks_failed,
         'timing': timing,
     }
+
+
+# =============================================================================
+# Session 1031: Surface Top Dreams to Boardroom
+# =============================================================================
+
+@shared_task
+def surface_top_dreams(max_items=5, min_composite=0.85):
+    """Surface top-scoring dreams as HumanAttentionItems for user review.
+
+    Queries promoted dreams that haven't been shown to the user yet,
+    deduplicates against existing attention items, caps per-agent diversity,
+    and creates boardroom items so users can approve/reject via PA or UI.
+    """
+    from django.utils import timezone
+    from django.contrib.auth import get_user_model
+    from core.models_unified_system import AgentDream
+    from core.models_human_interface import HumanAttentionItem
+
+    User = get_user_model()
+    user = User.objects.filter(is_superuser=True).first()
+    if not user:
+        logger.warning("[DREAM-SURFACE] No superuser found — cannot create attention items")
+        return {'surfaced': 0, 'reason': 'no_superuser'}
+
+    dreams = (
+        AgentDream.objects
+        .filter(
+            promoted_to_decision=True,
+            decision_outcome='pending',
+            shown_to_user=False,
+            origin__in=['serious', 'speculative'],
+            composite_score__gte=min_composite,
+        )
+        .select_related('agent')
+        .order_by('-composite_score', '-dreamed_at')[:50]
+    )
+
+    agent_counts = {}
+    created = 0
+
+    for dream in dreams:
+        if created >= max_items:
+            break
+
+        agent_name = dream.agent.name if dream.agent else 'Unknown'
+
+        # Diversity cap: max 2 per agent
+        if agent_counts.get(agent_name, 0) >= 2:
+            continue
+
+        # Dedup: skip if already surfaced
+        if HumanAttentionItem.objects.filter(
+            source_type='dream_pipeline',
+            source_id=str(dream.id),
+        ).exists():
+            continue
+
+        summary = (
+            f"{dream.content[:300]}... "
+            f"(Agent: {agent_name}, Score: {dream.composite_score:.2f})"
+        ) if len(dream.content) > 300 else (
+            f"{dream.content} "
+            f"(Agent: {agent_name}, Score: {dream.composite_score:.2f})"
+        )
+
+        HumanAttentionItem.objects.create(
+            user=user,
+            source_type='dream_pipeline',
+            source_id=str(dream.id),
+            source_agent=agent_name,
+            item_type='decision',
+            urgency='low',
+            title=f"Dream: {dream.title[:150]}",
+            summary=summary,
+            payload={
+                'dream_id': str(dream.id),
+                'dream_type': dream.dream_type,
+                'agent_name': agent_name,
+                'composite_score': dream.composite_score,
+                'creativity_score': dream.creativity_score,
+                'actionability_score': dream.actionability_score,
+                'relevance_score': dream.relevance_score,
+            },
+        )
+
+        dream.shown_to_user = True
+        dream.shown_at = timezone.now()
+        dream.save(update_fields=['shown_to_user', 'shown_at'])
+
+        agent_counts[agent_name] = agent_counts.get(agent_name, 0) + 1
+        created += 1
+
+    logger.info(f"[DREAM-SURFACE] Surfaced {created} dreams as attention items")
+    return {'surfaced': created}

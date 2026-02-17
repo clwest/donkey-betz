@@ -125,6 +125,15 @@ app.conf.beat_schedule = {
             'queue': 'default',  # Session 1000C: DB lifecycle updates
         }
     },
+    # Session 1031: Surface top dreams as boardroom attention items
+    'dream-daily-surfacing': {
+        'task': 'core.tasks.surface_top_dreams',
+        'schedule': crontab(hour=9, minute=0),  # Daily at 9 AM
+        'options': {
+            'expires': 3600,
+            'queue': 'default',  # Lightweight DB queries only
+        }
+    },
     # Session 954: Boardroom ML predictions - enrich pending items with content-aware predictions
     'enrich-boardroom-ml-predictions': {
         'task': 'core.tasks.enrich_boardroom_ml_predictions',
