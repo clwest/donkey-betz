@@ -28387,13 +28387,15 @@ AGENT_WORKSPACE_REGISTRY = {
     # =========================================================================
     # DEVELOPMENT AGENTS - Produce code and technical artifacts
     # =========================================================================
-    'CodeGeneratorAgent': {
-        'category': 'development',
-        'output_dir': 'development/generated',
-        'output_type': 'code',
-        'task_template': 'Generate code example for {topic}',
-        'default_topic': 'Python utility functions',
-    },
+    # Session 1029: CodeGeneratorAgent removed — no codebase access on Railway,
+    # captures CodeArtifacts but can't write files. Re-add when workspace is available.
+    # 'CodeGeneratorAgent': {
+    #     'category': 'development',
+    #     'output_dir': 'development/generated',
+    #     'output_type': 'code',
+    #     'task_template': 'Generate code example for {topic}',
+    #     'default_topic': 'Python utility functions',
+    # },
     'FullStackDeveloperAgent': {
         'category': 'development',
         'output_dir': 'development/fullstack',
@@ -28440,13 +28442,15 @@ AGENT_WORKSPACE_REGISTRY = {
         'task_template': 'Create video production brief for {topic}',
         'default_topic': 'AI explainer videos',
     },
-    'AudioAgent': {
-        'category': 'media',
-        'output_dir': 'media/audio',
-        'output_type': 'creative_brief',
-        'task_template': 'Create audio production brief for {topic}',
-        'default_topic': 'podcast intro music',
-    },
+    # Session 1029: AudioAgent removed — ElevenLabs quota exceeded.
+    # Re-add when quota resets or is upgraded.
+    # 'AudioAgent': {
+    #     'category': 'media',
+    #     'output_dir': 'media/audio',
+    #     'output_type': 'creative_brief',
+    #     'task_template': 'Create audio production brief for {topic}',
+    #     'default_topic': 'podcast intro music',
+    # },
     'ThreeDAgent': {
         'category': 'media',
         'output_dir': 'media/3d',
