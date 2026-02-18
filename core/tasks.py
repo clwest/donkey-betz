@@ -1345,6 +1345,22 @@ def execute_agent_task(
     conversation_id = context.get('conversation_id', 'unknown')
     execution_start = time.time()
 
+    # Session 1031: Hard-block agents that can't do useful work on Railway
+    _BLOCKED_AGENTS = frozenset({
+        'CodeGeneratorAgent',  # No codebase access in Railway sandbox
+        'AudioAgent',          # TTS quota exhausted
+    })
+    if agent_name in _BLOCKED_AGENTS:
+        logger.warning(
+            f"[execute_agent_task] BLOCKED: {agent_name} disabled on Railway "
+            f"(task='{task[:50]}...')"
+        )
+        return {
+            'status': 'blocked',
+            'agent': agent_name,
+            'reason': f'{agent_name} disabled on Railway since Session 1031',
+        }
+
     logger.info(
         f"[execute_agent_task] Starting: {agent_name} <- '{task[:50]}...' "
         f"(conversation={conversation_id})"
@@ -31487,56 +31503,31 @@ def run_system_self_audit():
 def discover_and_import_audits():
     """
     Session 820: Automatically discover and import new audit files.
-
-    Scans docs/audits/ for new or updated audit files and imports them
-    into the AuditReport/AuditFinding database. Runs daily at midnight.
+    Session 1031: DISABLED — audit import creates AuditFindings that feed
+    garbage tasks to agents via remediation pipeline.  The audit_tracker
+    regex still produces too many false-positive findings from markdown tables.
+    Re-enable after audit_tracker parsing is reliable.
     """
-    from core.services.autonomous_remediation_orchestrator import get_remediation_orchestrator
-
-    logger.info("🔍 [AUTO-REMEDIATE] Discovering and importing audits...")
-
-    try:
-        orchestrator = get_remediation_orchestrator()
-        results = orchestrator.discover_and_import_audits()
-
-        logger.info(
-            f"✅ [AUTO-REMEDIATE] Imported {results.get('imported', 0)} audits, "
-            f"{results.get('findings_created', 0)} findings"
-        )
-        return results
-
-    except Exception as e:
-        logger.error(f"❌ [AUTO-REMEDIATE] Audit discovery failed: {e}")
-        return {'error': str(e)}
+    logger.warning(
+        "🚫 [AUTO-REMEDIATE] discover_and_import_audits BLOCKED — "
+        "audit parsing produces garbage findings (Session 1031)"
+    )
+    return {'blocked': True, 'reason': 'Audit parsing unreliable'}
 
 
 @shared_task
 def assign_open_findings_to_agents():
     """
     Session 820: Auto-assign open findings to appropriate agents.
-
-    Matches each open finding to the best agent based on category and
-    affected files. Runs every 2 hours to catch new findings.
-
-    Session 840: Updated to include P2 findings since all P0/P1 are resolved.
+    Session 1031: DISABLED — all 4 execution paths blocked, assignment
+    just creates fuel for unknown 5th dispatch path that still fires
+    CodeGeneratorAgent.  Re-enable when execution paths are safe.
     """
-    from core.services.autonomous_remediation_orchestrator import get_remediation_orchestrator
-
-    logger.info("🎯 [AUTO-REMEDIATE] Assigning findings to agents...")
-
-    try:
-        orchestrator = get_remediation_orchestrator()
-        # Session 840: Include P2 findings now that P0/P1 are resolved
-        results = orchestrator.assign_open_findings(priority_filter=['P0', 'P1', 'P2'])
-
-        logger.info(
-            f"✅ [AUTO-REMEDIATE] Assigned {results.get('assigned', 0)} findings"
-        )
-        return results
-
-    except Exception as e:
-        logger.error(f"❌ [AUTO-REMEDIATE] Finding assignment failed: {e}")
-        return {'error': str(e)}
+    logger.warning(
+        "🚫 [AUTO-REMEDIATE] assign_open_findings_to_agents BLOCKED — "
+        "execution paths disabled since Session 1026"
+    )
+    return {'blocked': True, 'reason': 'All execution paths disabled'}
 
 
 @shared_task
