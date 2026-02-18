@@ -31546,7 +31546,19 @@ def execute_remediation_tasks():
 
     Runs each assigned task through the AgentRouter. Limits to 3 tasks
     per cycle to avoid overwhelming the system. Runs every 4 hours.
+
+    Session 1031: DISABLED — execution burns $9/day running agents on
+    garbage audit findings (markdown table fragments parsed as tasks).
+    Disabled in Beat (Session 1026) but mystery trigger still dispatches
+    this task ~20x/day. Hard-block here until trigger is identified.
     """
+    logger.warning(
+        "🚫 [AUTO-REMEDIATE] execute_remediation_tasks BLOCKED — "
+        "disabled since Session 1026, mystery trigger still dispatching. "
+        "Use 'python manage.py auto_remediate --execute' for manual runs."
+    )
+    return {'blocked': True, 'reason': 'Execution disabled since Session 1026'}
+
     from core.services.autonomous_remediation_orchestrator import get_remediation_orchestrator
 
     logger.info("🔧 [AUTO-REMEDIATE] Executing remediation tasks...")
@@ -31603,7 +31615,14 @@ def run_autonomous_remediation_cycle():
     Runs daily at 2am after the audit discovery at midnight.
 
     Session 840: Updated to include P2 findings since all P0/P1 are resolved.
+    Session 1031: DISABLED — same issue as execute_remediation_tasks.
     """
+    logger.warning(
+        "🚫 [AUTO-REMEDIATE] run_autonomous_remediation_cycle BLOCKED — "
+        "disabled since Session 1026. Use management command for manual runs."
+    )
+    return {'blocked': True, 'reason': 'Cycle disabled since Session 1026'}
+
     from core.services.autonomous_remediation_orchestrator import get_remediation_orchestrator
 
     logger.info("🔄 [AUTO-REMEDIATE] Starting full remediation cycle...")
