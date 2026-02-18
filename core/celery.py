@@ -227,6 +227,24 @@ app.conf.beat_schedule = {
             'queue': 'content',
         },
     },
+    # Session 1033: Auto-enhance blogs stuck in needs_enhancement
+    'auto-enhance-blogs': {
+        'task': 'core.tasks.auto_enhance_blogs',
+        'schedule': crontab(hour='*/4', minute=45),  # Every 4h at :45
+        'options': {
+            'expires': 14400,
+            'queue': 'content',
+        },
+    },
+    # Session 1033: Score deliverables with default quality scores
+    'score-unscored-deliverables': {
+        'task': 'core.tasks.score_unscored_deliverables',
+        'schedule': crontab(hour='*/6', minute=15),  # Every 6h at :15
+        'options': {
+            'expires': 21600,
+            'queue': 'default',
+        },
+    },
     # Session 1007: Aggregate tool call stats daily for dashboard queries
     'aggregate-tool-call-stats': {
         'task': 'core.tasks.aggregate_tool_call_stats',
