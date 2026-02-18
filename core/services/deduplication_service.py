@@ -31,7 +31,7 @@ class DeduplicationService:
     SIMILARITY_THRESHOLD = 0.85
 
     # Time window for considering duplicates (hours)
-    DUPLICATE_WINDOW_HOURS = 24
+    DUPLICATE_WINDOW_HOURS = 48
 
     # Common generic prefixes/patterns to normalize
     GENERIC_PREFIXES = [
@@ -283,6 +283,113 @@ class DeduplicationService:
 
         logger.info(f"Conversation deduplication: found {result['duplicates_found']} duplicate topics, "
                    f"{'would delete' if dry_run else 'deleted'} {result['records_to_delete']} records")
+
+        return result
+
+    def cleanup_fuzzy_conversation_duplicates(
+        self, dry_run: bool = True, hours: int = 168, threshold: float = None
+    ) -> Dict[str, Any]:
+        """
+        Session 1032: BFS-cluster conversations by fuzzy Jaccard similarity,
+        keep the highest quality_score per cluster, delete the rest.
+
+        Args:
+            dry_run: If True, only report what would be deleted.
+            hours: Lookback window (default 168 = 7 days).
+            threshold: Similarity threshold (default self.SIMILARITY_THRESHOLD).
+
+        Returns:
+            Summary of cleanup operation.
+        """
+        from collections import defaultdict
+
+        threshold = threshold or self.SIMILARITY_THRESHOLD
+        cutoff = timezone.now() - timedelta(hours=hours)
+
+        convos = list(
+            self.AgentConversation.objects.filter(started_at__gte=cutoff)
+            .order_by('-started_at')[:500]
+        )
+
+        result = {
+            'dry_run': dry_run,
+            'conversations_scanned': len(convos),
+            'clusters_found': 0,
+            'records_to_delete': 0,
+            'records_deleted': 0,
+            'clusters': [],
+        }
+
+        if len(convos) < 2:
+            return result
+
+        # Build adjacency list of similar conversations
+        similar_pairs: Dict[int, set] = defaultdict(set)
+        for i, c1 in enumerate(convos):
+            for c2 in convos[i + 1:]:
+                similarity = self._calculate_similarity(c1.topic or '', c2.topic or '')
+                if similarity >= threshold:
+                    similar_pairs[i].add(convos.index(c2))
+                    similar_pairs[convos.index(c2)].add(i)
+
+        # BFS to find connected components (clusters)
+        visited: set = set()
+        clusters: List[List] = []
+
+        for idx in range(len(convos)):
+            if idx in visited or idx not in similar_pairs:
+                continue
+
+            cluster_indices: List[int] = []
+            queue = [idx]
+            while queue:
+                current = queue.pop(0)
+                if current in visited:
+                    continue
+                visited.add(current)
+                cluster_indices.append(current)
+                for neighbor in similar_pairs[current]:
+                    if neighbor not in visited:
+                        queue.append(neighbor)
+
+            if len(cluster_indices) > 1:
+                cluster = [convos[ci] for ci in cluster_indices]
+                # Sort: concluded first, then highest quality_score, then newest
+                cluster.sort(
+                    key=lambda c: (
+                        c.status == 'concluded',
+                        getattr(c, 'quality_score', 0) or 0,
+                        c.started_at,
+                    ),
+                    reverse=True,
+                )
+                clusters.append(cluster)
+
+        result['clusters_found'] = len(clusters)
+
+        for cluster in clusters:
+            keeper = cluster[0]
+            duplicates = cluster[1:]
+            ids_to_delete = [c.id for c in duplicates]
+            result['records_to_delete'] += len(ids_to_delete)
+
+            cluster_info = {
+                'keeper': f"{str(keeper.id)[:8]}: {(keeper.topic or '')[:50]}",
+                'duplicates': len(ids_to_delete),
+                'sample_topics': [(c.topic or '')[:50] for c in duplicates[:3]],
+            }
+            result['clusters'].append(cluster_info)
+
+            if not dry_run and ids_to_delete:
+                deleted_count, _ = self.AgentConversation.objects.filter(
+                    id__in=ids_to_delete
+                ).delete()
+                result['records_deleted'] += deleted_count
+
+        logger.info(
+            f"Fuzzy conversation dedup: {result['clusters_found']} clusters, "
+            f"{'would delete' if dry_run else 'deleted'} {result['records_to_delete']} records"
+        )
 
         return result
 
