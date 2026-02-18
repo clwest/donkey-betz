@@ -1209,15 +1209,11 @@ Return comprehensive customer research with personas, pain points, and real quot
                 elif search_type == 'discussions':
                     query = f"{query} forum discussion reddit"
 
-                results = search_tool.search(
+                return search_tool.execute(
                     query=query,
                     max_results=arguments.get('num_results', 15),
                     search_type='search'
                 )
-                return {
-                    'success': True,
-                    'data': results
-                }
             except Exception as e:
                 logger.warning(f"Web search failed: {e}, using spider fallback")
                 return self._search_customer_discussions(

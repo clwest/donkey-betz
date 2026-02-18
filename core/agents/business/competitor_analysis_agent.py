@@ -1163,15 +1163,11 @@ Return a comprehensive competitive landscape analysis with DOMAIN-RELEVANT data.
             try:
                 from core.tools.web_search import WebSearchTool
                 search_tool = WebSearchTool()
-                results = search_tool.search(
+                return search_tool.execute(
                     query=arguments.get('query', ''),
                     max_results=arguments.get('num_results', 10),
                     search_type=arguments.get('search_type', 'search')
                 )
-                return {
-                    'success': True,
-                    'data': results
-                }
             except Exception as e:
                 logger.warning(f"Web search failed: {e}, using spider data as fallback")
                 # Fallback to spider data
