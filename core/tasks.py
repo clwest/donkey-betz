@@ -42,6 +42,18 @@ _NON_RESEARCH_AGENTS = frozenset({
     'COOAgent', 'CTOAgent', 'AudioAgent',  # Session 1032: Sync with _NON_SPECIALIST in agent_router.py
 })
 
+# Session 1036: Media agents can ONLY generate content — block non-generative tasks
+# like "list recent images", "review workspace", "catalog assets" etc.
+_MEDIA_AGENTS = frozenset({
+    'ImageAgent', 'VideoAgent', 'ThreeDAgent', 'AudioAgent',
+    'ImageEditingAgent', 'VideoEditingAgent',
+})
+_MEDIA_GENERATION_PATTERN = _re.compile(
+    r'(generat|creat|design|draw|render|produc|make|build|edit|enhance|'
+    r'upscale|retouch|composit|illustrat|paint|sketch|draft|style|transform)',
+    _re.I,
+)
+
 
 def _apply_task_routing_override(agent_name: str, task_text: str) -> str:
     """Reroute specialist tasks away from non-specialist agents."""
@@ -54,6 +66,20 @@ def _apply_task_routing_override(agent_name: str, task_text: str) -> str:
                 )
                 return correct_agent
     return agent_name
+
+
+def _is_media_task_blocked(agent_name: str, task_text: str) -> bool:
+    """Session 1036: Block non-generative tasks for media agents.
+
+    Media agents (ImageAgent, VideoAgent, etc.) can only generate/edit content.
+    Tasks like "list recent images", "review workspace assets", or
+    "catalog available media" are not generative and waste API spend.
+    """
+    if agent_name not in _MEDIA_AGENTS:
+        return False
+    if _MEDIA_GENERATION_PATTERN.search(task_text):
+        return False  # Looks like a real generation task
+    return True
 
 
 # Session 781: Import opener extraction for de-duplication
@@ -1360,6 +1386,20 @@ def execute_agent_task(
             'status': 'blocked',
             'agent': agent_name,
             'reason': f'{agent_name} disabled on Railway since Session 1031',
+        }
+
+    # Session 1036: Block non-generative tasks for media agents.
+    # ImageAgent, VideoAgent, etc. can only generate/edit content — tasks like
+    # "list recent images in workspace" waste API spend ($0.03+) for nothing.
+    if _is_media_task_blocked(agent_name, task):
+        logger.info(
+            f"[execute_agent_task] BLOCKED non-generative task for {agent_name}: "
+            f"'{task[:60]}...'"
+        )
+        return {
+            'status': 'blocked',
+            'agent': agent_name,
+            'reason': f'{agent_name} only handles generation/editing tasks',
         }
 
     logger.info(
@@ -27414,6 +27454,19 @@ def _get_workspace_for_skin_layer():
         name='System Autonomous Workspace'
     ).first()
     if workspace:
+        # Session 1036: Auto-correct root_path if it doesn't exist on this host.
+        # The DB record may have been created on a local dev machine (/Users/...)
+        # but Railway containers use /app/ as project root.
+        if not os.path.isdir(workspace.root_path):
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            correct_path = os.path.join(project_root, 'generated_content')
+            os.makedirs(correct_path, exist_ok=True)
+            logger.info(
+                f"[workspace] root_path '{workspace.root_path}' does not exist on this host, "
+                f"correcting to '{correct_path}'"
+            )
+            workspace.root_path = correct_path
+            workspace.save(update_fields=['root_path'])
         return workspace.user, workspace
 
     # Fallback: create one at generated_content/
