@@ -190,6 +190,9 @@ class ToolDispatcher:
         self.register("agent_introspection_tool", self._handle_agent_introspection)
         self.register("scheduled_tasks_tool", self._handle_scheduled_tasks)
 
+        # Session 1034: Research-and-create — chains web search → LLM generation → Deliverable save
+        self.register("research_and_create_tool", self._handle_research_and_create)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):
@@ -5704,6 +5707,174 @@ class ToolDispatcher:
 
         else:
             raise ValueError(f"Unknown dream action: {action}")
+
+    # ── Session 1034: Research-and-Create ──────────────────────────────
+
+    def _handle_research_and_create(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Session 1034: Chain web search → LLM content generation → Deliverable save.
+
+        User says something like "Research Clawbot and create a comparison for a YouTube video".
+        This handler:
+        1. Runs web search on the research topic
+        2. Sends research results + user's creation request to LLM
+        3. Saves the generated content as a Deliverable
+        4. Returns the content + deliverable link
+        """
+        from core.tools.web_search import WebSearchTool
+        from core.services.llm_provider_registry import get_llm_provider_registry, LLMRequest
+        from core.models_deliverables import Deliverable
+        from django.utils.text import slugify
+        import uuid as _uuid
+
+        message = payload.get('query', '')
+        research_topic = payload.get('research_topic', message)
+        output_type = payload.get('output_type', 'content')
+        output_type_label = payload.get('output_type_label', 'Content')
+
+        # Step 1: Web search
+        search_tool = WebSearchTool()
+        search_result = search_tool.execute(query=research_topic, max_results=8, search_type='text')
+
+        search_data = []
+        if search_result.get('success'):
+            raw_results = search_result.get('data', {}).get('results', [])
+            for r in raw_results[:8]:
+                search_data.append({
+                    'title': r.get('title', ''),
+                    'url': r.get('url', ''),
+                    'snippet': r.get('snippet', ''),
+                })
+
+        # Build research context for LLM
+        research_text = ""
+        for i, item in enumerate(search_data, 1):
+            research_text += f"\n{i}. **{item['title']}**\n   URL: {item['url']}\n   {item['snippet']}\n"
+
+        if not research_text:
+            research_text = "(No search results found. Generate content based on general knowledge.)"
+
+        # Step 2: LLM generation
+        # Import platform identity for context
+        from core.services.unified_pa_entrypoint import UnifiedPAEntrypoint
+        platform_identity = UnifiedPAEntrypoint._get_platform_identity()
+
+        system_prompt = f"""You are a professional content creator for the Donkey Betz Unified AI Platform.
+
+{platform_identity}
+
+TASK: The user asked: "{message}"
+
+Based on the research data below, create the requested content. Follow these rules:
+- Ground all claims in the research data provided — cite sources with URLs where relevant
+- Be comprehensive but well-structured with clear sections
+- Use markdown formatting (headers, bullet points, bold text)
+- If creating a YouTube script, include: Hook, Introduction, Main Segments, Call to Action, Outro
+- If creating a comparison, use a structured format with clear categories
+- If creating a report/analysis, include Executive Summary, Key Findings, Recommendations
+- Make the content ready to use — not a draft outline, but complete content
+- Length: 800-2000 words depending on complexity
+
+RESEARCH DATA:
+{research_text}"""
+
+        try:
+            registry = get_llm_provider_registry()
+            llm_response = registry.complete(
+                provider='openai',
+                model_id='gpt-4.1-mini',
+                request=LLMRequest(
+                    messages=[
+                        {'role': 'system', 'content': system_prompt},
+                        {'role': 'user', 'content': f'Create the {output_type_label} now. Make it complete and ready to use.'},
+                    ],
+                    max_tokens=4000,
+                    temperature=0.7,
+                )
+            )
+            generated_content = llm_response.content if llm_response and llm_response.content else ''
+        except Exception as e:
+            logger.error(f"[{trace_id}] Research-and-create LLM failed: {e}")
+            generated_content = ''
+
+        if not generated_content:
+            return {
+                'success': False,
+                'error': 'Content generation failed. Research results were gathered but LLM could not generate the content.',
+                'search_results': search_data,
+            }
+
+        # Step 3: Save as Deliverable
+        # Build a title from the message
+        title = message[:120]
+        # Clean up common prefixes
+        import re as _rc_re
+        title = _rc_re.sub(
+            r'^(?:research|please|can you|could you|i want you to|i need you to)\s+',
+            '', title, flags=_rc_re.IGNORECASE
+        ).strip()
+        title = title[0].upper() + title[1:] if title else 'Research & Create Output'
+
+        slug_base = slugify(title)[:250]
+        slug = f"{slug_base}-{_uuid.uuid4().hex[:6]}"
+
+        # Determine deliverable_type from output_type
+        type_map = {
+            'script': 'script',
+            'comparison': 'analysis',
+            'report': 'report',
+            'analysis': 'analysis',
+            'outline': 'plan',
+            'summary': 'document',
+            'brief': 'document',
+            'guide': 'document',
+            'plan': 'plan',
+            'proposal': 'strategy',
+        }
+        deliverable_type = type_map.get(output_type, 'document')
+
+        try:
+            deliverable = Deliverable.objects.create(
+                title=title,
+                slug=slug,
+                deliverable_type=deliverable_type,
+                category='PA Research & Create',
+                tags=['pa-created', 'research-and-create', output_type],
+                content=generated_content,
+                content_format='markdown',
+                agent_name='PersonalAssistantAgent',
+                quality_score=0.7,
+                confidence_score=0.7,
+                metadata={
+                    'research_query': research_topic,
+                    'search_results_count': len(search_data),
+                    'output_type': output_type,
+                    'source': 'pa_research_and_create',
+                    'trace_id': trace_id,
+                },
+            )
+            deliverable_id = str(deliverable.id)
+            logger.info(f"[{trace_id}] Research-and-create saved deliverable: {deliverable_id}")
+        except Exception as e:
+            logger.error(f"[{trace_id}] Failed to save deliverable: {e}")
+            deliverable_id = None
+
+        return {
+            'success': True,
+            'content': generated_content,
+            'title': title,
+            'output_type': output_type,
+            'output_type_label': output_type_label,
+            'deliverable_id': deliverable_id,
+            'search_results_count': len(search_data),
+            'search_results': search_data[:3],  # Include top 3 for reference
+        }
 
 
 # Singleton instance
