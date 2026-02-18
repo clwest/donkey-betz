@@ -456,7 +456,8 @@ class UnifiedPAEntrypoint:
                 # Execute via ToolDispatcher
                 t1 = time.time()
                 # Session 1034: research_and_create needs longer timeout (web search + LLM generation)
-                tool_timeout = 120 if intent == 'research_and_create' else None
+                # Session 1035: legal_assistance — agent does spider queries + OpenAI LLM calls
+                tool_timeout = 120 if intent in ('research_and_create', 'legal_assistance') else None
                 tool_result = await self.tool_dispatcher.execute(
                     tool_name=routed_to,
                     payload=self._build_tool_payload(message, intent, context),
@@ -939,6 +940,24 @@ class UnifiedPAEntrypoint:
             'create video', 'generate video', 'animate'
         ]):
             return ('video_creation', 'video_generation_agent')
+
+        # Session 1035: Legal assistance — MUST be BEFORE research_and_create and content_writing.
+        # "draft a motion", "custody case", "what forms to file" should go to legal agent,
+        # not generic research or content creation.
+        _legal_keywords = [
+            'motion', 'custody', 'divorce', 'parenting time', 'parenting plan',
+            'child support', 'family law', 'family court', 'court order',
+            'jdf form', 'jdf ', 'contempt', 'legal filing', 'file a motion',
+            'court case', 'legal case', 'pro se', 'respondent', 'petitioner',
+            'child custody', 'visitation', 'legal document', 'legal doc',
+            'legal help', 'legal assist', 'legal question', 'legal advice',
+            'court filing', 'court form', 'denied motion', 'modify order',
+            'enforce order', 'emergency motion', 'restraining order',
+            'dissolution', 'separation agreement', 'mediation',
+            'meet and confer', 'conferral', 'declaration',
+        ]
+        if any(lk in message_lower for lk in _legal_keywords):
+            return ('legal_assistance', 'legal_doc_drafter_agent')
 
         # Session 1034: Research-and-create — MUST be BEFORE content_writing and research.
         # Catches "research X and create/write Y" patterns where the user wants both
@@ -2213,7 +2232,7 @@ Only describe features and capabilities that actually exist. Never fabricate con
                           'learning_patterns', 'feedback', 'system_overview',
                           'gates', 'pilots', 'predictions', 'reasoning',
                           'system_health', 'crypto_price',
-                          'research_and_create']:
+                          'research_and_create', 'legal_assistance']:
             # Session 1034: Include platform identity in fallback so PA knows what "this platform" is
             platform_id = self._get_platform_identity()
             system_prompt = f"""You are {user_name}'s personal assistant on the Donkey Betz Unified AI Platform.
@@ -4084,6 +4103,35 @@ Address the user by name occasionally."""
                     lines.append(f"- **Blogs (24h):** {blogs.get('total', 0)} total, {blogs.get('published', 0)} published")
 
                 lines.append("\n*Want me to drill into any of these?*")
+                return "\n".join(lines)
+
+            # Session 1035: Legal assistance formatter — show agent output + disclaimer
+            elif intent == 'legal_assistance':
+                success = tool_result.get('success', False)
+                agent = tool_result.get('agent', 'LegalDocDrafterAgent')
+                output = tool_result.get('output', '')
+
+                if not success:
+                    return (
+                        f"The legal assistant couldn't process that request. "
+                        f"Try being more specific about what you need help with — "
+                        f"for example: \"I need to modify my parenting time in Larimer County\" "
+                        f"or \"What forms do I need to file for contempt?\""
+                    )
+
+                # The agent returns an AgentResult — extract the message
+                output_str = str(output)
+                # If it's an AgentResult object, try to get the message
+                if hasattr(output, 'message'):
+                    output_str = output.message or str(output)
+                elif hasattr(output, 'content'):
+                    output_str = output.content or str(output)
+                elif isinstance(output, dict):
+                    output_str = output.get('message', output.get('content', str(output)))
+
+                lines = []
+                lines.append(f"**{agent}** — Colorado Family Law Assistant\n")
+                lines.append(output_str)
                 return "\n".join(lines)
 
             # Session 987: Agent execution formatter (image, video, content_writer, etc.)
