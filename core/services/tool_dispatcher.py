@@ -5809,15 +5809,13 @@ RESEARCH DATA:
             }
 
         # Step 3: Save as Deliverable
-        # Build a title from the message
-        title = message[:120]
-        # Clean up common prefixes
+        # Use the extracted research_topic for a clean title
         import re as _rc_re
-        title = _rc_re.sub(
-            r'^(?:research|please|can you|could you|i want you to|i need you to)\s+',
-            '', title, flags=_rc_re.IGNORECASE
-        ).strip()
-        title = title[0].upper() + title[1:] if title else 'Research & Create Output'
+        clean_topic = research_topic[:100].strip()
+        if clean_topic:
+            title = f"{output_type_label}: {clean_topic[0].upper() + clean_topic[1:]}"
+        else:
+            title = f"{output_type_label}: Research Output"
 
         slug_base = slugify(title)[:250]
         slug = f"{slug_base}-{_uuid.uuid4().hex[:6]}"
