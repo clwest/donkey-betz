@@ -457,7 +457,13 @@ class UnifiedPAEntrypoint:
                 t1 = time.time()
                 # Session 1034: research_and_create needs longer timeout (web search + LLM generation)
                 # Session 1035: legal_assistance — agent does spider queries + OpenAI LLM calls
-                tool_timeout = 120 if intent in ('research_and_create', 'legal_assistance') else None
+                # Session 1035: agent_execution — 60s for agents that do LLM calls (30s default too tight)
+                if intent in ('research_and_create', 'legal_assistance'):
+                    tool_timeout = 120
+                elif intent == 'agent_execution':
+                    tool_timeout = 60
+                else:
+                    tool_timeout = None
                 tool_result = await self.tool_dispatcher.execute(
                     tool_name=routed_to,
                     payload=self._build_tool_payload(message, intent, context),
