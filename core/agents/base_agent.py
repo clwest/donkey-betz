@@ -1967,6 +1967,19 @@ Consider these trends when crafting the response to maximize relevance and engag
 
             prompt_parts.append("\nUse these documents to ground your response in established patterns and decisions.")
 
+        # 8.6 Session 1035: Inject user-uploaded document context from RAG
+        user_docs_text = spider_context.get('user_documents_text', '') if spider_context else ''
+        if user_docs_text:
+            user_docs_sources = spider_context.get('user_documents_sources', [])
+            prompt_parts.append("\n\n## Your Uploaded Documents")
+            prompt_parts.append(
+                "The user has uploaded documents relevant to this task. "
+                "Use these as primary reference material. Cite specific details when relevant."
+            )
+            prompt_parts.append(user_docs_text)
+            if user_docs_sources:
+                prompt_parts.append(f"\nDocument sources: {', '.join(user_docs_sources)}")
+
         # 9. Add Policy Context (from Boardroom Decisions)
         try:
             from core.services.policy_context import get_policy_context_service

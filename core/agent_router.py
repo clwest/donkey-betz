@@ -637,6 +637,7 @@ class AgentRouter:
         user_context = self._get_user_context(agent_name, task)  # Session 858
         risk_context = self._get_risk_aware_context(task)  # Session 949
         platform_tools_context = self._get_platform_tools_context()  # Session 992
+        user_docs_context = self._get_user_documents_context(task)  # Session 1035
 
         # Merge contexts (same logic as in route())
         if learning_context and learning_context.get('has_patterns'):
@@ -704,6 +705,12 @@ class AgentRouter:
         if platform_tools_context:
             spider_context['platform_tools_directive'] = platform_tools_context
 
+        # Session 1035: Merge user-uploaded documents into spider context
+        if user_docs_context and user_docs_context.get('has_user_documents'):
+            spider_context['user_documents'] = user_docs_context
+            spider_context['user_documents_text'] = user_docs_context.get('user_documents_text', '')
+            spider_context['user_documents_sources'] = user_docs_context.get('user_documents_sources', [])
+
         return {
             'scifi_context': scifi_context,
             'spider_context': spider_context,
@@ -715,6 +722,7 @@ class AgentRouter:
             'docs_context': docs_context,  # Session 798
             'user_context': user_context,  # Session 858
             'risk_context': risk_context,  # Session 949
+            'user_docs_context': user_docs_context,  # Session 1035
             'gathered': True,
         }
 
@@ -862,6 +870,7 @@ class AgentRouter:
             workspace_context = pre_gathered_context.get('workspace_context', {})  # Session 798
             docs_context = pre_gathered_context.get('docs_context', {})  # Session 798
             user_context = pre_gathered_context.get('user_context', {})  # Session 858
+            user_docs_context = pre_gathered_context.get('user_docs_context', {})  # Session 1035
             logger.info(f"Using pre-gathered context for {agent_name} (context gathering done outside timeout)")
         else:
             # Gather context (original behavior)
@@ -884,6 +893,8 @@ class AgentRouter:
             user_context = self._get_user_context(agent_name, task)
             # Session 949: Get risk-aware RAG context (critical docs, incidents, findings)
             risk_context = self._get_risk_aware_context(task)
+            # Session 1035: Get user-uploaded documents via RAG
+            user_docs_context = self._get_user_documents_context(task)
 
         # Session 522: Special handling for ContentWriterAgent - use SmartTrendingService
         # with dynamic year references and DuckDuckGo fallback for fresh 2025 data
@@ -1060,6 +1071,12 @@ class AgentRouter:
                 f"style={user_context.get('communication_style', 'professional')}"
             )
 
+        # Session 1035: Merge user-uploaded documents into spider context
+        if user_docs_context and user_docs_context.get('has_user_documents'):
+            spider_context['user_documents'] = user_docs_context
+            spider_context['user_documents_text'] = user_docs_context.get('user_documents_text', '')
+            spider_context['user_documents_sources'] = user_docs_context.get('user_documents_sources', [])
+
         # Execute the agent with tracking
         start_time = timezone.now()
         execution_record = None
@@ -1078,6 +1095,7 @@ class AgentRouter:
             'risk_context': bool(spider_context.get('risk_context')),  # Session 949
             'scifi_context': bool(scifi_context),
             'user_context': bool(context.get('user')),  # Session 858
+            'user_documents': bool(spider_context.get('user_documents')),  # Session 1035
         }
         logger.info(
             f"🔌 [Session 758] Context injection for {agent_name}: "
@@ -1089,6 +1107,7 @@ class AgentRouter:
             f"docs={context_summary['docs']}, "
             f"risk={context_summary['risk_context']}, "  # Session 949
             f"user={context_summary['user_context']}, "  # Session 858
+            f"user_docs={context_summary['user_documents']}, "  # Session 1035
             f"scifi={context_summary['scifi_context']}"
         )
 
@@ -1668,6 +1687,53 @@ class AgentRouter:
                 'incident_docs': [],
                 'audit_findings': [],
             }
+
+    # ==================== Session 1035: User-Uploaded Documents via RAG ====================
+
+    def _get_user_documents_context(self, task: str) -> Dict[str, Any]:
+        """Session 1035: Retrieve user-uploaded documents relevant to the task via RAG."""
+        if not self.user:
+            return {}
+        try:
+            from core.services.embedding_service import get_embedding_service
+            from content.models import DocumentEmbedding
+
+            service = get_embedding_service()
+            query_vec = service.get_embedding_sync(task[:500])
+
+            from pgvector.django import CosineDistance
+            results = DocumentEmbedding.objects.annotate(
+                distance=CosineDistance('embedding_vector', query_vec)
+            ).filter(
+                document__owner=self.user,
+                document__status='processed',
+                distance__lt=0.45,  # similarity > 0.55
+            ).select_related('document').order_by('distance')[:5]
+
+            if not results.exists():
+                return {}
+
+            doc_parts = []
+            sources = []
+            for emb in results:
+                doc = emb.document
+                similarity = round(1 - emb.distance, 2)
+                doc_parts.append(
+                    f"[{doc.title} | {doc.get_document_type_display()} | relevance={similarity:.0%}]\n"
+                    f"{emb.chunk_text}"
+                )
+                if doc.title not in sources:
+                    sources.append(doc.title)
+
+            return {
+                'has_user_documents': True,
+                'user_documents_text': "\n---\n".join(doc_parts),
+                'user_documents_sources': sources,
+                'user_documents_count': len(doc_parts),
+            }
+        except Exception as e:
+            logger.debug(f"User documents context unavailable: {e}")
+            return {}
 
     # ==================== Session 992: Platform Tools Context ====================
 
