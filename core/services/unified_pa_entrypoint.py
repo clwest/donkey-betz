@@ -4134,6 +4134,15 @@ Address the user by name occasionally."""
                 lines = []
                 lines.append(f"**{agent}** — Colorado Family Law Assistant\n")
                 lines.append(output_str)
+
+                # Session 1035: Hint about document upload when no user docs were found
+                if not tool_result.get('had_user_documents'):
+                    lines.append("\n---")
+                    lines.append(
+                        "*Tip: Upload your court orders, emails, or other documents via the "
+                        "Documents tab — I'll automatically reference them in future answers.*"
+                    )
+
                 return "\n".join(lines)
 
             # Session 987: Agent execution formatter (image, video, content_writer, etc.)
