@@ -835,6 +835,26 @@ class UnifiedPAEntrypoint:
                 return ('gates', 'gates_tool')
             return ('pilots', 'pilots_tool')
 
+        # Session 1035: Legal assistance — MUST be BEFORE user_feedback (which catches
+        # "wish" in court orders like "the child wishes to call") and BEFORE
+        # research_and_create/content_writing.
+        _legal_keywords = [
+            'motion', 'custody', 'divorce', 'parenting time', 'parenting plan',
+            'child support', 'family law', 'family court', 'court order',
+            'jdf form', 'jdf ', 'contempt', 'legal filing', 'file a motion',
+            'court case', 'legal case', 'pro se', 'respondent', 'petitioner',
+            'child custody', 'visitation', 'legal document', 'legal doc',
+            'legal help', 'legal assist', 'legal question', 'legal advice',
+            'court filing', 'court form', 'denied motion', 'modify order',
+            'enforce order', 'emergency motion', 'restraining order',
+            'dissolution', 'separation agreement', 'mediation',
+            'meet and confer', 'conferral', 'declaration',
+            'temporary orders', 'permanent orders', 'parenting plan',
+            'non disparagement', 'non-disparagement',
+        ]
+        if any(lk in message_lower for lk in _legal_keywords):
+            return ('legal_assistance', 'legal_doc_drafter_agent')
+
         # Session 948: User feedback/issues/complaints - be honest about limitations
         # These are things the PA can't fix with tools - requires code changes
         # IMPORTANT: This must come BEFORE reasoning patterns to avoid false triggers
@@ -940,24 +960,6 @@ class UnifiedPAEntrypoint:
             'create video', 'generate video', 'animate'
         ]):
             return ('video_creation', 'video_generation_agent')
-
-        # Session 1035: Legal assistance — MUST be BEFORE research_and_create and content_writing.
-        # "draft a motion", "custody case", "what forms to file" should go to legal agent,
-        # not generic research or content creation.
-        _legal_keywords = [
-            'motion', 'custody', 'divorce', 'parenting time', 'parenting plan',
-            'child support', 'family law', 'family court', 'court order',
-            'jdf form', 'jdf ', 'contempt', 'legal filing', 'file a motion',
-            'court case', 'legal case', 'pro se', 'respondent', 'petitioner',
-            'child custody', 'visitation', 'legal document', 'legal doc',
-            'legal help', 'legal assist', 'legal question', 'legal advice',
-            'court filing', 'court form', 'denied motion', 'modify order',
-            'enforce order', 'emergency motion', 'restraining order',
-            'dissolution', 'separation agreement', 'mediation',
-            'meet and confer', 'conferral', 'declaration',
-        ]
-        if any(lk in message_lower for lk in _legal_keywords):
-            return ('legal_assistance', 'legal_doc_drafter_agent')
 
         # Session 1034: Research-and-create — MUST be BEFORE content_writing and research.
         # Catches "research X and create/write Y" patterns where the user wants both
