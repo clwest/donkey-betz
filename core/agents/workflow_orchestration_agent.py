@@ -267,6 +267,7 @@ You execute complete workflow packages, not individual steps."""
                 if not workflow:
                     return AgentResult(
                         success=False,
+                        message=f"No workflow specified. Available: {AVAILABLE_WORKFLOWS}",
                         error=f"No workflow specified. Available: {AVAILABLE_WORKFLOWS}",
                         agent_name=self.name
                     )
@@ -349,9 +350,11 @@ You execute complete workflow packages, not individual steps."""
                     return result
 
                 else:
+                    err_msg = legacy_result.get('error', 'Workflow execution failed')
                     result = AgentResult(
                         success=False,
-                        error=legacy_result.get('error', 'Workflow execution failed'),
+                        message=f"Workflow '{workflow}' failed: {err_msg}",
+                        error=err_msg,
                         agent_name=self.name,
                         execution_time_ms=execution_time,
                         data={
@@ -374,6 +377,7 @@ You execute complete workflow packages, not individual steps."""
                 logger.warning(f"⏰ Legacy workflow timed out after {COORDINATOR_TIMEOUT}s for workflow: {workflow}")
                 return AgentResult(
                     success=False,
+                    message=f"Workflow '{workflow}' timed out after {COORDINATOR_TIMEOUT}s",
                     error=f"Workflow execution timed out after {COORDINATOR_TIMEOUT}s",
                     agent_name=self.name,
                     execution_time_ms=int((time.time() - start_time) * 1000),
@@ -383,6 +387,7 @@ You execute complete workflow packages, not individual steps."""
                 logger.error(f"WorkflowOrchestrationAgent error: {e}", exc_info=True)
                 return AgentResult(
                     success=False,
+                    message=f"WorkflowOrchestrationAgent error: {e}",
                     error=str(e),
                     agent_name=self.name,
                     execution_time_ms=int((time.time() - start_time) * 1000)

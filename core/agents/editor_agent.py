@@ -199,6 +199,7 @@ Output Format:
                 except SelfBlog.DoesNotExist:
                     return AgentResult(
                         success=False,
+                        message=f"Blog not found: {blog_id}",
                         error=f"Blog not found: {blog_id}",
                         agent_name=self.name,
                     )
@@ -206,6 +207,7 @@ Output Format:
             if not content:
                 return AgentResult(
                     success=False,
+                    message="No content provided. Include 'blog_id' or 'content' in context.",
                     error="No content provided. Include 'blog_id' or 'content' in context.",
                     agent_name=self.name,
                 )
@@ -222,6 +224,7 @@ Output Format:
             if not enhanced_content:
                 return AgentResult(
                     success=False,
+                    message="Failed to enhance content (LLM returned unparseable response)",
                     error="Failed to enhance content",
                     agent_name=self.name,
                 )
@@ -263,6 +266,7 @@ Output Format:
             logger.exception(f"EditorAgent error: {e}")
             return AgentResult(
                 success=False,
+                message=f"EditorAgent error: {e}",
                 error=str(e),
                 agent_name=self.name,
                 execution_time_ms=int((time.time() - start_time) * 1000),
