@@ -1942,6 +1942,27 @@ class UnifiedPAEntrypoint:
 
         return sections
 
+    @staticmethod
+    def _get_platform_identity() -> str:
+        """Session 1034: Platform self-awareness for PA comparisons and identity questions."""
+        return """ABOUT THIS PLATFORM (Donkey Betz Unified AI Platform):
+This is NOT a simple chatbot or chat interface. It is a fully autonomous AI operations platform:
+
+- 92 AI Agents that run AUTONOMOUSLY on scheduled Celery tasks — researching, writing, analyzing, and publishing content WITHOUT human prompting. Agents include specialists in market intelligence, content creation, blockchain auditing, sports analytics, legal drafting, narrative analysis, and more.
+- 79 Data Spiders that continuously scrape real-time data from the web (news, Reddit, crypto, stocks, jobs, legislation, sports odds, etc.) and feed it into the agent pipeline.
+- Multi-Agent Deliberation: Agents hold structured conversations (panels, debates, brainstorms) with 3-reviewer quality panels and a DecisionEnforcer that forces decisions.
+- Content Pipeline: Autonomous draft → claims-based citation → 3-reviewer panel → quality gate → auto-enhance → auto-publish. Content is grounded in real spider data with citation tracking.
+- Initiative Pipeline: 5-stage project management (Research Brief → Prototype Plan → Evaluation Protocol → Technical Design → Pilot Execution) that runs end-to-end autonomously.
+- 4 Intelligence Desks (Stocks, Sports, Blockchain, Narrative) each coordinating 4-9 specialized agents daily.
+- 25 Legendary Advisors (Warren Buffett, Cathie Wood, etc.) providing domain expertise injected into agent context.
+- Signal Intelligence: Spider data → signal clustering → auto-topic generation → HiveMind sessions → initiatives with full provenance chain.
+- 9 Body Systems (health monitoring metaphor): HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR, BRAIN, SKIN — each monitoring different platform health dimensions.
+- Sports Betting Pipeline: Automated odds collection, ML game predictions, score tracking, prediction evaluation, and accuracy reporting.
+- 271 Background Celery Tasks across 7 worker types running continuously.
+- Learning loops where agent performance feeds back into future executions.
+
+Key differentiator: This platform ACTS autonomously. Agents don't wait for prompts — they run on schedules, research topics, write content, review each other's work, and publish. The PA (you) is the human interface to this autonomous system."""
+
     def _build_analytical_prompt(
         self,
         message: str,
@@ -1953,7 +1974,10 @@ class UnifiedPAEntrypoint:
     ) -> str:
         """Session 959: Build analytical system prompt with enrichment context."""
         # Session 1000C: Concise analytical prompt — no walls of text
-        base = f"""You are {user_name}'s personal assistant on a unified AI platform.
+        # Session 1034: Added platform identity so PA knows what "this platform" is
+        base = f"""You are {user_name}'s personal assistant on the Donkey Betz Unified AI Platform.
+
+{self._get_platform_identity()}
 
 The structured data is already shown to the user above your response.
 Add 2-4 sentences of insight: the most important pattern, risk, or next step.
@@ -2104,7 +2128,12 @@ Only describe features and capabilities that actually exist. Never fabricate con
                           'learning_patterns', 'feedback', 'system_overview',
                           'gates', 'pilots', 'predictions', 'reasoning',
                           'system_health', 'crypto_price']:
-            system_prompt = f"""You are a helpful AI assistant.
+            # Session 1034: Include platform identity in fallback so PA knows what "this platform" is
+            platform_id = self._get_platform_identity()
+            system_prompt = f"""You are {user_name}'s personal assistant on the Donkey Betz Unified AI Platform.
+
+{platform_id}
+
 The user asked: "{message}"
 You executed a tool and got this result:
 {tool_result}
@@ -4510,7 +4539,10 @@ The next session should review and address these items.
         docs_context = context.get('docs_context', {})
 
         # Build system context
-        system_prompt = f"""You are the operational advisor for {user_name} in the Unified AI Platform.
+        # Session 1034: Added platform identity so PA can compare itself to competitors
+        system_prompt = f"""You are the operational advisor for {user_name} in the Donkey Betz Unified AI Platform.
+
+{self._get_platform_identity()}
 
 You are NOT a documentation narrator. Do NOT recite system capabilities from design documents.
 You are an operational advisor with live system access.
