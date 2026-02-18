@@ -3140,7 +3140,8 @@ urlpatterns = [
 
     # Session 1009: Removed agent-collab endpoints (orphan cleanup)
 
-    # Session 1009: Removed agent-learning endpoints (orphan cleanup)
+    # Session 1031: Re-added — frontend still polls this endpoint
+    path('api/agent-learning/activity/', get_knowledge_transfer_feed, name='agent-learning-activity'),
 
     # Session 244: Agent Conversations API
     path('api/agent-conversations/', get_agent_conversations, name='agent-conversations'),
