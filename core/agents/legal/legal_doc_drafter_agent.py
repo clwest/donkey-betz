@@ -1346,16 +1346,29 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
             "IMPORTANT GUIDELINES:",
             "1. Provide GENERAL LEGAL INFORMATION only, not specific legal advice",
             "2. Always recommend consulting with a licensed Colorado family law attorney",
-            "3. Reference appropriate Colorado JDF forms when applicable",
+            "3. Reference appropriate Colorado JDF forms from the FORM REFERENCE below",
             "4. Focus on procedural guidance, not legal strategy",
             "5. Generated documents should be clearly marked as TEMPLATES",
+            "6. ALWAYS use the JDF form reference data below — do NOT rely solely on external search",
+            "7. Call draft_motion or explain_procedure tools when the user asks for documents or steps",
             "",
             "Colorado Family Law Context:",
             "- Governing statutes: C.R.S. Title 14 (Domestic Matters)",
             "- Court: District Court, Family Division",
             "- Forms: JDF (Judicial Department Forms) series",
             "",
+            "=== JDF FORM REFERENCE (use this data) ===",
         ]
+
+        # Session 1035: Inject JDF form mapping so GPT has it in context
+        for relief_type, form_data in JDF_FORM_MAPPING.items():
+            prompt_parts.append(
+                f"- {relief_type}: {form_data['primary_form']} — {form_data['official_title']}. "
+                f"Criteria: {form_data['criteria']}. "
+                f"Required: {', '.join(form_data['required_attachments'])}."
+            )
+        prompt_parts.append("=== END FORM REFERENCE ===")
+        prompt_parts.append("")
 
         # Session 461: Inject fresh legal spider intelligence
         legal_intelligence = self._get_fresh_legal_spider_intelligence(task)
