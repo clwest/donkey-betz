@@ -674,10 +674,20 @@ class UnifiedPAEntrypoint:
         # Session 1016: Media creation guard — MUST be checked FIRST.
         # "create a YouTube video", "make a video comparing...", "generate an image of..."
         # must route to creation intents even when other keywords like "project" are present.
+        # Session 1034: Tightened — "youtube" alone doesn't trigger video generation.
+        # "create a comparison for a YouTube video" = research, not video gen.
+        # Only trigger when the creation verb directly modifies the media noun.
         creation_verbs = ['create ', 'make ', 'generate ', 'produce ', "let's create",
                           "let's make", "let's generate"]
         if any(cv in message_lower for cv in creation_verbs):
-            if any(media in message_lower for media in ['video', 'youtube', 'animation', 'animate']):
+            # Session 1034: Only route to video gen if "video" or "animation" appears near a creation verb,
+            # NOT if "youtube" appears anywhere (e.g., "create a script for a YouTube video" = research)
+            _video_nouns = ['video', 'animation', 'animate']
+            _is_direct_video_creation = any(
+                f'{cv}{vn}' in message_lower or f'{cv}a {vn}' in message_lower or f'{cv}an {vn}' in message_lower
+                for cv in creation_verbs for vn in _video_nouns
+            )
+            if _is_direct_video_creation:
                 return ('video_creation', 'video_generation_agent')
             if any(media in message_lower for media in [
                 'image', 'picture', 'logo', 'banner', 'illustration', 'photo',
