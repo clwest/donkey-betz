@@ -58,6 +58,18 @@ NON_RESEARCH_AGENTS = frozenset({
     'FullStackDeveloperAgent', 'CodeReviewAgent', 'ContentDistributionAgent',
 })
 
+# Session 1036: Media agents can ONLY generate/edit content — block non-generative
+# tasks like "list recent images", "review workspace", "catalog assets"
+_MEDIA_AGENTS = frozenset({
+    'ImageAgent', 'VideoAgent', 'ThreeDAgent', 'AudioAgent',
+    'ImageEditingAgent', 'VideoEditingAgent',
+})
+_MEDIA_GENERATION_RE = re.compile(
+    r'(generat|creat|design|draw|render|produc|make|build|edit|enhance|'
+    r'upscale|retouch|composit|illustrat|paint|sketch|draft|style|transform)',
+    re.I,
+)
+
 
 @dataclass
 class ParsedAction:
@@ -314,6 +326,17 @@ class ConversationActionDispatcher:
 
             # Session 1031: Routing override — force-reroute specialist tasks
             agent_name = self._apply_routing_override(agent_name, task_text)
+
+            # Session 1036: Block non-generative tasks for media agents.
+            # ImageAgent etc. can only generate/edit — "list images", "review
+            # workspace assets" etc. waste API spend for nothing.
+            if agent_name in _MEDIA_AGENTS and not _MEDIA_GENERATION_RE.search(task_text):
+                result.skipped_count += 1
+                logger.info(
+                    f"[dispatch] Blocked non-generative task for {agent_name}: "
+                    f"'{task_text[:60]}'"
+                )
+                continue
 
             # Session 1031: Dedup within this dispatch batch
             dedup_key = (agent_name, task_text[:80].lower())
