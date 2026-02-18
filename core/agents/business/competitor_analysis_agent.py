@@ -721,6 +721,7 @@ For absurd ideas, suggest what realistic version might work."""
                         project_context['domain_tags'] = domain_result.domain_tags
                         project_context['spider_queries'] = domain_result.spider_queries
                         project_context['domain_subreddits'] = domain_result.subreddits
+                        project_context['domain_tags_auto_extracted'] = True
                         logger.info(
                             f"🎯 [Session 490] Extracted domain from task: {domain_result.primary_domain}, "
                             f"tags: {domain_result.domain_tags[:5]}, confidence: {domain_result.confidence:.2f}"
@@ -941,6 +942,18 @@ Return a comprehensive competitive landscape analysis with DOMAIN-RELEVANT data.
                             success=tool_result.get('success', False),
                             result_summary=str(tool_result)[:100]
                         )
+
+                # Fallback: if GPT didn't call web_search, make an explicit call
+                # to ensure we always combine spider + web data
+                tools_used = {tc['tool'] for tc in tool_calls_made}
+                if 'web_search' not in tools_used:
+                    search_query = self._extract_search_query(task)
+                    if search_query:
+                        logger.info(f"[Fallback] GPT skipped web_search, running: {search_query[:80]}")
+                        web_result = self._execute_tool_call('web_search', {'query': search_query, 'num_results': 10})
+                        if web_result.get('success'):
+                            all_competitor_data.append({'source': 'web_search', 'data': web_result.get('data', web_result)})
+                            tool_calls_made.append({'tool': 'web_search', 'arguments': {'query': search_query}, 'result': web_result})
 
                 execution_time = int((time.time() - start_time) * 1000)
 
@@ -1477,6 +1490,39 @@ Return as JSON with keys: strengths, weaknesses, opportunities, threats (each an
                 'error': f"SWOT generation failed: {str(e)}"
             }
 
+    def _extract_search_query(self, task: str) -> str:
+        """Extract a concise web search query from a verbose task description.
+
+        Looks for company/product names first, then falls back to trimming
+        the task text to a reasonable search query length.
+        """
+        # Try to find explicit competitor names (Capitalized words, often after "covering" or "for")
+        patterns = [
+            r'(?:covering|including|for|vs\.?|versus|compare)\s+(.{10,120}?)(?:\.|$)',
+            r'(?:competitors?|companies|players)[\s:]+(.{10,120}?)(?:\.|$)',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, task, re.IGNORECASE)
+            if match:
+                fragment = match.group(1).strip().rstrip(',.')
+                return f"competitor analysis {fragment}"
+
+        # Fallback: use the first meaningful portion of the task
+        # Strip common task prefixes
+        cleaned = re.sub(
+            r'^(perform|conduct|do|run|create|generate)\s+(a\s+)?'
+            r'(comprehensive\s+|detailed\s+|thorough\s+)?'
+            r'(competitor\s+|competitive\s+|market\s+)?(analysis|audit|research|report)\s+'
+            r'(for|on|of|about|covering)\s+',
+            '', task, flags=re.IGNORECASE
+        ).strip()
+
+        if cleaned and len(cleaned) > 5:
+            return cleaned[:120]
+
+        # Last resort: first 100 chars of original task
+        return task[:100]
+
     def _synthesize_analysis(
         self,
         task: str,
@@ -1497,6 +1543,14 @@ Return as JSON with keys: strengths, weaknesses, opportunities, threats (each an
         for source in all_data:
             data = source.get('data', {})
             source_name = source.get('source', 'unknown')
+
+            # Normalize dict data: web_search returns {'results': [...]},
+            # spider_query may return {'data': [...]}, analyze_competitor wraps in a dict
+            if isinstance(data, dict):
+                data = data.get('results', data.get('data', data.get('discussions', [data])))
+                if not isinstance(data, list):
+                    data = [data]
+
             if isinstance(data, list):
                 for item in data[:15]:  # Limit per source
                     # Session 293: Strip HTML from titles and descriptions
@@ -1560,7 +1614,8 @@ Return as JSON with keys: strengths, weaknesses, opportunities, threats (each an
                 ],
             }
 
-        if domain_tags and data_relevance_score < MIN_DOMAIN_RELEVANCE and domain_relevant_count == 0:
+        domain_tags_reliable = not (project_context or {}).get('domain_tags_auto_extracted', False)
+        if domain_tags and domain_tags_reliable and data_relevance_score < MIN_DOMAIN_RELEVANCE and domain_relevant_count == 0:
             logger.warning(
                 f"[Evidence Gate] Blocking synthesis: {data_relevance_score}% domain relevance "
                 f"({domain_relevant_count}/{len(all_items)} items), 0 domain matches"
