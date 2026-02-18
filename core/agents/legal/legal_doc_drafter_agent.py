@@ -1453,10 +1453,10 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
 
             # If no specific document but user exists, check for recent relevant uploads
             if self.user and not document_id:
-                # Look for recent denied motions or court orders that might be relevant
+                # Session 1035: Use valid LegalDocument.document_type choices
                 recent_docs = LegalDocument.objects.filter(
                     user=self.user,
-                    document_type__in=['denied_motion', 'court_order']
+                    document_type__in=['motion', 'response', 'declaration', 'agreement', 'notes', 'other']
                 ).order_by('-created_at')[:2]
 
                 if recent_docs.exists():
@@ -1470,7 +1470,34 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
                             context_parts.append("[...]")
                     return "\n".join(context_parts)
 
-            return None
+            # Session 1035: Fallback to content app Documents (user-uploaded PDFs, URLs)
+            document_context = None
+            if self.user and not document_id:
+                try:
+                    from core.services.embedding_service import get_embedding_service
+                    from content.models import DocumentEmbedding
+                    from pgvector.django import CosineDistance
+
+                    service = get_embedding_service()
+                    query_vec = service.get_embedding_sync(task[:500])
+
+                    results = DocumentEmbedding.objects.annotate(
+                        distance=CosineDistance('embedding_vector', query_vec)
+                    ).filter(
+                        document__owner=self.user,
+                        document__status='processed',
+                        distance__lt=0.40,  # Higher bar for legal (similarity > 0.60)
+                    ).select_related('document').order_by('distance')[:5]
+
+                    if results.exists():
+                        parts = []
+                        for emb in results:
+                            parts.append(f"[{emb.document.title}]\n{emb.chunk_text}")
+                        document_context = "\n---\n".join(parts)
+                except Exception as e:
+                    logger.debug(f"Content app document search failed: {e}")
+
+            return document_context
 
         except Exception as e:
             logger.warning(f"Error getting uploaded document context: {e}")

@@ -434,6 +434,9 @@ class ToolDispatcher:
             'output': output_text,
             'success': success,
             'data': result.data if result else {},
+            'had_user_documents': bool(
+                result and result.data and result.data.get('user_documents_used')
+            ),
         }
 
     def _handle_web_search(
