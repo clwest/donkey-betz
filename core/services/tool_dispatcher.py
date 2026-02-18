@@ -5790,15 +5790,13 @@ RESEARCH DATA:
                 provider='openai',
                 model_id='gpt-4.1-mini',
                 request=LLMRequest(
-                    messages=[
-                        {'role': 'system', 'content': system_prompt},
-                        {'role': 'user', 'content': f'Create the {output_type_label} now. Make it complete and ready to use.'},
-                    ],
+                    prompt=f'Create the {output_type_label} now. Make it complete and ready to use.',
+                    system_prompt=system_prompt,
                     max_tokens=4000,
                     temperature=0.7,
                 )
             )
-            generated_content = llm_response.content if llm_response and llm_response.content else ''
+            generated_content = llm_response.content if llm_response and llm_response.success and llm_response.content else ''
         except Exception as e:
             logger.error(f"[{trace_id}] Research-and-create LLM failed: {e}")
             generated_content = ''
