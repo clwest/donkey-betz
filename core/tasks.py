@@ -27941,6 +27941,147 @@ def auto_publish_approved_blogs():
     return {'published': count, 'blog_ids': published_ids}
 
 
+# =============================================================================
+# Session 1033: Content Finishing Loop + Deliverable Quality Scoring
+# =============================================================================
+
+@shared_task(name='core.tasks.auto_enhance_blogs')
+def auto_enhance_blogs(limit: int = 5):
+    """
+    Session 1033: Auto-enhance blogs stuck in needs_enhancement status.
+
+    Completes the content finishing loop:
+    draft → evaluate → needs_enhancement → [THIS TASK] → re-evaluate → approved → published
+
+    Runs EditorAgent on the oldest needs_enhancement blogs with save=True,
+    so the content is updated in-place. The existing reevaluate-enhanced-blogs
+    task (every 3h) then re-scores them and promotes passing ones to approved.
+    """
+    from core.models_unified_system import SelfBlog
+    from core.agents.editor_agent import EditorAgent
+
+    blogs = list(
+        SelfBlog.objects.filter(status='needs_enhancement')
+        .order_by('created_at')[:limit]
+    )
+
+    if not blogs:
+        return {'enhanced': 0, 'failed': 0, 'message': 'No blogs need enhancement'}
+
+    agent = EditorAgent()
+    results = {'enhanced': 0, 'failed': 0, 'errors': []}
+
+    for blog in blogs:
+        try:
+            result = agent.execute(
+                task=f"Enhance blog structure: {blog.title[:80]}",
+                context={
+                    'blog_id': str(blog.id),
+                    'focus_areas': ['hooks', 'headers', 'engagement', 'structure', 'conclusion'],
+                    'save': True,
+                },
+                scifi_context={},
+                spider_context={},
+            )
+
+            if result.success:
+                results['enhanced'] += 1
+                logger.info(f"[AUTO-ENHANCE] Enhanced blog: {blog.title[:60]}")
+            else:
+                results['failed'] += 1
+                results['errors'].append(f"{blog.title[:40]}: {result.error}")
+        except Exception as e:
+            results['failed'] += 1
+            results['errors'].append(f"{blog.title[:40]}: {str(e)}")
+            logger.warning(f"[AUTO-ENHANCE] Error enhancing blog {blog.id}: {e}")
+
+    logger.info(
+        f"[AUTO-ENHANCE] Enhanced {results['enhanced']}/{results['enhanced'] + results['failed']} blogs"
+    )
+    return results
+
+
+@shared_task(name='core.tasks.score_unscored_deliverables')
+def score_unscored_deliverables(limit: int = 50):
+    """
+    Session 1033: Score deliverables that still have the default 0.7 quality score.
+
+    Uses heuristic scoring based on content characteristics to replace
+    the hardcoded default with a meaningful quality assessment.
+    """
+    from core.models_deliverables import Deliverable
+
+    deliverables = list(
+        Deliverable.objects.filter(quality_score=0.7)
+        .exclude(content__isnull=True)
+        .exclude(content='')
+        .order_by('-created_at')[:limit]
+    )
+
+    if not deliverables:
+        return {'scored': 0, 'message': 'No unscored deliverables'}
+
+    scored = 0
+    for d in deliverables:
+        try:
+            score = _calculate_deliverable_quality(d)
+            if score != 0.7:
+                d.quality_score = score
+                d.save(update_fields=['quality_score', 'updated_at'])
+                scored += 1
+        except Exception as e:
+            logger.warning(f"[SCORE] Error scoring deliverable {d.id}: {e}")
+
+    logger.info(f"[SCORE] Scored {scored}/{len(deliverables)} deliverables")
+    return {'scored': scored, 'total_checked': len(deliverables)}
+
+
+def _calculate_deliverable_quality(deliverable) -> float:
+    """
+    Session 1033: Heuristic quality scoring for deliverables.
+
+    Scores 0.1-1.0 based on:
+    - Content length (sweet spot 300-3000 words)
+    - Structure indicators (headers, lists, references)
+    - Agent confidence score
+    - Content format richness
+    """
+    score = 0.45
+    content = deliverable.content or ''
+    word_count = len(content.split())
+
+    # Content length scoring
+    if word_count >= 200:
+        score += 0.08
+    if word_count >= 500:
+        score += 0.07
+    if word_count >= 1000:
+        score += 0.05
+    if word_count > 5000:
+        score -= 0.05  # Penalize excessively long/unfocused
+
+    # Structure indicators
+    if '##' in content or '**' in content:
+        score += 0.05
+    if '\n- ' in content or '\n* ' in content or '\n1.' in content:
+        score += 0.05
+    if 'http://' in content or 'https://' in content:
+        score += 0.05
+
+    # Agent confidence
+    conf = deliverable.confidence_score or 0.0
+    if conf > 0.8:
+        score += 0.1
+    elif conf > 0.6:
+        score += 0.05
+
+    # Penalize very short content
+    if word_count < 50:
+        score = max(0.2, score - 0.2)
+
+    return round(min(1.0, max(0.1, score)), 2)
+
+
 @shared_task(name='core.tasks.aggregate_tool_call_stats')
 def aggregate_tool_call_stats(days_back: int = 1):
     """
@@ -29739,37 +29880,47 @@ def _run_agent_warmup(agent_name: str) -> dict:
 def _get_next_task_for_agent(agent_name: str) -> dict | None:
     """
     Session 864: Get next real task from the initiative queue for an agent.
+    Session 1033: Fixed broken field references (assigned_agent, description, title).
 
     Checks for:
-    1. Initiative stages that need this agent
-    2. PublishGate backlog (needs enhancement)
-    3. Failed jobs in retry queue
-    4. Approved dreams with execution pending
+    1. Initiative stages that need documents (PENDING status, no document)
+    2. PublishGate backlog (needs enhancement blogs)
 
     Returns:
         Task dict with topic, initiative_id, etc. or None if no real work.
     """
     try:
-        from core.models import Initiative, InitiativeStage
+        from core.models_document_registry import InitiativeStage
 
-        # Check for initiative stages needing this agent
-        # Stages have assigned_agent or agent_type that matches
+        # Check for initiative stages needing documents
+        # Session 1033: InitiativeStage has no assigned_agent field.
+        # Instead, find any PENDING stage without a document.
         pending_stage = InitiativeStage.objects.filter(
-            status='pending',
-            assigned_agent=agent_name
+            status='PENDING',
+            document__isnull=True,
         ).select_related('initiative').first()
 
         if pending_stage:
             return {
-                'topic': pending_stage.description or pending_stage.initiative.title,
+                'topic': pending_stage.initiative.name,
                 'initiative_id': str(pending_stage.initiative.id),
                 'stage_id': str(pending_stage.id),
+                'stage_num': pending_stage.stage,
                 'source': 'initiative_stage',
             }
 
-        # TODO: Check PublishGate backlog
-        # TODO: Check retry queue
-        # TODO: Check approved dreams
+        # Check PublishGate backlog — needs_enhancement blogs
+        from core.models_unified_system import SelfBlog
+        backlog = SelfBlog.objects.filter(
+            status='needs_enhancement'
+        ).order_by('created_at').first()
+
+        if backlog:
+            return {
+                'topic': f"Enhance blog: {backlog.title[:80]}",
+                'blog_id': str(backlog.id),
+                'source': 'publish_gate_backlog',
+            }
 
         return None
 
@@ -32661,7 +32812,8 @@ def advance_initiative_pipeline(limit: int = 10, auto_approve: bool = True):
         ).first()
 
         # Stage needs a document generated
-        if not stage or (stage.status in ('PENDING', 'DRAFT') and not stage.document_id):
+        # Session 1033: Also include IN_REVIEW stages with no document (dead state fix)
+        if not stage or (stage.status in ('PENDING', 'DRAFT', 'IN_REVIEW') and not stage.document_id):
             initiatives_to_advance.append({
                 'initiative': init,
                 'stage_num': stage_num,
