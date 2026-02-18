@@ -31,6 +31,7 @@ Tools NOT Available (by design):
 """
 
 import logging
+import re
 import time
 from typing import Dict, Any, List
 
@@ -541,6 +542,17 @@ Return a comprehensive brand strategy report that builds on existing project res
                             result_summary=str(tool_result)[:100]
                         )
 
+                    # Fallback: if GPT didn't call web_search, make an explicit call
+                    tools_used = {tc['tool'] for tc in tool_calls_made}
+                    if 'web_search' not in tools_used:
+                        search_query = self._extract_search_query(task)
+                        if search_query:
+                            logger.info(f"[Fallback] GPT skipped web_search, running: {search_query[:80]}")
+                            web_result = self._execute_tool_call('web_search', {'query': search_query, 'num_results': 10})
+                            if web_result.get('success'):
+                                all_brand_data.append({'source': 'web_search', 'data': web_result.get('data', web_result)})
+                                tool_calls_made.append({'tool': 'web_search', 'arguments': {'query': search_query}, 'result': web_result})
+
                 execution_time = int((time.time() - start_time) * 1000)
 
                 if all_brand_data:
@@ -1040,6 +1052,31 @@ provide specific hex color codes."""
                 'error': f"Strategy generation failed: {str(e)}"
             }
 
+    def _extract_search_query(self, task: str) -> str:
+        """Extract a concise web search query from a verbose task description."""
+        patterns = [
+            r'(?:brand|branding|strategy)\s+(?:for|of)\s+(.{5,120}?)(?:\.|$)',
+            r'(?:for|about|covering)\s+(.{10,120}?)(?:\.|$)',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, task, re.IGNORECASE)
+            if match:
+                fragment = match.group(1).strip().rstrip(',.')
+                return f"brand strategy {fragment}"
+
+        cleaned = re.sub(
+            r'^(create|develop|build|generate)\s+(a\s+)?'
+            r'(comprehensive\s+|detailed\s+)?'
+            r'(brand\s+)?(strategy|identity|positioning)\s+'
+            r'(for|on|of|about)\s+',
+            '', task, flags=re.IGNORECASE
+        ).strip()
+
+        if cleaned and len(cleaned) > 5:
+            return f"brand strategy {cleaned[:100]}"
+
+        return task[:100]
+
     def _synthesize_brand_strategy_fallback(
         self,
         project_name: str,
@@ -1060,8 +1097,13 @@ provide specific hex color codes."""
                 competitor_insights = data.get('competitor_analysis', '')[:2000]
                 customer_insights = data.get('customer_research', '')[:2000]
             elif source_name in ['spider_query', 'web_search']:
+                # Normalize dict data: web_search returns {'results': [...]}, etc.
+                if isinstance(data, dict):
+                    data = data.get('results', data.get('data', data.get('discussions', [data])))
+                    if not isinstance(data, list):
+                        data = [data]
                 if isinstance(data, list):
-                    trend_items = [f"- {item.get('title', '')}" for item in data[:5]]
+                    trend_items = [f"- {item.get('title', '')}" for item in data[:5] if isinstance(item, dict)]
                     brand_trends += "\n".join(trend_items)
 
         # Generate strategy with gathered data
