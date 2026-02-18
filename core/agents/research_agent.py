@@ -29,6 +29,7 @@ Session 872 - Research Contract:
 """
 
 import logging
+import re
 import time
 from typing import Dict, Any, List
 
@@ -673,6 +674,18 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                             result_summary=str(tool_result)[:100]
                         )
 
+                    # Fallback: if GPT didn't call web_search, make an explicit call
+                    # to ensure we always combine spider + web data
+                    tools_used = {tc['tool'] for tc in tool_calls_made}
+                    if 'web_search' not in tools_used:
+                        search_query = self._extract_search_query(task)
+                        if search_query:
+                            logger.info(f"[Fallback] GPT skipped web_search, running: {search_query[:80]}")
+                            web_result = self._execute_tool_call('web_search', {'query': search_query, 'num_results': 10})
+                            if web_result.get('success'):
+                                all_results.append({'source': 'web_search', 'data': web_result.get('data', web_result)})
+                                tool_calls_made.append({'tool': 'web_search', 'arguments': {'query': search_query}, 'result': web_result})
+
                     execution_time = int((time.time() - start_time) * 1000)
 
                     if all_results:
@@ -933,6 +946,33 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                     execution_time_ms=int((time.time() - start_time) * 1000)
                 )
 
+    def _extract_search_query(self, task: str) -> str:
+        """Extract a concise web search query from a verbose task description."""
+        # Try to find an explicit topic after common research prefixes
+        patterns = [
+            r'(?:research|investigate|look into|find out about|analyze)\s+(.{10,120}?)(?:\.|$)',
+            r'(?:about|regarding|on|for)\s+(.{10,120}?)(?:\.|$)',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, task, re.IGNORECASE)
+            if match:
+                fragment = match.group(1).strip().rstrip(',.')
+                return fragment
+
+        # Fallback: strip common task prefixes
+        cleaned = re.sub(
+            r'^(perform|conduct|do|run|create|generate)\s+(a\s+)?'
+            r'(comprehensive\s+|detailed\s+|thorough\s+)?'
+            r'(research|investigation|analysis|report)\s+'
+            r'(for|on|of|about|into)\s+',
+            '', task, flags=re.IGNORECASE
+        ).strip()
+
+        if cleaned and len(cleaned) > 5:
+            return cleaned[:120]
+
+        return task[:100]
+
     # === Session 872: Research Contract Methods ===
 
     def _build_research_contract(
@@ -1120,7 +1160,7 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
         elif 'trend' in task_lower or 'current' in task_lower:
             min_items = 1  # Session 957: Trend queries should work with any data
         else:
-            min_items = 2  # Was 3, lowered to 2
+            min_items = 1  # Was 3→2→1: any results are useful, web_search fallback helps
 
         is_sufficient = total_items >= min_items
 
