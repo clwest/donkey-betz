@@ -311,24 +311,28 @@ Output Format:
     def _enhance_with_llm(self, prompt: str, original_content: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Call LLM to enhance content."""
         try:
-            from core.services.llm_service import get_llm_service
+            # Session 1033: Use LLMProviderRegistry (not nonexistent llm_service)
+            from core.services.llm_provider_registry import LLMProviderRegistry, LLMRequest
 
-            llm = get_llm_service()
-
-            messages = [
-                {"role": "system", "content": self.system_prompt},
-                {"role": "user", "content": prompt}
-            ]
-
-            response = llm.chat(
-                messages=messages,
-                model="gpt-4o-mini",  # Use fast model for editing
+            registry = LLMProviderRegistry()
+            request = LLMRequest(
+                prompt=prompt,
+                system_prompt=self.system_prompt,
+                messages=[
+                    {"role": "system", "content": self.system_prompt},
+                    {"role": "user", "content": prompt}
+                ],
                 max_tokens=4000,
                 temperature=0.7,
             )
 
-            # Parse JSON response
-            response_text = response.get('content', '') if isinstance(response, dict) else str(response)
+            response = registry.complete('openai', 'gpt-4o-mini', request)
+
+            if not response.success:
+                logger.error(f"LLM enhancement failed: {response.error}")
+                return None
+
+            response_text = response.content or ''
 
             # Extract JSON from response
             if '```json' in response_text:
