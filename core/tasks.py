@@ -39,6 +39,7 @@ _TASK_ROUTING_OVERRIDES = [
 _NON_RESEARCH_AGENTS = frozenset({
     'WorkflowAgent', 'VideoAgent', 'CodeGeneratorAgent', 'DevOpsAgent',
     'FullStackDeveloperAgent', 'CodeReviewAgent', 'ContentDistributionAgent',
+    'COOAgent', 'CTOAgent', 'AudioAgent',  # Session 1032: Sync with _NON_SPECIALIST in agent_router.py
 })
 
 

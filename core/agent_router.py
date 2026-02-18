@@ -774,9 +774,13 @@ class AgentRouter:
 
         # Session 1031: Reroute specialist tasks away from non-specialist agents.
         # E.g. "competitor audit" should go to CompetitorAnalysisAgent, not WorkflowAgent.
+        # Session 1032: Broadened competitor patterns — "Step 3 competitor audit" variants
+        # were slipping through because LLM generates many phrasings.
         import re as _re
         _ROUTING_OVERRIDES = [
-            (_re.compile(r'competitor\s+(audit|analysis|landscape|benchmark)', _re.I), 'CompetitorAnalysisAgent'),
+            (_re.compile(r'competitor\s*(audit|analysis|landscape|benchmark|coverage)', _re.I), 'CompetitorAnalysisAgent'),
+            (_re.compile(r'Step\s+\d+\s+competitor', _re.I), 'CompetitorAnalysisAgent'),
+            (_re.compile(r'CompetitorAnalysisAgent\s+output', _re.I), 'CompetitorAnalysisAgent'),
             (_re.compile(r'trend\s+(analysis|report|summary)', _re.I), 'TrendAnalysisAgent'),
             (_re.compile(r'customer\s+(research|interview|persona)', _re.I), 'CustomerResearchAgent'),
             (_re.compile(r'brand\s+(strategy|positioning|audit)', _re.I), 'BrandStrategyAgent'),
@@ -798,6 +802,30 @@ class AgentRouter:
                         )
                         agent_name = correct_agent
                         agent_class = correct_class
+                    break
+
+        # Session 1032: Task text intercept — replace known unbounded tasks
+        # with bounded versions. The old text is embedded in 73+ AgentMemory
+        # records and keeps resurfacing from the system's learning infrastructure.
+        _TASK_TEXT_OVERRIDES = {
+            'TrendAnalysisAgent': [
+                (
+                    _re.compile(r'^Analyze current market and content trends', _re.I),
+                    'Summarize the top 3 market or technology trends from the last '
+                    '24 hours of spider data. Keep the report under 500 words. '
+                    'Do NOT attempt comprehensive analysis — focus on the 3 '
+                    'strongest signals only.',
+                ),
+            ],
+        }
+        if agent_name in _TASK_TEXT_OVERRIDES:
+            for pattern, replacement in _TASK_TEXT_OVERRIDES[agent_name]:
+                if pattern.search(task or ''):
+                    logger.info(
+                        f"[task-text-override] Replacing unbounded task for "
+                        f"{agent_name}: '{(task or '')[:60]}' -> bounded version"
+                    )
+                    task = replacement
                     break
 
         logger.info(f"Routing to {agent_name}: {task[:50]}...")
