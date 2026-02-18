@@ -782,14 +782,10 @@ Return a comprehensive brand strategy report that builds on existing project res
             try:
                 from core.tools.web_search import WebSearchTool
                 search_tool = WebSearchTool()
-                results = search_tool.search(
+                return search_tool.execute(
                     query=arguments.get('query', ''),
                     max_results=arguments.get('num_results', 10)
                 )
-                return {
-                    'success': True,
-                    'data': results
-                }
             except Exception as e:
                 logger.warning(f"Web search failed: {e}")
                 return {
