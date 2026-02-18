@@ -202,6 +202,7 @@ You produce comprehensive pipeline reports with value calculations and recommend
                 if not opportunity:
                     return AgentResult(
                         success=False,
+                        message="No 'opportunity' provided in context. Expected opportunity data dict.",
                         error="No 'opportunity' provided in context. Expected opportunity data dict.",
                         agent_name=self.name
                     )
@@ -288,9 +289,11 @@ You produce comprehensive pipeline reports with value calculations and recommend
                     return result
 
                 else:
+                    err_msg = legacy_result.get('error', 'Pipeline execution failed')
                     result = AgentResult(
                         success=False,
-                        error=legacy_result.get('error', 'Pipeline execution failed'),
+                        message=f"Pipeline failed: {err_msg}",
+                        error=err_msg,
                         agent_name=self.name,
                         execution_time_ms=execution_time,
                         data={
@@ -312,6 +315,7 @@ You produce comprehensive pipeline reports with value calculations and recommend
                 logger.error(f"OpportunityPipelineAgent error: {e}", exc_info=True)
                 return AgentResult(
                     success=False,
+                    message=f"OpportunityPipelineAgent error: {e}",
                     error=str(e),
                     agent_name=self.name,
                     execution_time_ms=int((time.time() - start_time) * 1000)

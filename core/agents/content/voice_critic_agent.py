@@ -253,6 +253,7 @@ Output your analysis as structured JSON with scores and reasoning."""
                 if not content:
                     return AgentResult(
                         success=False,
+                        message="No content provided to score",
                         error="No content provided to score",
                         agent_name=self.name
                     )
@@ -320,6 +321,7 @@ Output your analysis as structured JSON with scores and reasoning."""
                 logger.error(f"VoiceCriticAgent error: {e}", exc_info=True)
                 return AgentResult(
                     success=False,
+                    message=f"VoiceCriticAgent error: {e}",
                     error=str(e),
                     agent_name=self.name,
                     execution_time_ms=int((time.time() - start_time) * 1000)
@@ -568,6 +570,7 @@ Return this exact JSON structure:
             if not content:
                 return AgentResult(
                     success=False,
+                    message=f"Episode {episode_id} has no content to score",
                     error=f"Episode {episode_id} has no content to score",
                     agent_name=self.name
                 )
