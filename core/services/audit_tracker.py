@@ -182,13 +182,21 @@ class AuditTrackerService:
         return findings
 
     def _extract_table_findings(self, content: str) -> List[Dict]:
-        """Extract findings from markdown tables."""
+        """
+        Extract findings from markdown tables.
+
+        Session 1031: Tightened matching to avoid treating informational tables
+        (file listings, stat summaries, discovery inventories) as findings.
+        Now requires the FIRST column header to be an issue-type word, and
+        filters out rows that look like file paths, numbers-only, or bullet
+        fragments rather than real finding descriptions.
+        """
         findings = []
 
-        # Find tables that look like they contain issues/findings
-        # Look for tables with headers like Issue, Status, Priority, etc.
+        # Session 1031: Only match tables where the FIRST column is an
+        # issue-type header — not just any column in the row.
         table_pattern = re.compile(
-            r'\|[^|]*(?:Issue|Problem|Gap|Risk|Finding|Warning)[^|]*\|.*?\n\|[-:| ]+\|(.*?)(?=\n\n|\n#|\Z)',
+            r'\|\s*(?:Issue|Problem|Gap|Risk|Finding|Warning|Defect)\s*\|.*?\n\|[-:| ]+\|(.*?)(?=\n\n|\n#|\Z)',
             re.IGNORECASE | re.DOTALL
         )
 
@@ -203,16 +211,35 @@ class AuditTrackerService:
                 cells = [c.strip() for c in row.split('|') if c.strip()]
                 if len(cells) >= 2:
                     title = cells[0]
-                    # Skip empty or header-like rows
-                    if title and title != '-' and not title.startswith('--'):
-                        finding = {
-                            'title': title[:255],
-                            'description': ' | '.join(cells[1:]),
-                            'priority': self._determine_priority(' '.join(cells)),
-                            'category': self._determine_category(' '.join(cells)),
-                            'raw_text': row,
-                        }
-                        findings.append(finding)
+                    description = ' | '.join(cells[1:])
+
+                    # Skip empty, header-like, or non-finding rows
+                    if not title or title == '-' or title.startswith('--'):
+                        continue
+
+                    # Session 1031: Skip rows that are clearly NOT findings:
+                    # - Titles that are just numbers (e.g. "200+", "500+")
+                    # - Titles that look like file paths or code refs
+                    # - Titles shorter than 10 chars with no letters (stats)
+                    # - Bullet-point fragments ("- Memory integration")
+                    stripped_title = title.strip('`*_')
+                    if re.match(r'^[\d,+\-.<>]+$', stripped_title):
+                        continue  # Pure numeric like "200+" or "1,200"
+                    if stripped_title.startswith(('- ', '* ', '+ ')):
+                        continue  # Bullet fragment, not a finding
+                    if '/' in stripped_title and stripped_title.endswith(('.py', '.md', '.js', '.ts', '.json', '.yaml')):
+                        continue  # File path
+                    if len(stripped_title) < 15 and not any(c.isalpha() for c in stripped_title):
+                        continue  # Too short and no letters
+
+                    finding = {
+                        'title': title[:255],
+                        'description': description,
+                        'priority': self._determine_priority(' '.join(cells)),
+                        'category': self._determine_category(' '.join(cells)),
+                        'raw_text': row,
+                    }
+                    findings.append(finding)
 
         return findings
 
@@ -274,7 +301,10 @@ class AuditTrackerService:
 
                 for bullet in bullet_pattern.finditer(section_content):
                     title = bullet.group(1).strip()
-                    if title and len(title) > 10:  # Skip very short items
+                    # Session 1031: Require 25+ chars and at least one verb-like
+                    # word to avoid vague fragments like "Memory integration" or
+                    # "No test coverage" becoming agent tasks.
+                    if title and len(title) > 25:
                         finding = {
                             'title': title[:255],
                             'description': bullet.group(0).strip()[:2000],
