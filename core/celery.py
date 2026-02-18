@@ -1934,9 +1934,10 @@ app.conf.beat_schedule = {
     # Session 1007: Removed duplicate 'run-campaign-series-agents' (overwritten by Session 807 entry).
     'run-system-orchestration-agents': {
         'task': 'core.tasks.run_system_orchestration_agents',
-        'schedule': crontab(minute=0, hour='*/2'),  # Every 2 hours at :00
+        # Session 1035: Throttled 2h → 4h to reduce cost (~$4.91/day gap to $6 target)
+        'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours at :00
         'options': {
-            'expires': 7200,  # 2 hours
+            'expires': 14400,  # 4 hours
             'queue': 'agents',
         }
     },
@@ -2171,11 +2172,11 @@ app.conf.beat_schedule = {
         'options': {'expires': 14400, 'queue': 'long_running'}
     },
     # Session 807: Agent exercise schedules for weak muscles
-    # Research agents - Every 2 hours (CustomerResearchAgent, ResearchAgent)
+    # Research agents - Session 1035: Throttled 2h → 4h to reduce cost
     'run-research-analysis-agents': {
         'task': 'core.tasks.run_research_analysis_agents',
-        'schedule': crontab(minute=15, hour='*/2'),  # Every 2 hours at :15
-        'options': {'expires': 7200, 'queue': 'agents'}
+        'schedule': crontab(minute=15, hour='*/4'),  # Every 4 hours at :15
+        'options': {'expires': 14400, 'queue': 'agents'}
     },
     # Content studio agents - Every 4 hours (TopicMinerAgent, ContrarianAgent)
     'run-content-studio-agents': {
