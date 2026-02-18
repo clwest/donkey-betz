@@ -2443,6 +2443,15 @@ app.conf.beat_schedule = {
             'queue': 'long_running',
         },
     },
+    # Session 1032: Daily cleanup of fuzzy-duplicate conversations
+    'cleanup-conversation-duplicates': {
+        'task': 'core.tasks.cleanup_conversation_duplicates_task',
+        'schedule': crontab(hour=4, minute=30),  # Daily at 4:30 AM
+        'options': {
+            'expires': 3600,
+            'queue': 'default',  # Lightweight DB queries only
+        },
+    },
 }
 
 # Task routing configuration
