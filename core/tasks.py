@@ -31660,11 +31660,21 @@ def assign_and_execute_remediation(limit: int = 20, write_files: bool = True):
     """
     Session 833: Combined task that assigns findings then executes remediation.
 
-    This solves the UX issue where users had to click "Run Remediation" twice:
-    1. First click assigned findings to agents
-    2. Second click executed the assigned tasks
+    Session 1031: DISABLED — execution phase blocked. Assignment-only still
+    runs via assign_open_findings_to_agents. This combined task would re-enable
+    execution through run_agent_remediation_batch, bypassing the hard-block
+    on execute_remediation_tasks.
+    """
+    logger.warning(
+        "🚫 [ASSIGN-AND-EXECUTE] BLOCKED — execution phase disabled since "
+        "Session 1026. Use assign_open_findings_to_agents for assignment only."
+    )
+    return {'blocked': True, 'reason': 'Execution disabled since Session 1026'}
 
-    Now this single task does both in sequence.
+
+def _assign_and_execute_remediation_DISABLED(limit: int = 20, write_files: bool = True):
+    """
+    ORIGINAL IMPLEMENTATION — preserved for reference, not callable.
 
     Args:
         limit: Maximum number of findings to assign/tasks to execute
@@ -31784,14 +31794,24 @@ def run_agent_remediation_batch(agent_name: str = 'CodeGeneratorAgent', limit: i
     """
     Session 829: Run a batch of remediation tasks for a specific agent.
 
-    This is the Celery task version of /tmp/run_agent_tasks.py.
-    Triggered from the UI via /api/platform/actions/run-remediation/
+    Session 1031: DISABLED — execution burns $9/day running agents on garbage
+    audit findings. All 4 remediation execution paths now hard-blocked:
+    1. execute_remediation_tasks (blocked)
+    2. run_autonomous_remediation_cycle (blocked)
+    3. assign_and_execute_remediation (blocked)
+    4. run_agent_remediation_batch (this function — blocked)
 
-    Args:
-        agent_name: Which agent to run (default: CodeGeneratorAgent)
-        limit: Maximum number of tasks to process (default: 20)
-        write_files: Whether to write generated files to workspace (default: True)
+    Use 'python manage.py auto_remediate --execute' for manual runs.
     """
+    logger.warning(
+        f"🚫 [REMEDIATION-BATCH] BLOCKED — execution disabled since Session 1026. "
+        f"Agent: {agent_name}, limit: {limit}"
+    )
+    return {'blocked': True, 'reason': 'Execution disabled since Session 1026', 'agent': agent_name}
+
+
+def _run_agent_remediation_batch_DISABLED(agent_name: str = 'CodeGeneratorAgent', limit: int = 20, write_files: bool = True):
+    """ORIGINAL IMPLEMENTATION — preserved for reference, not callable."""
     import re
     from django.utils import timezone
     from core.models_audit_tracking import AuditRemediationTask
