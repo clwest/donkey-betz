@@ -815,15 +815,20 @@ class AgentRouter:
         # Session 1032: Task text intercept — replace known unbounded tasks
         # with bounded versions. The old text is embedded in 73+ AgentMemory
         # records and keeps resurfacing from the system's learning infrastructure.
+        _BOUNDED_TREND_TASK = (
+            'Summarize the top 3 market or technology trends from the last '
+            '24 hours of spider data. Keep the report under 500 words. '
+            'Do NOT attempt comprehensive analysis — focus on the 3 '
+            'strongest signals only.'
+        )
         _TASK_TEXT_OVERRIDES = {
             'TrendAnalysisAgent': [
-                (
-                    _re.compile(r'^Analyze current market and content trends', _re.I),
-                    'Summarize the top 3 market or technology trends from the last '
-                    '24 hours of spider data. Keep the report under 500 words. '
-                    'Do NOT attempt comprehensive analysis — focus on the 3 '
-                    'strongest signals only.',
-                ),
+                # Session 1032: Original unbounded task text
+                (_re.compile(r'^Analyze current market and content trends', _re.I), _BOUNDED_TREND_TASK),
+                # Session 1035: Broader patterns — LLM generates many phrasings
+                (_re.compile(r'^Analyze\s+(all|latest|recent|current|comprehensive)', _re.I), _BOUNDED_TREND_TASK),
+                (_re.compile(r'^(Comprehensive|Full|Complete|Detailed|In-depth)\s+(trend|market|industry)', _re.I), _BOUNDED_TREND_TASK),
+                (_re.compile(r'trend.{0,20}(report|analysis|summary|overview|landscape)', _re.I), _BOUNDED_TREND_TASK),
             ],
         }
         if agent_name in _TASK_TEXT_OVERRIDES:
