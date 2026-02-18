@@ -7499,26 +7499,38 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
             # Choose conversation type
             template = random.choice(conversation_templates)
 
-            # Session 1022: Dedup — skip if same knowledge item or same topic discussed recently
-            dedup_window = timezone.now() - timedelta(hours=6)
+            # Session 1032: Fuzzy dedup via DeduplicationService (replaces exact-match)
+            from core.services.deduplication_service import get_deduplication_service
+            dedup_svc = get_deduplication_service()
             topic_prefix = f"Discussion: {topic[:100]}"
-            already_discussed = False
 
-            if knowledge_item:
-                already_discussed = AgentConversation.objects.filter(
-                    related_knowledge=knowledge_item,
-                    started_at__gte=dedup_window,
-                ).exists()
-
-            if not already_discussed:
-                already_discussed = AgentConversation.objects.filter(
-                    topic=topic_prefix,
-                    started_at__gte=dedup_window,
-                ).exists()
-
-            if already_discussed:
-                logger.info(f"💬 [CONVERSATIONS] Skipping duplicate topic: {topic[:60]}")
+            # Fast check: same knowledge item in last 6h
+            if knowledge_item and AgentConversation.objects.filter(
+                related_knowledge=knowledge_item,
+                started_at__gte=timezone.now() - timedelta(hours=6),
+            ).exists():
+                logger.info(f"[CONVERSATIONS] Dedup skip (same knowledge): {topic[:60]}")
                 continue
+
+            # Fuzzy check: similar topic across ALL conversation types (48h window)
+            prior_conversation = dedup_svc.find_similar_conversation(topic=topic, hours=48)
+            if prior_conversation:
+                logger.info(f"[CONVERSATIONS] Dedup skip (fuzzy match): {topic[:60]}")
+                continue
+
+            # Session 1032: Continuity — inject prior conclusion if topic was discussed before
+            prior_conclusion_context = ""
+            older_match = dedup_svc.find_similar_conversation(topic=topic, hours=720)  # 30 days
+            if older_match and older_match.status == 'concluded' and older_match.conclusion:
+                prior_text = older_match.conclusion[:600]
+                prior_conclusion_context = (
+                    "\n\n== PRIOR DISCUSSION ON THIS TOPIC ==\n"
+                    "A previous conversation on a similar topic concluded:\n"
+                    f"{prior_text}\n\n"
+                    "Build on these conclusions. Do NOT repeat the same points.\n"
+                    "Advance the idea: propose next steps, challenge assumptions, or explore new angles.\n"
+                )
+                logger.info(f"[CONVERSATIONS] Injecting prior conclusion from {older_match.id}")
 
             # Session 1019: Pre-flight agent data gathering
             preflight_data = _preflight_gather_agent_data(topic, {initiator.name, responder.name})
@@ -7699,7 +7711,8 @@ Guidelines:
 {mood_context}
 {policy_context}
 {spider_context}
-{preflight_context}"""
+{preflight_context}
+{prior_conclusion_context}"""
 
                 # Build message history for context
                 history = []
@@ -8471,24 +8484,38 @@ def run_multi_agent_conversation(self, max_conversations: int = 2, participants_
             # Choose panel template
             template = random.choice(panel_templates)
 
-            # Session 1022: Dedup — skip if same knowledge item or same topic discussed recently
-            dedup_window = timezone.now() - timedelta(hours=6)
+            # Session 1032: Fuzzy dedup via DeduplicationService (replaces exact-match)
+            from core.services.deduplication_service import get_deduplication_service
+            dedup_svc = get_deduplication_service()
             topic_prefix = f"Panel: {topic[:100]}"
 
-            already_discussed = AgentConversation.objects.filter(
+            # Fast check: same knowledge item in last 6h
+            if AgentConversation.objects.filter(
                 related_knowledge=knowledge_item,
-                started_at__gte=dedup_window,
-            ).exists()
-
-            if not already_discussed:
-                already_discussed = AgentConversation.objects.filter(
-                    topic=topic_prefix,
-                    started_at__gte=dedup_window,
-                ).exists()
-
-            if already_discussed:
-                logger.info(f"👥 [MULTI-AGENT] Skipping duplicate topic: {topic[:60]}")
+                started_at__gte=timezone.now() - timedelta(hours=6),
+            ).exists():
+                logger.info(f"[MULTI-AGENT] Dedup skip (same knowledge): {topic[:60]}")
                 continue
+
+            # Fuzzy check: similar topic across ALL conversation types (48h window)
+            prior_conversation = dedup_svc.find_similar_conversation(topic=topic, hours=48)
+            if prior_conversation:
+                logger.info(f"[MULTI-AGENT] Dedup skip (fuzzy match): {topic[:60]}")
+                continue
+
+            # Session 1032: Continuity — inject prior conclusion if topic was discussed before
+            prior_conclusion_context = ""
+            older_match = dedup_svc.find_similar_conversation(topic=topic, hours=720)  # 30 days
+            if older_match and older_match.status == 'concluded' and older_match.conclusion:
+                prior_text = older_match.conclusion[:600]
+                prior_conclusion_context = (
+                    "\n\n== PRIOR DISCUSSION ON THIS TOPIC ==\n"
+                    "A previous conversation on a similar topic concluded:\n"
+                    f"{prior_text}\n\n"
+                    "Build on these conclusions. Do NOT repeat the same points.\n"
+                    "Advance the idea: propose next steps, challenge assumptions, or explore new angles.\n"
+                )
+                logger.info(f"[MULTI-AGENT] Injecting prior conclusion from {older_match.id}")
 
             # Session 1019: Pre-flight agent data gathering
             preflight_data = _preflight_gather_agent_data(topic, {a.name for a in panel_agents})
@@ -8622,7 +8649,8 @@ VOICE RULES (Session 781):
 - Use YOUR distinct voice and expertise - don't hedge with corporate language
 - Start with a FRESH opening phrase, not a template{opener_context}{discourse_context}
 {mood_context}
-{preflight_context}"""
+{preflight_context}
+{prior_conclusion_context}"""
 
                     # Session 364: Add diversity prompts to avoid repetitive agreement
                     panel_diversity_prompts = [
@@ -34765,3 +34793,21 @@ def surface_top_dreams(max_items=5, min_composite=0.85):
 
     logger.info(f"[DREAM-SURFACE] Surfaced {created} dreams as attention items")
     return {'surfaced': created}
+
+
+@shared_task(name='core.tasks.cleanup_conversation_duplicates_task', bind=True, max_retries=0)
+def cleanup_conversation_duplicates_task(self):
+    """
+    Session 1032: Daily cleanup of fuzzy-duplicate AgentConversation records.
+    Uses Jaccard similarity to cluster conversations and delete lower-quality duplicates.
+    """
+    from core.services.deduplication_service import get_deduplication_service
+
+    dedup_svc = get_deduplication_service()
+    result = dedup_svc.cleanup_fuzzy_conversation_duplicates(dry_run=False, hours=168)
+
+    logger.info(
+        f"[CONVERSATION-DEDUP] Cleaned {result['records_deleted']} duplicates "
+        f"from {result['clusters_found']} clusters"
+    )
+    return result
