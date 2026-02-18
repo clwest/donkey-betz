@@ -455,10 +455,13 @@ class UnifiedPAEntrypoint:
             if routed_to:
                 # Execute via ToolDispatcher
                 t1 = time.time()
+                # Session 1034: research_and_create needs longer timeout (web search + LLM generation)
+                tool_timeout = 120 if intent == 'research_and_create' else None
                 tool_result = await self.tool_dispatcher.execute(
                     tool_name=routed_to,
                     payload=self._build_tool_payload(message, intent, context),
-                    user_id=self.user.id
+                    user_id=self.user.id,
+                    timeout=tool_timeout
                 )
                 logger.info(f"[{trace_id}] Step 3a tool_dispatch: {int((time.time()-t1)*1000)}ms ok={tool_result.ok}")
                 tool_runs.append(tool_result.to_dict())
@@ -937,6 +940,21 @@ class UnifiedPAEntrypoint:
         ]):
             return ('video_creation', 'video_generation_agent')
 
+        # Session 1034: Research-and-create — MUST be BEFORE content_writing and research.
+        # Catches "research X and create/write Y" patterns where the user wants both
+        # research AND content creation in one step, saved as a Deliverable.
+        _research_words = ['research', 'look up', 'search', 'find out about', 'investigate']
+        _create_words = ['create ', 'write ', 'draft ', 'compose ', 'make ', 'generate ', 'build ']
+        _has_research = any(rw in message_lower for rw in _research_words)
+        _has_create = any(cw in message_lower for cw in _create_words)
+        # Also catch "comparison" / "script" / "report" as implicit creation
+        _has_output_noun = any(on in message_lower for on in [
+            'comparison', 'script', 'report', 'analysis', 'outline',
+            'summary', 'brief', 'proposal', 'plan', 'guide',
+        ])
+        if _has_research and (_has_create or _has_output_noun):
+            return ('research_and_create', 'research_and_create_tool')
+
         # Content writing - only for actual creation requests
         # Session 989: tightened — bare 'write'/'draft' matched inside item titles
         if any(phrase in message_lower for phrase in [
@@ -1321,6 +1339,63 @@ class UnifiedPAEntrypoint:
             )
             if uuid_match:
                 payload['id'] = uuid_match.group(1)
+
+        # Session 1034: Research-and-create payload — extract research topic + output type
+        elif intent == 'research_and_create':
+            import re as _rc_re
+            msg_lower = message.lower()
+
+            # Detect the output type from the message
+            _output_types = {
+                'script': ('script', 'Script'),
+                'comparison': ('comparison', 'Comparison'),
+                'report': ('report', 'Report'),
+                'analysis': ('analysis', 'Analysis'),
+                'outline': ('outline', 'Outline'),
+                'summary': ('summary', 'Summary'),
+                'brief': ('brief', 'Brief'),
+                'guide': ('guide', 'Guide'),
+                'plan': ('plan', 'Plan'),
+                'proposal': ('proposal', 'Proposal'),
+                'blog': ('document', 'Blog Post'),
+                'article': ('document', 'Article'),
+                'post': ('document', 'Post'),
+            }
+            output_type = 'document'
+            output_type_label = 'Content'
+            for keyword, (otype, olabel) in _output_types.items():
+                if keyword in msg_lower:
+                    output_type = otype
+                    output_type_label = olabel
+                    break
+
+            # If "youtube" or "video" is in context, it's a YouTube script
+            if 'youtube' in msg_lower or ('video' in msg_lower and output_type != 'video'):
+                output_type = 'script'
+                output_type_label = 'YouTube Script'
+
+            # Extract research topic: strip creation verbs and output nouns to isolate the topic
+            research_topic = _rc_re.sub(
+                r'\b(?:research|search|find|look up|investigate|and|then|please|can you|could you|i want you to|i need you to)\b',
+                '', msg_lower
+            ).strip()
+            research_topic = _rc_re.sub(
+                r'\b(?:create|write|draft|make|generate|build|compose)\b',
+                '', research_topic
+            ).strip()
+            research_topic = _rc_re.sub(
+                r'\b(?:a |an |the |for |that |which |can be |used as )\b',
+                '', research_topic
+            ).strip()
+            # Clean up extra spaces
+            research_topic = _rc_re.sub(r'\s+', ' ', research_topic).strip()
+            # If topic got too short, use the full message
+            if len(research_topic) < 5:
+                research_topic = message
+
+            payload['research_topic'] = research_topic
+            payload['output_type'] = output_type
+            payload['output_type_label'] = output_type_label
 
         # Session 943: Content review tool payload
         elif intent == 'content_review':
@@ -2137,7 +2212,8 @@ Only describe features and capabilities that actually exist. Never fabricate con
                           'execution_history',
                           'learning_patterns', 'feedback', 'system_overview',
                           'gates', 'pilots', 'predictions', 'reasoning',
-                          'system_health', 'crypto_price']:
+                          'system_health', 'crypto_price',
+                          'research_and_create']:
             # Session 1034: Include platform identity in fallback so PA knows what "this platform" is
             platform_id = self._get_platform_identity()
             system_prompt = f"""You are {user_name}'s personal assistant on the Donkey Betz Unified AI Platform.
@@ -4011,6 +4087,29 @@ Address the user by name occasionally."""
                 return "\n".join(lines)
 
             # Session 987: Agent execution formatter (image, video, content_writer, etc.)
+            # Session 1034: Research-and-create formatter — show preview + saved location
+            elif intent == 'research_and_create':
+                if not tool_result.get('success'):
+                    error = tool_result.get('error', 'Content generation failed.')
+                    return f"I wasn't able to generate the content: {error}"
+
+                title = tool_result.get('title', 'Untitled')
+                output_type_label = tool_result.get('output_type_label', 'Content')
+                content = tool_result.get('content', '')
+                deliverable_id = tool_result.get('deliverable_id')
+                search_count = tool_result.get('search_results_count', 0)
+
+                lines = []
+                lines.append(f"{output_type_label}: {title}")
+                lines.append(f"Researched {search_count} sources and generated your content.")
+                if deliverable_id:
+                    lines.append(f"Saved to Deliverables (ID: {deliverable_id})")
+                    lines.append("You can find the full content in Workspace > Deliverables.")
+                lines.append("")
+                # Show full content — the PA chat can handle it, and user wants to see it
+                lines.append(content)
+                return "\n".join(lines)
+
             elif intent in ['agent_execution', 'image_creation', 'video_creation',
                             'content_writing', 'image_generation', 'video_generation']:
                 agent = tool_result.get('agent', 'Agent')
