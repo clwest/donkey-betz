@@ -930,12 +930,18 @@ CELERY_TASK_ROUTES = {
     'core.tasks.score_and_promote_dreams': {'queue': 'long_running'},
     'core.tasks.process_approved_dreams': {'queue': 'long_running'},
     # Session 1004: Moved I/O-bound LLM API tasks off long_running (was saturating c=1)
-    'core.tasks.run_agent_conversation': {'queue': 'default'},
+    # Session 1034: Moved run_agent_conversation back to long_running — max 72min, OOM on 200MB default worker
+    'core.tasks.run_agent_conversation': {'queue': 'long_running'},
     'core.tasks.run_multi_agent_conversation': {'queue': 'long_running'},  # Session 1029: OOM fix — loads 30 agents
     'core.tasks.run_autonomous_thinking_cycle': {'queue': 'long_running'},  # Session 1029: OOM fix — heavy context gather
     'core.tasks.trigger_spider_conversations': {'queue': 'default'},
     'core.tasks.trigger_project_research': {'queue': 'default'},
     'core.tasks.agent_think_and_synthesize': {'queue': 'default'},
+    # Session 1034: Route heavy tasks that were falling through to default queue
+    'core.tasks.run_triggered_conversation': {'queue': 'long_running'},  # LLM conversation, max 471s
+    'core.tasks.generate_initiative_stage_document': {'queue': 'content'},  # TechnicalDocumentAgent LLM calls
+    'core.tasks.execute_approved_artifacts': {'queue': 'content'},  # Code artifact processing, max 324s
+    'core.tasks.generate_pending_reviews': {'queue': 'content'},  # LLM review generation, max 254s
     # Session 1000: Intelligence desks — 4 coordinators, heavy memory
     'core.tasks.run_all_desks_intelligence': {'queue': 'long_running'},
     # Session 1004: Moved heartbeat + nervous off long_running to unblock desk intelligence.
