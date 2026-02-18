@@ -772,6 +772,34 @@ class AgentRouter:
                 f"Unknown agent: '{agent_name}'. Available agents: {available}"
             )
 
+        # Session 1031: Reroute specialist tasks away from non-specialist agents.
+        # E.g. "competitor audit" should go to CompetitorAnalysisAgent, not WorkflowAgent.
+        import re as _re
+        _ROUTING_OVERRIDES = [
+            (_re.compile(r'competitor\s+(audit|analysis|landscape|benchmark)', _re.I), 'CompetitorAnalysisAgent'),
+            (_re.compile(r'trend\s+(analysis|report|summary)', _re.I), 'TrendAnalysisAgent'),
+            (_re.compile(r'customer\s+(research|interview|persona)', _re.I), 'CustomerResearchAgent'),
+            (_re.compile(r'brand\s+(strategy|positioning|audit)', _re.I), 'BrandStrategyAgent'),
+            (_re.compile(r'market(ing)?\s+(strategy|plan|recommendation)', _re.I), 'MarketingStrategyAgent'),
+        ]
+        _NON_SPECIALIST = frozenset({
+            'WorkflowAgent', 'VideoAgent', 'CodeGeneratorAgent', 'DevOpsAgent',
+            'FullStackDeveloperAgent', 'CodeReviewAgent', 'ContentDistributionAgent',
+            'COOAgent', 'CTOAgent', 'AudioAgent',
+        })
+        for pattern, correct_agent in _ROUTING_OVERRIDES:
+            if pattern.search(task or ''):
+                if agent_name != correct_agent and agent_name in _NON_SPECIALIST:
+                    correct_class = self.AGENT_MAP.get(correct_agent)
+                    if correct_class:
+                        logger.info(
+                            f"[routing-override] Rerouting '{(task or '')[:60]}' "
+                            f"from {agent_name} -> {correct_agent}"
+                        )
+                        agent_name = correct_agent
+                        agent_class = correct_class
+                    break
+
         logger.info(f"Routing to {agent_name}: {task[:50]}...")
 
         # Instantiate the agent
