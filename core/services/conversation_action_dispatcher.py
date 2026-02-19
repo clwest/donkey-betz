@@ -27,7 +27,7 @@ import re
 import uuid
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.utils import timezone
 
@@ -241,7 +241,7 @@ class ConversationActionDispatcher:
             from datetime import timedelta
             from core.models_unified_system import AgentExecution
 
-            cutoff = _tz.now() - timedelta(hours=2)
+            cutoff = _tz.now() - timedelta(hours=6)  # Session 1035: Extended from 2h to 6h
             # Use the first 80 chars of the task as a similarity key
             task_prefix = task_text[:80]
             return AgentExecution.objects.filter(
@@ -349,8 +349,30 @@ class ConversationActionDispatcher:
             # Session 1031: Cross-batch dedup — skip if same agent ran similar task recently
             if self._recently_dispatched(agent_name, task_text):
                 result.skipped_count += 1
-                logger.info(f"[dispatch] Recent-dedup skip: {agent_name} ran similar task in last 2h")
+                logger.info(f"[dispatch] Recent-dedup skip: {agent_name} ran similar task in last 6h")
                 continue
+
+            # Session 1035: Per-agent daily cap — no agent should run more than 8 times/day
+            # from conversation dispatch alone
+            _DAILY_AGENT_DISPATCH_CAP = 8
+            try:
+                from django.utils import timezone as _tz2
+                from core.models_unified_system import AgentExecution
+                daily_cutoff = _tz2.now() - timedelta(hours=24)
+                daily_count = AgentExecution.objects.filter(
+                    agent__name=agent_name,
+                    created_at__gte=daily_cutoff,
+                    input_data__context_injected__has_key='conversation_id',
+                ).count()
+                if daily_count >= _DAILY_AGENT_DISPATCH_CAP:
+                    result.skipped_count += 1
+                    logger.info(
+                        f"[dispatch] Daily cap skip: {agent_name} already dispatched "
+                        f"{daily_count} times today"
+                    )
+                    continue
+            except Exception:
+                pass  # fail-open
 
             # Dispatch the action
             dispatch_result = self._dispatch_to_agent(

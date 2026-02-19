@@ -865,18 +865,25 @@ class UnifiedPAEntrypoint:
         # These are things the PA can't fix with tools - requires code changes
         # IMPORTANT: This must come BEFORE reasoning patterns to avoid false triggers
         feedback_indicators = [
-            # Problem statements
-            'not working', 'doesn\'t work', 'broken', 'bug', 'issue',
+            # Problem statements — Session 1035: tightened bare 'issue' → 'issue with'/'issue is'
+            'not working', 'doesn\'t work', 'broken', 'bug',
+            'issue with', 'issue is', 'issues with',
             'problem with', 'can\'t access', 'cannot access', 'losing context',
             'context lost', 'context loss', 'disconnect', 'not connected',
-            'spread out', 'fragmented', 'difficult to', 'hard to',
-            # Feature requests disguised as complaints
-            'should be', 'need to be', 'would be better', 'wish',
+            'spread out', 'fragmented',
+            # Feature requests disguised as complaints — Session 1035: tightened 'should be'
+            'it should be', 'it should', 'need to be', 'would be better', 'wish',
             'why can\'t', 'why isn\'t', 'why doesn\'t',
         ]
         if any(phrase in message_lower for phrase in feedback_indicators):
             # Check if this is actually a fixable issue or needs code changes
-            fixable_keywords = ['approve', 'reject', 'list', 'show', 'what', 'how']
+            # Session 1035: Expanded from 6 keywords to cover analytical/reporting queries
+            fixable_keywords = [
+                'approve', 'reject', 'list', 'show', 'what', 'how', 'which', 'where',
+                'rank', 'sort', 'order', 'prioritize', 'top ', 'compare',
+                'produce', 'create', 'generate', 'build', 'give me', 'provide',
+                'analyze', 'analysis', 'report', 'count', 'find', 'check',
+            ]
             is_actionable = any(kw in message_lower for kw in fixable_keywords)
             if not is_actionable:
                 return ('user_feedback', None)  # No tool - direct honest response
