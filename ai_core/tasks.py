@@ -28,7 +28,7 @@ def collect_real_opportunities():
         # Import spider modules
         from ai_core.spiders.live_job_scraper import scrape_jobs_sync
         from intelligence.job_income_bridge import JobIncomeBridge
-        from intelligence.models import OpportunityActionPlan
+        from intelligence.models import ActionPlan
 
         # Collect jobs from live sources
         jobs = scrape_jobs_sync()
@@ -43,18 +43,20 @@ def collect_real_opportunities():
 
             # Store top opportunities in database for persistence
             # Session 1006: Only create NEW opportunities, skip already-known ones
+            # Session 1036: Use ActionPlan (not OpportunityActionPlan which requires FK)
             new_count = 0
             for job in jobs[:20]:  # Store top 20
                 opp_id = f"spider_{job.get('id', '')}"
-                _, created = OpportunityActionPlan.objects.get_or_create(
+                _, created = ActionPlan.objects.get_or_create(
                     opportunity_id=opp_id,
                     defaults={
-                        'platform': job.get('source', 'spider'),
-                        'opportunity_data': job,
-                        'success_score': job.get('aiScore', 0.75),
-                        'ml_confidence': job.get('aiScore', 0.75),
-                        'revenue_potential': _extract_salary_amount(job.get('salary', '$3000')),
-                        'status': 'identified',
+                        'opportunity_title': job.get('title', 'Spider opportunity')[:255],
+                        'opportunity_data': {
+                            **job,
+                            'ml_confidence': job.get('aiScore', 0.75),
+                            'revenue_potential': str(_extract_salary_amount(job.get('salary', '$3000'))),
+                        },
+                        'status': 'created',
                     }
                 )
                 if created:
