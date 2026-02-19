@@ -1125,3 +1125,8 @@ SPECTACULAR_SETTINGS = {
 # - Compatibility shim in agents/__init__.py redirects with deprecation warnings
 # - Can still disable via: USE_CLEAN_AGENT_ARCHITECTURE=False make start
 USE_CLEAN_AGENT_ARCHITECTURE = os.environ.get('USE_CLEAN_AGENT_ARCHITECTURE', 'True') == 'True'
+
+# Session 1036: LLM-driven function calling for PA (replaces keyword router)
+# When True, PA uses GPT-5.2 function calling to route messages instead of
+# the 506-line _detect_intent_and_route() keyword matching chain.
+PA_USE_FUNCTION_CALLING = os.environ.get('PA_USE_FUNCTION_CALLING', 'false').lower() == 'true'

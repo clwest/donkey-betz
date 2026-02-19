@@ -28,6 +28,7 @@ Usage:
     # }
 """
 
+import json
 import logging
 import re
 import time
@@ -58,6 +59,10 @@ class PAResponse:
     profile_completeness: Optional[int] = None
     latency_ms: int = 0
     error: Optional[str] = None
+    # Session 1036: Function calling metadata
+    tool_call_metadata: Optional[List[Dict]] = None
+    tool_result_data: Optional[List[Dict]] = None
+    response_id: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -446,69 +451,108 @@ class UnifiedPAEntrypoint:
             full_context = await self._build_context(message, context)
             logger.info(f"[{trace_id}] Step 1 _build_context: {int((time.time()-t0)*1000)}ms")
 
-            # 2. Detect intent and route
-            intent, routed_to = self._detect_intent_and_route(message)
-            logger.info(f"[{trace_id}] Step 2 intent={intent} routed_to={routed_to}")
+            # Session 1036: Feature flag for LLM-driven function calling
+            tool_call_metadata = None
+            tool_result_data = None
+            response_id = None
 
-            # 3. Execute (tool or direct response)
-            tool_runs = []
-            if routed_to:
-                # Execute via ToolDispatcher
-                t1 = time.time()
-                # Session 1034: research_and_create needs longer timeout (web search + LLM generation)
-                # Session 1035: legal_assistance — agent does spider queries + OpenAI LLM calls
-                # Session 1035: agent_execution — 60s for agents that do LLM calls (30s default too tight)
-                if intent in ('research_and_create', 'legal_assistance'):
-                    tool_timeout = 120
-                elif intent == 'agent_execution':
-                    tool_timeout = 60
-                else:
-                    tool_timeout = None
-                tool_result = await self.tool_dispatcher.execute(
-                    tool_name=routed_to,
-                    payload=self._build_tool_payload(message, intent, context),
-                    user_id=self.user.id,
-                    timeout=tool_timeout
+            if getattr(settings, 'PA_USE_FUNCTION_CALLING', False):
+                # ── New path: GPT-5.2 function calling ──────────────────────
+                content, tool_runs_raw, response_id = await self._run_agentic_loop(
+                    message, full_context, trace_id
                 )
-                logger.info(f"[{trace_id}] Step 3a tool_dispatch: {int((time.time()-t1)*1000)}ms ok={tool_result.ok}")
-                tool_runs.append(tool_result.to_dict())
+                tool_runs = tool_runs_raw
 
-                if tool_result.ok:
-                    # Session 959: Enrich tool result with intelligence context
-                    # Session 977: Cap enrichment at 15s to prevent pipeline stalls
+                # Infer intent from tool names for enrichment
+                tool_names = [r.get('tool', '') for r in tool_runs_raw]
+                intent = self._infer_intent_from_tools(tool_names)
+                routed_to = tool_names[0] if tool_names else None
+
+                # Build metadata for persistence
+                tool_call_metadata = [
+                    {'tool': r.get('tool', ''), 'ok': r.get('ok', False)}
+                    for r in tool_runs_raw
+                ]
+                tool_result_data = tool_runs_raw
+
+                # Run enrichment if tools were called and succeeded
+                if tool_runs_raw and any(r.get('ok') for r in tool_runs_raw):
                     t2 = time.time()
                     try:
                         enrichment_sections = await asyncio.wait_for(
                             self._enrich_tool_result(
-                                message, intent, tool_result.result, trace_id
+                                message, intent or 'general', {}, trace_id
                             ),
                             timeout=15.0
                         )
                     except asyncio.TimeoutError:
-                        logger.warning(f"[{trace_id}] Enrichment timed out after 15s, proceeding without")
                         enrichment_sections = {}
-                    logger.info(f"[{trace_id}] Step 3b enrichment: {int((time.time()-t2)*1000)}ms sections={list(enrichment_sections.keys())}")
-
-                    # Generate response from tool result + enrichment
-                    t3 = time.time()
-                    content = await self._generate_response_from_tool(
-                        message, intent, tool_result.result, full_context, trace_id,
-                        enrichment_sections=enrichment_sections
-                    )
-                    logger.info(f"[{trace_id}] Step 3c generate_response: {int((time.time()-t3)*1000)}ms")
-                else:
-                    # Tool failed - generate error response
-                    content = f"I encountered an issue: {tool_result.error_message}. " \
-                              f"(trace: {tool_result.trace_id})"
+                    logger.info(f"[{trace_id}] FC enrichment: {int((time.time()-t2)*1000)}ms sections={list(enrichment_sections.keys())}")
             else:
-                # No tool needed - direct LLM response
-                # Session 948: Special handling for user feedback - be honest about limitations
-                if intent == 'user_feedback':
-                    content = await self._generate_honest_feedback_response(message, full_context, trace_id)
-                elif intent == 'capabilities':
-                    content = self._generate_capabilities_response(full_context.get('user_name', 'there'))
+                # ── Existing path: keyword routing (unchanged) ──────────────
+                # 2. Detect intent and route
+                intent, routed_to = self._detect_intent_and_route(message)
+                logger.info(f"[{trace_id}] Step 2 intent={intent} routed_to={routed_to}")
+
+                # 3. Execute (tool or direct response)
+                tool_runs = []
+                if routed_to:
+                    # Execute via ToolDispatcher
+                    t1 = time.time()
+                    # Session 1034: research_and_create needs longer timeout (web search + LLM generation)
+                    # Session 1035: legal_assistance — agent does spider queries + OpenAI LLM calls
+                    # Session 1035: agent_execution — 60s for agents that do LLM calls (30s default too tight)
+                    if intent in ('research_and_create', 'legal_assistance'):
+                        tool_timeout = 120
+                    elif intent == 'agent_execution':
+                        tool_timeout = 60
+                    else:
+                        tool_timeout = None
+                    tool_result = await self.tool_dispatcher.execute(
+                        tool_name=routed_to,
+                        payload=self._build_tool_payload(message, intent, context),
+                        user_id=self.user.id,
+                        timeout=tool_timeout
+                    )
+                    logger.info(f"[{trace_id}] Step 3a tool_dispatch: {int((time.time()-t1)*1000)}ms ok={tool_result.ok}")
+                    tool_runs.append(tool_result.to_dict())
+
+                    if tool_result.ok:
+                        # Session 959: Enrich tool result with intelligence context
+                        # Session 977: Cap enrichment at 15s to prevent pipeline stalls
+                        t2 = time.time()
+                        try:
+                            enrichment_sections = await asyncio.wait_for(
+                                self._enrich_tool_result(
+                                    message, intent, tool_result.result, trace_id
+                                ),
+                                timeout=15.0
+                            )
+                        except asyncio.TimeoutError:
+                            logger.warning(f"[{trace_id}] Enrichment timed out after 15s, proceeding without")
+                            enrichment_sections = {}
+                        logger.info(f"[{trace_id}] Step 3b enrichment: {int((time.time()-t2)*1000)}ms sections={list(enrichment_sections.keys())}")
+
+                        # Generate response from tool result + enrichment
+                        t3 = time.time()
+                        content = await self._generate_response_from_tool(
+                            message, intent, tool_result.result, full_context, trace_id,
+                            enrichment_sections=enrichment_sections
+                        )
+                        logger.info(f"[{trace_id}] Step 3c generate_response: {int((time.time()-t3)*1000)}ms")
+                    else:
+                        # Tool failed - generate error response
+                        content = f"I encountered an issue: {tool_result.error_message}. " \
+                                  f"(trace: {tool_result.trace_id})"
                 else:
-                    content = await self._generate_direct_response(message, full_context, trace_id)
+                    # No tool needed - direct LLM response
+                    # Session 948: Special handling for user feedback - be honest about limitations
+                    if intent == 'user_feedback':
+                        content = await self._generate_honest_feedback_response(message, full_context, trace_id)
+                    elif intent == 'capabilities':
+                        content = self._generate_capabilities_response(full_context.get('user_name', 'there'))
+                    else:
+                        content = await self._generate_direct_response(message, full_context, trace_id)
 
             # Session 997: Validate response for mythology/hallucinations
             content = self._validate_mythology(content, message, trace_id)
@@ -524,12 +568,20 @@ class UnifiedPAEntrypoint:
                 'content': message,
                 'timestamp': datetime.now().isoformat()
             })
-            self._conversation_history.append({
+            assistant_turn = {
                 'role': 'assistant',
                 'content': content,
                 'timestamp': datetime.now().isoformat(),
-                'trace_id': trace_id
-            })
+                'trace_id': trace_id,
+            }
+            # Session 1036: Store function calling metadata for multi-turn context
+            if tool_call_metadata:
+                assistant_turn['tool_calls'] = tool_call_metadata
+            if tool_result_data:
+                assistant_turn['tool_results'] = tool_result_data
+            if response_id:
+                assistant_turn['response_id'] = response_id
+            self._conversation_history.append(assistant_turn)
 
             # Keep only last 20 turns
             if len(self._conversation_history) > 40:
@@ -557,7 +609,10 @@ class UnifiedPAEntrypoint:
                 routed_to=routed_to,
                 profile_completeness=profile_completeness,
                 latency_ms=latency_ms,
-                error=None
+                error=None,
+                tool_call_metadata=tool_call_metadata,
+                tool_result_data=tool_result_data,
+                response_id=response_id,
             )
 
         except Exception as e:
@@ -575,6 +630,196 @@ class UnifiedPAEntrypoint:
                 latency_ms=latency_ms,
                 error=str(e)
             )
+
+    # =========================================================================
+    # Session 1036: LLM-Driven Function Calling (Agentic Loop)
+    # =========================================================================
+
+    async def _run_agentic_loop(
+        self,
+        message: str,
+        context: Dict[str, Any],
+        trace_id: str,
+        max_iterations: int = 5,
+        total_timeout: float = 120.0,
+    ) -> tuple[str, List[Dict], Optional[str]]:
+        """
+        Core agentic loop: GPT-5.2 decides which tools to call.
+
+        Returns (content, tool_runs, response_id)
+        """
+        from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
+
+        # Build initial messages array
+        messages = self._build_messages_array(message, context)
+
+        tool_runs = []
+        response_id = None
+
+        for iteration in range(max_iterations):
+            # On final iteration, don't offer tools — force a text response
+            is_final = (iteration == max_iterations - 1)
+
+            logger.info(f"[{trace_id}] FC iteration {iteration+1}/{max_iterations} (final={is_final})")
+
+            # Call GPT-5.2 with tools
+            result = await asyncio.to_thread(
+                self.llm_enforcer.enforce_real_ai,
+                prompt=message,
+                input_messages=messages if not response_id else None,
+                tools=PA_TOOL_SCHEMAS if not is_final else None,
+                previous_response_id=response_id,
+                task_type='conversation',
+                max_tokens=2000,
+                agent_name='PersonalAssistant',
+            )
+
+            if not result.get('success'):
+                logger.error(f"[{trace_id}] FC LLM call failed: {result.get('error')}")
+                return (result.get('response', 'I encountered an error.'), tool_runs, response_id)
+
+            response_id = result.get('response_id')
+            tool_calls = result.get('tool_calls', [])
+
+            # If no tool calls, LLM responded with text — done
+            if not tool_calls:
+                return (result.get('response', ''), tool_runs, response_id)
+
+            # Execute each tool call via ToolDispatcher
+            tool_result_inputs = []
+            for tc in tool_calls:
+                fn = tc.get('function', {})
+                tool_name = fn.get('name', '')
+                call_id = tc.get('id', '')
+
+                try:
+                    arguments = json.loads(fn.get('arguments', '{}'))
+                except (json.JSONDecodeError, TypeError):
+                    arguments = {}
+
+                logger.info(f"[{trace_id}] FC calling tool: {tool_name}({list(arguments.keys())})")
+
+                # Handle the 'run_agent' meta-tool by routing to the actual agent tool
+                actual_tool_name = tool_name
+                if tool_name == 'run_agent':
+                    actual_tool_name = arguments.pop('agent_name', tool_name)
+
+                # Determine timeout based on tool
+                if actual_tool_name in ('research_and_create_tool', 'legal_doc_drafter_agent'):
+                    tool_timeout = 120
+                elif actual_tool_name in ('universal_agent_tool',) or actual_tool_name.endswith('_agent'):
+                    tool_timeout = 60
+                else:
+                    tool_timeout = None
+
+                tool_result = await self.tool_dispatcher.execute(
+                    tool_name=actual_tool_name,
+                    payload=arguments,
+                    user_id=self.user.id,
+                    timeout=tool_timeout,
+                )
+                tool_runs.append(tool_result.to_dict())
+
+                # Format result for feeding back to LLM
+                if tool_result.ok:
+                    output = json.dumps(tool_result.result, default=str)
+                else:
+                    output = json.dumps({'error': tool_result.error_message})
+
+                tool_result_inputs.append({
+                    "type": "function_call_output",
+                    "call_id": call_id,
+                    "output": output[:8000],  # Cap to prevent token explosion
+                })
+
+            # Feed tool results back — use previous_response_id for efficiency
+            messages = tool_result_inputs
+
+        # Safety: shouldn't normally reach here
+        return ("I wasn't able to complete that request.", tool_runs, response_id)
+
+    def _build_messages_array(self, message: str, context: Dict[str, Any]) -> List[Dict]:
+        """
+        Build the Responses API input from system prompt + history + user message.
+        """
+        messages = []
+
+        # System instruction
+        messages.append({
+            "role": "system",
+            "content": self._build_function_calling_system_prompt(context),
+        })
+
+        # Conversation history with tool call metadata
+        for turn in self._conversation_history:
+            role = turn.get('role', 'user')
+            content = turn.get('content', '')
+
+            if role == 'user':
+                messages.append({"role": "user", "content": content})
+            elif role == 'assistant':
+                messages.append({"role": "assistant", "content": content})
+                # If this assistant turn had tool calls, include them for context
+                # (The LLM benefits from seeing what tools were called previously)
+
+        # Current user message
+        messages.append({"role": "user", "content": message})
+
+        return messages
+
+    def _build_function_calling_system_prompt(self, context: Dict[str, Any]) -> str:
+        """
+        Streamlined system prompt for the agentic function-calling path.
+        """
+        user_name = context.get('user_name', 'there')
+        profile = context.get('profile', {})
+        stats = context.get('system_stats', {})
+        docs_ctx = context.get('docs_context', {})
+
+        skills = ', '.join(profile.get('skills', [])) if profile.get('skills') else 'Not set'
+        goals = profile.get('goals', 'Not set') or 'Not set'
+
+        agent_count = stats.get('agent_count', 92)
+        spider_count = stats.get('spider_count', 77)
+
+        prompt_parts = [
+            f"You are the Personal Assistant for {user_name} on the Donkey Betz AI Platform.",
+            "",
+            "CAPABILITIES: You have tools to query and act on all platform data.",
+            "Call tools when you need data. Do NOT guess or fabricate data.",
+            "You can call multiple tools in sequence if needed.",
+            "After getting tool results, provide a concise, conversational summary.",
+            "If the user refers to items from a previous response (e.g. '#2', 'the first one'), "
+            "use your conversation history to resolve the reference.",
+            "",
+            "USER PROFILE:",
+            f"- Skills: {skills}",
+            f"- Goals: {goals}",
+            "",
+            "PLATFORM STATS:",
+            f"- {agent_count} Agents | {spider_count} Spiders | 25 Advisors",
+        ]
+
+        # Add docs context summary if available
+        if docs_ctx.get('has_docs'):
+            docs_summary = docs_ctx.get('summary', '')
+            if docs_summary:
+                prompt_parts.append("")
+                prompt_parts.append(f"RELEVANT DOCS: {docs_summary[:500]}")
+
+        return "\n".join(prompt_parts)
+
+    def _infer_intent_from_tools(self, tool_names: List[str]) -> Optional[str]:
+        """
+        Map tool names back to canonical intent names for the enrichment pipeline.
+        """
+        from core.services.pa_tool_schemas import TOOL_TO_INTENT_MAP
+
+        for name in tool_names:
+            intent = TOOL_TO_INTENT_MAP.get(name)
+            if intent:
+                return intent
+        return 'general'
 
     async def _build_context(
         self,
@@ -4858,6 +5103,7 @@ Be concise, conversational, and personalized. Address the user by name."""
     def _load_conversation_history_from_db(self):
         """
         Session 1030: Load recent PA conversation turns from ChatConversation DB.
+        Session 1036: Include tool call metadata + increase response cap from 500→2000.
 
         This ensures context survives Celery worker recycling (max_tasks_per_child).
         Without this, each new worker child starts with empty conversation_history
@@ -4880,11 +5126,19 @@ Be concise, conversational, and personalized. Address the user by name."""
                         'timestamp': chat.created_at.isoformat() if chat.created_at else '',
                     })
                 if chat.assistant_response:
-                    turns.append({
+                    turn = {
                         'role': 'assistant',
-                        'content': chat.assistant_response[:500],  # Truncate to keep context lean
+                        'content': chat.assistant_response[:2000],  # Session 1036: Was 500, now 2000
                         'timestamp': chat.created_at.isoformat() if chat.created_at else '',
-                    })
+                    }
+                    # Session 1036: Include tool call metadata for function calling context
+                    meta = chat.metadata or {}
+                    if meta.get('tool_calls'):
+                        turn['tool_calls'] = meta['tool_calls']
+                        turn['tool_results'] = meta.get('tool_results', [])
+                    if meta.get('response_id'):
+                        turn['response_id'] = meta['response_id']
+                    turns.append(turn)
             self._conversation_history = turns
             if turns:
                 logger.debug(f"Loaded {len(turns)} conversation turns from DB for user {self.user.id}")
