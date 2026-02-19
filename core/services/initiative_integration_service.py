@@ -258,6 +258,16 @@ class InitiativeIntegrationService:
                 f"[Session 996] Auto-assigned owner_agent={created_by} "
                 f"for initiative '{initiative.name}' (from created_by)"
             )
+            return
+
+        # Session 1037: Fallback — assign ResearchAgent if still unowned
+        if not initiative.owner_agent:
+            initiative.owner_agent = 'ResearchAgent'
+            initiative.save(update_fields=['owner_agent'])
+            self.logger.info(
+                f"[Session 1037] Fallback owner_agent=ResearchAgent "
+                f"for initiative '{initiative.name}' (created_by={created_by})"
+            )
 
     def _initialize_stages(self, initiative: 'Initiative') -> None:
         """
