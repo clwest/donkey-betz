@@ -28,7 +28,7 @@ class DeduplicationService:
     """
 
     # Similarity threshold for fuzzy matching (0-1)
-    SIMILARITY_THRESHOLD = 0.85
+    SIMILARITY_THRESHOLD = 0.70  # Session 1035: Lowered from 0.85 to catch near-miss topic variants
 
     # Time window for considering duplicates (hours)
     DUPLICATE_WINDOW_HOURS = 48

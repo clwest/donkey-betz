@@ -8543,6 +8543,33 @@ def run_multi_agent_conversation(self, max_conversations: int = 2, participants_
                 logger.info(f"[MULTI-AGENT] Dedup skip (fuzzy match): {topic[:60]}")
                 continue
 
+            # Session 1035: Topic saturation cap — prevent echo chambers
+            # If 5+ similar conversations already exist in last 24h, skip
+            _TOPIC_SATURATION_CAP = 5
+            try:
+                topic_words = set(dedup_svc._normalize_text(topic).split())
+                if len(topic_words) >= 3:  # Only check multi-word topics
+                    recent_convos = AgentConversation.objects.filter(
+                        started_at__gte=timezone.now() - timedelta(hours=24),
+                    ).values_list('topic', flat=True)[:100]
+
+                    similar_count = 0
+                    for existing_topic in recent_convos:
+                        existing_words = set(dedup_svc._normalize_text(existing_topic).split())
+                        if existing_words and topic_words:
+                            overlap = len(topic_words & existing_words) / len(topic_words | existing_words)
+                            if overlap > 0.40:
+                                similar_count += 1
+
+                    if similar_count >= _TOPIC_SATURATION_CAP:
+                        logger.info(
+                            f"[MULTI-AGENT] Topic saturation skip ({similar_count} similar in 24h): "
+                            f"{topic[:60]}"
+                        )
+                        continue
+            except Exception as e:
+                logger.debug(f"Topic saturation check failed: {e}")
+
             # Session 1032: Continuity — inject prior conclusion if topic was discussed before
             prior_conclusion_context = ""
             older_match = dedup_svc.find_similar_conversation(topic=topic, hours=720)  # 30 days
