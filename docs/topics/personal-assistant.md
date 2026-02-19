@@ -1,57 +1,51 @@
 # Personal Assistant (PA) System
 
-The PA is the platform's conversational interface — a single `UnifiedPAEntrypoint` that routes user queries through 39 intents to 53 tools, enriches responses with 8 intelligence services, and returns structured data + LLM analysis. Session 1030: Production audit fixed 5 routing/payload issues. Session 1034: Added `legal_assistance` intent, raised `universal_agent_tool` timeout to 90s, upload hint for legal responses.
+The PA is the platform's conversational interface — a single `UnifiedPAEntrypoint` that handles all user queries. **Session 1036: Replaced keyword routing with GPT-5.2 function calling.** The LLM now sees all 50+ tool schemas and decides what to call, enabling multi-tool turns and natural follow-ups. Session 1035: Added DB timeout resilience, disjoint agent taxonomy, tool call metadata capture.
 
 ## Architecture
 
-Two files handle everything:
-- `core/services/unified_pa_entrypoint.py` — Intent detection, enrichment orchestration, response formatting
-- `core/services/tool_dispatcher.py` — 50 tool handlers with guaranteed structured responses
+Three files handle everything:
+- `core/services/unified_pa_entrypoint.py` — Agentic loop, context building, enrichment orchestration
+- `core/services/tool_dispatcher.py` — 53 tool handlers with guaranteed structured responses (ToolResult)
+- `core/services/pa_tool_schemas.py` — OpenAI function-calling schemas for all tools + enrichment map
 
-## Intent Routing
+### Flow (Function Calling — Active)
 
-`_detect_intent_and_route(message)` checks keywords top-to-bottom and returns `(intent, tool_name)`. Order matters — earlier intents take priority.
+```
+message -> _build_context() [profile, knowledge, stats, docs — each with 5s timeout]
+        -> _build_messages_array() [system prompt + conversation history + user msg]
+        -> GPT-5.2 Responses API with 50+ tool schemas
+           -> if tool_call(s): execute via ToolDispatcher -> feed result back -> loop (max 5 iterations)
+           -> if text response: done
+        -> enrichment (intent inferred from tool names via TOOL_TO_INTENT_MAP)
+        -> return PAResponse
+```
 
-| Priority | Intent | Routes To | Triggers |
-|----------|--------|-----------|----------|
-| 0 | video/image/audio creation | agent tools | creation verb + media type (Session 1016 guard) |
-| 1 | boardroom | boardroom_tool | decision, attention, approve, triage |
-| 2 | recent_activity | recent_activity_tool | what's been going on, catch me up |
-| 3 | system_health_check | system_health_tool | how's the system, anything down |
-| 4 | surgical_moves_status | surgical_moves_status_tool | deliberation status, verification |
-| 5 | error_summary | error_summary_tool | any errors, what failed |
-| 6 | system_overview | status_snapshot_tool | how is everything, executive summary |
-| 7 | system_health | get_body_vitals | body vitals, organ health |
-| 8 | predictions | predictions_tool | predict, forecast |
-| 9 | pilots / gates | pilots_tool / gates_tool | experiment, pilot, gates |
-| 10 | legal_assistance | universal_agent_tool (LegalDocDrafterAgent) | court order, custody, parenting time, motion, legal, attorney, JDF (Session 1034: MUST be before user_feedback) |
-| 11 | user_feedback | (direct response) | not working, broken, bug |
-| 12 | reasoning | reasoning_engine_tool | analyze deeply, reflect on |
-| 12 | sports_betting | sports_betting_tool | betting, odds, spread, moneyline, arbitrage, sharp action, wager, parlay (Session 1030: moved BEFORE opportunities) |
-| 13 | opportunities | opportunity_manager_tool | opportunity, job, gig, income |
-| 14 | content_review | content_review_tool | show blogs, latest blogs, blog titled, blog accuracy, triage blogs, batch publish, publish-ready (Session 1030: broadened patterns) |
-| 14 | generate_blog | generate_blog_tool | generate a blog, v2 blog, deliberated blog, generate content |
-| 15 | brainstorming | brainstorm_tool | brainstorm, panel, think tank |
-| 15 | image/video creation | agent tools | create image, generate video |
-| 16 | content_writing | content_writer_agent | write, draft, compose |
-| 17 | agent_execution | universal_agent_tool | run/execute/invoke agent, {Name}Agent pattern (Session 1030: moved BEFORE research, added payload extraction) |
-| 18 | research | web_search | search, find, research, trending |
-| 19 | initiatives | initiative_tool | initiative, project, pipeline (runs BEFORE boardroom) |
-| 20 | crypto_price | spider_data_tool | btc, bitcoin, ethereum, crypto, coin price, how much is (Session 1030: uses by_spider/coingecko, not keyword search) |
-| 21 | stock_intelligence | stock_intelligence_tool | stock, market brief, SEC filing |
-| 22 | spider_data | spider_data_tool | spider, crawled, news feed |
-| 23 | execution_history | execution_history_tool | agent history, agents been doing, agent conversations, deliberations |
-| 24 | learning_patterns | learning_patterns_tool | learning, patterns |
-| 25 | feedback | feedback_tool | feedback queue, bug reports |
-| 26 | revenue | revenue_tracker_tool | revenue, earnings, financial |
-| 27 | task_management | task_manager_tool | my tasks, task list |
-| 28 | workspace | workspace_tool | workspace, workspace files |
-| 29 | budget | check_resource_budget | budget, token usage, api cost |
-| 30 | system_alerts | get_system_alerts | active alerts, warnings |
-| 31 | ml_analysis | ml_analysis | ml status, decision pattern |
-| 32 | pipeline_status | pipeline_orchestrator_tool | pipeline status, stage breakdown |
-| 33 | capabilities | (direct response) | what can you do, your capabilities (narrowed in 988) |
-| 34 | general | (direct LLM response) | fallback for everything else |
+**Feature flag:** `PA_USE_FUNCTION_CALLING=true` (env var, enabled on Railway). When `false`, falls back to the legacy keyword router.
+
+### Flow (Legacy Keyword Router — Fallback)
+
+```
+message -> _detect_intent_and_route() [506 lines of if/elif keyword matching]
+        -> _build_tool_payload() [590 lines intent-specific extraction]
+        -> ToolDispatcher.execute()
+        -> enrichment (15s timeout)
+        -> LLM formats response
+```
+
+## Tool Schemas (pa_tool_schemas.py)
+
+`PA_TOOL_SCHEMAS` is a list of OpenAI function-calling tool definitions. Each tool has:
+- `name` — matches ToolDispatcher handler name (e.g., `agent_introspection_tool`)
+- `description` — natural language routing signal (GPT-5.2 uses this to decide when to call)
+- `parameters` — JSON schema with action enums, optional filters, limits
+
+`TOOL_TO_INTENT_MAP` maps tool names back to canonical intents for the enrichment pipeline.
+
+**Key tools:**
+- Action-based: `boardroom_tool` (9 actions), `content_review_tool` (10 actions), `initiative_tool` (8 actions)
+- Agent delegation: `run_agent` meta-tool with `agent_name` enum → routes to actual agent tool
+- Telemetry: `system_health_tool`, `agent_introspection_tool`, `status_snapshot_tool`, `check_resource_budget`, `pipeline_orchestrator_tool`
 
 ## Enrichment Pipeline
 
@@ -70,7 +64,19 @@ Eight intelligence services inject context before the LLM generates analysis. Ea
 
 **Relevance gating:** Content-related intents skip the gate. All others require 15% keyword overlap to avoid irrelevant injection.
 
-**Enrichment caps:** Each section is truncated (300-600 chars) to control token usage. `proactive_intelligence` and `platform_briefing` capped at 500 chars.
+**Enrichment caps (Session 1006):** 1500-2000 chars per section. Raised from 300-600 which was discarding 85-95% of data.
+
+## Context Building (_build_context)
+
+Session 1035: All DB-touching steps have `asyncio.wait_for` timeouts to prevent Postgres connection hangs (134s observed on Railway):
+
+| Step | Timeout | Graceful degradation |
+|------|---------|---------------------|
+| Profile load (ExtendedUserProfile) | 5s | PA works without profile context |
+| Knowledge injection | 3s | PA works without system knowledge |
+| System stats | 5s | PA uses hardcoded defaults |
+| Docs context (RAG) | 5s | PA works without document context |
+| Conversation history (sync, __init__) | 5s | `SET LOCAL statement_timeout` |
 
 ## Async Processing (Celery)
 
@@ -82,32 +88,44 @@ PA queries run asynchronously to avoid Railway's ~30s proxy timeout:
 4. Celery task runs with `time_limit=300s`, `soft_time_limit=280s`
 5. Uses `new_event_loop()` + `run_until_complete()` (not `async_to_sync`, which deadlocks)
 
-**Timeouts:** 15s enrichment pipeline, 60s per LLM call.
-
-**Production latency:** "hello" 3s, errors 3.4s, health 12.7s, overview 18.2s, blogs 46.6s, initiatives 64s.
-
-## Response Format
-
-1. **Structured data first** — Always shown, contains IDs for user action
-2. **LLM analysis second** — Max 3-5 bullets of insight, not data repetition
-3. **Intent-specific directives** — Each intent has a specialized analytical prompt (e.g., boardroom focuses on triage strategy, content_review on quality scores)
+**Production latency (function calling):** Single tool ~6s, 5-tool operator report ~16s, multi-turn follow-up ~6s (cached input discount).
 
 ## Conversation History
 
-`ChatConversation` model with `conversation_id`, `session_title`, auto-title generation via LLM on first message. ChatGPT-style sidebar in GlobalPADock and CommandCenterPage.
+`ChatConversation` model with `conversation_id`, `session_title`, auto-title generation via LLM on first message.
 
-**Session 1030: DB-backed memory.** `_load_conversation_history_from_db()` loads last 10 `ChatConversation` rows on PA init, so conversation context survives Celery worker recycling (`max_tasks_per_child`). Previously, `_conversation_history` was in-memory only and lost on every worker restart.
+**Session 1030: DB-backed memory.** `_load_conversation_history_from_db()` loads last 10 `ChatConversation` rows on PA init, so conversation context survives Celery worker recycling (`max_tasks_per_child`).
+
+**Session 1036: Tool call metadata.** `ChatConversation.metadata` now stores `tool_calls` (list of `{name, arguments, call_id, ok}`) and `response_id` (for GPT-5.2 `previous_response_id` caching). History reconstruction includes these for multi-turn function calling context.
+
+## Cost (GPT-5.2)
+
+| Component | Tokens | Cost/turn |
+|-----------|--------|-----------|
+| Tool schemas (50+) | ~5,000 input | $0.009 |
+| System prompt | ~2,500 input | $0.004 |
+| Conversation history (10 turns) | ~3,000 input | $0.005 |
+| Tool results (1-2 calls) | ~1,000 input | $0.002 |
+| Output | ~500 output | $0.007 |
+| **Total (1-tool turn, first msg)** | **~12K** | **~$0.027** |
+| **Total (follow-up, cached)** | **~12K** | **~$0.009** |
+
+With `previous_response_id`, follow-up turns hit the 90% cached input discount ($0.18/1M vs $1.75/1M).
 
 ## Key Tool Actions
 
-**boardroom_tool:** stats (top 10 critical/high items), list_attention, list_decisions, approve/ignore/promote/reject
-**content_review_tool:** list (by status/type), read (full blog + accuracy analysis), publish, archive, revise (blog revision via EditorAgent + PublishGate re-score), triage (3-tier quality summary), batch_publish, batch_archive. Publish/archive/revise actions record feedback to the originating agent via `_record_content_feedback()` → AgentMemory + UserAgentLearning (Session 990).
-**generate_blog_tool:** Triggers V2 deliberation pipeline — with topic runs `ContentDeliberationRunner.run_blog()` synchronously, without topic dispatches Celery task (Session 993).
-**initiative_tool:** list (with owner filter: me/unowned/agent), stats, detail (includes owner), audit (Jaccard similarity clustering), create, update_status (ACTIVE/ON_HOLD/COMPLETED/ARCHIVED), advance (next pipeline stage), complete_action_item, assign_owner (set owner agent or user)
-**opportunity_manager_tool:** list, get, stats, update_status (active/pending/applied/accepted/rejected/expired)
+**boardroom_tool:** stats, list_attention, list_decisions, approve/ignore/promote/reject
+**content_review_tool:** list, read, publish, archive, revise, triage, batch_publish, batch_archive
+**agent_introspection_tool:** stats (aggregates + disjoint taxonomy), list (top-50 preview), details, capabilities
+**initiative_tool:** list, stats, detail, audit, create, update_status, advance, complete_action_item, assign_owner
+**pipeline_orchestrator_tool:** status (initiatives by stage + by_status breakdown)
 **stock_intelligence_tool:** overview, briefs, alerts, predictions, sec_filings
-**spider_data_tool:** recent, by_type, by_spider (Session 1030: includes processed_data for first 3 items), summary, trigger (dispatch spider run by category via Celery)
+**spider_data_tool:** recent, by_type, by_spider, summary, trigger
 
-## Triage Mode
+## Agent Introspection Taxonomy (Session 1035)
 
-Interactive bulk review: "triage attention" activates step-by-step item review with approve/ignore/skip/promote/reject commands and final summary stats.
+Disjoint categories that sum to `router_routable_total`:
+- `blocked_agents` (2): AudioAgent, CodeGeneratorAgent — hard-blocked, tasks rejected
+- `rerouted_agents` (8): COOAgent, CTOAgent, etc. — tasks redirected to specialists
+- `fully_enabled_count` (72): everything else
+- `reconciliation`: "2 blocked + 8 rerouted + 72 fully_enabled = 82 total"
