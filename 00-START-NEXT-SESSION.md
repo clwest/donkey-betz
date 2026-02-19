@@ -1,97 +1,58 @@
-# Session 1032 - Start Here
+# Session 1035 - Start Here
 
-**Previous Session:** 1031 (Deep Agent Testing + Waste Elimination)
+**Previous Session:** 1034 (RAG Wiring, Legal Agent Pipeline, Production Stability — 10 PRs)
 **Date:** February 18, 2026
-**Status:** 92 Agents | 79 Spiders | 25 Advisors | **COST: ~$10/day (down from $15)** | **CodeGeneratorAgent: BLOCKED** | **AudioAgent: BLOCKED** | **6 REMEDIATION PATHS: ALL BLOCKED** | **ROUTING OVERRIDE: LIVE** | **5 ROUTING TESTS: PASS**
+**Status:** 92 Agents | 79 Spiders | 25 Advisors | 39 PA intents | **RAG documents wired into ALL agents** | **Legal agent LIVE** | **0 Railway errors** | **0 frontend 404s**
 
 ---
 
-## Session 1031 (Continued) — Deep Agent Testing
+## Session 1034 — What Happened
 
-### Routing Override in AgentRouter.route() (PR #1300)
+### RAG Document Integration (PR #1319)
+User-uploaded documents (PDFs, URLs, YouTube) now flow into **all 92 agents** via a new context layer:
+- `_get_user_documents_context()` in AgentRouter — pgvector cosine similarity search
+- `_build_intelligent_prompt()` injects relevant chunks as "YOUR UPLOADED DOCUMENTS"
+- Legal agent gets additional direct RAG fallback with stricter threshold
+- Cost: ~$0.00002 per agent execution (one embedding call)
 
-**Problem:** "Step 3 competitor audit" tasks dispatched to wrong agents — WorkflowAgent (17 runs), COOAgent (6), VideoAgent (3), totaling 70 runs/day across 5 agents.
+### Legal Agent Pipeline (PRs #1315–#1318)
+LegalDocDrafterAgent fully wired into PA:
+- New `legal_assistance` PA intent (priority before `user_feedback`)
+- Routes through `AgentRouter.route()` for full context injection
+- JDF (Judicial Department Form) reference injected into prompt
+- Fixed broken `court_order` document type filter
+- Upload hint shown when no user documents found
 
-**Root cause:** Routing override only existed in `execute_agent_task` Celery task, but most dispatches go through `AgentRouter.route()` directly (via orchestrations, HiveMind sessions, workspace output).
+### COO Recommendations (PR #1320)
+- Throttled 4 beat schedules (~40% fewer runs): spider warm-up 4h→6h, clean stale 24h→48h, refresh AI opps 30m→2h, dream execution 2h→4h
+- PA `universal_agent_tool` timeout raised 30s→90s
+- Broadened trend bounding regex
 
-**Fix:** Added routing override directly in `AgentRouter.route()` method (line ~775):
-- Pattern-matches specialist tasks (competitor audit, trend analysis, etc.)
-- Reroutes from non-specialist agents to correct specialist
-- `_NON_SPECIALIST` set: WorkflowAgent, VideoAgent, CodeGeneratorAgent, DevOpsAgent, etc.
-- 5/5 routing tests pass
+### Production Stability (PRs #1321–#1323)
+- **Workspace path self-healing:** Auto-detect stale local macOS paths on Railway, recompute and update DB
+- **Media task guard:** Two-layer regex whitelist blocks non-generative tasks for ImageAgent/VideoAgent/AudioAgent/ThreeDAgent
+- **4 Railway log errors fixed:** AgentResult `.result`→`.message`, UUID str() wrapping, OpportunityActionPlan→ActionPlan, SpiderPriority removal
+- **3 frontend 404s fixed:** Stub endpoints for AgentsPage channels/tools/templates tabs
 
-### Block CodeGeneratorAgent + Remediation Fuel Pipeline (PR #1301)
-
-**Problem:** CodeGeneratorAgent still getting 4 runs/2h ($5.59/day) despite 4 remediation execution paths being blocked. Found 19 non-cancelled remediation tasks (3 in_progress, 7 spec_complete, 9 failed) feeding an unidentified 5th dispatch path.
-
-**Fix (3 layers):**
-1. **Hard-block in `execute_agent_task`** — CodeGeneratorAgent and AudioAgent blocked at the execution entry point (catches ALL dispatch paths)
-2. **Block `assign_open_findings_to_agents`** — Was creating new remediation tasks every 2h
-3. **Block `discover_and_import_audits`** — Audit parser still produces garbage findings
-4. **Cancelled 24 remaining active remediation tasks** on Railway
-
-### All 6 Remediation Paths Now Blocked
-
-| Path | Blocked In |
-|------|-----------|
-| `execute_remediation_tasks` | PR #1297 |
-| `run_autonomous_remediation_cycle` | PR #1297 |
-| `assign_and_execute_remediation` | PR #1300 |
-| `run_agent_remediation_batch` | PR #1300 |
-| `assign_open_findings_to_agents` | PR #1301 |
-| `discover_and_import_audits` | PR #1301 |
-
-### Post-Deploy Verification
-
-| Check | Result |
-|-------|--------|
-| CodeGeneratorAgent runs (post-deploy) | 0 |
-| AudioAgent runs (post-deploy) | 0 |
-| Routing override: WorkflowAgent + competitor audit | Rerouted to CompetitorAnalysisAgent |
-| Routing override: normal task | NOT rerouted (correct) |
-| CompetitorAnalysisAgent success rate | 90% (up from 69%) |
-| ResearchAgent success rate | 97% |
-
-### Cost Impact
-
-| Metric | Before | After |
-|--------|--------|-------|
-| 24h cost | $15.03 | ~$10.91 projected |
-| CodeGeneratorAgent | $5.59/day (68 runs) | $0 (blocked) |
-| AudioAgent | $0.46/day (14 runs) | $0 (blocked) |
-| Target | $6/day | In progress |
+### Other Fixes
+- PR #1314: Cleaner deliverable titles for research-and-create workflow
 
 ---
 
-## Current Agent Health
+## Current System Health (post-Session 1034)
 
-### Healthy (>80% success)
-ResearchAgent (97%), CompetitorAnalysisAgent (90%), ImageAgent (100%), SystemIntelligenceAgent (94%), COOAgent (89%), DevOpsAgent (89%), CTOAgent (83%), CreativeDirectorAgent (86%), VideoAgent (82%), OpportunityScoringAgent (90%), FullStackDeveloperAgent (100%), ContentStrategyAgent (100%), CustomerResearchAgent (80%), BrandStrategyAgent (100%), MarketingStrategyAgent (100%), + all blockchain/financial agents
-
-### Needs Attention
-- **WorkflowAgent (39%)** — Old competitor audit failures pulling down rate. Routing fix deployed, rate should improve. Monitor.
-- **TrendAnalysisAgent (38%)** — Unbounded orchestration tasks ("Research current 12 months of trends") fail/timeout. Bounded tasks from group schedule succeed 100%. Need agent-level task bounding.
-- **ContentWriterAgent (77%)** — Worth investigating failure modes.
-
-### Blocked
-- **CodeGeneratorAgent** — No codebase access on Railway. $5.59/day waste eliminated.
-- **AudioAgent** — TTS API quota exhausted. $0.46/day waste eliminated.
-
----
-
-## Priority: Continue Cost Reduction
-
-Projected $10.91/day is still above $6/day target. Top cost drivers:
-1. **CompetitorAnalysisAgent: $2.48/day** — 63 runs, 90% ok. Productive but high volume.
-2. **WorkflowAgent: $2.88/day** — Inflated by old failures. Should drop post-fix.
-3. **ResearchAgent: $1.74/day** — 170 runs from excessive orchestration delegation.
-4. **VideoAgent: $1.05/day** — 17 runs, 82% ok.
-
-Options to reduce further:
-- Reduce `run_business_strategy_agents` frequency (every 8h → every 12h)
-- Reduce `run_research_analysis_agents` frequency (every 2h → every 4h)
-- Reduce `run_system_orchestration_agents` frequency (every 2h → every 4h)
-- Add task dedup to prevent "Step 3 competitor audit" volume (59 runs/day)
+| Metric | Value |
+|--------|-------|
+| Railway log errors | **0** |
+| Frontend console 404s | **0** |
+| Agents with RAG document access | **92** |
+| PA intents | **39** (added legal_assistance) |
+| PA timeout | 90s (was 30s) |
+| Media task guard | LIVE (two-layer) |
+| Initiatives COMPLETED | 3 (from Session 1033) |
+| Content finishing loop | LIVE (auto-enhance every 4h) |
+| Deliverable scoring | LIVE (score every 6h) |
+| Agent health | 92.4% pass rate |
 
 ---
 
@@ -101,43 +62,59 @@ Options to reduce further:
 `execute_remediation_tasks` triggered 41x/48h from unknown source. All execution + assignment paths now blocked. Root cause still unknown.
 
 ### 5th Dispatch Path — UNKNOWN
-Something reads AuditRemediationTask records and dispatches CodeGeneratorAgent. All tasks cancelled + agent blocked in execute_agent_task, so it's neutralized but the code path is not identified.
+Something reads AuditRemediationTask records and dispatches CodeGeneratorAgent. All tasks cancelled + agent blocked in both dispatch paths, so it's neutralized but the code path is not identified.
 
-### `_get_next_task_for_agent()` — BROKEN
-Always fails silently because InitiativeStage has no `assigned_agent` field. This function never returns real tasks. Low priority since it only affects warmup-to-production promotion.
+### WorkflowAgent / TrendAnalysisAgent Timeout Risk
+Both take 43-44min to complete. Celery timeout is 45min. They PASS but have no margin.
 
-### PA Tool Timeout
-`universal_agent_tool` has 30s timeout — too short for LLM agents.
+### TechnicalDocumentAgent workspace write warning
+All initiative doc generation shows `Failed to write document to workspace: Unknown error`. Documents ARE created (SelfBlog + Deliverable), but workspace write fails silently. Non-blocking but should be investigated.
 
-### TrendAnalysisAgent Task Bounding
-Orchestration pipelines generate unbounded tasks causing 64% failure rate. Need agent-level bounding.
+### Railway Cost
+User hit $1,200/month limit, bumped to $1,500. Schedule throttling (Session 1034) + media guards should reduce costs.
+
+### AgentsPage Tabs (Channels, Tools, Templates)
+Currently return empty stubs. Full backends not yet built (Session 734 frontend, no backend).
+
+### Future Improvements
+- Score remaining ~3,500 deliverables (periodic task will handle over time)
+- Enhance remaining ~111 `needs_enhancement` blogs (periodic task processes 5 per 4h run)
+- Monitor new TRIAGE initiatives for end-to-end completion
+- Build real backends for AgentsPage channels/tools/templates tabs
+- Test RAG document injection with uploaded court orders via PA legal assistant
 
 ---
 
 ## Verify Before Starting
 
 ```bash
-# 1. Blocked agents should have 0 runs
+# 1. Check Railway errors (should be 0)
+railway logs -n 200 2>&1 | grep -i 'ERROR\|WARNING\|Traceback' | grep -v 'errors=0\|error_count\|error_message\|error_type\|INFO'
+
+# 2. Test RAG document context
 railway run python manage.py shell -c "
-from core.models import AgentExecution
-from django.utils import timezone; from datetime import timedelta
-since = timezone.now() - timedelta(hours=6)
-for name in ['CodeGeneratorAgent', 'AudioAgent']:
-    c = AgentExecution.objects.filter(agent__name=name, created_at__gte=since).count()
-    print(f'{name}: {c} runs (should be 0)')
+from content.models import DocumentEmbedding
+print(f'Document embeddings: {DocumentEmbedding.objects.count()}')
 "
 
-# 2. Cost check
+# 3. Test legal agent via PA
+# Ask: "What are my options for enforcing a custody agreement?"
+# Should route to LegalDocDrafterAgent with RAG context
+
+# 4. Initiative & content status
 railway run python manage.py shell -c "
-from core.models import AgentExecution
-from django.utils import timezone; from datetime import timedelta
-from django.db.models import Sum
-since = timezone.now() - timedelta(hours=24)
-cost = float(AgentExecution.objects.filter(created_at__gte=since).aggregate(c=Sum('cost'))['c'] or 0)
-print(f'24h cost: \${cost:.2f} (target: <\$6)')
+from core.models_document_registry import Initiative
+from core.models_unified_system import SelfBlog
+from django.db.models import Count
+print('=== Initiatives ===')
+for s in Initiative.objects.values('status').annotate(cnt=Count('id')).order_by('-cnt'):
+    print(f'{s[\"status\"]:15} {s[\"cnt\"]}')
+print('=== Blogs ===')
+for s in SelfBlog.objects.values('status').annotate(cnt=Count('id')).order_by('-cnt'):
+    print(f'{s[\"status\"]:20} {s[\"cnt\"]}')
 "
 
-# 3. Agent health
+# 5. Agent health
 railway run python manage.py shell -c "
 from core.models import AgentExecution
 from django.utils import timezone; from datetime import timedelta
@@ -155,19 +132,21 @@ for a in AgentExecution.objects.filter(created_at__gte=since).values('agent__nam
 
 ## Critical Patterns & Gotchas
 
-**Blocked agents (Session 1031):** CodeGeneratorAgent and AudioAgent hard-blocked in `execute_agent_task` (core/tasks.py ~line 1348). Also blocked at routing level.
+**RAG context layer (Session 1034):** `_get_user_documents_context()` in AgentRouter — pgvector cosine search, threshold 0.45, top 5 chunks. Legal agent has additional direct fallback at 0.40. Only runs when `self.user` is set.
 
-**Routing override (Session 1031):** In `AgentRouter.route()` (core/agent_router.py ~line 775). Pattern-matches specialist tasks and reroutes from non-specialist agents.
+**Legal agent routing (Session 1034):** `legal_assistance` intent → `universal_agent_tool` → `AgentRouter.route()` → `LegalDocDrafterAgent`. Intent priority MUST be before `user_feedback` (which matches "order").
+
+**Media task guard (Session 1034):** `_MEDIA_AGENTS` frozenset + `_MEDIA_GENERATION_PATTERN` regex. Two layers: pre-dispatch filter in `ConversationActionDispatcher` + fallback in `execute_agent_task`.
+
+**Workspace path self-healing (Session 1034):** `_get_workspace_for_skin_layer()` detects invalid `root_path`, recomputes from `__file__`, updates DB. Handles Railway vs local path mismatch.
+
+**Content finishing loop (Session 1033):** `auto_enhance_blogs` → EditorAgent with `save=True` → blog status `pending_review` → `reevaluate_enhanced_blogs` re-scores → `auto_publish_approved_blogs` publishes.
+
+**Initiative dead state fix (Session 1033):** If stage has `status=IN_REVIEW` but no document, `advance_initiative_pipeline` now generates the doc.
+
+**Dual dispatch block (Session 1032):** CodeGeneratorAgent and AudioAgent blocked in BOTH `execute_agent_task` AND `AgentRouter.route()`.
 
 **6 remediation paths ALL blocked (Session 1031):** execute_remediation_tasks, run_autonomous_remediation_cycle, assign_and_execute_remediation, run_agent_remediation_batch, assign_open_findings_to_agents, discover_and_import_audits.
-
-**Evidence gate dict normalization:**
-```python
-if isinstance(data, dict):
-    data = data.get('results', data.get('data', data.get('discussions', [data])))
-    if not isinstance(data, list):
-        data = [data]
-```
 
 **Railway multi-service deployment:** GitHub push auto-deploys ALL services. Web service takes several minutes.
 
