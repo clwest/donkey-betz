@@ -638,17 +638,18 @@ class ToolDispatcher:
         The actual pipeline orchestration happens via Celery tasks and
         the Initiative pipeline (5 stages). This tool provides status visibility.
         """
-        from core.models_unified_system import Initiative
+        from core.models import Initiative
 
         action = payload.get('action', 'status')
 
         if action == 'status':
             # Get real pipeline stats from Initiative model
+            # Initiative.status uses UPPERCASE values ('ACTIVE' not 'active')
             total = Initiative.objects.count()
             by_stage = {}
             for stage in range(1, 6):
-                by_stage[f'stage_{stage}'] = Initiative.objects.filter(stage=stage).count()
-            active = Initiative.objects.filter(stage__lt=5, status='active').count()
+                by_stage[f'stage_{stage}'] = Initiative.objects.filter(current_stage=stage).count()
+            active = Initiative.objects.filter(current_stage__lt=5, status='ACTIVE').count()
 
             return {
                 'action': 'status',
@@ -868,9 +869,14 @@ class ToolDispatcher:
         vitals = get_body_vitals_service()
 
         if 'all' in systems:
-            result = vitals.get_all_vitals()
+            result = vitals.get_all_vitals(include_details=include_details)
         else:
-            result = vitals.get_vitals_for_systems(systems)
+            # get_system_vitals takes one system at a time
+            result = {}
+            for system_name in systems:
+                result[system_name] = vitals.get_system_vitals(
+                    system_name, include_details=include_details
+                )
 
         return {
             'systems_requested': systems,
@@ -891,13 +897,16 @@ class ToolDispatcher:
         estimated_cost = payload.get('estimated_cost', 0)
 
         vitals = get_body_vitals_service()
-        lungs = vitals.get_vitals_for_systems(['lungs'])
+        budget = vitals.check_budget(estimated_tokens, estimated_cost)
 
         return {
             'estimated_tokens': estimated_tokens,
             'estimated_cost': estimated_cost,
-            'budget_status': lungs.get('lungs', {}).get('status', 'unknown'),
-            'approved': True,  # For now, always approve
+            'budget_status': budget.get('status', 'unknown'),
+            'oxygen_level': budget.get('oxygen_level', 0),
+            'can_proceed': budget.get('can_proceed', True),
+            'warning': budget.get('warning'),
+            'recommendation': budget.get('recommendation'),
         }
 
     def _handle_system_alerts(
@@ -5188,9 +5197,39 @@ class ToolDispatcher:
         from django.utils import timezone
         from datetime import timedelta
 
+        action = payload.get('action', 'inspect')
         agent_query = payload.get('agent_name', '').strip().lower()
-        if not agent_query:
-            return {'error': 'No agent name provided'}
+
+        # Session 1036: Support list/stats action without requiring agent_name
+        if action in ('list', 'stats') or not agent_query:
+            all_agents = Agent.objects.filter(is_active=True)
+            total = all_agents.count()
+
+            by_type = {}
+            for a in all_agents.values('agent_type').distinct():
+                atype = a['agent_type'] or 'unknown'
+                by_type[atype] = all_agents.filter(agent_type=atype).count()
+
+            # Get agents with recent activity (last 7 days)
+            now = timezone.now()
+            active_ids = set(
+                AgentExecution.objects.filter(
+                    created_at__gte=now - timedelta(days=7),
+                ).values_list('agent_id', flat=True)
+            )
+
+            agent_list = list(
+                all_agents.values('name', 'agent_type', 'specialization', 'effectiveness_score')
+                .order_by('-effectiveness_score', 'name')[:50]
+            )
+
+            return {
+                'action': 'list',
+                'total_agents': total,
+                'active_last_7d': len(active_ids),
+                'by_type': by_type,
+                'agents': agent_list,
+            }
 
         # Search by name (fuzzy)
         agents = Agent.objects.filter(name__icontains=agent_query, is_active=True)
