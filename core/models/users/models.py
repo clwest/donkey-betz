@@ -374,6 +374,12 @@ class EnhancedUserProfile(models.Model):
 
     user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE, related_name='enhanced_profile')
 
+    # Session 1039: Multi-tenant customer access
+    tenant = models.ForeignKey(
+        'core.Tenant', null=True, blank=True,
+        on_delete=models.SET_NULL,
+    )
+
     # ========== 1. KEY ROLES & LONG-TERM GOALS ==========
     primary_role = models.CharField(
         max_length=200,
@@ -1091,13 +1097,15 @@ from django.dispatch import receiver
 
 @receiver(post_save, sender=get_user_model())
 def create_user_profile_and_stats(sender, instance, created, **kwargs):
-    """Create UserProfile, ExtendedUserProfile, and UserStatistics when a new user is created."""
+    """Create UserProfile, ExtendedUserProfile, EnhancedUserProfile, and UserStatistics when a new user is created."""
     if created:
         UserProfile.objects.create(user=instance)
         UserStatistics.objects.create(user=instance)
         ExtendedUserProfile.objects.create(user=instance)
+        EnhancedUserProfile.objects.get_or_create(user=instance)
     else:
         # Ensure profile and stats exist for existing users
         UserProfile.objects.get_or_create(user=instance)
         UserStatistics.objects.get_or_create(user=instance)
         ExtendedUserProfile.objects.get_or_create(user=instance)
+        EnhancedUserProfile.objects.get_or_create(user=instance)
