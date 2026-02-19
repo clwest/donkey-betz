@@ -1,6 +1,6 @@
 # Celery & Workers
 
-269 Celery tasks across 7 worker types with queue-based routing, memory management, and observability via CeleryTaskEvent signals. Session 1000C: Routed 60+ heavy tasks off default queue to prevent OOM. Session 1029: Rerouted 5 additional heavy tasks from default to long_running to fix recurring OOM crashes.
+271 Celery tasks across 7 worker types with queue-based routing, memory management, and observability via CeleryTaskEvent signals. Session 1000C: Routed 60+ heavy tasks off default queue to prevent OOM. Session 1029: Rerouted 5 additional heavy tasks from default to long_running to fix recurring OOM crashes. Session 1033: Added auto_enhance_blogs + score_unscored_deliverables. Session 1034: Throttled 4 beat schedules (~40% fewer runs), media task guard, workspace path self-healing.
 
 ## Worker Types (7)
 
@@ -27,9 +27,9 @@
 
 | Queue | # Tasks | Categories |
 |-------|---------|------------|
-| default | ~23 | Light DB queries, body system checks, attention lifecycle |
+| default | ~24 | Light DB queries, body system checks, attention lifecycle, deliverable scoring |
 | long_running | ~55 | Agent exercises (18), autonomous situations (14), pipeline execution, spider network, intelligence desks, blog enhancement, multi-agent conversations, hivemind sessions, dream execution |
-| content | ~21 | Blog generation, podcasts, initiative stages, content deliberation, blog re-evaluation, auto-publish |
+| content | ~22 | Blog generation, podcasts, initiative stages, content deliberation, blog re-evaluation, auto-publish, auto-enhance blogs |
 | sports | ~8 | Odds collection, prediction generation, score fetching, evaluation, verification, settlement, accuracy reports |
 | broadcast | ~4 | Status snapshots, heartbeat, nervous system |
 | ml | ~3 | Embedding backfills, ML model training/scoring |
@@ -72,9 +72,15 @@ Agents are dispatched from 3 independent paths (plus 3 secondary paths). Disabli
 
 **Data Ingestion:** collect_real_opportunities (15m), run_spider_network (15m), process_core_spider_data (2m), scan_spider_opportunities (30m)
 
+**Session 1034 Schedule Throttling:** spider warm-up 4h→6h, clean stale data 24h→48h, refresh AI opportunities 30m→2h, dream execution 2h→4h. Reduces Railway costs ~40% for these 4 tasks.
+
+**Session 1034 Media Task Guard:** `_MEDIA_AGENTS` frozenset (ImageAgent, VideoAgent, AudioAgent, ThreeDAgent) + `_MEDIA_GENERATION_PATTERN` regex. Two-layer defense: pre-dispatch filter in `ConversationActionDispatcher` + fallback in `execute_agent_task`. Blocks non-generative tasks like "List recent images".
+
 **Learning & Intelligence:** run_learning_loop_cycle (6h), mine_learning_patterns (12h), discover_success_patterns (6h)
 
-**Content Generation:** generate_self_blog_task (6h), generate_self_blog_deliberation_task (on-demand), generate_podcast_task (on-demand), enhance_all_blogs_needing_enhancement (6h), reevaluate_enhanced_blogs (6h), auto_publish_approved_blogs (daily 6AM)
+**Content Generation:** generate_self_blog_task (6h), generate_self_blog_deliberation_task (on-demand), generate_podcast_task (on-demand), auto_enhance_blogs (4h, Session 1033), enhance_all_blogs_needing_enhancement (6h), reevaluate_enhanced_blogs (6h), auto_publish_approved_blogs (daily 6AM)
+
+**Quality Scoring:** score_unscored_deliverables (6h, Session 1033)
 
 **Attention & Orchestration:** generate_human_attention_items (15m), process_human_attention_lifecycle (10m), enrich_boardroom_ml_predictions (15m), process_spider_actions (30m), process_gate_progression (15m)
 

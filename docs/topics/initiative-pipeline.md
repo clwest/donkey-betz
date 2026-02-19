@@ -174,6 +174,46 @@ Three systemic bugs found and fixed in `advance_initiative_pipeline`:
 4. Injects real data into task prompt with anti-hallucination instructions
 5. Passes `topic` and `research_context` to agent context
 
+## Dead State Fix & First Completions (Session 1033)
+
+### The Problem
+
+All 3 ACTIVE initiatives were permanently stuck at Stage 2 with `status=IN_REVIEW` but **no document**. The pipeline only processed `PENDING`/`DRAFT` stages — `IN_REVIEW` without a document was an unrecoverable dead state.
+
+### Fix 1: IN_REVIEW Dead State (PR #1307)
+
+`advance_initiative_pipeline` now includes `IN_REVIEW` stages with no document:
+```python
+if not stage or (stage.status in ('PENDING', 'DRAFT', 'IN_REVIEW') and not stage.document_id):
+```
+
+Previously only `PENDING`/`DRAFT` were handled, so `IN_REVIEW` stages without documents were permanently skipped.
+
+### Fix 2: `_get_next_task_for_agent()` Rewrite (PR #1307)
+
+The function was completely broken — referenced nonexistent fields:
+- `InitiativeStage.assigned_agent` (doesn't exist)
+- `InitiativeStage.description` (doesn't exist)
+- `Initiative.title` (should be `name`)
+- `status='pending'` (should be uppercase `'PENDING'`)
+- Wrong import path (`core.models` instead of `core.models_document_registry`)
+
+Rewritten to query `PENDING` stages with no document, plus PublishGate backlog as fallback.
+
+### Production Results — First Initiatives EVER Completed
+
+Data fix: Reset 3 stuck Stage 2 `IN_REVIEW` records to `PENDING` on Railway. Then manually triggered `advance_initiative_pipeline`:
+
+| Initiative | Stages Completed | Time |
+|-----------|-----------------|------|
+| "Developing role, job, position skills" | 2→3→4→5→COMPLETED | ~3 min |
+| "Revise Android 17 Beta Review for Credibility and Clarity" | 2→3→4→5→COMPLETED | ~3 min |
+| "Capitalizing on deadline, position opportunity" | 2→3→4→5→COMPLETED | ~3 min |
+
+Each stage generated a real document via TechnicalDocumentAgent (~45s each), using spider data and embeddings. **These were the first initiatives EVER to complete the full 5-stage pipeline.**
+
+Post-Session 1033 status: 3 COMPLETED, 0 ACTIVE, 17 TRIAGE.
+
 ## PA Flow Metrics (Session 994)
 
 `initiative_tool` actions: list, stats, details, action_items, **flow_metrics**, update_status, advance, complete_action_item, **assign_owner**.
