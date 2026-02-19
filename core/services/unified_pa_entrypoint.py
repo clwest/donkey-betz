@@ -663,10 +663,14 @@ class UnifiedPAEntrypoint:
             logger.info(f"[{trace_id}] FC iteration {iteration+1}/{max_iterations} (final={is_final})")
 
             # Call GPT-5.2 with tools
+            # Always pass messages as input_messages — on iteration 1 it's the full
+            # messages array; on subsequent iterations it's the tool_call_output items.
+            # previous_response_id provides conversation continuity; input provides
+            # the new content (tool outputs) that the API needs to continue.
             result = await asyncio.to_thread(
                 self.llm_enforcer.enforce_real_ai,
                 prompt=message,
-                input_messages=messages if not response_id else None,
+                input_messages=messages,
                 tools=PA_TOOL_SCHEMAS if not is_final else None,
                 previous_response_id=response_id,
                 task_type='conversation',
