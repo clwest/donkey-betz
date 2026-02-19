@@ -126,7 +126,8 @@ class JobApplication(UnifiedBaseModel):
 
     def _create_success_learning(self):
         """Create learning entries for successful applications"""
-        from ..ai_learning.models import UserAgentLearning, UserEmbedding
+        from core.models_unified_system import UserAgentLearning
+        from ..users.models import UserEmbedding
 
         try:
             # Update agent learning
@@ -184,7 +185,7 @@ class JobApplication(UnifiedBaseModel):
 
     def _create_failure_learning(self):
         """Create learning entries for rejected applications"""
-        from ..ai_learning.models import UserAgentLearning
+        from core.models_unified_system import UserAgentLearning
 
         try:
             learning, created = UserAgentLearning.objects.get_or_create(
