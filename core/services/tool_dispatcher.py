@@ -124,6 +124,7 @@ class ToolDispatcher:
         self.register("get_body_vitals", self._handle_body_vitals)
         self.register("check_resource_budget", self._handle_check_budget)
         self.register("get_system_alerts", self._handle_system_alerts)
+        self.register("cost_telemetry_tool", self._handle_cost_telemetry)
 
         # Intelligence tools
         self.register("predictions_tool", self._handle_predictions)
@@ -940,6 +941,179 @@ class ToolDispatcher:
             'alert_count': len(filtered_alerts),
             'alerts': filtered_alerts,
         }
+
+    def _handle_cost_telemetry(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Session 1036: Cost telemetry tool — real spend data from LLMCallLog.
+
+        Returns last 24h spend, top agents by cost, cost by task type, trend.
+        """
+        from core.models_llm_routing import LLMCallLog
+        from django.db.models import Sum, Count, Avg, F, Q
+        from django.utils import timezone
+        from datetime import timedelta
+
+        action = payload.get('action', 'summary')
+        hours = payload.get('hours', 24)
+        limit = min(payload.get('limit', 10), 50)
+
+        now = timezone.now()
+        cutoff = now - timedelta(hours=hours)
+
+        base_qs = LLMCallLog.objects.filter(created_at__gte=cutoff)
+
+        if action == 'summary':
+            # Overall spend summary
+            totals = base_qs.aggregate(
+                total_cost=Sum('cost'),
+                total_calls=Count('id'),
+                total_tokens=Sum('total_tokens'),
+                avg_latency=Avg('latency_ms'),
+                failed_calls=Count('id', filter=Q(success=False)),
+            )
+
+            # Cost by provider
+            by_provider = list(
+                base_qs.values('provider', 'model_id')
+                .annotate(
+                    spend=Sum('cost'),
+                    calls=Count('id'),
+                    tokens=Sum('total_tokens'),
+                )
+                .order_by('-spend')[:10]
+            )
+
+            # Cost by task type
+            by_task_type = list(
+                base_qs.values('task_type')
+                .annotate(
+                    spend=Sum('cost'),
+                    calls=Count('id'),
+                )
+                .order_by('-spend')[:10]
+            )
+
+            # Trend: compare current period to previous same-length period
+            prev_cutoff = cutoff - timedelta(hours=hours)
+            prev_totals = LLMCallLog.objects.filter(
+                created_at__gte=prev_cutoff,
+                created_at__lt=cutoff,
+            ).aggregate(
+                total_cost=Sum('cost'),
+                total_calls=Count('id'),
+            )
+
+            current_cost = float(totals['total_cost'] or 0)
+            prev_cost = float(prev_totals['total_cost'] or 0)
+            cost_change_pct = (
+                round((current_cost - prev_cost) / prev_cost * 100, 1)
+                if prev_cost > 0 else None
+            )
+
+            return {
+                'action': 'summary',
+                'period_hours': hours,
+                'total_cost_usd': round(current_cost, 4),
+                'total_calls': totals['total_calls'] or 0,
+                'total_tokens': totals['total_tokens'] or 0,
+                'avg_latency_ms': round(float(totals['avg_latency'] or 0), 0),
+                'failed_calls': totals['failed_calls'] or 0,
+                'by_provider': [
+                    {
+                        'provider': r['provider'],
+                        'model': r['model_id'],
+                        'spend_usd': round(float(r['spend'] or 0), 4),
+                        'calls': r['calls'],
+                        'tokens': r['tokens'] or 0,
+                    }
+                    for r in by_provider
+                ],
+                'by_task_type': [
+                    {
+                        'task_type': r['task_type'] or 'unknown',
+                        'spend_usd': round(float(r['spend'] or 0), 4),
+                        'calls': r['calls'],
+                    }
+                    for r in by_task_type
+                ],
+                'trend': {
+                    'previous_period_cost_usd': round(prev_cost, 4),
+                    'cost_change_pct': cost_change_pct,
+                },
+                'generated_at': now.isoformat(),
+            }
+
+        elif action == 'top_agents':
+            # Top N agents by cost
+            top_agents = list(
+                base_qs.values('agent_name')
+                .annotate(
+                    spend=Sum('cost'),
+                    calls=Count('id'),
+                    tokens=Sum('total_tokens'),
+                    avg_latency=Avg('latency_ms'),
+                    failures=Count('id', filter=Q(success=False)),
+                )
+                .order_by('-spend')[:limit]
+            )
+
+            return {
+                'action': 'top_agents',
+                'period_hours': hours,
+                'agents': [
+                    {
+                        'agent_name': r['agent_name'],
+                        'spend_usd': round(float(r['spend'] or 0), 4),
+                        'calls': r['calls'],
+                        'tokens': r['tokens'] or 0,
+                        'avg_latency_ms': round(float(r['avg_latency'] or 0), 0),
+                        'failures': r['failures'],
+                    }
+                    for r in top_agents
+                ],
+                'generated_at': now.isoformat(),
+            }
+
+        elif action == 'recent_calls':
+            # Most recent N calls (for debugging)
+            recent = list(
+                base_qs.order_by('-created_at')
+                .values(
+                    'agent_name', 'provider', 'model_id', 'task_type',
+                    'total_tokens', 'cost', 'latency_ms', 'success',
+                    'error_message', 'created_at',
+                )[:limit]
+            )
+
+            return {
+                'action': 'recent_calls',
+                'period_hours': hours,
+                'calls': [
+                    {
+                        'agent': r['agent_name'],
+                        'provider': r['provider'],
+                        'model': r['model_id'],
+                        'task_type': r['task_type'],
+                        'tokens': r['total_tokens'],
+                        'cost_usd': round(float(r['cost'] or 0), 6),
+                        'latency_ms': r['latency_ms'],
+                        'success': r['success'],
+                        'error': r['error_message'][:200] if r['error_message'] else None,
+                        'at': r['created_at'].isoformat() if r['created_at'] else None,
+                    }
+                    for r in recent
+                ],
+                'generated_at': now.isoformat(),
+            }
+
+        else:
+            return {'error': f'Unknown action: {action}. Supported: summary, top_agents, recent_calls'}
 
     def _handle_predictions(
         self,
