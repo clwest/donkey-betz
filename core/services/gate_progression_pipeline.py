@@ -581,15 +581,15 @@ class GateProgressionPipeline:
                 source_id=str(gate.id),
                 source_agent='GateProgressionPipeline',
                 payload={
-                    'gate_id': gate.id,
-                    'decision_id': gate.decision.id if gate.decision else None,
+                    'gate_id': str(gate.id),
+                    'decision_id': str(gate.decision.id) if gate.decision else None,
                     'risk_level': gate.risk_level,
                     'incomplete_items': incomplete,
                     # Session 797: Enable PA consultation flow for stuck gates
                     'consultation': True,
                     'intended_action': 'waive_gate',
                     'action_params': {
-                        'gate_id': gate.id,
+                        'gate_id': str(gate.id),
                         'decision_title': decision_title,
                     },
                     'action_options': [
