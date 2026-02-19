@@ -5223,9 +5223,19 @@ class ToolDispatcher:
                 .order_by('-effectiveness_score', 'name')[:50]
             )
 
+            # Get routable count from agent router
+            routable_count = 0
+            try:
+                from core.agent_router import get_agent_router
+                router = get_agent_router()
+                routable_count = len(router.get_available_agents()) if hasattr(router, 'get_available_agents') else 0
+            except Exception:
+                pass
+
             return {
                 'action': 'list',
                 'total_agents': total,
+                'routable_agents': routable_count,
                 'active_last_7d': len(active_ids),
                 'by_type': by_type,
                 'agents': agent_list,
