@@ -850,10 +850,14 @@ class UnifiedPAEntrypoint:
         context['conversation_history'] = self._conversation_history[-10:]
 
         # Add profile data (must use asyncio.to_thread for sync ORM in async context)
+        # 5s timeout: DB connection issues must not block the entire PA request
         try:
             from core.models import ExtendedUserProfile
-            profile = await asyncio.to_thread(
-                lambda: ExtendedUserProfile.objects.filter(user=self.user).first()
+            profile = await asyncio.wait_for(
+                asyncio.to_thread(
+                    lambda: ExtendedUserProfile.objects.filter(user=self.user).first()
+                ),
+                timeout=5.0,
             )
             if profile:
                 context['profile'] = {
@@ -864,40 +868,59 @@ class UnifiedPAEntrypoint:
                     'desired_income': profile.desired_income,  # type: ignore[attr-defined]
                     'availability': profile.availability,  # type: ignore[attr-defined]
                 }
+        except asyncio.TimeoutError:
+            logger.warning("Profile load timed out after 5s — skipping")
         except Exception as e:
             logger.warning(f"Failed to load profile: {e}")
 
-        # Add dynamic system knowledge if relevant
+        # Add dynamic system knowledge if relevant (3s timeout)
         if self.knowledge_injector:
             try:
-                knowledge_context = self.knowledge_injector.get_context_for_query(message)
+                knowledge_context = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        self.knowledge_injector.get_context_for_query, message
+                    ),
+                    timeout=3.0,
+                )
                 if knowledge_context.get('has_dynamic_context'):
                     context['system_knowledge'] = knowledge_context
+            except asyncio.TimeoutError:
+                logger.warning("Knowledge injection timed out after 3s — skipping")
             except Exception as e:
                 logger.warning(f"Failed to inject knowledge: {e}")
 
-        # Add system stats
+        # Add system stats (5s timeout)
         try:
-            context['system_stats'] = await self._get_system_stats()
+            context['system_stats'] = await asyncio.wait_for(
+                self._get_system_stats(),
+                timeout=5.0,
+            )
+        except asyncio.TimeoutError:
+            logger.warning("System stats timed out after 5s — skipping")
         except Exception as e:
             logger.warning(f"Failed to get system stats: {e}")
 
         # Session 943: Inject docs context so PA knows about system architecture,
-        # recent sessions, and what we've been working on
+        # recent sessions, and what we've been working on (5s timeout)
         if self.docs_context_builder:
             try:
-                docs_context = await asyncio.to_thread(
-                    self.docs_context_builder.build_context_for_agent,
-                    agent_name='personal_assistant',
-                    task=message,
-                    max_docs=8,
-                    include_recent_sessions=True,
-                    include_content_snippets=False,  # Keep context size manageable
-                    include_critical_docs=True  # Always include CLAUDE.md, 00-START-NEXT-SESSION.md
+                docs_context = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        self.docs_context_builder.build_context_for_agent,
+                        agent_name='personal_assistant',
+                        task=message,
+                        max_docs=8,
+                        include_recent_sessions=True,
+                        include_content_snippets=False,  # Keep context size manageable
+                        include_critical_docs=True  # Always include CLAUDE.md, 00-START-NEXT-SESSION.md
+                    ),
+                    timeout=5.0,
                 )
                 if docs_context.get('has_docs'):
                     context['docs_context'] = docs_context
-                    logger.debug(f"📚 [Session 943] PA docs context: {len(docs_context.get('relevant_docs', []))} docs")
+                    logger.debug(f"[Session 943] PA docs context: {len(docs_context.get('relevant_docs', []))} docs")
+            except asyncio.TimeoutError:
+                logger.warning("Docs context injection timed out after 5s — skipping")
             except Exception as e:
                 logger.debug(f"Failed to inject docs context: {e}")
 
@@ -5123,7 +5146,11 @@ Be concise, conversational, and personalized. Address the user by name."""
         and can't handle follow-up references like "tell me more about those".
         """
         try:
+            from django.db import connection
             from core.models import ChatConversation
+            # 5s statement timeout: DB connection issues must not block PA startup
+            with connection.cursor() as cursor:
+                cursor.execute("SET LOCAL statement_timeout = '5000'")
             recent = ChatConversation.objects.filter(
                 user=self.user,
                 platform='web',
