@@ -160,6 +160,9 @@ from ..models_celery_telemetry import CeleryTaskEvent
 # Import code artifact models (Session 1012 - Patch-First Workflow)
 from ..models_code_artifacts import CodeArtifact
 
+# Import tenant model (Session 1039 - Multi-Tenant Customer Access)
+from ..models_tenant import Tenant
+
 # Import learning journey models (Session 773 - Learning Journeys)
 from ..models_learning_journey import (
     LearningJourneyTemplate,
@@ -369,4 +372,7 @@ __all__ = [
 
     # Code Artifacts - Patch-First Workflow (Session 1012)
     'CodeArtifact',
+
+    # Tenant - Multi-Tenant Customer Access (Session 1039)
+    'Tenant',
 ]
