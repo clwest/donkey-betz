@@ -1,6 +1,6 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** February 17, 2026 - Session 1025
+**Last Updated:** February 19, 2026 - Session 1035
 
 ## Quick Start
 
@@ -19,9 +19,9 @@ open http://localhost:8000/ai-studio/
 
 | Component | Count | Details |
 |-----------|-------|---------|
-| **Agents** | 92 | 54 routable, 25 non-routable, 26 provenance-tracked |
+| **Agents** | 92 | 82 routable (72 enabled, 8 rerouted, 2 blocked), 26 provenance-tracked |
 | **Spiders** | 79 | 74 working, 5 need API keys |
-| **PA Tools** | 99 | 39 intents, 53 tool handlers, 8 enrichment services |
+| **PA Tools** | 103 | GPT-5.2 function calling, 53 tool handlers, 50+ schemas, 8 enrichment services |
 | **LLM Providers** | 6 | OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini |
 | **Database Models** | 397+ | PostgreSQL + pgvector |
 | **Celery Tasks** | 269 | 7 workers, dedicated PA queue |
@@ -37,7 +37,7 @@ open http://localhost:8000/ai-studio/
 - `core/services/` - 134 service classes
 - `ai_core/spiders/` - 77 spiders
 - `docs/topics/` - Embedding-optimized subsystem docs (current state)
-- `docs/handoffs/` - 640 session handoff documents (build history)
+- `docs/handoffs/` - 641 session handoff documents (build history)
 
 ### Key Files
 | File | Purpose |
@@ -46,8 +46,9 @@ open http://localhost:8000/ai-studio/
 | `core/agent_router.py` | Deterministic agent routing |
 | `core/tasks.py` | Celery background tasks |
 | `core/conversation_orchestrator.py` | Multi-agent conversations |
-| `core/services/unified_pa_entrypoint.py` | PA: 35 intents, enrichment pipeline |
-| `core/services/tool_dispatcher.py` | PA: 50 tool handlers |
+| `core/services/unified_pa_entrypoint.py` | PA: GPT-5.2 function calling agentic loop, enrichment pipeline |
+| `core/services/tool_dispatcher.py` | PA: 53 tool handlers |
+| `core/services/pa_tool_schemas.py` | PA: 50+ OpenAI function-calling tool schemas |
 | `core/services/signal_aggregation_service.py` | Signal clustering & auto-topic generation |
 | `core/services/content_scoring_service.py` | Rule-based reach/intent/replicability scoring |
 | `core/services/content_deliberation_runner.py` | v2 content pipeline |
@@ -60,7 +61,7 @@ Detailed current-state docs for each subsystem (designed for embedding):
 
 | Topic File | Covers |
 |------------|--------|
-| [docs/topics/personal-assistant.md](docs/topics/personal-assistant.md) | PA intent routing, 50 tools, enrichment, async flow |
+| [docs/topics/personal-assistant.md](docs/topics/personal-assistant.md) | PA GPT-5.2 function calling, 53 tools, enrichment, async flow |
 | [docs/topics/content-pipeline.md](docs/topics/content-pipeline.md) | ClaimsPack, deliberation, reviewers, PublishGate |
 | [docs/topics/agent-system.md](docs/topics/agent-system.md) | 92 agents, routing, ToolCallRecord, provenance |
 | [docs/topics/initiative-pipeline.md](docs/topics/initiative-pipeline.md) | Dreams, 5-stage pipeline, signals, action items |

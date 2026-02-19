@@ -1,87 +1,83 @@
-# Session 1035 - Start Here
+# Session 1036 - Start Here
 
-**Previous Session:** 1034 (RAG Wiring, Legal Agent Pipeline, Production Stability — 10 PRs)
-**Date:** February 18, 2026
-**Status:** 92 Agents | 79 Spiders | 25 Advisors | 39 PA intents | **RAG documents wired into ALL agents** | **Legal agent LIVE** | **0 Railway errors** | **0 frontend 404s**
-
----
-
-## Session 1034 — What Happened
-
-### RAG Document Integration (PR #1319)
-User-uploaded documents (PDFs, URLs, YouTube) now flow into **all 92 agents** via a new context layer:
-- `_get_user_documents_context()` in AgentRouter — pgvector cosine similarity search
-- `_build_intelligent_prompt()` injects relevant chunks as "YOUR UPLOADED DOCUMENTS"
-- Legal agent gets additional direct RAG fallback with stricter threshold
-- Cost: ~$0.00002 per agent execution (one embedding call)
-
-### Legal Agent Pipeline (PRs #1315–#1318)
-LegalDocDrafterAgent fully wired into PA:
-- New `legal_assistance` PA intent (priority before `user_feedback`)
-- Routes through `AgentRouter.route()` for full context injection
-- JDF (Judicial Department Form) reference injected into prompt
-- Fixed broken `court_order` document type filter
-- Upload hint shown when no user documents found
-
-### COO Recommendations (PR #1320)
-- Throttled 4 beat schedules (~40% fewer runs): spider warm-up 4h→6h, clean stale 24h→48h, refresh AI opps 30m→2h, dream execution 2h→4h
-- PA `universal_agent_tool` timeout raised 30s→90s
-- Broadened trend bounding regex
-
-### Production Stability (PRs #1321–#1323)
-- **Workspace path self-healing:** Auto-detect stale local macOS paths on Railway, recompute and update DB
-- **Media task guard:** Two-layer regex whitelist blocks non-generative tasks for ImageAgent/VideoAgent/AudioAgent/ThreeDAgent
-- **4 Railway log errors fixed:** AgentResult `.result`→`.message`, UUID str() wrapping, OpportunityActionPlan→ActionPlan, SpiderPriority removal
-- **3 frontend 404s fixed:** Stub endpoints for AgentsPage channels/tools/templates tabs
-
-### Other Fixes
-- PR #1314: Cleaner deliverable titles for research-and-create workflow
+**Previous Sessions:** 1035 (PA Function Calling Hardening), 1034 (RAG Wiring, Legal Agent, Stability)
+**Date:** February 19, 2026
+**Status:** 92 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2)** | 82 routable agents (72 enabled, 8 rerouted, 2 blocked) | DB timeout resilience | RAG documents wired into ALL agents
 
 ---
 
-## Current System Health (post-Session 1034)
+## Session 1035 — What Happened
+
+### PA Function Calling Hardened
+The PA redesign (Session 1036: keyword router → GPT-5.2 function calling) was hardened through iterative Railway testing:
+- **Pyright cleanup:** 0 errors across all 4 PA files (pa_tool_schemas.py, llm_enforcer.py, tool_dispatcher.py, unified_pa_entrypoint.py)
+- **Operator report accuracy:** Fixed 3 tool handlers (schema alignment, routable count, pipeline by_status)
+- **Disjoint agent taxonomy:** blocked (2) + rerouted (8) + fully_enabled (72) = 82 total, with reconciliation field
+- **Tool call metadata:** GPT function call names/arguments/call_ids now captured (was `name: unknown`)
+- **DB timeout resilience:** All `_build_context` steps capped at 3-5s (was unbounded, 134s hang observed)
+
+### Model Deduplication
+- Removed deprecated `UserAgentLearning` from `core/models.py` (242 lines). Canonical version in `core/models_unified_system.py`.
+- Fixed broken import in `core/models/jobs/models.py`
+
+### Commits
+| Commit | Description |
+|--------|-------------|
+| ea2de879 | Resolve all Pyright errors in PA function calling files |
+| 3d0725f3 | Add stats to introspection schema, fix routable count, add pipeline by_status |
+| cca9aac2 | Remove deprecated UserAgentLearning from core/models.py |
+| f5366d8a | Split stats/list in agent_introspection, add blocked agent breakdown |
+| 450be9a2 | Make agent introspection categories disjoint and reconcilable |
+| 53aaf07b | Capture GPT function call names in PA tool_call_metadata |
+| 3e777844 | Add timeouts to PA _build_context to prevent DB connection hangs |
+
+---
+
+## Current System Health (post-Session 1035)
 
 | Metric | Value |
 |--------|-------|
+| PA routing | **GPT-5.2 function calling** (`PA_USE_FUNCTION_CALLING=true`) |
+| PA latency (5-tool report) | **~16s** (was 140s with DB hang) |
+| PA _build_context timeout | **5s per step** (was unbounded) |
 | Railway log errors | **0** |
-| Frontend console 404s | **0** |
-| Agents with RAG document access | **92** |
-| PA intents | **39** (added legal_assistance) |
-| PA timeout | 90s (was 30s) |
-| Media task guard | LIVE (two-layer) |
-| Initiatives COMPLETED | 3 (from Session 1033) |
+| Agents routable | **82** (72 enabled + 8 rerouted + 2 blocked) |
+| Initiatives | 23 total (20 TRIAGE, 3 COMPLETED, **0 ACTIVE**) |
 | Content finishing loop | LIVE (auto-enhance every 4h) |
-| Deliverable scoring | LIVE (score every 6h) |
+| RAG documents | Wired into all 92 agents |
 | Agent health | 92.4% pass rate |
+| 24h stats (observed) | 45,869 celery tasks, 1,977 spider items, 68 active spiders, 482 signal clusters |
 
 ---
 
 ## Known Issues / Open Items
 
-### Ghost Celery Dispatcher — HARD-BLOCKED
-`execute_remediation_tasks` triggered 41x/48h from unknown source. All execution + assignment paths now blocked. Root cause still unknown.
+### 20 Initiatives Stuck in TRIAGE
+All initiatives are TRIAGE (20) or COMPLETED (3), none ACTIVE. The pipeline isn't promoting anything. Likely the `_get_next_task_for_agent()` function is broken (InitiativeStage has no `assigned_agent` field). Needs investigation.
 
-### 5th Dispatch Path — UNKNOWN
-Something reads AuditRemediationTask records and dispatches CodeGeneratorAgent. All tasks cancelled + agent blocked in both dispatch paths, so it's neutralized but the code path is not identified.
+### Profile Consolidation (Phase 4)
+Three user profile models: UserProfile + ExtendedUserProfile + EnhancedUserProfile. Need to merge into UnifiedUserProfile. Requires unified schema, migration, FK management across 50+ consumers. Deferred from Session 1035.
+
+### Ghost Celery Dispatcher — HARD-BLOCKED
+`execute_remediation_tasks` triggered 41x/48h from unknown source. All 6 execution + assignment paths blocked. Root cause still unknown.
 
 ### WorkflowAgent / TrendAnalysisAgent Timeout Risk
 Both take 43-44min to complete. Celery timeout is 45min. They PASS but have no margin.
 
-### TechnicalDocumentAgent workspace write warning
-All initiative doc generation shows `Failed to write document to workspace: Unknown error`. Documents ARE created (SelfBlog + Deliverable), but workspace write fails silently. Non-blocking but should be investigated.
+### Railway Web Service Instability
+Web service hung during deploy (Postgres connection timeout in release command). Required force redeploy. The timeout fix protects the PA but the release command (`migrate + sync_celery_beat + setup_codebase_workspace`) may also need timeouts.
 
 ### Railway Cost
 User hit $1,200/month limit, bumped to $1,500. Schedule throttling (Session 1034) + media guards should reduce costs.
 
-### AgentsPage Tabs (Channels, Tools, Templates)
-Currently return empty stubs. Full backends not yet built (Session 734 frontend, no backend).
-
 ### Future Improvements
-- Score remaining ~3,500 deliverables (periodic task will handle over time)
-- Enhance remaining ~111 `needs_enhancement` blogs (periodic task processes 5 per 4h run)
-- Monitor new TRIAGE initiatives for end-to-end completion
+- Investigate and fix initiative TRIAGE → ACTIVE promotion
+- Profile consolidation (Phase 4 model dedup)
 - Build real backends for AgentsPage channels/tools/templates tabs
+- Score remaining ~3,500 deliverables (periodic task handles over time)
+- Enhance remaining ~111 `needs_enhancement` blogs (5 per 4h run)
 - Test RAG document injection with uploaded court orders via PA legal assistant
+- Consider removing legacy keyword router once function calling is proven stable
 
 ---
 
@@ -91,19 +87,17 @@ Currently return empty stubs. Full backends not yet built (Session 734 frontend,
 # 1. Check Railway errors (should be 0)
 railway logs -n 200 2>&1 | grep -i 'ERROR\|WARNING\|Traceback' | grep -v 'errors=0\|error_count\|error_message\|error_type\|INFO'
 
-# 2. Test RAG document context
-railway run python manage.py shell -c "
-from content.models import DocumentEmbedding
-print(f'Document embeddings: {DocumentEmbedding.objects.count()}')
-"
+# 2. Test PA function calling
+# Ask: "Run a full operator report: system health, agent stats, pipeline status, and resource budget."
+# Should call 4+ tools via GPT-5.2 function calling, return raw numbers
 
-# 3. Test legal agent via PA
-# Ask: "What are my options for enforcing a custody agreement?"
-# Should route to LegalDocDrafterAgent with RAG context
+# 3. Quick agent taxonomy check
+# Ask: "How many agents are fully enabled vs blocked vs rerouted? Verify the math adds up."
+# Should return: 72 + 8 + 2 = 82, reconciliation_ok: true
 
 # 4. Initiative & content status
 railway run python manage.py shell -c "
-from core.models_document_registry import Initiative
+from core.models import Initiative
 from core.models_unified_system import SelfBlog
 from django.db.models import Count
 print('=== Initiatives ===')
@@ -113,41 +107,24 @@ print('=== Blogs ===')
 for s in SelfBlog.objects.values('status').annotate(cnt=Count('id')).order_by('-cnt'):
     print(f'{s[\"status\"]:20} {s[\"cnt\"]}')
 "
-
-# 5. Agent health
-railway run python manage.py shell -c "
-from core.models import AgentExecution
-from django.utils import timezone; from datetime import timedelta
-from django.db.models import Count, Q
-since = timezone.now() - timedelta(hours=6)
-for a in AgentExecution.objects.filter(created_at__gte=since).values('agent__name').annotate(
-    cnt=Count('id'), ok=Count('id', filter=Q(status='completed'))
-).order_by('-cnt')[:15]:
-    rate = a['ok']/max(a['cnt'],1)*100
-    print(f'{a[\"agent__name\"]:35} {a[\"cnt\"]:3} runs {rate:.0f}%')
-"
 ```
 
 ---
 
 ## Critical Patterns & Gotchas
 
-**RAG context layer (Session 1034):** `_get_user_documents_context()` in AgentRouter — pgvector cosine search, threshold 0.45, top 5 chunks. Legal agent has additional direct fallback at 0.40. Only runs when `self.user` is set.
+**PA function calling (Session 1036):** `PA_USE_FUNCTION_CALLING=true` env var. Agentic loop in `_run_agentic_loop()` — max 5 iterations, GPT-5.2 decides tool calls. `pa_tool_schemas.py` has all schemas. `TOOL_TO_INTENT_MAP` maps tool names → intents for enrichment.
 
-**Legal agent routing (Session 1034):** `legal_assistance` intent → `universal_agent_tool` → `AgentRouter.route()` → `LegalDocDrafterAgent`. Intent priority MUST be before `user_feedback` (which matches "order").
+**PA context timeouts (Session 1035):** All `_build_context` DB steps have 3-5s `asyncio.wait_for`. History load uses `SET LOCAL statement_timeout = '5000'`. Graceful degradation — PA works without any context piece.
 
-**Media task guard (Session 1034):** `_MEDIA_AGENTS` frozenset + `_MEDIA_GENERATION_PATTERN` regex. Two layers: pre-dispatch filter in `ConversationActionDispatcher` + fallback in `execute_agent_task`.
+**Agent taxonomy (Session 1035):** `blocked_agents` (2), `rerouted_agents` (8), `fully_enabled_count` (72). Categories are disjoint and sum to `router_routable_total` (82). Defined in `_handle_agent_introspection` in tool_dispatcher.py.
 
-**Workspace path self-healing (Session 1034):** `_get_workspace_for_skin_layer()` detects invalid `root_path`, recomputes from `__file__`, updates DB. Handles Railway vs local path mismatch.
+**RAG context layer (Session 1034):** `_get_user_documents_context()` in AgentRouter — pgvector cosine search, threshold 0.45, top 5 chunks.
 
-**Content finishing loop (Session 1033):** `auto_enhance_blogs` → EditorAgent with `save=True` → blog status `pending_review` → `reevaluate_enhanced_blogs` re-scores → `auto_publish_approved_blogs` publishes.
-
-**Initiative dead state fix (Session 1033):** If stage has `status=IN_REVIEW` but no document, `advance_initiative_pipeline` now generates the doc.
+**Legal agent routing (Session 1034):** `legal_assistance` intent → `universal_agent_tool` → `AgentRouter.route()` → `LegalDocDrafterAgent`.
 
 **Dual dispatch block (Session 1032):** CodeGeneratorAgent and AudioAgent blocked in BOTH `execute_agent_task` AND `AgentRouter.route()`.
 
 **6 remediation paths ALL blocked (Session 1031):** execute_remediation_tasks, run_autonomous_remediation_cycle, assign_and_execute_remediation, run_agent_remediation_batch, assign_open_findings_to_agents, discover_and_import_audits.
 
-**Railway multi-service deployment:** GitHub push auto-deploys ALL services. Web service takes several minutes.
-
-**Auth for production API:** `Token 0cdc1c72dba99ea637485076ee952d571440aa30`
+**Railway multi-service deployment:** GitHub push auto-deploys ALL services. Web service takes several minutes. Celery workers may take longer.
