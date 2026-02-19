@@ -18,6 +18,8 @@ Django web application deployed on Railway with Redis, PostgreSQL (pgvector), an
 - **Start command:** `sh -c` wrapper required for `$PORT` expansion
 - **Ephemeral filesystem:** Workspace file writes fail between deploys (expected, not a bug)
 - **Blue-green deploys:** Migrations can hang on lock during deploy; temporarily remove from start command if needed
+- **Workspace path self-healing (Session 1034):** `_get_workspace_for_skin_layer()` auto-detects stale local macOS paths (stored in DB), recomputes from `__file__`, and updates the DB record. Handles Railway vs local path mismatch.
+- **Cost budget:** $1,500/month (raised from $1,200 in Session 1034). Schedule throttling reduces unnecessary task runs.
 
 ## Settings
 
