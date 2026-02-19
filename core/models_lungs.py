@@ -19,6 +19,7 @@ Human Body Metaphor:
 
 import uuid
 from decimal import Decimal
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
@@ -43,6 +44,8 @@ class Budget(models.Model):
         ('system', 'System-wide'),
         ('provider', 'Per Provider'),
         ('agent', 'Per Agent'),
+        ('tenant', 'Per Tenant'),
+        ('user', 'Per User'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -78,6 +81,16 @@ class Budget(models.Model):
     critical_threshold = models.FloatField(
         default=0.95,
         help_text='Send critical alert at this % of limit (0.95 = 95%)'
+    )
+
+    # Session 1039: Tenant / user scoped budgets
+    tenant = models.ForeignKey(
+        'core.Tenant', null=True, blank=True,
+        on_delete=models.CASCADE, related_name='budgets',
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.CASCADE, related_name='budgets',
     )
 
     # Status flags

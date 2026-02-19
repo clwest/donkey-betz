@@ -112,6 +112,25 @@ class UnifiedUser(AbstractUser):
         help_text="Primary role/access level on the platform"
     )
 
+    # Session 1039: Multi-tenant customer access
+    tenant = models.ForeignKey(
+        'core.Tenant',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='members',
+    )
+    customer_role = models.CharField(
+        max_length=20,
+        choices=[
+            ('viewer', 'Viewer'),
+            ('user', 'User'),
+            ('org_admin', 'Org Admin'),
+        ],
+        default='user',
+        blank=True,
+    )
+
     # Subscription and billing
     subscription_tier = models.CharField(
         max_length=20,
