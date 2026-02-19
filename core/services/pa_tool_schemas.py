@@ -714,7 +714,16 @@ PA_TOOL_SCHEMAS = [
         ),
         "parameters": {
             "type": "object",
-            "properties": {},
+            "properties": {
+                "estimated_tokens": {
+                    "type": "integer",
+                    "description": "Estimated token usage for a planned operation",
+                },
+                "estimated_cost": {
+                    "type": "number",
+                    "description": "Estimated cost in USD for a planned operation",
+                },
+            },
         },
     },
 
