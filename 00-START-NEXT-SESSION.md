@@ -1,47 +1,70 @@
-# Session 1037 - Start Here
+# Session 1038 - Start Here
 
-**Previous Sessions:** 1036 (TRIAGE Promotion Fix), 1035 (PA Function Calling Hardening), 1034 (RAG Wiring, Legal Agent, Stability)
+**Previous Sessions:** 1037 (Initiative Pipeline + Artifact Routing Fix), 1036 (PA Function Calling Hardening), 1035 (RAG Wiring, Legal Agent, Stability)
 **Date:** February 19, 2026
-**Status:** 92 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2)** | 82 routable agents (72 enabled, 8 rerouted, 2 blocked) | **Initiative pipeline UNBLOCKED** | 19 ACTIVE initiatives
+**Status:** 92 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2)** | 82 routable agents (72 enabled, 8 rerouted, 2 blocked) | **Initiative pipeline UNBLOCKED** | 19 ACTIVE initiatives | 218 total agent personas (139 DB-only)
 
 ---
 
-## Session 1036 — What Happened
+## Session 1037 — What Happened
 
 ### Initiative Pipeline Unblocked (TRIAGE -> ACTIVE)
-All 20 non-completed initiatives were permanently stuck in TRIAGE. Session 994 introduced TRIAGE as a quality gate, Session 1016 added demotion sweep + `can_promote_to_active()`, but **no promotion path was ever built**. The complete deadlock:
-- New initiatives always created as TRIAGE
-- `advance_initiative_pipeline` only queries ACTIVE — skipped TRIAGE entirely
-- `_auto_assign_owner()` failed silently for `HiveMind:*` creators, leaving `owner_agent` empty (hard requirement for quality gate)
-- Even manual promotion blocked by `save()` override
+All 20 non-completed initiatives were permanently stuck in TRIAGE — no promotion path existed. Fixed by adding a TRIAGE->ACTIVE promotion sweep to `process_initiative_auto_progression` (every 10 min) + `ResearchAgent` fallback for unowned initiatives.
 
-**Fix (2 files, ~30 lines):**
-1. **`core/tasks.py`** — Added TRIAGE->ACTIVE promotion sweep inside `process_initiative_auto_progression` (runs every 10 min). Backfills `owner_agent` for unowned initiatives using `PROGRAM_OWNER_MAP` + `ResearchAgent` fallback, then promotes those passing `can_promote_to_active()`.
-2. **`core/services/initiative_integration_service.py`** — Added `ResearchAgent` fallback in `_auto_assign_owner()` so `HiveMind:*` creators and `uncategorized` programs no longer leave `owner_agent` empty.
+**Result:** 0 ACTIVE -> **19 ACTIVE**, stages generating (38 APPROVED, 48 PENDING, 4 DRAFT, 5 BLOCKED).
 
-**Result verified on Railway:**
-- Before: 20 TRIAGE, 0 ACTIVE, 8 COMPLETED
-- After: **19 ACTIVE**, 0 TRIAGE, 8 COMPLETED
-- `advance_initiative_pipeline` immediately picked up the ACTIVE initiatives
-- `execute_initiative_stage_task` generating stage documents (72-146s per task)
-- Stage breakdown: 38 APPROVED, 48 PENDING, 4 DRAFT, 5 BLOCKED
+### Artifact Execution Routing Fix
+`execute_approved_artifacts` was failing for ~40% of approved artifacts (1,409/3,489) because `source_agent` pointed to DB-only agent personas not in `AgentRouter.AGENT_MAP`. Fixed `_select_agent()` to validate against `AGENT_MAP` before using `source_agent.name`, falling through to keyword/type matching for non-routable personas.
+
+### Key Discovery: 218 Agent Personas
+The Agent table has 218 entries: 82 routable (Python classes in AGENT_MAP) + **139 DB-only personas** (e.g. "Hidden Job Market Explorer", "Resume Optimizer AI", "Salary Negotiation Expert"). These are real agent personas created from conversations/dreams — NOT hallucinated names. They need a `DynamicPersonaAgent` to become routable.
 
 ### Commits
 | Commit | Description |
 |--------|-------------|
 | fa448460 | Add TRIAGE->ACTIVE promotion sweep to unblock stuck initiatives |
+| 52ce7d31 | Session 1036 handoff docs |
+| 5746361d | Fall back to keyword/type routing when artifact source_agent not routable |
 
 ---
 
-## Current System Health (post-Session 1036)
+## Priority: DynamicPersonaAgent
+
+Make all 218 agents routable by creating a single `DynamicPersonaAgent` class that loads persona from the Agent DB record.
+
+### What exists
+- `Agent` model has `name`, `description`, `system_prompt`, `tools` (JSONField), `enabled`
+- `AgentRouter.AGENT_MAP` maps agent name -> Python class (currently 82 entries)
+- `AgentRouter.route()` looks up `agent_name` in `AGENT_MAP`, fails if missing
+- 139 DB-only personas have approved artifacts, learning records, and spider connections
+
+### Proposed approach
+1. Create `core/agents/dynamic_persona_agent.py` — subclass of `BaseAgent` that:
+   - Receives agent name at construction time
+   - Loads `system_prompt` and `description` from Agent DB record
+   - Has access to standard tools (web_search, spider_query) but not creation tools
+   - Falls back gracefully if DB record missing
+2. Modify `AgentRouter.route()` to check `AGENT_MAP` first, then fall back to `DynamicPersonaAgent` for any Agent DB record with `enabled=True`
+3. No need to add 139 entries to `AGENT_MAP` — the fallback is dynamic
+
+### Questions to decide
+- Which tools should DynamicPersonaAgent have access to? (web_search, spider_query, analyze_data?)
+- Should the Agent DB `tools` JSONField drive tool access, or use a standard set?
+- Should non-enabled DB personas be routable?
+
+---
+
+## Current System Health (post-Session 1037)
 
 | Metric | Value |
 |--------|-------|
 | PA routing | **GPT-5.2 function calling** (`PA_USE_FUNCTION_CALLING=true`) |
 | PA latency (5-tool report) | **~16s** (was 140s with DB hang) |
 | Agents routable | **82** (72 enabled + 8 rerouted + 2 blocked) |
+| Agent personas (DB) | **218** total (139 DB-only, need DynamicPersonaAgent) |
 | Initiatives | **19 ACTIVE**, 8 COMPLETED, 0 TRIAGE |
 | Initiative stages | 38 APPROVED, 48 PENDING, 4 DRAFT, 5 BLOCKED |
+| Artifact execution | Fixed — non-routable personas fall through to keyword/type routing |
 | Content finishing loop | LIVE (auto-enhance every 4h) |
 | RAG documents | Wired into all 92 agents |
 | Agent health | 92.4% pass rate |
@@ -65,11 +88,8 @@ Web service hung during deploy (Postgres connection timeout in release command).
 ### Railway Cost
 User hit $1,200/month limit, bumped to $1,500. Schedule throttling (Session 1034) + media guards should reduce costs.
 
-### Artifact Execution Agent Name Mismatch
-`execute_approved_artifacts` fails for initiatives with hallucinated agent names like "SEO Content Optimizer", "Content Strategy Planner", "Hidden Job Market Explorer", "Resume Optimizer AI" — these don't exist in the router. The `owner_agent` or artifact `assigned_agent` was set to a non-existent agent name. May need a name-normalization step or fallback routing.
-
 ### Future Improvements
-- Fix artifact agent name mismatches (normalize to real agent names)
+- **DynamicPersonaAgent** — make all 218 agents routable (priority for Session 1038)
 - Profile consolidation (Phase 4 model dedup)
 - Build real backends for AgentsPage channels/tools/templates tabs
 - Score remaining ~3,500 deliverables (periodic task handles over time)
@@ -82,7 +102,7 @@ User hit $1,200/month limit, bumped to $1,500. Schedule throttling (Session 1034
 ## Verify Before Starting
 
 ```bash
-# 1. Check Railway errors (should be 0)
+# 1. Check Railway errors (should be minimal — artifact "Unknown agent" errors should be gone)
 railway logs -n 200 2>&1 | grep -i 'ERROR\|WARNING\|Traceback' | grep -v 'errors=0\|error_count\|error_message\|error_type\|INFO'
 
 # 2. Initiative pipeline status (should show ACTIVE > 0, stages progressing)
@@ -98,24 +118,30 @@ for s in InitiativeStage.objects.filter(initiative__status='ACTIVE').values('sta
     print(f'{s[\"status\"]:15} {s[\"cnt\"]}')
 "
 
-# 3. Test PA function calling
+# 3. Agent persona inventory
+railway run python manage.py shell -c "
+from core.models import Agent
+from core.agent_router import AgentRouter
+routable = set(AgentRouter.AGENT_MAP.keys())
+total = Agent.objects.count()
+db_only = Agent.objects.exclude(name__in=routable).count()
+print(f'Total agent personas: {total}')
+print(f'Routable (Python class): {len(routable)}')
+print(f'DB-only (need DynamicPersonaAgent): {db_only}')
+"
+
+# 4. Test PA function calling
 # Ask: "Run a full operator report: system health, agent stats, pipeline status, and resource budget."
 # Should call 4+ tools via GPT-5.2 function calling, return raw numbers
-
-# 4. Blog status
-railway run python manage.py shell -c "
-from core.models_unified_system import SelfBlog
-from django.db.models import Count
-for s in SelfBlog.objects.values('status').annotate(cnt=Count('id')).order_by('-cnt'):
-    print(f'{s[\"status\"]:20} {s[\"cnt\"]}')
-"
 ```
 
 ---
 
 ## Critical Patterns & Gotchas
 
-**Initiative promotion (Session 1036):** `process_initiative_auto_progression` (every 10 min) now has both demotion sweep (ACTIVE->TRIAGE for bad initiatives) AND promotion sweep (TRIAGE->ACTIVE for qualifying ones). Backfills `owner_agent` with `ResearchAgent` fallback. Uses `skip_invariant_check=True` to bypass `save()` override.
+**Artifact routing fallback (Session 1037):** `_select_agent()` in `core/services/artifact_execution.py` checks `source_agent.name` against `AgentRouter.AGENT_MAP`. Non-routable DB personas fall through to keyword/type matching. 139 DB-only personas are real — do NOT delete them.
+
+**Initiative promotion (Session 1037):** `process_initiative_auto_progression` (every 10 min) has demotion sweep (ACTIVE->TRIAGE) AND promotion sweep (TRIAGE->ACTIVE). Backfills `owner_agent` with `ResearchAgent` fallback. Uses `skip_invariant_check=True` to bypass `save()` override.
 
 **PA function calling (Session 1036):** `PA_USE_FUNCTION_CALLING=true` env var. Agentic loop in `_run_agentic_loop()` — max 5 iterations, GPT-5.2 decides tool calls. `pa_tool_schemas.py` has all schemas. `TOOL_TO_INTENT_MAP` maps tool names -> intents for enrichment.
 
