@@ -187,13 +187,20 @@ class ArtifactExecutionService:
         Select the best agent for this artifact.
 
         Priority:
-        1. Source agent (if the proposing agent can handle it)
+        1. Source agent (if routable — has a Python class in AgentRouter.AGENT_MAP)
         2. Keyword-based specialization matching
         3. Default by artifact type
         """
-        # Option 1: Use source agent if available
+        # Option 1: Use source agent if it's routable
         if artifact.source_agent:
-            return artifact.source_agent.name
+            from core.agent_router import AgentRouter
+            if artifact.source_agent.name in AgentRouter.AGENT_MAP:
+                return artifact.source_agent.name
+            # Session 1037: source_agent is a DB-only persona, fall through to keyword/type matching
+            logger.info(
+                f"Artifact {artifact.id}: source_agent '{artifact.source_agent.name}' "
+                f"not routable, falling back to keyword/type matching"
+            )
 
         # Option 2: Check for keyword matches in title/description
         text = f"{artifact.title} {artifact.description}".lower()
