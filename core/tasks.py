@@ -9507,29 +9507,15 @@ def trigger_project_research(self, max_projects: int = 3, max_spiders_per_projec
             # Limit spiders per project
             spiders_to_run = list(spiders_to_run)[:max_spiders_per_project]
 
-            # Trigger spider execution by setting priority
-            from core.models_unified_system import SpiderPriority
-
+            # Session 1036: SpiderPriority model doesn't exist — just log which
+            # spiders would benefit from boosting. Spiders run on their own schedules.
             for spider_name in spiders_to_run:
-                try:
-                    priority, created = SpiderPriority.objects.get_or_create(
-                        spider_name=spider_name,
-                        defaults={
-                            'priority_score': 80,
-                            'boost_reason': f'Project need: {project.project_name}'
-                        }
-                    )
-                    if not created:
-                        # Boost existing priority
-                        priority.priority_score = min(100, priority.priority_score + 10)
-                        priority.boost_reason = f'Project need: {project.project_name}'
-                        priority.save()
-
-                    stats['spiders_prioritized'].append(spider_name)
-
-                except Exception as e:
-                    logger.warning(f"📊 [PROJECT-RESEARCH] Failed to prioritize {spider_name}: {e}")
-                    continue
+                stats['spiders_prioritized'].append(spider_name)
+            if spiders_to_run:
+                logger.info(
+                    f"📊 [PROJECT-RESEARCH] Spiders relevant to {project.project_name}: "
+                    f"{', '.join(spiders_to_run)}"
+                )
 
             # Also create a conversation about the project's research needs
             if spiders_to_run and random.random() < 0.3:  # 30% chance
