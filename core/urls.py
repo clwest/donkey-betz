@@ -2806,6 +2806,12 @@ urlpatterns = [
     path('api/v1/agents/discovery/refresh/', refresh_agent_discovery, name='agent-discovery-refresh'),
     path('api/v1/agents/comprehensive/', comprehensive_agents_list, name='agents-comprehensive'),  # Session 663
 
+    # Session 1036: Stub endpoints for AgentsPage tabs (channels, tools, templates)
+    # Frontend expects {results: []} format — return empty lists until backends are built
+    path('api/v1/agents/channels/', lambda r: __import__('django.http', fromlist=['JsonResponse']).JsonResponse({'results': [], 'count': 0}), name='v1-agent-channels'),
+    path('api/v1/agents/tools/', lambda r: __import__('django.http', fromlist=['JsonResponse']).JsonResponse({'results': [], 'count': 0}), name='v1-agent-tools'),
+    path('api/v1/agents/templates/', lambda r: __import__('django.http', fromlist=['JsonResponse']).JsonResponse({'results': [], 'count': 0}), name='v1-agent-templates'),
+
     # Odds & Sports Analytics APIs (from DBAO tools-manifest)
     path('api/v1/odds/convert-odds/', convert_odds, name='odds-convert'),
     path('api/v1/odds/expected-value/', calculate_expected_value, name='expected-value'),
