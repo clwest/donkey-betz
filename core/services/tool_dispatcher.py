@@ -841,7 +841,7 @@ class ToolDispatcher:
         from core.services.workspace_manager import get_workspace_manager
 
         action = payload.get('action', 'list')
-        manager = get_workspace_manager()
+        manager = get_workspace_manager()  # type: ignore[call-arg]
 
         if action == 'list':
             workspaces = manager.list_workspaces()
@@ -2439,9 +2439,9 @@ class ToolDispatcher:
             scored = {}
 
             # Signal 1: Same initiative
-            if source.initiative_id:
+            if source.initiative_id:  # type: ignore[attr-defined]
                 siblings = SelfBlog.objects.filter(
-                    initiative_id=source.initiative_id
+                    initiative_id=source.initiative_id  # type: ignore[attr-defined]
                 ).exclude(id=blog_id)[:20]
                 for b in siblings:
                     scored[b.id] = (1.0, 'same_initiative', b)
@@ -3010,7 +3010,7 @@ class ToolDispatcher:
         else:
             # Async — dispatch to Celery for background generation
             from core.tasks import generate_self_blog_deliberation_task
-            task = generate_self_blog_deliberation_task.delay(tone=tone)
+            task = generate_self_blog_deliberation_task.delay(tone=tone)  # type: ignore[union-attr]
 
             return {
                 'action': 'generate_blog',
@@ -3291,7 +3291,7 @@ class ToolDispatcher:
 
             # Get stage info — Session 1021: fixed field names (stage, not stage_number)
             stages = list(
-                initiative.stages.all()
+                initiative.stages.all()  # type: ignore[attr-defined]
                 .order_by('stage')
                 .values('stage', 'status', 'approved_at', 'document_id')
             )
@@ -3316,7 +3316,7 @@ class ToolDispatcher:
 
             # Session 996: Resolve owner
             owner_display = initiative.owner_agent or None
-            if initiative.owner_id:
+            if initiative.owner_id:  # type: ignore[attr-defined]
                 owner_display = initiative.owner.username if initiative.owner else None
 
             return {
@@ -3362,7 +3362,7 @@ class ToolDispatcher:
                     'priority': item.priority,
                     'due_date': item.due_date.isoformat() if item.due_date else None,
                     'assigned_agent': item.assigned_agent,
-                    'initiative_id': str(item.initiative_id),
+                    'initiative_id': str(item.initiative_id),  # type: ignore[attr-defined]
                     'initiative_name': item.initiative.name if item.initiative else 'Unknown',
                 })
 
@@ -3484,7 +3484,7 @@ class ToolDispatcher:
                 initiative.owner = user
                 initiative.owner_agent = ''
                 initiative.save(update_fields=['owner', 'owner_agent'])
-                new_owner = user.username
+                new_owner = user.username  # type: ignore[attr-defined]
             else:
                 raise ValueError("agent_name or user_name is required for assign_owner")
 
@@ -3917,7 +3917,7 @@ class ToolDispatcher:
 
             from core.tasks import run_spider_by_category
             target = category or spider_name
-            task = run_spider_by_category.delay(category=target)
+            task = run_spider_by_category.delay(category=target)  # type: ignore[union-attr]
 
             return {
                 'action': 'trigger',
@@ -4539,7 +4539,7 @@ class ToolDispatcher:
                 'unhealthy': len(components) - healthy_count,
             }
             if action == 'components':
-                health['components']['details'] = components
+                health['components']['details'] = components  # type: ignore[index]
         except Exception as e:
             health['components'] = {'error': str(e)}
 
@@ -5119,10 +5119,10 @@ class ToolDispatcher:
                 for p in qs[:limit]:
                     items.append({
                         'id': str(p.id),
-                        'matchup': f"{p.away_team} @ {p.home_team}" if hasattr(p, 'home_team') else str(p),
+                        'matchup': f"{p.away_team} @ {p.home_team}" if hasattr(p, 'home_team') else str(p),  # type: ignore[attr-defined]
                         'predicted_winner': p.predicted_winner if hasattr(p, 'predicted_winner') else '',
                         'confidence': p.confidence if hasattr(p, 'confidence') else 0,
-                        'sport_name': p.sport_name if hasattr(p, 'sport_name') else '',
+                        'sport_name': p.sport_name if hasattr(p, 'sport_name') else '',  # type: ignore[attr-defined]
                         'created_at': p.created_at.isoformat() if hasattr(p, 'created_at') and p.created_at else None,
                     })
                 return {'action': 'predictions', 'items': items, 'total': total}
@@ -5180,11 +5180,11 @@ class ToolDispatcher:
             for w in qs[:limit]:
                 items.append({
                     'id': str(w.id),
-                    'description': w.description if hasattr(w, 'description') else str(w),
+                    'description': w.description if hasattr(w, 'description') else str(w),  # type: ignore[attr-defined]
                     'status': w.status,
                     'stake': float(w.stake) if hasattr(w, 'stake') and w.stake else 0,
                     'potential_payout': float(w.potential_payout) if hasattr(w, 'potential_payout') and w.potential_payout else 0,
-                    'created_at': w.created_at.isoformat() if hasattr(w, 'created_at') and w.created_at else None,
+                    'created_at': w.created_at.isoformat() if hasattr(w, 'created_at') and w.created_at else None,  # type: ignore[attr-defined]
                 })
             return {'action': 'wagers', 'items': items, 'total': total}
 
@@ -5914,7 +5914,7 @@ class ToolDispatcher:
                     'decision_outcome': dream.decision_outcome or 'none',
                     'user_reaction': dream.user_reaction,
                     'shown_to_user': dream.shown_to_user,
-                    'initiative_id': str(dream.initiative_id) if dream.initiative_id else None,
+                    'initiative_id': str(dream.initiative_id) if dream.initiative_id else None,  # type: ignore[attr-defined]
                     'dreamed_at': dream.dreamed_at.isoformat(),
                 },
             }

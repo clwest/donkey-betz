@@ -437,7 +437,7 @@ class LLMEnforcer:
             ]
         )
 
-        content = response.content[0].text if response.content else ""
+        content = response.content[0].text if response.content else ""  # type: ignore[union-attr]
 
         # Session 802: Extract detailed token usage for CostTracking
         input_tokens = response.usage.input_tokens if hasattr(response, 'usage') else 0
