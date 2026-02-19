@@ -5402,27 +5402,34 @@ class ToolDispatcher:
             )
 
             # Router breakdown: routable, blocked, non-specialist
+            # Router breakdown: disjoint categories that reconcile cleanly
+            # router_routable_total = blocked + rerouted + fully_enabled
             router_routable_total = 0
-            blocked_agents = []
-            non_specialist_agents = []
+            blocked_agents: list = []
+            rerouted_agents: list = []
             try:
                 from core.agent_router import AgentRouter
                 router_routable_total = len(AgentRouter.AGENT_MAP)
-                # Expose blocked agents (hard-blocked on Railway)
+                # Hard-blocked: won't execute at all on Railway
                 _BLOCKED = frozenset({
                     'CodeGeneratorAgent',  # No codebase access in Railway sandbox
                     'AudioAgent',          # TTS quota exhausted
                 })
-                blocked_agents = sorted(_BLOCKED)
-                # Non-specialist agents (rerouted to specialists)
+                # Non-specialist: tasks get rerouted to specialist agents
                 _NON_SPECIALIST = frozenset({
                     'WorkflowAgent', 'VideoAgent', 'CodeGeneratorAgent', 'DevOpsAgent',
                     'FullStackDeveloperAgent', 'CodeReviewAgent', 'ContentDistributionAgent',
                     'COOAgent', 'CTOAgent', 'AudioAgent',
                 })
-                non_specialist_agents = sorted(_NON_SPECIALIST)
+                # Make disjoint: rerouted = non_specialist minus blocked
+                blocked_agents = sorted(_BLOCKED)
+                rerouted_agents = sorted(_NON_SPECIALIST - _BLOCKED)
             except Exception:
                 pass
+
+            blocked_count = len(blocked_agents)
+            rerouted_count = len(rerouted_agents)
+            fully_enabled = router_routable_total - blocked_count - rerouted_count
 
             result: Dict[str, Any] = {
                 'requested_action': action,
@@ -5430,10 +5437,12 @@ class ToolDispatcher:
                 'total_agents_db': total,
                 'active_last_7d': len(active_ids),
                 'router_routable_total': router_routable_total,
-                'router_routable_enabled': router_routable_total - len(blocked_agents),
+                'blocked_count': blocked_count,
                 'blocked_agents': blocked_agents,
-                'blocked_count': len(blocked_agents),
-                'non_specialist_agents': non_specialist_agents,
+                'rerouted_count': rerouted_count,
+                'rerouted_agents': rerouted_agents,
+                'fully_enabled_count': fully_enabled,
+                'reconciliation': f'{blocked_count} blocked + {rerouted_count} rerouted + {fully_enabled} fully_enabled = {router_routable_total} total',
                 'by_agent_type': by_agent_type,
             }
 
