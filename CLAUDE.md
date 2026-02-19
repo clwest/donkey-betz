@@ -21,7 +21,7 @@ open http://localhost:8000/ai-studio/
 |-----------|-------|---------|
 | **Agents** | 92 | 54 routable, 25 non-routable, 26 provenance-tracked |
 | **Spiders** | 79 | 74 working, 5 need API keys |
-| **PA Tools** | 97 | 38 intents, 53 tool handlers, 8 enrichment services |
+| **PA Tools** | 99 | 39 intents, 53 tool handlers, 8 enrichment services |
 | **LLM Providers** | 6 | OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini |
 | **Database Models** | 397+ | PostgreSQL + pgvector |
 | **Celery Tasks** | 269 | 7 workers, dedicated PA queue |

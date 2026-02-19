@@ -131,18 +131,66 @@ Max 2 domains per content piece. Gives content the "builder voice" — writing f
 - **v2:** `content_review_panel_v2.py` + `ContentDeliberationRunner` — claims-based, structured validation
 - Different entry points for A/B testing. v2 via `POST /api/v1/research/self-blog/generate-v2/`
 
-## Content Review Automation (Session 1000C)
+## Content Review Automation (Session 1000C, updated Session 1033)
 
 Scheduled tasks that move blogs through the pipeline without manual intervention:
 
 | Task | Schedule | Queue | Action |
 |------|----------|-------|--------|
 | `evaluate_unscored_blogs` | Every 2h at :10 | content | Score draft blogs through PublishGate |
+| `auto_enhance_blogs` | Every 4h at :45 | content | EditorAgent enhances oldest `needs_enhancement` blogs (limit 5, `save=True`) |
 | `enhance_all_blogs_needing_enhancement` | Every 6h at :40 | long_running | EditorAgent improves needs_enhancement blogs (limit 5, max 3 rounds) |
 | `reevaluate_enhanced_blogs` | Every 6h at :10 | content | Re-score enhanced blogs through PublishGate |
 | `auto_publish_approved_blogs` | Daily 6 AM | content | Move approved+publish_ready blogs to published |
 
 **Enhancement guard:** `stats_snapshot['enhancement_count']` tracks rounds per blog. After 3 unsuccessful rounds, the blog is skipped to prevent infinite loops.
+
+### Content Finishing Loop (Session 1033)
+
+Before Session 1033, blogs that reached `needs_enhancement` had no automatic path forward — EditorAgent existed but was never auto-triggered. 116 blogs were stuck.
+
+**Complete pipeline now:**
+```
+draft → evaluate_unscored_blogs → needs_enhancement
+  → auto_enhance_blogs (EditorAgent with save=True)
+    → pending_review → reevaluate_enhanced_blogs (PublishGate re-scores)
+      → approved → auto_publish_approved_blogs → published
+```
+
+**`auto_enhance_blogs` task** (`core/tasks.py`):
+- Finds oldest `needs_enhancement` blogs, limit 5 per run
+- Runs `EditorAgent.execute()` with `save=True` — enhanced content saved directly to SelfBlog
+- Blog status moves to `pending_review` after enhancement
+- Each enhancement takes ~18s via OpenAI gpt-4o-mini
+
+**EditorAgent LLM fix (PR #1308):** EditorAgent's `_enhance_with_llm()` imported from nonexistent `core.services.llm_service`. Fixed to use `LLMProviderRegistry` + `LLMRequest` from `core.services.llm_provider_registry`.
+
+**Production results (first run):** 6 blogs enhanced successfully (5/5 + 1 earlier test). All moved from `needs_enhancement` → `pending_review`. Blog status snapshot post-Session 1033: 207 draft, 195 published, 111 needs_enhancement, 18 pending_review.
+
+## Deliverable Quality Scoring (Session 1033)
+
+Prior to Session 1033, all 4,380 deliverables had a hardcoded default `quality_score` of 0.7 — no differentiation between good and bad output.
+
+**`score_unscored_deliverables` task** (`core/tasks.py`):
+- Runs every 6h at :15 on `default` queue
+- Finds deliverables with `quality_score=0.7` (the default), processes 50 per batch
+- Heuristic scoring via `_calculate_deliverable_quality()`:
+
+| Factor | Score Contribution |
+|--------|-------------------|
+| Base | 0.45 |
+| Word count >= 200 | +0.08 |
+| Word count >= 500 | +0.07 |
+| Word count >= 1000 | +0.05 |
+| Word count > 5000 | -0.05 (too verbose) |
+| Has headers (`##`, `**`) | +0.05 |
+| Has lists (`- `, `* `, `1.`) | +0.05 |
+| Has URLs | +0.05 |
+| Agent confidence > 0.8 | +0.10 |
+| Agent confidence > 0.6 | +0.05 |
+| Word count < 50 | -0.20 (stub content) |
+
+**Range:** 0.1 to 1.0. **Production results:** 884 deliverables scored in first batch, distribution 0.30–0.75.
 
 ## Operational Telemetry Grounding (Session 1001)
 

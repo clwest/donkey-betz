@@ -1,6 +1,6 @@
 # Agent System
 
-92 agents organized by category, routed deterministically via dictionary lookup, with automatic tool call recording and provenance tracking. Session 1000: 4 Intelligence Desks run 21 agents daily. Session 1029: Agent health audit — 35 thriving, 6 bounded, 3 waste paths closed.
+92 agents organized by category, routed deterministically via dictionary lookup, with automatic tool call recording and provenance tracking. Session 1000: 4 Intelligence Desks run 21 agents daily. Session 1029: Agent health audit — 35 thriving, 6 bounded, 3 waste paths closed. Session 1034: RAG user documents wired into all 92 agents, media task guard blocks non-generative tasks.
 
 ## Agent Categories (82 Total)
 
@@ -53,7 +53,7 @@ Deterministic dictionary lookup — no LLM involved in routing:
 
 **Optional semantic routing:** Embeddings-based for natural language queries (cosine similarity threshold 0.35, falls back to keyword matching).
 
-## Context Injection (11 Layers)
+## Context Injection (12 Layers)
 
 Every agent receives contextual data before execution:
 1. **scifi_context** — Platform state
@@ -67,6 +67,7 @@ Every agent receives contextual data before execution:
 9. **user_context** — Personalized user data (skills, goals, preferences)
 10. **risk_context** — Critical docs, incidents, audit findings
 11. **platform_tools_directive** — "Use internal tools, not external services" prompt from `PlatformIntegration` (Session 992)
+12. **user_docs_context** — User-uploaded documents via RAG (Session 1034): pgvector cosine search on `DocumentEmbedding`, threshold 0.45, top 5 chunks. Only runs when `self.user` is set. Injected into `_build_intelligent_prompt()` as "YOUR UPLOADED DOCUMENTS".
 
 `feedback_context` now includes `pa_review_feedback` (last 5 PA publish/archive/revise decisions) and `pa_review_summary`, extracted into `spider_context['pa_content_feedback']` and `spider_context['pa_review_summary']` by `gather_context()` (Session 990).
 
@@ -111,7 +112,7 @@ Automatic audit trail for all agents via `__init_subclass__()` in `BaseAgent`:
 
 Provenance fields: `generated_at`, `inputs_used`, `freshness_window`, `publishable`, `validation_status`.
 
-## Agent Health Classification (Session 1029)
+## Agent Health Classification (Sessions 1029, 1032-1033)
 
 Every agent is classified by its ability to fulfill its mission:
 
@@ -120,6 +121,14 @@ Every agent is classified by its ability to fulfill its mission:
 | Thriving | 35 | >80% success rate, producing deliverables |
 | Struggling | 6 | 30-80% success, need bounded tasks or data |
 | Wasting | 3 | Running with no useful output (paths now closed) |
+
+### 79-Agent Stress Test (Session 1032)
+
+Comprehensive end-to-end test of all routable agents: **73 PASS, 6 FAIL (92.4% pass rate)**. Each agent tested with realistic task + context. Failures were all pre-existing issues (missing API keys, external service quotas), not code bugs.
+
+### EditorAgent LLM Fix (Session 1033, PR #1308)
+
+EditorAgent's `_enhance_with_llm()` referenced nonexistent `core.services.llm_service`. Fixed to use `LLMProviderRegistry` + `LLMRequest` from `core.services.llm_provider_registry`. Now successfully enhances blogs via OpenAI gpt-4o-mini (~18s per blog).
 
 ### Waste Agents Removed (Sessions 1027, 1029)
 

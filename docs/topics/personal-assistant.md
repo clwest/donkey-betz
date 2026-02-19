@@ -1,6 +1,6 @@
 # Personal Assistant (PA) System
 
-The PA is the platform's conversational interface — a single `UnifiedPAEntrypoint` that routes user queries through 39 intents to 51 tools, enriches responses with 8 intelligence services, and returns structured data + LLM analysis. Session 1030: Production audit fixed 5 routing/payload issues — intent priority ordering, conversation memory persistence, and payload extraction for agent execution and crypto intents.
+The PA is the platform's conversational interface — a single `UnifiedPAEntrypoint` that routes user queries through 39 intents to 53 tools, enriches responses with 8 intelligence services, and returns structured data + LLM analysis. Session 1030: Production audit fixed 5 routing/payload issues. Session 1034: Added `legal_assistance` intent, raised `universal_agent_tool` timeout to 90s, upload hint for legal responses.
 
 ## Architecture
 
@@ -24,8 +24,9 @@ Two files handle everything:
 | 7 | system_health | get_body_vitals | body vitals, organ health |
 | 8 | predictions | predictions_tool | predict, forecast |
 | 9 | pilots / gates | pilots_tool / gates_tool | experiment, pilot, gates |
-| 10 | user_feedback | (direct response) | not working, broken, bug |
-| 11 | reasoning | reasoning_engine_tool | analyze deeply, reflect on |
+| 10 | legal_assistance | universal_agent_tool (LegalDocDrafterAgent) | court order, custody, parenting time, motion, legal, attorney, JDF (Session 1034: MUST be before user_feedback) |
+| 11 | user_feedback | (direct response) | not working, broken, bug |
+| 12 | reasoning | reasoning_engine_tool | analyze deeply, reflect on |
 | 12 | sports_betting | sports_betting_tool | betting, odds, spread, moneyline, arbitrage, sharp action, wager, parlay (Session 1030: moved BEFORE opportunities) |
 | 13 | opportunities | opportunity_manager_tool | opportunity, job, gig, income |
 | 14 | content_review | content_review_tool | show blogs, latest blogs, blog titled, blog accuracy, triage blogs, batch publish, publish-ready (Session 1030: broadened patterns) |
