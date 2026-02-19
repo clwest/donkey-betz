@@ -24,6 +24,7 @@ import {
   Command,
   Film,
   Landmark,
+  FileUp,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -63,7 +64,8 @@ const navItems = [
   // { path: '/legal', label: 'Legal', icon: Scale },
   // { path: '/portfolio', label: 'Portfolio', icon: DollarSign },
 
-  // Reference & Tools
+  // Documents & Reference
+  { path: '/documents', label: 'Documents', icon: FileUp },
   { path: '/docs-index', label: 'Docs Index', icon: Book },
   { path: '/mythology-lab', label: 'Mythology Lab', icon: Beaker },
   // Session 872: Removed Voices - available in Workspace tab
