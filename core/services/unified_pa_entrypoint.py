@@ -458,7 +458,7 @@ class UnifiedPAEntrypoint:
 
             if getattr(settings, 'PA_USE_FUNCTION_CALLING', False):
                 # ── New path: GPT-5.2 function calling ──────────────────────
-                content, tool_runs_raw, response_id = await self._run_agentic_loop(
+                content, tool_runs_raw, fc_meta, response_id = await self._run_agentic_loop(
                     message, full_context, trace_id
                 )
                 tool_runs = tool_runs_raw
@@ -468,11 +468,8 @@ class UnifiedPAEntrypoint:
                 intent = self._infer_intent_from_tools(tool_names)
                 routed_to = tool_names[0] if tool_names else None
 
-                # Build metadata for persistence
-                tool_call_metadata = [
-                    {'tool': r.get('tool', ''), 'ok': r.get('ok', False)}
-                    for r in tool_runs_raw
-                ]
+                # Use GPT function call metadata (has name, arguments, call_id, ok)
+                tool_call_metadata = fc_meta
                 tool_result_data = tool_runs_raw
 
                 # Run enrichment if tools were called and succeeded
@@ -643,11 +640,12 @@ class UnifiedPAEntrypoint:
         trace_id: str,
         max_iterations: int = 5,
         total_timeout: float = 120.0,
-    ) -> tuple[str, List[Dict], Optional[str]]:
+    ) -> tuple[str, List[Dict], List[Dict], Optional[str]]:
         """
         Core agentic loop: GPT-5.2 decides which tools to call.
 
-        Returns (content, tool_runs, response_id)
+        Returns (content, tool_runs, fc_metadata, response_id)
+        where fc_metadata captures the GPT function call info (name, arguments, call_id).
         """
         from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
 
@@ -655,6 +653,7 @@ class UnifiedPAEntrypoint:
         messages = self._build_messages_array(message, context)
 
         tool_runs = []
+        fc_metadata: List[Dict] = []  # GPT function call metadata (name, args, call_id)
         response_id = None
 
         for iteration in range(max_iterations):
@@ -681,14 +680,14 @@ class UnifiedPAEntrypoint:
 
             if not result.get('success'):
                 logger.error(f"[{trace_id}] FC LLM call failed: {result.get('error')}")
-                return (result.get('response', 'I encountered an error.'), tool_runs, response_id)
+                return (result.get('response', 'I encountered an error.'), tool_runs, fc_metadata, response_id)
 
             response_id = result.get('response_id')
             tool_calls = result.get('tool_calls', [])
 
             # If no tool calls, LLM responded with text — done
             if not tool_calls:
-                return (result.get('response', ''), tool_runs, response_id)
+                return (result.get('response', ''), tool_runs, fc_metadata, response_id)
 
             # Execute each tool call via ToolDispatcher
             tool_result_inputs = []
@@ -725,6 +724,14 @@ class UnifiedPAEntrypoint:
                 )
                 tool_runs.append(tool_result.to_dict())
 
+                # Capture GPT function call metadata for persistence/multi-turn
+                fc_metadata.append({
+                    'name': tool_name,
+                    'arguments': arguments,
+                    'call_id': call_id,
+                    'ok': tool_result.ok,
+                })
+
                 # Format result for feeding back to LLM
                 if tool_result.ok:
                     output = json.dumps(tool_result.result, default=str)
@@ -741,7 +748,7 @@ class UnifiedPAEntrypoint:
             messages = tool_result_inputs
 
         # Safety: shouldn't normally reach here
-        return ("I wasn't able to complete that request.", tool_runs, response_id)
+        return ("I wasn't able to complete that request.", tool_runs, fc_metadata, response_id)
 
     def _build_messages_array(self, message: str, context: Dict[str, Any]) -> List[Dict]:
         """
