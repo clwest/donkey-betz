@@ -5383,15 +5383,15 @@ class ToolDispatcher:
         action = payload.get('action', 'inspect')
         agent_query = payload.get('agent_name', '').strip().lower()
 
-        # Session 1036: Support list/stats action without requiring agent_name
-        if action in ('list', 'stats') or not agent_query:
+        # Session 1036+: Support list/stats actions without requiring agent_name
+        if action in ('list', 'stats') or (not agent_query and action not in ('details', 'capabilities')):
             all_agents = Agent.objects.filter(is_active=True)
             total = all_agents.count()
 
-            by_type = {}
+            by_agent_type = {}
             for a in all_agents.values('agent_type').distinct():
                 atype = a['agent_type'] or 'unknown'
-                by_type[atype] = all_agents.filter(agent_type=atype).count()
+                by_agent_type[atype] = all_agents.filter(agent_type=atype).count()
 
             # Get agents with recent activity (last 7 days)
             now = timezone.now()
@@ -5401,28 +5401,51 @@ class ToolDispatcher:
                 ).values_list('agent_id', flat=True)
             )
 
-            agent_list = list(
-                all_agents.values('name', 'agent_type', 'specialization', 'effectiveness_score')
-                .order_by('-effectiveness_score', 'name')[:50]
-            )
-
-            # Get routable count from agent router (use AGENT_MAP directly — get_available_agents()
-            # accesses system_prompt which can throw on some agent classes)
-            routable_count = 0
+            # Router breakdown: routable, blocked, non-specialist
+            router_routable_total = 0
+            blocked_agents = []
+            non_specialist_agents = []
             try:
                 from core.agent_router import AgentRouter
-                routable_count = len(AgentRouter.AGENT_MAP)
+                router_routable_total = len(AgentRouter.AGENT_MAP)
+                # Expose blocked agents (hard-blocked on Railway)
+                _BLOCKED = frozenset({
+                    'CodeGeneratorAgent',  # No codebase access in Railway sandbox
+                    'AudioAgent',          # TTS quota exhausted
+                })
+                blocked_agents = sorted(_BLOCKED)
+                # Non-specialist agents (rerouted to specialists)
+                _NON_SPECIALIST = frozenset({
+                    'WorkflowAgent', 'VideoAgent', 'CodeGeneratorAgent', 'DevOpsAgent',
+                    'FullStackDeveloperAgent', 'CodeReviewAgent', 'ContentDistributionAgent',
+                    'COOAgent', 'CTOAgent', 'AudioAgent',
+                })
+                non_specialist_agents = sorted(_NON_SPECIALIST)
             except Exception:
                 pass
 
-            return {
-                'action': 'list',
-                'total_agents': total,
-                'routable_agents': routable_count,
+            result: Dict[str, Any] = {
+                'requested_action': action,
+                'effective_action': action,
+                'total_agents_db': total,
                 'active_last_7d': len(active_ids),
-                'by_type': by_type,
-                'agents': agent_list,
+                'router_routable_total': router_routable_total,
+                'router_routable_enabled': router_routable_total - len(blocked_agents),
+                'blocked_agents': blocked_agents,
+                'blocked_count': len(blocked_agents),
+                'non_specialist_agents': non_specialist_agents,
+                'by_agent_type': by_agent_type,
             }
+
+            # 'list' includes the top-50 agent preview; 'stats' is aggregates only
+            if action == 'list':
+                agent_list = list(
+                    all_agents.values('name', 'agent_type', 'specialization', 'effectiveness_score')
+                    .order_by('-effectiveness_score', 'name')[:50]
+                )
+                result['agents'] = agent_list
+
+            return result
 
         # Search by name (fuzzy)
         agents = Agent.objects.filter(name__icontains=agent_query, is_active=True)
