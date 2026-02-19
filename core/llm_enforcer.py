@@ -96,11 +96,13 @@ class LLMEnforcer:
                        use_claude: bool = False,
                        tools: Optional[List[Dict]] = None,
                        previous_response_id: Optional[str] = None,
-                       tool_choice: Optional[Dict] = None) -> Dict[str, Any]:
+                       tool_choice: Optional[Dict] = None,
+                       input_messages: Optional[List[Dict]] = None) -> Dict[str, Any]:
         """
         ENFORCE real AI usage - this is the ONLY way to get AI responses
 
         Session 129: Added previous_response_id parameter for GPT-5.1 chain of thought
+        Session 1036: Added input_messages for structured Responses API input
 
         Args:
             prompt: The actual prompt to send
@@ -110,6 +112,7 @@ class LLMEnforcer:
             max_tokens: Maximum tokens for response
             temperature: Creativity level (0-1)
             use_claude: Use Claude instead of GPT
+            input_messages: Structured messages array for Responses API (overrides prompt+context)
 
         Returns:
             Dict with response and metadata
@@ -144,9 +147,10 @@ class LLMEnforcer:
                 # Session 129: Pass context separately so GPT can see project assets
                 # Session 129: Pass previous_response_id for chain of thought
                 # Session 129: Pass tool_choice to force tool execution
-                response = self._call_openai(prompt, max_tokens, temperature, task_type, tools, context, previous_response_id, tool_choice)
+                # Session 1036: Pass input_messages for structured Responses API input
+                response = self._call_openai(prompt, max_tokens, temperature, task_type, tools, context, previous_response_id, tool_choice, input_messages)
                 provider = "openai"
-                model = "gpt-5.1"  # Session 129: Upgraded to GPT-5.1 flagship model with Responses API
+                model = "gpt-5.2"  # Session 1036: Upgraded to GPT-5.2 (agentic tool calling optimized)
             else:
                 raise Exception("No LLM client available")
 
@@ -204,6 +208,10 @@ class LLMEnforcer:
                 result['tool_calls'] = response['tool_calls']
                 logger.info(f"🛠️ Returning {len(response['tool_calls'])} tool calls to caller")
 
+            # Session 1036: Always include response_id for chaining
+            if 'response_id' in response:
+                result['response_id'] = response['response_id']
+
             return result
 
         except Exception as e:
@@ -229,15 +237,17 @@ class LLMEnforcer:
                 'agent': agent_name
             }
 
-    def _call_openai(self, prompt: str, max_tokens: int, temperature: float, task_type: str, tools: Optional[List[Dict]] = None, context: str = "", previous_response_id: Optional[str] = None, tool_choice: Optional[Dict] = None) -> Dict[str, Any]:
-        """Make actual OpenAI API call using GPT-5.1 with Responses API
+    def _call_openai(self, prompt: str, max_tokens: int, temperature: float, task_type: str, tools: Optional[List[Dict]] = None, context: str = "", previous_response_id: Optional[str] = None, tool_choice: Optional[Dict] = None, input_messages: Optional[List[Dict]] = None) -> Dict[str, Any]:
+        """Make actual OpenAI API call using GPT-5.2 with Responses API
 
         Session 129: Migrated to GPT-5.1 with Responses API
-        - Uses gpt-5.1 flagship model
+        Session 1036: Upgraded to GPT-5.2, added input_messages for structured input
+        - Uses gpt-5.2 (optimized for agentic tool calling, 90% cached discount)
         - Responses API for chain of thought passing
         - Proper reasoning.effort and text.verbosity configuration
         - Tool calling support via Responses API
         - Tool forcing via tool_choice with allowed_tools (mode: required)
+        - input_messages: structured messages array (overrides prompt+context)
         """
         if not self.openai_client:
             raise Exception("OpenAI client not initialized")
@@ -260,8 +270,12 @@ class LLMEnforcer:
                 }
                 system_msg = fallback_prompts.get(task_type, fallback_prompts['general'])
 
-        # Combine system message and user prompt for Responses API input
-        full_input = f"{system_msg}\n\nUser request: {prompt}"
+        # Session 1036: If structured input_messages provided, use directly
+        if input_messages:
+            full_input = input_messages
+        else:
+            # Combine system message and user prompt for Responses API input
+            full_input = f"{system_msg}\n\nUser request: {prompt}"
 
         # Session 129: GPT-5.1 with Responses API
         # Configure reasoning effort based on task type
@@ -276,9 +290,11 @@ class LLMEnforcer:
         reasoning_effort = reasoning_effort_map.get(task_type, 'none')
 
         # Build Responses API parameters
+        # Session 1036: GPT-5.2 pricing: $1.75/1M input, $14/1M output
+        #   Cached input (via previous_response_id): $0.18/1M (90% discount)
         params = {
-            'model': "gpt-5.1",                          # Session 129: Upgraded to GPT-5.1
-            'input': full_input,                         # Combined system + user input
+            'model': "gpt-5.2",                          # Session 1036: Upgraded to GPT-5.2
+            'input': full_input,                         # Messages array or combined string
             'reasoning': {"effort": reasoning_effort},   # Configurable reasoning
             'text': {"verbosity": "medium"},             # Balanced output length
             'max_output_tokens': max_tokens,             # Correct parameter for Responses API
@@ -323,7 +339,7 @@ class LLMEnforcer:
             function_calls = [item for item in response.output if hasattr(item, 'type') and item.type == 'function_call']
 
             if function_calls:
-                logger.info(f"🛠️ GPT-5.1 returned {len(function_calls)} tool calls in output list!")
+                logger.info(f"🛠️ GPT-5.2 returned {len(function_calls)} tool calls in output list!")
                 tool_calls = [
                     {
                         'id': tc.call_id if hasattr(tc, 'call_id') else (tc.id if hasattr(tc, 'id') else str(i)),
@@ -336,21 +352,21 @@ class LLMEnforcer:
                 ]
                 logger.info(f"🎯 Parsed tool calls: {[tc['function']['name'] for tc in tool_calls]}")
 
-        # Calculate usage and cost for GPT-5.1
+        # Calculate usage and cost for GPT-5.2
         usage = response.usage if hasattr(response, 'usage') else None
         if usage:
-            # GPT-5.1 pricing: $1.25/1M input + $10.00/1M output
-            # Reasoning tokens are separate but counted in cost
+            # GPT-5.2 pricing: $1.75/1M input, $14.00/1M output
+            # Cached input (via previous_response_id): $0.18/1M (90% discount)
             input_tokens = usage.input_tokens if hasattr(usage, 'input_tokens') else 0
             output_tokens = usage.output_tokens if hasattr(usage, 'output_tokens') else 0
             reasoning_tokens = usage.reasoning_tokens if hasattr(usage, 'reasoning_tokens') else 0
 
             # Calculate cost (reasoning tokens count toward input cost)
             total_input = input_tokens + reasoning_tokens
-            cost = (total_input * 1.25 / 1_000_000) + (output_tokens * 10.00 / 1_000_000)
+            cost = (total_input * 1.75 / 1_000_000) + (output_tokens * 14.00 / 1_000_000)
             total_tokens = input_tokens + output_tokens + reasoning_tokens
 
-            logger.info(f"💰 GPT-5.1 usage: {input_tokens} input + {reasoning_tokens} reasoning + {output_tokens} output = {total_tokens} total tokens (${cost:.6f})")
+            logger.info(f"💰 GPT-5.2 usage: {input_tokens} input + {reasoning_tokens} reasoning + {output_tokens} output = {total_tokens} total tokens (${cost:.6f})")
         else:
             total_tokens = 0
             cost = 0.0

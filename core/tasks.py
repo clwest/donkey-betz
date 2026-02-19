@@ -34587,6 +34587,10 @@ def process_pa_chat_task(self, user_id, message, context=None, generate_audio=Fa
                 'trace_id': response.trace_id,
                 'intent': response.intent,
                 'routed_to': response.routed_to,
+                # Session 1036: Persist function calling metadata for multi-turn context
+                'tool_calls': response.tool_call_metadata or [],
+                'tool_results': response.tool_result_data or [],
+                'response_id': response.response_id,
             },
             response_time_ms=response.latency_ms or elapsed_ms,
             agents_used=[r.get('tool', '') for r in (response.tool_runs or [])],
