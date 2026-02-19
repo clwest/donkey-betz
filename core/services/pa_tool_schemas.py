@@ -727,6 +727,41 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
+    # ── Cost Telemetry ─────────────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "cost_telemetry_tool",
+        "description": (
+            "Get real API cost and spend data from LLM call logs. Use when the user "
+            "asks about actual costs, spending, most expensive agents, cost trends, "
+            "cost breakdown, or wants a ranked list of agents by spend. This returns "
+            "real dollar amounts, not budget gates."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["summary", "top_agents", "recent_calls"],
+                    "description": (
+                        "summary: total spend, by provider, by task type, trend. "
+                        "top_agents: ranked list of agents by cost. "
+                        "recent_calls: last N individual LLM calls for debugging."
+                    ),
+                },
+                "hours": {
+                    "type": "integer",
+                    "description": "Lookback period in hours (default 24)",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max items to return (default 10, max 50)",
+                },
+            },
+            "required": ["action"],
+        },
+    },
+
     # ── System Alerts ───────────────────────────────────────────────────────
     {
         "type": "function",
@@ -949,6 +984,7 @@ TOOL_ENRICHMENT_MAP = {
     'surgical_moves_status_tool': [],
     'get_body_vitals': [],
     'check_resource_budget': [],
+    'cost_telemetry_tool': ['intelligence_enricher', 'platform_briefing'],
     'get_system_alerts': [],
     'status_snapshot_tool': ['intelligence_enricher', 'proactive_intelligence', 'platform_briefing'],
     'agent_introspection_tool': [],
@@ -992,6 +1028,7 @@ TOOL_TO_INTENT_MAP = {
     'surgical_moves_status_tool': 'surgical_moves_status',
     'get_body_vitals': 'system_health',
     'check_resource_budget': 'system_health',
+    'cost_telemetry_tool': 'system_health',
     'get_system_alerts': 'system_health',
     'status_snapshot_tool': 'system_overview',
     'agent_introspection_tool': 'agent_introspection',
