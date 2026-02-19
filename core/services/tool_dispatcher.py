@@ -640,6 +640,7 @@ class ToolDispatcher:
         the Initiative pipeline (5 stages). This tool provides status visibility.
         """
         from core.models import Initiative
+        from django.db.models import Count
 
         action = payload.get('action', 'status')
 
@@ -652,12 +653,20 @@ class ToolDispatcher:
                 by_stage[f'stage_{stage}'] = Initiative.objects.filter(current_stage=stage).count()
             active = Initiative.objects.filter(current_stage__lt=5, status='ACTIVE').count()
 
+            # Add status breakdown for visibility
+            by_status = dict(
+                Initiative.objects.values('status')
+                .annotate(count=Count('id'))
+                .values_list('status', 'count')
+            )
+
             return {
                 'action': 'status',
                 'pipeline': 'operational',
                 'initiatives_total': total,
                 'initiatives_active': active,
                 'by_stage': by_stage,
+                'by_status': by_status,
             }
 
         else:
@@ -5397,12 +5406,12 @@ class ToolDispatcher:
                 .order_by('-effectiveness_score', 'name')[:50]
             )
 
-            # Get routable count from agent router
+            # Get routable count from agent router (use AGENT_MAP directly — get_available_agents()
+            # accesses system_prompt which can throw on some agent classes)
             routable_count = 0
             try:
-                from core.agent_router import get_agent_router
-                router = get_agent_router()
-                routable_count = len(router.get_available_agents()) if hasattr(router, 'get_available_agents') else 0
+                from core.agent_router import AgentRouter
+                routable_count = len(AgentRouter.AGENT_MAP)
             except Exception:
                 pass
 
