@@ -609,6 +609,12 @@ class AgentExecution(models.Model):
     output_data = models.JSONField(default=dict)
     error_message = models.TextField(blank=True)
 
+    # Session 1039: Multi-tenant cost attribution
+    tenant = models.ForeignKey(
+        'core.Tenant', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='agent_executions',
+    )
+
     # Performance metrics
     execution_time_ms = models.IntegerField(null=True)
     tokens_used = models.IntegerField(default=0)
@@ -6116,6 +6122,12 @@ class CostTracking(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
         related_name='cost_records', null=True, blank=True
+    )
+
+    # Session 1039: Multi-tenant cost attribution
+    tenant = models.ForeignKey(
+        'core.Tenant', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='cost_records_by_tenant',
     )
 
     # Provider and service
