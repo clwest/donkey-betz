@@ -824,8 +824,8 @@ Your job is to keep this system running smoothly and surfacing valuable narrativ
                 historian_result = future.result(timeout=SUB_AGENT_TIMEOUT)
 
             if historian_result.success:
-                analyses['agent_analyses']['historian'] = historian_result.result
-                shift.historian_analysis = historian_result.result[:2000]
+                analyses['agent_analyses']['historian'] = historian_result.message
+                shift.historian_analysis = historian_result.message[:2000]
         except FuturesTimeoutError:
             logger.warning(f"⏰ NarrativeHistorianAgent timed out after {SUB_AGENT_TIMEOUT}s")
             analyses['agent_analyses']['historian'] = f"Timeout after {SUB_AGENT_TIMEOUT}s"
@@ -846,8 +846,8 @@ Your job is to keep this system running smoothly and surfacing valuable narrativ
                 trend_result = future.result(timeout=SUB_AGENT_TIMEOUT)
 
             if trend_result.success:
-                analyses['agent_analyses']['trend_break'] = trend_result.result
-                shift.trend_break_analysis = trend_result.result[:2000]
+                analyses['agent_analyses']['trend_break'] = trend_result.message
+                shift.trend_break_analysis = trend_result.message[:2000]
         except FuturesTimeoutError:
             logger.warning(f"⏰ TrendBreakDetectorAgent timed out after {SUB_AGENT_TIMEOUT}s")
             analyses['agent_analyses']['trend_break'] = f"Timeout after {SUB_AGENT_TIMEOUT}s"
@@ -868,8 +868,8 @@ Your job is to keep this system running smoothly and surfacing valuable narrativ
                 cultural_result = future.result(timeout=SUB_AGENT_TIMEOUT)
 
             if cultural_result.success:
-                analyses['agent_analyses']['cultural_impact'] = cultural_result.result
-                shift.cultural_impact_analysis = cultural_result.result[:2000]
+                analyses['agent_analyses']['cultural_impact'] = cultural_result.message
+                shift.cultural_impact_analysis = cultural_result.message[:2000]
         except FuturesTimeoutError:
             logger.warning(f"⏰ CulturalImpactAgent timed out after {SUB_AGENT_TIMEOUT}s")
             analyses['agent_analyses']['cultural_impact'] = f"Timeout after {SUB_AGENT_TIMEOUT}s"

@@ -179,8 +179,8 @@ class SpiderDataPersistence:
         Returns:
             Number of jobs persisted
         """
-        from intelligence.models import OpportunityActionPlan
-        from django.utils import timezone
+        # Session 1036: Use ActionPlan (not OpportunityActionPlan which requires FK)
+        from intelligence.models import ActionPlan
 
         persisted_count = 0
 
@@ -191,16 +191,16 @@ class SpiderDataPersistence:
                 salary_amount = SpiderDataPersistence._extract_salary_amount(salary_str)
 
                 # Create or update in database
-                obj, created = OpportunityActionPlan.objects.update_or_create(
+                obj, created = ActionPlan.objects.update_or_create(
                     opportunity_id=f"spider_{job.get('id', '')}_{job.get('source', 'unknown')}",
                     defaults={
-                        'platform': job.get('source', 'spider'),
-                        'opportunity_data': job,
-                        'success_score': job.get('aiScore', 0.75),
-                        'ml_confidence': job.get('aiScore', 0.75),
-                        'revenue_potential': salary_amount,
-                        'status': 'identified',
-                        'created_at': timezone.now()
+                        'opportunity_title': job.get('title', 'Spider opportunity')[:255],
+                        'opportunity_data': {
+                            **job,
+                            'ml_confidence': job.get('aiScore', 0.75),
+                            'revenue_potential': str(salary_amount),
+                        },
+                        'status': 'created',
                     }
                 )
 
@@ -225,8 +225,8 @@ class SpiderDataPersistence:
         Returns:
             Number of opportunities persisted
         """
-        from intelligence.models import OpportunityActionPlan
-        from django.utils import timezone
+        # Session 1036: Use ActionPlan (not OpportunityActionPlan which requires FK)
+        from intelligence.models import ActionPlan
 
         persisted_count = 0
 
@@ -237,16 +237,16 @@ class SpiderDataPersistence:
                 potential_amount = SpiderDataPersistence._extract_salary_amount(potential)
 
                 # Create or update
-                obj, created = OpportunityActionPlan.objects.update_or_create(
+                _, created = ActionPlan.objects.update_or_create(
                     opportunity_id=f"opp_{opp.get('id', '')}_{opp.get('stream_type', 'unknown')}",
                     defaults={
-                        'platform': opp.get('stream_type', 'income_stream'),
-                        'opportunity_data': opp,
-                        'success_score': opp.get('success_rate', 75) / 100,
-                        'ml_confidence': opp.get('market_demand', 80) / 100,
-                        'revenue_potential': potential_amount,
-                        'status': 'identified',
-                        'created_at': timezone.now()
+                        'opportunity_title': opp.get('title', 'Income opportunity')[:255],
+                        'opportunity_data': {
+                            **opp,
+                            'ml_confidence': opp.get('market_demand', 80) / 100,
+                            'revenue_potential': str(potential_amount),
+                        },
+                        'status': 'created',
                     }
                 )
 
