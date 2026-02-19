@@ -4,13 +4,14 @@
 # Reduced max-tasks-per-child: celery-worker 50→25→10 (Session 1000C OOM fix)
 # Session 1003: Bumped pa to -c 2 (lighter tasks), broadcast to -c 3 (threads pool)
 # Session 1009: Reduced content from -c 2 → -c 1 (OOM fix: deliberation + dream tasks are memory-heavy)
+# Session 1039: Bumped content memory 150→250MB, recycle 10→5 tasks (OOM: deliberation uses 80-120MB per task)
 # --pool=prefork on Linux (Railway) recycles child processes after N tasks
 # macOS local dev should still use --pool=threads (prefork causes SIGSEGV) via Makefile
 release: python manage.py migrate --noinput && python manage.py sync_celery_beat --apply --create-only && python manage.py setup_codebase_workspace
 web: daphne -b 0.0.0.0 -p ${PORT:-8000} --http-timeout 120 --application-close-timeout 120 core.asgi:application
 celery-worker: celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=10 --max-memory-per-child=200000 -Q default,agents,sports
 celery-pa: celery -A core worker -l info --pool=prefork -c 2 --max-tasks-per-child=50 --max-memory-per-child=150000 -Q pa
-celery-content: celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=10 --max-memory-per-child=150000 -Q content
+celery-content: celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=5 --max-memory-per-child=250000 -Q content
 celery-long-running: celery -A core worker -l info --pool=prefork -c 3 --max-tasks-per-child=10 --max-memory-per-child=300000 -Q long_running,ml
 celery-broadcast: celery -A core worker -l info --pool=threads -c 3 --max-tasks-per-child=50 --max-memory-per-child=200000 -Q broadcast
 celery-beat: celery -A core beat -l info
