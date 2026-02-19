@@ -775,10 +775,26 @@ class AgentRouter:
         # Validate agent name
         agent_class = self.AGENT_MAP.get(agent_name)
         if not agent_class:
-            available = ", ".join(self.AGENT_MAP.keys())
-            raise AgentNotFoundError(
-                f"Unknown agent: '{agent_name}'. Available agents: {available}"
-            )
+            # Session 1038: Fall back to DynamicPersonaAgent for DB-only personas
+            from core.agents.dynamic_persona_agent import DynamicPersonaAgent
+            try:
+                from core.models_unified_system import Agent as AgentModel
+                if AgentModel.objects.filter(name=agent_name, is_active=True).exists():
+                    logger.info(f"[routing] '{agent_name}' not in AGENT_MAP, using DynamicPersonaAgent")
+                    agent_class = DynamicPersonaAgent
+                else:
+                    available = ", ".join(self.AGENT_MAP.keys())
+                    raise AgentNotFoundError(
+                        f"Unknown agent: '{agent_name}'. Available agents: {available}"
+                    )
+            except AgentNotFoundError:
+                raise
+            except Exception as e:
+                logger.warning(f"[routing] DynamicPersonaAgent fallback failed for '{agent_name}': {e}")
+                available = ", ".join(self.AGENT_MAP.keys())
+                raise AgentNotFoundError(
+                    f"Unknown agent: '{agent_name}'. Available agents: {available}"
+                )
 
         # Session 1031: Reroute specialist tasks away from non-specialist agents.
         # E.g. "competitor audit" should go to CompetitorAnalysisAgent, not WorkflowAgent.
@@ -862,7 +878,11 @@ class AgentRouter:
             )
 
         # Instantiate the agent
-        agent = agent_class(user=self.user)
+        # Session 1038: DynamicPersonaAgent needs persona_name kwarg
+        if agent_class.__name__ == 'DynamicPersonaAgent':
+            agent = agent_class(persona_name=agent_name, user=self.user)
+        else:
+            agent = agent_class(user=self.user)
 
         # Session 769: Use pre-gathered context if provided (for timeout isolation)
         if pre_gathered_context and pre_gathered_context.get('gathered'):
