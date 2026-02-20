@@ -3407,6 +3407,7 @@ Address the user by name occasionally."""
                     display_limit = 25
                     for i, item in enumerate(items[:display_limit]):
                         name = item.get('name', 'Untitled')[:80]
+                        hid = item.get('human_id') or f"#{i + 1}"
                         stage = item.get('current_stage', 1)
                         purpose = item.get('purpose', 'unknown')
                         pending = item.get('pending_actions', 0)
@@ -3423,7 +3424,7 @@ Address the user by name occasionally."""
                                 details += f" ({critical} critical)"
                         if not last_activity:
                             details += " | no activity"
-                        response += f"{i + 1}. **{name}**\n   {details}\n\n"
+                        response += f"- **{hid}** — {name}\n   {details}\n\n"
 
                     if count > display_limit:
                         response += f"...and {count - display_limit} more.\n"
@@ -3490,6 +3491,7 @@ Address the user by name occasionally."""
 
                 elif action == 'details':
                     name = tool_result.get('name', 'Unknown')
+                    hid = tool_result.get('human_id')
                     description = tool_result.get('description', '')[:200]
                     status = tool_result.get('status', 'unknown')
                     stage = tool_result.get('current_stage', 1)
@@ -3501,7 +3503,8 @@ Address the user by name occasionally."""
 
                     owner = tool_result.get('owner')
 
-                    response = f"{status_icon} **{name}**\n\n"
+                    header = f"**{hid}** — {name}" if hid else f"**{name}**"
+                    response = f"{status_icon} {header}\n\n"
                     response += f"- Status: {status}\n"
                     response += f"- Stage: {stage}/5\n"
                     response += f"- Purpose: {purpose}\n"

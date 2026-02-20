@@ -30,7 +30,7 @@ Usage:
 """
 
 import uuid
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 
 
@@ -434,13 +434,48 @@ class Initiative(models.Model):
         help_text='Session 1016: Why this initiative is blocked/stalled'
     )
 
+    # Session 1043: Human-friendly sequential IDs (INIT-000001)
+    seq_id = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        unique=True,
+        help_text='Session 1043: Sequential human-friendly ID number'
+    )
+    human_id = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        unique=True,
+        db_index=True,
+        help_text='Session 1043: Human-friendly ID (e.g., INIT-000001)'
+    )
+
     class Meta:
         ordering = ['-updated_at']
         verbose_name = 'Initiative'
         verbose_name_plural = 'Initiatives'
 
     def __str__(self):
-        return f"{self.name} (Stage {self.current_stage}/5)"
+        prefix = self.human_id or 'INIT-?'
+        return f"{prefix} — {self.name} (Stage {self.current_stage}/5)"
+
+    def save(self, *args, **kwargs):
+        if self.seq_id is None:
+            self._assign_seq_id()
+        super().save(*args, **kwargs)
+
+    def _assign_seq_id(self):
+        """Concurrency-safe sequential ID assignment using SELECT FOR UPDATE."""
+        from django.db.models import Max
+        with transaction.atomic():
+            # Lock the table's max seq_id row to prevent duplicates
+            max_seq = (
+                Initiative.objects
+                .select_for_update()
+                .aggregate(max_seq=Max('seq_id'))
+            )['max_seq'] or 0
+            self.seq_id = max_seq + 1
+            self.human_id = f"INIT-{self.seq_id:06d}"
 
     @property
     def priority_score(self):
