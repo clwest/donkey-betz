@@ -3385,6 +3385,49 @@ class ToolDispatcher:
                 }
             }
 
+        # Session 1040: Fetch full stage document content
+        elif action == 'stage_document':
+            initiative_id = payload.get('id') or payload.get('initiative_id')
+            document_id = payload.get('document_id')
+            stage_num = payload.get('stage')
+
+            if not initiative_id and not document_id:
+                raise ValueError("id (initiative UUID) or document_id is required")
+
+            from core.models_unified_system import SelfBlog
+
+            if document_id:
+                doc = SelfBlog.objects.filter(id=document_id).first()
+                if not doc:
+                    raise ValueError(f"Document {document_id} not found")
+            elif initiative_id and stage_num:
+                from core.models_document_registry import InitiativeStage as IS
+                stage = IS.objects.filter(
+                    initiative_id=initiative_id, stage=int(stage_num)
+                ).select_related('document').first()
+                if not stage:
+                    raise ValueError(f"Stage {stage_num} not found for initiative {initiative_id}")
+                if not stage.document:
+                    raise ValueError(f"Stage {stage_num} has no document attached")
+                doc = stage.document
+            else:
+                raise ValueError("Provide document_id, or both id + stage")
+
+            return {
+                'action': 'stage_document',
+                'document_id': str(doc.id),
+                'title': doc.title,
+                'word_count': doc.word_count,
+                'status': doc.status,
+                'created_at': doc.created_at.isoformat() if doc.created_at else None,
+                'intro': doc.intro or '',
+                'full_text': doc.full_text or '',
+                'sections': doc.sections or [],
+                'tags': doc.tags or [],
+                'quality_score': doc.quality_score,
+                'tone': doc.tone,
+            }
+
         # Session 993: Write actions for initiatives
         elif action == 'update_status':
             initiative_id = payload.get('id') or payload.get('initiative_id')
