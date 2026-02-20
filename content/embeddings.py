@@ -173,23 +173,30 @@ class SentenceTransformerProvider(BaseEmbeddingProvider):
     
     def __init__(self, model: str = "all-MiniLM-L6-v2"):
         super().__init__()
-        
+
         if not HAS_SENTENCE_TRANSFORMERS:
             raise ImportError("sentence-transformers library not installed")
 
-        from sentence_transformers import SentenceTransformer
         self.model_name = model
-        self.model = SentenceTransformer(model)
-        self.dimension = self.model.get_sentence_embedding_dimension()
+        self._model = None
+        self.dimension = None
         self.cost_per_token = 0.0  # Local model, no API cost
-    
+
+    def _get_model(self):
+        """Lazy-load the SentenceTransformer model on first use."""
+        if self._model is None:
+            from sentence_transformers import SentenceTransformer
+            self._model = SentenceTransformer(self.model_name)
+            self.dimension = self._model.get_sentence_embedding_dimension()
+        return self._model
+
     async def generate_embedding(self, text: str) -> EmbeddingResult:
         """Generate embedding using Sentence Transformers"""
         try:
             import time
             start_time = time.time()
-            
-            embedding = self.model.encode(text, convert_to_tensor=False)
+
+            embedding = self._get_model().encode(text, convert_to_tensor=False)
             processing_time = int((time.time() - start_time) * 1000)
             
             return EmbeddingResult(
@@ -854,5 +861,22 @@ class RAGSystem:
         return rag_context
 
 
-# Global RAG system instance
-rag_system = RAGSystem()
+# Global RAG system instance — lazy to avoid loading ML models at import time
+_rag_system = None
+
+
+def _get_rag_system():
+    global _rag_system
+    if _rag_system is None:
+        _rag_system = RAGSystem()
+    return _rag_system
+
+
+class _LazyRAGSystem:
+    """Proxy that defers RAGSystem() construction until first attribute access."""
+
+    def __getattr__(self, name):
+        return getattr(_get_rag_system(), name)
+
+
+rag_system = _LazyRAGSystem()
