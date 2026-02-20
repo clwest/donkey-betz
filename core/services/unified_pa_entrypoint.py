@@ -655,6 +655,7 @@ class UnifiedPAEntrypoint:
         tool_runs = []
         fc_metadata: List[Dict] = []  # GPT function call metadata (name, args, call_id)
         response_id = None
+        prev_tool_sigs: List[str] = []  # Session 1043: Track tool call signatures for loop detection
 
         for iteration in range(max_iterations):
             # On final iteration, don't offer tools — force a text response
@@ -688,6 +689,50 @@ class UnifiedPAEntrypoint:
             # If no tool calls, LLM responded with text — done
             if not tool_calls:
                 return (result.get('response', ''), tool_runs, fc_metadata, response_id)
+
+            # Session 1043: Detect degenerate loops — LLM stuck repeating itself
+            text_content = result.get('response', '')
+            if text_content and self._is_degenerate_content(text_content):
+                logger.warning(
+                    f"[{trace_id}] Degenerate content detected at iteration {iteration+1}, "
+                    f"forcing final text response. Content: {text_content[:100]!r}"
+                )
+                # Re-run WITHOUT tools to force a clean text answer
+                final_result = await asyncio.to_thread(
+                    self.llm_enforcer.enforce_real_ai,
+                    prompt=message,
+                    input_messages=messages,
+                    tools=None,
+                    previous_response_id=response_id,
+                    task_type='conversation',
+                    max_tokens=2000,
+                    agent_name='PersonalAssistant',
+                )
+                return (final_result.get('response', ''), tool_runs, fc_metadata, final_result.get('response_id'))
+
+            # Session 1043: Detect repeated identical tool calls (same tool+args)
+            current_sigs = sorted(
+                f"{tc.get('function', {}).get('name', '')}:{tc.get('function', {}).get('arguments', '')}"
+                for tc in tool_calls
+            )
+            sig_key = '|'.join(current_sigs)
+            if sig_key in prev_tool_sigs:
+                logger.warning(
+                    f"[{trace_id}] Duplicate tool call signature detected at iteration {iteration+1}, "
+                    f"breaking loop. Sig: {sig_key[:100]}"
+                )
+                final_result = await asyncio.to_thread(
+                    self.llm_enforcer.enforce_real_ai,
+                    prompt=message,
+                    input_messages=messages,
+                    tools=None,
+                    previous_response_id=response_id,
+                    task_type='conversation',
+                    max_tokens=2000,
+                    agent_name='PersonalAssistant',
+                )
+                return (final_result.get('response', ''), tool_runs, fc_metadata, final_result.get('response_id'))
+            prev_tool_sigs.append(sig_key)
 
             # Execute each tool call via ToolDispatcher
             tool_result_inputs = []
@@ -749,6 +794,51 @@ class UnifiedPAEntrypoint:
 
         # Safety: shouldn't normally reach here
         return ("I wasn't able to complete that request.", tool_runs, fc_metadata, response_id)
+
+    @staticmethod
+    def _is_degenerate_content(text: str) -> bool:
+        """
+        Session 1043: Detect degenerate LLM output (stuck loops).
+
+        Catches patterns like "Ok.Ok.Ok.Ok..." or "Let's call.Ok.Ok.Stop.Ok..."
+        where the model is generating filler instead of real content.
+        """
+        if not text or len(text) < 30:
+            return False
+
+        # Strip whitespace and check for high repetition of short tokens
+        compressed = text.replace(' ', '').replace('\n', '')
+        if not compressed:
+            return False
+
+        # Pattern 1: Extremely repetitive — same 2-5 char substring repeated many times
+        # e.g. "Ok.Ok.Ok.Ok.Ok." or "Stop.Stop.Stop."
+        for chunk_len in (2, 3, 4, 5):
+            if len(compressed) >= chunk_len * 6:
+                chunk = compressed[:chunk_len]
+                repeat_count = 0
+                for i in range(0, len(compressed) - chunk_len + 1, chunk_len):
+                    if compressed[i:i+chunk_len] == chunk:
+                        repeat_count += 1
+                if repeat_count >= 6:
+                    return True
+
+        # Pattern 2: High ratio of "Ok" / "Stop" / "Done" / filler words
+        lower = text.lower()
+        filler_words = ['ok', 'stop', 'done', 'proceed', 'let\'s', 'call', 'tool', 'now', 'send', 'alright', 'enough', 'sorry']
+        filler_count = sum(lower.count(w) for w in filler_words)
+        word_count = len(text.split())
+        if word_count > 10 and filler_count / max(word_count, 1) > 0.5:
+            return True
+
+        # Pattern 3: Very long text with almost no unique words (degenerate repetition)
+        words = text.lower().split()
+        if len(words) > 20:
+            unique_ratio = len(set(words)) / len(words)
+            if unique_ratio < 0.15:
+                return True
+
+        return False
 
     def _build_messages_array(self, message: str, context: Dict[str, Any]) -> List[Dict]:
         """
