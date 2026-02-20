@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router-dom'
 import { useAgentUpdates, useLearningFeed, useSystemEvents, type AgentUpdate, type LearningEvent } from '@/hooks/useWebSocket'
 import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb, Hash, Send, BarChart3, AlertTriangle, Cpu, Database, Loader2, Wrench, Power, ExternalLink, Plus, Edit2, Trash2, FileText, Star, Globe, Lock, Shield, Calendar, DollarSign, XCircle } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 // Session 713: Cross-page navigation
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
 
@@ -4071,6 +4073,59 @@ export default function AgentsPage() {
                                 {JSON.stringify(selectedExecution.output_data.data.analysis, null, 2)}
                               </pre>
                             )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Special handling for analysis as string (CompetitorAnalysisAgent, etc.) */}
+                      {selectedExecution.output_data.data.analysis && typeof selectedExecution.output_data.data.analysis === 'string' && (
+                        <div className="mb-4">
+                          <h5 className="text-sm font-medium text-accent-amber mb-2">Analysis</h5>
+                          <div className="bg-dark-card rounded-lg p-3 border border-dark-border prose prose-invert prose-sm max-w-none prose-table:text-xs prose-th:text-accent-amber prose-td:border-dark-border">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedExecution.output_data.data.analysis}</ReactMarkdown>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Special handling for query string */}
+                      {selectedExecution.output_data.data.query && typeof selectedExecution.output_data.data.query === 'string' && (
+                        <div className="mb-4">
+                          <h5 className="text-sm font-medium text-gray-500 mb-1">Query</h5>
+                          <p className="text-gray-300 text-sm bg-dark-card rounded-lg px-3 py-2 border border-dark-border">{selectedExecution.output_data.data.query}</p>
+                        </div>
+                      )}
+
+                      {/* Special handling for raw_data array (source cards) */}
+                      {selectedExecution.output_data.data.raw_data && Array.isArray(selectedExecution.output_data.data.raw_data) && selectedExecution.output_data.data.raw_data.length > 0 && (
+                        <div className="mb-4">
+                          <h5 className="text-sm font-medium text-accent-cyan mb-2">Sources ({selectedExecution.output_data.data.raw_data.length})</h5>
+                          <div className="space-y-2">
+                            {selectedExecution.output_data.data.raw_data.slice(0, 10).map((item: { title?: string; source?: string; url?: string; description?: string; snippet?: string }, idx: number) => (
+                              <div key={idx} className="bg-dark-card rounded-lg p-3 border border-dark-border">
+                                <div className="flex items-center gap-2 mb-1">
+                                  {item.source && (
+                                    <span className="text-xs px-1.5 py-0.5 bg-accent-cyan/20 text-accent-cyan rounded">{item.source}</span>
+                                  )}
+                                  {item.title && (
+                                    item.url ? (
+                                      <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-sm text-white font-medium hover:text-accent-cyan truncate">
+                                        {item.title}
+                                      </a>
+                                    ) : (
+                                      <span className="text-sm text-white font-medium truncate">{item.title}</span>
+                                    )
+                                  )}
+                                </div>
+                                {(item.description || item.snippet) && (
+                                  <p className="text-xs text-gray-400 line-clamp-2">{item.description || item.snippet}</p>
+                                )}
+                                {item.url && !item.title && (
+                                  <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-xs text-accent-cyan hover:underline truncate block">
+                                    {item.url}
+                                  </a>
+                                )}
+                              </div>
+                            ))}
                           </div>
                         </div>
                       )}
