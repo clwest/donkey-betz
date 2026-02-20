@@ -7672,7 +7672,8 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
                         spider_insights = spider_service.get_insights_for_prompt(topic)
 
                         if spider_insights:
-                            spider_parts = ["\n\n== REAL-WORLD INTELLIGENCE (from Spider Network) =="]
+                            from django.utils import timezone as _tz
+                            spider_parts = [f"\n\n== REAL-WORLD INTELLIGENCE (from Spider Network, retrieved {_tz.now().strftime('%B %d, %Y %H:%M UTC')}) =="]
 
                             if spider_insights.get('relevant_trends'):
                                 trends = spider_insights['relevant_trends'][:3]
@@ -7682,7 +7683,10 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
                                 discussions = spider_insights['related_discussions'][:2]
                                 for disc in discussions:
                                     if isinstance(disc, dict):
-                                        spider_parts.append(f"- {disc.get('title', '')[:80]}")
+                                        title = disc.get('title', '')[:80]
+                                        found = disc.get('found_at', disc.get('created_at', ''))
+                                        ts = f" (collected: {found})" if found else ""
+                                        spider_parts.append(f"- {title}{ts}")
                                     else:
                                         spider_parts.append(f"- {str(disc)[:80]}")
 
@@ -7690,6 +7694,20 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
                                 market = spider_insights['market_data']
                                 if market.get('summary'):
                                     spider_parts.append(f"Market: {market['summary'][:100]}")
+
+                            # Session 1040: Surface related_content from search_spider_data()
+                            # This is the semantic/keyword fallback that always runs —
+                            # previously its results were silently dropped here
+                            if spider_insights.get('related_content'):
+                                related = spider_insights['related_content'][:3]
+                                for item in related:
+                                    if isinstance(item, dict):
+                                        title = item.get('title', '')[:80]
+                                        source = item.get('source', '')
+                                        found = item.get('found_at', '')
+                                        ts = f" (collected: {found})" if found else ""
+                                        src = f" [source: {source}]" if source else ""
+                                        spider_parts.append(f"- {title}{src}{ts}")
 
                             if len(spider_parts) > 1:
                                 spider_context = '\n'.join(spider_parts)
@@ -7747,7 +7765,8 @@ Guidelines:
 - If you see a problem with their approach, say so
 - Ask probing questions, don't just accept statements
 - Real experts disagree sometimes - that's healthy
-- When citing data, mention the source (e.g., "from Notion spider data" or "based on HackerNews trends")
+- When citing data, mention the source AND the date it was collected (e.g., "from HackerNews spider data collected Feb 18, 2026")
+- CRITICAL: If no == REAL-WORLD INTELLIGENCE == section appears below, you have NO spider data available. State "No data available for this topic" — do NOT invent dates, counts, statistics, or claim data exists. Never fabricate a date or say "data shows X" without an actual data source below.
 {mood_context}
 {policy_context}
 {spider_context}
