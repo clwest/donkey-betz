@@ -1612,10 +1612,23 @@ def execute_initiative_stage_task(
 
         execution_time_ms = int((time.time() - execution_start) * 1000)
 
+        # Session 1041: ContentWriterAgent puts actual content in data['content'],
+        # while .content (alias for .message) is just a summary like
+        # "Blog Post: 'Title' | 571 words | ...". Extract real full_text from data.
+        actual_content = result.content or ''
+        if result.data:
+            content_data = result.data.get('content')
+            if isinstance(content_data, dict):
+                full_text = content_data.get('full_text', '')
+                if full_text and len(full_text) > len(actual_content):
+                    actual_content = full_text
+            elif isinstance(content_data, str) and len(content_data) > len(actual_content):
+                actual_content = content_data
+
         # Build task result for stage handler
         task_result = {
             'success': result.success,
-            'content': result.content[:5000] if result.content else '',
+            'content': actual_content[:5000] if actual_content else '',
             'error': result.error,
             'execution_time_ms': execution_time_ms,
         }
@@ -34287,6 +34300,18 @@ Stage {stage_num} ({config['template']}) should include:
             raise ValueError(f"Agent returned empty response: {result.error if result else 'No result'}")
 
         document_content = result.message
+
+        # Session 1041: ContentWriterAgent puts actual content in data['content'],
+        # while message is just a summary like "Blog Post: 'Title' | 571 words | ..."
+        # Extract the real full_text from data if available.
+        if result.data:
+            content_data = result.data.get('content')
+            if isinstance(content_data, dict):
+                full_text = content_data.get('full_text', '')
+                if full_text and len(full_text) > len(document_content):
+                    document_content = full_text
+            elif isinstance(content_data, str) and len(content_data) > len(document_content):
+                document_content = content_data
 
         # Create the document (Session 906: Use SelfBlog, not Document)
         # Map stage to category
