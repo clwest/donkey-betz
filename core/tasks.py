@@ -35334,3 +35334,37 @@ def cleanup_conversation_duplicates_task(self):
         f"from {result['clusters_found']} clusters"
     )
     return result
+
+
+@shared_task(name='core.tasks.rescan_active_workspaces')
+def rescan_active_workspaces(stale_days: int = 7):
+    """
+    Session 1055: Periodic rescan of active workspaces with stale or missing context.
+    Keeps WorkspaceContext fresh so PA workspace injection stays accurate.
+    """
+    from core.models_skin_layer import ProjectWorkspace, WorkspaceContext
+    from core.services.workspace_manager import WorkspaceScanner
+
+    cutoff = timezone.now() - timedelta(days=stale_days)
+    scanner = WorkspaceScanner()
+    rescanned = 0
+    errors = 0
+
+    active_workspaces = ProjectWorkspace.objects.filter(is_active=True)
+
+    for ws in active_workspaces:
+        try:
+            ctx = WorkspaceContext.objects.filter(workspace=ws).first()
+            if ctx and ctx.updated_at and ctx.updated_at > cutoff:
+                continue  # Still fresh
+            scanner.scan_workspace(ws)
+            rescanned += 1
+        except Exception as e:
+            errors += 1
+            logger.warning(f"[WORKSPACE-RESCAN] Failed to rescan {ws.name}: {e}")
+
+    logger.info(
+        f"[WORKSPACE-RESCAN] Rescanned {rescanned} workspaces, "
+        f"{errors} errors, {active_workspaces.count()} total active"
+    )
+    return {'rescanned': rescanned, 'errors': errors}
