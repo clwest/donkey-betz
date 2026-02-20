@@ -987,6 +987,11 @@ PA_TOOL_SCHEMAS = [
                     "type": "string",
                     "description": "Full task name for drilldown (e.g. core.tasks.execute_agent_task)",
                 },
+                "status": {
+                    "type": "string",
+                    "enum": ["SUCCESS", "FAILURE", "STARTED"],
+                    "description": "Filter drilldown executions by status (e.g. FAILURE to see only failures)",
+                },
                 "limit": {
                     "type": "integer",
                     "description": "Max items to return (default 25 for summary, 50 for drilldown)",

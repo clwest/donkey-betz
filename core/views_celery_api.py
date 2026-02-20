@@ -390,13 +390,13 @@ class TaskBreakdownDetailView(View):
             window = request.GET.get('window', '60m')
             minutes = WINDOW_MAP.get(window, 60)
             limit = min(int(request.GET.get('limit', 50)), 200)
+            status = request.GET.get('status', '')
             cutoff = timezone.now() - timedelta(minutes=minutes)
 
-            rows = (
-                CeleryTaskEvent.objects
-                .filter(task_name=task_name, started_at__gte=cutoff)
-                .order_by('-started_at')[:limit]
-            )
+            qs = CeleryTaskEvent.objects.filter(task_name=task_name, started_at__gte=cutoff)
+            if status:
+                qs = qs.filter(status=status.upper())
+            rows = qs.order_by('-started_at')[:limit]
 
             executions = []
             for r in rows:
