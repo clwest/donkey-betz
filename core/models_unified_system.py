@@ -207,6 +207,7 @@ class AgentKnowledgeSource(models.Model):
         ('user_behavior', 'User Behavior'),
         ('content_idea', 'Content Ideas'),
         ('tool_discovery', 'Tool Discovery'),
+        ('collaborative_insight', 'Collaborative Insight'),
     ])
 
     # Source tracking
