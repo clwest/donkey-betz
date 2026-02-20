@@ -923,7 +923,7 @@ class AgentRouter:
 
         # Session 522: Special handling for ContentWriterAgent - use SmartTrendingService
         # with dynamic year references and DuckDuckGo fallback for fresh 2025 data
-        if agent_name == 'ContentWriterAgent':
+        if agent_name == 'ContentWriterAgent' and context.get('content_type') != 'internal_document':
             from datetime import datetime
             try:
                 from core.services.smart_trending_service import SmartTrendingService
