@@ -57,20 +57,26 @@ Agents in initiative-triggered conversations are **fabricating data dates and cl
 - Reality: Spider data ranges from Jan 22, 2026 to Feb 19, 2026 (today), 30K+ records, 11K+ in last 7 days
 - The date "Oct 15, 2023" is **completely fabricated** — no spider record has that timestamp
 
-### Root Cause Analysis (3 interconnected issues)
+### Root Cause Analysis (4 interconnected issues — PA independently confirmed #1)
 
-**1. Spider intelligence keyword matching is too narrow** (`core/services/spider_intelligence.py:1040`)
+**1. Agents assigned tasks they have no tools for** (PA confirmed via agent introspection)
+- CodeGeneratorAgent only has codebase tools (read_file, write_file, edit_file, generate_code) — **cannot query spider data**
+- Data Scientist Pro has **no attached toolset** at all
+- The conversation orchestrator asked them to "summarize recent spider data" without injecting any data
+- Agents hallucinated because they literally had nothing to work with
+- **PA recommendation:** orchestrator should fetch data first, inject `NOW_UTC=...` + actual records, then ask agent to summarize only what's provided
+
+**2. Spider intelligence keyword matching is too narrow** (`core/services/spider_intelligence.py:1040`)
 - `get_insights_for_prompt()` only matches 5 categories: tech, crypto, finance, jobs, design
 - "Customer behavior signals" matches NONE of them
 - So `spider_context` injected into the conversation system prompt is **empty**
-- Agents receive the topic "summarize spider data" but get zero actual data
 
-**2. No data provenance / timestamps in agent context** (`core/tasks.py:7674-7695`)
+**3. No data provenance / timestamps in agent context** (`core/tasks.py:7674-7695`)
 - When spider data IS injected, the `spider_parts` list shows titles and summaries only
 - Never includes "this data is from [date]" or "collected [N] hours ago"
 - Agents can't distinguish fresh data from stale data, so they hallucinate dates
 
-**3. Initiative pipeline creates tasks without validating data availability**
+**4. Initiative pipeline creates tasks without validating data availability**
 - Initiative "Summarize customer behavior signals from spider data" was auto-created from a conversation decision
 - Pipeline ran it through all 5 stages without checking if any spider actually collects "customer behavior" data
 - Result: agents argue for 7 messages about data that doesn't exist in the format they expect
