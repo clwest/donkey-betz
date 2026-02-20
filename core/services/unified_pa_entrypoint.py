@@ -3045,6 +3045,43 @@ Address the user by name occasionally."""
 
                     return response
 
+                # Session 1042: Blog/content search by title
+                elif action == 'search':
+                    query = tool_result.get('query', '')
+                    total = tool_result.get('total_found', 0)
+
+                    # Handle both unified search (blogs + deliverables) and blog-only search
+                    blog_data = tool_result.get('blogs') or tool_result
+                    blog_items = blog_data.get('items', []) if isinstance(blog_data, dict) else []
+                    deliverable_data = tool_result.get('deliverables', {})
+                    deliverable_items = deliverable_data.get('items', []) if isinstance(deliverable_data, dict) else []
+
+                    all_items = blog_items + deliverable_items
+                    if not all_items:
+                        return f"No content found matching \"{query}\", {user_name}."
+
+                    response = f"Found {len(all_items)} result(s) for \"{query}\":\n\n"
+                    for item in all_items[:8]:
+                        title = item.get('title', 'Untitled')[:60]
+                        status = item.get('status', 'unknown')
+                        word_count = item.get('word_count', 0)
+                        quality = item.get('quality_score')
+                        item_id = str(item.get('id', ''))[:8]
+
+                        status_icon = {'published': '✅', 'approved': '🟢', 'pending_review': '🔵', 'draft': '📝'}.get(status, '⬜')
+                        response += f"{status_icon} **{title}**\n"
+                        response += f"   [{status}]"
+                        if word_count:
+                            response += f" · {word_count:,} words"
+                        if quality:
+                            response += f" · {quality:.0%} quality"
+                        response += f" · ID: {item_id}…\n"
+
+                    if len(all_items) > 8:
+                        response += f"\n...and {len(all_items) - 8} more."
+                    response += "\n\nSay 'show details [id]' for full content."
+                    return response
+
                 elif action == 'stats':
                     ready = tool_result.get('ready_for_review', 0)
                     drafts = tool_result.get('drafts', 0)
