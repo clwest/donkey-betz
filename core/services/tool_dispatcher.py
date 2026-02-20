@@ -3155,6 +3155,7 @@ class ToolDispatcher:
                     'confidence', 'revenue_potential', 'created_at',
                     'updated_at', 'last_activity_at',
                     'owner_id', 'owner_agent',
+                    'human_id', 'seq_id',
                 )
             )
 
@@ -3248,17 +3249,17 @@ class ToolDispatcher:
                 'classification': {
                     'real': {
                         'count': len(real),
-                        'items': [{'name': i.name, 'stage': i.current_stage,
+                        'items': [{'human_id': i.human_id, 'name': i.name, 'stage': i.current_stage,
                                    'purpose': i.purpose} for i in real[:10]]
                     },
                     'stalled': {
                         'count': len(stalled),
-                        'items': [{'name': i.name, 'created_at': str(i.created_at)[:10],
+                        'items': [{'human_id': i.human_id, 'name': i.name, 'created_at': str(i.created_at)[:10],
                                    'purpose': i.purpose} for i in stalled[:5]]
                     },
                     'noise': {
                         'count': len(noise),
-                        'items': [{'name': i.name} for i in noise[:5]]
+                        'items': [{'human_id': i.human_id, 'name': i.name} for i in noise[:5]]
                     },
                     'duplicates': {
                         'count': len(duplicate_ids),
@@ -3336,8 +3337,15 @@ class ToolDispatcher:
             if not initiative_id and not name_query:
                 raise ValueError("id or name is required for details action")
 
+            # Session 1043: Support lookup by human_id (INIT-000001) or seq_id number
             if initiative_id:
-                initiative = Initiative.objects.filter(id=initiative_id).first()
+                id_str = str(initiative_id).strip()
+                if id_str.upper().startswith('INIT-'):
+                    initiative = Initiative.objects.filter(human_id__iexact=id_str).first()
+                elif id_str.isdigit():
+                    initiative = Initiative.objects.filter(seq_id=int(id_str)).first()
+                else:
+                    initiative = Initiative.objects.filter(id=initiative_id).first()
             else:
                 initiative = Initiative.objects.filter(name__icontains=name_query).first()
 
@@ -3390,6 +3398,7 @@ class ToolDispatcher:
             return {
                 'action': 'details',
                 'id': str(initiative.id),
+                'human_id': initiative.human_id or None,
                 'name': initiative.name,
                 'description': initiative.description,
                 'status': initiative.status,
