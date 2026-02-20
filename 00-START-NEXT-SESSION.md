@@ -1,8 +1,37 @@
-# Session 1044 - Start Here
+# Session 1048 - Start Here
 
-**Previous Sessions:** 1043 (Brainstorm Bulk Export), 1042 (Initiative Cleanup + PA Blog Search + Frontend Fixes), 1041 (Stage Doc Content Fix + Regen Sweep), 1040 (Anti-Hallucination + ThinkingAgent Fix + PA Tool + Celery OOM)
+**Previous Sessions:** 1048 (Task Volume Breakdown API), 1043 (Brainstorm Bulk Export + DOCX/CSV + OOM Fix), 1042 (Initiative Cleanup + PA Blog Search + Frontend Fixes), 1041 (Stage Doc Content Fix + Regen Sweep), 1040 (Anti-Hallucination + ThinkingAgent Fix + PA Tool + Celery OOM)
 **Date:** February 19, 2026
-**Status:** 92 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2)** | **All 218 agent personas routable** | **Tenant model Phase 1 landed** | 4 ACTIVE initiatives | 35 COMPLETED
+**Status:** 92 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2, 41 tool schemas, 59 handlers)** | **All 218 agent personas routable** | **Tenant model Phase 1 landed** | 4 ACTIVE initiatives | 35 COMPLETED
+
+---
+
+## Session 1048 — What Happened
+
+### Task Volume Breakdown API + PA Tool
+
+PA-generated engineering ticket (Chat #213-214) called for a "one-click" task volume breakdown. The existing `/api/celery/tasks/` endpoint queries the empty `TaskResult` table (broken with Redis backend). Added two new endpoints that query `CeleryTaskEvent` directly, plus a PA tool.
+
+**New endpoints:**
+- `GET /api/celery/breakdown/?window=60m&limit=25` — Aggregated totals, by-task with p50/p95 percentiles, by-agent breakdown
+- `GET /api/celery/breakdown/task/?task_name=core.tasks.xyz&window=60m` — Drill-down into specific task name with recent executions
+
+**PA tool:** `task_breakdown_tool` (summary/drilldown actions). Ask "what's driving load?", "top failing tasks", "drill into execute_agent_task".
+
+**Files changed (5):**
+| File | Change |
+|------|--------|
+| `core/views_celery_api.py` | `TaskBreakdownView` + `TaskBreakdownDetailView` (~200 lines) |
+| `core/urls.py` | 2 URL patterns under `/api/celery/breakdown/` |
+| `core/services/pa_tool_schemas.py` | `task_breakdown_tool` schema + enrichment/intent maps |
+| `core/services/tool_dispatcher.py` | `_handle_task_breakdown` handler (~170 lines) |
+| `core/services/unified_pa_entrypoint.py` | `task_breakdown` formatter (markdown tables) + bypass list |
+
+**Key design decisions:**
+- Percentile calculation in Python (sorted list index) — manageable volume (~few thousand rows per 24h window)
+- Handler duplicates view logic rather than sharing a helper — queries are straightforward, avoids coupling
+- Window options: 15m, 60m, 2h, 6h, 24h (mapped to minutes internally)
+- AgentExecution by-agent uses `agent__name` (FK to Agent), filtered by `created_at` (NOT `started_at`)
 
 ---
 
@@ -17,6 +46,23 @@ PA identified ~13,256 agent-to-agent brainstorm conversations (last 30 days) but
 - `_handle_brainstorm` in tool_dispatcher — new `list` action, limit capped at 200
 - `pa_tool_schemas.py` — added `offset`, `days`, `type`, `status`, `include_transcript` params
 - `unified_pa_entrypoint.py` — NLU payload builder for "list all"/"export"/"bulk" keywords + markdown table formatter with pagination hints
+
+### OOM Fix — 9 Heavy Tasks Rerouted (PR #1346)
+
+celery-worker OOMing after deploy — 9 heavy unrouted tasks falling to `default` queue (200MB limit). Rerouted all to `long_running` queue in `CELERY_TASK_ROUTES`.
+
+### DOCX & CSV Processors for RAG Pipeline
+
+RAG upload pipeline only supported PDF/TXT/MD. Added DOCX and CSV support across the full stack:
+
+**Backend:**
+- `DOCXProcessor` — python-docx, extracts paragraphs + tables, handles bytes input
+- `CSVProcessor` — pandas, column summaries + first 50 rows as text, handles bytes input
+- Both registered in `DocumentProcessingPipeline` and wired into `ingest_file()` endpoint
+
+**Frontend:**
+- File input accepts `.docx,.csv`, new type badges (Word=indigo, CSV=emerald)
+- Updated help text and info section
 
 ---
 
@@ -78,12 +124,13 @@ PA Chat area on Command Center was cramped — NowHub (3 dashboard cards) + Inte
 
 ---
 
-## Current System Health (post-Session 1042)
+## Current System Health (post-Session 1048)
 
 | Metric | Value |
 |--------|-------|
 | PA routing | **GPT-5.2 function calling** (`PA_USE_FUNCTION_CALLING=true`) |
-| PA tools | **list** action on brainstorm_tool (bulk paginated export), **search** on content_review_tool, **stage_document** on initiative_tool |
+| PA tools | **41 schemas, 59 handlers** — `task_breakdown_tool` (summary/drilldown), `brainstorm_tool` (bulk paginated export), `content_review_tool` (search), `initiative_tool` (stage_document) |
+| RAG upload | **5 formats**: PDF, DOCX, CSV, TXT, MD + URL + YouTube |
 | Agents routable | **All 218** (82 AGENT_MAP + 139 DynamicPersonaAgent + 2 blocked) |
 | Initiatives | **4 ACTIVE**, 35 COMPLETED, 1 TRIAGE, 8 ARCHIVED (48 total) |
 | Initiative quality gate | **Content-review patterns blocked**, explore threshold lowered to 1 |
@@ -169,6 +216,8 @@ railway logs -n 200 2>&1 | grep -i 'OOM\|killed\|memory'
 
 ## Critical Patterns & Gotchas
 
+**Task volume breakdown (Session 1048):** `task_breakdown_tool` queries `CeleryTaskEvent` (NOT `TaskResult`). REST endpoints at `/api/celery/breakdown/` and `/api/celery/breakdown/task/`. Handler in `tool_dispatcher._handle_task_breakdown`. Formatter in `unified_pa_entrypoint._format_tool_result` under `intent == 'task_breakdown'`. AgentExecution uses `agent__name` (FK), `created_at` (NOT `started_at`), `status='failed'` (NOT `success=False`).
+
 **Initiative quality gate (Session 1042):** `ConversationInitiativePipeline._quality_gate()` now rejects content-review topics (`CONTENT_REVIEW_PATTERNS`) and any single explore pattern match (`EXPLORE_PATTERNS` threshold = 1). If adding new initiative creation paths, call `_quality_gate()` before creation.
 
 **PA content_review_tool search (Session 1042):** `content_review_tool(action='search', query='keyword', type='blog')` searches SelfBlog by title. Without `type='blog'`, searches both SelfBlog and Deliverables. Also exposed: `action='recent'` with `days=N` parameter.
@@ -182,6 +231,8 @@ railway logs -n 200 2>&1 | grep -i 'OOM\|killed\|memory'
 **ThinkingAgent banned from document generation:** ThinkingAgent returns system diagnostics instead of reviewing content. Session 912 fixed `generate_initiative_stage_document` (auto_pipeline). Session 1040 fixed `conversation_initiative_pipeline.py`. If adding new pipelines, NEVER use ThinkingAgent for content tasks.
 
 **Celery-content task routing (Session 1040):** 5 heavy tasks moved from content → long_running queue. Content queue now only has: deliberation, blog gen, auto-progression, scoring, publishing. If OOM returns again, next step is splitting deliberation into chained tasks.
+
+**RAG file processors (Session 1043):** `DOCXProcessor` and `CSVProcessor` in `content/processors.py`. Both handle bytes input (from upload) and file paths. `DocumentType.DOCX` and `DocumentType.CSV` in `content/models.py`. Frontend `DocumentsPage.tsx` accepts `.docx,.csv` with type badges. To add more formats: create processor class, register in `DocumentProcessingPipeline.__init__`, add branch in `ingest_file()` view, update frontend accept/badges.
 
 **Brainstorm bulk list (Session 1043):** `brainstorm_tool(action='list', offset=0, limit=50)` for paginated export. Limit capped at 200. NLU triggers on "list all", "export", "enumerate", "bulk". `include_transcript=true` adds full message arrays (heavy — use sparingly).
 
