@@ -120,7 +120,20 @@ Agents are dispatched from 3 independent paths (plus 3 secondary paths). Disabli
 **Solution:** `CeleryTaskEvent` model in `core/models_celery_telemetry.py`, populated by signal handlers in `core/celery_telemetry.py`:
 - Signals: `task_prerun`, `task_postrun`, `task_failure`
 - Fields: task_id, task_name, queue, status, worker, started_at, finished_at, duration_seconds, error_type, error_message
-- Used by: status_snapshot_tool (PA), system_health_tool, nervous system message stats
+- Used by: status_snapshot_tool (PA), system_health_tool, nervous system message stats, task_breakdown_tool (PA)
+
+### Task Volume Breakdown (Session 1048)
+
+Two REST endpoints + PA tool for one-click task load analysis, querying `CeleryTaskEvent` directly:
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/celery/breakdown/?window=60m&limit=25` | Aggregated totals, by-task (with p50/p95 percentiles), by-agent breakdown |
+| `GET /api/celery/breakdown/task/?task_name=core.tasks.xyz&window=60m` | Drill-down into a specific task name |
+
+**PA tool:** `task_breakdown_tool` with `summary` and `drilldown` actions. Triggered by "what's driving load?", "top failing tasks", "task volume", etc.
+
+**Window options:** 15m, 60m, 2h, 6h, 24h. **Percentile calculation:** Python-side from sorted duration lists (manageable data volume).
 
 ## ML Import Chain
 
