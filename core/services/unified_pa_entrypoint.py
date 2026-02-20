@@ -913,12 +913,14 @@ class UnifiedPAEntrypoint:
         ws_ctx = context.get('workspace_context', {})
         if ws_ctx:
             parts = []
-            if ws_ctx.get('tech_stack'):
-                parts.append(f"Tech: {', '.join(ws_ctx['tech_stack'][:8])}")
-            key_files = ws_ctx.get('key_files', [])
+            tech = ws_ctx.get('tech_stack', {})
+            if tech:
+                tech_items = list(tech.values())[:8] if isinstance(tech, dict) else list(tech)[:8]
+                parts.append(f"Tech: {', '.join(str(t) for t in tech_items)}")
+            key_files = ws_ctx.get('key_files', {})
             if key_files:
-                files_str = ', '.join(str(f) for f in key_files[:10])
-                parts.append(f"Key files: {files_str}")
+                kf_items = list(key_files.values())[:10] if isinstance(key_files, dict) else list(key_files)[:10]
+                parts.append(f"Key files: {', '.join(str(f) for f in kf_items)}")
             if ws_ctx.get('total_files'):
                 parts.append(f"{ws_ctx['total_files']} total files")
             if parts:
@@ -5335,23 +5337,33 @@ Be concise, conversational, and personalized. Address the user by name."""
             cb_parts = []
             if ws_ctx.get('workspace_name'):
                 cb_parts.append(f"Project: {ws_ctx['workspace_name']}")
-            if ws_ctx.get('tech_stack'):
-                cb_parts.append(f"Tech stack: {', '.join(ws_ctx['tech_stack'])}")
-            key_files = ws_ctx.get('key_files', [])
+            tech = ws_ctx.get('tech_stack', {})
+            if tech:
+                tech_items = list(tech.values()) if isinstance(tech, dict) else list(tech)
+                cb_parts.append(f"Tech stack: {', '.join(str(t) for t in tech_items)}")
+            key_files = ws_ctx.get('key_files', {})
             if key_files:
                 cb_parts.append("Key files:")
-                for kf in key_files[:15]:
-                    cb_parts.append(f"  - {kf}")
+                kf_items = list(key_files.items())[:15] if isinstance(key_files, dict) else list(key_files)[:15]
+                for kf in kf_items:
+                    if isinstance(kf, tuple):
+                        cb_parts.append(f"  - {kf[0]}: {kf[1]}")
+                    else:
+                        cb_parts.append(f"  - {kf}")
             dir_purposes = ws_ctx.get('directory_purposes', {})
             if isinstance(dir_purposes, dict) and dir_purposes:
                 cb_parts.append("Directory purposes:")
                 for d, purpose in list(dir_purposes.items())[:15]:
                     cb_parts.append(f"  - {d}: {purpose}")
-            patterns = ws_ctx.get('coding_patterns', [])
+            patterns = ws_ctx.get('coding_patterns', {})
             if patterns:
                 cb_parts.append("Coding patterns:")
-                for p in patterns[:10]:
-                    cb_parts.append(f"  - {p}")
+                pat_items = list(patterns.items())[:10] if isinstance(patterns, dict) else list(patterns)[:10]
+                for p in pat_items:
+                    if isinstance(p, tuple):
+                        cb_parts.append(f"  - {p[0]}: {p[1]}")
+                    else:
+                        cb_parts.append(f"  - {p}")
             if ws_ctx.get('total_files'):
                 cb_parts.append(f"Total files: {ws_ctx['total_files']}")
             if cb_parts:
