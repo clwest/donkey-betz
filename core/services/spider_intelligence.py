@@ -1037,11 +1037,42 @@ class SpiderIntelligenceService:
         }
 
         # Detect prompt intent
-        is_tech = any(w in prompt_lower for w in ['tech', 'code', 'programming', 'software', 'ai', 'ml'])
-        is_crypto = any(w in prompt_lower for w in ['crypto', 'bitcoin', 'btc', 'eth', 'blockchain', 'nft'])
-        is_finance = any(w in prompt_lower for w in ['stock', 'market', 'invest', 'trading', 'finance'])
-        is_jobs = any(w in prompt_lower for w in ['job', 'career', 'work', 'remote', 'hire', 'salary'])
-        is_design = any(w in prompt_lower for w in ['design', 'ui', 'ux', 'graphic', 'logo', 'brand'])
+        # Session 1040: Expanded keyword lists — agents were hallucinating because
+        # topics like "customer behavior signals" matched NONE of the original 5 categories,
+        # resulting in empty spider_context being injected into conversations.
+        is_tech = any(w in prompt_lower for w in [
+            'tech', 'code', 'programming', 'software', 'ai', 'ml',
+            'api', 'developer', 'engineering', 'algorithm', 'data science',
+            'machine learning', 'deep learning', 'automation', 'cloud',
+            'devops', 'infrastructure', 'database', 'web', 'app',
+        ])
+        is_crypto = any(w in prompt_lower for w in [
+            'crypto', 'bitcoin', 'btc', 'eth', 'blockchain', 'nft',
+            'defi', 'web3', 'token', 'wallet', 'mining',
+        ])
+        is_finance = any(w in prompt_lower for w in [
+            'stock', 'market', 'invest', 'trading', 'finance',
+            'revenue', 'profit', 'economic', 'portfolio', 'fund',
+            'earnings', 'valuation', 'financial',
+        ])
+        is_jobs = any(w in prompt_lower for w in [
+            'job', 'career', 'work', 'remote', 'hire', 'salary',
+            'freelance', 'gig', 'employment', 'recruit', 'talent',
+        ])
+        is_design = any(w in prompt_lower for w in [
+            'design', 'ui', 'ux', 'graphic', 'logo', 'brand',
+            'visual', 'layout', 'wireframe', 'prototype',
+        ])
+        is_business = any(w in prompt_lower for w in [
+            'customer', 'user', 'behavior', 'signal', 'analytics',
+            'engagement', 'retention', 'churn', 'funnel', 'growth',
+            'product', 'strategy', 'competitor', 'business', 'saas',
+            'subscription', 'marketing', 'sales', 'conversion',
+        ])
+        is_news = any(w in prompt_lower for w in [
+            'news', 'trend', 'announcement', 'update', 'release',
+            'launch', 'report', 'research', 'study', 'survey',
+        ])
 
         # Get relevant data based on intent
         if is_tech:
@@ -1067,10 +1098,25 @@ class SpiderIntelligenceService:
             }
             insights['suggestions'].append("Reference current job market trends")
 
+        # Session 1040: business/analytics and news categories
+        if is_business or is_news:
+            # No dedicated get_business_trends() — rely on semantic search below
+            insights['suggestions'].append("Include data-backed evidence for any claims")
+
         # Always do a quick search for relevant content
-        search_results = self.search_spider_data(prompt, limit=3)
+        # Session 1040: bumped limit from 3 → 5 so agents have more context
+        search_results = self.search_spider_data(prompt, limit=5)
         if search_results:
             insights['related_content'] = search_results
+
+        # Session 1040: If NO category matched at all, promote related_content
+        # into related_discussions so the spider_parts builder in tasks.py picks it up.
+        # This prevents empty spider_context when the topic doesn't match any keyword list.
+        matched_any_category = is_tech or is_crypto or is_finance or is_jobs or is_design or is_business or is_news
+        if not matched_any_category and search_results:
+            insights['related_discussions'] = search_results[:3]
+            insights['relevant_trends'] = [f"Search results for: {prompt[:60]}"]
+            insights['suggestions'].append("Topic did not match a known category — showing general search results")
 
         return insights
 
