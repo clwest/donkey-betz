@@ -2109,6 +2109,37 @@ class ToolDispatcher:
                 'by_status': status_counts,
             }
 
+        elif action == 'search':
+            # Session 1042: Search deliverables + blogs by title keyword
+            query = payload.get('query', '')
+            if not query:
+                raise ValueError("query parameter required for search action")
+
+            # Search Deliverables
+            deliverable_items = list(
+                base_qs.filter(title__icontains=query)
+                .order_by('-created_at')[:limit]
+                .values('id', 'title', 'deliverable_type', 'category',
+                        'agent_name', 'quality_score', 'created_at', 'status')
+            )
+
+            # Also search SelfBlog (where most content lives)
+            from core.models_unified_system import SelfBlog
+            blog_items = list(
+                SelfBlog.objects.filter(title__icontains=query)
+                .order_by('-created_at')[:limit]
+                .values('id', 'title', 'author', 'category', 'status', 'created_at',
+                        'quality_score', 'word_count', 'tone')
+            )
+
+            return {
+                'action': 'search',
+                'query': query,
+                'deliverables': {'count': len(deliverable_items), 'items': deliverable_items},
+                'blogs': {'count': len(blog_items), 'items': blog_items},
+                'total_found': len(deliverable_items) + len(blog_items),
+            }
+
         elif action == 'stats':
             # Get statistics on content requiring review
             ready_count = base_qs.filter(status='ready').count()
@@ -2344,6 +2375,34 @@ class ToolDispatcher:
                 'avg_novelty': aggregates.get('avg_novelty'),
                 'avg_structure': aggregates.get('avg_structure'),
                 'publish_ready_count': publish_ready_count,
+            }
+
+        elif action == 'search':
+            # Session 1042: Search blogs by title keyword (any status)
+            query = payload.get('query', '')
+            if not query:
+                raise ValueError("query parameter required for search action")
+
+            from django.db.models import Q
+            status_filter = payload.get('status')
+            qs = base_qs.filter(title__icontains=query)
+            if status_filter:
+                qs = qs.filter(status=status_filter)
+
+            items = list(
+                qs.order_by('-created_at')[:limit].values(
+                    'id', 'title', 'author', 'category', 'status', 'created_at',
+                    'quality_score', 'novelty_score', 'structure_score',
+                    'content_type', 'publish_ready', 'word_count', 'tone'
+                )
+            )
+
+            return {
+                'action': 'search',
+                'source': 'SelfBlog',
+                'query': query,
+                'count': len(items),
+                'items': items,
             }
 
         elif action == 'stats':

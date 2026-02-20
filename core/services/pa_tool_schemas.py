@@ -85,21 +85,24 @@ PA_TOOL_SCHEMAS = [
         "type": "function",
         "name": "content_review_tool",
         "description": (
-            "Review content deliverables: list items awaiting review, approve, "
-            "reject, or get details. Use when the user asks about content, blogs, "
-            "deliverables, articles, or content awaiting review."
+            "Review content deliverables and blogs: list items awaiting review, "
+            "search by title, get recent content, approve, reject, or get details. "
+            "Use when the user asks about content, blogs, deliverables, articles, "
+            "or content awaiting review. Set type='blog' to query blogs specifically."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "details", "approve", "reject", "stats"],
-                    "description": "Content review action",
+                    "enum": ["list", "search", "recent", "details", "approve", "reject", "stats"],
+                    "description": "Content review action. 'search' finds blogs by title keyword.",
                 },
-                "id": {"type": "string", "description": "UUID of deliverable"},
-                "status": {"type": "string", "description": "Filter by status"},
-                "content_type": {"type": "string", "description": "Filter by content type"},
+                "id": {"type": "string", "description": "UUID of deliverable or blog"},
+                "query": {"type": "string", "description": "Title search term for 'search' action"},
+                "type": {"type": "string", "description": "Content type filter. Use 'blog' for blog posts."},
+                "status": {"type": "string", "description": "Filter by status (draft, pending_review, approved, published)"},
+                "days": {"type": "integer", "description": "Lookback period in days for 'recent' action (default 30)"},
                 "limit": {"type": "integer", "description": "Max items (default 10)"},
             },
             "required": ["action"],
