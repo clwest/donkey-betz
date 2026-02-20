@@ -389,9 +389,9 @@ app.conf.beat_schedule = {
     # Session 139: Background 3D Model Status Polling
     'poll-pending-3d-models': {
         'task': 'core.tasks.poll_pending_3d_models',
-        'schedule': 30.0,  # Every 30 seconds
+        'schedule': 60.0,  # Every 60 seconds (was 30s, throttled Session 1056)
         'options': {
-            'expires': 25,  # Expire after 25 seconds if not executed (just before next run)
+            'expires': 55,  # Expire before next run
             'queue': 'default',  # Session 1000C: light API polling
         }
     },
@@ -618,9 +618,9 @@ app.conf.beat_schedule = {
     },
     'broadcast-learning-status': {
         'task': 'core.tasks.broadcast_learning_status',
-        'schedule': 60.0,  # Every 60 seconds - real-time learning updates
+        'schedule': 180.0,  # Every 3 minutes (was 60s, throttled Session 1056)
         'options': {
-            'expires': 55,
+            'expires': 170,
         }
     },
     # Session 244: Daily Learning Embeddings (LEGACY - kept for knowledge transfers)
@@ -720,18 +720,18 @@ app.conf.beat_schedule = {
     },
     'broadcast-conversation-status': {
         'task': 'core.tasks.broadcast_conversation_status',
-        'schedule': 120.0,  # Every 2 minutes - show recent conversations
+        'schedule': 300.0,  # Every 5 minutes (was 120s, throttled Session 1056)
         'options': {
-            'expires': 115,
+            'expires': 290,
         }
     },
     # Session 573: System State Aggregator Cache Refresh
     # Keeps PA's system awareness current by aggregating attention items
     'refresh-system-state-cache': {
         'task': 'core.tasks.refresh_system_state_cache',
-        'schedule': 60.0,  # Every 60 seconds
+        'schedule': 120.0,  # Every 2 minutes (was 60s, throttled Session 1056)
         'options': {
-            'expires': 55,
+            'expires': 110,
         }
     },
     # Session 247: Agent Dreams (Idle Thoughts & Creative Ideas)
@@ -746,9 +746,9 @@ app.conf.beat_schedule = {
     },
     'broadcast-dream-journal': {
         'task': 'core.tasks.broadcast_dream_journal',
-        'schedule': 180.0,  # Every 3 minutes - show recent dreams
+        'schedule': 600.0,  # Every 10 minutes (was 180s, throttled Session 1056)
         'options': {
-            'expires': 175,
+            'expires': 590,
         }
     },
     # Session 366: Dream Productization Pipeline
@@ -844,9 +844,9 @@ app.conf.beat_schedule = {
     },
     'broadcast-relationship-status': {
         'task': 'core.tasks.broadcast_relationship_status',
-        'schedule': 120.0,  # Every 2 minutes - broadcast status
+        'schedule': 300.0,  # Every 5 minutes (was 120s, throttled Session 1056)
         'options': {
-            'expires': 115,
+            'expires': 290,
         }
     },
     # Session 254: Agent Evolution System
@@ -867,9 +867,9 @@ app.conf.beat_schedule = {
     },
     'broadcast-evolution-status': {
         'task': 'core.tasks.broadcast_evolution_status',
-        'schedule': 120.0,  # Every 2 minutes - broadcast evolution status
+        'schedule': 300.0,  # Every 5 minutes (was 120s, throttled Session 1056)
         'options': {
-            'expires': 115,
+            'expires': 290,
         }
     },
     # Session 326: Project-Agent Learning Bridge
@@ -1074,9 +1074,9 @@ app.conf.beat_schedule = {
     # Real-time queue processing (every 30 seconds for low latency)
     'process-realtime-scoring-queue': {
         'task': 'core.tasks.process_realtime_scoring_queue',
-        'schedule': 30.0,  # Every 30 seconds
+        'schedule': 60.0,  # Every 60 seconds (was 30s, throttled Session 1056)
         'options': {
-            'expires': 25,  # Expire before next run
+            'expires': 55,  # Expire before next run
         }
     },
     # Batch queue processing (every hour)
@@ -1116,25 +1116,25 @@ app.conf.beat_schedule = {
     # Process scoring event queue (every 30 seconds)
     'process-event-bus-scoring-queue': {
         'task': 'core.tasks.process_event_bus_scoring_queue',
-        'schedule': 30.0,  # Every 30 seconds
+        'schedule': 60.0,  # Every 60 seconds (was 30s, throttled Session 1056)
         'options': {
-            'expires': 25,  # Expire before next run
+            'expires': 55,  # Expire before next run
         }
     },
     # Process validation event queue (every 30 seconds)
     'process-event-bus-validation-queue': {
         'task': 'core.tasks.process_event_bus_validation_queue',
-        'schedule': 30.0,  # Every 30 seconds
+        'schedule': 60.0,  # Every 60 seconds (was 30s, throttled Session 1056)
         'options': {
-            'expires': 25,  # Expire before next run
+            'expires': 55,  # Expire before next run
         }
     },
     # Process analytics event queue (every minute)
     'process-event-bus-analytics-queue': {
         'task': 'core.tasks.process_event_bus_analytics_queue',
-        'schedule': 60.0,  # Every minute
+        'schedule': 120.0,  # Every 2 minutes (was 60s, throttled Session 1056)
         'options': {
-            'expires': 55,  # Expire before next run
+            'expires': 110,  # Expire before next run
         }
     },
     # Claim stale events (every 5 minutes)
@@ -1718,9 +1718,9 @@ app.conf.beat_schedule = {
     # The central heartbeat of the AI body - monitors all vital systems
     'heart-service-heartbeat': {
         'task': 'core.tasks.run_heartbeat',
-        'schedule': 60.0,  # Every 60 seconds
+        'schedule': 300.0,  # Every 5 minutes (was 60s, throttled Session 1056)
         'options': {
-            'expires': 55,  # Expire before next run
+            'expires': 290,  # Expire before next run
             'queue': 'broadcast',  # Session 1004: Moved off long_running (was blocking desks)
         }
     },
@@ -1754,9 +1754,9 @@ app.conf.beat_schedule = {
     # The blood flow of the AI body - monitors Redis queues, Celery tasks, WebSocket channels
     'circulatory-system-pulse': {
         'task': 'core.tasks.check_circulation',
-        'schedule': 30.0,  # Every 30 seconds
+        'schedule': 120.0,  # Every 2 minutes (was 30s, throttled Session 1056)
         'options': {
-            'expires': 25,  # Expire before next check
+            'expires': 110,  # Expire before next check
             'queue': 'broadcast',  # High-frequency status task
         }
     },
@@ -1764,9 +1764,9 @@ app.conf.beat_schedule = {
     # The backbone of the AI body - monitors API route health and patterns
     'spine-alignment-check': {
         'task': 'core.tasks.check_spine_alignment',
-        'schedule': 60.0,  # Every 60 seconds
+        'schedule': 300.0,  # Every 5 minutes (was 60s, throttled Session 1056)
         'options': {
-            'expires': 55,  # Expire before next check
+            'expires': 290,  # Expire before next check
             'queue': 'broadcast',  # Status monitoring task
         }
     },
@@ -1774,9 +1774,9 @@ app.conf.beat_schedule = {
     # The defense layer of the AI body - detects and responds to threats
     'immune-system-scan': {
         'task': 'core.tasks.immune_scan',
-        'schedule': 45.0,  # Every 45 seconds
+        'schedule': 180.0,  # Every 3 minutes (was 45s, throttled Session 1056)
         'options': {
-            'expires': 40,  # Expire before next scan
+            'expires': 170,  # Expire before next scan
             'queue': 'broadcast',  # Status monitoring task
         }
     },
@@ -1784,9 +1784,9 @@ app.conf.beat_schedule = {
     # Monitors how raw spider data is transformed into actionable intelligence
     'digestive-system-check': {
         'task': 'core.tasks.check_digestion',
-        'schedule': 60.0,  # Every 60 seconds
+        'schedule': 300.0,  # Every 5 minutes (was 60s, throttled Session 1056)
         'options': {
-            'expires': 55,  # Expire before next check
+            'expires': 290,  # Expire before next check
             'queue': 'broadcast',  # Status monitoring task
         }
     },
@@ -1794,9 +1794,9 @@ app.conf.beat_schedule = {
     # Monitors agent execution performance, strength, fatigue, and strain
     'muscular-system-check': {
         'task': 'core.tasks.check_muscular',
-        'schedule': 90.0,  # Every 90 seconds
+        'schedule': 300.0,  # Every 5 minutes (was 90s, throttled Session 1056)
         'options': {
-            'expires': 85,  # Expire before next check
+            'expires': 290,  # Expire before next check
             'queue': 'broadcast',  # Status monitoring task
         }
     },
@@ -1804,9 +1804,9 @@ app.conf.beat_schedule = {
     # Monitors LLM calls, conversations, agent thinking, and reasoning quality
     'brain-system-check': {
         'task': 'core.tasks.check_brain',
-        'schedule': 60.0,  # Every 60 seconds
+        'schedule': 300.0,  # Every 5 minutes (was 60s, throttled Session 1056)
         'options': {
-            'expires': 55,  # Expire before next check
+            'expires': 290,  # Expire before next check
             'queue': 'broadcast',  # Status monitoring task
         }
     },
@@ -1814,9 +1814,9 @@ app.conf.beat_schedule = {
     # Monitors workspace health, file operations, agent activity, and rollback
     'skin-system-check': {
         'task': 'core.tasks.check_skin',
-        'schedule': 90.0,  # Every 90 seconds
+        'schedule': 300.0,  # Every 5 minutes (was 90s, throttled Session 1056)
         'options': {
-            'expires': 85,  # Expire before next check
+            'expires': 290,  # Expire before next check
             'queue': 'broadcast',  # Status monitoring task
         }
     },
@@ -1824,9 +1824,9 @@ app.conf.beat_schedule = {
     # Monitors WebSocket connections, message throughput, Redis channel layer
     'nervous-system-check': {
         'task': 'core.tasks.check_nervous',
-        'schedule': 60.0,  # Every 60 seconds
+        'schedule': 180.0,  # Every 3 minutes (was 60s, throttled Session 1056)
         'options': {
-            'expires': 55,  # Expire before next check
+            'expires': 170,  # Expire before next check
             'queue': 'broadcast',  # Session 1004: Moved off long_running (was blocking desks)
         }
     },
@@ -1980,9 +1980,9 @@ app.conf.beat_schedule = {
     # Session 744: Celery Health Monitoring (Phase 1 Foundation)
     'check-celery-health': {
         'task': 'core.tasks.check_celery_health',
-        'schedule': 120.0,  # Every 2 minutes
+        'schedule': 300.0,  # Every 5 minutes (was 120s, throttled Session 1056)
         'options': {
-            'expires': 110,  # Expire before next run
+            'expires': 290,  # Expire before next run
             'queue': 'default',  # Session 1000C: was 'celery' (dead queue, no worker consumes it)
         }
     },
