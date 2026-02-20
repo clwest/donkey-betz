@@ -617,6 +617,9 @@ export default function CommandCenterPage() {
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('context')
   const [showWhileAway, setShowWhileAway] = useState(false)
   const [showVoiceSettings, setShowVoiceSettings] = useState(false)
+  const [isDashboardCollapsed, setIsDashboardCollapsed] = useState(() => {
+    try { return localStorage.getItem('cc_dashboard_collapsed') === 'true' } catch { return false }
+  })
 
   // Voice state
   const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>(loadVoiceSettings)
@@ -645,6 +648,11 @@ export default function CommandCenterPage() {
       if (pollRef.current) clearInterval(pollRef.current)
     }
   }, [])
+
+  // Session 1042: Persist dashboard collapsed state
+  useEffect(() => {
+    try { localStorage.setItem('cc_dashboard_collapsed', String(isDashboardCollapsed)) } catch {}
+  }, [isDashboardCollapsed])
 
   // Session 948: Navigate to Workspace tabs
   const goToWorkspace = useCallback((tab?: string) => {
@@ -1131,22 +1139,61 @@ export default function CommandCenterPage() {
         setShowWhileAway={setShowWhileAway}
       />
 
-      {/* Session 971b D: "Now" Hub — Attention + Active Work + Pulse */}
-      <NowHub
-        pendingDecisions={pendingDecisions}
-        activeWork={activeWork}
-        bodyHealthScore={bodyHealthScore}
-        agentsActive={bootData?.quick_stats?.agents_active || 0}
-        systemHealth={bootData?.quick_stats?.system_health || 'healthy'}
-        onNavigate={goToWorkspace}
-      />
+      {/* Session 1042: Collapsible dashboard — click to toggle, gives chat more space */}
+      {isDashboardCollapsed ? (
+        <button
+          onClick={() => setIsDashboardCollapsed(false)}
+          className="flex items-center justify-between px-3 py-1.5 mb-2 rounded-lg bg-dark-card border border-dark-border hover:border-primary-500/30 transition-colors group"
+        >
+          <div className="flex items-center gap-4 text-xs text-gray-400">
+            <span className="flex items-center gap-1.5">
+              <Bell size={11} />
+              <span className="text-gray-300 font-medium">{pendingDecisions.filter(d => d.urgency === 'critical' || d.urgency === 'high').length}</span> attention
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Workflow size={11} />
+              <span className="text-gray-300 font-medium">{activeWork?.initiatives?.active_count || 0}</span> active
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Activity size={11} />
+              <span className={cn(
+                'font-medium',
+                bodyHealthScore >= 80 ? 'text-accent-green' : bodyHealthScore >= 50 ? 'text-accent-amber' : 'text-accent-red'
+              )}>{bodyHealthScore.toFixed(0)}%</span> health
+            </span>
+          </div>
+          <ChevronDown size={14} className="text-gray-500 group-hover:text-gray-300" />
+        </button>
+      ) : (
+        <>
+          <div className="flex items-center justify-end mb-1">
+            <button
+              onClick={() => setIsDashboardCollapsed(true)}
+              className="flex items-center gap-1 px-2 py-0.5 text-[10px] text-gray-500 hover:text-gray-300 rounded hover:bg-dark-border transition-colors"
+              title="Collapse dashboard to give chat more space"
+            >
+              <ChevronUp size={12} />
+              Collapse
+            </button>
+          </div>
+          {/* Session 971b D: "Now" Hub — Attention + Active Work + Pulse */}
+          <NowHub
+            pendingDecisions={pendingDecisions}
+            activeWork={activeWork}
+            bodyHealthScore={bodyHealthScore}
+            agentsActive={bootData?.quick_stats?.agents_active || 0}
+            systemHealth={bootData?.quick_stats?.system_health || 'healthy'}
+            onNavigate={goToWorkspace}
+          />
 
-      {/* Session 1000: Intelligence Desks Panel */}
-      <IntelligenceDesksPanel
-        desksData={desksData}
-        onTrigger={() => triggerDesksMutation.mutate()}
-        isTriggerPending={triggerDesksMutation.isPending}
-      />
+          {/* Session 1000: Intelligence Desks Panel */}
+          <IntelligenceDesksPanel
+            desksData={desksData}
+            onTrigger={() => triggerDesksMutation.mutate()}
+            isTriggerPending={triggerDesksMutation.isPending}
+          />
+        </>
+      )}
 
       <div className="flex flex-1 gap-4 overflow-hidden">
         {/* Session 974: Conversation Sidebar */}
