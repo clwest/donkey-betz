@@ -432,7 +432,8 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_CLASSES': [],
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100000/hour',
-        'user': '500000/hour'
+        'user': '500000/hour',
+        'rag_ingest': '20/hour',
     }
 }
 

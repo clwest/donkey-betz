@@ -448,7 +448,7 @@ function UploadZone({
               {isDragging ? 'Drop file here' : 'Drag & drop a file or click to browse'}
             </p>
             <p className="text-xs text-gray-500">
-              Supports PDF, DOCX, CSV, TXT, MD files
+              Supports PDF, DOCX, CSV, TXT, MD files (max 5MB)
             </p>
           </>
         )}
@@ -893,7 +893,14 @@ export default function DocumentsPage() {
     },
   })
 
+  const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+
   const handleUpload = (file: File) => {
+    if (file.size > MAX_FILE_SIZE) {
+      setIngestError(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 5MB.`)
+      return
+    }
+    setIngestError(null)
     uploadMutation.mutate(file)
   }
 
