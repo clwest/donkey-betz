@@ -1946,6 +1946,24 @@ class ToolDispatcher:
             )
             return {'action': 'by_category', **result}
 
+        elif action == 'list':
+            days_back = payload.get('days', 30)
+            offset = payload.get('offset', 0)
+            limit = min(payload.get('limit', 50), 200)  # cap at 200
+            conv_type = payload.get('type')
+            status = payload.get('status')
+            include_transcript = payload.get('include_transcript', False)
+
+            result = brainstorm_search_service.list_conversations(
+                days_back=days_back,
+                offset=offset,
+                limit=limit,
+                conversation_type=conv_type,
+                status=status,
+                include_transcript=include_transcript,
+            )
+            return {'action': 'list', **result}
+
         elif action == 'stats':
             days = payload.get('days', 30)
 
@@ -1954,7 +1972,7 @@ class ToolDispatcher:
 
         else:
             raise ValueError(
-                f"Unknown action: {action}. Valid actions: search, recent, details, by_category, stats"
+                f"Unknown action: {action}. Valid actions: list, search, recent, details, by_category, stats"
             )
 
     def _record_content_feedback(self, agent_name, action, details, user_id=None):

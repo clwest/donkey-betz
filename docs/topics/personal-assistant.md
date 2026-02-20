@@ -43,7 +43,7 @@ message -> _detect_intent_and_route() [506 lines of if/elif keyword matching]
 `TOOL_TO_INTENT_MAP` maps tool names back to canonical intents for the enrichment pipeline.
 
 **Key tools:**
-- Action-based: `boardroom_tool` (9 actions), `content_review_tool` (10 actions), `initiative_tool` (8 actions)
+- Action-based: `boardroom_tool` (9 actions), `content_review_tool` (10 actions), `initiative_tool` (8 actions), `brainstorm_tool` (4 actions: list/search/details/stats — `list` supports offset/limit pagination up to 200 for bulk export)
 - Agent delegation: `run_agent` meta-tool with `agent_name` enum → routes to actual agent tool
 - Telemetry: `system_health_tool`, `agent_introspection_tool`, `status_snapshot_tool`, `check_resource_budget`, `pipeline_orchestrator_tool`
 
