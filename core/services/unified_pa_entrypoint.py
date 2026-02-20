@@ -2634,7 +2634,8 @@ Only describe features and capabilities that actually exist. Never fabricate con
                           'learning_patterns', 'feedback', 'system_overview',
                           'gates', 'pilots', 'predictions', 'reasoning',
                           'system_health', 'crypto_price',
-                          'research_and_create', 'legal_assistance']:
+                          'research_and_create', 'legal_assistance',
+                          'task_breakdown']:
             # Session 1034: Include platform identity in fallback so PA knows what "this platform" is
             platform_id = self._get_platform_identity()
             system_prompt = f"""You are {user_name}'s personal assistant on the Donkey Betz Unified AI Platform.
@@ -4890,6 +4891,70 @@ Address the user by name occasionally."""
                     response = f"Found {count} cross-domain opportunities:\n\n"
                     for opp in opps[:5]:
                         response += f"- {opp}\n"
+                    return response
+
+                else:
+                    return str(tool_result)
+
+            # Session 1048: Task volume breakdown formatter
+            elif intent == 'task_breakdown':
+                action = tool_result.get('action', 'summary')
+
+                if action == 'summary':
+                    totals = tool_result.get('totals', {})
+                    by_task = tool_result.get('by_task', [])
+                    by_agent = tool_result.get('by_agent', [])
+                    window = tool_result.get('window', '60m')
+
+                    response = f"Task Volume Breakdown ({window} window):\n\n"
+                    response += (
+                        f"**Totals:** {totals.get('tasks', 0)} tasks | "
+                        f"{totals.get('success', 0)} success | "
+                        f"{totals.get('failure', 0)} failure | "
+                        f"{totals.get('started', 0)} in-flight\n\n"
+                    )
+
+                    if by_task:
+                        response += "| Task | Count | Fail% | Avg | p50 | p95 |\n"
+                        response += "|------|-------|-------|-----|-----|-----|\n"
+                        for t in by_task[:20]:
+                            short_name = t['task_name'].rsplit('.', 1)[-1]
+                            fail_pct = f"{t['failure_rate']:.0%}" if t['failure_rate'] else "0%"
+                            response += (
+                                f"| {short_name} | {t['count_total']} | {fail_pct} | "
+                                f"{t['avg_duration_ms']}ms | {t['p50_ms']}ms | {t['p95_ms']}ms |\n"
+                            )
+
+                    if by_agent:
+                        response += "\n**Agent Executions:**\n"
+                        for a in by_agent[:10]:
+                            fail_pct = f" ({a['failure_rate']:.0%} fail)" if a['count_failure'] else ""
+                            response += f"- {a['agent_name']}: {a['execution_count']}{fail_pct}\n"
+
+                    return response
+
+                elif action == 'drilldown':
+                    task_name = tool_result.get('task_name', '')
+                    executions = tool_result.get('executions', [])
+                    count = tool_result.get('count', 0)
+                    window = tool_result.get('window', '60m')
+
+                    short_name = task_name.rsplit('.', 1)[-1]
+                    response = f"**{short_name}** — {count} executions ({window} window):\n\n"
+
+                    if executions:
+                        response += "| Time | Duration | Status | Queue | Error |\n"
+                        response += "|------|----------|--------|-------|-------|\n"
+                        for e in executions[:30]:
+                            started = (e.get('started_at') or '')[-8:]  # HH:MM:SS
+                            dur = f"{e['duration_ms']}ms" if e.get('duration_ms') else "-"
+                            status = e.get('status', '?')
+                            queue = e.get('queue', 'default')
+                            error = (e.get('error_type') or '')[:30]
+                            response += f"| {started} | {dur} | {status} | {queue} | {error} |\n"
+                    else:
+                        response += "No executions found in this window."
+
                     return response
 
                 else:

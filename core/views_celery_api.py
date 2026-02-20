@@ -10,10 +10,16 @@ Endpoints:
 - GET /api/celery/queues/ - Queue depths
 - GET /api/celery/tasks/ - Recent task stats
 - GET /api/celery/schedule/ - Scheduled task list
+- GET /api/celery/breakdown/ - Task volume aggregation (Session 1048)
+- GET /api/celery/breakdown/task/ - Task drill-down (Session 1048)
 """
 
 import logging
+from datetime import timedelta
+
+from django.db.models import Count, Q, Avg
 from django.http import JsonResponse
+from django.utils import timezone
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
@@ -224,3 +230,196 @@ class CeleryStaleTasks(View):
                 'error': str(e),
                 'count': 0,
             }, status=500)
+
+
+# ── Session 1048: Task Volume Breakdown ──────────────────────────────────────
+
+WINDOW_MAP = {
+    '15m': 15,
+    '60m': 60,
+    '2h': 120,
+    '6h': 360,
+    '24h': 1440,
+}
+
+
+def _percentile(sorted_list, p):
+    """Compute p-th percentile from a pre-sorted list."""
+    if not sorted_list:
+        return 0
+    k = (len(sorted_list) - 1) * p
+    f = int(k)
+    return sorted_list[f]
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class TaskBreakdownView(View):
+    """Task volume aggregation breakdown."""
+
+    def get(self, request):
+        """
+        GET /api/celery/breakdown/?window=60m&limit=25
+
+        Returns task volume breakdown: totals, by_task (with percentiles),
+        by_agent. Queries CeleryTaskEvent and AgentExecution.
+        """
+        try:
+            from core.models_celery_telemetry import CeleryTaskEvent
+            from core.models import AgentExecution
+
+            window = request.GET.get('window', '60m')
+            minutes = WINDOW_MAP.get(window, 60)
+            limit = min(int(request.GET.get('limit', 25)), 50)
+            cutoff = timezone.now() - timedelta(minutes=minutes)
+
+            qs = CeleryTaskEvent.objects.filter(started_at__gte=cutoff)
+
+            # ── Totals ──
+            totals = qs.aggregate(
+                tasks=Count('id'),
+                success=Count('id', filter=Q(status='SUCCESS')),
+                failure=Count('id', filter=Q(status='FAILURE')),
+                started=Count('id', filter=Q(status='STARTED')),
+            )
+
+            # ── By task name ──
+            by_task_qs = (
+                qs.values('task_name')
+                .annotate(
+                    count_total=Count('id'),
+                    count_success=Count('id', filter=Q(status='SUCCESS')),
+                    count_failure=Count('id', filter=Q(status='FAILURE')),
+                    avg_duration=Avg('duration_seconds'),
+                )
+                .order_by('-count_total')[:limit]
+            )
+
+            top_task_names = [row['task_name'] for row in by_task_qs]
+
+            # Percentiles: fetch raw durations for top tasks in one query
+            duration_rows = (
+                qs.filter(task_name__in=top_task_names, duration_seconds__isnull=False)
+                .values_list('task_name', 'duration_seconds')
+            )
+            durations_by_task = {}
+            for task_name, dur in duration_rows:
+                durations_by_task.setdefault(task_name, []).append(dur)
+            for v in durations_by_task.values():
+                v.sort()
+
+            # Queue breakdown for top tasks
+            queue_rows = (
+                qs.filter(task_name__in=top_task_names)
+                .values('task_name', 'queue')
+                .annotate(count=Count('id'))
+            )
+            queues_by_task = {}
+            for row in queue_rows:
+                queues_by_task.setdefault(row['task_name'], []).append(
+                    {'queue': row['queue'] or 'default', 'count': row['count']}
+                )
+
+            by_task = []
+            for row in by_task_qs:
+                tn = row['task_name']
+                ct = row['count_total']
+                cf = row['count_failure']
+                durs = durations_by_task.get(tn, [])
+                avg_dur = row['avg_duration'] or 0
+                by_task.append({
+                    'task_name': tn,
+                    'count_total': ct,
+                    'count_success': row['count_success'],
+                    'count_failure': cf,
+                    'failure_rate': round(cf / ct, 3) if ct else 0,
+                    'avg_duration_ms': round(avg_dur * 1000),
+                    'p50_ms': round(_percentile(durs, 0.5) * 1000),
+                    'p95_ms': round(_percentile(durs, 0.95) * 1000),
+                    'top_queues': sorted(
+                        queues_by_task.get(tn, []),
+                        key=lambda q: q['count'], reverse=True
+                    )[:3],
+                })
+
+            # ── By agent ──
+            by_agent = list(
+                AgentExecution.objects.filter(created_at__gte=cutoff)
+                .values('agent__name')
+                .annotate(
+                    execution_count=Count('id'),
+                    count_failure=Count('id', filter=Q(status='failed')),
+                )
+                .order_by('-execution_count')[:limit]
+            )
+            for row in by_agent:
+                row['agent_name'] = row.pop('agent__name')
+                ec = row['execution_count']
+                cf = row['count_failure']
+                row['failure_rate'] = round(cf / ec, 3) if ec else 0
+
+            return JsonResponse({
+                'window': window,
+                'generated_at': timezone.now().isoformat(),
+                'totals': totals,
+                'by_task': by_task,
+                'by_agent': by_agent,
+            })
+
+        except Exception as e:
+            logger.error(f"Error in task breakdown: {e}")
+            return JsonResponse({'error': str(e)}, status=500)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class TaskBreakdownDetailView(View):
+    """Drill-down into a specific task name."""
+
+    def get(self, request):
+        """
+        GET /api/celery/breakdown/task/?task_name=core.tasks.xyz&window=60m&limit=50
+
+        Returns recent executions for a specific task name.
+        """
+        try:
+            from core.models_celery_telemetry import CeleryTaskEvent
+
+            task_name = request.GET.get('task_name', '')
+            if not task_name:
+                return JsonResponse({'error': 'task_name is required'}, status=400)
+
+            window = request.GET.get('window', '60m')
+            minutes = WINDOW_MAP.get(window, 60)
+            limit = min(int(request.GET.get('limit', 50)), 200)
+            cutoff = timezone.now() - timedelta(minutes=minutes)
+
+            rows = (
+                CeleryTaskEvent.objects
+                .filter(task_name=task_name, started_at__gte=cutoff)
+                .order_by('-started_at')[:limit]
+            )
+
+            executions = []
+            for r in rows:
+                dur_ms = round(r.duration_seconds * 1000) if r.duration_seconds else None
+                executions.append({
+                    'task_id': r.task_id,
+                    'started_at': r.started_at.isoformat() if r.started_at else None,
+                    'finished_at': r.finished_at.isoformat() if r.finished_at else None,
+                    'duration_ms': dur_ms,
+                    'status': r.status,
+                    'queue': r.queue or 'default',
+                    'worker': r.worker,
+                    'error_type': r.error_type or None,
+                    'error_message': (r.error_message or '')[:500] or None,
+                })
+
+            return JsonResponse({
+                'task_name': task_name,
+                'window': window,
+                'count': len(executions),
+                'executions': executions,
+            })
+
+        except Exception as e:
+            logger.error(f"Error in task breakdown detail: {e}")
+            return JsonResponse({'error': str(e)}, status=500)
