@@ -939,9 +939,11 @@ CELERY_TASK_ROUTES = {
     'core.tasks.agent_think_and_synthesize': {'queue': 'default'},
     # Session 1034: Route heavy tasks that were falling through to default queue
     'core.tasks.run_triggered_conversation': {'queue': 'long_running'},  # LLM conversation, max 471s
-    'core.tasks.generate_initiative_stage_document': {'queue': 'content'},  # TechnicalDocumentAgent LLM calls
-    'core.tasks.execute_approved_artifacts': {'queue': 'content'},  # Code artifact processing, max 324s
-    'core.tasks.generate_pending_reviews': {'queue': 'content'},  # LLM review generation, max 254s
+    # Session 1040: Moved 3 heavy tasks off content → long_running to fix OOM
+    # Content worker was crashing with 25+ completed initiatives driving heavy LLM tasks
+    'core.tasks.generate_initiative_stage_document': {'queue': 'long_running'},  # TechnicalDocumentAgent, heavy context build
+    'core.tasks.execute_approved_artifacts': {'queue': 'long_running'},  # Code artifact processing, max 324s
+    'core.tasks.generate_pending_reviews': {'queue': 'long_running'},  # LLM review generation, max 254s
     # Session 1000: Intelligence desks — 4 coordinators, heavy memory
     'core.tasks.run_all_desks_intelligence': {'queue': 'long_running'},
     # Session 1004: Moved heartbeat + nervous off long_running to unblock desk intelligence.
@@ -951,10 +953,10 @@ CELERY_TASK_ROUTES = {
     # Session 885: Content generation tasks - dedicated content worker
     'core.tasks.generate_self_blog_task': {'queue': 'content'},
     'core.tasks.generate_self_blog_deliberation_task': {'queue': 'content'},
-    'core.tasks.execute_initiative_stage_task': {'queue': 'content'},
+    'core.tasks.execute_initiative_stage_task': {'queue': 'long_running'},  # Session 1040: Heavy LLM pipeline execution
     'core.tasks.advance_initiative_pipeline': {'queue': 'content'},
     'core.tasks.auto_kickstart_stuck_initiatives': {'queue': 'content'},
-    'core.tasks.execute_dream_implementations': {'queue': 'content'},
+    'core.tasks.execute_dream_implementations': {'queue': 'long_running'},  # Session 1040: Heavy LLM processing
     # Session 1009: Removed 4 phantom routes (tasks don't exist):
     #   autonomous_studio.run_main_loop, generate_podcast_task, generate_image_task, generate_video_task
     'content.tasks.poll_pending_trainings': {'queue': 'content'},
