@@ -18,6 +18,23 @@ PA identified ~13,256 agent-to-agent brainstorm conversations (last 30 days) but
 - `pa_tool_schemas.py` — added `offset`, `days`, `type`, `status`, `include_transcript` params
 - `unified_pa_entrypoint.py` — NLU payload builder for "list all"/"export"/"bulk" keywords + markdown table formatter with pagination hints
 
+### OOM Fix — 9 Heavy Tasks Rerouted (PR #1346)
+
+celery-worker OOMing after deploy — 9 heavy unrouted tasks falling to `default` queue (200MB limit). Rerouted all to `long_running` queue in `CELERY_TASK_ROUTES`.
+
+### DOCX & CSV Processors for RAG Pipeline
+
+RAG upload pipeline only supported PDF/TXT/MD. Added DOCX and CSV support across the full stack:
+
+**Backend:**
+- `DOCXProcessor` — python-docx, extracts paragraphs + tables, handles bytes input
+- `CSVProcessor` — pandas, column summaries + first 50 rows as text, handles bytes input
+- Both registered in `DocumentProcessingPipeline` and wired into `ingest_file()` endpoint
+
+**Frontend:**
+- File input accepts `.docx,.csv`, new type badges (Word=indigo, CSV=emerald)
+- Updated help text and info section
+
 ---
 
 ## Session 1042 — What Happened
@@ -84,6 +101,7 @@ PA Chat area on Command Center was cramped — NowHub (3 dashboard cards) + Inte
 |--------|-------|
 | PA routing | **GPT-5.2 function calling** (`PA_USE_FUNCTION_CALLING=true`) |
 | PA tools | **list** action on brainstorm_tool (bulk paginated export), **search** on content_review_tool, **stage_document** on initiative_tool |
+| RAG upload | **5 formats**: PDF, DOCX, CSV, TXT, MD + URL + YouTube |
 | Agents routable | **All 218** (82 AGENT_MAP + 139 DynamicPersonaAgent + 2 blocked) |
 | Initiatives | **4 ACTIVE**, 35 COMPLETED, 1 TRIAGE, 8 ARCHIVED (48 total) |
 | Initiative quality gate | **Content-review patterns blocked**, explore threshold lowered to 1 |
@@ -182,6 +200,8 @@ railway logs -n 200 2>&1 | grep -i 'OOM\|killed\|memory'
 **ThinkingAgent banned from document generation:** ThinkingAgent returns system diagnostics instead of reviewing content. Session 912 fixed `generate_initiative_stage_document` (auto_pipeline). Session 1040 fixed `conversation_initiative_pipeline.py`. If adding new pipelines, NEVER use ThinkingAgent for content tasks.
 
 **Celery-content task routing (Session 1040):** 5 heavy tasks moved from content → long_running queue. Content queue now only has: deliberation, blog gen, auto-progression, scoring, publishing. If OOM returns again, next step is splitting deliberation into chained tasks.
+
+**RAG file processors (Session 1043):** `DOCXProcessor` and `CSVProcessor` in `content/processors.py`. Both handle bytes input (from upload) and file paths. `DocumentType.DOCX` and `DocumentType.CSV` in `content/models.py`. Frontend `DocumentsPage.tsx` accepts `.docx,.csv` with type badges. To add more formats: create processor class, register in `DocumentProcessingPipeline.__init__`, add branch in `ingest_file()` view, update frontend accept/badges.
 
 **Brainstorm bulk list (Session 1043):** `brainstorm_tool(action='list', offset=0, limit=50)` for paginated export. Limit capped at 200. NLU triggers on "list all", "export", "enumerate", "bulk". `include_transcript=true` adds full message arrays (heavy — use sparingly).
 

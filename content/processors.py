@@ -1377,6 +1377,212 @@ class MultiPageCrawlResult:
         self.error_message = error_message
 
 
+class DOCXProcessor(BaseProcessor):
+    """Process DOCX (Word) files"""
+
+    def __init__(self):
+        super().__init__()
+        self.supported_types = [
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ]
+
+    def can_process(self, file_path: str, mime_type: str) -> bool:
+        return (mime_type in self.supported_types or
+                file_path.endswith('.docx')) and HAS_DOCX
+
+    def process(self, file_input, **kwargs) -> ProcessingResult:
+        if not HAS_DOCX:
+            return ProcessingResult(
+                success=False,
+                error_message="DOCX processing requires python-docx library",
+                processing_steps=[
+                    {'step': 'dependency_check', 'status': 'error', 'error': 'python-docx not available'}
+                ]
+            )
+
+        try:
+            import docx
+            import io
+
+            if isinstance(file_input, bytes):
+                f = io.BytesIO(file_input)
+                file_size = len(file_input)
+            else:
+                f = open(file_input, 'rb')
+                file_size = os.path.getsize(file_input)
+
+            doc = docx.Document(f)
+
+            if not isinstance(file_input, bytes):
+                f.close()
+
+            # Extract text from paragraphs
+            paragraphs = []
+            for para in doc.paragraphs:
+                text = para.text.strip()
+                if text:
+                    paragraphs.append(text)
+
+            # Extract text from tables
+            table_texts = []
+            for table in doc.tables:
+                for row in table.rows:
+                    row_text = ' | '.join(cell.text.strip() for cell in row.cells if cell.text.strip())
+                    if row_text:
+                        table_texts.append(row_text)
+
+            raw_content = '\n'.join(paragraphs)
+            if table_texts:
+                raw_content += '\n\n' + '\n'.join(table_texts)
+
+            processed_content = self._clean_text(raw_content)
+            language = self._detect_language(processed_content)
+            word_count = len(processed_content.split()) if processed_content else 0
+            key_phrases = self._extract_key_phrases(processed_content)
+            entities = self._extract_entities(processed_content)
+
+            # Extract metadata
+            core_props = doc.core_properties
+            metadata = {
+                'processor': 'DOCXProcessor',
+                'file_size': file_size,
+                'filename': kwargs.get('filename', 'unknown.docx'),
+                'paragraph_count': len(paragraphs),
+                'table_count': len(doc.tables),
+                'title': core_props.title or '',
+                'author': core_props.author or '',
+                'subject': core_props.subject or '',
+            }
+
+            return ProcessingResult(
+                success=True,
+                raw_content=raw_content,
+                processed_content=processed_content,
+                metadata=metadata,
+                language=language,
+                word_count=word_count,
+                key_phrases=key_phrases,
+                entities=entities,
+                processing_steps=[
+                    {'step': 'docx_open', 'status': 'success'},
+                    {'step': 'text_extraction', 'status': 'success', 'paragraphs': len(paragraphs)},
+                    {'step': 'table_extraction', 'status': 'success', 'tables': len(doc.tables)},
+                ]
+            )
+
+        except Exception as e:
+            return ProcessingResult(
+                success=False,
+                error_message=str(e),
+                processing_steps=[
+                    {'step': 'docx_processing', 'status': 'error', 'error': str(e)}
+                ]
+            )
+
+
+class CSVProcessor(BaseProcessor):
+    """Process CSV files"""
+
+    def __init__(self):
+        super().__init__()
+        self.supported_types = ['text/csv', 'application/csv']
+
+    def can_process(self, file_path: str, mime_type: str) -> bool:
+        return (mime_type in self.supported_types or
+                file_path.endswith('.csv')) and HAS_PANDAS
+
+    def process(self, file_input, **kwargs) -> ProcessingResult:
+        if not HAS_PANDAS:
+            return ProcessingResult(
+                success=False,
+                error_message="CSV processing requires pandas library",
+                processing_steps=[
+                    {'step': 'dependency_check', 'status': 'error', 'error': 'pandas not available'}
+                ]
+            )
+
+        try:
+            import pandas as pd
+            import io
+
+            if isinstance(file_input, bytes):
+                f = io.BytesIO(file_input)
+                file_size = len(file_input)
+            elif isinstance(file_input, str) and not os.path.exists(file_input):
+                # Assume it's CSV content as a string
+                f = io.StringIO(file_input)
+                file_size = len(file_input.encode('utf-8'))
+            else:
+                f = file_input
+                file_size = os.path.getsize(file_input) if isinstance(file_input, str) else 0
+
+            df = pd.read_csv(f, nrows=10000)
+
+            # Build text representation
+            parts = []
+            parts.append(f"CSV with {len(df)} rows and {len(df.columns)} columns.")
+            parts.append(f"Columns: {', '.join(df.columns.tolist())}")
+            parts.append("")
+
+            # Column summaries
+            for col in df.columns:
+                unique = df[col].nunique()
+                nulls = df[col].isnull().sum()
+                sample = df[col].dropna().head(3).tolist()
+                sample_str = ', '.join(str(v) for v in sample)
+                parts.append(f"{col}: {unique} unique values, {nulls} nulls. Sample: {sample_str}")
+
+            parts.append("")
+
+            # Include first rows as text (up to 50 rows)
+            row_limit = min(len(df), 50)
+            parts.append(f"First {row_limit} rows:")
+            for idx, row in df.head(row_limit).iterrows():
+                row_text = ' | '.join(f"{col}: {val}" for col, val in row.items() if pd.notna(val))
+                parts.append(row_text)
+
+            raw_content = df.head(100).to_csv(index=False)
+            processed_content = self._clean_text('\n'.join(parts))
+            language = self._detect_language(processed_content)
+            word_count = len(processed_content.split()) if processed_content else 0
+            key_phrases = self._extract_key_phrases(processed_content)
+            entities = self._extract_entities(processed_content)
+
+            metadata = {
+                'processor': 'CSVProcessor',
+                'file_size': file_size,
+                'filename': kwargs.get('filename', 'unknown.csv'),
+                'row_count': len(df),
+                'column_count': len(df.columns),
+                'columns': df.columns.tolist(),
+            }
+
+            return ProcessingResult(
+                success=True,
+                raw_content=raw_content,
+                processed_content=processed_content,
+                metadata=metadata,
+                language=language,
+                word_count=word_count,
+                key_phrases=key_phrases,
+                entities=entities,
+                processing_steps=[
+                    {'step': 'csv_parse', 'status': 'success', 'rows': len(df)},
+                    {'step': 'column_analysis', 'status': 'success', 'columns': len(df.columns)},
+                    {'step': 'text_conversion', 'status': 'success'},
+                ]
+            )
+
+        except Exception as e:
+            return ProcessingResult(
+                success=False,
+                error_message=str(e),
+                processing_steps=[
+                    {'step': 'csv_processing', 'status': 'error', 'error': str(e)}
+                ]
+            )
+
+
 class DocumentProcessingPipeline:
     """Main document processing pipeline"""
 
@@ -1388,6 +1594,8 @@ class DocumentProcessingPipeline:
             MarkdownProcessor(),
             HTMLProcessor(),
             PDFProcessor(),
+            DOCXProcessor(),
+            CSVProcessor(),
             JSONProcessor(),
         ]
 
