@@ -1475,6 +1475,7 @@ def initiatives_api(request):
 
             initiatives_list.append({
                 'id': str(init.id),
+                'human_id': init.human_id or None,
                 'name': init.name,
                 'description': init.description,
                 'status': init.status,
