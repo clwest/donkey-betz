@@ -744,10 +744,10 @@ class DocumentEmbedding(UnifiedBaseModel):
         indexes = [
             models.Index(fields=['document', 'chunk_index']),
             models.Index(fields=['embedding_model']),
-        ]
-        # Session 179: When pgvector is fully installed, add HNSW index:
-        # HnswIndex(name='embedding_hnsw_idx', fields=['embedding_vector'],
-        #           m=16, ef_construction=64, opclasses=['vector_cosine_ops'])
+        ] + ([
+            HnswIndex(name='docembed_vector_hnsw_idx', fields=['embedding_vector'],
+                      m=16, ef_construction=64, opclasses=['vector_cosine_ops']),
+        ] if HAS_PGVECTOR else [])
         unique_together = ['document', 'chunk_index', 'embedding_model']
 
     def __str__(self):

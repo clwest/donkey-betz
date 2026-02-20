@@ -7,9 +7,10 @@ No more mock data - uses actual embedding providers and semantic search.
 Compatible with existing frontend connections.
 """
 
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from django.contrib.auth import get_user_model
 from django.db.models import Avg, Count, Sum
 from datetime import datetime
@@ -22,6 +23,10 @@ from content.embeddings import rag_system, EmbeddingManager
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
+
+
+class RagIngestThrottle(ScopedRateThrottle):
+    scope = 'rag_ingest'
 
 
 def run_async(coro):
@@ -903,6 +908,7 @@ def list_documents(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([RagIngestThrottle])
 def ingest_url(request):
     """
     Ingest a URL (YouTube video or web page) and create a document.
@@ -1171,6 +1177,7 @@ def delete_document(request, document_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([RagIngestThrottle])
 def ingest_file(request):
     """
     Upload and ingest a PDF or text file.
