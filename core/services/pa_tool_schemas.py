@@ -955,6 +955,46 @@ PA_TOOL_SCHEMAS = [
             "required": ["task"],
         },
     },
+
+    # ── Session 1048: Task Volume Breakdown ──────────────────────────────────
+    {
+        "type": "function",
+        "name": "task_breakdown_tool",
+        "description": (
+            "Celery task volume breakdown and load analysis. Use when the user "
+            "asks about task load, what's driving Celery load, top tasks, "
+            "failing tasks, task execution stats, task volume, task breakdown, "
+            "Celery performance, or worker utilization."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["summary", "drilldown"],
+                    "description": (
+                        "summary: aggregated task volume with totals, top tasks, "
+                        "percentiles, and agent breakdown. "
+                        "drilldown: recent executions for a specific task name."
+                    ),
+                },
+                "window": {
+                    "type": "string",
+                    "enum": ["15m", "60m", "2h", "6h", "24h"],
+                    "description": "Time window (default 60m)",
+                },
+                "task_name": {
+                    "type": "string",
+                    "description": "Full task name for drilldown (e.g. core.tasks.execute_agent_task)",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max items to return (default 25 for summary, 50 for drilldown)",
+                },
+            },
+            "required": ["action"],
+        },
+    },
 ]
 
 
@@ -1003,6 +1043,7 @@ TOOL_ENRICHMENT_MAP = {
     'workspace_tool': [],
     'run_agent': ['intelligence_enricher'],
     'legal_doc_drafter_agent': ['domain_context'],
+    'task_breakdown_tool': [],
 }
 
 # Reverse map: tool name -> canonical intent name for enrichment pipeline
@@ -1047,4 +1088,5 @@ TOOL_TO_INTENT_MAP = {
     'workspace_tool': 'general',
     'run_agent': 'agent_execution',
     'legal_doc_drafter_agent': 'legal_assistance',
+    'task_breakdown_tool': 'task_breakdown',
 }

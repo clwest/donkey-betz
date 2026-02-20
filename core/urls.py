@@ -4170,6 +4170,7 @@ from core.views_celery_api import (
     CeleryStatusView, CeleryQuickStatusView, CeleryWorkersView,
     CeleryQueuesView, CeleryTasksView, CeleryScheduleView,
     CeleryPingView, CeleryStaleTasks,
+    TaskBreakdownView, TaskBreakdownDetailView,  # Session 1048
 )
 
 urlpatterns += [
@@ -4181,6 +4182,9 @@ urlpatterns += [
     path('api/celery/schedule/', CeleryScheduleView.as_view(), name='celery-schedule'),
     path('api/celery/ping/', CeleryPingView.as_view(), name='celery-ping'),
     path('api/celery/stale/', CeleryStaleTasks.as_view(), name='celery-stale'),
+    # Session 1048: Task volume breakdown
+    path('api/celery/breakdown/', TaskBreakdownView.as_view(), name='celery-breakdown'),
+    path('api/celery/breakdown/task/', TaskBreakdownDetailView.as_view(), name='celery-breakdown-task'),
 ]
 
 # =========================================================================
