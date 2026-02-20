@@ -1,8 +1,22 @@
-# Session 1043 - Start Here
+# Session 1044 - Start Here
 
-**Previous Sessions:** 1042 (Initiative Cleanup + PA Blog Search + Frontend Fixes), 1041 (Stage Doc Content Fix + Regen Sweep), 1040 (Anti-Hallucination + ThinkingAgent Fix + PA Tool + Celery OOM), 1039 (Tenant Model + Agent Hallucination Discovery)
+**Previous Sessions:** 1043 (Brainstorm Bulk Export), 1042 (Initiative Cleanup + PA Blog Search + Frontend Fixes), 1041 (Stage Doc Content Fix + Regen Sweep), 1040 (Anti-Hallucination + ThinkingAgent Fix + PA Tool + Celery OOM)
 **Date:** February 19, 2026
 **Status:** 92 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2)** | **All 218 agent personas routable** | **Tenant model Phase 1 landed** | 4 ACTIVE initiatives | 35 COMPLETED
+
+---
+
+## Session 1043 — What Happened
+
+### Brainstorm Bulk Export Endpoint (PR #1345)
+
+PA identified ~13,256 agent-to-agent brainstorm conversations (last 30 days) but had no way to enumerate them at scale — existing actions only returned 10-20 results. Added `list` action to `brainstorm_tool` with offset-based pagination (up to 200 per page).
+
+**Changes:**
+- `BrainstormSearchService.list_conversations()` — paginated listing with type/status filters, optional transcript inclusion
+- `_handle_brainstorm` in tool_dispatcher — new `list` action, limit capped at 200
+- `pa_tool_schemas.py` — added `offset`, `days`, `type`, `status`, `include_transcript` params
+- `unified_pa_entrypoint.py` — NLU payload builder for "list all"/"export"/"bulk" keywords + markdown table formatter with pagination hints
 
 ---
 
@@ -69,7 +83,7 @@ PA Chat area on Command Center was cramped — NowHub (3 dashboard cards) + Inte
 | Metric | Value |
 |--------|-------|
 | PA routing | **GPT-5.2 function calling** (`PA_USE_FUNCTION_CALLING=true`) |
-| PA tools | **search** action added to content_review_tool, **stage_document** on initiative_tool |
+| PA tools | **list** action on brainstorm_tool (bulk paginated export), **search** on content_review_tool, **stage_document** on initiative_tool |
 | Agents routable | **All 218** (82 AGENT_MAP + 139 DynamicPersonaAgent + 2 blocked) |
 | Initiatives | **4 ACTIVE**, 35 COMPLETED, 1 TRIAGE, 8 ARCHIVED (48 total) |
 | Initiative quality gate | **Content-review patterns blocked**, explore threshold lowered to 1 |
@@ -168,6 +182,8 @@ railway logs -n 200 2>&1 | grep -i 'OOM\|killed\|memory'
 **ThinkingAgent banned from document generation:** ThinkingAgent returns system diagnostics instead of reviewing content. Session 912 fixed `generate_initiative_stage_document` (auto_pipeline). Session 1040 fixed `conversation_initiative_pipeline.py`. If adding new pipelines, NEVER use ThinkingAgent for content tasks.
 
 **Celery-content task routing (Session 1040):** 5 heavy tasks moved from content → long_running queue. Content queue now only has: deliberation, blog gen, auto-progression, scoring, publishing. If OOM returns again, next step is splitting deliberation into chained tasks.
+
+**Brainstorm bulk list (Session 1043):** `brainstorm_tool(action='list', offset=0, limit=50)` for paginated export. Limit capped at 200. NLU triggers on "list all", "export", "enumerate", "bulk". `include_transcript=true` adds full message arrays (heavy — use sparingly).
 
 **PA function calling (Session 1036):** `PA_USE_FUNCTION_CALLING=true` env var. Agentic loop in `_run_agentic_loop()` — max 5 iterations, GPT-5.2 decides tool calls.
 

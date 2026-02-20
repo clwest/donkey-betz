@@ -140,9 +140,9 @@ PA_TOOL_SCHEMAS = [
         "type": "function",
         "name": "brainstorm_tool",
         "description": (
-            "Search brainstorm sessions: discussion panels, multi-agent debates, "
-            "and collaborative insights. Use when the user asks about brainstorms, "
-            "discussions, panels, debates, or collaborative agent sessions."
+            "Search and list brainstorm sessions: discussion panels, multi-agent debates, "
+            "and collaborative insights. Use 'list' for bulk paginated export, 'search' "
+            "for keyword search, 'details' for a single session, 'stats' for activity stats."
         ),
         "parameters": {
             "type": "object",
@@ -154,7 +154,12 @@ PA_TOOL_SCHEMAS = [
                 },
                 "id": {"type": "string", "description": "UUID of brainstorm session"},
                 "query": {"type": "string", "description": "Search query for brainstorm content"},
-                "limit": {"type": "integer", "description": "Max items (default 10)"},
+                "limit": {"type": "integer", "description": "Max items (default 50 for list, 10 for search)"},
+                "offset": {"type": "integer", "description": "Pagination offset for list action (default 0)"},
+                "days": {"type": "integer", "description": "Days back to search (default 30)"},
+                "type": {"type": "string", "description": "Filter by type: 'discussion' or 'panel'"},
+                "status": {"type": "string", "description": "Filter by conversation status"},
+                "include_transcript": {"type": "boolean", "description": "Include full message transcript (default false)"},
             },
             "required": ["action"],
         },
