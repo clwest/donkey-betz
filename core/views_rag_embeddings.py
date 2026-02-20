@@ -1176,7 +1176,7 @@ def ingest_file(request):
     Upload and ingest a PDF or text file.
     Session 402: Document ingestion system.
     """
-    from content.processors import PDFProcessor, TextProcessor
+    from content.processors import PDFProcessor, TextProcessor, DOCXProcessor, CSVProcessor
 
     user = request.user
 
@@ -1207,10 +1207,18 @@ def ingest_file(request):
             processor = TextProcessor()
             result = processor.process(file_content.decode('utf-8', errors='ignore'))
             doc_type = DocumentType.MARKDOWN
+        elif filename.endswith('.docx'):
+            processor = DOCXProcessor()
+            result = processor.process(file_content, filename=uploaded_file.name)
+            doc_type = DocumentType.DOCX
+        elif filename.endswith('.csv'):
+            processor = CSVProcessor()
+            result = processor.process(file_content, filename=uploaded_file.name)
+            doc_type = DocumentType.CSV
         else:
             return Response({
                 'success': False,
-                'error': f'Unsupported file type. Supported: .pdf, .txt, .md'
+                'error': f'Unsupported file type. Supported: .pdf, .txt, .md, .docx, .csv'
             }, status=400)
 
         # Check if we got content

@@ -5,7 +5,7 @@
  * using pgvector for semantic search.
  *
  * Features:
- * - Document upload with drag-and-drop (PDF, TXT, MD)
+ * - Document upload with drag-and-drop (PDF, DOCX, CSV, TXT, MD)
  * - URL ingestion (web pages)
  * - YouTube video transcription ingestion
  * - Semantic search interface
@@ -431,7 +431,7 @@ function UploadZone({
         <input
           ref={fileInputRef}
           type="file"
-          accept=".pdf,.txt,.md"
+          accept=".pdf,.txt,.md,.docx,.csv"
           onChange={handleFileSelect}
           className="hidden"
         />
@@ -448,7 +448,7 @@ function UploadZone({
               {isDragging ? 'Drop file here' : 'Drag & drop a file or click to browse'}
             </p>
             <p className="text-xs text-gray-500">
-              Supports PDF, TXT, MD files
+              Supports PDF, DOCX, CSV, TXT, MD files
             </p>
           </>
         )}
@@ -594,6 +594,8 @@ function DocumentTypeBadge({ type }: { type: string }) {
     youtube: { color: 'bg-red-500/20 text-red-400', icon: Youtube, label: 'YouTube' },
     url: { color: 'bg-blue-500/20 text-blue-400', icon: Globe, label: 'Web Page' },
     pdf: { color: 'bg-orange-500/20 text-orange-400', icon: FileText, label: 'PDF' },
+    docx: { color: 'bg-indigo-500/20 text-indigo-400', icon: FileText, label: 'Word' },
+    csv: { color: 'bg-emerald-500/20 text-emerald-400', icon: FileText, label: 'CSV' },
     text: { color: 'bg-gray-500/20 text-gray-400', icon: FileText, label: 'Text' },
     markdown: { color: 'bg-purple-500/20 text-purple-400', icon: FileText, label: 'Markdown' },
   }
@@ -1082,7 +1084,7 @@ export default function DocumentsPage() {
           </p>
           <ul className="list-disc list-inside space-y-1 ml-2">
             <li>
-              <strong className="text-gray-300">Files</strong> - Upload PDF, TXT, or Markdown files
+              <strong className="text-gray-300">Files</strong> - Upload PDF, DOCX, CSV, TXT, or Markdown files
             </li>
             <li>
               <strong className="text-gray-300">Web Pages</strong> - Import any public URL
