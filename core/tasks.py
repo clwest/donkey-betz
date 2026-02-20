@@ -1612,18 +1612,9 @@ def execute_initiative_stage_task(
 
         execution_time_ms = int((time.time() - execution_start) * 1000)
 
-        # Session 1041: ContentWriterAgent puts actual content in data['content'],
-        # while .content (alias for .message) is just a summary like
-        # "Blog Post: 'Title' | 571 words | ...". Extract real full_text from data.
-        actual_content = result.content or ''
-        if result.data:
-            content_data = result.data.get('content')
-            if isinstance(content_data, dict):
-                full_text = content_data.get('full_text', '')
-                if full_text and len(full_text) > len(actual_content):
-                    actual_content = full_text
-            elif isinstance(content_data, str) and len(content_data) > len(actual_content):
-                actual_content = content_data
+        # Session 1041: Use helper to extract real content from AgentResult.
+        # Many agents put summaries in .message and actual content in .data.
+        actual_content = _extract_agent_content(result)
 
         # Build task result for stage handler
         task_result = {
@@ -34037,13 +34028,14 @@ def process_initiative_auto_progression(self):
         f"📊 [AUTO-PROGRESSION] Complete: {progressed_count} progressed, {failed_count} failed"
     )
 
-    # Session 1041: Regenerate missing stage documents for ACTIVE initiatives.
+    # Session 1041: Regenerate missing stage documents for ACTIVE + COMPLETED initiatives.
     # Stages that are PENDING with no document are stuck — trigger doc generation.
+    # Also covers COMPLETED initiatives whose docs were cleared for quality reasons.
     regen_count = 0
     try:
         from core.models_document_registry import Initiative, InitiativeStage
-        active_inits = Initiative.objects.filter(status='ACTIVE')
-        for init in active_inits:
+        inits = Initiative.objects.filter(status__in=['ACTIVE', 'COMPLETED'])
+        for init in inits:
             for sn in range(1, init.current_stage + 1):
                 stage = InitiativeStage.objects.filter(
                     initiative=init, stage=sn, document__isnull=True
@@ -34126,6 +34118,72 @@ def detect_duplicate_initiatives(self):
         'clusters_found': len(clusters),
         'total_duplicates': sum(len(c) - 1 for c in clusters),
     }
+
+
+def _extract_agent_content(result) -> str:
+    """
+    Session 1041: Extract real content from an AgentResult.
+
+    Many agents put a SHORT summary in result.message while storing the
+    actual content in result.data under various keys. This helper checks
+    all known patterns:
+    - ContentWriterAgent: data['content']['full_text']
+    - ResearchAgent (tool path): data['all_results'] + data['key_insights']
+    - ResearchAgent (no-tool path): data['response']
+    - FullStackDeveloperAgent: data['results'] (code/configs)
+    - Generic: any data['full_text'] or data['output'] string
+    Falls back to result.message if nothing longer is found.
+    """
+    message = result.message or ''
+    data = result.data or {}
+
+    best = message
+
+    # Pattern 1: ContentWriterAgent — data['content'] is dict with 'full_text'
+    content_data = data.get('content')
+    if isinstance(content_data, dict):
+        ft = content_data.get('full_text', '')
+        if ft and len(ft) > len(best):
+            best = ft
+    elif isinstance(content_data, str) and len(content_data) > len(best):
+        best = content_data
+
+    # Pattern 2: Direct full_text or output keys
+    for key in ('full_text', 'output', 'response', 'document'):
+        val = data.get(key)
+        if isinstance(val, str) and len(val) > len(best):
+            best = val
+
+    # Pattern 3: ResearchAgent — build prose from key_insights + all_results
+    if len(best) < 200:  # Still short — try research data
+        parts = []
+        insights = data.get('key_insights', [])
+        if isinstance(insights, list) and insights:
+            parts.append("## Key Insights")
+            for i, insight in enumerate(insights[:10], 1):
+                if isinstance(insight, str):
+                    parts.append(f"{i}. {insight}")
+
+        all_results = data.get('all_results', [])
+        if isinstance(all_results, list):
+            for r in all_results[:5]:
+                if isinstance(r, dict):
+                    source = r.get('source', 'Unknown')
+                    r_data = r.get('data')
+                    if isinstance(r_data, list):
+                        items = [str(item.get('title', item) if isinstance(item, dict) else item)[:200] for item in r_data[:5]]
+                        if items:
+                            parts.append(f"\n## From {source}")
+                            parts.extend(f"- {item}" for item in items)
+                    elif isinstance(r_data, str) and len(r_data) > 20:
+                        parts.append(f"\n## From {source}\n{r_data[:2000]}")
+
+        if parts:
+            assembled = "\n".join(parts)
+            if len(assembled) > len(best):
+                best = assembled
+
+    return best
 
 
 @shared_task(bind=True, queue='default', max_retries=2)
@@ -34323,19 +34381,9 @@ Stage {stage_num} ({config['template']}) should include:
         if not result or not result.success or not result.message:
             raise ValueError(f"Agent returned empty response: {result.error if result else 'No result'}")
 
-        document_content = result.message
-
-        # Session 1041: ContentWriterAgent puts actual content in data['content'],
-        # while message is just a summary like "Blog Post: 'Title' | 571 words | ..."
-        # Extract the real full_text from data if available.
-        if result.data:
-            content_data = result.data.get('content')
-            if isinstance(content_data, dict):
-                full_text = content_data.get('full_text', '')
-                if full_text and len(full_text) > len(document_content):
-                    document_content = full_text
-            elif isinstance(content_data, str) and len(content_data) > len(document_content):
-                document_content = content_data
+        # Session 1041: Use helper to extract real content from AgentResult.
+        # Many agents put summaries in .message and actual content in .data.
+        document_content = _extract_agent_content(result)
 
         # Create the document (Session 906: Use SelfBlog, not Document)
         # Map stage to category
