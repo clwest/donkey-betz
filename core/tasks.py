@@ -34511,7 +34511,24 @@ Stage {stage_num} ({config['template']}) should include:
         result = router.route(
             agent_name=agent_model.name,
             task=prompt,
-            context={'initiative_id': str(initiative_id), 'stage': stage_num}
+            context={
+                'initiative_id': str(initiative_id),
+                'stage': stage_num,
+                'content_type': 'internal_document',
+            },
+            pre_gathered_context={
+                'gathered': True,
+                'spider_context': {},
+                'scifi_context': {},
+                'learning_context': {},
+                'advisor_context': {},
+                'feedback_context': {},
+                'knowledge_context': {},
+                'workspace_context': {},
+                'docs_context': {},
+                'user_context': {},
+                'user_docs_context': {},
+            },
         )
 
         # AgentResult has .success, .message, .data - not .get('response')
