@@ -284,6 +284,86 @@ class BrainstormSearchService:
             'total_found': len(unique_results),
         }
 
+    def list_conversations(
+        self,
+        days_back: int = 30,
+        offset: int = 0,
+        limit: int = 50,
+        conversation_type: Optional[str] = None,
+        status: Optional[str] = None,
+        include_transcript: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Paginated listing of all brainstorm conversations.
+
+        Args:
+            days_back: How far back to search
+            offset: Pagination offset
+            limit: Page size (capped at 200 by caller)
+            conversation_type: 'discussion', 'panel', or None for both
+            status: Filter by conversation status
+            include_transcript: Include full message list per conversation
+
+        Returns:
+            Dict with conversations list and pagination metadata
+        """
+        from core.models import AgentConversation
+
+        cutoff = timezone.now() - timedelta(days=days_back)
+
+        qs = AgentConversation.objects.filter(started_at__gte=cutoff).filter(
+            Q(topic__startswith='Discussion:') | Q(topic__startswith='Panel:')
+        )
+
+        if conversation_type == 'discussion':
+            qs = qs.filter(topic__startswith='Discussion:')
+        elif conversation_type == 'panel':
+            qs = qs.filter(topic__startswith='Panel:')
+
+        if status:
+            qs = qs.filter(status=status)
+
+        total_count = qs.count()
+        conversations = qs.order_by('-started_at').annotate(
+            msg_count=Count('messages')
+        )[offset:offset + limit]
+
+        results = []
+        for conv in conversations:
+            conv_type = 'Discussion' if conv.topic.startswith('Discussion:') else 'Panel'
+            # Extract participant names
+            participants = list(
+                conv.messages.exclude(agent__isnull=True)
+                .values_list('agent__name', flat=True)
+                .distinct()
+            )
+            entry = {
+                'id': str(conv.id),
+                'topic': conv.topic,
+                'type': conv_type,
+                'started_at': conv.started_at.isoformat(),
+                'status': conv.status,
+                'message_count': conv.msg_count,
+                'quality_score': getattr(conv, 'quality_score', None),
+                'conclusion': (conv.conclusion or '')[:300],
+                'participants': participants,
+            }
+            if include_transcript:
+                entry['messages'] = list(
+                    conv.messages.order_by('sequence_number').values(
+                        'agent__name', 'content', 'sequence_number', 'message_type'
+                    )
+                )
+            results.append(entry)
+
+        return {
+            'conversations': results,
+            'total_count': total_count,
+            'offset': offset,
+            'limit': limit,
+            'has_more': (offset + limit) < total_count,
+        }
+
     def get_stats(self, days: int = 30) -> Dict[str, Any]:
         """
         Get statistics about brainstorming activity.
