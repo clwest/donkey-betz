@@ -34036,10 +34036,34 @@ def process_initiative_auto_progression(self):
     logger.info(
         f"📊 [AUTO-PROGRESSION] Complete: {progressed_count} progressed, {failed_count} failed"
     )
+
+    # Session 1041: Regenerate missing stage documents for ACTIVE initiatives.
+    # Stages that are PENDING with no document are stuck — trigger doc generation.
+    regen_count = 0
+    try:
+        from core.models_document_registry import Initiative, InitiativeStage
+        active_inits = Initiative.objects.filter(status='ACTIVE')
+        for init in active_inits:
+            for sn in range(1, init.current_stage + 1):
+                stage = InitiativeStage.objects.filter(
+                    initiative=init, stage=sn, document__isnull=True
+                ).first()
+                if stage and stage.status in ('PENDING', 'DRAFT'):
+                    generate_initiative_stage_document.delay(str(init.id), sn)
+                    regen_count += 1
+                    logger.info(
+                        f"[AUTO-PROGRESSION] Queued doc regen for '{init.name[:50]}' Stage {sn}"
+                    )
+        if regen_count:
+            logger.info(f"[AUTO-PROGRESSION] Queued {regen_count} missing stage doc regenerations")
+    except Exception as e:
+        logger.warning(f"[AUTO-PROGRESSION] Doc regen sweep failed: {e}")
+
     return {
         'status': 'success',
         'progressed_count': progressed_count,
         'failed_count': failed_count,
+        'regen_queued': regen_count,
         'results': results
     }
 
