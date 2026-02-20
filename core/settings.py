@@ -1086,6 +1086,23 @@ CELERY_TASK_ROUTES = {
     'core.tasks.run_stock_audit_cycle': {'queue': 'long_running'},
     'core.tasks.process_agent_activity_xp': {'queue': 'broadcast'},
     'core.tasks.monitor_running_experiments': {'queue': 'broadcast'},
+    # Session 1043: Route heavy unrouted tasks off celery-worker (200MB) to prevent OOM
+    # execute_agent_task loads AgentRouter (all 92 agents, ~300-500MB)
+    'core.tasks.execute_agent_task': {'queue': 'long_running'},
+    # Spider tasks instantiate SpiderRegistry + fetch/scrape
+    'core.tasks.run_spider_by_category': {'queue': 'long_running'},
+    'core.tasks.execute_single_spider': {'queue': 'long_running'},
+    'core.tasks.execute_single_spider_lightweight': {'queue': 'long_running'},
+    # Content orchestration — multi-agent LLM calls
+    'core.tasks.produce_content_package': {'queue': 'long_running'},
+    # Hive mind — OpenAI API calls for 10+ agents
+    'core.tasks.run_hive_mind_session': {'queue': 'long_running'},
+    # Dream exploration — LLM calls
+    'core.tasks.explore_dream_topic': {'queue': 'long_running'},
+    # Pilot evaluation — ThinkingAgent LLM calls
+    'core.tasks.evaluate_pilots_with_thinking_agent': {'queue': 'long_running'},
+    # Learning loop — orchestrator data extraction
+    'core.tasks.run_learning_loop_cycle': {'queue': 'long_running'},
 }
 
 # Celery Worker Settings

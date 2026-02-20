@@ -49,6 +49,22 @@ celery-worker (512MB container, ~200MB parent) was OOMing 3 times in 18 minutes.
 | `execute_approved_dreams_via_orchestration` | 250-500MB | Up to 10 dreams |
 | `warm_up_spider_network` | 200-400MB | Initializes all 77 spiders |
 
+### OOM Fix — 9 More Heavy Tasks Rerouted (Session 1043)
+
+9 additional unrouted heavy tasks found falling through to `default` queue (200MB limit):
+
+| Task | Est. Memory | Why Heavy | New Queue |
+|------|-------------|-----------|-----------|
+| `execute_agent_task` | 300-500MB | AgentRouter loads all 92 agents | long_running |
+| `run_spider_by_category` | 400-800MB | SpiderRegistry + spider execution | long_running |
+| `execute_single_spider` | 400-800MB | Full spider execution, data collection | long_running |
+| `execute_single_spider_lightweight` | 200-400MB | Spider instantiation + fetch | long_running |
+| `produce_content_package` | 400-800MB | ContentProductionOrchestrator + multi-agent | long_running |
+| `run_hive_mind_session` | 300-600MB | OpenAI API calls for 10+ agents | long_running |
+| `explore_dream_topic` | 300-500MB | LLM API calls | long_running |
+| `evaluate_pilots_with_thinking_agent` | 200-400MB | ThinkingAgent LLM calls | long_running |
+| `run_learning_loop_cycle` | 300-500MB | LearningLoopOrchestrator | long_running |
+
 ### Disabled Schedules (Sessions 1027, 1029)
 
 3 remediation execution schedules disabled (PR #1271) + 3 metric trigger rules disabled (PRs #1283, #1284). Discovery + assignment still run. Beat schedules persisted in DB — commenting out code alone does NOT disable them; must also `PeriodicTask.objects.filter(name='...').update(enabled=False)`.
