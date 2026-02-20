@@ -733,6 +733,46 @@ class WorkspaceScanner:
         elif name == 'pyproject.toml':
             key_files['pyproject'] = path_str
 
+        # Infrastructure files
+        if name == 'procfile':
+            key_files['procfile'] = path_str
+        elif name == 'makefile':
+            key_files['makefile'] = path_str
+        elif name in ('docker-compose.yml', 'docker-compose.yaml'):
+            key_files['docker_compose'] = path_str
+        elif name == 'dockerfile':
+            key_files['dockerfile'] = path_str
+
+        # Session/project docs
+        if name == 'claude.md':
+            key_files['claude_md'] = path_str
+        elif name.startswith('00-start-'):
+            key_files['session_entry'] = path_str
+
+        # Agent system files
+        if name == 'base_agent.py' and 'agents' in path_str:
+            key_files['base_agent'] = path_str
+        elif name == 'agent_router.py':
+            key_files['agent_router'] = path_str
+        elif name.endswith('_agent.py') and 'agents' in path_str:
+            # Count agent files
+            count = int(key_files.get('agent_file_count', '0')) + 1
+            key_files['agent_file_count'] = str(count)
+            if count == 1:
+                key_files['agent_example'] = path_str
+
+        # Service layer files
+        if name == 'tasks.py' and 'migrations' not in path_str:
+            key_files['celery_tasks'] = path_str
+        elif name == 'tool_dispatcher.py':
+            key_files['tool_dispatcher'] = path_str
+        elif name == 'unified_pa_entrypoint.py':
+            key_files['pa_entrypoint'] = path_str
+
+        # Celery config
+        if name == 'celery.py' and 'migrations' not in path_str:
+            key_files['celery_config'] = path_str
+
     def _detect_tech_stack(
         self,
         root: Path,
@@ -741,8 +781,10 @@ class WorkspaceScanner:
         """Auto-detect the tech stack of a project."""
         tech_stack = {}
 
-        # Check package.json
+        # Check package.json (fallback to frontend/ subdirectory)
         package_json = root / 'package.json'
+        if not package_json.exists():
+            package_json = root / 'frontend' / 'package.json'
         if package_json.exists():
             try:
                 pkg = json.loads(package_json.read_text())
@@ -760,11 +802,11 @@ class WorkspaceScanner:
                     tech_stack['frontend'] = 'angular'
 
                 if 'express' in deps:
-                    tech_stack['backend'] = 'express'
+                    tech_stack['backend_js'] = 'express'
                 elif 'fastify' in deps:
-                    tech_stack['backend'] = 'fastify'
+                    tech_stack['backend_js'] = 'fastify'
                 elif 'nestjs' in deps or '@nestjs/core' in deps:
-                    tech_stack['backend'] = 'nestjs'
+                    tech_stack['backend_js'] = 'nestjs'
 
                 if 'tailwindcss' in deps:
                     tech_stack['styling'] = 'tailwind'
@@ -780,19 +822,39 @@ class WorkspaceScanner:
         # Check Python
         if (root / 'manage.py').exists():
             tech_stack['backend'] = 'django'
-        elif (root / 'requirements.txt').exists():
+
+        # Parse requirements.txt for framework and infrastructure libs
+        requirements_file = root / 'requirements.txt'
+        if requirements_file.exists():
             try:
-                reqs = (root / 'requirements.txt').read_text().lower()
-                if 'django' in reqs:
-                    tech_stack['backend'] = 'django'
-                elif 'fastapi' in reqs:
-                    tech_stack['backend'] = 'fastapi'
-                elif 'flask' in reqs:
-                    tech_stack['backend'] = 'flask'
+                reqs = requirements_file.read_text().lower()
+                if 'backend' not in tech_stack:
+                    if 'django' in reqs:
+                        tech_stack['backend'] = 'django'
+                    elif 'fastapi' in reqs:
+                        tech_stack['backend'] = 'fastapi'
+                    elif 'flask' in reqs:
+                        tech_stack['backend'] = 'flask'
+
+                # Infrastructure libs
+                infra_map = {
+                    'celery': ('task_queue', 'celery'),
+                    'redis': ('cache', 'redis'),
+                    'scrapy': ('scraping', 'scrapy'),
+                    'pgvector': ('vector_db', 'pgvector'),
+                    'channels': ('websockets', 'django-channels'),
+                    'daphne': ('asgi_server', 'daphne'),
+                    'sentence-transformers': ('embeddings', 'sentence-transformers'),
+                    'psycopg': ('database', 'postgresql'),
+                    'djangorestframework': ('api_framework', 'django-rest-framework'),
+                }
+                for lib, (key, value) in infra_map.items():
+                    if lib in reqs and key not in tech_stack:
+                        tech_stack[key] = value
             except Exception:
                 pass
 
-        # Check for databases
+        # Check for databases via docker-compose
         if (root / 'docker-compose.yml').exists() or (root / 'docker-compose.yaml').exists():
             tech_stack['containerization'] = 'docker'
             try:
@@ -806,6 +868,21 @@ class WorkspaceScanner:
                     tech_stack['database'] = 'mysql'
                 elif 'mongo' in compose:
                     tech_stack['database'] = 'mongodb'
+                if 'redis' in compose and 'cache' not in tech_stack:
+                    tech_stack['cache'] = 'redis'
+            except Exception:
+                pass
+
+        # Check Procfile for worker/server detection
+        procfile = root / 'Procfile'
+        if procfile.exists():
+            try:
+                proc_content = procfile.read_text().lower()
+                if 'daphne' in proc_content and 'asgi_server' not in tech_stack:
+                    tech_stack['asgi_server'] = 'daphne'
+                if 'celery' in proc_content and 'task_queue' not in tech_stack:
+                    tech_stack['task_queue'] = 'celery'
+                tech_stack['deployment'] = 'procfile'
             except Exception:
                 pass
 
@@ -819,10 +896,16 @@ class WorkspaceScanner:
         """Detect coding patterns used in the project."""
         patterns = {}
 
+        agent_files = 0
+        service_dirs = 0
+        spider_files = 0
+        task_files = 0
+        serializer_files = 0
+        model_split_files = 0
+
         # Check for component patterns
         for dir_path, files in file_tree.items():
             tsx_files = [f for f in files if f.endswith('.tsx')]
-            jsx_files = [f for f in files if f.endswith('.jsx')]
 
             if tsx_files and 'components' in dir_path.lower():
                 # Check naming convention
@@ -835,6 +918,31 @@ class WorkspaceScanner:
                 if hook_files:
                     patterns['hook_pattern'] = 'use*.ts in hooks/'
 
+            # Agent pattern: *_agent.py files in agents/ dirs
+            dir_name = Path(dir_path).name.lower()
+            if dir_name == 'agents':
+                agent_files += sum(1 for f in files if f.endswith('_agent.py'))
+
+            # Service layer: services/ dirs with many .py files
+            if dir_name == 'services':
+                py_count = sum(1 for f in files if f.endswith('.py'))
+                if py_count > 10:
+                    service_dirs += 1
+
+            # Spider pattern
+            if dir_name == 'spiders':
+                spider_files += sum(1 for f in files if f.endswith('.py') and f != '__init__.py')
+
+            # Celery tasks: tasks.py files outside migrations
+            if 'migrations' not in dir_path:
+                task_files += sum(1 for f in files if f == 'tasks.py')
+
+            # DRF serializers
+            serializer_files += sum(1 for f in files if 'serializer' in f.lower() and f.endswith('.py'))
+
+            # Model split pattern: models_*.py files
+            model_split_files += sum(1 for f in files if f.startswith('models_') and f.endswith('.py'))
+
         # Check for test patterns
         for dir_path, files in file_tree.items():
             test_files = [f for f in files if 'test' in f.lower() or 'spec' in f.lower()]
@@ -844,6 +952,20 @@ class WorkspaceScanner:
                 elif any('.test.' in f or '.spec.' in f for f in test_files):
                     patterns['test_pattern'] = '*.test.ts/*.spec.ts (Jest style)'
                 break
+
+        # Record detected patterns
+        if agent_files > 0:
+            patterns['agent_pattern'] = f'{agent_files} *_agent.py files in agents/ dirs'
+        if service_dirs > 0:
+            patterns['service_layer'] = f'{service_dirs} services/ dir(s) with 10+ Python files'
+        if spider_files > 0:
+            patterns['spider_pattern'] = f'{spider_files} spider files in spiders/ dirs'
+        if task_files > 0:
+            patterns['celery_tasks'] = f'{task_files} tasks.py file(s) for background processing'
+        if serializer_files > 0:
+            patterns['drf_serializers'] = f'{serializer_files} serializer file(s) (Django REST Framework)'
+        if model_split_files > 0:
+            patterns['model_organization'] = f'{model_split_files} models_*.py files (split model pattern)'
 
         return patterns
 
@@ -917,6 +1039,41 @@ class WorkspaceScanner:
         """Infer the purpose of each directory."""
         purposes = {}
 
+        # Full-path matching (most specific, checked first)
+        path_purpose_map = {
+            'core/agents': 'AI agent implementations (routable agents)',
+            'core/services': 'Business logic services (134+ service classes)',
+            'core/management/commands': 'Django management commands',
+            'core/management': 'Django management module',
+            'core/migrations': 'Core app database migrations',
+            'core/templatetags': 'Django custom template tags',
+            'ai_core/spiders': 'Data collection spiders (Scrapy)',
+            'ai_core/intelligence': 'AI intelligence services (learning loop, shared memory)',
+            'ai_core/migrations': 'AI core database migrations',
+            'docs/topics': 'Embedding-optimized subsystem documentation',
+            'docs/handoffs': 'Session handoff documents (build history)',
+            'frontend/src': 'Frontend source code (React/TypeScript)',
+            'frontend/src/pages': 'Route page components',
+            'frontend/src/components': 'Reusable UI components',
+            'frontend/src/hooks': 'Custom React hooks',
+            'frontend/src/api': 'API client and endpoints',
+            'frontend/src/types': 'TypeScript type definitions',
+            'frontend/src/styles': 'CSS/SCSS stylesheets',
+            'frontend/src/store': 'State management',
+            'frontend/src/context': 'React context providers',
+            'frontend/src/assets': 'Static assets (images, fonts)',
+            'intelligence': 'Intelligence subsystem (opportunities, action plans)',
+            'intelligence/migrations': 'Intelligence app database migrations',
+            'ml': 'Machine learning models and training',
+            'ml/migrations': 'ML app database migrations',
+            'sports': 'Sports betting predictions and analytics',
+            'sports/migrations': 'Sports app database migrations',
+            'persistence': 'Legacy persistence layer',
+            'persistence/migrations': 'Persistence app database migrations',
+            'generated_content': 'Agent-generated output files',
+        }
+
+        # Leaf-name matching (less specific, fallback)
         purpose_map = {
             'components': 'Reusable UI components',
             'pages': 'Route page components',
@@ -938,12 +1095,45 @@ class WorkspaceScanner:
             'templates': 'HTML templates',
             'agents': 'AI agent implementations',
             'spiders': 'Data collection spiders',
+            'management': 'Django management module',
+            'commands': 'Django management commands',
+            'middleware': 'Django/Express middleware',
+            'serializers': 'DRF serializers',
+            'fixtures': 'Test/seed data fixtures',
+            'advisors': 'AI advisor implementations',
+            'blockchain': 'Blockchain integration',
+            'security': 'Security utilities',
+            'narrative': 'Narrative/story generation',
+            'podcast': 'Podcast generation',
+            'static': 'Static files served by web server',
+            'media': 'User-uploaded media files',
+            'locale': 'Internationalization translations',
+            'docs': 'Documentation',
+            'scripts': 'Utility scripts',
+            'config': 'Configuration files',
+            'deploy': 'Deployment configuration',
+            'logs': 'Log files',
         }
 
         for dir_path in file_tree.keys():
+            # Normalize to forward slashes for matching
+            normalized = dir_path.replace('\\', '/')
+
+            # Try full-path match first (more specific)
+            matched = False
+            for path_key, purpose in path_purpose_map.items():
+                if normalized == path_key:
+                    purposes[dir_path] = purpose
+                    matched = True
+                    break
+
+            if matched:
+                continue
+
+            # Fall back to leaf-name exact match
             dir_name = Path(dir_path).name.lower()
             for key, purpose in purpose_map.items():
-                if key in dir_name:
+                if dir_name == key:
                     purposes[dir_path] = purpose
                     break
 
