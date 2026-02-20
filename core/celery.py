@@ -2471,6 +2471,15 @@ app.conf.beat_schedule = {
             'queue': 'default',  # Lightweight DB queries only
         },
     },
+    # Session 1055: Periodic workspace rescan to keep PA context fresh
+    'rescan-active-workspaces': {
+        'task': 'core.tasks.rescan_active_workspaces',
+        'schedule': crontab(day_of_week=3, hour=3, minute=45),  # Wednesday 3:45 AM
+        'options': {
+            'expires': 3600,
+            'queue': 'default',  # File I/O scan, no API calls
+        },
+    },
 }
 
 # Task routing configuration
