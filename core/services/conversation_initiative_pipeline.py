@@ -269,6 +269,17 @@ class ConversationInitiativePipeline:
         'recommend', 'suggest', 'any ideas', 'overview', 'summary',
     ]
 
+    # Session 1042: Content-review patterns that generate busywork initiatives
+    # These come from PA conversations about existing blog content — the system
+    # creates "revise this blog" initiatives which clog the pipeline.
+    CONTENT_REVIEW_PATTERNS = [
+        'revise ', 'review ', 'revisit ', 'reassess ',
+        'hold publication', 'assemble ', 'enhance ',
+        'investor guidance', 'investor briefs', 'investor insights',
+        'key insights for', 'actionable insights',
+        'navigating ', 'enhancing ',
+    ]
+
     # Action verbs that indicate an initiative-worthy objective
     ACTION_VERBS = [
         'build', 'create', 'implement', 'deploy', 'launch', 'design',
@@ -285,9 +296,11 @@ class ConversationInitiativePipeline:
     ) -> Dict[str, Any]:
         """
         Session 994: Pre-creation quality gate to prevent initiative spam.
+        Session 1042: Added content-review/revision rejection.
 
         Checks:
         1. Topic is not purely exploratory (trends, brainstorm, overview)
+        1b. Topic is not a content-review/revision pattern
         2. Decision summary contains an actionable objective
         3. Conversation has sufficient substance
 
@@ -296,10 +309,16 @@ class ConversationInitiativePipeline:
         """
         topic_lower = (topic or '').lower()
 
-        # 1. Reject exploratory topics
+        # 1. Reject exploratory topics (lowered threshold from 2 to 1)
         explore_matches = sum(1 for p in self.EXPLORE_PATTERNS if p in topic_lower)
-        if explore_matches >= 2:
-            return {'pass': False, 'reason': f'Exploratory topic ({explore_matches} explore patterns)'}
+        if explore_matches >= 1:
+            return {'pass': False, 'reason': f'Exploratory topic (matched: {[p for p in self.EXPLORE_PATTERNS if p in topic_lower]})'}
+
+        # 1b. Session 1042: Reject content-review/revision topics
+        # PA conversations about blog quality/revision should not become initiatives
+        review_matches = [p for p in self.CONTENT_REVIEW_PATTERNS if p in topic_lower]
+        if review_matches:
+            return {'pass': False, 'reason': f'Content review/revision topic (matched: {review_matches})'}
 
         # 2. Check decision summary for actionable content
         if decision_summary:
