@@ -67,8 +67,9 @@ CONTENT_TYPE_STAGES = {
             {'agent': 'ContentWriterAgent', 'task_template': 'Create content implementing {topic}'},
         ]},
         4: {'name': 'Review & Polish', 'tasks': [
-            # Session 924: Changed from EditorAgent (requires blog_id/content) to ThinkingAgent
-            {'agent': 'ThinkingAgent', 'task_template': 'Review and polish {topic} content for quality'},
+            # Session 1040: Changed from ThinkingAgent to ContentWriterAgent
+            # ThinkingAgent returns system diagnostics instead of reviewing content
+            {'agent': 'ContentWriterAgent', 'task_template': 'Review and polish {topic} content for quality'},
         ]},
         5: {'name': 'Publication', 'tasks': [
             {'agent': 'ContentDistributionAgent', 'task_template': 'Prepare {topic} for distribution'},
@@ -102,8 +103,9 @@ CONTENT_TYPE_STAGES = {
             {'agent': 'ContentWriterAgent', 'task_template': 'Synthesize {topic} findings into executive summary'},
         ]},
         4: {'name': 'Review', 'tasks': [
-            # Session 924: Changed from EditorAgent (requires blog_id/content) to ThinkingAgent
-            {'agent': 'ThinkingAgent', 'task_template': 'Review {topic} analysis for accuracy'},
+            # Session 1040: Changed from ThinkingAgent to ContentWriterAgent
+            # ThinkingAgent returns system diagnostics instead of reviewing content
+            {'agent': 'ContentWriterAgent', 'task_template': 'Review {topic} analysis for accuracy'},
         ]},
         5: {'name': 'Distribution', 'tasks': [
             {'agent': 'ContentDistributionAgent', 'task_template': 'Share {topic} analysis with stakeholders'},
@@ -120,8 +122,9 @@ CONTENT_TYPE_STAGES = {
             {'agent': 'ContentWriterAgent', 'task_template': 'Create shareable brief from {topic} research'},
         ]},
         4: {'name': 'Review', 'tasks': [
-            # Session 924: Changed from EditorAgent (requires blog_id/content) to ThinkingAgent
-            {'agent': 'ThinkingAgent', 'task_template': 'Review {topic} documentation for quality'},
+            # Session 1040: Changed from ThinkingAgent to ContentWriterAgent
+            # ThinkingAgent returns system diagnostics instead of reviewing content
+            {'agent': 'ContentWriterAgent', 'task_template': 'Review {topic} documentation for quality'},
         ]},
         5: {'name': 'Publication', 'tasks': [
             {'agent': 'ContentDistributionAgent', 'task_template': 'Publish {topic} research findings'},
@@ -136,8 +139,9 @@ CONTENT_TYPE_STAGES = {
             {'agent': 'ContentWriterAgent', 'task_template': 'Enhance {topic} with additional detail'},
         ]},
         3: {'name': 'Review', 'tasks': [
-            # Session 924: Changed from EditorAgent to ThinkingAgent for review tasks
-            {'agent': 'ThinkingAgent', 'task_template': 'Review {topic} for quality and accuracy'},
+            # Session 1040: Changed from ThinkingAgent to ContentWriterAgent
+            # ThinkingAgent returns system diagnostics instead of reviewing content
+            {'agent': 'ContentWriterAgent', 'task_template': 'Review {topic} for quality and accuracy'},
         ]},
         4: {'name': 'Polish', 'tasks': [
             # Session 924: Changed from EditorAgent to ContentWriterAgent for polish tasks

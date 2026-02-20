@@ -64,12 +64,13 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "stats", "details", "action_items"],
-                    "description": "Initiative action to perform",
+                    "enum": ["list", "stats", "details", "action_items", "stage_document"],
+                    "description": "Initiative action to perform. Use 'stage_document' to read the full content of a stage document.",
                 },
-                "id": {"type": "string", "description": "UUID of initiative for details"},
+                "id": {"type": "string", "description": "UUID of initiative for details or stage_document"},
+                "document_id": {"type": "string", "description": "UUID of document (for stage_document action)"},
                 "status": {"type": "string", "description": "Filter by status (ACTIVE, PAUSED, COMPLETED, ARCHIVED, all)"},
-                "stage": {"type": "string", "description": "Filter by pipeline stage (1-5)"},
+                "stage": {"type": "string", "description": "Filter by pipeline stage (1-5). For stage_document: which stage to fetch."},
                 "purpose": {"type": "string", "description": "Filter by purpose"},
                 "program": {"type": "string", "description": "Filter by program"},
                 "owner": {"type": "string", "description": "Filter by owner ('me', 'unowned', or agent name)"},
