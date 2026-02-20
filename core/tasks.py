@@ -5857,7 +5857,8 @@ def run_agent_learning_cycle():
             # Get teacher's recent knowledge that student doesn't have
             # Session 357: Expanded default to include ALL knowledge types for better sharing
             ALL_KNOWLEDGE_TYPES = ['trend', 'opportunity', 'market', 'user_behavior', 'content_idea',
-                                   'tool_discovery', 'pricing', 'research', 'insight', 'strategy']
+                                   'tool_discovery', 'pricing', 'research', 'insight', 'strategy',
+                                   'collaborative_insight']
             teacher_knowledge = AgentKnowledgeSource.objects.filter(
                 agent=teacher,
                 is_active=True,
@@ -7377,6 +7378,123 @@ def _handle_conversation_delegation(tool_call, system_user):
 
 
 # =============================================================================
+# Session 1049: Conversation/HiveMind -> Knowledge Bridge
+# =============================================================================
+
+def _extract_conversation_knowledge(conversation, initiator, responder, topic, messages):
+    """Extract AgentKnowledgeSource records from a concluded agent conversation.
+
+    Creates one AKS per participant if quality gates pass. Idempotent via
+    source_spider_names containing 'conversation_{uuid}'.
+    """
+    from core.models_unified_system import AgentKnowledgeSource
+
+    # Quality gates
+    conclusion = conversation.conclusion or ''
+    if len(conclusion) < 50:
+        return 0
+    quality = conversation.quality_score or 0
+    if quality < 0.5:
+        return 0
+    if (conversation.message_count or 0) < 3:
+        return 0
+
+    conv_tag = f'conversation_{conversation.id}'
+    created = 0
+
+    for agent, partner in [(initiator, responder), (responder, initiator)]:
+        # Idempotency: skip if already extracted for this agent + conversation
+        if AgentKnowledgeSource.objects.filter(
+            agent=agent,
+            source_spider_names__contains=[conv_tag],
+        ).exists():
+            continue
+
+        # Build key_insights from insights_generated + insight-type messages
+        key_insights = list(conversation.insights_generated or [])[:5]
+        if len(key_insights) < 5:
+            for m in messages:
+                if m.get('type') == 'insight' and len(key_insights) < 5:
+                    text = m.get('content', '')[:300]
+                    if text and text not in key_insights:
+                        key_insights.append(text)
+
+        AgentKnowledgeSource.objects.create(
+            agent=agent,
+            knowledge_type='collaborative_insight',
+            title=f'[Conversation] {topic[:480]}',
+            summary=(
+                f'Conversation with {partner.name} on "{topic[:200]}"\n\n'
+                f'{conclusion[:2000]}'
+            ),
+            key_insights=key_insights,
+            confidence_score=round(quality * 0.9, 3),
+            source_spider_names=[conv_tag, f'partner_{partner.name}'],
+        )
+        created += 1
+
+    return created
+
+
+def _extract_hivemind_knowledge(session, completed_contributions):
+    """Extract AgentKnowledgeSource records from a completed HiveMind session.
+
+    Creates one AKS per contributing agent. Idempotent via
+    source_spider_names containing 'hivemind_{uuid}'.
+    """
+    from core.models_unified_system import AgentKnowledgeSource
+
+    synthesis = session.synthesis or ''
+    if len(synthesis) < 50:
+        return 0
+    if (session.contribution_count or 0) < 2:
+        return 0
+
+    hive_tag = f'hivemind_{session.id}'
+    topic = session.question or 'HiveMind Session'
+    created = 0
+
+    # Collect top key_points across contributions (max 5)
+    all_key_points = []
+    for c in completed_contributions:
+        points = c.key_points or []
+        all_key_points.extend(points[:2])
+    all_key_points = all_key_points[:5]
+
+    # Participant names for provenance
+    participant_names = [c.agent.name for c in completed_contributions]
+    confidence = min(1.0, 0.6 + len(participant_names) * 0.05)
+
+    for contribution in completed_contributions:
+        agent = contribution.agent
+
+        if AgentKnowledgeSource.objects.filter(
+            agent=agent,
+            source_spider_names__contains=[hive_tag],
+        ).exists():
+            continue
+
+        source_tags = [hive_tag] + [f'partner_{n}' for n in participant_names if n != agent.name]
+
+        AgentKnowledgeSource.objects.create(
+            agent=agent,
+            knowledge_type='collaborative_insight',
+            title=f'[HiveMind] {topic[:485]}',
+            summary=(
+                f'HiveMind session: "{topic[:200]}"\n'
+                f'Participants: {", ".join(participant_names)}\n\n'
+                f'{synthesis[:2000]}'
+            ),
+            key_insights=all_key_points,
+            confidence_score=round(confidence, 3),
+            source_spider_names=source_tags[:10],  # cap array length
+        )
+        created += 1
+
+    return created
+
+
+# =============================================================================
 # Session 244: Agent Conversations (Inter-Agent Chat)
 # =============================================================================
 
@@ -8295,6 +8413,17 @@ Operating Constraints:
 
                 except Exception as e:
                     logger.warning(f"Could not update mood after conversation: {e}")
+
+                # Session 1049: Extract conversation knowledge into AgentKnowledgeSource
+                try:
+                    conv_knowledge_count = _extract_conversation_knowledge(
+                        conversation, initiator, responder, topic, messages
+                    )
+                    if conv_knowledge_count > 0:
+                        stats['knowledge_created'] = stats.get('knowledge_created', 0) + conv_knowledge_count
+                        logger.info(f"[CONV-KNOWLEDGE] Created {conv_knowledge_count} AKS from conversation {conversation.id}")
+                except Exception as e:
+                    logger.warning(f"[CONV-KNOWLEDGE] Failed to extract knowledge: {e}")
 
             else:
                 # Session 846: Mark conversation as abandoned if no messages were generated
@@ -12271,6 +12400,14 @@ Include this DecisionSummary block NOW."""
             logger.info(f"🏛️ [BOARDROOM] Posted HiveMind consensus to Discord")
         except Exception as discord_err:
             logger.warning(f"🏛️ [BOARDROOM] Discord notification failed: {discord_err}")
+
+        # Session 1049: Extract HiveMind synthesis into AgentKnowledgeSource
+        try:
+            hive_knowledge_count = _extract_hivemind_knowledge(session, completed_contributions)
+            if hive_knowledge_count > 0:
+                logger.info(f"[HIVE-KNOWLEDGE] Created {hive_knowledge_count} AKS from HiveMind {session_id}")
+        except Exception as e:
+            logger.warning(f"[HIVE-KNOWLEDGE] Failed to extract knowledge: {e}")
 
         logger.info(
             f"🧠 [HIVE MIND] Session {session_id} completed! "
