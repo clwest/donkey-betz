@@ -909,6 +909,22 @@ class UnifiedPAEntrypoint:
                 prompt_parts.append("")
                 prompt_parts.append(f"RELEVANT DOCS: {docs_summary[:500]}")
 
+        # Add workspace/codebase context if available
+        ws_ctx = context.get('workspace_context', {})
+        if ws_ctx:
+            parts = []
+            if ws_ctx.get('tech_stack'):
+                parts.append(f"Tech: {', '.join(ws_ctx['tech_stack'][:8])}")
+            key_files = ws_ctx.get('key_files', [])
+            if key_files:
+                files_str = ', '.join(str(f) for f in key_files[:10])
+                parts.append(f"Key files: {files_str}")
+            if ws_ctx.get('total_files'):
+                parts.append(f"{ws_ctx['total_files']} total files")
+            if parts:
+                prompt_parts.append("")
+                prompt_parts.append(f"CODEBASE: {' | '.join(parts)}")
+
         return "\n".join(prompt_parts)
 
     def _infer_intent_from_tools(self, tool_names: List[str]) -> Optional[str]:
@@ -1013,6 +1029,30 @@ class UnifiedPAEntrypoint:
                 logger.warning("Docs context injection timed out after 5s — skipping")
             except Exception as e:
                 logger.debug(f"Failed to inject docs context: {e}")
+
+        # Workspace context (codebase structure from SKIN layer)
+        try:
+            from core.services.workspace_manager import get_workspace_manager
+            manager = get_workspace_manager(self.user)
+            workspace = await asyncio.wait_for(
+                asyncio.to_thread(manager.get_active_workspace),
+                timeout=3.0,
+            )
+            if workspace:
+                ws_ctx = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        manager.get_workspace_context_for_agent,
+                        workspace, 'personal_assistant', message
+                    ),
+                    timeout=3.0,
+                )
+                if ws_ctx:
+                    context['workspace_context'] = ws_ctx
+                    logger.debug(f"PA workspace context: {ws_ctx.get('workspace_name')} ({ws_ctx.get('total_files', 0)} files)")
+        except asyncio.TimeoutError:
+            logger.warning("Workspace context injection timed out after 3s — skipping")
+        except Exception as e:
+            logger.debug(f"Failed to inject workspace context: {e}")
 
         # Merge user-provided context
         context.update(user_context)
@@ -5288,6 +5328,38 @@ Be concise, conversational, and personalized. Address the user by name."""
             if knowledge_text:
                 system_prompt += knowledge_text
                 logger.debug(f"[{trace_id}] Added system knowledge to PA prompt ({len(knowledge_text)} chars)")
+
+        # Workspace/codebase context from SKIN layer
+        ws_ctx = context.get('workspace_context', {})
+        if ws_ctx:
+            cb_parts = []
+            if ws_ctx.get('workspace_name'):
+                cb_parts.append(f"Project: {ws_ctx['workspace_name']}")
+            if ws_ctx.get('tech_stack'):
+                cb_parts.append(f"Tech stack: {', '.join(ws_ctx['tech_stack'])}")
+            key_files = ws_ctx.get('key_files', [])
+            if key_files:
+                cb_parts.append("Key files:")
+                for kf in key_files[:15]:
+                    cb_parts.append(f"  - {kf}")
+            dir_purposes = ws_ctx.get('directory_purposes', {})
+            if isinstance(dir_purposes, dict) and dir_purposes:
+                cb_parts.append("Directory purposes:")
+                for d, purpose in list(dir_purposes.items())[:15]:
+                    cb_parts.append(f"  - {d}: {purpose}")
+            patterns = ws_ctx.get('coding_patterns', [])
+            if patterns:
+                cb_parts.append("Coding patterns:")
+                for p in patterns[:10]:
+                    cb_parts.append(f"  - {p}")
+            if ws_ctx.get('total_files'):
+                cb_parts.append(f"Total files: {ws_ctx['total_files']}")
+            if cb_parts:
+                codebase_text = "\n\nCODEBASE CONTEXT:\n" + "\n".join(cb_parts)
+                if len(codebase_text) > 3000:
+                    codebase_text = codebase_text[:3000] + "\n... (truncated)"
+                system_prompt += codebase_text
+                logger.debug(f"[{trace_id}] Added codebase context to PA prompt ({len(codebase_text)} chars)")
 
         # Add conversation history
         history_text = ""
