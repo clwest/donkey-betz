@@ -1,115 +1,81 @@
-# Session 1040 - Start Here
+# Session 1041 - Start Here
 
-**Previous Sessions:** 1039 (Tenant Model + Celery OOM Fix + Agent Hallucination Discovery), 1038 (DynamicPersonaAgent), 1037 (Initiative Pipeline Fix), 1036 (PA Function Calling Hardening)
+**Previous Sessions:** 1040 (Anti-Hallucination Fixes + Stage 4 ThinkingAgent Fix + PA Tool + Celery OOM), 1039 (Tenant Model + Agent Hallucination Discovery), 1038 (DynamicPersonaAgent), 1037 (Initiative Pipeline Fix)
 **Date:** February 19, 2026
-**Status:** 92 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2)** | **All 218 agent personas routable** | **Tenant model foundation landed (Phase 1/3)** | 19 ACTIVE initiatives
+**Status:** 92 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2)** | **All 218 agent personas routable** | **Tenant model Phase 1 landed** | 8 ACTIVE initiatives | 28 COMPLETED
 
 ---
 
-## Session 1039 — What Happened
+## Session 1040 — What Happened
 
-### Tenant Model & Customer Access Foundation (Phase 1 of 3)
+### 1. Agent Data Hallucination Fix (PR #1330)
 
-Created multi-tenant infrastructure for future customer-facing access control. PR #1327 merged to main.
+Agents in initiative conversations were fabricating dates and statistics (e.g. "data shows 0 discussions on Oct 15, 2023") when spider data was actually fresh (30K+ records). Three interconnected fixes deployed:
 
-**New model:** `Tenant` (`core/models_tenant.py`) — UUID PK, name, slug, owner FK, subscription_tier, monthly cost guardrails, features JSONField, is_active.
+**a) Anti-hallucination guard in system prompt** (`core/tasks.py:7768`)
+- Agents now told: "If no == REAL-WORLD INTELLIGENCE == section appears below, you have NO spider data. Say 'No data available' — do NOT invent dates, counts, statistics."
+- Updated citation guideline to require source AND date when citing data.
 
-**Modified models:**
-- `UnifiedUser` — added nullable `tenant` FK + `customer_role` (viewer/user/org_admin)
-- `AgentExecution` — added nullable `tenant` FK for cost attribution
-- `CostTracking` — added nullable `tenant` FK for cost attribution
-- `EnhancedUserProfile` — added nullable `tenant` FK
-- `Budget` — added `tenant`/`user` scope choices + nullable FKs
+**b) Timestamps + related_content surfacing** (`core/tasks.py:7675-7714`)
+- REAL-WORLD INTELLIGENCE header now includes retrieval timestamp.
+- Discussion items show `(collected: 2026-02-18T...)` dates.
+- `related_content` from `search_spider_data()` (semantic/keyword fallback) was **silently dropped** — now surfaced with source attribution and timestamps.
 
-**Profile cleanup:**
-- Deleted dead duplicate `core/models/user_profile.py` (imported Django `User` not `UnifiedUser`, nothing referenced it)
-- Added `EnhancedUserProfile` auto-create in user post_save signal handler
+**c) Broader spider intelligence matching** (`core/services/spider_intelligence.py:1040-1115`)
+- Expanded all 5 keyword categories with more terms.
+- Added 2 new categories: `is_business` (customer, analytics, retention, growth...) and `is_news` (trend, announcement, research...).
+- Bumped `search_spider_data` limit from 3 → 5.
+- **Critical fallback**: when NO category matches, semantic search results are promoted into `related_discussions` so the spider_parts builder always picks them up.
 
-**Migration:** `0249_session_1039_tenant_model_and_customer_access` — all FKs nullable, non-destructive.
+### 2. Stage 4 ThinkingAgent Contamination Fix (PR #1331)
 
-### Celery-Content OOM Fix
+**Root cause:** Session 912 replaced ThinkingAgent with ContentWriterAgent in `generate_initiative_stage_document` (auto_pipeline path) because ThinkingAgent dumps system diagnostics instead of reviewing content. But `conversation_initiative_pipeline.py` was **never updated** — still used ThinkingAgent for review/polish stages.
 
-`celery-content` worker was OOMing on Railway (user received 2 OOM emails). Root cause: deliberation pipeline tasks use 80-120MB per task, but child limit was only 150MB.
+**Impact:** 3/26 completed initiative Stage 4 docs were contaminated with "System scan for the last 24 hours..." metrics dumps instead of actual review content.
 
-**Fix:** Bumped `--max-memory-per-child` from 150MB → 250MB and `--max-tasks-per-child` from 10 → 5. Peak: 200MB parent + 250MB child = 450MB, fits Railway 512MB with 62MB headroom.
+**Fix:** Replaced all 4 ThinkingAgent references in `conversation_initiative_pipeline.py` with ContentWriterAgent (content types: strategy, analysis, research, document).
 
-### Agent Hallucination Discovery (THE BIG ISSUE)
+### 3. PA `stage_document` Tool (PR #1331)
 
-User spotted agents in initiative conversations fabricating data dates and claiming no data exists when spider data is actually fresh. This is the **#1 priority for Session 1040**.
+PA got stuck in a gibberish loop ("Tool call.Let's call.Ok.No...") when user asked to "Open the Stage 4 doc" because no tool existed to fetch stage document content.
+
+**Fix:** Added `stage_document` action to `initiative_tool` in both `tool_dispatcher.py` and `pa_tool_schemas.py`. Accepts `document_id` or `initiative_id + stage` combo, returns full SelfBlog content.
+
+### 4. Celery-Content OOM Fix (PR #1332)
+
+celery-content kept crashing with 25+ completed initiatives driving heavy LLM tasks.
+
+**Fix:** Moved 5 heaviest tasks from `content` queue to `long_running` (300MB/child, 3 concurrency):
+- `generate_initiative_stage_document`
+- `execute_approved_artifacts`
+- `generate_pending_reviews`
+- `execute_initiative_stage_task`
+- `execute_dream_implementations`
+
+Reduced `max-tasks-per-child` from 5 → 2 on celery-content for more aggressive recycling.
 
 ### Commits
 | Commit | Description |
 |--------|-------------|
-| 17dc0664 | feat: add Tenant model and customer access foundation (Phase 1 of 3) |
-| bdf1e0f2 | fix: bump celery-content memory 150→250MB and recycle 10→5 tasks |
-| 979c6911 | docs: Session 1039 handoff |
+| 457e03f3 | fix: prevent agent data hallucination in initiative conversations |
+| 5a20f146 | fix: replace ThinkingAgent in conversation pipeline + add stage_document PA tool |
+| 3e807b98 | fix: move 5 heavy tasks off celery-content to stop OOM crashes |
 
 ---
 
-## TOP PRIORITY: Agent Data Hallucination in Initiative Conversations
-
-### The Problem
-
-Agents in initiative-triggered conversations are **fabricating data dates and claiming no data exists** when the spider network actually has 30,023 records (11,872 from the last 7 days alone).
-
-**Example:** CodeGeneratorAgent + Data Scientist Pro conversation about "Summarize customer behavior signals from spider data":
-- Agents claimed: "spider dataset shows 0 discussions collected on Oct 15, 2023 — ~28 months old"
-- Reality: Spider data ranges from Jan 22, 2026 to Feb 19, 2026 (today), 30K+ records, 11K+ in last 7 days
-- The date "Oct 15, 2023" is **completely fabricated** — no spider record has that timestamp
-
-### Root Cause Analysis (4 interconnected issues — PA independently confirmed #1)
-
-**1. Agents assigned tasks they have no tools for** (PA confirmed via agent introspection)
-- CodeGeneratorAgent only has codebase tools (read_file, write_file, edit_file, generate_code) — **cannot query spider data**
-- Data Scientist Pro has **no attached toolset** at all
-- The conversation orchestrator asked them to "summarize recent spider data" without injecting any data
-- Agents hallucinated because they literally had nothing to work with
-- **PA recommendation:** orchestrator should fetch data first, inject `NOW_UTC=...` + actual records, then ask agent to summarize only what's provided
-
-**2. Spider intelligence keyword matching is too narrow** (`core/services/spider_intelligence.py:1040`)
-- `get_insights_for_prompt()` only matches 5 categories: tech, crypto, finance, jobs, design
-- "Customer behavior signals" matches NONE of them
-- So `spider_context` injected into the conversation system prompt is **empty**
-
-**3. No data provenance / timestamps in agent context** (`core/tasks.py:7674-7695`)
-- When spider data IS injected, the `spider_parts` list shows titles and summaries only
-- Never includes "this data is from [date]" or "collected [N] hours ago"
-- Agents can't distinguish fresh data from stale data, so they hallucinate dates
-
-**4. Initiative pipeline creates tasks without validating data availability**
-- Initiative "Summarize customer behavior signals from spider data" was auto-created from a conversation decision
-- Pipeline ran it through all 5 stages without checking if any spider actually collects "customer behavior" data
-- Result: agents argue for 7 messages about data that doesn't exist in the format they expect
-
-### Files to Fix
-
-| File | Issue | Fix |
-|------|-------|-----|
-| `core/services/spider_intelligence.py:1040` | `get_insights_for_prompt()` keyword matching too narrow | Add broader category matching OR use embedding similarity instead of keyword lists |
-| `core/tasks.py:7674-7695` | Spider context has no timestamps | Include `created_at` dates on injected spider items so agents know data freshness |
-| `core/tasks.py:7731-7754` | System prompt doesn't tell agents what to do when no data is available | Add explicit instruction: "If no spider data was injected below, state 'No data available' — do NOT fabricate dates or statistics" |
-| `core/tasks.py` (conversation orchestrator) | No data availability pre-check | Before starting a conversation about data, verify the data actually exists |
-
-### Proposed Fix Order
-
-1. **Quick win — anti-hallucination guard in system prompt** (5 min): Add to the conversation system prompt: "If no == REAL-WORLD INTELLIGENCE == section appears below, you have NO spider data. Say 'No data available' — do NOT invent dates, counts, or statistics."
-2. **Add timestamps to spider context** (15 min): When building `spider_parts`, include `created_at` on each item
-3. **Broaden spider intelligence matching** (30 min): Add embedding-based or broader keyword matching to `get_insights_for_prompt()`
-4. **Initiative data validation gate** (future): Before creating an initiative about data, check the data source exists
-
----
-
-## Current System Health (post-Session 1039)
+## Current System Health (post-Session 1040)
 
 | Metric | Value |
 |--------|-------|
 | PA routing | **GPT-5.2 function calling** (`PA_USE_FUNCTION_CALLING=true`) |
 | Agents routable | **All 218** (82 AGENT_MAP + 139 DynamicPersonaAgent + 2 blocked) |
-| Initiatives | **19 ACTIVE**, 8 COMPLETED, 0 TRIAGE |
-| Content worker | **250MB limit, 5-task recycle** (was 150MB/10, OOMing) |
-| Tenant model | **Phase 1 merged** (migration runs on next Railway deploy) |
-| Agent health | 92.4% pass rate |
-| Spider data | **30,023 records** (Jan 22 – Feb 19, 2026), 11,872 in last 7 days |
+| Initiatives | **8 ACTIVE**, 28 COMPLETED, 2 TRIAGE (38 total) |
+| Content worker | **250MB limit, 2-task recycle**, 5 heavy tasks moved to long_running |
+| Long-running worker | Now handles initiative stage docs, artifacts, reviews, dream implementations |
+| Tenant model | **Phase 1 merged** (migration applied) |
+| Spider data | **30,173 records** (Jan 22 – Feb 19, 2026), 11,957 in last 7 days |
+| Anti-hallucination | **LIVE** — guard in system prompt + timestamps + broader matching |
+| PA tools | **stage_document** action added to initiative_tool |
 
 ---
 
@@ -124,9 +90,16 @@ Both take 43-44min to complete. Celery timeout is 45min. They PASS but have no m
 ### Railway Cost
 User hit $1,200/month limit, bumped to $1,500. Schedule throttling (Session 1034) + media guards should reduce costs.
 
+### 3 Contaminated Stage 4 Docs (Session 1040)
+These completed initiatives have Stage 4 docs filled with ThinkingAgent system diagnostics instead of real content. They could be regenerated if needed:
+- "Navigating Time-Sensitive Securities Fraud Alerts"
+- "Revise and Enhance Class Action Landscape Briefing"
+- "Revise Florida High School Soccer Playoff Broadcast Information"
+
 ### Future Improvements
 - Tenant Phases 2-3 (budget enforcement, customer API endpoints, TenantScopeMixin)
 - Profile consolidation (Phase 4 model dedup)
+- Initiative data validation gate (check data source exists before creating data-dependent initiatives)
 - Build real backends for AgentsPage channels/tools/templates tabs
 - Score remaining ~3,500 deliverables
 - Enhance remaining ~111 `needs_enhancement` blogs
@@ -137,42 +110,53 @@ User hit $1,200/month limit, bumped to $1,500. Schedule throttling (Session 1034
 ## Verify Before Starting
 
 ```bash
-# 1. Check migration applied on Railway
-railway run python manage.py shell -c "
-from core.models_tenant import Tenant
-from core.models import UnifiedUser
-u = UnifiedUser.objects.first()
-print(f'tenant={u.tenant}, customer_role={u.customer_role}')
-print('Tenant model accessible: OK')
-"
-
-# 2. Check celery-content not OOMing anymore
+# 1. Check celery-content not OOMing after task redistribution
 railway logs -n 200 2>&1 | grep -i 'OOM\|killed\|memory'
 
-# 3. Verify spider data is fresh (root cause confirmation)
+# 2. Verify anti-hallucination guard is working
 railway run python manage.py shell -c "
-from core.models_unified_system import SpiderData
-from django.db.models import Min, Max, Count
-agg = SpiderData.objects.aggregate(oldest=Min('created_at'), newest=Max('created_at'), total=Count('id'))
-print(f'Spider data: {agg[\"total\"]} records, {agg[\"oldest\"]} to {agg[\"newest\"]}')
+from core.services.spider_intelligence import SpiderIntelligenceService
+svc = SpiderIntelligenceService()
+insights = svc.get_insights_for_prompt('customer behavior signals')
+print(f'related_content: {len(insights.get(\"related_content\", []))} items')
+print(f'suggestions: {insights.get(\"suggestions\", [])}')
 "
 
-# 4. Check how many initiative conversations have empty spider context
-railway logs -n 500 2>&1 | grep -c 'Injected spider intelligence'
-railway logs -n 500 2>&1 | grep -c 'Could not get spider intelligence'
+# 3. Verify PA stage_document tool works
+railway run python manage.py shell -c "
+from core.services.tool_dispatcher import ToolDispatcher
+td = ToolDispatcher()
+# Should return full document content
+print('stage_document action registered:', hasattr(td, '_handle_initiative'))
+"
+
+# 4. Verify ThinkingAgent removed from conversation pipeline
+railway run python manage.py shell -c "
+from core.services.conversation_initiative_pipeline import CONTENT_TYPE_STAGES
+for ct, stages in CONTENT_TYPE_STAGES.items():
+    for sn, si in stages.items():
+        for t in si.get('tasks', []):
+            if t.get('agent') == 'ThinkingAgent':
+                print(f'STILL HAS ThinkingAgent: {ct} Stage {sn}')
+print('Check complete')
+"
 ```
 
 ---
 
 ## Critical Patterns & Gotchas
 
-**Agent hallucination in conversations (Session 1039):** When `spider_context` is empty (keyword matching misses), agents fabricate dates and statistics. `get_insights_for_prompt()` in `core/services/spider_intelligence.py:1040` only matches 5 narrow categories. Fix: anti-hallucination guard in system prompt + broaden matching + add timestamps.
+**Anti-hallucination guard (Session 1040):** Conversation system prompt now includes CRITICAL instruction: if no REAL-WORLD INTELLIGENCE section appears, agent must say "No data available" and never fabricate. Spider context header includes retrieval timestamp. `related_content` from semantic search is now surfaced (was silently dropped).
 
-**Tenant model (Session 1039):** `Tenant` in `core/models_tenant.py`, registered via `core/models/__init__.py`. Import: `from core.models_tenant import Tenant` or `from core.models import Tenant`. All FKs nullable — no enforcement yet (Phase 2-3).
+**ThinkingAgent banned from document generation:** ThinkingAgent returns system diagnostics instead of reviewing content. Session 912 fixed `generate_initiative_stage_document` (auto_pipeline). Session 1040 fixed `conversation_initiative_pipeline.py`. If adding new pipelines, NEVER use ThinkingAgent for content tasks.
 
-**Celery-content OOM (Session 1039):** Deliberation tasks use 80-120MB. Worker now at 250MB limit with 5-task recycle. If OOM returns, the fix is to split deliberation into chained tasks (build claims → draft → review → rewrite).
+**Celery-content task routing (Session 1040):** 5 heavy tasks moved from content → long_running queue. Content queue now only has: deliberation, blog gen, auto-progression, scoring, publishing. If OOM returns again, next step is splitting deliberation into chained tasks.
 
-**DynamicPersonaAgent (Session 1038):** `AgentRouter.route()` falls back to `DynamicPersonaAgent` when `AGENT_MAP` lookup fails. Checks `Agent.objects.filter(name=agent_name, is_active=True)`. Has `web_search` + `spider_query` tools only.
+**PA stage_document tool (Session 1040):** `initiative_tool(action='stage_document', id=<initiative_uuid>, stage=4)` or `initiative_tool(action='stage_document', document_id=<doc_uuid>)` returns full SelfBlog content.
+
+**Tenant model (Session 1039):** `Tenant` in `core/models_tenant.py`, registered via `core/models/__init__.py`. All FKs nullable — no enforcement yet (Phase 2-3).
+
+**DynamicPersonaAgent (Session 1038):** `AgentRouter.route()` falls back to `DynamicPersonaAgent` when `AGENT_MAP` lookup fails. Has `web_search` + `spider_query` tools only.
 
 **PA function calling (Session 1036):** `PA_USE_FUNCTION_CALLING=true` env var. Agentic loop in `_run_agentic_loop()` — max 5 iterations, GPT-5.2 decides tool calls.
 
