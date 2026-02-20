@@ -6360,11 +6360,11 @@ RESEARCH DATA:
                 return {'error': 'task_name is required for drilldown'}
 
             limit = min(int(payload.get('limit', 50)), 200)
-            rows = (
-                CeleryTaskEvent.objects
-                .filter(task_name=task_name, started_at__gte=cutoff)
-                .order_by('-started_at')[:limit]
-            )
+            status = payload.get('status', '')
+            qs = CeleryTaskEvent.objects.filter(task_name=task_name, started_at__gte=cutoff)
+            if status:
+                qs = qs.filter(status=status.upper())
+            rows = qs.order_by('-started_at')[:limit]
 
             executions = []
             for r in rows:

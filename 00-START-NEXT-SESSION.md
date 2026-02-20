@@ -1,8 +1,39 @@
-# Session 1048 - Start Here
+# Session 1049 - Start Here
 
-**Previous Sessions:** 1048 (Task Volume Breakdown API), 1043 (Brainstorm Bulk Export + DOCX/CSV + OOM Fix), 1042 (Initiative Cleanup + PA Blog Search + Frontend Fixes), 1041 (Stage Doc Content Fix + Regen Sweep), 1040 (Anti-Hallucination + ThinkingAgent Fix + PA Tool + Celery OOM)
-**Date:** February 19, 2026
-**Status:** 92 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2, 41 tool schemas, 59 handlers)** | **All 218 agent personas routable** | **Tenant model Phase 1 landed** | 4 ACTIVE initiatives | 35 COMPLETED
+**Previous Sessions:** 1049 (INIT-000057 RAG Gaps + celery-content OOM Fix), 1048 (Task Volume Breakdown API), 1043 (Brainstorm Bulk Export + DOCX/CSV + OOM Fix), 1042 (Initiative Cleanup + PA Blog Search + Frontend Fixes), 1041 (Stage Doc Content Fix + Regen Sweep), 1040 (Anti-Hallucination + ThinkingAgent Fix + PA Tool + Celery OOM)
+**Date:** February 20, 2026
+**Status:** 92 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2, 41 tool schemas, 59 handlers)** | **All 218 agent personas routable** | **Tenant model Phase 1 landed** | 4 ACTIVE initiatives | 36 COMPLETED
+
+---
+
+## Session 1049 — What Happened
+
+### INIT-000057 Closed: RAG Pipeline Gaps (PR #1349)
+
+Initiative had 6 must-have gaps. 4 were already resolved (DOCX/CSV processors, HNSW index in DB, user-scoping). Session 1049 closed the remaining 2 + housekeeping:
+
+1. **Rate limiting** — `RagIngestThrottle` (ScopedRateThrottle, 20/hour) on `ingest_url` and `ingest_file`. Global `DEFAULT_THROTTLE_CLASSES` stays empty (Session 789 concern).
+2. **Frontend file size validation** — 5MB client-side check in `DocumentsPage.handleUpload` with error via `setIngestError`. Upload zone label updated to show "(max 5MB)".
+3. **HNSW index Meta sync** — Activated `HnswIndex` in `DocumentEmbedding.Meta.indexes` (conditional on `HAS_PGVECTOR`). State-only migration 0040 via `SeparateDatabaseAndState` — DB index already exists from migration 0037 raw SQL.
+
+**Files changed (4 + 1 migration):**
+| File | Change |
+|------|--------|
+| `content/models.py` | HNSW index in Meta.indexes (conditional on HAS_PGVECTOR) |
+| `content/migrations/0040_documentembedding_hnsw_index_state.py` | State-only migration (no DB changes) |
+| `core/settings.py` | `rag_ingest: 20/hour` throttle rate |
+| `core/views_rag_embeddings.py` | `RagIngestThrottle` class + decorators on 2 endpoints |
+| `frontend/src/pages/DocumentsPage.tsx` | 5MB file size check + updated label |
+
+### celery-content OOM Fix — Lazy ML Loading (PR #1350)
+
+celery-content crashed on Railway due to OOM at startup. Root cause: `SentenceTransformerProvider.__init__` eagerly loaded `all-MiniLM-L6-v2` (~800MB with PyTorch/TF) during `content.embeddings` module import.
+
+**Fixes:**
+- `SentenceTransformerProvider`: deferred model load to `_get_model()` on first embedding request
+- Global `rag_system`: wrapped in `_LazyRAGSystem` proxy so `from content.embeddings import rag_system` no longer triggers `EmbeddingManager` → provider construction
+
+**Result:** celery-content starts without loading TensorFlow or SentenceTransformer. Models load on-demand when first embedding is requested.
 
 ---
 
@@ -124,17 +155,17 @@ PA Chat area on Command Center was cramped — NowHub (3 dashboard cards) + Inte
 
 ---
 
-## Current System Health (post-Session 1048)
+## Current System Health (post-Session 1049)
 
 | Metric | Value |
 |--------|-------|
 | PA routing | **GPT-5.2 function calling** (`PA_USE_FUNCTION_CALLING=true`) |
 | PA tools | **41 schemas, 59 handlers** — `task_breakdown_tool` (summary/drilldown), `brainstorm_tool` (bulk paginated export), `content_review_tool` (search), `initiative_tool` (stage_document) |
-| RAG upload | **5 formats**: PDF, DOCX, CSV, TXT, MD + URL + YouTube |
+| RAG upload | **5 formats**: PDF, DOCX, CSV, TXT, MD + URL + YouTube — **rate limited 20/hour**, **5MB max file size** |
 | Agents routable | **All 218** (82 AGENT_MAP + 139 DynamicPersonaAgent + 2 blocked) |
-| Initiatives | **4 ACTIVE**, 35 COMPLETED, 1 TRIAGE, 8 ARCHIVED (48 total) |
+| Initiatives | **4 ACTIVE**, 36 COMPLETED (INIT-000057 closed), 1 TRIAGE, 8 ARCHIVED (49 total) |
 | Initiative quality gate | **Content-review patterns blocked**, explore threshold lowered to 1 |
-| Content worker | **250MB limit, 2-task recycle**, 5 heavy tasks moved to long_running |
+| Content worker | **250MB limit, 2-task recycle**, 5 heavy tasks moved to long_running, **ML lazy-loaded** |
 | Stage doc regen | **AUTO** — missing docs auto-queued every 10 min via auto-progression sweep |
 | Tenant model | **Phase 1 merged** (migration applied) |
 | Anti-hallucination | **LIVE** — guard in system prompt + timestamps + broader matching |
@@ -208,13 +239,19 @@ for sn in [2, 3, 4]:
 # 3. Test PA blog search (should find results now)
 # Ask PA: "Find the blog about IAC valuation"
 
-# 4. Check celery-content not OOMing
-railway logs -n 200 2>&1 | grep -i 'OOM\|killed\|memory'
+# 4. Check celery-content healthy (OOM fixed in Session 1049 — lazy ML loading)
+railway service celery-content && railway logs 2>&1 | grep -i 'ready\.' | tail -1
 ```
 
 ---
 
 ## Critical Patterns & Gotchas
+
+**RAG ingest rate limiting (Session 1049):** `RagIngestThrottle` (ScopedRateThrottle, scope `rag_ingest`, 20/hour) on `ingest_url` and `ingest_file` in `views_rag_embeddings.py`. Rate configured in `settings.py` `DEFAULT_THROTTLE_RATES`. Global `DEFAULT_THROTTLE_CLASSES` stays empty so only decorated endpoints are affected.
+
+**Lazy ML loading (Session 1049):** `SentenceTransformerProvider._get_model()` defers model load to first use. Global `rag_system` in `content/embeddings.py` is a `_LazyRAGSystem` proxy — importing it does NOT trigger construction. NEVER add eager model loads at module level in files imported by Celery workers.
+
+**HNSW index (Session 1049):** `DocumentEmbedding.Meta.indexes` now includes `HnswIndex(name='docembed_vector_hnsw_idx')` conditional on `HAS_PGVECTOR`. Migration 0040 is state-only — the actual DB index is `documentembedding_vector_hnsw_idx` (created by migration 0037 raw SQL).
 
 **Task volume breakdown (Session 1048):** `task_breakdown_tool` queries `CeleryTaskEvent` (NOT `TaskResult`). REST endpoints at `/api/celery/breakdown/` and `/api/celery/breakdown/task/`. Handler in `tool_dispatcher._handle_task_breakdown`. Formatter in `unified_pa_entrypoint._format_tool_result` under `intent == 'task_breakdown'`. AgentExecution uses `agent__name` (FK), `created_at` (NOT `started_at`), `status='failed'` (NOT `success=False`).
 
