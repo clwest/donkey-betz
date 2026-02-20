@@ -1669,9 +1669,26 @@ class UnifiedPAEntrypoint:
         # Session 943: Brainstorming tool payload
         elif intent == 'brainstorming':
             msg_lower = message.lower()
+            import re as _bs_re
+
+            # Bulk list action: "list all brainstorm conversations", "export brainstorms"
+            if any(kw in msg_lower for kw in ['list all', 'export', 'enumerate', 'bulk']):
+                payload['action'] = 'list'
+                # Extract offset if present (e.g., "offset 50")
+                off_match = _bs_re.search(r'offset\s+(\d+)', msg_lower)
+                if off_match:
+                    payload['offset'] = int(off_match.group(1))
+                # Extract limit if present
+                lim_match = _bs_re.search(r'limit\s+(\d+)', msg_lower)
+                if lim_match:
+                    payload['limit'] = int(lim_match.group(1))
+                # Extract days if present
+                day_match = _bs_re.search(r'(\d+)\s*days?', msg_lower)
+                if day_match:
+                    payload['days'] = int(day_match.group(1))
 
             # Determine action based on message
-            if 'recent' in msg_lower or 'latest' in msg_lower or 'this week' in msg_lower:
+            elif 'recent' in msg_lower or 'latest' in msg_lower or 'this week' in msg_lower:
                 payload['action'] = 'recent'
                 payload['days'] = 7
             elif 'stats' in msg_lower or 'statistics' in msg_lower or 'how much' in msg_lower:
@@ -2991,7 +3008,37 @@ Address the user by name occasionally."""
             elif intent == 'brainstorming':
                 action = tool_result.get('action', '')
 
-                if action == 'search':
+                if action == 'list':
+                    convos = tool_result.get('conversations', [])
+                    total = tool_result.get('total_count', 0)
+                    offset = tool_result.get('offset', 0)
+                    limit = tool_result.get('limit', 50)
+                    has_more = tool_result.get('has_more', False)
+
+                    if total == 0:
+                        return f"No brainstorm conversations found in that period, {user_name}."
+
+                    end = offset + len(convos)
+                    response = f"**Brainstorm Conversations** — showing {offset + 1}-{end} of {total}\n\n"
+                    response += "| # | Type | Topic | Msgs | Participants | Date |\n"
+                    response += "|---|------|-------|------|-------------|------|\n"
+                    for i, c in enumerate(convos, offset + 1):
+                        topic = c.get('topic', '').replace('Discussion:', '').replace('Panel:', '').strip()
+                        if len(topic) > 50:
+                            topic = topic[:47] + '...'
+                        ctype = c.get('type', '?')[0]  # D or P
+                        msgs = c.get('message_count', 0)
+                        parts = len(c.get('participants', []))
+                        date = c.get('started_at', '')[:10]
+                        response += f"| {i} | {ctype} | {topic} | {msgs} | {parts} | {date} |\n"
+
+                    if has_more:
+                        next_offset = offset + limit
+                        response += f"\n{total - end} more — say 'list brainstorm conversations offset {next_offset}' for next page."
+
+                    return response
+
+                elif action == 'search':
                     topic_matches = tool_result.get('topic_matches', [])
                     content_matches = tool_result.get('content_matches', [])
                     total = tool_result.get('total_found', 0)
