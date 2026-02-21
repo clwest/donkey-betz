@@ -183,6 +183,12 @@ CONTENT_TYPES = {
         'description': 'Email newsletter with subject, preview, and sections',
         'default_word_count': 800,
         'structure': ['subject_line', 'preview_text', 'greeting', 'sections', 'cta', 'sign_off']
+    },
+    'internal_document': {
+        'name': 'Internal Document',
+        'description': 'Internal planning or strategy document (initiative stages, technical specs)',
+        'default_word_count': 2000,
+        'structure': ['title', 'executive_summary', 'sections', 'key_findings', 'recommendations']
     }
 }
 
