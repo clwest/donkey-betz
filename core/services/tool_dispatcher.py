@@ -3604,6 +3604,21 @@ class ToolDispatcher:
                 ),
             }
 
+        elif action == 'start_action_item':
+            item_id = payload.get('item_id') or payload.get('id')
+            if not item_id:
+                raise ValueError("item_id is required for start_action_item action")
+            item = InitiativeActionItem.objects.filter(id=item_id).first()
+            if not item:
+                raise ValueError(f"Action item {item_id} not found")
+            item.start(by='human_pa')
+            return {
+                'action': 'start_action_item',
+                'id': str(item.id),
+                'title': item.title,
+                'status': item.status,
+            }
+
         elif action == 'complete_action_item':
             item_id = payload.get('item_id') or payload.get('id')
             notes = payload.get('notes', '')
@@ -3920,8 +3935,8 @@ class ToolDispatcher:
         else:
             raise ValueError(
                 f"Unknown action: {action}. Valid actions: list, stats, details, "
-                f"action_items, flow_metrics, update_status, advance, complete_action_item, "
-                f"assign_owner, bulk_auto_assign, bulk_cleanup"
+                f"action_items, flow_metrics, update_status, advance, start_action_item, "
+                f"complete_action_item, assign_owner, bulk_auto_assign, bulk_cleanup"
             )
 
     # =========================================================================
