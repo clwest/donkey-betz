@@ -119,6 +119,7 @@ class ToolDispatcher:
         # Universal tools
         self.register("universal_agent_tool", self._handle_universal_agent)
         self.register("workspace_tool", self._handle_workspace)
+        self.register("deliverables_tool", self._handle_deliverables)
 
         # Body system tools
         self.register("get_body_vitals", self._handle_body_vitals)
@@ -908,6 +909,124 @@ class ToolDispatcher:
                     'root_path': active[0].root_path,
                     'current_branch': active[0].current_branch or '',
                 } if active else None,
+            }
+
+        else:
+            raise ValueError(f"Unknown action: {action}")
+
+    def _handle_deliverables(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """Handle deliverables library tool."""
+        from core.models_deliverables import Deliverable
+        from django.db.models import Count
+
+        action = payload.get('action', 'list')
+        limit = min(payload.get('limit', 10), 50)
+
+        # Build base queryset scoped to user
+        base_qs = Deliverable.objects.all()
+        if user_id:
+            base_qs = base_qs.filter(user_id=user_id)
+
+        if action == 'list':
+            qs = base_qs
+            dtype = payload.get('type')
+            if dtype:
+                qs = qs.filter(deliverable_type=dtype)
+            if payload.get('saved'):
+                qs = qs.filter(is_saved=True)
+
+            items = list(
+                qs.order_by('-created_at')[:limit].values(
+                    'id', 'title', 'deliverable_type', 'category',
+                    'agent_name', 'quality_score', 'is_saved', 'created_at'
+                )
+            )
+            return {'action': 'list', 'count': len(items), 'items': items}
+
+        elif action == 'search':
+            query = payload.get('query', '')
+            if not query:
+                raise ValueError("query parameter required for search action")
+
+            items = list(
+                base_qs.filter(title__icontains=query)
+                .order_by('-created_at')[:limit]
+                .values(
+                    'id', 'title', 'deliverable_type', 'category',
+                    'agent_name', 'quality_score', 'is_saved', 'created_at'
+                )
+            )
+            return {'action': 'search', 'query': query, 'count': len(items), 'items': items}
+
+        elif action == 'detail':
+            did = payload.get('id')
+            if not did:
+                raise ValueError("id parameter required for detail action")
+
+            obj = base_qs.filter(id=did).first()
+            if not obj:
+                raise ValueError(f"Deliverable {did} not found")
+
+            return {
+                'action': 'detail',
+                'id': str(obj.id),
+                'title': obj.title,
+                'deliverable_type': obj.deliverable_type,
+                'category': obj.category,
+                'agent_name': obj.agent_name,
+                'content_format': obj.content_format,
+                'content_preview': (obj.content or '')[:500],
+                'quality_score': obj.quality_score,
+                'is_saved': obj.is_saved,
+                'is_template': obj.is_template,
+                'status': obj.status,
+                'tags': obj.tags or [],
+                'created_at': obj.created_at.isoformat() if obj.created_at else None,
+            }
+
+        elif action == 'save':
+            did = payload.get('id')
+            if not did:
+                raise ValueError("id parameter required for save action")
+            obj = base_qs.filter(id=did).first()
+            if not obj:
+                raise ValueError(f"Deliverable {did} not found")
+            obj.is_saved = True
+            obj.save(update_fields=['is_saved'])
+            return {'action': 'save', 'id': str(obj.id), 'title': obj.title, 'saved': True}
+
+        elif action == 'unsave':
+            did = payload.get('id')
+            if not did:
+                raise ValueError("id parameter required for unsave action")
+            obj = base_qs.filter(id=did).first()
+            if not obj:
+                raise ValueError(f"Deliverable {did} not found")
+            obj.is_saved = False
+            obj.save(update_fields=['is_saved'])
+            return {'action': 'unsave', 'id': str(obj.id), 'title': obj.title, 'saved': False}
+
+        elif action == 'stats':
+            total = base_qs.count()
+            saved = base_qs.filter(is_saved=True).count()
+            templates = base_qs.filter(is_template=True).count()
+            by_type = dict(
+                base_qs.values('deliverable_type')
+                .annotate(count=Count('id'))
+                .values_list('deliverable_type', 'count')
+            )
+            return {
+                'action': 'stats',
+                'total': total,
+                'saved': saved,
+                'templates': templates,
+                'by_type': by_type,
             }
 
         else:
