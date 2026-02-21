@@ -130,14 +130,20 @@ class Command(BaseCommand):
         # Orphaned tasks
         if orphaned:
             self.stdout.write(self.style.WARNING(f'Tasks in DB but NOT in celery.py ({len(orphaned)}):'))
-            for name, pt in orphaned[:20]:  # Show first 20
-                self.stdout.write(f'  ? {name}: {pt.task}')
+            disabled_count = 0
+            for i, (name, pt) in enumerate(orphaned):
+                if i < 20:  # Show first 20
+                    self.stdout.write(f'  ? {name}: {pt.task}')
                 if disable_missing and apply_changes:
                     pt.enabled = False
                     pt.save()
-                    self.stdout.write(self.style.SUCCESS(f'    ✅ Disabled'))
+                    disabled_count += 1
+                    if i < 20:
+                        self.stdout.write(self.style.SUCCESS(f'    ✅ Disabled'))
             if len(orphaned) > 20:
                 self.stdout.write(f'  ... and {len(orphaned) - 20} more')
+            if disable_missing and apply_changes and disabled_count:
+                self.stdout.write(self.style.SUCCESS(f'  Disabled {disabled_count} orphaned tasks'))
             if not disable_missing:
                 self.stdout.write(self.style.NOTICE('    (Use --disable-missing to disable these)'))
             self.stdout.write('')
