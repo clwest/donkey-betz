@@ -317,6 +317,15 @@ def check_stage_for_progression(initiative_id: str) -> Dict[str, Any]:
     except Initiative.DoesNotExist:
         return {'success': False, 'error': 'Initiative not found'}
 
+    # Session 1058: Only auto-progress ACTIVE initiatives
+    if initiative.status != 'ACTIVE':
+        return {
+            'success': False,
+            'error': f'Initiative status is {initiative.status}, not ACTIVE',
+            'initiative_id': str(initiative_id),
+            'status': initiative.status,
+        }
+
     current_stage_num = initiative.current_stage
 
     # Get current stage
@@ -675,9 +684,11 @@ def get_initiatives_ready_for_progression() -> list:
     from core.models_document_registry import Initiative, InitiativeStage
 
     # Find stages in DRAFT status with documents
+    # Session 1058: Only progress ACTIVE initiatives (excludes TRIAGE, ON_HOLD, etc.)
     draft_stages = InitiativeStage.objects.filter(
         status='DRAFT',
-        document__isnull=False
+        document__isnull=False,
+        initiative__status='ACTIVE',
     ).select_related('initiative')
 
     ready_initiatives = []

@@ -34122,36 +34122,8 @@ def process_initiative_auto_progression(self):
     except Exception as e:
         logger.warning(f"[AUTO-PROGRESSION] ACTIVE sweep failed: {e}")
 
-    # Session 1037: Promote TRIAGE initiatives that meet quality gate
-    try:
-        from core.models_document_registry import Initiative
-        from core.services.initiative_circuit_breaker import can_promote_to_active
-        from core.services.initiative_integration_service import PROGRAM_OWNER_MAP
-        promoted = 0
-        for init in Initiative.objects.filter(status='TRIAGE').order_by('-updated_at')[:50]:
-            # Backfill owner_agent if missing
-            if not init.owner_agent:
-                program = getattr(init, 'program', '') or ''
-                created_by = getattr(init, 'created_by', '') or ''
-                skip_names = {'system', 'pa', 'human', 'admin', ''}
-                if program and program != 'uncategorized' and program in PROGRAM_OWNER_MAP:
-                    init.owner_agent = PROGRAM_OWNER_MAP[program]
-                elif created_by.lower() not in skip_names and not created_by.startswith('HiveMind:'):
-                    init.owner_agent = created_by
-                else:
-                    init.owner_agent = 'ResearchAgent'
-                init.save(update_fields=['owner_agent'], skip_invariant_check=True)
-                logger.info(f"[AUTO-PROGRESSION] Backfilled owner_agent={init.owner_agent} for '{init.name[:50]}'")
-
-            if can_promote_to_active(init):
-                init.status = 'ACTIVE'
-                init.save(skip_invariant_check=True)
-                promoted += 1
-                logger.info(f"[AUTO-PROGRESSION] Promoted '{init.name[:50]}' from TRIAGE to ACTIVE")
-        if promoted:
-            logger.info(f"[AUTO-PROGRESSION] Promoted {promoted} TRIAGE initiatives to ACTIVE")
-    except Exception as e:
-        logger.warning(f"[AUTO-PROGRESSION] TRIAGE promotion sweep failed: {e}")
+    # Session 1058: Removed TRIAGE→ACTIVE auto-promotion sweep.
+    # TRIAGE initiatives now require human promotion via initiative_tool promote action.
 
     ready_initiatives = get_initiatives_ready_for_progression()
     logger.info(f"📊 [AUTO-PROGRESSION] Found {len(ready_initiatives)} initiatives ready")
