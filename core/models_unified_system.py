@@ -1014,6 +1014,8 @@ class Opportunity(models.Model):
         ('software', 'Software/Tool'),
         ('consulting', 'Consulting'),
         ('affiliate', 'Affiliate Marketing'),
+        ('sports_betting', 'Sports Betting'),
+        ('trading', 'Trading/Investment'),
     ]
     category = models.CharField(
         max_length=30,
