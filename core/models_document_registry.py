@@ -1833,6 +1833,15 @@ class InitiativeActionItem(models.Model):
         related_name='extracted_action_items',
         help_text='The conversation that generated this action item'
     )
+    # Session 1058: Link to the pipeline stage whose document generated this item
+    source_stage = models.ForeignKey(
+        'InitiativeStage',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='action_items',
+        help_text='The pipeline stage whose document generated this action item'
+    )
     source_text = models.TextField(
         blank=True,
         help_text='Original text from conclusion that was parsed'

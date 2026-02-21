@@ -3404,11 +3404,11 @@ class ToolDispatcher:
             if not initiative:
                 raise ValueError(f"Initiative not found")
 
-            # Get action items
+            # Get action items (Session 1058: include source_stage)
             action_items = list(
                 InitiativeActionItem.objects.filter(initiative=initiative)
                 .order_by('-priority', 'status', '-created_at')[:10]
-                .values('id', 'title', 'status', 'priority', 'due_date', 'assigned_agent')
+                .values('id', 'title', 'status', 'priority', 'due_date', 'assigned_agent', 'source_stage__stage')
             )
 
             # Session 987: Serialize UUIDs and datetimes
@@ -3474,7 +3474,7 @@ class ToolDispatcher:
             status_filter = payload.get('item_status', 'pending')
             priority_filter = payload.get('priority')
 
-            qs = InitiativeActionItem.objects.select_related('initiative')
+            qs = InitiativeActionItem.objects.select_related('initiative', 'source_stage')
 
             if status_filter and status_filter != 'all':
                 qs = qs.filter(status=status_filter)
@@ -3493,6 +3493,7 @@ class ToolDispatcher:
                     'assigned_agent': item.assigned_agent,
                     'initiative_id': str(item.initiative_id),  # type: ignore[attr-defined]
                     'initiative_name': item.initiative.name if item.initiative else 'Unknown',
+                    'source_stage': item.source_stage.stage if item.source_stage else None,
                 })
 
             return {
@@ -3667,6 +3668,46 @@ class ToolDispatcher:
                 'old_owner': old_owner,
                 'new_owner': new_owner,
                 'success': True,
+            }
+
+        elif action == 'promote':
+            # Session 1058: Human-in-the-loop promotion from TRIAGE/ON_HOLD → ACTIVE
+            initiative_id = payload.get('id') or payload.get('initiative_id')
+            if not initiative_id:
+                raise ValueError("id is required for promote action")
+
+            # Reuse human_id / seq_id lookup from details action
+            id_str = str(initiative_id).strip()
+            if id_str.upper().startswith('INIT-'):
+                initiative = Initiative.objects.filter(human_id__iexact=id_str).first()
+            elif id_str.isdigit():
+                initiative = Initiative.objects.filter(seq_id=int(id_str)).first()
+            else:
+                initiative = Initiative.objects.filter(id=initiative_id).first()
+
+            if not initiative:
+                raise ValueError(f"Initiative {initiative_id} not found")
+
+            promotable = {'TRIAGE', 'ON_HOLD'}
+            if initiative.status not in promotable:
+                raise ValueError(
+                    f"Cannot promote: status is {initiative.status}. "
+                    f"Only {', '.join(sorted(promotable))} initiatives can be promoted to ACTIVE."
+                )
+
+            old_status = initiative.status
+            initiative.status = 'ACTIVE'
+            initiative.save(update_fields=['status'])
+
+            return {
+                'action': 'promote',
+                'id': str(initiative.id),
+                'human_id': initiative.human_id or None,
+                'name': initiative.name,
+                'old_status': old_status,
+                'new_status': 'ACTIVE',
+                'success': True,
+                'message': f"Promoted '{initiative.name}' from {old_status} to ACTIVE",
             }
 
         elif action == 'flow_metrics':
