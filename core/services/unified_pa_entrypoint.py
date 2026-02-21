@@ -555,6 +555,11 @@ class UnifiedPAEntrypoint:
             # Session 997: Validate response for mythology/hallucinations
             content = self._validate_mythology(content, message, trace_id)
 
+            # Session 1060: Strip leaked internal reasoning from FC responses
+            # (e.g. "to=functions.content_review_tool", raw JSON tool call syntax)
+            if getattr(settings, 'PA_USE_FUNCTION_CALLING', False):
+                content = self._sanitize_fc_response(content, trace_id)
+
             # 4. Generate audio if requested
             audio_url = None
             if generate_audio and content:
@@ -782,6 +787,19 @@ class UnifiedPAEntrypoint:
                 )
                 tool_runs.append(tool_result.to_dict())
 
+                # Session 1060: Record tool call in ToolCallRecord for observability.
+                # Previously PA tool calls had zero records — no way to debug failures.
+                try:
+                    self._record_tool_call(
+                        trace_id=trace_id,
+                        tool_name=actual_tool_name,
+                        arguments=arguments,
+                        tool_result=tool_result,
+                        task_summary=message[:200],
+                    )
+                except Exception as rec_err:
+                    logger.debug(f"[{trace_id}] ToolCallRecord save failed (non-fatal): {rec_err}")
+
                 # Capture GPT function call metadata for persistence/multi-turn
                 fc_metadata.append({
                     'name': tool_name,
@@ -812,8 +830,10 @@ class UnifiedPAEntrypoint:
     def _is_degenerate_content(text: str) -> bool:
         """
         Session 1043: Detect degenerate LLM output (stuck loops).
+        Session 1060: Fixed false positives — use word-boundary matching,
+        narrower filler list, and log which pattern triggered.
 
-        Catches patterns like "Ok.Ok.Ok.Ok..." or "Let's call.Ok.Ok.Stop.Ok..."
+        Catches patterns like "Ok.Ok.Ok.Ok..." or "Stop.Stop.Stop."
         where the model is generating filler instead of real content.
         """
         if not text or len(text) < 30:
@@ -834,30 +854,127 @@ class UnifiedPAEntrypoint:
                     if compressed[i:i+chunk_len] == chunk:
                         repeat_count += 1
                 if repeat_count >= 6:
+                    logger.debug(f"[degenerate] Pattern 1 hit: chunk={chunk!r} repeated {repeat_count}x")
                     return True
 
-        # Pattern 2: High ratio of "Ok" / "Stop" / "Done" / filler words
-        lower = text.lower()
-        filler_words = ['ok', 'stop', 'done', 'proceed', 'let\'s', 'call', 'tool', 'now', 'send', 'alright', 'enough', 'sorry']
-        filler_count = sum(lower.count(w) for w in filler_words)
-        word_count = len(text.split())
-        if word_count > 10 and filler_count / max(word_count, 1) > 0.5:
-            return True
+        # Pattern 2: High ratio of filler words (word-boundary matching).
+        # Session 1060: Use split-based matching instead of str.count() to avoid
+        # substring false positives ('ok' in 'token', 'now' in 'know', etc.).
+        # Narrowed list to genuinely degenerate words — removed 'call', 'tool',
+        # 'now', 'proceed', 'send', "let's" which appear in normal tool-planning text.
+        _FILLER_WORDS = {'ok', 'stop', 'done', 'alright', 'enough', 'sorry', 'ok.', 'stop.', 'done.'}
+        words = text.lower().split()
+        word_count = len(words)
+        if word_count > 10:
+            filler_count = sum(1 for w in words if w.strip('.,!?:;') in _FILLER_WORDS)
+            if filler_count / word_count > 0.5:
+                logger.debug(f"[degenerate] Pattern 2 hit: {filler_count}/{word_count} filler words")
+                return True
 
         # Pattern 3: Very long text with almost no unique words (degenerate repetition)
-        words = text.lower().split()
         if len(words) > 20:
             unique_ratio = len(set(words)) / len(words)
             if unique_ratio < 0.15:
+                logger.debug(f"[degenerate] Pattern 3 hit: unique_ratio={unique_ratio:.2f}")
                 return True
 
         # Session 1056: Pattern 4 — high "Ok." density anywhere in text.
         # Model stuck in acknowledgment/attempt loop: "Ok.Let's call.Ok.Ok.Ok."
         # Normal text never has "ok." 8+ times.
-        if lower.count('ok.') >= 8:
+        lower = text.lower()
+        ok_count = lower.count('ok.')
+        if ok_count >= 8:
+            logger.debug(f"[degenerate] Pattern 4 hit: 'ok.' count={ok_count}")
             return True
 
         return False
+
+    def _record_tool_call(
+        self,
+        trace_id: str,
+        tool_name: str,
+        arguments: dict,
+        tool_result,  # ToolResult dataclass
+        task_summary: str = '',
+    ) -> None:
+        """
+        Session 1060: Persist PA tool calls to ToolCallRecord for observability.
+
+        Previously PA had zero records — impossible to debug what tools were
+        called, what succeeded/failed. This runs synchronously but is fast
+        (single INSERT).
+        """
+        import hashlib
+        from core.models_tool_calls import ToolCallRecord
+
+        result_str = json.dumps(tool_result.result, default=str) if tool_result.result else ''
+        result_size = len(result_str.encode('utf-8', errors='replace'))
+
+        ToolCallRecord.objects.create(
+            trace_id=None,  # PA trace_id is "pa-N-hex" not UUID; store in task_summary
+            agent_name='PersonalAssistant',
+            tool_name=tool_name,
+            parameters=arguments,
+            result_summary=result_str[:4096],
+            result_hash=f"sha256:{hashlib.sha256(result_str.encode()).hexdigest()}" if result_str else '',
+            full_result=result_str if result_size <= 65536 else '',
+            result_size_bytes=result_size,
+            success=tool_result.ok,
+            error_message=tool_result.error_message or '',
+            error_type=tool_result.error_code or '',
+            latency_ms=tool_result.latency_ms,
+            task_summary=f"[{trace_id}] {task_summary}"[:500],
+        )
+
+    @staticmethod
+    def _sanitize_fc_response(content: str, trace_id: str) -> str:
+        """
+        Session 1060: Strip leaked internal reasoning from FC responses.
+
+        GPT-5.2 sometimes includes function-calling syntax or raw JSON tool
+        call artifacts in its text response (e.g. "to=functions.tool_name",
+        raw JSON blobs from tool results). These should never reach the user.
+        """
+        if not content:
+            return content
+
+        original_len = len(content)
+
+        # Strip "to=functions.xxx" patterns (leaked tool routing syntax)
+        content = re.sub(r'\bto=functions\.\w+', '', content)
+
+        # Strip lines that are pure JSON objects (tool result leaks)
+        # but preserve JSON inside markdown code blocks
+        lines = content.split('\n')
+        cleaned_lines = []
+        in_code_block = False
+        for line in lines:
+            if line.strip().startswith('```'):
+                in_code_block = not in_code_block
+            if in_code_block:
+                cleaned_lines.append(line)
+                continue
+            stripped = line.strip()
+            # Skip lines that are pure JSON objects (not in code blocks)
+            if stripped.startswith('{') and stripped.endswith('}') and len(stripped) > 100:
+                try:
+                    json.loads(stripped)
+                    continue  # Skip pure JSON lines
+                except (json.JSONDecodeError, ValueError):
+                    pass
+            cleaned_lines.append(line)
+        content = '\n'.join(cleaned_lines)
+
+        # Clean up multiple blank lines left by removals
+        content = re.sub(r'\n{3,}', '\n\n', content).strip()
+
+        if len(content) < original_len:
+            logger.info(
+                f"[{trace_id}] Sanitized FC response: removed "
+                f"{original_len - len(content)} chars of leaked internal content"
+            )
+
+        return content
 
     def _build_messages_array(self, message: str, context: Dict[str, Any]) -> List[Dict]:
         """
