@@ -198,9 +198,15 @@ PA_TOOL_SCHEMAS = [
                 "action": {
                     "type": "string",
                     "enum": ["overview", "briefs", "alerts", "predictions", "sec_filings"],
-                    "description": "Stock intelligence action",
+                    "description": (
+                        "overview: dashboard summary (latest brief, alert counts, prediction accuracy). "
+                        "briefs: recent market intelligence briefs. "
+                        "alerts: stock alerts (filterable by ticker). "
+                        "predictions: prediction outcomes with accuracy stats (filterable by ticker). "
+                        "sec_filings: SEC Edgar filings from spider."
+                    ),
                 },
-                "ticker": {"type": "string", "description": "Stock ticker symbol"},
+                "ticker": {"type": "string", "description": "Stock ticker symbol to filter alerts/predictions (e.g. 'AAPL')"},
                 "limit": {"type": "integer", "description": "Max items (default 10)"},
             },
             "required": ["action"],
@@ -243,8 +249,8 @@ PA_TOOL_SCHEMAS = [
         "type": "function",
         "name": "sports_betting_tool",
         "description": (
-            "Access sports betting intelligence: predictions, model accuracy, "
-            "upcoming games, and betting analytics. Use when the user asks about "
+            "Access sports betting intelligence: predictions, arbitrage, odds, "
+            "sharp action, and wager tracking. Use when the user asks about "
             "sports, betting, predictions, games, odds, or ML model performance."
         ),
         "parameters": {
@@ -252,8 +258,17 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["overview", "predictions", "upcoming", "accuracy", "history"],
-                    "description": "Sports betting action",
+                    "enum": ["overview", "predictions", "arbs", "sharp_action", "line_movements", "wagers", "live_odds", "brief"],
+                    "description": (
+                        "overview: dashboard summary (wager counts, arb opps, recent odds). "
+                        "predictions: ML game predictions with confidence. "
+                        "arbs: active arbitrage opportunities. "
+                        "sharp_action: sharp betting signals. "
+                        "line_movements: detected line movements. "
+                        "wagers: user's placed wagers and results. "
+                        "live_odds: current odds from spider network. "
+                        "brief: full betting brief from coordinator."
+                    ),
                 },
                 "sport": {"type": "string", "description": "Sport type filter (nba, nfl, mlb, nhl)"},
                 "limit": {"type": "integer", "description": "Max items (default 10)"},
@@ -379,28 +394,9 @@ PA_TOOL_SCHEMAS = [
     },
 
     # ── Predictions ─────────────────────────────────────────────────────────
-    {
-        "type": "function",
-        "name": "predictions_tool",
-        "description": (
-            "Access ML predictions: list recent predictions, accuracy stats, "
-            "model performance. Use when the user asks about predictions, "
-            "forecasts, or prediction accuracy."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string",
-                    "enum": ["list", "stats", "details"],
-                    "description": "Predictions action",
-                },
-                "id": {"type": "string", "description": "UUID of prediction"},
-                "limit": {"type": "integer", "description": "Max items (default 10)"},
-            },
-            "required": ["action"],
-        },
-    },
+    # REMOVED (Session 1062): predictions_tool schema removed — AgentPrediction
+    # model deprecated (Session 284). Sports predictions → sports_betting_tool,
+    # stock predictions → stock_intelligence_tool.
 
     # ── Gates ───────────────────────────────────────────────────────────────
     {
@@ -876,14 +872,15 @@ PA_TOOL_SCHEMAS = [
         "type": "function",
         "name": "universal_agent_tool",
         "description": (
-            "Route a task to the best-fit agent automatically. Use when the "
-            "user wants a specific agent task done but you're not sure which "
-            "specialized tool to use."
+            "Route a task to a specific agent or auto-route to the best-fit agent. "
+            "Use when the user wants a specific agent to run, or when no other "
+            "specialized tool fits the request."
         ),
         "parameters": {
             "type": "object",
             "properties": {
-                "task": {"type": "string", "description": "Task description to route to best agent"},
+                "task": {"type": "string", "description": "Task description for the agent to execute"},
+                "agent_name": {"type": "string", "description": "Specific agent name (e.g. 'ContentStrategyAgent'). If omitted, auto-routes to best-fit agent."},
                 "context": {"type": "object", "description": "Additional context for the agent"},
             },
             "required": ["task"],
@@ -1036,7 +1033,7 @@ TOOL_ENRICHMENT_MAP = {
     'pipeline_orchestrator_tool': ['intelligence_enricher'],
     'revenue_tracker_tool': ['intelligence_enricher', 'proactive_intelligence'],
     'ml_analysis': ['spider_trends', 'domain_context'],
-    'predictions_tool': ['spider_trends', 'domain_context'],
+    # predictions_tool removed (Session 1062) — deprecated AgentPrediction model
     'gates_tool': ['intelligence_enricher'],
     'pilots_tool': ['intelligence_enricher'],
     'human_decisions_tool': ['intelligence_enricher', 'strategic_memory'],
@@ -1081,7 +1078,7 @@ TOOL_TO_INTENT_MAP = {
     'pipeline_orchestrator_tool': 'initiatives',
     'revenue_tracker_tool': 'opportunities',
     'ml_analysis': 'predictions',
-    'predictions_tool': 'predictions',
+    # predictions_tool removed (Session 1062)
     'gates_tool': 'gates',
     'pilots_tool': 'pilots',
     'human_decisions_tool': 'boardroom',
