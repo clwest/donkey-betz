@@ -816,15 +816,34 @@ class ToolDispatcher:
         user_id: Optional[int],
         trace_id: str
     ) -> Dict[str, Any]:
-        """Handle universal agent tool - invoke any agent by name."""
+        """
+        Handle universal agent tool - invoke agent by name or auto-route.
+
+        Session 1062: Added auto-routing via AgentRouter when agent_name
+        not provided. Previously required agent_name which the schema
+        didn't expose, causing "agent_name is required" errors.
+        """
         from core.agents.registry import get_agent_registry
 
-        agent_name = payload.get('agent_name')
+        agent_name = payload.get('agent_name', '')
         task = payload.get('task', '')
         context = payload.get('context', {})
 
+        if not task:
+            raise ValueError("task is required")
+
+        # Session 1062: Auto-route to best agent when no name given
         if not agent_name:
-            raise ValueError("agent_name is required")
+            from core.agent_router import AgentRouter
+            router = AgentRouter()
+            # Try to find agent name mentioned in the task text
+            for name in router.AGENT_MAP:
+                if name.lower() in task.lower():
+                    agent_name = name
+                    break
+            # Fallback: use ResearchAgent for general tasks
+            if not agent_name:
+                agent_name = 'ResearchAgent'
 
         registry = get_agent_registry()
         agent_metadata = registry.get_agent(agent_name)
@@ -838,8 +857,10 @@ class ToolDispatcher:
 
         return {
             'agent': agent_name,
+            'task': task[:200],
             'output': result if result else 'Agent execution completed',
             'success': True if result else False,
+            'auto_routed': not payload.get('agent_name'),
         }
 
     def _handle_workspace(
@@ -5216,6 +5237,10 @@ class ToolDispatcher:
 
         elif action == 'alerts':
             qs = StockMarketAlert.objects.all()
+            # Session 1062: Filter by ticker if provided
+            ticker = payload.get('ticker', '')
+            if ticker:
+                qs = qs.filter(symbol__iexact=ticker)
             total = qs.count()
             alerts = qs[:limit]
             items = []
@@ -5237,6 +5262,10 @@ class ToolDispatcher:
 
         elif action == 'predictions':
             qs = PredictionOutcome.objects.all()
+            # Session 1062: Filter by ticker if provided
+            ticker = payload.get('ticker', '')
+            if ticker:
+                qs = qs.filter(ticker__iexact=ticker)
             total = qs.count()
             predictions = qs[:limit]
             items = []
