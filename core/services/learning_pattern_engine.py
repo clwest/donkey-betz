@@ -789,6 +789,171 @@ class LearningPatternEngine:
             e_total = (patterns_created + patterns_updated) - a_total - b_total - c_total - d_total
             logger.info(f"  Miner E (agent_tool_effectiveness): {e_total} patterns")
 
+            # === Miner F: Collaboration Effectiveness ===
+            # Which agents perform better in multi-agent HiveMind sessions?
+            f_total = patterns_created + patterns_updated
+            try:
+                from core.models_unified_system import HiveMindContribution
+
+                # Find completed sessions with 2+ distinct contributors
+                collab_session_ids = (
+                    HiveMindContribution.objects.filter(
+                        session__status='completed',
+                        session__created_at__gte=since,
+                        status='completed',
+                    )
+                    .values('session_id')
+                    .annotate(n_agents=Count('agent_id', distinct=True))
+                    .filter(n_agents__gte=2)
+                    .values_list('session_id', flat=True)
+                )
+                collab_ids = list(collab_session_ids)
+
+                if collab_ids:
+                    # Per-agent stats in collaborative sessions
+                    collab_stats = (
+                        HiveMindContribution.objects.filter(
+                            session_id__in=collab_ids,
+                            status='completed',
+                        )
+                        .values('agent__name')
+                        .annotate(
+                            avg_conf=Avg('confidence_score'),
+                            count=Count('id'),
+                            sessions=Count('session_id', distinct=True),
+                        )
+                        .filter(count__gte=3)
+                    )
+
+                    # Solo sessions: exactly 1 distinct contributor
+                    solo_session_ids = (
+                        HiveMindContribution.objects.filter(
+                            session__status='completed',
+                            session__created_at__gte=since,
+                            status='completed',
+                        )
+                        .values('session_id')
+                        .annotate(n_agents=Count('agent_id', distinct=True))
+                        .filter(n_agents=1)
+                        .values_list('session_id', flat=True)
+                    )
+                    solo_ids = list(solo_session_ids)
+
+                    solo_avg_map = {}
+                    if solo_ids:
+                        solo_stats = (
+                            HiveMindContribution.objects.filter(
+                                session_id__in=solo_ids,
+                                status='completed',
+                            )
+                            .values('agent__name')
+                            .annotate(avg_conf=Avg('confidence_score'))
+                        )
+                        solo_avg_map = {r['agent__name']: r['avg_conf'] for r in solo_stats}
+
+                    for row in collab_stats:
+                        agent_name = row['agent__name']
+                        avg_conf = round(row['avg_conf'], 3)
+                        solo_avg = solo_avg_map.get(agent_name)
+                        delta = round(avg_conf - solo_avg, 3) if solo_avg is not None else None
+                        confidence = min(0.85, 0.3 + (row['count'] / 50))
+
+                        delta_str = f", {delta:+.3f} vs solo" if delta is not None else ""
+                        pattern, created = self.LearningPattern.objects.update_or_create(
+                            pattern_type='collaboration_effectiveness',
+                            pattern_data__agent_name=agent_name,
+                            defaults={
+                                'description': (
+                                    f"{agent_name} averages {avg_conf:.2f} confidence in "
+                                    f"multi-agent sessions ({row['count']} contributions"
+                                    f"{delta_str})"
+                                ),
+                                'confidence': round(confidence, 3),
+                                'pattern_data': {
+                                    'agent_name': agent_name,
+                                    'avg_confidence': avg_conf,
+                                    'collab_count': row['count'],
+                                    'sessions_participated': row['sessions'],
+                                    'solo_avg_confidence': round(solo_avg, 3) if solo_avg is not None else None,
+                                    'confidence_delta': delta,
+                                    'days_analyzed': days_back,
+                                    'mined_at': timezone.now().isoformat(),
+                                },
+                                'applies_to_agents': [agent_name],
+                                'is_active': True,
+                            }
+                        )
+                        if created:
+                            patterns_created += 1
+                        else:
+                            patterns_updated += 1
+
+            except Exception as e:
+                logger.warning(f"  Miner F (collaboration_effectiveness) failed: {e}")
+
+            f_total = (patterns_created + patterns_updated) - f_total
+            logger.info(f"  Miner F (collaboration_effectiveness): {f_total} patterns")
+
+            # === Miner G: Spider Data Value ===
+            # Which spider data types are most valuable (volume, relevance, actionability)?
+            g_total = patterns_created + patterns_updated
+            try:
+                from core.models_unified_system import SpiderData
+
+                spider_stats = (
+                    SpiderData.objects.filter(created_at__gte=since)
+                    .values('data_type')
+                    .annotate(
+                        total=Count('id'),
+                        avg_relevance=Avg('relevance_score'),
+                        actionable_count=Count('id', filter=Q(is_actionable=True)),
+                        processed_count=Count('id', filter=Q(is_processed=True)),
+                    )
+                    .filter(total__gte=10)
+                    .order_by('-total')
+                )
+
+                for row in spider_stats:
+                    data_type = row['data_type']
+                    avg_rel = round(row['avg_relevance'] or 0, 1)
+                    actionable_pct = round(row['actionable_count'] / row['total'] * 100, 1)
+                    processed_pct = round(row['processed_count'] / row['total'] * 100, 1)
+                    confidence = min(0.9, 0.4 + (row['total'] / 500))
+
+                    pattern, created = self.LearningPattern.objects.update_or_create(
+                        pattern_type='spider_data_value',
+                        pattern_data__data_type=data_type,
+                        defaults={
+                            'description': (
+                                f"Spider data type '{data_type}' has avg relevance "
+                                f"{avg_rel}/100 ({row['total']} items, {actionable_pct}% actionable)"
+                            ),
+                            'confidence': round(confidence, 3),
+                            'pattern_data': {
+                                'data_type': data_type,
+                                'total_items': row['total'],
+                                'avg_relevance': avg_rel,
+                                'actionable_count': row['actionable_count'],
+                                'actionable_pct': actionable_pct,
+                                'processed_pct': processed_pct,
+                                'days_analyzed': days_back,
+                                'mined_at': timezone.now().isoformat(),
+                            },
+                            'applies_to_agents': [],
+                            'is_active': True,
+                        }
+                    )
+                    if created:
+                        patterns_created += 1
+                    else:
+                        patterns_updated += 1
+
+            except Exception as e:
+                logger.warning(f"  Miner G (spider_data_value) failed: {e}")
+
+            g_total = (patterns_created + patterns_updated) - g_total
+            logger.info(f"  Miner G (spider_data_value): {g_total} patterns")
+
             # === Deactivate stale patterns ===
             stale_cutoff = timezone.now() - timedelta(days=60)
             stale_patterns = self.LearningPattern.objects.filter(
@@ -797,6 +962,7 @@ class LearningPatternEngine:
                 pattern_type__in=[
                     'agent_success_rate', 'content_quality', 'tool_reliability',
                     'prediction_accuracy', 'agent_tool_effectiveness',
+                    'collaboration_effectiveness', 'spider_data_value',
                 ]
             )
             stale_count = stale_patterns.update(is_active=False)
