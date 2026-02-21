@@ -77,6 +77,12 @@ class SpiderDecisionBridge:
 
             logger.info(f"Found {len(raw_opportunities)} raw opportunities")
 
+            # Cap per-scan to prevent worker starvation (10 items x ~90s = ~15min)
+            _MAX_PER_SCAN = 10
+            if len(raw_opportunities) > _MAX_PER_SCAN:
+                logger.info(f"Capping {len(raw_opportunities)} opportunities to {_MAX_PER_SCAN}")
+                raw_opportunities = raw_opportunities[:_MAX_PER_SCAN]
+
             # Convert to decision opportunities
             decision_opportunities = []
 
