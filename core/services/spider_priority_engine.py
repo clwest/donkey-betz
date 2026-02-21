@@ -86,6 +86,43 @@ class SpiderPriorityEngine:
     def __init__(self):
         self.logger = logging.getLogger(f"{__name__}.SpiderPriorityEngine")
 
+    def _get_data_value_boosts(self) -> Dict[str, float]:
+        """
+        Query spider_data_value LearningPatterns and return a
+        {data_type: boost_multiplier} dict.
+
+        Boost formula: 1.0 + min(actionable_pct / 100, 1.0) * 0.5
+        scaled by avg_relevance / 100.  Types with 0% actionable or
+        low relevance return 1.0 (neutral).
+        """
+        try:
+            from core.models_unified_system import LearningPattern
+
+            patterns = LearningPattern.objects.filter(
+                pattern_type='spider_data_value',
+                is_active=True,
+            ).values_list('pattern_data', flat=True)
+
+            boosts: Dict[str, float] = {}
+            for data in patterns:
+                data_type = data.get('data_type', '')
+                actionable_pct = data.get('actionable_pct', 0) or 0
+                avg_relevance = data.get('avg_relevance', 0) or 0
+
+                if not data_type or (actionable_pct <= 0 and avg_relevance <= 0):
+                    continue
+
+                action_factor = min(actionable_pct / 100, 1.0) * 0.5
+                relevance_scale = min(avg_relevance / 100, 1.0)
+                boost = 1.0 + action_factor * relevance_scale
+                if boost > 1.0:
+                    boosts[data_type] = round(boost, 4)
+
+            return boosts
+        except Exception as e:
+            self.logger.debug(f"Could not load data-value boosts: {e}")
+            return {}
+
     def calculate_priorities(self) -> Dict[str, float]:
         """
         Calculate priority weights for all spider categories based on active projects.
@@ -134,6 +171,12 @@ class SpiderPriorityEngine:
         for cat in all_categories:
             if cat.slug not in category_weights:
                 category_weights[cat.slug] = self.DEFAULT_WEIGHT
+
+        # Apply data-value boosts from spider_data_value learning patterns
+        data_value_boosts = self._get_data_value_boosts()
+        for category_slug in category_weights:
+            if category_slug in data_value_boosts:
+                category_weights[category_slug] *= data_value_boosts[category_slug]
 
         self.logger.info(f"Calculated priorities for {len(category_weights)} categories")
         return category_weights
