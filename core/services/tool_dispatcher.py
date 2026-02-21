@@ -860,11 +860,34 @@ class ToolDispatcher:
 
         if action == 'list':
             workspaces = manager.list_workspaces()
-            return {'action': 'list', 'workspaces': workspaces}
+            serialized = []
+            for ws in workspaces:
+                serialized.append({
+                    'id': str(ws.id),
+                    'name': ws.name,
+                    'description': ws.description or '',
+                    'workspace_type': ws.workspace_type,
+                    'root_path': ws.root_path,
+                    'is_active': ws.is_active,
+                    'current_branch': ws.current_branch or '',
+                    'total_operations': ws.total_operations,
+                    'last_operation_at': ws.last_operation_at.isoformat() if ws.last_operation_at else None,
+                })
+            return {'action': 'list', 'workspaces': serialized, 'count': len(serialized)}
 
         elif action == 'status':
-            status = manager.get_status()
-            return {'action': 'status', 'status': status}
+            workspaces = manager.list_workspaces()
+            active = [ws for ws in workspaces if ws.is_active]
+            return {
+                'action': 'status',
+                'total_workspaces': len(workspaces),
+                'active_workspace': {
+                    'id': str(active[0].id),
+                    'name': active[0].name,
+                    'root_path': active[0].root_path,
+                    'current_branch': active[0].current_branch or '',
+                } if active else None,
+            }
 
         else:
             raise ValueError(f"Unknown action: {action}")
