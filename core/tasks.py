@@ -1325,7 +1325,7 @@ def run_autonomy_cycle(user_id: int = None):
 # ==================== SESSION 811: CONVERSATION ACTION EXECUTION ====================
 
 
-@shared_task(bind=True, max_retries=2, default_retry_delay=60, soft_time_limit=2700, time_limit=3000)
+@shared_task(bind=True, max_retries=2, default_retry_delay=60, soft_time_limit=3600, time_limit=3900)
 def execute_agent_task(
     self,
     agent_name: str,
@@ -1335,6 +1335,9 @@ def execute_agent_task(
     """
     Session 811: Execute a task via a specific agent from conversation next_steps.
     Session 1017: Added soft_time_limit=2700 (45 min) to kill hung agents.
+    Session 1058: Raised to 3600/3900 (60/65 min) — WorkflowAgent/TrendAnalysisAgent hit 43-44 min.
+    NOTE: soft_time_limit does NOT enforce on --pool=threads (Railway) — SIGUSR1
+    only works with prefork. The WorkflowAgent wall-clock guard is the real timeout.
 
     This task is queued by ConversationActionDispatcher when a conversation
     produces next_steps that should be executed.
@@ -1497,6 +1500,12 @@ def execute_agent_task(
                 successful_executions=F('successful_executions') + (1 if result.success else 0)
             )
 
+        if execution_time_ms > 2_400_000:  # 40 min
+            logger.warning(
+                f"[execute_agent_task] SLOW AGENT: {agent_name} took "
+                f"{execution_time_ms // 60_000}min — approaching timeout"
+            )
+
         logger.info(
             f"[execute_agent_task] Completed: {agent_name} "
             f"(success={result.success}, time={execution_time_ms}ms)"
@@ -1517,7 +1526,7 @@ def execute_agent_task(
         logger.error(f"[execute_agent_task] KILLED by soft_time_limit: {agent_name} after {execution_time_ms}ms")
         if execution_record:
             execution_record.status = 'failed'
-            execution_record.error_message = 'Celery soft_time_limit exceeded (45 min)'
+            execution_record.error_message = 'Celery soft_time_limit exceeded (60 min)'
             execution_record.execution_time_ms = execution_time_ms
             execution_record.completed_at = timezone.now()
             execution_record.save()
@@ -1525,7 +1534,7 @@ def execute_agent_task(
             'success': False,
             'agent_name': agent_name,
             'task': task,
-            'error': 'Celery soft_time_limit exceeded (45 min)',
+            'error': 'Celery soft_time_limit exceeded (60 min)',
             'execution_time_ms': execution_time_ms,
             'conversation_id': conversation_id,
         }
@@ -1559,7 +1568,7 @@ def execute_agent_task(
 # ==================== SESSION 884: INITIATIVE STAGE EXECUTION ====================
 
 
-@shared_task(bind=True, max_retries=2, default_retry_delay=60, soft_time_limit=2700, time_limit=3000)
+@shared_task(bind=True, max_retries=2, default_retry_delay=60, soft_time_limit=3600, time_limit=3900)
 def execute_initiative_stage_task(
     self,
     initiative_id: str,
@@ -1571,6 +1580,9 @@ def execute_initiative_stage_task(
     """
     Session 884: Execute a task linked to an Initiative stage.
     Session 1017: Added soft_time_limit=2700 (45 min) to kill hung agents.
+    Session 1058: Raised to 3600/3900 (60/65 min). NOTE: soft_time_limit does NOT
+    enforce on --pool=threads (Railway) — SIGUSR1 only works with prefork. The
+    WorkflowAgent wall-clock guard is the real timeout protection.
 
     This task is part of the Conversation-to-Initiative pipeline.
     When complete, it updates the stage and potentially advances the Initiative.
@@ -1631,6 +1643,12 @@ def execute_initiative_stage_task(
             agent_name=agent_name,
             task_result=task_result,
         )
+
+        if execution_time_ms > 2_400_000:  # 40 min
+            logger.warning(
+                f"[execute_initiative_stage_task] SLOW AGENT: {agent_name} took "
+                f"{execution_time_ms // 60_000}min — approaching timeout"
+            )
 
         logger.info(
             f"[execute_initiative_stage_task] Completed: {agent_name} Stage {stage_num} "
@@ -1696,7 +1714,7 @@ def execute_initiative_stage_task(
                 initiative_id=initiative_id,
                 stage_num=stage_num,
                 agent_name=agent_name,
-                task_result={'success': False, 'error': 'Celery soft_time_limit exceeded (45 min)'},
+                task_result={'success': False, 'error': 'Celery soft_time_limit exceeded (60 min)'},
             )
         except Exception:
             pass
@@ -1706,7 +1724,7 @@ def execute_initiative_stage_task(
             'initiative_id': initiative_id,
             'stage_num': stage_num,
             'task': task,
-            'error': 'Celery soft_time_limit exceeded (45 min)',
+            'error': 'Celery soft_time_limit exceeded (60 min)',
             'execution_time_ms': execution_time_ms,
         }
 
@@ -30006,14 +30024,14 @@ Trigger: {trigger}
                 status__in=['running', 'in_progress'],
             ).update(
                 status='failed',
-                error_message=f'Celery soft_time_limit exceeded (45 min)',
+                error_message=f'Celery soft_time_limit exceeded (60 min)',
                 completed_at=tz.now(),
             )
             if stuck:
                 logger.info(f"🤖 [SKIN LAYER] Marked {stuck} execution(s) as failed for {agent_name}")
         except Exception:
             pass
-        return {'success': False, 'agent': agent_name, 'error': 'Celery soft_time_limit exceeded (45 min)', 'run_mode': run_mode}
+        return {'success': False, 'agent': agent_name, 'error': 'Celery soft_time_limit exceeded (60 min)', 'run_mode': run_mode}
 
     except Exception as e:
         logger.error(f"🤖 [SKIN LAYER] {agent_name} execution failed: {e}", exc_info=True)

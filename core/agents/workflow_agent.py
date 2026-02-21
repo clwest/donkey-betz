@@ -369,6 +369,13 @@ You orchestrate. You don't create content directly."""
                 conversation_history = []
 
                 for iteration in range(max_iterations):
+                    if time.time() - start_time > 2700:  # 45 min wall clock
+                        logger.warning(
+                            f"[WorkflowAgent] Stopping after {iteration} iterations "
+                            f"— approaching timeout"
+                        )
+                        break
+
                     # Add previous workflow results to prompt for context
                     if workflow_results:
                         results_context = "\n\n## Previous Step Results:\n"
