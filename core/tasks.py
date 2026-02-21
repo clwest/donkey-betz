@@ -34527,6 +34527,7 @@ Stage {stage_num} ({config['template']}) should include:
                 'workspace_context': {},
                 'docs_context': {},
                 'user_context': {},
+                'risk_context': {},
                 'user_docs_context': {},
             },
         )
