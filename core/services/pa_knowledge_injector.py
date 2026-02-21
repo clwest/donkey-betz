@@ -478,7 +478,7 @@ class PAKnowledgeInjector:
                     'name': 'Content Studio',
                     'route': '/workspace?tab=content',
                     'description': 'Content creation and management hub',
-                    'sub_tabs': 'Gallery, Channels, Blogs, Podcast, Distribution, Dossiers, Voices, Files',
+                    'sub_tabs': 'Gallery, Channels, Blogs, Documents, Podcast, Distribution, Dossiers, Voices, Files, Campaigns, Deliverables',
                 },
                 {
                     'name': 'System',
@@ -489,7 +489,7 @@ class PAKnowledgeInjector:
                 {
                     'name': 'Operations',
                     'route': '/workspace?tab=operations',
-                    'description': 'Agent execution history, deliverables, report provenance, PDF export',
+                    'description': 'Agent execution history, report provenance, workspace file operations',
                 },
                 {
                     'name': 'Data & Intel',

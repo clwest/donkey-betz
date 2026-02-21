@@ -894,20 +894,46 @@ PA_TOOL_SCHEMAS = [
         "type": "function",
         "name": "workspace_tool",
         "description": (
-            "Manage workspace items: notes, bookmarks, saved items. "
-            "Use when the user asks about their workspace, saved items, or notes."
+            "List development workspaces and check status. "
+            "Use when the user asks about their active workspace or project worktrees."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "create", "delete"],
+                    "enum": ["list", "status"],
                     "description": "Workspace action",
                 },
-                "content": {"type": "string", "description": "Content for new item"},
-                "id": {"type": "string", "description": "UUID of item to act on"},
+                "id": {"type": "string", "description": "UUID of workspace to act on"},
                 "limit": {"type": "integer", "description": "Max items (default 10)"},
+            },
+            "required": ["action"],
+        },
+    },
+
+    # ── Deliverables Library ──────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "deliverables_tool",
+        "description": (
+            "Browse, search, and manage the Deliverables Library. "
+            "Use when the user asks about deliverables, saved outputs, agent results, "
+            "or wants to save/unsave items in their library."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list", "search", "detail", "save", "unsave", "stats"],
+                    "description": "Deliverables action",
+                },
+                "id": {"type": "string", "description": "UUID of deliverable"},
+                "query": {"type": "string", "description": "Search query for title matching"},
+                "type": {"type": "string", "description": "Filter by deliverable type (document, image, report, analysis, etc.)"},
+                "saved": {"type": "boolean", "description": "Filter to saved items only"},
+                "limit": {"type": "integer", "description": "Max items to return (default 10)"},
             },
             "required": ["action"],
         },
@@ -1059,6 +1085,7 @@ TOOL_ENRICHMENT_MAP = {
     'scheduled_tasks_tool': [],
     'universal_agent_tool': ['intelligence_enricher'],
     'workspace_tool': [],
+    'deliverables_tool': ['intelligence_enricher'],
     'run_agent': ['intelligence_enricher'],
     'legal_doc_drafter_agent': ['domain_context'],
     'task_breakdown_tool': [],
@@ -1103,7 +1130,8 @@ TOOL_TO_INTENT_MAP = {
     'agent_introspection_tool': 'agent_introspection',
     'scheduled_tasks_tool': 'scheduled_tasks',
     'universal_agent_tool': 'agent_execution',
-    'workspace_tool': 'general',
+    'workspace_tool': 'workspace',
+    'deliverables_tool': 'deliverables',
     'run_agent': 'agent_execution',
     'legal_doc_drafter_agent': 'legal_assistance',
     'task_breakdown_tool': 'task_breakdown',
