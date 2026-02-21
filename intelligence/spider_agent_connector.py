@@ -254,28 +254,15 @@ class SpiderAgentConnector:
             return None
 
     def _create_learning_record(self, agent: Agent, spider_data: SpiderData, solution: AgentSolution):
-        """Create a learning record for the agent and propagate to connected agents"""
-        try:
-            # Self-learning from spider data (existing behavior)
-            learning = AgentLearning.objects.create(
-                teacher_agent=agent,
-                student_agent=agent,
-                solution=solution,
-                learning_type='spider_intelligence',
-                effectiveness_before=70.0,
-                effectiveness_after=85.0
-            )
-            logger.info(f"Created learning record for agent {agent.name}")
+        """Record spider data ingestion for the agent.
 
-            # Session 767: Propagate learning to connected agents
-            # This activates the AgentLearningConnection relationships
-            self._propagate_to_connected_agents(agent, solution, spider_data)
-
-            return learning
-
-        except Exception as e:
-            logger.error(f"Error creating learning record: {e}")
-            return None
+        Note: Synthetic AgentLearning records with hardcoded effectiveness
+        scores (70→85) have been removed. Real performance is now tracked
+        via AgentExecution, Deliverable, and ToolCallRecord tables, mined
+        by LearningPatternEngine.mine_patterns().
+        """
+        logger.debug(f"Spider data processed for agent {agent.name}")
+        return None
 
     def _propagate_to_connected_agents(
         self,
