@@ -5258,12 +5258,19 @@ class ToolDispatcher:
                 total = qs.count()
                 items = []
                 for p in qs[:limit]:
+                    # MLPrediction: game FK (home_team/away_team on Game), predicted_winner FK to Team
+                    game = getattr(p, 'game', None)
+                    if game:
+                        matchup = f"{getattr(game.away_team, 'abbreviation', game.away_team)} @ {getattr(game.home_team, 'abbreviation', game.home_team)}"
+                    else:
+                        matchup = str(p)
+                    winner = getattr(p, 'predicted_winner', None)
                     items.append({
                         'id': str(p.id),
-                        'matchup': f"{p.away_team} @ {p.home_team}" if hasattr(p, 'home_team') else str(p),  # type: ignore[attr-defined]
-                        'predicted_winner': p.predicted_winner if hasattr(p, 'predicted_winner') else '',
-                        'confidence': p.confidence if hasattr(p, 'confidence') else 0,
-                        'sport_name': p.sport_name if hasattr(p, 'sport_name') else '',  # type: ignore[attr-defined]
+                        'matchup': matchup,
+                        'predicted_winner': str(winner) if winner else '',
+                        'confidence': getattr(p, 'confidence', 0),
+                        'sport_name': getattr(p, 'sport_name', ''),
                         'created_at': p.created_at.isoformat() if hasattr(p, 'created_at') and p.created_at else None,
                     })
                 return {'action': 'predictions', 'items': items, 'total': total}
