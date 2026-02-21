@@ -20548,6 +20548,33 @@ and {spider_data_total:,} collected data points. Use this as credibility context
 # =============================================================================
 
 @shared_task(bind=True)
+def generate_blog_with_topic_task(self, topic, tone='enthusiastic'):
+    """
+    Session 1057: Generate a blog for a specific topic via the deliberation pipeline.
+    Dispatched by PA generate_blog_tool when user provides a specific topic.
+    """
+    from core.services.content_deliberation_runner import ContentDeliberationRunner
+
+    logger.info(f"[Phase 4] Starting topic-specific deliberation blog: topic={topic}, tone={tone}")
+
+    runner = ContentDeliberationRunner()
+    result = runner.run_blog(topic, voice=tone)
+
+    status = result.get('status', 'unknown')
+    decision = result.get('decision', 'unknown')
+    selfblog_id = str(result['selfblog_id']) if result.get('selfblog_id') else None
+
+    logger.info(f"[Phase 4] Topic blog complete: topic={topic}, status={status}, decision={decision}, id={selfblog_id}")
+
+    return {
+        'status': status,
+        'decision': decision,
+        'selfblog_id': selfblog_id,
+        'topic': topic,
+    }
+
+
+@shared_task(bind=True)
 def generate_self_blog_deliberation_task(self, tone='enthusiastic', word_count=1500, topic_category=None):
     """
     Phase 4: Generate a blog through the multi-agent deliberation pipeline.
