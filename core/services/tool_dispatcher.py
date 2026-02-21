@@ -401,46 +401,27 @@ class ToolDispatcher:
     ) -> Dict[str, Any]:
         """
         Session 1035: Handle legal assistant via AgentRouter.route().
-
-        Unlike _handle_agent_tool (which only creates an execution record),
-        this handler actually invokes LegalDocDrafterAgent.execute() and
-        returns the real result content.
+        Session 1062: Made async — dispatches to Celery task to avoid PA tool timeout.
         """
-        from core.agent_router import AgentRouter
-
-        task = payload.get('task') or payload.get('query', '')
+        task_description = payload.get('task') or payload.get('query', '')
         context = payload.get('context', {})
 
-        # Get user for agent instantiation
-        user = None
-        if user_id:
-            try:
-                from django.contrib.auth import get_user_model
-                User = get_user_model()
-                user = User.objects.get(id=user_id)
-            except Exception:
-                pass
-
-        router = AgentRouter(user=user)
-        result = router.route(
-            agent_name='LegalDocDrafterAgent',
-            task=task,
+        from core.tasks import draft_legal_document_task
+        task = draft_legal_document_task.delay(
+            task_description=task_description,
             context=context,
+            user_id=user_id,
         )
-
-        # AgentResult has .message (or .content alias) and .data (or .metadata alias)
-        output_text = ''
-        if result:
-            output_text = result.message or result.content or str(result)
-        success = result.success if result else False
 
         return {
             'agent': 'LegalDocDrafterAgent',
-            'output': output_text,
-            'success': success,
-            'data': result.data if result else {},
-            'had_user_documents': bool(
-                result and result.data and result.data.get('user_documents_used')
+            'action': 'draft_legal_document',
+            'mode': 'async',
+            'task': task_description,
+            'task_id': str(task.id),
+            'message': (
+                'Legal document drafting has been queued. This typically takes '
+                '1-3 minutes. Use task_breakdown_tool to check progress.'
             ),
         }
 

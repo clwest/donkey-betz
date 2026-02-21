@@ -20580,6 +20580,39 @@ and {spider_data_total:,} collected data points. Use this as credibility context
 # PHASE 4: Content Deliberation Pipeline — v2 blog generation via ClaimsPack
 # =============================================================================
 
+@shared_task(bind=True, soft_time_limit=240, time_limit=300)
+def draft_legal_document_task(self, task_description, context=None, user_id=None):
+    """
+    Session 1062: Async legal document drafting via LegalDocDrafterAgent.
+    Dispatched by PA legal_doc_drafter_agent handler to avoid PA tool timeout.
+    """
+    from core.agent_router import AgentRouter
+    from django.contrib.auth import get_user_model
+
+    user = None
+    if user_id:
+        User = get_user_model()
+        user = User.objects.filter(id=user_id).first()
+
+    router = AgentRouter(user=user)
+    result = router.route(
+        agent_name='LegalDocDrafterAgent',
+        task=task_description,
+        context=context or {},
+    )
+
+    output_text = ''
+    if result:
+        output_text = result.message or result.content or str(result)
+
+    return {
+        'agent': 'LegalDocDrafterAgent',
+        'output': output_text,
+        'success': bool(result and result.success),
+        'data': result.data if result else {},
+    }
+
+
 @shared_task(bind=True)
 def generate_blog_with_topic_task(self, topic, tone='enthusiastic'):
     """
