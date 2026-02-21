@@ -7,7 +7,7 @@
 # Session 1040: Moved 5 heaviest tasks off content→long_running, recycle 5→2 tasks (repeated OOM with 25+ initiatives)
 # --pool=prefork on Linux (Railway) recycles child processes after N tasks
 # macOS local dev should still use --pool=threads (prefork causes SIGSEGV) via Makefile
-release: python manage.py migrate --noinput && python manage.py sync_celery_beat --apply --create-only && python manage.py setup_codebase_workspace
+release: python manage.py migrate --noinput && python manage.py sync_celery_beat --apply --create-only --disable-missing && python manage.py setup_codebase_workspace
 web: daphne -b 0.0.0.0 -p ${PORT:-8000} --http-timeout 120 --application-close-timeout 120 core.asgi:application
 celery-worker: celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=10 --max-memory-per-child=200000 -Q default,agents,sports
 celery-pa: celery -A core worker -l info --pool=prefork -c 2 --max-tasks-per-child=50 --max-memory-per-child=150000 -Q pa
