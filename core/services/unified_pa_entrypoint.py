@@ -835,7 +835,7 @@ class UnifiedPAEntrypoint:
                 tool_result_inputs.append({
                     "type": "function_call_output",
                     "call_id": call_id,
-                    "output": output[:8000],  # Cap to prevent token explosion
+                    "output": self._truncate_tool_output(output, 16000),
                 })
 
             # Feed tool results back — use previous_response_id for efficiency
@@ -843,6 +843,72 @@ class UnifiedPAEntrypoint:
 
         # Safety: shouldn't normally reach here
         return ("I wasn't able to complete that request.", tool_runs, fc_metadata, response_id)
+
+    @staticmethod
+    def _truncate_tool_output(output: str, limit: int = 16000) -> str:
+        """
+        Session 1065: Smart truncation that preserves valid JSON structure.
+
+        Raw [:8000] slicing broke JSON mid-object, causing GPT-5.2 to see
+        only partial results (e.g. 1 of 13 initiatives). This helper:
+        1. Returns as-is if under limit
+        2. Parses JSON, finds the main list field, and drops tail items
+           until the re-serialized output fits, adding a _truncated marker
+        3. Falls back to raw slice if JSON parsing fails
+        """
+        if len(output) <= limit:
+            return output
+
+        # Try JSON-aware truncation
+        try:
+            data = json.loads(output)
+        except (json.JSONDecodeError, TypeError):
+            return output[:limit]
+
+        if not isinstance(data, dict):
+            return output[:limit]
+
+        # Find the main list field
+        list_key = None
+        list_val = None
+        for key in ('items', 'results', 'data', 'entries', 'records'):
+            if key in data and isinstance(data[key], list):
+                list_key = key
+                list_val = data[key]
+                break
+
+        # If no known list key, try the first list-valued field
+        if list_key is None:
+            for key, val in data.items():
+                if isinstance(val, list) and len(val) > 1:
+                    list_key = key
+                    list_val = val
+                    break
+
+        if list_key is None or not list_val:
+            return output[:limit]
+
+        total_count = len(list_val)
+
+        # Binary search for the max number of items that fit
+        lo, hi = 0, total_count
+        while lo < hi:
+            mid = (lo + hi + 1) // 2
+            data[list_key] = list_val[:mid]
+            data['_truncated'] = {'shown': mid, 'total': total_count}
+            candidate = json.dumps(data, default=str)
+            if len(candidate) <= limit:
+                lo = mid
+            else:
+                hi = mid - 1
+
+        data[list_key] = list_val[:lo]
+        if lo < total_count:
+            data['_truncated'] = {'shown': lo, 'total': total_count}
+        else:
+            data.pop('_truncated', None)
+
+        return json.dumps(data, default=str)
 
     @staticmethod
     def _is_degenerate_content(text: str) -> bool:
