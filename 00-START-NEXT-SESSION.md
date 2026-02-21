@@ -1,174 +1,96 @@
-# Session 1049 - Start Here
+# Session 1057 - Start Here
 
-**Previous Sessions:** 1049 (INIT-000057 RAG Gaps + celery-content OOM Fix), 1048 (Task Volume Breakdown API), 1043 (Brainstorm Bulk Export + DOCX/CSV + OOM Fix), 1042 (Initiative Cleanup + PA Blog Search + Frontend Fixes), 1041 (Stage Doc Content Fix + Regen Sweep), 1040 (Anti-Hallucination + ThinkingAgent Fix + PA Tool + Celery OOM)
+**Previous Sessions:** 1056 (Railway Cost Throttle + PA Degenerate Loop Fix), 1049 (INIT-000057 RAG Gaps + celery-content OOM Fix), 1048 (Task Volume Breakdown API), 1043 (Brainstorm Bulk Export + DOCX/CSV + OOM Fix)
 **Date:** February 20, 2026
 **Status:** 92 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2, 41 tool schemas, 59 handlers)** | **All 218 agent personas routable** | **Tenant model Phase 1 landed** | 4 ACTIVE initiatives | 36 COMPLETED
 
 ---
 
-## Session 1049 — What Happened
+## Session 1056 — What Happened
 
-### INIT-000057 Closed: RAG Pipeline Gaps (PR #1349)
+### Railway Cost Throttle (PR #1356)
 
-Initiative had 6 must-have gaps. 4 were already resolved (DOCX/CSV processors, HNSW index in DB, user-scoping). Session 1049 closed the remaining 2 + housekeeping:
+Throttled 21 high-frequency Celery beat tasks to reduce Railway compute ~59%:
+- **Body Systems (9 tasks):** 30-90s → 120-300s
+- **Broadcast/Dashboard (6 tasks):** 60-180s → 120-600s
+- **Event Bus/Infra (5 tasks):** 30-120s → 60-300s
+- **3D Model Polling (1 task):** 30s → 60s
 
-1. **Rate limiting** — `RagIngestThrottle` (ScopedRateThrottle, 20/hour) on `ingest_url` and `ingest_file`. Global `DEFAULT_THROTTLE_CLASSES` stays empty (Session 789 concern).
-2. **Frontend file size validation** — 5MB client-side check in `DocumentsPage.handleUpload` with error via `setIngestError`. Upload zone label updated to show "(max 5MB)".
-3. **HNSW index Meta sync** — Activated `HnswIndex` in `DocumentEmbedding.Meta.indexes` (conditional on `HAS_PGVECTOR`). State-only migration 0040 via `SeparateDatabaseAndState` — DB index already exists from migration 0037 raw SQL.
+`body-coordinator-check` (60s) NOT changed — gates LLM throttle mode.
+Estimated ~21,000 fewer invocations/day.
 
-**Files changed (4 + 1 migration):**
-| File | Change |
-|------|--------|
-| `content/models.py` | HNSW index in Meta.indexes (conditional on HAS_PGVECTOR) |
-| `content/migrations/0040_documentembedding_hnsw_index_state.py` | State-only migration (no DB changes) |
-| `core/settings.py` | `rag_ingest: 20/hour` throttle rate |
-| `core/views_rag_embeddings.py` | `RagIngestThrottle` class + decorators on 2 endpoints |
-| `frontend/src/pages/DocumentsPage.tsx` | 5MB file size check + updated label |
+### PA Degenerate Text Loop Fix (PR #1357)
 
-### celery-content OOM Fix — Lazy ML Loading (PR #1350)
+GPT-5.2 got stuck generating filler text ("Ok.Ok.Let's call.Ok.") instead of actual function calls. The degenerate content detector only ran when tool calls were present — text-only responses bypassed it.
 
-celery-content crashed on Railway due to OOM at startup. Root cause: `SentenceTransformerProvider.__init__` eagerly loaded `all-MiniLM-L6-v2` (~800MB with PyTorch/TF) during `content.embeddings` module import.
-
-**Fixes:**
-- `SentenceTransformerProvider`: deferred model load to `_get_model()` on first embedding request
-- Global `rag_system`: wrapped in `_LazyRAGSystem` proxy so `from content.embeddings import rag_system` no longer triggers `EmbeddingManager` → provider construction
-
-**Result:** celery-content starts without loading TensorFlow or SentenceTransformer. Models load on-demand when first embedding is requested.
+**Fix:** Added degenerate check in the no-tool-calls early return path + Pattern 4 (high "Ok." density >=8). PA now returns friendly error instead of garbage.
 
 ---
 
-## Session 1048 — What Happened
+## Priority: Working with the PA via Claude Code
 
-### Task Volume Breakdown API + PA Tool
+**Next session focus:** Working with the PA through the Railway API from Claude Code.
 
-PA-generated engineering ticket (Chat #213-214) called for a "one-click" task volume breakdown. The existing `/api/celery/tasks/` endpoint queries the empty `TaskResult` table (broken with Redis backend). Added two new endpoints that query `CeleryTaskEvent` directly, plus a PA tool.
+### How to Connect to the PA via Railway
 
-**New endpoints:**
-- `GET /api/celery/breakdown/?window=60m&limit=25` — Aggregated totals, by-task with p50/p95 percentiles, by-agent breakdown
-- `GET /api/celery/breakdown/task/?task_name=core.tasks.xyz&window=60m` — Drill-down into specific task name with recent executions
+The PA runs on Railway at `https://donkeybetz.com`. Authentication uses DRF Token auth.
 
-**PA tool:** `task_breakdown_tool` (summary/drilldown actions). Ask "what's driving load?", "top failing tasks", "drill into execute_agent_task".
+**Step 1: Get an auth token**
+```bash
+# Login to get token
+curl -s -X POST https://donkeybetz.com/api/v1/auth/login/ \
+  -H "Content-Type: application/json" \
+  -d '{"username": "YOUR_USERNAME", "password": "YOUR_PASSWORD"}' | python -m json.tool
+# Returns: {"token": "abc123...", "user": {...}}
+```
 
-**Files changed (5):**
-| File | Change |
-|------|--------|
-| `core/views_celery_api.py` | `TaskBreakdownView` + `TaskBreakdownDetailView` (~200 lines) |
-| `core/urls.py` | 2 URL patterns under `/api/celery/breakdown/` |
-| `core/services/pa_tool_schemas.py` | `task_breakdown_tool` schema + enrichment/intent maps |
-| `core/services/tool_dispatcher.py` | `_handle_task_breakdown` handler (~170 lines) |
-| `core/services/unified_pa_entrypoint.py` | `task_breakdown` formatter (markdown tables) + bypass list |
+**Step 2: Send a message to the PA (async — returns task_id)**
+```bash
+TOKEN="your-token-here"
+curl -s -X POST https://donkeybetz.com/api/pa/chat/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Token $TOKEN" \
+  -d '{"message": "What are the active initiatives?"}' | python -m json.tool
+# Returns: {"success": true, "task_id": "celery-task-id", "status": "processing"}
+```
 
-**Key design decisions:**
-- Percentile calculation in Python (sorted list index) — manageable volume (~few thousand rows per 24h window)
-- Handler duplicates view logic rather than sharing a helper — queries are straightforward, avoids coupling
-- Window options: 15m, 60m, 2h, 6h, 24h (mapped to minutes internally)
-- AgentExecution by-agent uses `agent__name` (FK to Agent), filtered by `created_at` (NOT `started_at`)
+**Step 3: Poll for the response**
+```bash
+TASK_ID="the-task-id-from-step-2"
+curl -s https://donkeybetz.com/api/pa/chat/status/$TASK_ID/ \
+  -H "Authorization: Token $TOKEN" | python -m json.tool
+# Returns: {"success": true, "status": "completed", "response": "...", "tool_runs": [...]}
+# If still processing: {"success": true, "status": "processing"}
+# Poll every 2-3 seconds until status != "processing"
+```
 
----
+**Key endpoints:**
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/v1/auth/login/` | POST | Get auth token (`{username, password}` → `{token}`) |
+| `/api/pa/chat/` | POST | Send message to PA (`{message}` → `{task_id}`) |
+| `/api/pa/chat/status/<task_id>/` | GET | Poll async result → `{status, response, tool_runs}` |
+| `/api/pa/context/` | GET | Get PA context (user profile, system state) |
 
-## Session 1043 — What Happened
-
-### Brainstorm Bulk Export Endpoint (PR #1345)
-
-PA identified ~13,256 agent-to-agent brainstorm conversations (last 30 days) but had no way to enumerate them at scale — existing actions only returned 10-20 results. Added `list` action to `brainstorm_tool` with offset-based pagination (up to 200 per page).
-
-**Changes:**
-- `BrainstormSearchService.list_conversations()` — paginated listing with type/status filters, optional transcript inclusion
-- `_handle_brainstorm` in tool_dispatcher — new `list` action, limit capped at 200
-- `pa_tool_schemas.py` — added `offset`, `days`, `type`, `status`, `include_transcript` params
-- `unified_pa_entrypoint.py` — NLU payload builder for "list all"/"export"/"bulk" keywords + markdown table formatter with pagination hints
-
-### OOM Fix — 9 Heavy Tasks Rerouted (PR #1346)
-
-celery-worker OOMing after deploy — 9 heavy unrouted tasks falling to `default` queue (200MB limit). Rerouted all to `long_running` queue in `CELERY_TASK_ROUTES`.
-
-### DOCX & CSV Processors for RAG Pipeline
-
-RAG upload pipeline only supported PDF/TXT/MD. Added DOCX and CSV support across the full stack:
-
-**Backend:**
-- `DOCXProcessor` — python-docx, extracts paragraphs + tables, handles bytes input
-- `CSVProcessor` — pandas, column summaries + first 50 rows as text, handles bytes input
-- Both registered in `DocumentProcessingPipeline` and wired into `ingest_file()` endpoint
-
-**Frontend:**
-- File input accepts `.docx,.csv`, new type badges (Word=indigo, CSV=emerald)
-- Updated help text and info section
+**Important notes:**
+- PA chat is **async** — POST returns a `task_id`, you must poll `/status/` for the response
+- Polling typically completes in 3-15 seconds depending on tool calls
+- The PA uses GPT-5.2 function calling with up to 5 agentic loop iterations
+- All 41 tool schemas are available (initiative_tool, content_review_tool, dream_tool, task_breakdown_tool, brainstorm_tool, etc.)
+- Auth header format: `Authorization: Token <token>` (NOT Bearer)
 
 ---
 
-## Session 1042 — What Happened
-
-### 1. Agent Activity Modal Formatting (PR #1338)
-
-CompetitorAnalysisAgent (and similar agents) returned structured data with `{query, analysis, raw_data}` but the Agent Activity modal showed raw JSON because the `analysis` handler only checked for `typeof === 'object'` (CompetitorAnalysisAgent returns analysis as a markdown string).
-
-**Fix:** Added 3 new handlers to `AgentsPage.tsx`:
-- **String analysis**: `ReactMarkdown` + `remarkGfm` for markdown tables/content
-- **Source cards**: `raw_data` arrays render as formatted cards with title, source badge, clickable URLs
-- **Query display**: Labeled text field for the search query
-
-### 2. PA Blog Search-by-Title (PR #1339)
-
-PA could not find blog drafts by title — user asked "tell me about a blog titled: Assessing IAC Valuation..." and PA couldn't locate it.
-
-**Root cause:** `content_review_tool` schema only had `list/details/approve/reject/stats` actions. No search, and `list` only returned `pending_review`/`approved` status (excluding drafts). The `recent` action existed in the handler but wasn't in the schema enum.
-
-**Fix:**
-- Added `search` action: queries SelfBlog + Deliverables by `title__icontains`
-- Exposed `recent` in schema enum
-- Added `query`, `type`, `days` parameters to tool schema
-- Added search result formatter in PA entrypoint
-
-### 3. Command Center Collapsible Dashboard (PR #1340)
-
-PA Chat area on Command Center was cramped — NowHub (3 dashboard cards) + Intelligence Desks consumed ~300px above the chat.
-
-**Fix:** Dashboard is now collapsible:
-- "Collapse" button hides NowHub + Intelligence Desks
-- Collapsed state shows slim bar with key metrics (attention count, active initiatives, health %)
-- Click bar to expand back
-- State persisted in `localStorage`
-
-### 4. Initiative Quality Gate + Bulk Cleanup (PR #1341)
-
-15 ACTIVE/TRIAGE initiatives — 8 were noise. PA conversations about blog content were being turned into "revise this blog" initiatives by `ConversationInitiativePipeline`. ThinkingAgent created 4 duplicate "integrity anomaly" initiatives.
-
-**Quality gate improvements:**
-- Added `CONTENT_REVIEW_PATTERNS` list to `_quality_gate()`: rejects "revise", "review", "hold publication", "enhance", "investor briefs/guidance/insights", "navigating", "enhancing"
-- Lowered `EXPLORE_PATTERNS` threshold from 2 matches → 1 (single exploratory match now blocks)
-
-**Bulk archive on Railway (8 initiatives):**
-- 2 TRIAGE blog-review (ConversationInitiativePipeline)
-- 3 duplicate integrity-anomaly (ThinkingAgent)
-- 3 vague meta-proposals (DecisionExtractor)
-
-**Result:** 15 → 4 meaningful initiatives remaining.
-
-### Commits
-| Commit | Description |
-|--------|-------------|
-| PR #1338 | fix: format structured data in Agent Activity modal instead of raw JSON |
-| PR #1339 | feat: add blog search-by-title to PA content_review_tool |
-| PR #1340 | fix: collapsible dashboard in Command Center for more chat space |
-| PR #1341 | fix: add content-review rejection to initiative quality gate |
-
----
-
-## Current System Health (post-Session 1049)
+## Current System Health (post-Session 1056)
 
 | Metric | Value |
 |--------|-------|
 | PA routing | **GPT-5.2 function calling** (`PA_USE_FUNCTION_CALLING=true`) |
-| PA tools | **41 schemas, 59 handlers** — `task_breakdown_tool` (summary/drilldown), `brainstorm_tool` (bulk paginated export), `content_review_tool` (search), `initiative_tool` (stage_document) |
-| RAG upload | **5 formats**: PDF, DOCX, CSV, TXT, MD + URL + YouTube — **rate limited 20/hour**, **5MB max file size** |
+| PA tools | **41 schemas, 59 handlers** |
+| Beat schedule | **21 tasks throttled** (~59% reduction, ~21k fewer invocations/day) |
 | Agents routable | **All 218** (82 AGENT_MAP + 139 DynamicPersonaAgent + 2 blocked) |
-| Initiatives | **4 ACTIVE**, 36 COMPLETED (INIT-000057 closed), 1 TRIAGE, 8 ARCHIVED (49 total) |
-| Initiative quality gate | **Content-review patterns blocked**, explore threshold lowered to 1 |
-| Content worker | **250MB limit, 2-task recycle**, 5 heavy tasks moved to long_running, **ML lazy-loaded** |
-| Stage doc regen | **AUTO** — missing docs auto-queued every 10 min via auto-progression sweep |
-| Tenant model | **Phase 1 merged** (migration applied) |
-| Anti-hallucination | **LIVE** — guard in system prompt + timestamps + broader matching |
+| Initiatives | **4 ACTIVE**, 36 COMPLETED, 1 TRIAGE, 8 ARCHIVED (49 total) |
+| Degenerate detection | **4 patterns** — repetition, filler ratio, unique ratio, Ok. density |
 
 ---
 
@@ -181,22 +103,10 @@ PA Chat area on Command Center was cramped — NowHub (3 dashboard cards) + Inte
 Both take 43-44min to complete. Celery timeout is 45min. They PASS but have no margin.
 
 ### Railway Cost
-User hit $1,200/month limit, bumped to $1,500. Schedule throttling (Session 1034) + media guards should reduce costs.
-
-### Stage Doc Regeneration — Check Progress
-41 broken stage docs cleared in Session 1041. Auto-progression sweep should have regenerated them by now. Verify:
-```bash
-railway run python manage.py shell -c "
-from core.models_document_registry import InitiativeStage
-for sn in [2, 3, 4]:
-    need = InitiativeStage.objects.filter(stage=sn, document__isnull=True).count()
-    has = InitiativeStage.objects.filter(stage=sn, document__isnull=False).count()
-    print(f'Stage {sn}: {need} missing, {has} have docs')
-"
-```
+User hit $1,200/month limit, bumped to $1,500. Session 1056 throttled 21 tasks (~59% reduction). Monitor Railway compute after 24h.
 
 ### DecisionExtractor Initiative Spam
-DecisionExtractor creates initiatives from `suggested_feature` in decision summaries. 3 were archived this session ("AI Tools Enhancement...", "AI Content Creation Enhancement...", "Research customer Enhancement..."). The title validation (`_is_valid_initiative_name`) doesn't catch these vague meta-proposals. Consider adding stricter validation for DecisionExtractor-sourced initiatives.
+DecisionExtractor creates initiatives from `suggested_feature` in decision summaries. 3 were archived (Session 1042). Consider adding stricter validation for DecisionExtractor-sourced initiatives.
 
 ### 3 Contaminated Stage 4 Docs (Session 1040)
 These completed initiatives have Stage 4 docs filled with ThinkingAgent system diagnostics instead of real content:
@@ -219,61 +129,58 @@ These completed initiatives have Stage 4 docs filled with ThinkingAgent system d
 ## Verify Before Starting
 
 ```bash
-# 1. Check initiative health
+# 1. Verify beat throttling deployed (check a throttled task)
+railway logs 2>&1 | grep -c 'heart-service-heartbeat' # Should be ~12/hour now, not 60
+
+# 2. Verify PA degenerate fix deployed
+railway logs 2>&1 | grep 'Degenerate text-only'  # Should appear if triggered
+
+# 3. Test PA connection from CLI
+TOKEN=$(curl -s -X POST https://donkeybetz.com/api/v1/auth/login/ \
+  -H "Content-Type: application/json" \
+  -d '{"username": "YOUR_USERNAME", "password": "YOUR_PASSWORD"}' | python -c "import sys,json; print(json.load(sys.stdin)['token'])")
+echo "Token: $TOKEN"
+
+TASK_ID=$(curl -s -X POST https://donkeybetz.com/api/pa/chat/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Token $TOKEN" \
+  -d '{"message": "Hello, what can you help me with?"}' | python -c "import sys,json; print(json.load(sys.stdin)['task_id'])")
+echo "Task ID: $TASK_ID"
+
+sleep 5
+curl -s https://donkeybetz.com/api/pa/chat/status/$TASK_ID/ \
+  -H "Authorization: Token $TOKEN" | python -m json.tool
+
+# 4. Check initiative health
 railway run python manage.py shell -c "
 from core.models import Initiative
 for s in ['ACTIVE', 'TRIAGE', 'COMPLETED', 'ARCHIVED']:
     c = Initiative.objects.filter(status=s).count()
     print(f'{s}: {c}')
 "
-
-# 2. Check stage doc regeneration completed
-railway run python manage.py shell -c "
-from core.models_document_registry import InitiativeStage
-for sn in [2, 3, 4]:
-    need = InitiativeStage.objects.filter(stage=sn, document__isnull=True).count()
-    has = InitiativeStage.objects.filter(stage=sn, document__isnull=False).count()
-    print(f'Stage {sn}: {need} missing, {has} have docs')
-"
-
-# 3. Test PA blog search (should find results now)
-# Ask PA: "Find the blog about IAC valuation"
-
-# 4. Check celery-content healthy (OOM fixed in Session 1049 — lazy ML loading)
-railway service celery-content && railway logs 2>&1 | grep -i 'ready\.' | tail -1
 ```
 
 ---
 
 ## Critical Patterns & Gotchas
 
-**RAG ingest rate limiting (Session 1049):** `RagIngestThrottle` (ScopedRateThrottle, scope `rag_ingest`, 20/hour) on `ingest_url` and `ingest_file` in `views_rag_embeddings.py`. Rate configured in `settings.py` `DEFAULT_THROTTLE_RATES`. Global `DEFAULT_THROTTLE_CLASSES` stays empty so only decorated endpoints are affected.
+**PA async flow (Session 974b):** POST `/api/pa/chat/` returns `{task_id}`. Poll GET `/api/pa/chat/status/<task_id>/` until `status != 'processing'`. Typical completion: 3-15s. Auth: `Authorization: Token <token>` (NOT Bearer).
+
+**PA degenerate detection (Session 1056):** `_is_degenerate_content()` has 4 patterns: (1) repeated short substrings from start, (2) filler word ratio > 0.5, (3) unique word ratio < 0.15, (4) "ok." count >= 8. Check runs in BOTH tool-call and no-tool-call paths.
+
+**Beat schedule throttling (Session 1056):** 21 tasks throttled. `body-coordinator-check` stays at 60s — it sets throttle mode that gates LLM calls. All `expires` values are 10s below schedule interval. If body systems dashboard seems stale, this is expected (5-min refresh now).
 
 **Lazy ML loading (Session 1049):** `SentenceTransformerProvider._get_model()` defers model load to first use. Global `rag_system` in `content/embeddings.py` is a `_LazyRAGSystem` proxy — importing it does NOT trigger construction. NEVER add eager model loads at module level in files imported by Celery workers.
 
-**HNSW index (Session 1049):** `DocumentEmbedding.Meta.indexes` now includes `HnswIndex(name='docembed_vector_hnsw_idx')` conditional on `HAS_PGVECTOR`. Migration 0040 is state-only — the actual DB index is `documentembedding_vector_hnsw_idx` (created by migration 0037 raw SQL).
+**Task volume breakdown (Session 1048):** `task_breakdown_tool` queries `CeleryTaskEvent` (NOT `TaskResult`). REST endpoints at `/api/celery/breakdown/` and `/api/celery/breakdown/task/`.
 
-**Task volume breakdown (Session 1048):** `task_breakdown_tool` queries `CeleryTaskEvent` (NOT `TaskResult`). REST endpoints at `/api/celery/breakdown/` and `/api/celery/breakdown/task/`. Handler in `tool_dispatcher._handle_task_breakdown`. Formatter in `unified_pa_entrypoint._format_tool_result` under `intent == 'task_breakdown'`. AgentExecution uses `agent__name` (FK), `created_at` (NOT `started_at`), `status='failed'` (NOT `success=False`).
+**Initiative quality gate (Session 1042):** `ConversationInitiativePipeline._quality_gate()` now rejects content-review topics and any single explore pattern match.
 
-**Initiative quality gate (Session 1042):** `ConversationInitiativePipeline._quality_gate()` now rejects content-review topics (`CONTENT_REVIEW_PATTERNS`) and any single explore pattern match (`EXPLORE_PATTERNS` threshold = 1). If adding new initiative creation paths, call `_quality_gate()` before creation.
+**ContentWriterAgent result structure (Session 1041):** `result.message` is a descriptive summary, NOT the actual content. Real content is in `result.data['content']['full_text']`.
 
-**PA content_review_tool search (Session 1042):** `content_review_tool(action='search', query='keyword', type='blog')` searches SelfBlog by title. Without `type='blog'`, searches both SelfBlog and Deliverables. Also exposed: `action='recent'` with `days=N` parameter.
+**Anti-hallucination guard (Session 1040):** Conversation system prompt includes CRITICAL instruction: if no REAL-WORLD INTELLIGENCE section appears, agent must say "No data available" and never fabricate.
 
-**ContentWriterAgent result structure (Session 1041):** `result.message` is a descriptive summary (`Blog Post: "Title" | 571 words | ...`), NOT the actual content. The real content is in `result.data['content']['full_text']`. Both `generate_initiative_stage_document` and `execute_initiative_stage_task` now extract `full_text` from `data` when available.
-
-**Stage doc auto-regeneration (Session 1041):** `process_initiative_auto_progression` now sweeps for ACTIVE initiative stages that are PENDING/DRAFT with no document and queues regeneration. Runs every 10 minutes.
-
-**Anti-hallucination guard (Session 1040):** Conversation system prompt now includes CRITICAL instruction: if no REAL-WORLD INTELLIGENCE section appears, agent must say "No data available" and never fabricate. Spider context header includes retrieval timestamp. `related_content` from semantic search is now surfaced (was silently dropped).
-
-**ThinkingAgent banned from document generation:** ThinkingAgent returns system diagnostics instead of reviewing content. Session 912 fixed `generate_initiative_stage_document` (auto_pipeline). Session 1040 fixed `conversation_initiative_pipeline.py`. If adding new pipelines, NEVER use ThinkingAgent for content tasks.
-
-**Celery-content task routing (Session 1040):** 5 heavy tasks moved from content → long_running queue. Content queue now only has: deliberation, blog gen, auto-progression, scoring, publishing. If OOM returns again, next step is splitting deliberation into chained tasks.
-
-**RAG file processors (Session 1043):** `DOCXProcessor` and `CSVProcessor` in `content/processors.py`. Both handle bytes input (from upload) and file paths. `DocumentType.DOCX` and `DocumentType.CSV` in `content/models.py`. Frontend `DocumentsPage.tsx` accepts `.docx,.csv` with type badges. To add more formats: create processor class, register in `DocumentProcessingPipeline.__init__`, add branch in `ingest_file()` view, update frontend accept/badges.
-
-**Brainstorm bulk list (Session 1043):** `brainstorm_tool(action='list', offset=0, limit=50)` for paginated export. Limit capped at 200. NLU triggers on "list all", "export", "enumerate", "bulk". `include_transcript=true` adds full message arrays (heavy — use sparingly).
-
-**PA function calling (Session 1036):** `PA_USE_FUNCTION_CALLING=true` env var. Agentic loop in `_run_agentic_loop()` — max 5 iterations, GPT-5.2 decides tool calls.
+**ThinkingAgent banned from document generation:** ThinkingAgent returns system diagnostics instead of reviewing content. NEVER use ThinkingAgent for content tasks.
 
 **Dual dispatch block (Session 1032):** CodeGeneratorAgent and AudioAgent blocked in BOTH `execute_agent_task` AND `AgentRouter.route()`.
 
