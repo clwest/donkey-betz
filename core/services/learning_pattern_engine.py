@@ -414,32 +414,73 @@ class LearningPatternEngine:
         # Type-aware rendering extracts actionable data from pattern_data
         stored = patterns.get('stored_patterns', [])
         if stored:
-            collab_rendered = False
-            spider_rendered = False
+            rendered_types = set()
             generic_types = []
 
-            for p in stored[:5]:
+            for p in stored[:8]:
                 ptype = p['type']
+                if ptype in rendered_types:
+                    continue
                 pdata = p.get('data', {})
 
-                if ptype == 'collaboration_effectiveness' and not collab_rendered:
+                if ptype == 'agent_success_rate':
+                    rate = pdata.get('success_rate')
+                    total = pdata.get('total_executions', 0)
+                    if rate is not None and total:
+                        parts.append(f"Success rate: {rate}% ({total} runs)")
+                        rendered_types.add(ptype)
+                    continue
+
+                if ptype == 'content_quality':
+                    avg_q = pdata.get('avg_quality')
+                    saved = pdata.get('saved_pct', 0)
+                    if avg_q is not None:
+                        parts.append(f"Content quality: {avg_q:.2f}" + (f", {saved}% saved" if saved else ""))
+                        rendered_types.add(ptype)
+                    continue
+
+                if ptype == 'tool_reliability':
+                    tool = pdata.get('tool_name', '')
+                    rate = pdata.get('success_rate')
+                    if tool and rate is not None:
+                        parts.append(f"Tool '{tool}': {rate}% reliable")
+                        rendered_types.add(ptype)
+                    continue
+
+                if ptype == 'prediction_accuracy':
+                    sport = pdata.get('sport_type', '')
+                    acc = pdata.get('accuracy_pct')
+                    if sport and acc is not None:
+                        parts.append(f"{sport} predictions: {acc}% accurate")
+                        rendered_types.add(ptype)
+                    continue
+
+                if ptype == 'agent_tool_effectiveness':
+                    tool = pdata.get('tool_name', '')
+                    rate = pdata.get('success_rate')
+                    if tool and rate is not None:
+                        parts.append(f"Best tool: {tool} ({rate}%)")
+                        rendered_types.add(ptype)
+                    continue
+
+                if ptype == 'collaboration_effectiveness':
                     delta = pdata.get('quality_delta')
                     if delta is not None and delta > 0:
                         parts.append(f"Collab boost: +{delta:.0%} in group sessions")
-                        collab_rendered = True
+                        rendered_types.add(ptype)
                     continue
 
-                if ptype == 'spider_data_value' and not spider_rendered:
+                if ptype == 'spider_data_value':
                     dt = pdata.get('data_type', '')
                     act = pdata.get('actionable_pct', 0)
                     if dt and act > 0:
                         parts.append(f"Spider '{dt}': {act}% actionable")
-                        spider_rendered = True
+                        rendered_types.add(ptype)
                     continue
 
                 generic_types.append(ptype)
 
-            # Fall back to generic rendering for remaining types
+            # Fall back to generic rendering for unrecognized types
             if generic_types:
                 unique = list(dict.fromkeys(generic_types))[:3]
                 parts.append(f"Known patterns: {', '.join(unique)}")
@@ -1316,14 +1357,35 @@ class LearningPatternEngine:
                 if task_type:
                     parts.append(f"Excels: {task_type}")
 
-            # Collaboration effectiveness (from stored patterns)
+            # Stored pattern highlights (one line per type, most impactful first)
             stored = patterns.get('stored_patterns', [])
+            rendered_types = set()
             for p in stored:
-                if p['type'] == 'collaboration_effectiveness':
-                    delta = p.get('data', {}).get('quality_delta')
+                ptype = p['type']
+                if ptype in rendered_types:
+                    continue
+                pdata = p.get('data', {})
+
+                if ptype == 'agent_success_rate':
+                    rate = pdata.get('success_rate')
+                    if rate is not None:
+                        parts.append(f"{rate}% success")
+                        rendered_types.add(ptype)
+                elif ptype == 'content_quality':
+                    avg_q = pdata.get('avg_quality')
+                    if avg_q is not None:
+                        parts.append(f"Quality: {avg_q:.2f}")
+                        rendered_types.add(ptype)
+                elif ptype == 'collaboration_effectiveness':
+                    delta = pdata.get('quality_delta')
                     if delta is not None and delta > 0:
                         parts.append(f"Collab: +{delta:.0%}")
-                    break
+                        rendered_types.add(ptype)
+                elif ptype == 'prediction_accuracy':
+                    acc = pdata.get('accuracy_pct')
+                    if acc is not None:
+                        parts.append(f"Pred: {acc}%")
+                        rendered_types.add(ptype)
 
             result = " | ".join(parts)
 
