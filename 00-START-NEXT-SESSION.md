@@ -1,96 +1,88 @@
-# Session 1057 - Start Here
+# Session 1058 - Start Here
 
-**Previous Sessions:** 1056 (Railway Cost Throttle + PA Degenerate Loop Fix), 1049 (INIT-000057 RAG Gaps + celery-content OOM Fix), 1048 (Task Volume Breakdown API), 1043 (Brainstorm Bulk Export + DOCX/CSV + OOM Fix)
-**Date:** February 20, 2026
-**Status:** 92 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2, 41 tool schemas, 59 handlers)** | **All 218 agent personas routable** | **Tenant model Phase 1 landed** | 4 ACTIVE initiatives | 36 COMPLETED
-
----
-
-## Session 1056 — What Happened
-
-### Railway Cost Throttle (PR #1356)
-
-Throttled 21 high-frequency Celery beat tasks to reduce Railway compute ~59%:
-- **Body Systems (9 tasks):** 30-90s → 120-300s
-- **Broadcast/Dashboard (6 tasks):** 60-180s → 120-600s
-- **Event Bus/Infra (5 tasks):** 30-120s → 60-300s
-- **3D Model Polling (1 task):** 30s → 60s
-
-`body-coordinator-check` (60s) NOT changed — gates LLM throttle mode.
-Estimated ~21,000 fewer invocations/day.
-
-### PA Degenerate Text Loop Fix (PR #1357)
-
-GPT-5.2 got stuck generating filler text ("Ok.Ok.Let's call.Ok.") instead of actual function calls. The degenerate content detector only ran when tool calls were present — text-only responses bypassed it.
-
-**Fix:** Added degenerate check in the no-tool-calls early return path + Pattern 4 (high "Ok." density >=8). PA now returns friendly error instead of garbage.
+**Previous Sessions:** 1057 (PA Tool Audit — 9 bugs fixed across 5 PRs), 1056 (Railway Cost Throttle + PA Degenerate Loop Fix), 1049 (INIT-000057 RAG Gaps + celery-content OOM Fix), 1048 (Task Volume Breakdown API)
+**Date:** February 21, 2026
+**Status:** 218 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2, 41 tool schemas, 59 handlers)** | **All 218 agent personas routable** | **Tenant model Phase 1 landed** | 4 ACTIVE initiatives | 36 COMPLETED
 
 ---
 
-## Priority: Working with the PA via Claude Code
+## Session 1057 — What Happened
 
-**Next session focus:** Working with the PA through the Railway API from Claude Code.
+### Comprehensive PA Tool Audit (PRs #1359, #1360, #1361, #1362, #1363)
 
-### How to Connect to the PA via Railway
+Connected to the PA via Railway API and systematically tested all 41 PA tool schemas. Found and fixed 9 bugs across 5 PRs:
 
-The PA runs on Railway at `https://donkeybetz.com`. Authentication uses DRF Token auth.
+#### Bug Fixes
 
-**Step 1: Get an auth token**
-```bash
-# Login to get token
-curl -s -X POST https://donkeybetz.com/api/v1/auth/login/ \
-  -H "Content-Type: application/json" \
-  -d '{"username": "YOUR_USERNAME", "password": "YOUR_PASSWORD"}' | python -m json.tool
-# Returns: {"token": "abc123...", "user": {...}}
+| Bug | File | Fix | PR |
+|-----|------|-----|-----|
+| `risk_context` UnboundLocalError (149 failures/24h) | `agent_router.py:898` | Added `risk_context = pre_gathered_context.get('risk_context', {})` | #1359 |
+| `learning_patterns_tool` schema mismatch | `pa_tool_schemas.py:584` | Enum `["summary","by_agent","trends"]` → `["list","by_type","stats"]` | #1359 |
+| `sports_betting_tool` Team FK not serializable | `tool_dispatcher.py:5260` | `str(winner)` + traverse game FK for matchup | #1360 |
+| `revenue_tracker_tool` schema mismatch | `pa_tool_schemas.py:333` | Enum `["summary","breakdown","history"]` → `["stats","list"]` | #1360 |
+| `execution_history_tool` schema mismatch | `pa_tool_schemas.py:558` | `"details"` → `"failures"` in enum | #1360 |
+| `workspace_tool` missing user argument | `tool_dispatcher.py:858` | Resolve User from user_id before `get_workspace_manager(user)` | #1362 |
+| `revenue_tracker_tool` field name wrong | `tool_dispatcher.py:708,738` | `Revenue.source` → `Revenue.source_type` | #1362 |
+| `workspace_tool` ProjectWorkspace not serializable | `tool_dispatcher.py:862` | Serialize model objects to dicts | #1363 |
+| `ContentWriterAgent` rejects `internal_document` type | `content_writer_agent.py:187` | Added `internal_document` to `CONTENT_TYPES` dict | #1363 |
+
+#### PA Tool Scorecard (41 tools)
+
+| Status | Count | Tools |
+|--------|-------|-------|
+| Working | 36 | Most tools including initiative_tool, content_review_tool, boardroom_tool, agent_introspection_tool, system_health_tool, task_breakdown_tool, brainstorm_tool, dream_tool, etc. |
+| Deprecated | 1 | predictions_tool (intentional — use sports_betting_tool) |
+| Slow/Timeout | 1 | generate_blog_tool (exceeds 30s PA tool timeout — generates full blog) |
+| Minor issues | 2 | universal_agent_tool (needs agent_name), legal_doc_drafter (wrong template sometimes) |
+| PA rendering | 1 | gates_tool (tool works but GPT-5.2 struggles formatting large result) |
+
+#### Railway API Connection Details
+
+The PA runs on Railway. **URL: `https://donkey-betz-platform-production.up.railway.app`** (NOT `donkeybetz.com` which is Squarespace).
+
+```python
+# Python pattern for PA interaction (avoids shell escaping issues)
+import urllib.request, json, time
+
+TOKEN = 'YOUR_TOKEN'
+BASE = 'https://donkey-betz-platform-production.up.railway.app'
+
+# Send message
+data = json.dumps({'message': 'Your message here'}).encode()
+req = urllib.request.Request(f'{BASE}/api/pa/chat/', data=data, headers={
+    'Authorization': f'Token {TOKEN}',
+    'Content-Type': 'application/json'
+})
+resp = json.loads(urllib.request.urlopen(req).read())
+task_id = resp['task_id']
+
+# Poll until complete
+for i in range(15):
+    time.sleep(3)
+    req = urllib.request.Request(f'{BASE}/api/pa/chat/status/{task_id}/', headers={
+        'Authorization': f'Token {TOKEN}',
+    })
+    result = json.loads(urllib.request.urlopen(req).read())
+    if result['status'] != 'processing':
+        print(result.get('content', ''))
+        break
 ```
 
-**Step 2: Send a message to the PA (async — returns task_id)**
-```bash
-TOKEN="your-token-here"
-curl -s -X POST https://donkeybetz.com/api/pa/chat/ \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Token $TOKEN" \
-  -d '{"message": "What are the active initiatives?"}' | python -m json.tool
-# Returns: {"success": true, "task_id": "celery-task-id", "status": "processing"}
-```
-
-**Step 3: Poll for the response**
-```bash
-TASK_ID="the-task-id-from-step-2"
-curl -s https://donkeybetz.com/api/pa/chat/status/$TASK_ID/ \
-  -H "Authorization: Token $TOKEN" | python -m json.tool
-# Returns: {"success": true, "status": "completed", "response": "...", "tool_runs": [...]}
-# If still processing: {"success": true, "status": "processing"}
-# Poll every 2-3 seconds until status != "processing"
-```
-
-**Key endpoints:**
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/v1/auth/login/` | POST | Get auth token (`{username, password}` → `{token}`) |
-| `/api/pa/chat/` | POST | Send message to PA (`{message}` → `{task_id}`) |
-| `/api/pa/chat/status/<task_id>/` | GET | Poll async result → `{status, response, tool_runs}` |
-| `/api/pa/context/` | GET | Get PA context (user profile, system state) |
-
-**Important notes:**
-- PA chat is **async** — POST returns a `task_id`, you must poll `/status/` for the response
-- Polling typically completes in 3-15 seconds depending on tool calls
-- The PA uses GPT-5.2 function calling with up to 5 agentic loop iterations
-- All 41 tool schemas are available (initiative_tool, content_review_tool, dream_tool, task_breakdown_tool, brainstorm_tool, etc.)
-- Auth header format: `Authorization: Token <token>` (NOT Bearer)
+Auth: `Authorization: Token <token>` (NOT Bearer). Token from `/api/v1/auth/login/`.
 
 ---
 
-## Current System Health (post-Session 1056)
+## Current System Health (post-Session 1057)
 
 | Metric | Value |
 |--------|-------|
 | PA routing | **GPT-5.2 function calling** (`PA_USE_FUNCTION_CALLING=true`) |
-| PA tools | **41 schemas, 59 handlers** |
+| PA tools | **41 schemas, 59 handlers** — 36 fully working, 9 bugs fixed this session |
 | Beat schedule | **21 tasks throttled** (~59% reduction, ~21k fewer invocations/day) |
 | Agents routable | **All 218** (82 AGENT_MAP + 139 DynamicPersonaAgent + 2 blocked) |
 | Initiatives | **4 ACTIVE**, 36 COMPLETED, 1 TRIAGE, 8 ARCHIVED (49 total) |
 | Degenerate detection | **4 patterns** — repetition, filler ratio, unique ratio, Ok. density |
+| Stage doc generation | **Fixed** — `internal_document` content type now accepted by ContentWriterAgent |
 
 ---
 
@@ -114,6 +106,12 @@ These completed initiatives have Stage 4 docs filled with ThinkingAgent system d
 - "Revise and Enhance Class Action Landscape Briefing"
 - "Revise Florida High School Soccer Playoff Broadcast Information"
 
+### ContentWriterAgent high failure count
+PA reports 44 ContentWriterAgent failures in 60 min. Most are likely pre-fix `internal_document` errors. Monitor after 24h — should drop to near zero.
+
+### generate_blog_tool timeout
+Full blog generation via PA exceeds the 30s tool timeout. Works fine as a Celery task, just can't complete within the PA agentic loop. Consider raising the PA tool timeout or making it async.
+
 ### Future Improvements
 - Tenant Phases 2-3 (budget enforcement, customer API endpoints, TenantScopeMixin)
 - Profile consolidation (Phase 4 model dedup)
@@ -128,43 +126,49 @@ These completed initiatives have Stage 4 docs filled with ThinkingAgent system d
 
 ## Verify Before Starting
 
-```bash
-# 1. Verify beat throttling deployed (check a throttled task)
-railway logs 2>&1 | grep -c 'heart-service-heartbeat' # Should be ~12/hour now, not 60
+```python
+# Use Python to avoid shell escaping issues with curl
+import urllib.request, json, time
 
-# 2. Verify PA degenerate fix deployed
-railway logs 2>&1 | grep 'Degenerate text-only'  # Should appear if triggered
+TOKEN = 'YOUR_TOKEN'  # Get from /api/v1/auth/login/
+BASE = 'https://donkey-betz-platform-production.up.railway.app'
 
-# 3. Test PA connection from CLI
-TOKEN=$(curl -s -X POST https://donkeybetz.com/api/v1/auth/login/ \
-  -H "Content-Type: application/json" \
-  -d '{"username": "YOUR_USERNAME", "password": "YOUR_PASSWORD"}' | python -c "import sys,json; print(json.load(sys.stdin)['token'])")
-echo "Token: $TOKEN"
+# 1. Verify PA responds
+data = json.dumps({'message': 'Hello, what can you help me with?'}).encode()
+req = urllib.request.Request(f'{BASE}/api/pa/chat/', data=data, headers={
+    'Authorization': f'Token {TOKEN}',
+    'Content-Type': 'application/json'
+})
+resp = json.loads(urllib.request.urlopen(req).read())
+task_id = resp['task_id']
+print(f'Task ID: {task_id}')
 
-TASK_ID=$(curl -s -X POST https://donkeybetz.com/api/pa/chat/ \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Token $TOKEN" \
-  -d '{"message": "Hello, what can you help me with?"}' | python -c "import sys,json; print(json.load(sys.stdin)['task_id'])")
-echo "Task ID: $TASK_ID"
+time.sleep(8)
+req = urllib.request.Request(f'{BASE}/api/pa/chat/status/{task_id}/', headers={
+    'Authorization': f'Token {TOKEN}',
+})
+result = json.loads(urllib.request.urlopen(req).read())
+print(f"Status: {result['status']}")
+print(result.get('content', '')[:500])
 
-sleep 5
-curl -s https://donkeybetz.com/api/pa/chat/status/$TASK_ID/ \
-  -H "Authorization: Token $TOKEN" | python -m json.tool
+# 2. Check initiative health via PA
+# "Use initiative_tool with action stats"
 
-# 4. Check initiative health
-railway run python manage.py shell -c "
-from core.models import Initiative
-for s in ['ACTIVE', 'TRIAGE', 'COMPLETED', 'ARCHIVED']:
-    c = Initiative.objects.filter(status=s).count()
-    print(f'{s}: {c}')
-"
+# 3. Check for recent failures
+# "Use task_breakdown_tool with action summary and window 60m"
 ```
 
 ---
 
 ## Critical Patterns & Gotchas
 
+**PA Railway URL (Session 1057):** Use `https://donkey-betz-platform-production.up.railway.app` (NOT `donkeybetz.com`). Use Python `urllib` for requests to avoid shell escaping issues with curl.
+
 **PA async flow (Session 974b):** POST `/api/pa/chat/` returns `{task_id}`. Poll GET `/api/pa/chat/status/<task_id>/` until `status != 'processing'`. Typical completion: 3-15s. Auth: `Authorization: Token <token>` (NOT Bearer).
+
+**PA tool schema-handler pattern (Session 1057):** Many tool schemas had action enums that didn't match what the handler supports. Always check both `pa_tool_schemas.py` (what GPT-5.2 sees) and `tool_dispatcher.py` (what actually executes).
+
+**PA tool serialization pattern (Session 1057):** ToolDispatcher handlers must return JSON-serializable dicts. Django model objects (ProjectWorkspace, Team, etc.) must be converted to dicts/strings before returning.
 
 **PA degenerate detection (Session 1056):** `_is_degenerate_content()` has 4 patterns: (1) repeated short substrings from start, (2) filler word ratio > 0.5, (3) unique word ratio < 0.15, (4) "ok." count >= 8. Check runs in BOTH tool-call and no-tool-call paths.
 
@@ -173,8 +177,6 @@ for s in ['ACTIVE', 'TRIAGE', 'COMPLETED', 'ARCHIVED']:
 **Lazy ML loading (Session 1049):** `SentenceTransformerProvider._get_model()` defers model load to first use. Global `rag_system` in `content/embeddings.py` is a `_LazyRAGSystem` proxy — importing it does NOT trigger construction. NEVER add eager model loads at module level in files imported by Celery workers.
 
 **Task volume breakdown (Session 1048):** `task_breakdown_tool` queries `CeleryTaskEvent` (NOT `TaskResult`). REST endpoints at `/api/celery/breakdown/` and `/api/celery/breakdown/task/`.
-
-**Initiative quality gate (Session 1042):** `ConversationInitiativePipeline._quality_gate()` now rejects content-review topics and any single explore pattern match.
 
 **ContentWriterAgent result structure (Session 1041):** `result.message` is a descriptive summary, NOT the actual content. Real content is in `result.data['content']['full_text']`.
 
