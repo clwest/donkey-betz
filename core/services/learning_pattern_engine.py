@@ -790,92 +790,80 @@ class LearningPatternEngine:
             logger.info(f"  Miner E (agent_tool_effectiveness): {e_total} patterns")
 
             # === Miner F: Collaboration Effectiveness ===
-            # Which agents perform better in multi-agent HiveMind sessions?
+            # Which agents perform better in multi-agent conversations?
+            # Source: AgentConversation (14k+ records, M2M participants, quality_score)
             f_total = patterns_created + patterns_updated
             try:
-                from core.models_unified_system import HiveMindContribution
+                from core.models_unified_system import AgentConversation
 
-                # Find completed sessions with 2+ distinct contributors
-                collab_session_ids = (
-                    HiveMindContribution.objects.filter(
-                        session__status='completed',
-                        session__created_at__gte=since,
-                        status='completed',
+                # Concluded conversations with 3+ participants (true collaboration)
+                collab_ids = list(
+                    AgentConversation.objects.filter(
+                        status='concluded',
+                        started_at__gte=since,
                     )
-                    .values('session_id')
-                    .annotate(n_agents=Count('agent_id', distinct=True))
-                    .filter(n_agents__gte=2)
-                    .values_list('session_id', flat=True)
+                    .annotate(n_parts=Count('participants'))
+                    .filter(n_parts__gte=3)
+                    .values_list('id', flat=True)
                 )
-                collab_ids = list(collab_session_ids)
+
+                # Pair conversations (exactly 2 participants) as baseline
+                pair_ids = list(
+                    AgentConversation.objects.filter(
+                        status='concluded',
+                        started_at__gte=since,
+                    )
+                    .annotate(n_parts=Count('participants'))
+                    .filter(n_parts=2)
+                    .values_list('id', flat=True)
+                )
 
                 if collab_ids:
-                    # Per-agent stats in collaborative sessions
+                    # Per-agent avg quality in 3+ participant conversations
                     collab_stats = (
-                        HiveMindContribution.objects.filter(
-                            session_id__in=collab_ids,
-                            status='completed',
-                        )
-                        .values('agent__name')
+                        AgentConversation.objects.filter(id__in=collab_ids)
+                        .values('participants__name')
                         .annotate(
-                            avg_conf=Avg('confidence_score'),
+                            avg_quality=Avg('quality_score'),
                             count=Count('id'),
-                            sessions=Count('session_id', distinct=True),
                         )
                         .filter(count__gte=3)
                     )
 
-                    # Solo sessions: exactly 1 distinct contributor
-                    solo_session_ids = (
-                        HiveMindContribution.objects.filter(
-                            session__status='completed',
-                            session__created_at__gte=since,
-                            status='completed',
+                    # Per-agent avg quality in pair conversations (baseline)
+                    pair_avg_map = {}
+                    if pair_ids:
+                        pair_stats = (
+                            AgentConversation.objects.filter(id__in=pair_ids)
+                            .values('participants__name')
+                            .annotate(avg_quality=Avg('quality_score'))
                         )
-                        .values('session_id')
-                        .annotate(n_agents=Count('agent_id', distinct=True))
-                        .filter(n_agents=1)
-                        .values_list('session_id', flat=True)
-                    )
-                    solo_ids = list(solo_session_ids)
-
-                    solo_avg_map = {}
-                    if solo_ids:
-                        solo_stats = (
-                            HiveMindContribution.objects.filter(
-                                session_id__in=solo_ids,
-                                status='completed',
-                            )
-                            .values('agent__name')
-                            .annotate(avg_conf=Avg('confidence_score'))
-                        )
-                        solo_avg_map = {r['agent__name']: r['avg_conf'] for r in solo_stats}
+                        pair_avg_map = {r['participants__name']: r['avg_quality'] for r in pair_stats}
 
                     for row in collab_stats:
-                        agent_name = row['agent__name']
-                        avg_conf = round(row['avg_conf'], 3)
-                        solo_avg = solo_avg_map.get(agent_name)
-                        delta = round(avg_conf - solo_avg, 3) if solo_avg is not None else None
+                        agent_name = row['participants__name']
+                        avg_quality = round(row['avg_quality'], 3)
+                        pair_avg = pair_avg_map.get(agent_name)
+                        delta = round(avg_quality - pair_avg, 3) if pair_avg is not None else None
                         confidence = min(0.85, 0.3 + (row['count'] / 50))
 
-                        delta_str = f", {delta:+.3f} vs solo" if delta is not None else ""
+                        delta_str = f", {delta:+.3f} vs pairs" if delta is not None else ""
                         pattern, created = self.LearningPattern.objects.update_or_create(
                             pattern_type='collaboration_effectiveness',
                             pattern_data__agent_name=agent_name,
                             defaults={
                                 'description': (
-                                    f"{agent_name} averages {avg_conf:.2f} confidence in "
-                                    f"multi-agent sessions ({row['count']} contributions"
+                                    f"{agent_name} averages {avg_quality:.2f} quality in "
+                                    f"multi-agent conversations ({row['count']} sessions"
                                     f"{delta_str})"
                                 ),
                                 'confidence': round(confidence, 3),
                                 'pattern_data': {
                                     'agent_name': agent_name,
-                                    'avg_confidence': avg_conf,
+                                    'avg_quality': avg_quality,
                                     'collab_count': row['count'],
-                                    'sessions_participated': row['sessions'],
-                                    'solo_avg_confidence': round(solo_avg, 3) if solo_avg is not None else None,
-                                    'confidence_delta': delta,
+                                    'pair_avg_quality': round(pair_avg, 3) if pair_avg is not None else None,
+                                    'quality_delta': delta,
                                     'days_analyzed': days_back,
                                     'mined_at': timezone.now().isoformat(),
                                 },
