@@ -64,8 +64,8 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "stats", "details", "action_items", "stage_document", "promote"],
-                    "description": "Initiative action to perform. Use 'stage_document' to read the full content of a stage document. Use 'promote' to move a TRIAGE or ON_HOLD initiative to ACTIVE.",
+                    "enum": ["list", "stats", "details", "action_items", "stage_document", "promote", "start_action_item", "complete_action_item"],
+                    "description": "Initiative action to perform. Use 'stage_document' to read the full content of a stage document. Use 'promote' to move a TRIAGE or ON_HOLD initiative to ACTIVE. Use 'start_action_item' or 'complete_action_item' with an item id.",
                 },
                 "id": {"type": "string", "description": "Initiative identifier: human ID (e.g., INIT-000012), seq number (e.g., 12), or UUID"},
                 "name": {"type": "string", "description": "Search initiative by name (partial match)"},
