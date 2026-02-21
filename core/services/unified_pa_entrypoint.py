@@ -804,9 +804,11 @@ class UnifiedPAEntrypoint:
                 tool_runs.append(tool_result.to_dict())
 
                 # Session 1060: Record tool call in ToolCallRecord for observability.
-                # Previously PA tool calls had zero records — no way to debug failures.
+                # Session 1061: Must use asyncio.to_thread — we're in an async
+                # coroutine, so synchronous ORM raises SynchronousOnlyOperation.
                 try:
-                    self._record_tool_call(
+                    await asyncio.to_thread(
+                        self._record_tool_call,
                         trace_id=trace_id,
                         tool_name=actual_tool_name,
                         arguments=arguments,
@@ -814,7 +816,7 @@ class UnifiedPAEntrypoint:
                         task_summary=message[:200],
                     )
                 except Exception as rec_err:
-                    logger.debug(f"[{trace_id}] ToolCallRecord save failed (non-fatal): {rec_err}")
+                    logger.warning(f"[{trace_id}] ToolCallRecord save failed (non-fatal): {rec_err}")
 
                 # Capture GPT function call metadata for persistence/multi-turn
                 fc_metadata.append({
