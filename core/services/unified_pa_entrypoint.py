@@ -715,13 +715,17 @@ class UnifiedPAEntrypoint:
                     f"[{trace_id}] Degenerate content detected at iteration {iteration+1}, "
                     f"forcing final text response. Content: {text_content[:100]!r}"
                 )
-                # Re-run WITHOUT tools to force a clean text answer
+                # Re-run WITHOUT tools to force a clean text answer.
+                # Session 1060: Drop previous_response_id — the current response
+                # has pending tool_calls, so OpenAI rejects continuations without
+                # function_call_output. Rebuild fresh messages instead.
+                fresh_messages = self._build_messages_array(message, context)
                 final_result = await asyncio.to_thread(
                     self.llm_enforcer.enforce_real_ai,
                     prompt=message,
-                    input_messages=messages,
+                    input_messages=fresh_messages,
                     tools=None,
-                    previous_response_id=response_id,
+                    previous_response_id=None,
                     task_type='conversation',
                     max_tokens=2000,
                     agent_name='PersonalAssistant',
@@ -739,12 +743,24 @@ class UnifiedPAEntrypoint:
                     f"[{trace_id}] Duplicate tool call signature detected at iteration {iteration+1}, "
                     f"breaking loop. Sig: {sig_key[:100]}"
                 )
+                # Session 1060: Drop previous_response_id — see degenerate break above.
+                # Also inject tool results as user context so the LLM can summarize.
+                fresh_messages = self._build_messages_array(message, context)
+                tool_summary = json.dumps(
+                    [{'tool': r.get('tool', ''), 'ok': r.get('ok'), 'result': str(r.get('result', ''))[:500]}
+                     for r in tool_runs],
+                    default=str
+                )[:4000]
+                fresh_messages.append({
+                    "role": "user",
+                    "content": f"Here are the tool results I gathered. Please summarize them for the user:\n{tool_summary}",
+                })
                 final_result = await asyncio.to_thread(
                     self.llm_enforcer.enforce_real_ai,
                     prompt=message,
-                    input_messages=messages,
+                    input_messages=fresh_messages,
                     tools=None,
-                    previous_response_id=response_id,
+                    previous_response_id=None,
                     task_type='conversation',
                     max_tokens=2000,
                     agent_name='PersonalAssistant',
@@ -846,15 +862,20 @@ class UnifiedPAEntrypoint:
 
         # Pattern 1: Extremely repetitive — same 2-5 char substring repeated many times
         # e.g. "Ok.Ok.Ok.Ok.Ok." or "Stop.Stop.Stop."
+        # Session 1060: Require >40% of windows to match, not just 6 absolute.
+        # '##' appears 8 times in a 2000-char markdown report (0.8%) — that's
+        # not degenerate, just normal headings. True degenerate text has >40%.
         for chunk_len in (2, 3, 4, 5):
-            if len(compressed) >= chunk_len * 6:
+            total_windows = len(compressed) // chunk_len
+            if total_windows >= 6:
                 chunk = compressed[:chunk_len]
                 repeat_count = 0
                 for i in range(0, len(compressed) - chunk_len + 1, chunk_len):
                     if compressed[i:i+chunk_len] == chunk:
                         repeat_count += 1
-                if repeat_count >= 6:
-                    logger.debug(f"[degenerate] Pattern 1 hit: chunk={chunk!r} repeated {repeat_count}x")
+                repeat_ratio = repeat_count / total_windows
+                if repeat_count >= 6 and repeat_ratio > 0.4:
+                    logger.debug(f"[degenerate] Pattern 1 hit: chunk={chunk!r} repeated {repeat_count}/{total_windows} ({repeat_ratio:.0%})")
                     return True
 
         # Pattern 2: High ratio of filler words (word-boundary matching).
