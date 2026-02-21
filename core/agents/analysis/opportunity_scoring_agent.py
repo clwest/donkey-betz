@@ -700,50 +700,25 @@ You score and analyze - you do NOT create content or execute workflows."""
             except Exception as e:
                 logger.warning(f"ML scoring failed, falling back to rules: {e}")
 
-        # Fallback: Rule-based scoring using spider data attributes
-        # Session 1062: Use actual data signals instead of hardcoded values
-        base = spider_data.relevance_score / 2 + 25
-        raw_data = spider_data.raw_data or {}
-
-        profit = min(100, max(1, int(base + 10)))
-
-        # Derive competition from data signals instead of hardcoding 50
-        has_budget = bool(raw_data.get('budget') or raw_data.get('salary'))
-        has_skills = bool(raw_data.get('skills', raw_data.get('skills_required')))
-        desc_len = len(raw_data.get('description', ''))
-        competition = 30 if has_budget and has_skills else 50 if has_skills else 65
-
-        # Derive effort from description detail and skills count
-        skills_list = raw_data.get('skills', raw_data.get('skills_required', []))
-        if isinstance(skills_list, str):
-            skills_list = [s.strip() for s in skills_list.split(',') if s.strip()]
-        skill_count = len(skills_list) if isinstance(skills_list, list) else 0
-        effort = 30 if skill_count <= 2 else 50 if skill_count <= 5 else 65
-
-        # Derive timing from recency and urgency signals
-        urgency = raw_data.get('urgency', '')
-        timing = 80 if urgency == 'high' else 65 if desc_len > 200 else 50
-
-        # Calculate overall
-        competition_score = 100 - competition
-        effort_score = 100 - effort
-        overall = int(
-            profit * 0.35 +
-            competition_score * 0.35 +
-            effort_score * 0.20 +
-            timing * 0.10
+        # Fallback: Unified type-aware scoring
+        from core.services.opportunity_scorer import score_opportunity
+        result = score_opportunity(
+            raw_data=raw_data,
+            spider_name=spider_data.spider_name,
+            data_type=spider_data.data_type,
+            title=title,
         )
 
         return {
             'title': title[:100],
             'source': spider_data.spider_name,
-            'profit_potential': profit,
-            'competition_level': competition,
-            'effort_required': effort,
-            'time_sensitivity': timing,
-            'overall_score': min(100, max(1, overall)),
+            'profit_potential': result['profit_potential'],
+            'competition_level': result['competition_level'],
+            'effort_required': result['effort_required'],
+            'time_sensitivity': result['time_sensitivity'],
+            'overall_score': result['overall_score'],
             'content_types': self._suggest_content_types('trend', title),
-            'scoring_method': 'rule_based',
+            'scoring_method': result['scoring_method'],
         }
 
     def _calculate_trend_scores(self, topic: str) -> Dict[str, Any]:
@@ -1059,10 +1034,13 @@ You score and analyze - you do NOT create content or execute workflows."""
         spider_lower = spider_name.lower()
 
         category_mappings = {
-            'freelance': ['freelancer', 'upwork', 'fiverr', 'remoteok', 'weworkremotely'],
-            'content': ['youtube', 'tiktok', 'instagram', 'twitter', 'reddit'],
+            'freelance': ['freelancer', 'upwork', 'fiverr', 'remoteok', 'weworkremotely', 'real_job', 'job_opportunity'],
+            'content': ['youtube', 'tiktok', 'instagram', 'twitter', 'reddit', 'news', 'trending_content', 'social_api'],
+            'sports_betting': ['theodds', 'odds_api', 'sports_odds', 'sports_data', 'live_betting', 'prop_betting', 'esports'],
+            'trading': ['yahoo_finance', 'coingecko', 'stock_options', 'forex_crypto', 'financial_api', 'crypto_intelligence'],
             'digital_product': ['gumroad', 'teachable', 'udemy', 'skillshare'],
             'software': ['github', 'producthunt', 'hackernews'],
+            'consulting': ['ai_startup'],
             'course': ['coursera', 'edx', 'khan'],
             'template': ['envato', 'creative_market'],
         }
