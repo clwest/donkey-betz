@@ -895,6 +895,7 @@ class AgentRouter:
             workspace_context = pre_gathered_context.get('workspace_context', {})  # Session 798
             docs_context = pre_gathered_context.get('docs_context', {})  # Session 798
             user_context = pre_gathered_context.get('user_context', {})  # Session 858
+            risk_context = pre_gathered_context.get('risk_context', {})  # Session 949
             user_docs_context = pre_gathered_context.get('user_docs_context', {})  # Session 1035
             logger.info(f"Using pre-gathered context for {agent_name} (context gathering done outside timeout)")
         else:
