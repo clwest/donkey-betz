@@ -340,10 +340,10 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["summary", "breakdown", "history"],
-                    "description": "Revenue action",
+                    "enum": ["stats", "list"],
+                    "description": "Revenue action: stats (totals by source/status), list (recent revenue records)",
                 },
-                "period": {"type": "string", "description": "Time period (week, month, quarter, year)"},
+                "limit": {"type": "integer", "description": "Max items for list action (default 20)"},
             },
             "required": ["action"],
         },
@@ -566,8 +566,8 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["recent", "by_agent", "stats", "details"],
-                    "description": "Execution history action",
+                    "enum": ["recent", "by_agent", "stats", "failures"],
+                    "description": "Execution history action: recent (latest runs), by_agent (filter by agent), stats (aggregates), failures (recent errors)",
                 },
                 "agent_name": {"type": "string", "description": "Filter by agent name"},
                 "id": {"type": "string", "description": "UUID of execution for details"},
