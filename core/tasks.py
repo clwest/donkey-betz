@@ -20640,13 +20640,16 @@ def generate_blog_with_topic_task(self, topic, tone='enthusiastic'):
     }
 
 
-@shared_task(bind=True)
+@shared_task(bind=True, soft_time_limit=240, time_limit=300)
 def generate_self_blog_deliberation_task(self, tone='enthusiastic', word_count=1500, topic_category=None):
     """
     Phase 4: Generate a blog through the multi-agent deliberation pipeline.
 
     Same signature as generate_self_blog_task but uses ContentDeliberationRunner
     for ClaimsPack -> Draft -> 3-reviewer panel -> DecisionEnforcer -> PublishGate.
+
+    Session 1062: Added Redis lock (max_concurrency=1) to prevent OOM from
+    concurrent deliberation tasks crashing celery-content every hour.
 
     Args:
         tone: Blog tone
@@ -20656,6 +20659,13 @@ def generate_self_blog_deliberation_task(self, tone='enthusiastic', word_count=1
     import random
     from datetime import timedelta
     from django.utils import timezone
+
+    # Session 1062: Only one deliberation at a time — prevents OOM on celery-content
+    from django.core.cache import cache
+    lock_key = 'deliberation_blog_running'
+    if not cache.add(lock_key, self.request.id, timeout=300):
+        logger.info(f"[Phase 4] Skipping deliberation — another is already running (lock={lock_key})")
+        return {'success': False, 'skipped': True, 'reason': 'concurrent deliberation already running'}
 
     # Session 969: Weight away from 'system' for diversity
     if topic_category is None or topic_category == 'random':
@@ -20751,6 +20761,9 @@ def generate_self_blog_deliberation_task(self, tone='enthusiastic', word_count=1
     except Exception as e:
         logger.error(f"[Phase 4] Deliberation task failed: {e}", exc_info=True)
         return {'success': False, 'error': str(e)}
+
+    finally:
+        cache.delete(lock_key)
 
 
 # =============================================================================
