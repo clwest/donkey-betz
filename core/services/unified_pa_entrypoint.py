@@ -1548,13 +1548,22 @@ class UnifiedPAEntrypoint:
         ]):
             return ('opportunities', 'opportunity_manager_tool')
 
+        # Deliverables library patterns — save/unsave/browse agent outputs
+        if any(phrase in message_lower for phrase in [
+            'my deliverables', 'saved deliverables', 'deliverables library',
+            'save to library', 'saved items', 'my saved', 'bookmarks',
+            'saved outputs', 'unsave deliverable', 'save deliverable',
+            'show deliverables', 'list deliverables', 'deliverable stats',
+        ]):
+            return ('deliverables', 'deliverables_tool')
+
         # Session 943: Content REVIEW patterns - MUST come before content creation patterns
         # These are for viewing/reviewing existing content, not creating new
         # Session 957: Added blog/report query patterns for "what blogs have been written by agents"
         if any(phrase in message_lower for phrase in [
             'what content', 'content created', 'content been created',
             'show content', 'list content', 'my content', 'created content',
-            'deliverable', 'content ready', 'ready for review',
+            'content ready', 'ready for review',
             'ready to publish', 'publish content', 'archive content',
             'content stats', 'review content', 'view content',
             # Session 957: Blog/report query patterns
@@ -5096,6 +5105,73 @@ Address the user by name occasionally."""
 
                 else:
                     return str(tool_result)
+
+            # Deliverables library formatter
+            elif intent == 'deliverables':
+                if isinstance(tool_result, dict):
+                    action = tool_result.get('action', '')
+
+                    if action in ('list', 'search'):
+                        items = tool_result.get('items', [])
+                        if not items:
+                            return f"No deliverables found, {user_name}."
+
+                        label = "Search results" if action == 'search' else "Deliverables"
+                        response = f"{label} ({len(items)}):\n\n"
+                        for i, item in enumerate(items[:15], 1):
+                            if isinstance(item, dict):
+                                title = item.get('title', 'Untitled')
+                                dtype = item.get('deliverable_type', '')
+                                score = item.get('quality_score', 0)
+                                saved = ' [saved]' if item.get('is_saved') else ''
+                                response += f"{i}. **{title}** ({dtype}) — quality: {score:.1f}{saved}\n"
+                        return response
+
+                    elif action == 'detail':
+                        title = tool_result.get('title', 'Untitled')
+                        dtype = tool_result.get('deliverable_type', '')
+                        agent = tool_result.get('agent_name', '')
+                        preview = tool_result.get('content_preview', '')
+                        score = tool_result.get('quality_score', 0)
+                        saved = 'Yes' if tool_result.get('is_saved') else 'No'
+                        tags = ', '.join(tool_result.get('tags', []))
+
+                        response = f"**{title}**\n\n"
+                        response += f"- **Type:** {dtype}\n"
+                        response += f"- **Agent:** {agent}\n"
+                        response += f"- **Quality:** {score:.1f}\n"
+                        response += f"- **Saved:** {saved}\n"
+                        if tags:
+                            response += f"- **Tags:** {tags}\n"
+                        if preview:
+                            response += f"\n**Preview:**\n{preview}\n"
+                        response += "\n*View in Content Studio > Deliverables*"
+                        return response
+
+                    elif action in ('save', 'unsave'):
+                        title = tool_result.get('title', '')
+                        if action == 'save':
+                            return f"Saved **{title}** to your library."
+                        else:
+                            return f"Removed **{title}** from your saved items."
+
+                    elif action == 'stats':
+                        total = tool_result.get('total', 0)
+                        saved = tool_result.get('saved', 0)
+                        templates = tool_result.get('templates', 0)
+                        by_type = tool_result.get('by_type', {})
+
+                        response = f"Deliverables Library, {user_name}:\n\n"
+                        response += f"- **Total:** {total}\n"
+                        response += f"- **Saved:** {saved}\n"
+                        response += f"- **Templates:** {templates}\n"
+                        if by_type:
+                            response += "\n**By type:**\n"
+                            for t, c in by_type.items():
+                                response += f"- {t}: {c}\n"
+                        return response
+
+                return str(tool_result)
 
             # Session 987: Budget formatter
             elif intent == 'budget':
