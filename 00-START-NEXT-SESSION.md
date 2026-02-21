@@ -1,8 +1,24 @@
-# Session 1061 - Start Here
+# Session 1062 - Start Here
 
-**Previous Sessions:** 1060 (PA Real-World Testing — 3 degenerate detector fixes, tool call observability, FC sanitizer), 1059 (Timeout Fix + Initiative Spam Cap), 1058 (Action Item Auto-Dispatch + Ghost Dispatcher Fix), 1057 (PA Tool Audit — 9 bugs fixed across 5 PRs)
+**Previous Sessions:** 1061 (Sports Betting Accuracy Handler — wired MLPrediction.calculate_accuracy to PA, fixed sport_name→sport_type bug), 1060 (PA Real-World Testing — 3 degenerate detector fixes, tool call observability, FC sanitizer), 1059 (Timeout Fix + Initiative Spam Cap), 1058 (Action Item Auto-Dispatch + Ghost Dispatcher Fix)
 **Date:** February 21, 2026
 **Status:** 218 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2, 41 tool schemas, 61 handlers)** | **PA tested: 14/14 tests pass (0 crashes)** | 13 ACTIVE initiatives | 57 COMPLETED
+
+---
+
+## Session 1061 — What Happened
+
+### Sports Betting Accuracy Handler (PR #1379)
+
+GPT-5.2 had no `accuracy` action in the `sports_betting_tool` schema. Any accuracy question ("how accurate are predictions?") fell through to the `else` branch which silently returned the `overview` payload — wager counts instead of accuracy stats.
+
+| Change | File | Details |
+|--------|------|---------|
+| Add `accuracy` to schema enum | `pa_tool_schemas.py:261` | New action + `days` integer property |
+| New accuracy handler | `tool_dispatcher.py:5435` | Calls `MLPrediction.calculate_accuracy()`, per-sport breakdown, PlacedWager ROI stats |
+| Fix `sport_name` → `sport_type` | `tool_dispatcher.py:5427` | predictions action was returning empty string for sport |
+
+**Railway-verified results:** 2,014 predictions over 30 days, **70.01% overall accuracy** (NCAAB 70.79%, NBA 65.96%, Soccer 75.47%), avg confidence 66.71%.
 
 ---
 
@@ -97,11 +113,11 @@ FC path returned raw LLM text directly. GPT-5.2 sometimes included `to=functions
 ### Data Layer Gaps (discovered in PA testing)
 These are **not PA bugs** — the PA correctly reports what's there. The data backends need work:
 1. **Revenue tracker**: $0 ingested, 0 records — needs Stripe/affiliate/ad data source integration
-2. **Sports betting accuracy endpoint**: returns overview payload instead of accuracy stats — tool handler bug in `sports_betting_tool`
+2. ~~**Sports betting accuracy endpoint**~~: FIXED in Session 1061 — `accuracy` action added to schema + handler, returns MLPrediction stats + PlacedWager ROI
 3. **Stock intelligence**: no "watchlist" or "top tracked tickers" concept — ticker-addressed only, needs portfolio model
 4. **ML predictions table**: deprecated with 0 records, `predictions_tool` says use HumanAttentionItem instead
-5. **`universal_agent_tool` schema mismatch**: errors with "agent_name is required" but schema only takes `task` — needs schema or handler fix
-6. **Initiative tool truncation**: returns only 1 of 13 items in payload — likely a page size / serialization limit
+5. ~~**`universal_agent_tool` schema mismatch**~~: FIXED in Session 1062 — handler auto-routes via ResearchAgent when `agent_name` omitted
+6. ~~**Initiative tool truncation**~~: FIXED in Session 1065 — smart truncation preserves JSON, limit raised to 16K, descriptions trimmed to 200 chars
 
 ### 25 Untested PA Tools
 High-priority untested: `brainstorm_tool`, `dream_tool`, `content_review_tool`, `learning_patterns_tool`, `opportunity_manager_tool`, `pilots_tool`, `reasoning_engine_tool` (tested indirectly), `legal_doc_drafter_agent`, `legislation_tool`
