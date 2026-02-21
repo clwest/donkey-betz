@@ -33894,6 +33894,131 @@ def extract_action_items_from_session(self, session_id: str):
 
 
 # =============================================================================
+# Session 1058 Level 3: Auto-Dispatch Pending Action Items
+# =============================================================================
+
+@shared_task(bind=True, soft_time_limit=300, time_limit=360)
+def dispatch_pending_action_items(self):
+    """
+    Session 1058 Level 3: Dispatch pending action items to assigned agents.
+    Runs on beat cycle. Only dispatches items from STAGES_WITH_AUTO_DISPATCH
+    on ACTIVE initiatives.
+    """
+    from core.models_document_registry import (
+        Initiative, InitiativeActionItem, STAGES_WITH_AUTO_DISPATCH,
+    )
+    from core.models import Agent
+    from core.models_unified_system import AgentExecution
+    from core.agent_router import AgentRouter
+    from django.utils import timezone
+    from datetime import timedelta
+
+    logger.info("[ACTION-DISPATCH] Starting dispatch cycle")
+
+    # Blocked agents (same as execute_agent_task)
+    _BLOCKED_AGENTS = frozenset({'CodeGeneratorAgent', 'AudioAgent'})
+
+    # Query pending items on ACTIVE initiatives, auto-dispatch stages only
+    items = (
+        InitiativeActionItem.objects
+        .filter(
+            status='pending',
+            initiative__status='ACTIVE',
+            source_stage__isnull=False,
+            source_stage__stage__in=STAGES_WITH_AUTO_DISPATCH,
+        )
+        .exclude(assigned_agent='')
+        .exclude(assigned_agent__isnull=True)
+        .select_related('initiative', 'source_stage')
+        [:20]  # Fetch up to 20, dispatch up to 10
+    )
+
+    dispatched = []
+    skipped = []
+    blocked = []
+    now = timezone.now()
+
+    for item in items:
+        if len(dispatched) >= 10:
+            break
+
+        agent_name = item.assigned_agent
+
+        # Safety: skip blocked agents
+        if agent_name in _BLOCKED_AGENTS:
+            item.block(reason=f'{agent_name} is blocked (Session 1031)')
+            blocked.append({'id': str(item.id), 'agent': agent_name, 'reason': 'blocked_agent'})
+            continue
+
+        # Safety: validate agent exists in AGENT_MAP or DB
+        agent_exists = (
+            agent_name in AgentRouter.AGENT_MAP
+            or Agent.objects.filter(name=agent_name).exists()
+        )
+        if not agent_exists:
+            item.block(reason=f'{agent_name} not found in AGENT_MAP or DB')
+            blocked.append({'id': str(item.id), 'agent': agent_name, 'reason': 'unknown_agent'})
+            continue
+
+        # Safety: per-agent daily cap (8 dispatches/day from initiative pipeline)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        daily_count = AgentExecution.objects.filter(
+            agent__name=agent_name,
+            created_at__gte=today_start,
+            input_data__source='initiative_action_dispatch',
+        ).count()
+        if daily_count >= 8:
+            skipped.append({'id': str(item.id), 'agent': agent_name, 'reason': 'daily_cap'})
+            continue
+
+        # Safety: dedup — skip if same agent ran similar task in last 6 hours
+        title_prefix = item.title[:80]
+        recent_dup = AgentExecution.objects.filter(
+            agent__name=agent_name,
+            created_at__gte=now - timedelta(hours=6),
+            input_data__task__startswith=title_prefix,
+        ).exists()
+        if recent_dup:
+            skipped.append({'id': str(item.id), 'agent': agent_name, 'reason': 'dedup'})
+            continue
+
+        # Dispatch
+        item.start(by='auto_dispatcher')
+
+        execute_agent_task.delay(
+            agent_name=agent_name,
+            task=item.title,
+            context={
+                'source': 'initiative_action_dispatch',
+                'action_item_id': str(item.id),
+                'initiative_id': str(item.initiative_id),
+                'stage': item.source_stage.stage if item.source_stage else None,
+            },
+        )
+        dispatched.append({
+            'id': str(item.id),
+            'agent': agent_name,
+            'title': item.title[:60],
+        })
+
+    result = {
+        'dispatched': len(dispatched),
+        'skipped': len(skipped),
+        'blocked': len(blocked),
+        'details': {
+            'dispatched': dispatched,
+            'skipped': skipped,
+            'blocked': blocked,
+        },
+    }
+    logger.info(
+        f"[ACTION-DISPATCH] Done: {len(dispatched)} dispatched, "
+        f"{len(skipped)} skipped, {len(blocked)} blocked"
+    )
+    return result
+
+
+# =============================================================================
 # Session 905: Research Self-Unblock Loop
 # =============================================================================
 
@@ -34458,6 +34583,7 @@ Provide a research brief with:
 2. **Data Sources** - Which web sources and spider data you used
 3. **Key Insights** - 3-5 most important takeaways
 4. **Recommendation** - Should this project proceed? Why or why not?
+5. **Action Items** - Next steps with format "- AgentName: Task description (Timeline)"
 
 IMPORTANT: Use web_search as your PRIMARY tool. This is external market/topic research, NOT internal system analysis."""
     else:
@@ -34485,10 +34611,10 @@ Stage {stage_num} ({config['template']}) should include:
 
         # Add stage-specific instructions for stages 2-5
         stage_instructions = {
-            2: "- Architecture Overview\n- Implementation Approach\n- Key Components\n- Risk Assessment",
-            3: "- Success Criteria\n- Metrics to Track\n- Evaluation Timeline\n- Go/No-Go Decision Criteria",
-            4: "- Technical Specification\n- Dependencies\n- Integration Points\n- Testing Strategy",
-            5: "- Pilot Results\n- Learnings\n- Recommendations\n- Scale Plan",
+            2: "- Architecture Overview\n- Implementation Approach\n- Key Components\n- Risk Assessment\n- Action Items (use format: \"- AgentName: Task description (Timeline)\")",
+            3: "- Success Criteria\n- Metrics to Track\n- Evaluation Timeline\n- Go/No-Go Decision Criteria\n- Action Items (use format: \"- AgentName: Task description (Timeline)\")",
+            4: "- Technical Specification\n- Dependencies\n- Integration Points\n- Testing Strategy\n- Action Items (use format: \"- AgentName: Task description (Timeline)\")",
+            5: "- Pilot Results\n- Learnings\n- Recommendations\n- Scale Plan\n- Action Items (use format: \"- AgentName: Task description (Timeline)\")",
         }
         prompt += stage_instructions.get(stage_num, "- Relevant sections for this stage")
 
