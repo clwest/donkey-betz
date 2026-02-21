@@ -411,12 +411,38 @@ class LearningPatternEngine:
             parts.append(f"Excels at: {', '.join(unique_types)}")
 
         # Session 766: Stored patterns from LearningPattern model
+        # Type-aware rendering extracts actionable data from pattern_data
         stored = patterns.get('stored_patterns', [])
         if stored:
-            pattern_types = [p['type'] for p in stored[:3]]
-            unique_pattern_types = list(set(pattern_types))
-            if unique_pattern_types:
-                parts.append(f"Known patterns: {', '.join(unique_pattern_types)}")
+            collab_rendered = False
+            spider_rendered = False
+            generic_types = []
+
+            for p in stored[:5]:
+                ptype = p['type']
+                pdata = p.get('data', {})
+
+                if ptype == 'collaboration_effectiveness' and not collab_rendered:
+                    delta = pdata.get('quality_delta')
+                    if delta is not None and delta > 0:
+                        parts.append(f"Collab boost: +{delta:.0%} in group sessions")
+                        collab_rendered = True
+                    continue
+
+                if ptype == 'spider_data_value' and not spider_rendered:
+                    dt = pdata.get('data_type', '')
+                    act = pdata.get('actionable_pct', 0)
+                    if dt and act > 0:
+                        parts.append(f"Spider '{dt}': {act}% actionable")
+                        spider_rendered = True
+                    continue
+
+                generic_types.append(ptype)
+
+            # Fall back to generic rendering for remaining types
+            if generic_types:
+                unique = list(dict.fromkeys(generic_types))[:3]
+                parts.append(f"Known patterns: {', '.join(unique)}")
 
         return " | ".join(parts) if parts else ""
 
@@ -1289,6 +1315,15 @@ class LearningPatternEngine:
                 task_type = success[0].get('task_type', '')
                 if task_type:
                     parts.append(f"Excels: {task_type}")
+
+            # Collaboration effectiveness (from stored patterns)
+            stored = patterns.get('stored_patterns', [])
+            for p in stored:
+                if p['type'] == 'collaboration_effectiveness':
+                    delta = p.get('data', {}).get('quality_delta')
+                    if delta is not None and delta > 0:
+                        parts.append(f"Collab: +{delta:.0%}")
+                    break
 
             result = " | ".join(parts)
 

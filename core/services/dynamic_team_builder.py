@@ -259,6 +259,41 @@ class DynamicTeamBuilder:
         # Return top agents
         return agent_scores[:max_agents]
 
+    # ==================== Collaboration Boost ====================
+
+    def _load_collab_boosts(self) -> Dict[str, float]:
+        """
+        Load collaboration effectiveness patterns into a lookup dict.
+
+        Returns {agent_name: quality_delta} for agents that perform better
+        in multi-agent conversations. Single DB query, called once per
+        team-build cycle.
+        """
+        try:
+            from core.models_unified_system import LearningPattern
+
+            patterns = LearningPattern.objects.filter(
+                pattern_type='collaboration_effectiveness',
+                is_active=True,
+            ).values_list('pattern_data', 'confidence')
+
+            boosts = {}
+            for data, confidence in patterns:
+                agent_name = data.get('agent_name')
+                delta = data.get('quality_delta')
+                if agent_name and delta is not None and delta > 0:
+                    # Up to 15% boost, scaled by confidence
+                    raw_boost = 1.0 + min(delta / 0.2, 1.0) * 0.15
+                    boosts[agent_name] = 1.0 + (raw_boost - 1.0) * min(confidence, 1.0)
+            return boosts
+        except Exception as e:
+            logger.debug(f"Could not load collab boosts: {e}")
+            return {}
+
+    def _get_collab_boost(self, agent_name: str, boost_map: Dict[str, float]) -> float:
+        """Look up pre-loaded collaboration boost for an agent (1.0 = neutral)."""
+        return boost_map.get(agent_name, 1.0)
+
     # ==================== Synergy Optimization ====================
 
     def _get_synergy_bonus(self, agent1: str, agent2: str) -> float:
@@ -304,6 +339,18 @@ class DynamicTeamBuilder:
         if not candidates:
             return []
 
+        # Load collaboration boosts once for the whole selection
+        collab_boosts = self._load_collab_boosts()
+
+        # Re-sort candidates with collab boost applied so agents that
+        # thrive in groups float up in multi-agent teams (size >= 2)
+        if min_size >= 2 and collab_boosts:
+            candidates = sorted(
+                candidates,
+                key=lambda c: c[1] * collab_boosts.get(c[0], 1.0),
+                reverse=True,
+            )
+
         # Start with top candidate as primary
         team = []
         selected_agents = set()
@@ -337,8 +384,9 @@ class DynamicTeamBuilder:
 
             avg_synergy = sum(synergy_scores) / len(synergy_scores) if synergy_scores else 1.0
 
-            # Add if score * synergy is high enough
-            combined_score = score * avg_synergy
+            # Add if score * synergy * collab boost is high enough
+            collab_boost = self._get_collab_boost(agent_name, collab_boosts)
+            combined_score = score * avg_synergy * collab_boost
             if combined_score >= self.RELEVANCE_THRESHOLD or avg_synergy > 1.1:
                 team.append(TeamMember(
                     agent_name=agent_name,
