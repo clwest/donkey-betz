@@ -921,6 +921,8 @@ CELERY_TASK_ROUTES = {
     'sports.*': {'queue': 'sports'},
     'content.*': {'queue': 'content'},
     'ml.*': {'queue': 'ml'},
+    # Session 1036: Route DB-only monitor task to default queue (no HTTP/ML, just queries saved opps)
+    'intelligence.tasks.monitor_and_process_opportunities': {'queue': 'default'},
     'intelligence.*': {'queue': 'long_running'},  # Session 884: Intelligence tasks are long-running
 
     # Session 573: Long-running tasks — heavy memory (ML models, coordinators)

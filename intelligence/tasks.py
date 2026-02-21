@@ -7,6 +7,7 @@ import asyncio
 import logging
 from datetime import datetime
 from celery import shared_task
+from celery.exceptions import SoftTimeLimitExceeded
 from .realtime_engine import intelligence_engine
 
 # Session 642: Import shared_memory task to ensure Celery discovers it
@@ -1567,7 +1568,7 @@ def execute_agent_task(agent_id: int, task: str, context: dict = None):
         }
 
 
-@shared_task(bind=True)
+@shared_task(bind=True, soft_time_limit=900, time_limit=960)
 def scan_spider_opportunities(self):
     """
     CRITICAL FIX: Scheduled task to scan spider network for opportunities
@@ -1580,12 +1581,16 @@ def scan_spider_opportunities(self):
 
     Session 902: Added task lock to prevent concurrent execution (OOM fix).
     Multiple simultaneous scans cause memory issues from unclosed aiohttp sessions.
+
+    Session 1036: Added soft_time_limit=900 (15min) + time_limit=960 to prevent
+    worker starvation. Lock timeout covers full run (1020s > 960s hard limit).
     """
     from django.core.cache import cache
 
     # Session 902: Task lock to prevent concurrent execution
+    # Session 1036: Lock timeout must exceed hard time_limit to prevent ghost locks
     lock_key = 'scan_spider_opportunities_lock'
-    lock_timeout = 600  # 10 minutes max lock time
+    lock_timeout = 1020  # Must exceed time_limit (960s)
 
     # Try to acquire lock
     if not cache.add(lock_key, self.request.id, lock_timeout):
@@ -1623,6 +1628,10 @@ def scan_spider_opportunities(self):
             'stats': stats,
             'timestamp': datetime.now().isoformat()
         }
+
+    except SoftTimeLimitExceeded:
+        logger.warning("scan_spider_opportunities hit 15min soft time limit, returning partial results")
+        return {'status': 'partial', 'reason': 'time_limit'}
 
     except Exception as e:
         logger.error(f"❌ Spider scan error: {e}", exc_info=True)
@@ -1707,9 +1716,13 @@ def scan_income_spider_orchestrator(self):
         }
 
 
-@shared_task(name='intelligence.tasks.fetch_all_opportunities')
+@shared_task(name='intelligence.tasks.fetch_all_opportunities', soft_time_limit=600, time_limit=660)
 def fetch_all_opportunities():
-    """Fetch opportunities from all spiders - runs hourly"""
+    """Fetch opportunities from all spiders - runs hourly
+
+    Session 1036: Added soft_time_limit=600 (10min) + time_limit=660 to prevent
+    worker starvation on the long_running queue.
+    """
     from intelligence.spider_opportunity_connector import spider_connector, save_opportunity_to_database
     from django.contrib.auth import get_user_model
     from channels.db import database_sync_to_async
@@ -1769,7 +1782,12 @@ def fetch_all_opportunities():
     # Session 880: Use asyncio.run() which properly creates a Task context
     # that aiohttp's ClientTimeout requires (fixes "Timeout context manager
     # should be used inside a task" error)
-    result = asyncio.run(fetch_all())
+    try:
+        result = asyncio.run(fetch_all())
+    except SoftTimeLimitExceeded:
+        logger.warning("fetch_all_opportunities hit 10min soft time limit, returning partial results")
+        return {'success': False, 'reason': 'time_limit', 'timestamp': datetime.now().isoformat()}
+
     logger.info(f"✅ Spider orchestration complete: {result['saved']}/{result['total']} opportunities saved")
     return {
         'success': True,
