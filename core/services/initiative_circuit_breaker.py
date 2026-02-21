@@ -124,6 +124,36 @@ def is_backlog_too_high() -> bool:
     return pending >= threshold
 
 
+def get_daily_creation_limit() -> int:
+    """Session 1059: Max initiatives created per 24h rolling window."""
+    try:
+        return int(os.environ.get('INITIATIVE_DAILY_LIMIT', '15'))
+    except (ValueError, TypeError):
+        return 15
+
+
+def is_daily_limit_reached() -> bool:
+    """
+    Session 1059: Check if the 24h rolling creation cap has been reached.
+
+    Initiatives complete in 0.7-3h, so the backlog threshold alone doesn't
+    prevent spam — fast-completing initiatives keep the count low while the
+    system churns through dozens per day.
+    """
+    try:
+        from core.models_document_registry import Initiative
+        from django.utils import timezone as tz
+        from datetime import timedelta
+
+        limit = get_daily_creation_limit()
+        cutoff = tz.now() - timedelta(hours=24)
+        created_24h = Initiative.objects.filter(created_at__gte=cutoff).count()
+        return created_24h >= limit
+    except Exception as e:
+        logger.warning(f"[circuit_breaker] Daily limit check failed: {e}")
+        return False
+
+
 def can_create_initiative(bypass_check: bool = False) -> bool:
     """
     Main check: Can we create a new initiative?
@@ -156,6 +186,15 @@ def can_create_initiative(bypass_check: bool = False) -> bool:
         )
         return False
 
+    # Session 1059: Daily creation cap — prevents churn even when initiatives complete fast
+    if is_daily_limit_reached():
+        limit = get_daily_creation_limit()
+        logger.warning(
+            f"[circuit_breaker] Daily initiative limit reached: "
+            f"{limit} created in last 24h"
+        )
+        return False
+
     return True
 
 
@@ -163,6 +202,7 @@ def get_backlog_status() -> Dict[str, Any]:
     """Get full status of the circuit breaker."""
     pending = get_pending_initiative_count()
     threshold = get_backlog_threshold()
+    daily_limit = get_daily_creation_limit()
 
     return {
         'can_create': can_create_initiative(),
@@ -174,6 +214,8 @@ def get_backlog_status() -> Dict[str, Any]:
         'paused_by_env': is_creation_paused_by_env(),
         'paused_by_db': is_creation_paused_by_db(),
         'paused_by_backlog': is_backlog_too_high(),
+        'daily_limit': daily_limit,
+        'paused_by_daily_limit': is_daily_limit_reached(),
     }
 
 
@@ -195,11 +237,19 @@ def find_similar_initiative(name: str, threshold: float = 0.6) -> Optional[Any]:
         if not new_keywords:
             return None
 
-        # Check ACTIVE and TRIAGE initiatives at low stages (the ones that would be duplicated)
-        candidates = Initiative.objects.filter(
+        # Session 1059: Check ACTIVE/TRIAGE at any stage AND recently COMPLETED.
+        # Previously only checked stages 1-2, so fast-completing initiatives (0.7-3h)
+        # escaped dedup and near-duplicates piled up.
+        from django.utils import timezone as tz
+        from datetime import timedelta
+        candidates_qs = Initiative.objects.filter(
             status__in=['ACTIVE', 'TRIAGE'],
-            current_stage__lte=2,
-        ).values_list('id', 'name')[:200]  # Cap scan for performance
+        ).values_list('id', 'name')
+        completed_recent_qs = Initiative.objects.filter(
+            status='COMPLETED',
+            updated_at__gte=tz.now() - timedelta(hours=48),
+        ).values_list('id', 'name')
+        candidates = list(candidates_qs[:200]) + list(completed_recent_qs[:200])
 
         best_match = None
         best_score = 0.0
