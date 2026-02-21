@@ -1416,7 +1416,19 @@ CITATION RULES:
 - Greeting: Personal but professional
 - Sections: 2-3 content sections with headers
 - CTA: Clear primary call-to-action
-- Sign Off: Warm, personal closing"""
+- Sign Off: Warm, personal closing""",
+
+            'internal_document': """
+- Title: Clear, descriptive title for the document
+- Executive Summary: 200-300 word overview of scope and goals
+- Sections: 3-5 main content sections with clear H2 headers
+- Key Findings: Summary of critical discoveries or decisions
+- Recommendations: Prioritized recommendations with rationale
+- Action Items (Required): Dedicated section with specific format:
+  - Use bullet points: "- AgentName: Task description (Timeline)"
+  - Include 3-5 concrete, assignable action items
+  - Each item should name a responsible agent or role
+  - Include timeline estimates where possible"""
         }
 
         return instructions.get(content_type, f"Follow standard {content_type} format.")

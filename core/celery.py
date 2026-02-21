@@ -2319,6 +2319,16 @@ app.conf.beat_schedule = {
         }
     },
 
+    # Session 1058 Level 3: Auto-dispatch pending action items to assigned agents
+    'dispatch-pending-action-items': {
+        'task': 'core.tasks.dispatch_pending_action_items',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'options': {
+            'expires': 1790,  # Just under 30 minutes
+            'queue': 'default',
+        }
+    },
+
     # ==================== SESSION 872: CELERY HEALTH MONITORING ====================
     # Monitor task execution and send Discord alerts on failures
     # Checks spider data freshness, task completion, and schedule staleness

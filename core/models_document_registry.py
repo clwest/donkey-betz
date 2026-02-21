@@ -1210,6 +1210,18 @@ STAGE_PURPOSES = {
     5: 'Execution & postmortem - What happened and what did we learn?',
 }
 
+# Session 1058 Level 3: Stage type classification for action item dispatch
+STAGE_TYPES = {
+    1: 'research',       # External research — produces findings
+    2: 'planning',       # Architecture/prototype plan — produces design doc
+    3: 'evaluation',     # Go/no-go gate — produces criteria doc
+    4: 'specification',  # Technical detail — produces spec doc + action items
+    5: 'execution',      # Pilot execution — produces results + action items
+}
+
+# Stages where action items are expected and auto-dispatch is enabled
+STAGES_WITH_AUTO_DISPATCH = {4, 5}
+
 STAGE_CHOICES = [(i, f"Stage {i} - {STAGE_NAMES.get(i, 'Unknown')}") for i in range(1, 6)]
 
 
