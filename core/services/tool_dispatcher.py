@@ -1197,7 +1197,7 @@ class ToolDispatcher:
         from core.models_pilot_readiness import PilotReadinessGate
 
         action = payload.get('action', 'list')
-        limit = payload.get('limit', 20)
+        limit = payload.get('limit', 10)  # Session 1057: Reduced from 20 to match schema
 
         if action == 'list':
             gates = list(
@@ -1207,11 +1207,14 @@ class ToolDispatcher:
             )
             # Flatten decision__topic to topic for cleaner response
             # Session 987: Serialize UUIDs and datetimes for clean display
+            # Session 1057: Truncate summary to prevent GPT-5.2 rendering failure on large results
             for gate in gates:
                 gate['topic'] = gate.pop('decision__topic', '')
                 gate['id'] = str(gate['id'])
                 if gate.get('created_at'):
                     gate['created_at'] = gate['created_at'].isoformat()
+                if gate.get('summary') and len(gate['summary']) > 200:
+                    gate['summary'] = gate['summary'][:200] + '...'
             return {'action': 'list', 'count': len(gates), 'gates': gates}
 
         elif action == 'stats':
@@ -1239,7 +1242,7 @@ class ToolDispatcher:
         from core.models_pilot_readiness import PilotExecution
 
         action = payload.get('action', 'list')
-        limit = payload.get('limit', 20)
+        limit = payload.get('limit', 10)  # Session 1057: Reduced from 20 to match schema
 
         if action == 'list':
             pilots = list(
@@ -1248,10 +1251,13 @@ class ToolDispatcher:
                 )
             )
             # Session 987: Serialize UUIDs and datetimes for clean display
+            # Session 1057: Truncate name to prevent GPT-5.2 rendering failure
             for pilot in pilots:
                 pilot['id'] = str(pilot['id'])
                 if pilot.get('created_at'):
                     pilot['created_at'] = pilot['created_at'].isoformat()
+                if pilot.get('name') and len(pilot['name']) > 150:
+                    pilot['name'] = pilot['name'][:150] + '...'
             return {'action': 'list', 'count': len(pilots), 'pilots': pilots}
 
         elif action == 'running':
@@ -1265,6 +1271,8 @@ class ToolDispatcher:
                 pilot['id'] = str(pilot['id'])
                 if pilot.get('created_at'):
                     pilot['created_at'] = pilot['created_at'].isoformat()
+                if pilot.get('name') and len(pilot['name']) > 150:
+                    pilot['name'] = pilot['name'][:150] + '...'
             return {'action': 'running', 'count': len(pilots), 'pilots': pilots}
 
         elif action == 'stats':
@@ -3098,29 +3106,25 @@ class ToolDispatcher:
     ) -> Dict[str, Any]:
         """
         Session 993: Generate a blog through the V2 deliberation pipeline.
-
-        If a topic is provided, runs ContentDeliberationRunner.run_blog() synchronously.
-        If no topic, dispatches the Celery task for background generation.
+        Session 1057: Always async — blog generation takes 60-300s which exceeds
+        the PA tool timeout. Dispatch to Celery and return immediately.
         """
         topic = payload.get('topic')
         tone = payload.get('tone', 'enthusiastic')
 
         if topic:
-            # Synchronous — run the full deliberation pipeline
-            from core.services.content_deliberation_runner import ContentDeliberationRunner
-            runner = ContentDeliberationRunner()
-            result = runner.run_blog(topic, voice=tone)
+            # Session 1057: Dispatch topic-specific blog to Celery
+            from core.tasks import generate_blog_with_topic_task
+            task = generate_blog_with_topic_task.delay(topic=topic, tone=tone)  # type: ignore[union-attr]
 
             return {
                 'action': 'generate_blog',
-                'mode': 'synchronous',
+                'mode': 'async',
                 'topic': topic,
                 'tone': tone,
-                'status': result.get('status', 'unknown'),
-                'decision': result.get('decision', 'unknown'),
-                'selfblog_id': str(result['selfblog_id']) if result.get('selfblog_id') else None,
-                'deliberation_session_id': str(result['deliberation_session_id']) if result.get('deliberation_session_id') else None,
-                'summary': result.get('summary', {}),
+                'task_id': str(task.id),
+                'message': f'Blog generation for "{topic}" queued via deliberation pipeline. '
+                           f'This typically takes 2-5 minutes. Use task_breakdown_tool to check progress.',
             }
         else:
             # Async — dispatch to Celery for background generation
@@ -3132,7 +3136,8 @@ class ToolDispatcher:
                 'mode': 'async',
                 'tone': tone,
                 'task_id': str(task.id),
-                'message': 'Blog generation queued via deliberation pipeline. Check back shortly.',
+                'message': 'Blog generation queued via deliberation pipeline. '
+                           'This typically takes 2-5 minutes. Use task_breakdown_tool to check progress.',
             }
 
     def _handle_initiative(
