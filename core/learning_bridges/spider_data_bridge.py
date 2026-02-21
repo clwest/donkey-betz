@@ -278,6 +278,19 @@ class SpiderDataLearningLoop:
         else:
             return 'low'
 
+    @staticmethod
+    def evaluate_actionability(spider_data: SpiderData) -> bool:
+        """Evaluate whether spider data is actionable (can drive user decisions)."""
+        if (spider_data.relevance_score or 0) < 50:
+            return False
+        raw = spider_data.raw_data or {}
+        items = raw.get('items', [])
+        if not items:
+            return False
+        if spider_data.data_type == 'training_data':
+            return False
+        return True
+
     def _map_data_type_to_domain(self, data_type: str) -> str:
         """Map spider data type to learning domain"""
         mapping = {
@@ -306,6 +319,11 @@ spider_data_learning = SpiderDataLearningLoop()
 def on_spider_data_collected(sender, instance, created, **kwargs):
     """Learn from newly collected spider data"""
     if created:  # Only process new data
+        # Evaluate actionability (field checks only, no DB queries)
+        actionable = SpiderDataLearningLoop.evaluate_actionability(instance)
+        if actionable:
+            SpiderData.objects.filter(pk=instance.pk).update(is_actionable=True)
+
         try:
             spider_data_learning.process_spider_data(instance)
         except Exception as e:
