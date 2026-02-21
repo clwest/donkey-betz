@@ -220,13 +220,19 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "search", "details", "stats"],
-                    "description": "Legislation action",
+                    "enum": ["overview", "trending", "search", "status", "summary", "ask"],
+                    "description": (
+                        "overview: dashboard stats (total bills, top topics, status breakdown). "
+                        "trending: most recently active bills. "
+                        "search: find bills by keyword (requires query). "
+                        "status: status of a specific bill (requires bill_number). "
+                        "summary: plain-English explanation of a bill (requires bill_number or query). "
+                        "ask: RAG-powered Q&A about legislation (requires query)."
+                    ),
                 },
-                "query": {"type": "string", "description": "Search query for bills"},
-                "id": {"type": "string", "description": "Bill ID for details"},
-                "status": {"type": "string", "description": "Filter by bill status"},
-                "limit": {"type": "integer", "description": "Max items (default 10)"},
+                "query": {"type": "string", "description": "Search query or question about legislation"},
+                "bill_number": {"type": "string", "description": "Bill number for status/summary (e.g. 'HR 1234')"},
+                "limit": {"type": "integer", "description": "Max items (default 10, max 20)"},
             },
             "required": ["action"],
         },

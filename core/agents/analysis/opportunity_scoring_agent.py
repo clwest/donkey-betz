@@ -700,13 +700,29 @@ You score and analyze - you do NOT create content or execute workflows."""
             except Exception as e:
                 logger.warning(f"ML scoring failed, falling back to rules: {e}")
 
-        # Fallback: Original rule-based scoring
+        # Fallback: Rule-based scoring using spider data attributes
+        # Session 1062: Use actual data signals instead of hardcoded values
         base = spider_data.relevance_score / 2 + 25
+        raw_data = spider_data.raw_data or {}
 
         profit = min(100, max(1, int(base + 10)))
-        competition = 50
-        effort = 40
-        timing = 60
+
+        # Derive competition from data signals instead of hardcoding 50
+        has_budget = bool(raw_data.get('budget') or raw_data.get('salary'))
+        has_skills = bool(raw_data.get('skills', raw_data.get('skills_required')))
+        desc_len = len(raw_data.get('description', ''))
+        competition = 30 if has_budget and has_skills else 50 if has_skills else 65
+
+        # Derive effort from description detail and skills count
+        skills_list = raw_data.get('skills', raw_data.get('skills_required', []))
+        if isinstance(skills_list, str):
+            skills_list = [s.strip() for s in skills_list.split(',') if s.strip()]
+        skill_count = len(skills_list) if isinstance(skills_list, list) else 0
+        effort = 30 if skill_count <= 2 else 50 if skill_count <= 5 else 65
+
+        # Derive timing from recency and urgency signals
+        urgency = raw_data.get('urgency', '')
+        timing = 80 if urgency == 'high' else 65 if desc_len > 200 else 50
 
         # Calculate overall
         competition_score = 100 - competition
