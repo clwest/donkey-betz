@@ -336,6 +336,78 @@ def extract_action_items_from_conversation(session_id: str) -> List:
     return created_items
 
 
+def extract_action_items_from_stage(stage_id: str) -> List:
+    """
+    Session 1058: Extract action items from an InitiativeStage document
+    and create InitiativeActionItem records.
+
+    Called after stage document generation to populate trackable work items
+    that must be completed before the stage can auto-approve.
+
+    Args:
+        stage_id: UUID of the InitiativeStage
+
+    Returns:
+        List of created InitiativeActionItem instances
+    """
+    from core.models_document_registry import InitiativeStage, InitiativeActionItem
+
+    try:
+        stage = InitiativeStage.objects.select_related(
+            'initiative', 'document'
+        ).get(id=stage_id)
+    except InitiativeStage.DoesNotExist:
+        logger.error(f"[Session 1058] Stage {stage_id} not found")
+        return []
+
+    if not stage.document:
+        logger.info(f"[Session 1058] Stage {stage_id} has no document")
+        return []
+
+    full_text = stage.document.full_text or ''
+    if not full_text:
+        logger.info(f"[Session 1058] Stage {stage_id} document has no text")
+        return []
+
+    # Parse the document for action items
+    parser = ActionItemParser()
+    items_data = parser.parse_conclusion(full_text)
+
+    if not items_data:
+        logger.info(f"[Session 1058] No action items found in stage {stage_id}")
+        return []
+
+    initiative = stage.initiative
+
+    # Create action item records (dedup by title within this initiative)
+    created_items = []
+    for item_data in items_data:
+        existing = InitiativeActionItem.objects.filter(
+            initiative=initiative,
+            title__iexact=item_data['title'][:300]
+        ).exists()
+
+        if existing:
+            continue
+
+        action_item = InitiativeActionItem.objects.create(
+            initiative=initiative,
+            source_stage=stage,
+            title=item_data['title'],
+            assigned_agent=item_data.get('assigned_agent', ''),
+            timeline_text=item_data.get('timeline_text', ''),
+            due_date=item_data.get('due_date'),
+            priority=item_data.get('priority', 'medium'),
+            source_text=item_data.get('source_text', ''),
+            order=item_data.get('order', 0),
+            created_by='stage_pipeline',
+        )
+        created_items.append(action_item)
+        logger.info(f"[Session 1058] Created action item: {action_item.title}")
+
+    return created_items
+
+
 def bulk_extract_action_items(limit: int = 100) -> Dict:
     """
     Extract action items from recent conversations that don't have any yet.

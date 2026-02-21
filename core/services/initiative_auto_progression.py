@@ -317,6 +317,15 @@ def check_stage_for_progression(initiative_id: str) -> Dict[str, Any]:
     except Initiative.DoesNotExist:
         return {'success': False, 'error': 'Initiative not found'}
 
+    # Session 1058: Only auto-progress ACTIVE initiatives
+    if initiative.status != 'ACTIVE':
+        return {
+            'success': False,
+            'error': f'Initiative status is {initiative.status}, not ACTIVE',
+            'initiative_id': str(initiative_id),
+            'status': initiative.status,
+        }
+
     current_stage_num = initiative.current_stage
 
     # Get current stage
@@ -471,6 +480,33 @@ def check_stage_for_progression(initiative_id: str) -> Dict[str, Any]:
     except Exception as e:
         # Don't block on drift check failures - log and continue
         logger.warning(f"[Session 914.3] Drift check failed, continuing: {e}")
+
+    # Session 1058: Action item completion gate
+    try:
+        from core.models_document_registry import InitiativeActionItem
+        stage_items = InitiativeActionItem.objects.filter(
+            source_stage=current_stage,
+        ).exclude(status='cancelled')
+
+        total = stage_items.count()
+        if total > 0:
+            completed = stage_items.filter(status='completed').count()
+            if completed < total:
+                pending_items = list(
+                    stage_items.exclude(status='completed')
+                    .values_list('title', flat=True)[:5]
+                )
+                return {
+                    'success': False,
+                    'error': f'{total - completed}/{total} action items incomplete',
+                    'stage': current_stage_num,
+                    'can_progress': False,
+                    'pending_action_items': total - completed,
+                    'total_action_items': total,
+                    'examples': pending_items,
+                }
+    except Exception as e:
+        logger.warning(f"[Session 1058] Action item gate check failed: {e}")
 
     # Quality check passed - ready for progression
     return {
@@ -675,9 +711,11 @@ def get_initiatives_ready_for_progression() -> list:
     from core.models_document_registry import Initiative, InitiativeStage
 
     # Find stages in DRAFT status with documents
+    # Session 1058: Only progress ACTIVE initiatives (excludes TRIAGE, ON_HOLD, etc.)
     draft_stages = InitiativeStage.objects.filter(
         status='DRAFT',
-        document__isnull=False
+        document__isnull=False,
+        initiative__status='ACTIVE',
     ).select_related('initiative')
 
     ready_initiatives = []
