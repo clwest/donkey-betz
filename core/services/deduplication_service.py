@@ -54,6 +54,28 @@ class DeduplicationService:
         'analysis',
     }
 
+    # Patterns that indicate a conversation concluded with no usable data.
+    # Single-element tuples → substring match; multi-element → all words must appear (AND).
+    NO_DATA_PATTERNS = [
+        ('no data',),
+        ('insufficient data',),
+        ('no relevant data',),
+        ('hypothetical',),
+        ('lack data',),
+        ('lacked', 'data'),
+        ('without', 'concrete', 'data'),
+        ('no actionable', 'data'),
+        ('could not find', 'data'),
+        ('unable', 'find', 'data'),
+        ('no specific data',),
+        ('no real-time data',),
+        ('no real data',),
+        ('without', 'actual', 'data'),
+    ]
+
+    NO_DATA_CONCLUSION_THRESHOLD = 3
+    NO_DATA_WINDOW_HOURS = 168  # 7 days
+
     def __init__(self):
         from core.models_unified_system import SpiderData, AgentConversation, AgentDream
         self.SpiderData = SpiderData
@@ -232,6 +254,70 @@ class DeduplicationService:
                 return convo
 
         return None
+
+    @staticmethod
+    def _conclusion_is_no_data(conclusion: str) -> bool:
+        """Check whether a conclusion indicates the conversation produced no usable data."""
+        if not conclusion:
+            return False
+        lower = conclusion.lower()
+        for pattern in DeduplicationService.NO_DATA_PATTERNS:
+            if len(pattern) == 1:
+                # Substring match
+                if pattern[0] in lower:
+                    return True
+            else:
+                # All words must appear
+                if all(word in lower for word in pattern):
+                    return True
+        return False
+
+    def has_repeated_no_data_conclusions(
+        self, topic: str, threshold: int = None, hours: int = None
+    ) -> Tuple[bool, int]:
+        """
+        Check whether recent conversations on a similar topic repeatedly ended
+        with no-data conclusions.
+
+        Args:
+            topic: The candidate conversation topic.
+            threshold: How many no-data conclusions trigger the gate
+                       (default NO_DATA_CONCLUSION_THRESHOLD).
+            hours: Lookback window (default NO_DATA_WINDOW_HOURS).
+
+        Returns:
+            (should_skip, no_data_count)
+        """
+        threshold = threshold or self.NO_DATA_CONCLUSION_THRESHOLD
+        hours = hours or self.NO_DATA_WINDOW_HOURS
+
+        if not topic:
+            return False, 0
+
+        cutoff = timezone.now() - timedelta(hours=hours)
+        recent = list(
+            self.AgentConversation.objects.filter(
+                started_at__gte=cutoff,
+                status__in=['concluded', 'abandoned'],
+            )
+            .order_by('-started_at')
+            .values('topic', 'conclusion')[:200]
+        )
+
+        no_data_count = 0
+        for row in recent:
+            similarity = self._calculate_similarity(topic, row['topic'] or '')
+            if similarity >= self.SIMILARITY_THRESHOLD:
+                if self._conclusion_is_no_data(row['conclusion'] or ''):
+                    no_data_count += 1
+
+        should_skip = no_data_count >= threshold
+        if should_skip:
+            logger.info(
+                f"Outcome gate: {no_data_count} no-data conclusions in {hours}h "
+                f"for topic '{topic[:60]}'"
+            )
+        return should_skip, no_data_count
 
     def get_duplicate_conversations(self, limit: int = 100) -> List[Dict]:
         """Get list of duplicate conversation topics."""

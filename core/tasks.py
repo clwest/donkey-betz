@@ -7698,6 +7698,12 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
                 logger.info(f"[CONVERSATIONS] Dedup skip (fuzzy match): {topic[:60]}")
                 continue
 
+            # Outcome gate: skip topics with repeated no-data conclusions
+            _no_data_skip, _no_data_count = dedup_svc.has_repeated_no_data_conclusions(topic=topic)
+            if _no_data_skip:
+                logger.info(f"[CONVERSATIONS] Outcome gate skip ({_no_data_count} no-data in 7d): {topic[:60]}")
+                continue
+
             # Session 1032: Continuity — inject prior conclusion if topic was discussed before
             prior_conclusion_context = ""
             older_match = dedup_svc.find_similar_conversation(topic=topic, hours=720)  # 30 days
@@ -8739,6 +8745,15 @@ def run_multi_agent_conversation(self, max_conversations: int = 2, participants_
                         continue
             except Exception as e:
                 logger.debug(f"Topic saturation check failed: {e}")
+
+            # Outcome gate: skip topics with repeated no-data conclusions
+            try:
+                _no_data_skip, _no_data_count = dedup_svc.has_repeated_no_data_conclusions(topic=topic)
+                if _no_data_skip:
+                    logger.info(f"[MULTI-AGENT] Outcome gate skip ({_no_data_count} no-data in 7d): {topic[:60]}")
+                    continue
+            except Exception as e:
+                logger.debug(f"Outcome gate check failed: {e}")
 
             # Session 1032: Continuity — inject prior conclusion if topic was discussed before
             prior_conclusion_context = ""
