@@ -592,11 +592,12 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["summary", "by_agent", "trends"],
-                    "description": "Learning patterns action",
+                    "enum": ["list", "by_type", "stats"],
+                    "description": "Learning patterns action: list (active patterns), by_type (filter by pattern_type), stats (aggregate statistics)",
                 },
-                "agent_name": {"type": "string", "description": "Filter by agent"},
-                "limit": {"type": "integer", "description": "Max items (default 10)"},
+                "pattern_type": {"type": "string", "description": "Filter by pattern type (e.g. tool_reliability, agent_performance)"},
+                "min_confidence": {"type": "number", "description": "Minimum confidence threshold (default 0.5)"},
+                "limit": {"type": "integer", "description": "Max items (default 20)"},
             },
             "required": ["action"],
         },
