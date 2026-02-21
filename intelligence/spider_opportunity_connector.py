@@ -26,6 +26,66 @@ import hashlib
 logger = logging.getLogger(__name__)
 
 
+def _heuristic_quality_score(data: Dict) -> float:
+    """
+    Session 1062: Calculate quality score from available opportunity attributes.
+
+    Instead of defaulting to 0.5 (which made all 11,500+ opportunities score 50),
+    this uses real signals from the spider data to differentiate opportunities.
+
+    Returns a score between 0.3 and 0.95.
+    """
+    score = 0.35  # Base score
+
+    # Has budget info (+0.15)
+    budget = data.get('budget', {})
+    if isinstance(budget, dict):
+        if budget.get('min') or budget.get('max'):
+            score += 0.15
+    elif isinstance(budget, str) and budget.strip():
+        score += 0.10
+
+    # Has meaningful description (+0.10)
+    desc = data.get('description', data.get('summary', ''))
+    if len(desc) > 200:
+        score += 0.10
+    elif len(desc) > 50:
+        score += 0.05
+
+    # Has skills listed (+0.10)
+    skills = data.get('skills_required', data.get('skills', []))
+    if isinstance(skills, str):
+        skills = [s.strip() for s in skills.split(',') if s.strip()]
+    if isinstance(skills, list) and len(skills) >= 3:
+        score += 0.10
+    elif isinstance(skills, list) and len(skills) >= 1:
+        score += 0.05
+
+    # High urgency (+0.05)
+    if data.get('urgency') == 'high':
+        score += 0.05
+
+    # Client rating (+0.10)
+    try:
+        rating = data.get('client_rating')
+        if rating is not None and float(rating) >= 4.5:
+            score += 0.10
+        elif rating is not None and float(rating) >= 4.0:
+            score += 0.05
+    except (ValueError, TypeError):
+        pass
+
+    # Has specific experience level set (+0.05)
+    if data.get('experience_level') and data['experience_level'] != 'beginner':
+        score += 0.05
+
+    # Has deadline (+0.05) — implies active/real posting
+    if data.get('deadline'):
+        score += 0.05
+
+    return min(0.95, score)
+
+
 @dataclass
 class SpiderOpportunity:
     """Structured opportunity from spider network"""
@@ -270,7 +330,7 @@ class SpiderOpportunityConnector:
                 experience_level=data.get('experience_level', 'beginner'),
                 deadline=data.get('deadline'),
                 urgency=data.get('urgency', 'medium'),
-                quality_score=data.get('quality_score', 0.5),
+                quality_score=data.get('quality_score') or _heuristic_quality_score(data),
                 competition_level=data.get('competition_level', 'medium'),
                 client_rating=data.get('client_rating'),
                 spider_source=channel,

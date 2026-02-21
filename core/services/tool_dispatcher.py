@@ -5854,8 +5854,11 @@ class ToolDispatcher:
         import json
 
         action = payload.get('action', 'search')
+        # Session 1062: Alias old schema actions to real handler actions
+        _ACTION_ALIASES = {'list': 'trending', 'stats': 'overview', 'details': 'status'}
+        action = _ACTION_ALIASES.get(action, action)
         query = payload.get('query', '')
-        bill_number = payload.get('bill_number', '')
+        bill_number = payload.get('bill_number', '') or payload.get('id', '')
         limit = min(payload.get('limit', 10), 20)
 
         def _bill_data(item):
