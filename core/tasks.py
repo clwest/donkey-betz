@@ -34582,6 +34582,18 @@ Stage {stage_num} ({config['template']}) should include:
         except Exception as e:
             logger.debug(f"[STAGE-GEN] Drift check skipped: {e}")
 
+        # Session 1058: Extract action items from stage document
+        try:
+            from core.services.action_item_parser import extract_action_items_from_stage
+            extracted = extract_action_items_from_stage(str(stage.id))
+            if extracted:
+                logger.info(
+                    f"[STAGE-GEN] Extracted {len(extracted)} action items "
+                    f"from Stage {stage_num} of '{initiative.name[:50]}'"
+                )
+        except Exception as e:
+            logger.warning(f"[STAGE-GEN] Action item extraction failed: {e}")
+
         # Session 994: Record activity when stage document is created
         initiative.update_activity()
 

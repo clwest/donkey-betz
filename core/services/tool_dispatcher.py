@@ -3404,11 +3404,11 @@ class ToolDispatcher:
             if not initiative:
                 raise ValueError(f"Initiative not found")
 
-            # Get action items
+            # Get action items (Session 1058: include source_stage)
             action_items = list(
                 InitiativeActionItem.objects.filter(initiative=initiative)
                 .order_by('-priority', 'status', '-created_at')[:10]
-                .values('id', 'title', 'status', 'priority', 'due_date', 'assigned_agent')
+                .values('id', 'title', 'status', 'priority', 'due_date', 'assigned_agent', 'source_stage__stage')
             )
 
             # Session 987: Serialize UUIDs and datetimes
@@ -3474,7 +3474,7 @@ class ToolDispatcher:
             status_filter = payload.get('item_status', 'pending')
             priority_filter = payload.get('priority')
 
-            qs = InitiativeActionItem.objects.select_related('initiative')
+            qs = InitiativeActionItem.objects.select_related('initiative', 'source_stage')
 
             if status_filter and status_filter != 'all':
                 qs = qs.filter(status=status_filter)
@@ -3493,6 +3493,7 @@ class ToolDispatcher:
                     'assigned_agent': item.assigned_agent,
                     'initiative_id': str(item.initiative_id),  # type: ignore[attr-defined]
                     'initiative_name': item.initiative.name if item.initiative else 'Unknown',
+                    'source_stage': item.source_stage.stage if item.source_stage else None,
                 })
 
             return {
