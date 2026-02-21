@@ -1,95 +1,54 @@
-# Session 1058 - Start Here
+# Session 1059 - Start Here
 
-**Previous Sessions:** 1057 (PA Tool Audit — 9 bugs fixed across 5 PRs), 1056 (Railway Cost Throttle + PA Degenerate Loop Fix), 1049 (INIT-000057 RAG Gaps + celery-content OOM Fix), 1048 (Task Volume Breakdown API)
-**Date:** February 21, 2026
-**Status:** 218 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2, 41 tool schemas, 59 handlers)** | **All 218 agent personas routable** | **Tenant model Phase 1 landed** | 4 ACTIVE initiatives | 36 COMPLETED
-
----
-
-## Session 1057 — What Happened
-
-### Comprehensive PA Tool Audit (PRs #1359, #1360, #1361, #1362, #1363)
-
-Connected to the PA via Railway API and systematically tested all 41 PA tool schemas. Found and fixed 9 bugs across 5 PRs:
-
-#### Bug Fixes
-
-| Bug | File | Fix | PR |
-|-----|------|-----|-----|
-| `risk_context` UnboundLocalError (149 failures/24h) | `agent_router.py:898` | Added `risk_context = pre_gathered_context.get('risk_context', {})` | #1359 |
-| `learning_patterns_tool` schema mismatch | `pa_tool_schemas.py:584` | Enum `["summary","by_agent","trends"]` → `["list","by_type","stats"]` | #1359 |
-| `sports_betting_tool` Team FK not serializable | `tool_dispatcher.py:5260` | `str(winner)` + traverse game FK for matchup | #1360 |
-| `revenue_tracker_tool` schema mismatch | `pa_tool_schemas.py:333` | Enum `["summary","breakdown","history"]` → `["stats","list"]` | #1360 |
-| `execution_history_tool` schema mismatch | `pa_tool_schemas.py:558` | `"details"` → `"failures"` in enum | #1360 |
-| `workspace_tool` missing user argument | `tool_dispatcher.py:858` | Resolve User from user_id before `get_workspace_manager(user)` | #1362 |
-| `revenue_tracker_tool` field name wrong | `tool_dispatcher.py:708,738` | `Revenue.source` → `Revenue.source_type` | #1362 |
-| `workspace_tool` ProjectWorkspace not serializable | `tool_dispatcher.py:862` | Serialize model objects to dicts | #1363 |
-| `ContentWriterAgent` rejects `internal_document` type | `content_writer_agent.py:187` | Added `internal_document` to `CONTENT_TYPES` dict | #1363 |
-
-#### PA Tool Scorecard (41 tools)
-
-| Status | Count | Tools |
-|--------|-------|-------|
-| Working | 36 | Most tools including initiative_tool, content_review_tool, boardroom_tool, agent_introspection_tool, system_health_tool, task_breakdown_tool, brainstorm_tool, dream_tool, etc. |
-| Deprecated | 1 | predictions_tool (intentional — use sports_betting_tool) |
-| Slow/Timeout | 1 | generate_blog_tool (exceeds 30s PA tool timeout — generates full blog) |
-| Minor issues | 2 | universal_agent_tool (needs agent_name), legal_doc_drafter (wrong template sometimes) |
-| PA rendering | 1 | gates_tool (tool works but GPT-5.2 struggles formatting large result) |
-
-#### Railway API Connection Details
-
-The PA runs on Railway. **URL: `https://donkey-betz-platform-production.up.railway.app`** (NOT `donkeybetz.com` which is Squarespace).
-
-```python
-# Python pattern for PA interaction (avoids shell escaping issues)
-import urllib.request, json, time
-
-TOKEN = 'YOUR_TOKEN'
-BASE = 'https://donkey-betz-platform-production.up.railway.app'
-
-# Send message
-data = json.dumps({'message': 'Your message here'}).encode()
-req = urllib.request.Request(f'{BASE}/api/pa/chat/', data=data, headers={
-    'Authorization': f'Token {TOKEN}',
-    'Content-Type': 'application/json'
-})
-resp = json.loads(urllib.request.urlopen(req).read())
-task_id = resp['task_id']
-
-# Poll until complete
-for i in range(15):
-    time.sleep(3)
-    req = urllib.request.Request(f'{BASE}/api/pa/chat/status/{task_id}/', headers={
-        'Authorization': f'Token {TOKEN}',
-    })
-    result = json.loads(urllib.request.urlopen(req).read())
-    if result['status'] != 'processing':
-        print(result.get('content', ''))
-        break
-```
-
-Auth: `Authorization: Token <token>` (NOT Bearer). Token from `/api/v1/auth/login/`.
+**Previous Sessions:** 1058 (Action Item Auto-Dispatch + Ghost Dispatcher Fix), 1057 (PA Tool Audit — 9 bugs fixed across 5 PRs), 1056 (Railway Cost Throttle + PA Degenerate Loop Fix), 1049 (INIT-000057 RAG Gaps + celery-content OOM Fix)
+**Date:** February 20, 2026
+**Status:** 218 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2, 41 tool schemas, 61 handlers)** | **All 218 agent personas routable** | **Tenant model Phase 1 landed** | 4 ACTIVE initiatives | 36 COMPLETED
 
 ---
 
-## Current System Health (post-Session 1057)
+## Session 1058 — What Happened
+
+### Level 3: Prompt-Guided Action Items + Auto-Dispatch (PR #1366)
+
+Stage prompts were not asking for action items, so extraction was unreliable. Now all stage prompts (1-5) explicitly request an "Action Items" section with `"- AgentName: Task description (Timeline)"` format.
+
+| Change | File | Details |
+|--------|------|---------|
+| `internal_document` type instructions | `content_writer_agent.py:1421` | Added to `_get_type_instructions()` with explicit "Action Items (Required)" section |
+| Stage prompt action items | `tasks.py:34457,34488` | All 5 stages now request action items in required output |
+| `STAGE_TYPES` / `STAGES_WITH_AUTO_DISPATCH` | `models_document_registry.py:1213` | Constants classifying stages; auto-dispatch enabled for stages 4-5 only |
+| `dispatch_pending_action_items` beat task | `tasks.py:33900`, `celery.py:2322` | Runs every 30 min, dispatches pending items to assigned agents |
+| Safety gates | `tasks.py:33900` | Blocked agents, AGENT_MAP validation, 8/day cap, 6-hour dedup, 10/cycle cap |
+| `start_action_item` PA tool | `tool_dispatcher.py:3607`, `pa_tool_schemas.py:67` | Humans can mark items in-progress via PA |
+
+### Ghost Celery Dispatcher — ROOT CAUSE FOUND & FIXED (PR #1367)
+
+**Root cause:** `DatabaseScheduler` keeps stale `PeriodicTask` DB entries even after tasks are removed from `celery.py`. The Procfile release command ran `sync_celery_beat --apply --create-only` but never `--disable-missing`, so `execute-remediation-tasks` (commented out in Session 1026) stayed `enabled=True` in the DB and kept firing at its original `crontab(minute=30, hour='*/4')` schedule — 6x/day, matching the observed 41 triggers/48h.
+
+| Change | File | Details |
+|--------|------|---------|
+| Added `--disable-missing` to release | `Procfile:10` | Orphaned DB tasks now disabled on every deploy |
+| Fixed orphan disable loop | `sync_celery_beat.py:130` | Was only iterating `orphaned[:20]`, now disables all |
+
+**After next deploy:** Ghost triggers will drop to zero. The stale `execute-remediation-tasks`, `run-autonomous-remediation-cycle`, and `verify-completed-fixes` DB entries will be disabled.
+
+---
+
+## Current System Health (post-Session 1058)
 
 | Metric | Value |
 |--------|-------|
 | PA routing | **GPT-5.2 function calling** (`PA_USE_FUNCTION_CALLING=true`) |
-| PA tools | **41 schemas, 59 handlers** — 36 fully working, 9 bugs fixed this session |
-| Beat schedule | **21 tasks throttled** (~59% reduction, ~21k fewer invocations/day) |
+| PA tools | **41 schemas, 61 handlers** — 36 fully working, `start_action_item` + `complete_action_item` added |
+| Beat schedule | **21 tasks throttled** + 1 new (`dispatch-pending-action-items` every 30 min) |
 | Agents routable | **All 218** (82 AGENT_MAP + 139 DynamicPersonaAgent + 2 blocked) |
 | Initiatives | **4 ACTIVE**, 36 COMPLETED, 1 TRIAGE, 8 ARCHIVED (49 total) |
-| Degenerate detection | **4 patterns** — repetition, filler ratio, unique ratio, Ok. density |
-| Stage doc generation | **Fixed** — `internal_document` content type now accepted by ContentWriterAgent |
+| Ghost dispatcher | **RESOLVED** — stale DB entries will be disabled on next deploy |
+| Action item dispatch | **NEW** — stages 4-5 auto-dispatch pending items to assigned agents |
 
 ---
 
 ## Known Issues / Open Items
-
-### Ghost Celery Dispatcher — HARD-BLOCKED
-`execute_remediation_tasks` triggered 41x/48h from unknown source. All 6 execution + assignment paths blocked. Root cause still unknown.
 
 ### WorkflowAgent / TrendAnalysisAgent Timeout Risk
 Both take 43-44min to complete. Celery timeout is 45min. They PASS but have no margin.
@@ -154,13 +113,18 @@ print(result.get('content', '')[:500])
 # 2. Check initiative health via PA
 # "Use initiative_tool with action stats"
 
-# 3. Check for recent failures
-# "Use task_breakdown_tool with action summary and window 60m"
+# 3. Check ghost dispatcher is gone (after deploy)
+# "Use execution_history_tool with action failures and window 24h"
+# Should show zero execute_remediation_tasks triggers
 ```
 
 ---
 
 ## Critical Patterns & Gotchas
+
+**DatabaseScheduler orphan risk (Session 1058):** `django_celery_beat.DatabaseScheduler` keeps stale `PeriodicTask` entries even after removing tasks from `celery.py`. The release command now runs `--disable-missing` to clean these up. If you comment out a beat task, it won't stop firing until the next deploy runs `sync_celery_beat --disable-missing`.
+
+**Action item dispatch (Session 1058):** `dispatch_pending_action_items` runs every 30 min. Only dispatches items from `STAGES_WITH_AUTO_DISPATCH` (stages 4-5) on ACTIVE initiatives. Safety: blocked agents, AGENT_MAP validation, 8/day cap per agent, 6-hour dedup, 10/cycle cap.
 
 **PA Railway URL (Session 1057):** Use `https://donkey-betz-platform-production.up.railway.app` (NOT `donkeybetz.com`). Use Python `urllib` for requests to avoid shell escaping issues with curl.
 
@@ -170,17 +134,11 @@ print(result.get('content', '')[:500])
 
 **PA tool serialization pattern (Session 1057):** ToolDispatcher handlers must return JSON-serializable dicts. Django model objects (ProjectWorkspace, Team, etc.) must be converted to dicts/strings before returning.
 
-**PA degenerate detection (Session 1056):** `_is_degenerate_content()` has 4 patterns: (1) repeated short substrings from start, (2) filler word ratio > 0.5, (3) unique word ratio < 0.15, (4) "ok." count >= 8. Check runs in BOTH tool-call and no-tool-call paths.
+**Beat schedule throttling (Session 1056):** 21 tasks throttled. `body-coordinator-check` stays at 60s — it sets throttle mode that gates LLM calls. All `expires` values are 10s below schedule interval.
 
-**Beat schedule throttling (Session 1056):** 21 tasks throttled. `body-coordinator-check` stays at 60s — it sets throttle mode that gates LLM calls. All `expires` values are 10s below schedule interval. If body systems dashboard seems stale, this is expected (5-min refresh now).
-
-**Lazy ML loading (Session 1049):** `SentenceTransformerProvider._get_model()` defers model load to first use. Global `rag_system` in `content/embeddings.py` is a `_LazyRAGSystem` proxy — importing it does NOT trigger construction. NEVER add eager model loads at module level in files imported by Celery workers.
-
-**Task volume breakdown (Session 1048):** `task_breakdown_tool` queries `CeleryTaskEvent` (NOT `TaskResult`). REST endpoints at `/api/celery/breakdown/` and `/api/celery/breakdown/task/`.
+**Lazy ML loading (Session 1049):** `SentenceTransformerProvider._get_model()` defers model load to first use. NEVER add eager model loads at module level in files imported by Celery workers.
 
 **ContentWriterAgent result structure (Session 1041):** `result.message` is a descriptive summary, NOT the actual content. Real content is in `result.data['content']['full_text']`.
-
-**Anti-hallucination guard (Session 1040):** Conversation system prompt includes CRITICAL instruction: if no REAL-WORLD INTELLIGENCE section appears, agent must say "No data available" and never fabricate.
 
 **ThinkingAgent banned from document generation:** ThinkingAgent returns system diagnostics instead of reviewing content. NEVER use ThinkingAgent for content tasks.
 
