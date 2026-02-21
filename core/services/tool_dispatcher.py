@@ -3244,6 +3244,10 @@ class ToolDispatcher:
 
             # Add action item counts (including critical) + serialize
             for item in items:
+                # Session 1065: Trim description in list view — full text via 'details' action
+                desc = item.get('description') or ''
+                if len(desc) > 200:
+                    item['description'] = desc[:200] + '...'
                 item['pending_actions'] = InitiativeActionItem.objects.filter(
                     initiative_id=item['id'],
                     status='pending'
