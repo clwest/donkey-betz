@@ -484,14 +484,13 @@ class LearningPatternEngine:
 
     def mine_patterns(self, days_back: int = 30) -> Dict[str, Any]:
         """
-        Session 767: Mine AgentLearning records to create LearningPattern entries.
+        Mine real performance data to create LearningPattern entries.
 
-        This method analyzes AgentLearning data to discover patterns like:
-        1. spider_effectiveness - Which spider data improves which agents
-        2. agent_collaboration - Which agent pairs work best together
-        3. learning_type_impact - Which learning types produce biggest gains
+        Queries actual outcome tables (AgentExecution, Deliverable,
+        ToolCallRecord, MLPrediction) instead of synthetic AgentLearning
+        records. Replaces the Session 767 synthetic miners.
 
-        Should be run periodically via Celery task.
+        Should be run periodically via Celery task (every 12h).
 
         Args:
             days_back: How many days of data to analyze
@@ -499,48 +498,62 @@ class LearningPatternEngine:
         Returns:
             Dict with mining results (patterns_created, patterns_updated)
         """
-        from django.db.models import Count, Avg, F
+        from django.db.models import Count, Avg, F, Q, Case, When, FloatField, Value
         from django.utils import timezone
 
         since = timezone.now() - timedelta(days=days_back)
         patterns_created = 0
         patterns_updated = 0
 
-        logger.info(f"🔍 [Session 767] Mining learning patterns from last {days_back} days...")
+        logger.info(f"Mining learning patterns from real data (last {days_back} days)...")
 
         try:
-            # === Pattern Type 1: Spider Effectiveness ===
-            # Find which spider data helps which agents the most
-            spider_patterns = self.AgentLearning.objects.filter(
-                learning_type='spider_intelligence',
-                created_at__gte=since
-            ).values('student_agent__name').annotate(
-                event_count=Count('id'),
-                avg_improvement=Avg(F('effectiveness_after') - F('effectiveness_before'))
-            ).filter(
-                event_count__gte=5,  # Need enough data points
-                avg_improvement__gt=0  # Only positive improvements
-            ).order_by('-avg_improvement')[:20]
+            # One-time cleanup: deactivate old synthetic patterns
+            old_types = ['spider_effectiveness', 'agent_collaboration', 'learning_type_impact', 'top_teacher']
+            cleaned = self.LearningPattern.objects.filter(
+                pattern_type__in=old_types, is_active=True
+            ).update(is_active=False)
+            if cleaned > 0:
+                logger.info(f"  Deactivated {cleaned} old synthetic patterns")
 
-            for sp in spider_patterns:
-                agent_name = sp['student_agent__name']
-                avg_improvement = round(sp['avg_improvement'], 2)
-                event_count = sp['event_count']
+            # === Miner A: Agent Success Rate (from AgentExecution) ===
+            from core.models_unified_system import AgentExecution
 
-                # Calculate confidence based on sample size and consistency
-                confidence = min(0.9, 0.3 + (event_count / 100) + (avg_improvement / 50))
+            agent_stats = AgentExecution.objects.filter(
+                created_at__gte=since,
+                status__in=['completed', 'failed'],
+            ).values('agent__name').annotate(
+                total=Count('id'),
+                completed=Count('id', filter=Q(status='completed')),
+                failed=Count('id', filter=Q(status='failed')),
+                avg_ms=Avg('execution_time_ms'),
+                avg_cost=Avg('cost'),
+            ).filter(total__gte=5).order_by('-total')[:50]
 
-                # Create or update pattern
+            for row in agent_stats:
+                agent_name = row['agent__name']
+                success_rate = round(row['completed'] / row['total'] * 100, 1)
+                avg_ms = round(row['avg_ms'] or 0)
+                avg_cost = float(row['avg_cost'] or 0)
+                confidence = min(0.95, 0.4 + (row['total'] / 200))
+
                 pattern, created = self.LearningPattern.objects.update_or_create(
-                    pattern_type='spider_effectiveness',
+                    pattern_type='agent_success_rate',
                     applies_to_agents__contains=[agent_name],
                     defaults={
-                        'description': f"{agent_name} benefits from spider intelligence data with avg +{avg_improvement}% improvement",
+                        'description': (
+                            f"{agent_name} has {success_rate}% success rate "
+                            f"({row['total']} executions, avg {avg_ms}ms)"
+                        ),
                         'confidence': round(confidence, 3),
                         'pattern_data': {
                             'agent_name': agent_name,
-                            'avg_improvement': avg_improvement,
-                            'event_count': event_count,
+                            'success_rate': success_rate,
+                            'total_executions': row['total'],
+                            'completed': row['completed'],
+                            'failed': row['failed'],
+                            'avg_execution_ms': avg_ms,
+                            'avg_cost': round(avg_cost, 4),
                             'days_analyzed': days_back,
                             'mined_at': timezone.now().isoformat(),
                         },
@@ -548,168 +561,247 @@ class LearningPatternEngine:
                         'is_active': True,
                     }
                 )
-
                 if created:
                     patterns_created += 1
-                    logger.info(f"  ✅ Created spider_effectiveness pattern for {agent_name}")
                 else:
                     patterns_updated += 1
 
-            # === Pattern Type 2: Agent Collaboration ===
-            # Find which teacher-student pairs produce the best results
-            collaboration_patterns = self.AgentLearning.objects.filter(
+            logger.info(f"  Miner A (agent_success_rate): {patterns_created} created, {patterns_updated} updated")
+            a_total = patterns_created + patterns_updated
+
+            # === Miner B: Content Quality (from Deliverable) ===
+            from core.models_deliverables import Deliverable
+
+            quality_stats = Deliverable.objects.filter(
                 created_at__gte=since,
-                implementation_success=True
-            ).exclude(
-                teacher_agent=F('student_agent')  # Exclude self-learning
-            ).values(
-                'teacher_agent__name', 'student_agent__name'
-            ).annotate(
-                collab_count=Count('id'),
-                avg_improvement=Avg(F('effectiveness_after') - F('effectiveness_before'))
-            ).filter(
-                collab_count__gte=3,  # Need multiple collaborations
-                avg_improvement__gt=5  # Meaningful improvement
-            ).order_by('-avg_improvement')[:15]
+            ).values('agent_name').annotate(
+                total=Count('id'),
+                avg_quality=Avg('quality_score'),
+                saved=Count('id', filter=Q(is_saved=True)),
+                starred=Count('id', filter=Q(is_starred=True)),
+            ).filter(total__gte=3).order_by('-total')[:50]
 
-            for cp in collaboration_patterns:
-                teacher = cp['teacher_agent__name']
-                student = cp['student_agent__name']
-                avg_improvement = round(cp['avg_improvement'], 2)
-                collab_count = cp['collab_count']
+            for row in quality_stats:
+                agent_name = row['agent_name']
+                avg_q = round(row['avg_quality'] or 0, 3)
+                saved_pct = round(row['saved'] / row['total'] * 100, 1) if row['total'] else 0
+                starred_pct = round(row['starred'] / row['total'] * 100, 1) if row['total'] else 0
 
-                confidence = min(0.9, 0.4 + (collab_count / 50) + (avg_improvement / 40))
+                # Get per-type breakdown
+                by_type = list(
+                    Deliverable.objects.filter(
+                        created_at__gte=since,
+                        agent_name=agent_name,
+                    ).values('deliverable_type').annotate(
+                        count=Count('id'),
+                        avg_quality=Avg('quality_score'),
+                    ).order_by('-count')[:5]
+                )
+                for bt in by_type:
+                    bt['avg_quality'] = round(bt['avg_quality'] or 0, 3)
+
+                confidence = min(0.9, 0.3 + (row['total'] / 100))
 
                 pattern, created = self.LearningPattern.objects.update_or_create(
-                    pattern_type='agent_collaboration',
-                    pattern_data__teacher=teacher,
-                    pattern_data__student=student,
+                    pattern_type='content_quality',
+                    applies_to_agents__contains=[agent_name],
                     defaults={
-                        'description': f"{teacher} teaching {student} produces +{avg_improvement}% improvement",
+                        'description': (
+                            f"{agent_name} produces content with avg quality {avg_q} "
+                            f"({row['total']} deliverables, {saved_pct}% saved)"
+                        ),
                         'confidence': round(confidence, 3),
                         'pattern_data': {
-                            'teacher': teacher,
-                            'student': student,
-                            'avg_improvement': avg_improvement,
-                            'collab_count': collab_count,
+                            'agent_name': agent_name,
+                            'avg_quality': avg_q,
+                            'total_deliverables': row['total'],
+                            'by_type': by_type,
+                            'saved_pct': saved_pct,
+                            'starred_pct': starred_pct,
                             'days_analyzed': days_back,
                             'mined_at': timezone.now().isoformat(),
                         },
-                        'applies_to_agents': [teacher, student],
+                        'applies_to_agents': [agent_name],
                         'is_active': True,
                     }
                 )
-
                 if created:
                     patterns_created += 1
-                    logger.info(f"  ✅ Created collaboration pattern: {teacher} → {student}")
                 else:
                     patterns_updated += 1
 
-            # === Pattern Type 3: Learning Type Impact ===
-            # Find which learning types produce the biggest gains
-            learning_type_patterns = self.AgentLearning.objects.filter(
+            b_total = (patterns_created + patterns_updated) - a_total
+            logger.info(f"  Miner B (content_quality): {b_total} patterns")
+
+            # === Miner C: Tool Reliability (from ToolCallRecord) ===
+            from core.models_tool_calls import ToolCallRecord
+
+            tool_stats = ToolCallRecord.objects.filter(
                 created_at__gte=since,
-                implementation_success=True
-            ).values('learning_type').annotate(
-                event_count=Count('id'),
-                avg_improvement=Avg(F('effectiveness_after') - F('effectiveness_before'))
-            ).filter(
-                event_count__gte=10,
-                avg_improvement__gt=0
-            ).order_by('-avg_improvement')[:10]
+            ).values('tool_name').annotate(
+                total=Count('id'),
+                successes=Count('id', filter=Q(success=True)),
+                avg_latency=Avg('latency_ms'),
+            ).filter(total__gte=10).order_by('-total')[:50]
 
-            for ltp in learning_type_patterns:
-                learning_type = ltp['learning_type']
-                avg_improvement = round(ltp['avg_improvement'], 2)
-                event_count = ltp['event_count']
+            for row in tool_stats:
+                tool_name = row['tool_name']
+                success_rate = round(row['successes'] / row['total'] * 100, 1)
+                avg_latency = round(row['avg_latency'] or 0)
 
-                confidence = min(0.95, 0.5 + (event_count / 200) + (avg_improvement / 30))
+                # Find top agents using this tool
+                top_agents = list(
+                    ToolCallRecord.objects.filter(
+                        created_at__gte=since,
+                        tool_name=tool_name,
+                    ).values('agent_name').annotate(
+                        count=Count('id'),
+                    ).order_by('-count')[:5].values_list('agent_name', flat=True)
+                )
+
+                confidence = min(0.95, 0.5 + (row['total'] / 500))
 
                 pattern, created = self.LearningPattern.objects.update_or_create(
-                    pattern_type='learning_type_impact',
-                    pattern_data__learning_type=learning_type,
+                    pattern_type='tool_reliability',
+                    pattern_data__tool_name=tool_name,
                     defaults={
-                        'description': f"Learning type '{learning_type}' produces avg +{avg_improvement}% improvement",
+                        'description': (
+                            f"Tool '{tool_name}' has {success_rate}% success rate "
+                            f"({row['total']} calls, avg {avg_latency}ms)"
+                        ),
                         'confidence': round(confidence, 3),
                         'pattern_data': {
-                            'learning_type': learning_type,
-                            'avg_improvement': avg_improvement,
-                            'event_count': event_count,
+                            'tool_name': tool_name,
+                            'success_rate': success_rate,
+                            'avg_latency_ms': avg_latency,
+                            'total_calls': row['total'],
+                            'top_agents': top_agents,
                             'days_analyzed': days_back,
                             'mined_at': timezone.now().isoformat(),
                         },
                         'applies_to_agents': [],  # Global pattern
-                        'applies_to_query_types': [learning_type],
                         'is_active': True,
                     }
                 )
-
                 if created:
                     patterns_created += 1
-                    logger.info(f"  ✅ Created learning_type pattern: {learning_type}")
                 else:
                     patterns_updated += 1
 
-            # === Pattern Type 4: Top Teachers ===
-            # Identify the most effective teaching agents
-            top_teachers = self.AgentLearning.objects.filter(
+            c_total = (patterns_created + patterns_updated) - a_total - b_total
+            logger.info(f"  Miner C (tool_reliability): {c_total} patterns")
+
+            # === Miner D: Prediction Accuracy (from MLPrediction) ===
+            try:
+                from sports.models import MLPrediction
+
+                pred_stats = MLPrediction.objects.filter(
+                    was_correct__isnull=False,
+                    evaluated_at__gte=since,
+                ).values('sport_type').annotate(
+                    total=Count('id'),
+                    correct=Count('id', filter=Q(was_correct=True)),
+                    avg_confidence=Avg('confidence'),
+                ).filter(total__gte=5).order_by('-total')
+
+                for row in pred_stats:
+                    sport = row['sport_type']
+                    accuracy = round(row['correct'] / row['total'] * 100, 1)
+                    avg_conf = round(row['avg_confidence'] or 0, 1)
+                    confidence = min(0.9, 0.4 + (row['total'] / 200))
+
+                    pattern, created = self.LearningPattern.objects.update_or_create(
+                        pattern_type='prediction_accuracy',
+                        pattern_data__sport_type=sport,
+                        defaults={
+                            'description': (
+                                f"Predictions for {sport} are {accuracy}% accurate "
+                                f"({row['total']} evaluated, avg confidence {avg_conf}%)"
+                            ),
+                            'confidence': round(confidence, 3),
+                            'pattern_data': {
+                                'sport_type': sport,
+                                'accuracy_pct': accuracy,
+                                'total_evaluated': row['total'],
+                                'correct': row['correct'],
+                                'avg_confidence': avg_conf,
+                                'days_analyzed': days_back,
+                                'mined_at': timezone.now().isoformat(),
+                            },
+                            'applies_to_agents': ['GamePredictor'],
+                            'is_active': True,
+                        }
+                    )
+                    if created:
+                        patterns_created += 1
+                    else:
+                        patterns_updated += 1
+            except Exception as e:
+                logger.warning(f"  Miner D (prediction_accuracy) skipped: {e}")
+
+            d_total = (patterns_created + patterns_updated) - a_total - b_total - c_total
+            logger.info(f"  Miner D (prediction_accuracy): {d_total} patterns")
+
+            # === Miner E: Agent-Tool Effectiveness (from ToolCallRecord) ===
+            agent_tool_stats = ToolCallRecord.objects.filter(
                 created_at__gte=since,
-                implementation_success=True
-            ).exclude(
-                teacher_agent=F('student_agent')
-            ).values('teacher_agent__name').annotate(
-                teaching_count=Count('id'),
-                avg_improvement=Avg(F('effectiveness_after') - F('effectiveness_before')),
-                student_count=Count('student_agent', distinct=True)
-            ).filter(
-                teaching_count__gte=5,
-                avg_improvement__gt=5
-            ).order_by('-avg_improvement')[:10]
+            ).values('agent_name', 'tool_name').annotate(
+                total=Count('id'),
+                successes=Count('id', filter=Q(success=True)),
+                avg_latency=Avg('latency_ms'),
+            ).filter(total__gte=5).order_by('-total')[:100]
 
-            for tt in top_teachers:
-                teacher = tt['teacher_agent__name']
-                avg_improvement = round(tt['avg_improvement'], 2)
-                teaching_count = tt['teaching_count']
-                student_count = tt['student_count']
-
-                confidence = min(0.9, 0.4 + (teaching_count / 50) + (student_count / 20))
+            for row in agent_tool_stats:
+                agent_name = row['agent_name']
+                tool_name = row['tool_name']
+                success_rate = round(row['successes'] / row['total'] * 100, 1)
+                avg_latency = round(row['avg_latency'] or 0)
+                confidence = min(0.9, 0.3 + (row['total'] / 100))
 
                 pattern, created = self.LearningPattern.objects.update_or_create(
-                    pattern_type='top_teacher',
-                    pattern_data__teacher=teacher,
+                    pattern_type='agent_tool_effectiveness',
+                    pattern_data__agent_name=agent_name,
+                    pattern_data__tool_name=tool_name,
                     defaults={
-                        'description': f"{teacher} is a top teacher with +{avg_improvement}% avg improvement across {student_count} students",
+                        'description': (
+                            f"{agent_name} uses {tool_name} effectively "
+                            f"({success_rate}% success, {avg_latency}ms avg)"
+                        ),
                         'confidence': round(confidence, 3),
                         'pattern_data': {
-                            'teacher': teacher,
-                            'avg_improvement': avg_improvement,
-                            'teaching_count': teaching_count,
-                            'student_count': student_count,
+                            'agent_name': agent_name,
+                            'tool_name': tool_name,
+                            'success_rate': success_rate,
+                            'avg_latency_ms': avg_latency,
+                            'call_count': row['total'],
                             'days_analyzed': days_back,
                             'mined_at': timezone.now().isoformat(),
                         },
-                        'applies_to_agents': [teacher],
+                        'applies_to_agents': [agent_name],
                         'is_active': True,
                     }
                 )
-
                 if created:
                     patterns_created += 1
-                    logger.info(f"  ✅ Created top_teacher pattern: {teacher}")
                 else:
                     patterns_updated += 1
+
+            e_total = (patterns_created + patterns_updated) - a_total - b_total - c_total - d_total
+            logger.info(f"  Miner E (agent_tool_effectiveness): {e_total} patterns")
 
             # === Deactivate stale patterns ===
             stale_cutoff = timezone.now() - timedelta(days=60)
             stale_patterns = self.LearningPattern.objects.filter(
                 is_active=True,
                 updated_at__lt=stale_cutoff,
-                pattern_type__in=['spider_effectiveness', 'agent_collaboration', 'learning_type_impact', 'top_teacher']
+                pattern_type__in=[
+                    'agent_success_rate', 'content_quality', 'tool_reliability',
+                    'prediction_accuracy', 'agent_tool_effectiveness',
+                ]
             )
             stale_count = stale_patterns.update(is_active=False)
             if stale_count > 0:
-                logger.info(f"  ⚠️ Deactivated {stale_count} stale patterns (>60 days old)")
+                logger.info(f"  Deactivated {stale_count} stale patterns (>60 days old)")
 
             total_patterns = self.LearningPattern.objects.filter(is_active=True).count()
 
@@ -723,7 +815,7 @@ class LearningPatternEngine:
             }
 
             logger.info(
-                f"🔍 [Session 767] Pattern mining complete: "
+                f"Pattern mining complete: "
                 f"{patterns_created} created, {patterns_updated} updated, {stale_count} deactivated"
             )
 
