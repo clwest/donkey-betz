@@ -705,9 +705,9 @@ class ToolDispatcher:
 
             # Get by source
             by_source = dict(
-                base_qs.values('source').annotate(
+                base_qs.values('source_type').annotate(
                     total=Sum('amount')
-                ).values_list('source', 'total')
+                ).values_list('source_type', 'total')
             )
 
             # Get by status
@@ -735,7 +735,7 @@ class ToolDispatcher:
         elif action == 'list':
             limit = payload.get('limit', 20)
             revenues = list(base_qs.order_by('-created_at')[:limit].values(
-                'id', 'amount', 'source', 'status', 'created_at', 'description'
+                'id', 'amount', 'source_type', 'status', 'created_at', 'description'
             ))
 
             # Session 987: Serialize UUIDs and datetimes
