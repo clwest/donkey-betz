@@ -851,9 +851,12 @@ class ToolDispatcher:
     ) -> Dict[str, Any]:
         """Handle workspace tool."""
         from core.services.workspace_manager import get_workspace_manager
+        from django.contrib.auth import get_user_model
 
         action = payload.get('action', 'list')
-        manager = get_workspace_manager()  # type: ignore[call-arg]
+        User = get_user_model()
+        user = User.objects.filter(id=user_id).first() if user_id else None
+        manager = get_workspace_manager(user)
 
         if action == 'list':
             workspaces = manager.list_workspaces()
