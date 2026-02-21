@@ -688,6 +688,19 @@ class UnifiedPAEntrypoint:
 
             # If no tool calls, LLM responded with text — done
             if not tool_calls:
+                # Session 1056: Also check text-only responses for degeneracy.
+                # Model may get stuck generating filler like "Ok.Ok.Let's call.Ok."
+                # instead of emitting actual function calls.
+                text_content = result.get('response', '')
+                if text_content and self._is_degenerate_content(text_content):
+                    logger.warning(
+                        f"[{trace_id}] Degenerate text-only response at iteration {iteration+1}, "
+                        f"len={len(text_content)}, content: {text_content[:200]!r}"
+                    )
+                    return (
+                        "I ran into an issue processing that request. Could you try again or rephrase?",
+                        tool_runs, fc_metadata, response_id,
+                    )
                 return (result.get('response', ''), tool_runs, fc_metadata, response_id)
 
             # Session 1043: Detect degenerate loops — LLM stuck repeating itself
@@ -837,6 +850,12 @@ class UnifiedPAEntrypoint:
             unique_ratio = len(set(words)) / len(words)
             if unique_ratio < 0.15:
                 return True
+
+        # Session 1056: Pattern 4 — high "Ok." density anywhere in text.
+        # Model stuck in acknowledgment/attempt loop: "Ok.Let's call.Ok.Ok.Ok."
+        # Normal text never has "ok." 8+ times.
+        if lower.count('ok.') >= 8:
+            return True
 
         return False
 
