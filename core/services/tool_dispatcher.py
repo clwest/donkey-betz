@@ -5424,13 +5424,89 @@ class ToolDispatcher:
                         'matchup': matchup,
                         'predicted_winner': str(winner) if winner else '',
                         'confidence': getattr(p, 'confidence', 0),
-                        'sport_name': getattr(p, 'sport_name', ''),
+                        'sport_type': getattr(p, 'sport_type', ''),
                         'created_at': p.created_at.isoformat() if hasattr(p, 'created_at') and p.created_at else None,
                     })
                 return {'action': 'predictions', 'items': items, 'total': total}
             except Exception as e:
                 logger.warning(f"MLPrediction query failed: {e}")
                 return {'action': 'predictions', 'items': [], 'total': 0, 'error': str(e)}
+
+        elif action == 'accuracy':
+            try:
+                from sports.models import MLPrediction
+                from core.models_betting import PlacedWager
+                from django.db.models import Sum, Count, Q, Avg
+
+                sport = payload.get('sport', None)
+                days = payload.get('days', 30)
+
+                # Overall accuracy from MLPrediction.calculate_accuracy
+                overall = MLPrediction.calculate_accuracy(sport_type=sport, days=days)
+
+                # Per-sport breakdown
+                from django.utils import timezone as tz
+                from datetime import timedelta
+                cutoff = tz.now() - timedelta(days=days)
+                sport_qs = MLPrediction.objects.filter(
+                    created_at__gte=cutoff,
+                    was_correct__isnull=False,
+                )
+                if sport:
+                    sport_qs = sport_qs.filter(sport_type=sport)
+
+                by_sport = []
+                for row in sport_qs.values('sport_type').annotate(
+                    total=Count('id'),
+                    correct=Count('id', filter=Q(was_correct=True)),
+                    avg_confidence=Avg('confidence'),
+                ).order_by('-total'):
+                    total_s = row['total']
+                    by_sport.append({
+                        'sport': row['sport_type'],
+                        'total': total_s,
+                        'correct': row['correct'],
+                        'accuracy_pct': round((row['correct'] / total_s) * 100, 2) if total_s else 0,
+                        'avg_confidence': round(row['avg_confidence'] or 0, 2),
+                    })
+
+                # Wager win/loss/push stats
+                wager_qs = PlacedWager.objects.filter(placed_at__gte=cutoff)
+                if user_id:
+                    wager_qs = wager_qs.filter(user_id=user_id)
+                agg = wager_qs.aggregate(
+                    total=Count('id'),
+                    won=Count('id', filter=Q(status='won')),
+                    lost=Count('id', filter=Q(status='lost')),
+                    push=Count('id', filter=Q(status='push')),
+                    pending=Count('id', filter=Q(status='pending')),
+                    total_staked=Sum('stake'),
+                    total_pnl=Sum('result_amount'),
+                )
+                total_staked = float(agg['total_staked'] or 0)
+                total_pnl = float(agg['total_pnl'] or 0)
+                wager_stats = {
+                    'total_wagers': agg['total'],
+                    'won': agg['won'],
+                    'lost': agg['lost'],
+                    'push': agg['push'],
+                    'pending': agg['pending'],
+                    'win_rate_pct': round((agg['won'] / (agg['won'] + agg['lost'])) * 100, 2) if (agg['won'] + agg['lost']) > 0 else 0,
+                    'total_staked': total_staked,
+                    'total_pnl': total_pnl,
+                    'roi_pct': round((total_pnl / total_staked) * 100, 2) if total_staked > 0 else 0,
+                }
+
+                return {
+                    'action': 'accuracy',
+                    'overall': overall,
+                    'by_sport': by_sport,
+                    'wager_stats': wager_stats,
+                    'days': days,
+                }
+            except Exception as e:
+                logger.warning(f"Accuracy query failed: {e}")
+                return {'action': 'accuracy', 'overall': {}, 'by_sport': [], 'wager_stats': {}, 'days': payload.get('days', 30), 'error': str(e)}
 
         elif action == 'sharp_action':
             try:

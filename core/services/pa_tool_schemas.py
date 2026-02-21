@@ -258,10 +258,11 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["overview", "predictions", "arbs", "sharp_action", "line_movements", "wagers", "live_odds", "brief"],
+                    "enum": ["overview", "predictions", "accuracy", "arbs", "sharp_action", "line_movements", "wagers", "live_odds", "brief"],
                     "description": (
                         "overview: dashboard summary (wager counts, arb opps, recent odds). "
                         "predictions: ML game predictions with confidence. "
+                        "accuracy: prediction accuracy stats and win/loss record. "
                         "arbs: active arbitrage opportunities. "
                         "sharp_action: sharp betting signals. "
                         "line_movements: detected line movements. "
@@ -272,6 +273,7 @@ PA_TOOL_SCHEMAS = [
                 },
                 "sport": {"type": "string", "description": "Sport type filter (nba, nfl, mlb, nhl)"},
                 "limit": {"type": "integer", "description": "Max items (default 10)"},
+                "days": {"type": "integer", "description": "Lookback period in days (default 30, used by accuracy action)"},
             },
             "required": ["action"],
         },
