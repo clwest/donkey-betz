@@ -874,25 +874,10 @@ class BaseAgent(ABC, TimeTravelMixin):
                 }
             )
 
-            # Create learning record
-            AgentLearning.objects.create(
-                teacher_agent=teacher_model,
-                student_agent=student_model,
-                solution=solution,
-                learning_type='cross_agent_delegation',
-                implementation_success=success,
-                effectiveness_before=0.7,  # Baseline
-                effectiveness_after=0.8 if success else 0.6,  # Slight improvement on success
-                metadata={
-                    'task': task[:500],
-                    'delegation_type': 'specialist_request',
-                    'session': 744
-                }
-            )
-
-            logger.info(
-                f"📚 [Session 744] Recorded delegation: "
-                f"{self.name} → {specialist_agent}"
+            # Delegation is tracked via AgentExecution records now;
+            # synthetic AgentLearning records removed (effectiveness_before/after were hardcoded).
+            logger.debug(
+                f"Recorded delegation: {self.name} -> {specialist_agent}"
             )
 
         except Exception as e:
