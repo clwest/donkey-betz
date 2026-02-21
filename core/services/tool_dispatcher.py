@@ -4456,16 +4456,19 @@ class ToolDispatcher:
 
     def _handle_feedback(
         self,
+        tool_name: str,
         payload: Dict[str, Any],
-        user: Optional[Any] = None,
-        context: Optional[Dict[str, Any]] = None
+        user_id: Optional[int],
+        trace_id: str
     ) -> Dict[str, Any]:
         """
         Session 948: Handle user feedback viewing and management.
+        Session 1061: Fixed handler signature (was old-style, caused crash).
 
         Actions:
         - list: List feedback items (optionally filtered by status)
         - stats: Get feedback statistics
+        - submit: Submit new feedback
         - update: Update feedback status (admin only)
         """
         from core.models_user_feedback import UserFeedback
@@ -4509,6 +4512,37 @@ class ToolDispatcher:
                 'by_status': summary['by_status'],
             }
 
+        elif action == 'submit':
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+
+            comment = payload.get('comment', '')
+            target_type = payload.get('target_type', 'general')
+
+            if not comment:
+                return {'error': 'comment is required for submit'}
+
+            user = User.objects.filter(id=user_id).first() if user_id else None
+            if not user:
+                user = User.objects.first()
+
+            feedback = UserFeedback.objects.create(
+                user=user,
+                feedback_type=target_type if target_type in (
+                    'ui_ux_issue', 'bug', 'feature_request', 'feedback'
+                ) else 'feedback',
+                message=comment,
+                status='open',
+                trace_id=trace_id if trace_id and not trace_id.startswith('pa-') else '',
+            )
+
+            return {
+                'action': 'submit',
+                'id': str(feedback.id),
+                'success': True,
+                'message': 'Feedback submitted successfully',
+            }
+
         elif action == 'update':
             feedback_id = payload.get('id')
             new_status = payload.get('new_status')
@@ -4535,7 +4569,7 @@ class ToolDispatcher:
 
         else:
             raise ValueError(
-                f"Unknown action: {action}. Valid actions: list, stats, update"
+                f"Unknown action: {action}. Valid actions: list, stats, submit, update"
             )
 
 

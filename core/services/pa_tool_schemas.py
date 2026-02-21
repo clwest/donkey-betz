@@ -617,14 +617,21 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["submit", "list", "stats"],
-                    "description": "Feedback action",
+                    "enum": ["submit", "list", "stats", "update"],
+                    "description": (
+                        "submit: create new feedback. "
+                        "list: view feedback items. "
+                        "stats: feedback statistics. "
+                        "update: change feedback status."
+                    ),
                 },
-                "target_type": {"type": "string", "description": "What the feedback is about"},
-                "target_id": {"type": "string", "description": "UUID of the item being rated"},
-                "rating": {"type": "integer", "description": "Rating (1-5)"},
-                "comment": {"type": "string", "description": "Feedback comment"},
-                "limit": {"type": "integer", "description": "Max items (default 10)"},
+                "target_type": {"type": "string", "description": "What the feedback is about (for submit)"},
+                "target_id": {"type": "string", "description": "UUID of the item being rated (for submit)"},
+                "rating": {"type": "integer", "description": "Rating 1-5 (for submit)"},
+                "comment": {"type": "string", "description": "Feedback comment (required for submit)"},
+                "id": {"type": "string", "description": "Feedback UUID (for update)"},
+                "new_status": {"type": "string", "description": "New status (for update): open, acknowledged, in_progress, addressed, wont_fix"},
+                "limit": {"type": "integer", "description": "Max items (default 10, for list)"},
             },
             "required": ["action"],
         },
