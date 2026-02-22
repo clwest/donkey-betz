@@ -95,6 +95,7 @@ class ToolDispatcher:
         self.register("image_editing_agent", self._handle_agent_tool)
         self.register("video_generation_agent", self._handle_agent_tool)
         self.register("video_editing_agent", self._handle_agent_tool)
+        self.register("resolve_agent", self._handle_agent_tool)
         self.register("audio_generation_agent", self._handle_agent_tool)
         self.register("three_d_generation_agent", self._handle_agent_tool)
         self.register("character_training_agent", self._handle_agent_tool)
@@ -120,6 +121,7 @@ class ToolDispatcher:
         self.register("universal_agent_tool", self._handle_universal_agent)
         self.register("workspace_tool", self._handle_workspace)
         self.register("deliverables_tool", self._handle_deliverables)
+        self.register("media_tool", self._handle_media)
 
         # Body system tools
         self.register("get_body_vitals", self._handle_body_vitals)
@@ -406,6 +408,7 @@ class ToolDispatcher:
             'image_editing_agent': 'ImageEditingAgent',
             'video_generation_agent': 'VideoAgent',
             'video_editing_agent': 'VideoEditingAgent',
+            'resolve_agent': 'ResolveAgent',
             'audio_generation_agent': 'AudioAgent',
             'three_d_generation_agent': 'ThreeDAgent',
             'character_training_agent': 'CharacterTrainingAgent',
@@ -1156,6 +1159,153 @@ class ToolDispatcher:
                 'templates': templates,
                 'by_type': by_type,
             }
+
+        else:
+            raise ValueError(f"Unknown action: {action}")
+
+    def _handle_media(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """Handle media library tool (images, videos, audio)."""
+        from content.models import ImageHistory, VideoHistory, AudioHistory
+        from django.db.models import Count
+
+        action = payload.get('action', 'list')
+        media_type = payload.get('media_type', 'all')
+        limit = min(payload.get('limit', 10), 50)
+
+        # Helper to build per-model querysets scoped to user
+        def _qs(model):
+            qs = model.objects.all()
+            if user_id:
+                qs = qs.filter(user_id=user_id)
+            return qs
+
+        if action == 'list':
+            content_type = payload.get('content_type')
+            items = []
+
+            if media_type in ('image', 'all'):
+                qs = _qs(ImageHistory)
+                if content_type:
+                    qs = qs.filter(image_type=content_type)
+                for obj in qs.order_by('-created_at')[:limit]:
+                    items.append({
+                        'id': str(obj.id), 'media_type': 'image',
+                        'filename': obj.filename,
+                        'image_type': obj.image_type,
+                        'prompt': (obj.prompt or '')[:200],
+                        'file_path': obj.file_path,
+                        'created_at': obj.created_at.isoformat() if obj.created_at else None,
+                    })
+
+            if media_type in ('video', 'all'):
+                qs = _qs(VideoHistory)
+                if content_type:
+                    qs = qs.filter(video_type=content_type)
+                for obj in qs.order_by('-created_at')[:limit]:
+                    items.append({
+                        'id': str(obj.id), 'media_type': 'video',
+                        'video_type': obj.video_type,
+                        'prompt': (obj.prompt or '')[:200],
+                        'video_url': obj.video_url or '',
+                        'thumbnail_url': obj.thumbnail_url or '',
+                        'duration': obj.duration,
+                        'created_at': obj.created_at.isoformat() if obj.created_at else None,
+                    })
+
+            if media_type in ('audio', 'all'):
+                qs = _qs(AudioHistory)
+                if content_type:
+                    qs = qs.filter(audio_type=content_type)
+                for obj in qs.order_by('-created_at')[:limit]:
+                    items.append({
+                        'id': str(obj.id), 'media_type': 'audio',
+                        'filename': obj.filename,
+                        'audio_type': obj.audio_type,
+                        'prompt': (obj.prompt or '')[:200],
+                        'voice_name': obj.voice_name or '',
+                        'file_path': obj.file_path,
+                        'created_at': obj.created_at.isoformat() if obj.created_at else None,
+                    })
+
+            # Sort combined results by created_at descending, take limit
+            items.sort(key=lambda x: x.get('created_at') or '', reverse=True)
+            items = items[:limit]
+            return {'action': 'list', 'count': len(items), 'items': items}
+
+        elif action == 'detail':
+            mid = payload.get('id')
+            if not mid:
+                raise ValueError("id parameter required for detail action")
+
+            # Search across all three models
+            for model, mtype, extra_fields in [
+                (ImageHistory, 'image', lambda o: {
+                    'filename': o.filename, 'image_type': o.image_type,
+                    'file_path': o.file_path, 'model_used': o.model_used,
+                    'style': o.style, 'prompt': o.prompt or '',
+                }),
+                (VideoHistory, 'video', lambda o: {
+                    'video_type': o.video_type, 'video_url': o.video_url or '',
+                    'thumbnail_url': o.thumbnail_url or '',
+                    'duration': o.duration, 'ratio': o.ratio,
+                    'video_width': o.video_width, 'video_height': o.video_height,
+                    'model_used': o.model_used, 'prompt': o.prompt or '',
+                }),
+                (AudioHistory, 'audio', lambda o: {
+                    'filename': o.filename, 'audio_type': o.audio_type,
+                    'file_path': o.file_path, 'voice_id': o.voice_id,
+                    'voice_name': o.voice_name or '', 'prompt': o.prompt or '',
+                }),
+            ]:
+                obj = _qs(model).filter(id=mid).first()
+                if obj:
+                    result = {
+                        'action': 'detail', 'id': str(obj.id),
+                        'media_type': mtype,
+                        'created_at': obj.created_at.isoformat() if obj.created_at else None,
+                    }
+                    result.update(extra_fields(obj))
+                    return result
+
+            raise ValueError(f"Media asset {mid} not found")
+
+        elif action == 'stats':
+            counts = {}
+            if media_type in ('image', 'all'):
+                counts['images'] = _qs(ImageHistory).count()
+            if media_type in ('video', 'all'):
+                counts['videos'] = _qs(VideoHistory).count()
+            if media_type in ('audio', 'all'):
+                counts['audio'] = _qs(AudioHistory).count()
+            counts['total'] = sum(counts.values())
+            return {'action': 'stats', **counts}
+
+        elif action == 'delete':
+            mid = payload.get('id')
+            if not mid:
+                raise ValueError("id parameter required for delete action")
+
+            for model, mtype in [
+                (ImageHistory, 'image'),
+                (VideoHistory, 'video'),
+                (AudioHistory, 'audio'),
+            ]:
+                obj = _qs(model).filter(id=mid).first()
+                if obj:
+                    info = getattr(obj, 'filename', '') or getattr(obj, 'video_url', '') or str(mid)
+                    obj.delete()
+                    return {
+                        'action': 'delete', 'id': str(mid),
+                        'media_type': mtype, 'message': f'Deleted {mtype} asset: {info}',
+                    }
+
+            raise ValueError(f"Media asset {mid} not found")
 
         else:
             raise ValueError(f"Unknown action: {action}")

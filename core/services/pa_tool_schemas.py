@@ -947,13 +947,47 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
+    # ── Media Library (images, videos, audio) ─────────────────────────────
+    {
+        "type": "function",
+        "name": "media_tool",
+        "description": (
+            "Browse the user's media library: AI-generated images, videos, and audio files. "
+            "Supported actions: list, detail, stats, delete. "
+            "Use 'list' to browse media (filter by media_type, content_type, limit). "
+            "Use 'detail' to get full metadata for one asset. "
+            "Use 'stats' for aggregate counts by type. "
+            "Use 'delete' to remove a media asset."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list", "detail", "stats", "delete"],
+                    "description": "list=browse media, detail=full metadata, stats=counts, delete=remove asset.",
+                },
+                "id": {"type": "string", "description": "UUID of media asset (required for detail, delete)"},
+                "media_type": {
+                    "type": "string",
+                    "enum": ["image", "video", "audio", "all"],
+                    "description": "Filter by media type (default: all)",
+                },
+                "content_type": {"type": "string", "description": "Filter by content subtype (e.g. 'generated', 'uploaded', 'text_to_video', 'tts')"},
+                "limit": {"type": "integer", "description": "Max items to return (default 10, max 50)"},
+            },
+            "required": ["action"],
+        },
+    },
+
     # ── Agent Delegation (generic) ──────────────────────────────────────────
     {
         "type": "function",
         "name": "run_agent",
         "description": (
             "Delegate a task to a specialized agent. Use when the user asks to "
-            "generate images, create videos, edit images/videos, generate audio, "
+            "generate images, create videos, edit videos (trim/effects/speed/concat), "
+            "render or color-grade videos via DaVinci Resolve, generate audio, "
             "create 3D models, train characters, do competitor analysis, customer "
             "research, brand strategy, content strategy, marketing strategy, "
             "content writing, or workflow orchestration."
@@ -966,6 +1000,7 @@ PA_TOOL_SCHEMAS = [
                     "enum": [
                         "image_generation_agent", "image_editing_agent",
                         "video_generation_agent", "video_editing_agent",
+                        "resolve_agent",
                         "audio_generation_agent", "three_d_generation_agent",
                         "character_training_agent", "talking_character_agent",
                         "competitor_analysis_agent", "customer_research_agent",
@@ -974,7 +1009,11 @@ PA_TOOL_SCHEMAS = [
                         "workflow_orchestration_agent", "coleadership_agent",
                         "strategic_review",
                     ],
-                    "description": "Which agent to run",
+                    "description": (
+                        "Which agent to run. resolve_agent = DaVinci Resolve rendering & color grading. "
+                        "video_editing_agent = ffmpeg trim/effects/speed/concat. "
+                        "video_generation_agent = Runway ML text/image-to-video."
+                    ),
                 },
                 "task": {"type": "string", "description": "Task description for the agent"},
                 "context": {"type": "object", "description": "Additional context"},
