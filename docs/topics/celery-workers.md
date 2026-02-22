@@ -27,12 +27,12 @@
 
 | Queue | # Tasks | Categories |
 |-------|---------|------------|
-| default | ~10 | Light DB queries, narrative drift, attention lifecycle, deliverable scoring |
-| long_running | ~74 | Agent exercises (18), autonomous situations (14), pipeline execution, spider network, intelligence desks, multi-agent conversations, hivemind sessions, dream execution, spider signals, autonomy cycle, market intelligence |
-| content | ~29 | Blog generation, podcasts, initiative stages, content deliberation, blog re-evaluation, auto-publish, auto-enhance blogs, dream triage, pilot completion |
-| sports | ~8 | Odds collection, prediction generation, score fetching, evaluation, verification, settlement, accuracy reports |
-| broadcast | ~15 | Status snapshots, heartbeat, nervous system, body system checks (9), orchestration timeouts |
-| ml | ~8 | Embedding backfills, ML model training/scoring, agent activity embeddings, document/memory embeddings |
+| default | ~20 | Light DB queries, narrative drift, attention lifecycle, triggers, roi_metrics, cleanup |
+| long_running | ~120 | Agent exercises (18), autonomous situations (14), pipeline execution, spider network, intelligence desks, multi-agent conversations, hivemind sessions, dream execution, core.tasks_agents.execute_*, ai_core.spiders.tasks.*, content generation, LLM pipelines |
+| content | ~35 | Blog generation, podcasts, initiative stages, content deliberation, blog re-evaluation, auto-publish, auto-enhance blogs, dream triage, pilot completion, voice scoring |
+| sports | ~11 | Odds collection, prediction generation, score fetching, evaluation, verification, settlement, accuracy reports, betting digests |
+| broadcast | ~25 | Status snapshots, heartbeat, nervous system, body system checks (9), orchestration timeouts, stuck/cleanup checks, learning loop tracking, KPI alerts, celery health |
+| ml | ~12 | Embedding backfills, ML model training/scoring, agent activity embeddings, document/memory embeddings, signal score backfills, training data collection |
 | pa | 2 | process_pa_chat_task, draft_legal_document_task |
 | agents | ~18 | Agent exercise groups, autonomous situations, market desk, alert checks |
 
@@ -80,6 +80,22 @@ celery-worker (512MB container, ~200MB parent) was OOMing 3 times in 18 minutes.
 | Alert checks | 1 | agents | `check_all_alerts` |
 
 Body checks alone were generating ~150+ task runs/hour on the 200MB default worker.
+
+### OOM Fix — ~70 More Unrouted Tasks (Session 1064)
+
+Critical discovery: `core.tasks_agents.*` (6 tasks including `execute_agent`, `execute_orchestration`) were NOT covered by the `agents.*` glob — that glob only matches `agents.update_agent_performance`. These ~300-500MB tasks were all landing on the 200MB default worker.
+
+| Category | Count | New Queue | Examples |
+|----------|-------|-----------|----------|
+| core.tasks_agents.* | 4 | long_running | `execute_agent`, `execute_agent_async`, `execute_orchestration` |
+| core.tasks_agents.* | 2 | broadcast | `check_stuck_executions`, `cleanup_old_executions` |
+| ai_core.spiders.tasks.* | 5 | long_running | `deploy_full_army`, `collect_spider_data`, `activate_spider_wave` |
+| ai_core.spiders.tasks.* | 2 | broadcast | `spider_heartbeat`, `clean_inactive_spiders` |
+| Standalone module tasks | 6 | long_running | `trigger_signal_driven_conversation`, `workspace.autopilot_tick`, `pipelines.tasks.run_pipeline_task` |
+| Standalone module tasks | 14 | various | `roi_metrics.*`, `triggers.*`, `learning_loop.*`, etc. |
+| core.tasks.* heavy | ~30 | long_running | `execute_orchestration_async`, `run_conceptforge_pipeline`, `generate_content_package`, `collect_spider_data` |
+| core.tasks.* content | ~5 | content/sports | `generate_podcast_episode`, `enhance_blog`, `collect_sports_odds` |
+| core.tasks.* monitoring | ~3 | broadcast | `monitor_celery_health`, `check_kpi_alerts`, `get_event_bus_stats` |
 
 ### Disabled Schedules (Sessions 1027, 1029)
 
