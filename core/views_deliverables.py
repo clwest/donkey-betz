@@ -42,6 +42,7 @@ def list_deliverables(request):
         - agent: Filter by agent name
         - saved: Filter by is_saved (true/false)
         - template: Filter by is_template (true/false)
+        - source: Filter by source (user/system)
         - search: Search in title and content
         - page: Page number (default: 1)
         - per_page: Items per page (default: 20, max: 100)
@@ -77,6 +78,12 @@ def list_deliverables(request):
         template = request.GET.get('template')
         if template is not None:
             queryset = queryset.filter(is_template=template.lower() == 'true')
+
+        source = request.GET.get('source')
+        if source == 'user':
+            queryset = queryset.filter(user__isnull=False)
+        elif source == 'system':
+            queryset = queryset.filter(user__isnull=True)
 
         search = request.GET.get('search')
         if search:
@@ -383,6 +390,8 @@ def get_deliverable_stats(request):
         total = queryset.count()
         saved = queryset.filter(is_saved=True).count()
         templates = queryset.filter(is_template=True).count()
+        user_count = queryset.filter(user__isnull=False).count()
+        system_count = queryset.filter(user__isnull=True).count()
 
         # By type
         by_type = list(
@@ -418,6 +427,8 @@ def get_deliverable_stats(request):
                 'saved': saved,
                 'templates': templates,
                 'recent_7d': recent_count,
+                'user_count': user_count,
+                'system_count': system_count,
                 'by_type': by_type,
                 'by_category': by_category,
                 'by_agent': by_agent,
@@ -450,6 +461,9 @@ def get_deliverable_types(request):
 
 def _serialize_deliverable(deliverable: Deliverable, include_content: bool = False) -> dict:
     """Serialize a deliverable to a JSON-compatible dict."""
+    # Determine source: user-initiated (PA chat) vs system (autonomous agents)
+    source = 'user' if deliverable.user is not None else 'system'
+
     data = {
         'id': str(deliverable.id),
         'title': deliverable.title,
@@ -473,6 +487,7 @@ def _serialize_deliverable(deliverable: Deliverable, include_content: bool = Fal
         'word_count': deliverable.word_count,
         'line_count': deliverable.line_count,
         'status': deliverable.status,
+        'source': source,
         'created_at': deliverable.created_at.isoformat(),
         'updated_at': deliverable.updated_at.isoformat(),
     }

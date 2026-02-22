@@ -3967,7 +3967,7 @@ export const auditApi = {
 
 // Session 1009: Deliverables Library API
 export const deliverablesApi = {
-  list: (params?: { type?: string; category?: string; agent?: string; saved?: boolean; template?: boolean; search?: string; page?: number; per_page?: number }) =>
+  list: (params?: { type?: string; category?: string; agent?: string; saved?: boolean; template?: boolean; source?: string; search?: string; page?: number; per_page?: number }) =>
     api.get('/deliverables/', { params }),
   detail: (id: string) => api.get(`/deliverables/${id}/`),
   stats: () => api.get('/deliverables/stats/'),
