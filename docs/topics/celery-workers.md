@@ -1,6 +1,6 @@
 # Celery & Workers
 
-271 Celery tasks across 7 worker types with queue-based routing, memory management, and observability via CeleryTaskEvent signals. Session 1000C: Routed 60+ heavy tasks off default queue to prevent OOM. Session 1029: Rerouted 5 additional heavy tasks from default to long_running to fix recurring OOM crashes. Session 1033: Added auto_enhance_blogs + score_unscored_deliverables. Session 1034: Throttled 4 beat schedules (~40% fewer runs), media task guard, workspace path self-healing.
+271 Celery tasks across 7 worker types with queue-based routing, memory management, and observability via CeleryTaskEvent signals. Session 1000C: Routed 60+ heavy tasks off default queue to prevent OOM. Session 1029: Rerouted 5 additional heavy tasks from default to long_running to fix recurring OOM crashes. Session 1033: Added auto_enhance_blogs + score_unscored_deliverables. Session 1034: Throttled 4 beat schedules (~40% fewer runs), media task guard, workspace path self-healing. Session 1063: Routed 46 more unrouted tasks (body checks → broadcast, LLM tasks → long_running, embeddings → ml).
 
 ## Worker Types (7)
 
@@ -27,13 +27,14 @@
 
 | Queue | # Tasks | Categories |
 |-------|---------|------------|
-| default | ~24 | Light DB queries, body system checks, attention lifecycle, deliverable scoring |
-| long_running | ~55 | Agent exercises (18), autonomous situations (14), pipeline execution, spider network, intelligence desks, blog enhancement, multi-agent conversations, hivemind sessions, dream execution |
-| content | ~22 | Blog generation, podcasts, initiative stages, content deliberation, blog re-evaluation, auto-publish, auto-enhance blogs |
+| default | ~10 | Light DB queries, narrative drift, attention lifecycle, deliverable scoring |
+| long_running | ~74 | Agent exercises (18), autonomous situations (14), pipeline execution, spider network, intelligence desks, multi-agent conversations, hivemind sessions, dream execution, spider signals, autonomy cycle, market intelligence |
+| content | ~29 | Blog generation, podcasts, initiative stages, content deliberation, blog re-evaluation, auto-publish, auto-enhance blogs, dream triage, pilot completion |
 | sports | ~8 | Odds collection, prediction generation, score fetching, evaluation, verification, settlement, accuracy reports |
-| broadcast | ~4 | Status snapshots, heartbeat, nervous system |
-| ml | ~3 | Embedding backfills, ML model training/scoring |
-| pa | 1 | process_pa_chat_task |
+| broadcast | ~15 | Status snapshots, heartbeat, nervous system, body system checks (9), orchestration timeouts |
+| ml | ~8 | Embedding backfills, ML model training/scoring, agent activity embeddings, document/memory embeddings |
+| pa | 2 | process_pa_chat_task, draft_legal_document_task |
+| agents | ~18 | Agent exercise groups, autonomous situations, market desk, alert checks |
 
 **Important:** `CELERY_BEAT_SCHEDULE` in settings.py overrides `app.conf.beat_schedule` in celery.py (lazy `config_from_object`). The celery.py beat schedule is effectively dead code — all beat entries live in settings.py.
 
@@ -64,6 +65,21 @@ celery-worker (512MB container, ~200MB parent) was OOMing 3 times in 18 minutes.
 | `explore_dream_topic` | 300-500MB | LLM API calls | long_running |
 | `evaluate_pilots_with_thinking_agent` | 200-400MB | ThinkingAgent LLM calls | long_running |
 | `run_learning_loop_cycle` | 300-500MB | LearningLoopOrchestrator | long_running |
+
+### OOM Fix — 46 Unrouted Tasks Rerouted (Session 1063)
+
+46 tasks had no explicit route and were falling to `default` queue (200MB celery-worker). Key categories:
+
+| Category | Count | New Queue | Examples |
+|----------|-------|-----------|----------|
+| Body system checks | 11 | broadcast | `coordinate_body` (60s), `check_circulation` (2m), `immune_scan` (3m), 7 more at 5-15m |
+| Heavy LLM/agent tasks | 19 | long_running | `process_spider_data_automatic`, `run_autonomy_cycle`, `market_intelligence_scan`, `run_stock_market_intelligence`, `workspace_autopilot_tick` |
+| Embedding tasks | 5 | ml | `embed_agent_activity`, `embed_daily_agent_learning`, `generate_document_embeddings` |
+| Content/pipeline tasks | 7 | content | `auto_enhance_blogs`, `auto_triage_dreams`, `auto_promote_decisions`, `auto_complete_pilots` |
+| PA-triggered | 1 | pa | `draft_legal_document_task` |
+| Alert checks | 1 | agents | `check_all_alerts` |
+
+Body checks alone were generating ~150+ task runs/hour on the 200MB default worker.
 
 ### Disabled Schedules (Sessions 1027, 1029)
 
