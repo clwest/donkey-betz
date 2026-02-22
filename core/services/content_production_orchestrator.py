@@ -243,7 +243,7 @@ PRODUCTION_TEAMS = {
                 agent_name='AudioAgent',
                 task_template='Generate voiceover for podcast episode using script. Use a {voice_style} voice appropriate for {target_audience}.',
                 depends_on=['podcast_script'],
-                optional=False,
+                optional=True,  # Session 1068: audio optional so production doesn't hard-fail
                 parallel_group=2
             ),
             AssetRequirement(
@@ -306,7 +306,7 @@ PRODUCTION_TEAMS = {
                 agent_name='AudioAgent',
                 task_template='Generate voiceover for video narration. Use a {voice_style} voice that engages {target_audience}.',
                 depends_on=['video_script'],
-                optional=False,
+                optional=True,  # Session 1068: audio optional so production doesn't hard-fail
                 parallel_group=2
             ),
             AssetRequirement(
