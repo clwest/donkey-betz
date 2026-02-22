@@ -4952,9 +4952,15 @@ Address the user by name occasionally."""
                 success = tool_result.get('success', False)
                 output = tool_result.get('output', '')
                 data = tool_result.get('data', {}) or {}
+                # Session 1065: Deliverable ID from _handle_agent_tool
+                deliverable_id = tool_result.get('deliverable_id')
 
                 if not success:
                     return f"**{agent}** could not complete the task."
+
+                saved_note = ''
+                if deliverable_id:
+                    saved_note = f"\n\n*Saved to your Deliverables library.*"
 
                 # Session 1063: Render image results as markdown images
                 if intent in ('image_creation', 'image_generation') and isinstance(data, dict):
@@ -4965,14 +4971,16 @@ Address the user by name occasionally."""
                             url = img.get('url', '') if isinstance(img, dict) else str(img)
                             if url:
                                 lines.append(f"**Image {i}:**\n![Image {i}]({url})\n")
+                        if saved_note:
+                            lines.append(saved_note)
                         return "\n".join(lines)
 
                 # Truncate long outputs
                 output_str = str(output)
-                if len(output_str) > 500:
-                    output_str = output_str[:500] + '...'
+                if len(output_str) > 2000:
+                    output_str = output_str[:2000] + '...'
 
-                return f"**{agent}** completed successfully:\n\n{output_str}"
+                return f"**{agent}** completed successfully:\n\n{output_str}{saved_note}"
 
             # Session 987 / 1028: Web search / research formatter
             elif intent in ['web_search', 'research']:

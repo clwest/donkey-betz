@@ -341,6 +341,10 @@ class ToolDispatcher:
         Session 1063: Use AgentRouter.route() instead of registry.execute_agent().
         The registry only creates a DB record without running the agent.
         AgentRouter actually executes the agent and returns an AgentResult.
+
+        Session 1065: After execution, find the Deliverable the agent saved,
+        assign the PA user to it, and return deliverable_id so the formatter
+        can tell the user where to find it.
         """
         from core.agent_router import AgentRouter
 
@@ -363,6 +367,35 @@ class ToolDispatcher:
         # Session 1063: Preserve structured data (images, content, etc.) for formatter
         if agent_result and agent_result.data:
             result['data'] = agent_result.data
+
+        # Session 1065: Find the Deliverable the agent just saved and attach
+        # the PA user so it shows as "You" in the Deliverables tab.
+        if agent_result and agent_result.success:
+            try:
+                from core.models_deliverables import Deliverable
+                from django.utils import timezone
+                from datetime import timedelta
+
+                recent = Deliverable.objects.filter(
+                    agent_name=agent_name,
+                    created_at__gte=timezone.now() - timedelta(seconds=120),
+                ).order_by('-created_at').first()
+
+                if recent:
+                    result['deliverable_id'] = str(recent.id)
+                    result['deliverable_title'] = recent.title
+
+                    # Assign PA user so source indicator shows "You"
+                    if user_id and not recent.user:
+                        from django.contrib.auth import get_user_model
+                        User = get_user_model()
+                        try:
+                            recent.user = User.objects.get(id=user_id)
+                            recent.save(update_fields=['user', 'updated_at'])
+                        except User.DoesNotExist:
+                            pass
+            except Exception as e:
+                logger.debug(f"Could not find deliverable for {agent_name}: {e}")
 
         return result
 
@@ -6624,6 +6657,16 @@ RESEARCH DATA:
         deliverable_type = type_map.get(output_type, 'document')
 
         try:
+            # Session 1065: Resolve user so deliverable shows as "You"
+            resolved_user = None
+            if user_id:
+                from django.contrib.auth import get_user_model
+                _User = get_user_model()
+                try:
+                    resolved_user = _User.objects.get(id=user_id)
+                except _User.DoesNotExist:
+                    pass
+
             deliverable = Deliverable.objects.create(
                 title=title,
                 slug=slug,
@@ -6633,6 +6676,7 @@ RESEARCH DATA:
                 content=generated_content,
                 content_format='markdown',
                 agent_name='PersonalAssistantAgent',
+                user=resolved_user,
                 quality_score=0.7,
                 confidence_score=0.7,
                 metadata={
