@@ -22,6 +22,8 @@ import {
   LayoutTemplate,
   Filter,
   X,
+  User,
+  Bot,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { deliverablesApi } from '@/lib/api'
@@ -52,6 +54,7 @@ interface Deliverable {
   word_count: number
   line_count: number
   status: string
+  source: 'user' | 'system'
   created_at: string
   updated_at: string
   // detail-only fields
@@ -68,6 +71,8 @@ interface DeliverableStats {
   saved: number
   templates: number
   recent_7d: number
+  user_count: number
+  system_count: number
   by_type: Array<{ deliverable_type: string; count: number }>
   by_category: Array<{ category: string; count: number }>
   by_agent: Array<{ agent_name: string; count: number }>
@@ -140,6 +145,7 @@ export function DeliverablesTab() {
     search?: string
     saved?: boolean
     template?: boolean
+    source?: string
   }>({})
   const [searchInput, setSearchInput] = useState('')
   const [showFilters, setShowFilters] = useState(false)
@@ -222,7 +228,7 @@ export function DeliverablesTab() {
   const deliverables: Deliverable[] = listQuery.data?.deliverables ?? []
   const pagination: Pagination | null = listQuery.data?.pagination ?? null
   const detail: Deliverable | null = detailQuery.data?.deliverable ?? null
-  const hasActiveFilters = !!(filters.type || filters.agent || filters.search || filters.saved || filters.template)
+  const hasActiveFilters = !!(filters.type || filters.agent || filters.search || filters.saved || filters.template || filters.source)
 
   // ============ Detail View ============
   if (selectedId) {
@@ -265,6 +271,15 @@ export function DeliverablesTab() {
                           {detail.agent_name}
                         </span>
                       )}
+                      <span className={cn(
+                        'px-2 py-0.5 rounded text-xs inline-flex items-center gap-1',
+                        detail.source === 'user'
+                          ? 'bg-emerald-500/20 text-emerald-400'
+                          : 'bg-gray-600/30 text-gray-400'
+                      )}>
+                        {detail.source === 'user' ? <User size={10} /> : <Bot size={10} />}
+                        {detail.source === 'user' ? 'You' : 'System'}
+                      </span>
                     </div>
                     {detail.quality_score > 0 && <QualityBar score={detail.quality_score} />}
                   </div>
@@ -435,6 +450,33 @@ export function DeliverablesTab() {
         </div>
       )}
 
+      {/* Source Tabs */}
+      <div className="flex gap-1 border-b border-dark-border pb-2">
+        {([
+          { key: undefined, label: 'All', count: stats?.total },
+          { key: 'user', label: 'Mine', count: stats?.user_count },
+          { key: 'system', label: 'System', count: stats?.system_count },
+        ] as const).map((tab) => (
+          <button
+            key={tab.label}
+            onClick={() => { setFilters(f => ({ ...f, source: tab.key })); setPage(1) }}
+            className={cn(
+              'px-3 py-1.5 rounded-t text-sm transition-colors flex items-center gap-1.5',
+              filters.source === tab.key
+                ? 'bg-primary-500/20 text-primary-400 border-b-2 border-primary-400'
+                : 'text-gray-400 hover:text-white'
+            )}
+          >
+            {tab.key === 'user' && <User size={12} />}
+            {tab.key === 'system' && <Bot size={12} />}
+            {tab.label}
+            {tab.count !== undefined && (
+              <span className="text-xs text-gray-500">{tab.count}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
       {/* Search & Filters */}
       <div className="space-y-2">
         <div className="flex gap-2">
@@ -560,6 +602,15 @@ export function DeliverablesTab() {
                   </div>
 
                   <div className="flex flex-wrap gap-1.5 mb-2">
+                    <span className={cn(
+                      'px-1.5 py-0.5 rounded text-xs inline-flex items-center gap-1',
+                      d.source === 'user'
+                        ? 'bg-emerald-500/20 text-emerald-400'
+                        : 'bg-gray-600/30 text-gray-400'
+                    )}>
+                      {d.source === 'user' ? <User size={10} /> : <Bot size={10} />}
+                      {d.source === 'user' ? 'You' : 'System'}
+                    </span>
                     <span className={cn('px-1.5 py-0.5 rounded text-xs', TYPE_COLORS[d.deliverable_type] || 'bg-gray-700 text-gray-300')}>
                       {d.deliverable_type}
                     </span>
