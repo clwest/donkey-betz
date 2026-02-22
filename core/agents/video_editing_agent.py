@@ -465,69 +465,63 @@ If asked to create something new, explain you can only edit existing videos."""
         tool_name: str,
         arguments: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Execute a tool call for video editing."""
+        """Execute a tool call for video editing via ffmpeg service."""
+        from core.services.video_editing_service import (
+            trim_video, add_text_overlay, apply_effect,
+            extract_frame, concatenate_videos, change_speed,
+        )
 
         if tool_name == "trim":
-            from core.views_image import _execute_edit_video
-            parameters = {
-                'video_id': arguments.get('video_id'),
-                'operation': 'trim',
-                'start_time': arguments.get('start_time', 0),
-                'end_time': arguments.get('end_time'),
-                'duration': arguments.get('duration'),
-            }
-            return _execute_edit_video(self.user, parameters)
+            return trim_video(
+                self.user,
+                arguments.get('video_id'),
+                start_time=arguments.get('start_time', 0),
+                end_time=arguments.get('end_time'),
+                duration=arguments.get('duration'),
+            )
 
         elif tool_name == "add_text":
-            from core.views_image import _execute_add_text_to_video
-            parameters = {
-                'video_id': arguments.get('video_id'),
-                'text': arguments.get('text'),
-                'position': arguments.get('position', 'bottom'),
-                'font_size': arguments.get('font_size', 48),
-                'color': arguments.get('color', 'white'),
-                'start_time': arguments.get('start_time', 0),
-                'end_time': arguments.get('end_time'),
-            }
-            return _execute_add_text_to_video(self.user, parameters)
+            return add_text_overlay(
+                self.user,
+                arguments.get('video_id'),
+                text=arguments.get('text', ''),
+                position=arguments.get('position', 'bottom'),
+                font_size=arguments.get('font_size', 48),
+                color=arguments.get('color', 'white'),
+                start_time=arguments.get('start_time', 0),
+                end_time=arguments.get('end_time'),
+            )
 
         elif tool_name == "add_effects":
-            from core.views_image import _execute_edit_video
-            parameters = {
-                'video_id': arguments.get('video_id'),
-                'operation': 'apply_effect',
-                'effect': arguments.get('effect'),
-                'intensity': arguments.get('intensity', 0.5),
-            }
-            return _execute_edit_video(self.user, parameters)
+            return apply_effect(
+                self.user,
+                arguments.get('video_id'),
+                effect=arguments.get('effect', 'cinematic'),
+                intensity=arguments.get('intensity', 0.5),
+            )
 
         elif tool_name == "extract_frame":
-            from core.views_image import _execute_edit_video
-            parameters = {
-                'video_id': arguments.get('video_id'),
-                'operation': 'extract_frame',
-                'time': arguments.get('time', 0),
-                'output_format': arguments.get('output_format', 'png'),
-            }
-            return _execute_edit_video(self.user, parameters)
+            return extract_frame(
+                self.user,
+                arguments.get('video_id'),
+                time=arguments.get('time', 0),
+                output_format=arguments.get('output_format', 'png'),
+            )
 
         elif tool_name == "concatenate":
-            from core.views_image import _execute_chain_videos
-            parameters = {
-                'video_ids': arguments.get('video_ids', []),
-                'transition': arguments.get('transition', 'none'),
-                'transition_duration': arguments.get('transition_duration', 0.5),
-            }
-            return _execute_chain_videos(self.user, parameters)
+            return concatenate_videos(
+                self.user,
+                arguments.get('video_ids', []),
+                transition=arguments.get('transition', 'none'),
+                transition_duration=arguments.get('transition_duration', 0.5),
+            )
 
         elif tool_name == "speed_change":
-            from core.views_image import _execute_edit_video
-            parameters = {
-                'video_id': arguments.get('video_id'),
-                'operation': 'speed_change',
-                'speed_factor': arguments.get('speed_factor', 1.0),
-                'preserve_audio_pitch': arguments.get('preserve_audio_pitch', True),
-            }
-            return _execute_edit_video(self.user, parameters)
+            return change_speed(
+                self.user,
+                arguments.get('video_id'),
+                speed_factor=arguments.get('speed_factor', 1.0),
+                preserve_audio_pitch=arguments.get('preserve_audio_pitch', True),
+            )
 
         return super()._execute_tool_call(tool_name, arguments)
