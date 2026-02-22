@@ -1026,6 +1026,60 @@ class ToolDispatcher:
             obj.save(update_fields=['is_saved'])
             return {'action': 'unsave', 'id': str(obj.id), 'title': obj.title, 'saved': False}
 
+        elif action == 'create':
+            # Session 1065: Allow PA to save arbitrary content to Deliverables
+            title = payload.get('title', '').strip()
+            content = payload.get('content', '').strip()
+            if not title or not content:
+                raise ValueError("title and content are required for create action")
+
+            import uuid as _d_uuid
+            from django.utils.text import slugify as _d_slugify
+
+            content_format = payload.get('content_format', 'markdown')
+            dtype = payload.get('type', 'document')
+            slug = f"{_d_slugify(title[:100])}-{_d_uuid.uuid4().hex[:8]}"
+
+            # Resolve user
+            resolved_user = None
+            if user_id:
+                from django.contrib.auth import get_user_model
+                _DUser = get_user_model()
+                try:
+                    resolved_user = _DUser.objects.get(id=user_id)
+                except _DUser.DoesNotExist:
+                    pass
+
+            preview = content[:500]
+            if len(content) > 500:
+                preview += '...'
+
+            obj = Deliverable.objects.create(
+                title=title[:255],
+                slug=slug,
+                deliverable_type=dtype,
+                category='PA Created',
+                tags=['pa-created'],
+                content=content,
+                content_format=content_format,
+                preview_content=preview,
+                agent_name='PersonalAssistantAgent',
+                user=resolved_user,
+                quality_score=0.7,
+                confidence_score=0.8,
+                is_saved=True,
+                status='ready',
+                metadata={'source': 'pa_deliverables_tool', 'trace_id': trace_id},
+            )
+            return {
+                'action': 'create',
+                'id': str(obj.id),
+                'title': obj.title,
+                'deliverable_type': obj.deliverable_type,
+                'saved': True,
+                'message': f'Created and saved "{obj.title}" to your Deliverables library.',
+            }
+
         elif action == 'stats':
             total = base_qs.count()
             saved = base_qs.filter(is_saved=True).count()

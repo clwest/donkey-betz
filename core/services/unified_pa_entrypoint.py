@@ -1006,6 +1006,16 @@ class UnifiedPAEntrypoint:
             logger.debug(f"[degenerate] Pattern 4 hit: 'ok.' count={ok_count}")
             return True
 
+        # Session 1065: Pattern 5 — run-on sentences without spaces after periods.
+        # Degenerate text often concatenates fragments: "call.Ok.Let's call.Ok.Stop."
+        # Normal text always has spaces after periods. Count period followed
+        # immediately by an uppercase letter — if >= 10, it's degenerate.
+        import re as _degen_re
+        runon_count = len(_degen_re.findall(r'\.[A-Z]', text))
+        if runon_count >= 10:
+            logger.debug(f"[degenerate] Pattern 5 hit: run-on sentences count={runon_count}")
+            return True
+
         return False
 
     def _record_tool_call(
@@ -5220,6 +5230,12 @@ Address the user by name occasionally."""
                             for t, c in by_type.items():
                                 response += f"- {t}: {c}\n"
                         return response
+
+                    # Session 1065: Create action formatter
+                    elif action == 'create':
+                        title = tool_result.get('title', '')
+                        dtype = tool_result.get('deliverable_type', 'document')
+                        return f"Created **{title}** ({dtype}) and saved it to your Deliverables library."
 
                 return str(tool_result)
 
