@@ -980,6 +980,46 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
+    # ── DaVinci Resolve Control Surface ────────────────────────────────────
+    {
+        "type": "function",
+        "name": "davinci_tool",
+        "description": (
+            "Direct control surface for DaVinci Resolve rendering and color grading. "
+            "Supported actions: health, render, status, result, jobs, grades. "
+            "Use 'health' to check if the render node is online. "
+            "Use 'render' to start a professional render job (requires clip_paths). "
+            "Use 'status' to check render job progress (requires job_id). "
+            "Use 'result' to get the download URL for a completed render (requires job_id). "
+            "Use 'jobs' to list all render jobs. "
+            "Use 'grades' to get available color grade presets matching current trends."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["health", "render", "status", "result", "jobs", "grades"],
+                    "description": "health=check node, render=start job, status=check progress, result=get download URL, jobs=list all, grades=trending presets.",
+                },
+                "job_id": {"type": "string", "description": "Render job ID (required for status, result)"},
+                "clip_paths": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of video file paths or URLs to render (required for render)",
+                },
+                "template": {
+                    "type": "string",
+                    "enum": ["default_mp4", "high_quality"],
+                    "description": "Render template (default: default_mp4)",
+                },
+                "timeline_name": {"type": "string", "description": "Optional name for the timeline"},
+                "color_grade": {"type": "string", "description": "Color grade preset (e.g. cinematic_warm, cyberpunk_neon, vintage_film)"},
+            },
+            "required": ["action"],
+        },
+    },
+
     # ── Agent Delegation (generic) ──────────────────────────────────────────
     {
         "type": "function",
