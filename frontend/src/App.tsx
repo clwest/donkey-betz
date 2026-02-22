@@ -28,6 +28,7 @@ import DocumentsPage from '@/pages/DocumentsPage'
 import ImageStudioPage from '@/pages/ImageStudioPage'
 import VideoStudioPage from '@/pages/VideoStudioPage'
 import GovernmentPage from '@/pages/GovernmentPage'
+import HowItWorksPage from '@/pages/HowItWorksPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -85,6 +86,7 @@ function App() {
         <Route path="documents" element={<DocumentsPage />} />
         <Route path="image-studio" element={<ImageStudioPage />} />
         <Route path="video-studio" element={<VideoStudioPage />} />
+        <Route path="how-it-works" element={<HowItWorksPage />} />
       </Route>
     </Routes>
   )
