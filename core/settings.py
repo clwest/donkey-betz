@@ -1107,6 +1107,64 @@ CELERY_TASK_ROUTES = {
     'core.tasks.evaluate_pilots_with_thinking_agent': {'queue': 'long_running'},
     # Learning loop — orchestrator data extraction
     'core.tasks.run_learning_loop_cycle': {'queue': 'long_running'},
+
+    # Session 1063: Route body system checks to broadcast — high-frequency (60s-5min),
+    # lightweight DB queries, were pounding the 200MB default worker
+    'core.tasks.coordinate_body': {'queue': 'broadcast'},
+    'core.tasks.check_breathing': {'queue': 'broadcast'},
+    'core.tasks.check_circulation': {'queue': 'broadcast'},
+    'core.tasks.check_spine_alignment': {'queue': 'broadcast'},
+    'core.tasks.immune_scan': {'queue': 'broadcast'},
+    'core.tasks.check_digestion': {'queue': 'broadcast'},
+    'core.tasks.check_muscular': {'queue': 'broadcast'},
+    'core.tasks.check_brain': {'queue': 'broadcast'},
+    'core.tasks.check_skin': {'queue': 'broadcast'},
+    'core.tasks.check_orchestration_timeouts': {'queue': 'broadcast'},
+    'core.tasks.check_orchestration_auto_approvals': {'queue': 'broadcast'},
+
+    # Session 1063: Route heavy LLM/agent tasks off default queue to prevent OOM
+    'core.tasks.process_spider_data_automatic': {'queue': 'long_running'},
+    'core.tasks.run_autonomy_cycle': {'queue': 'long_running'},
+    'core.tasks.market_intelligence_scan': {'queue': 'long_running'},
+    'core.tasks.run_stock_market_intelligence': {'queue': 'long_running'},
+    'core.tasks.check_content_diversity': {'queue': 'long_running'},
+    'core.tasks.run_daily_intelligence_digest': {'queue': 'long_running'},
+    'core.tasks.auto_resolve_knowledge_gaps': {'queue': 'long_running'},
+    'core.tasks.mine_learning_patterns': {'queue': 'long_running'},
+    'core.tasks.run_system_self_audit': {'queue': 'long_running'},
+    'core.tasks.generate_weekly_intelligence_brief': {'queue': 'long_running'},
+    'core.tasks.generate_weekly_synthesis': {'queue': 'long_running'},
+    'core.tasks.run_project_learning_cycle': {'queue': 'long_running'},
+    'core.tasks.run_metrics_action_check': {'queue': 'long_running'},
+    'core.tasks.market_movement_alerts': {'queue': 'long_running'},
+    'core.tasks.check_sec_filings_alert': {'queue': 'long_running'},
+    'core.tasks.workspace_autopilot_tick': {'queue': 'long_running'},
+    'core.tasks.dispatch_pending_action_items': {'queue': 'long_running'},
+    'core.tasks.aggregate_spider_signals': {'queue': 'long_running'},
+    'core.tasks.process_pending_auto_topics': {'queue': 'long_running'},
+
+    # Session 1063: Route embedding tasks to ml queue
+    'core.tasks.embed_agent_activity': {'queue': 'ml'},
+    'core.tasks.embed_daily_agent_learning': {'queue': 'ml'},
+    'core.tasks.generate_document_embeddings': {'queue': 'ml'},
+    'core.tasks.generate_memory_embedding': {'queue': 'ml'},
+    'core.tasks.collect_training_data': {'queue': 'ml'},
+
+    # Session 1063: Route content-generation tasks to content queue
+    'core.tasks.auto_enhance_blogs': {'queue': 'content'},
+    'core.tasks.score_opportunities_from_spider_data': {'queue': 'content'},
+
+    # Session 1063: Route lightweight initiative pipeline tasks to content queue
+    'core.tasks.auto_triage_dreams': {'queue': 'content'},
+    'core.tasks.auto_promote_decisions': {'queue': 'content'},
+    'core.tasks.auto_approve_low_risk_gates': {'queue': 'content'},
+    'core.tasks.auto_complete_pilots': {'queue': 'content'},
+
+    # Session 1063: Route PA-triggered tasks to pa queue
+    'core.tasks.draft_legal_document_task': {'queue': 'pa'},
+
+    # Session 1063: Route alert checks to agents queue
+    'core.tasks.check_all_alerts': {'queue': 'agents'},
 }
 
 # Celery Worker Settings
