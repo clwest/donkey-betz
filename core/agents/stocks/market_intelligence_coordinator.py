@@ -951,6 +951,8 @@ Focus on the Debate Zone - genuine uncertainty creates opportunity."""
         Generate spoken audio version of the market brief using ElevenLabs TTS.
 
         Session 465: Market Intelligence Desk completion - spoken output capability.
+        Session 1068: Gated behind ENABLE_SPOKEN_BRIEFS env var to prevent
+        autonomous token bleed (~8-12 calls/day were draining ElevenLabs quota).
 
         Args:
             brief: Market intelligence brief dict
@@ -958,6 +960,11 @@ Focus on the Debate Zone - genuine uncertainty creates opportunity."""
         Returns:
             URL to audio file, or None if generation failed
         """
+        import os
+        if not os.environ.get('ENABLE_SPOKEN_BRIEFS', '').lower() in ('1', 'true', 'yes'):
+            logger.debug("Spoken briefs disabled (set ENABLE_SPOKEN_BRIEFS=true to enable)")
+            return None
+
         try:
             # Build concise script for spoken delivery (audio briefs should be shorter)
             summary = brief.get('executive_summary', '')
