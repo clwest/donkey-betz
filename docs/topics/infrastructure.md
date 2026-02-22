@@ -21,6 +21,21 @@ Django web application deployed on Railway with Redis, PostgreSQL (pgvector), an
 - **Workspace path self-healing (Session 1034):** `_get_workspace_for_skin_layer()` auto-detects stale local macOS paths (stored in DB), recomputes from `__file__`, and updates the DB record. Handles Railway vs local path mismatch.
 - **Cost budget:** $1,500/month (raised from $1,200 in Session 1034). Schedule throttling reduces unnecessary task runs.
 
+## Release Command (Procfile)
+
+The `release:` line runs on every Railway deploy:
+
+```
+release: python manage.py migrate --noinput && python manage.py sync_celery_beat --apply --create-only --disable-missing && python manage.py sync_task_queues --apply && python manage.py setup_codebase_workspace
+```
+
+| Step | Purpose |
+|------|---------|
+| `migrate` | Apply DB migrations |
+| `sync_celery_beat` | Create/disable PeriodicTask records from celery.py definitions |
+| `sync_task_queues` | Sync PeriodicTask.queue fields to match CELERY_TASK_ROUTES (Session 1064) |
+| `setup_codebase_workspace` | Initialize workspace file structure |
+
 ## Settings
 
 - **Module:** `core.settings` (NOT `config.settings`)

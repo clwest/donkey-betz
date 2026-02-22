@@ -6,6 +6,23 @@
 
 ---
 
+## Session 1064 — What's Done So Far
+
+### PeriodicTask Queue Sync Fix (PR pending)
+
+**Problem:** 179 `PeriodicTask` records in django_celery_beat DB had wrong/missing `queue` values, overriding `CELERY_TASK_ROUTES` and sending heavy tasks to the 200MB celery-worker.
+
+**Fix:**
+1. Created `core/management/commands/sync_task_queues.py` — reads `CELERY_TASK_ROUTES`, resolves intended queue per enabled PeriodicTask, updates mismatches. Supports `--apply` and `--verbose`.
+2. Added `sync_task_queues --apply` to Procfile release command (runs after `sync_celery_beat` on every deploy).
+3. Deleted `check_routes.py` temp diagnostic script.
+
+**Status:** Code committed. **NOT YET applied on Railway.** Next step: deploy or `railway run python manage.py sync_task_queues --apply`, then redeploy celery-worker + celery-long-running.
+
+**Dry run result:** 179 fixed, 36 already correct, 68 no route (skipped).
+
+---
+
 ## Session 1063 — What Happened
 
 ### PA Tools Expansion (PRs #1407-#1411)
@@ -57,8 +74,8 @@ Systematically exposed missing capabilities to the PA, driven by live PA convers
 
 ## Known Issues / Open Items
 
-### Celery OOM (recurring)
-celery-worker and celery-long-running were OOMing. Mitigated by lowering concurrency/max-tasks but may recur if individual tasks are too heavy. Monitor after deploy.
+### Celery OOM (root cause fixed Session 1064)
+celery-worker and celery-long-running were OOMing. Root cause: 179 PeriodicTask records had stale queue values overriding CELERY_TASK_ROUTES. Fix: `sync_task_queues` management command (runs on every deploy). **Needs Railway deploy** to take effect. Previous mitigations (lower concurrency/max-tasks) also still in place.
 
 ### Data Layer Gaps (discovered in PA testing)
 1. **Revenue tracker**: $0 ingested, 0 records — needs Stripe/affiliate/ad data source integration
