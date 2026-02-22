@@ -15,6 +15,7 @@ import {
   DollarSign,
   Shield,
   FolderCog,
+  LayoutGrid,
   FileText,
   Beaker,
   Book,
@@ -49,7 +50,8 @@ const navItems = [
   // Session 931: Command Center - Unified AI interface + controls
   { path: '/', label: 'Command Center', icon: Command },
 
-  // Main Hub - Primary entry point
+  // Session 1035: Platform dashboard (system-wide tabs) + Workspace (project-specific)
+  { path: '/platform', label: 'Platform', icon: LayoutGrid },
   { path: '/workspace', label: 'Workspace', icon: FolderCog },
   { path: '/image-studio', label: 'Image Studio', icon: Palette },
   { path: '/video-studio', label: 'Video Studio', icon: Film },
