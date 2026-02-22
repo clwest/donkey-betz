@@ -1377,9 +1377,9 @@ def execute_agent_task(
     execution_start = time.time()
 
     # Session 1031: Hard-block agents that can't do useful work on Railway
+    # Session 1068: Unblocked AudioAgent (ElevenLabs quota replenished)
     _BLOCKED_AGENTS = frozenset({
         'CodeGeneratorAgent',  # No codebase access in Railway sandbox
-        'AudioAgent',          # TTS quota exhausted
     })
     if agent_name in _BLOCKED_AGENTS:
         logger.warning(
