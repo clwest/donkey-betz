@@ -917,25 +917,29 @@ PA_TOOL_SCHEMAS = [
         "type": "function",
         "name": "deliverables_tool",
         "description": (
-            "Browse, search, create, and manage the Deliverables Library. "
-            "Use when the user asks about deliverables, saved outputs, agent results, "
-            "or wants to save/unsave items in their library. "
-            "Use 'create' to save new content (scripts, plans, notes, etc.) directly."
+            "Full CRUD access to the Deliverables Library. "
+            "Supported actions: list, search, detail, save, unsave, stats, create, update, delete. "
+            "Use 'create' to save new content (scripts, plans, notes, etc.). "
+            "Use 'update' to change a deliverable's title, content, type, format, or tags. "
+            "Use 'delete' to permanently remove a deliverable. "
+            "Use 'list'/'search' to browse, 'detail' to read full content, "
+            "'save'/'unsave' to bookmark, 'stats' for aggregate counts."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "search", "detail", "save", "unsave", "stats", "create"],
-                    "description": "Deliverables action. Use 'create' to save new content to the library.",
+                    "enum": ["list", "search", "detail", "save", "unsave", "stats", "create", "update", "delete"],
+                    "description": "list=browse, search=find by query, detail=full content, save/unsave=bookmark, stats=counts, create=new deliverable, update=edit existing, delete=remove permanently.",
                 },
-                "id": {"type": "string", "description": "UUID of deliverable"},
+                "id": {"type": "string", "description": "UUID of deliverable (required for detail, save, unsave, update, delete)"},
                 "query": {"type": "string", "description": "Search query for title matching"},
-                "type": {"type": "string", "description": "Filter by deliverable type (document, image, report, analysis, script, plan, etc.)"},
-                "title": {"type": "string", "description": "Title for new deliverable (required for create)"},
-                "content": {"type": "string", "description": "Full content to save (required for create)"},
+                "type": {"type": "string", "description": "Filter by or set deliverable type (document, image, report, analysis, script, plan, etc.)"},
+                "title": {"type": "string", "description": "Title for create or update"},
+                "content": {"type": "string", "description": "Full content for create or update"},
                 "content_format": {"type": "string", "enum": ["markdown", "text", "html", "json"], "description": "Content format (default: markdown)"},
+                "tags": {"type": "string", "description": "Comma-separated tags for update (e.g. 'finance, report, q1')"},
                 "saved": {"type": "boolean", "description": "Filter to saved items only"},
                 "limit": {"type": "integer", "description": "Max items to return (default 10)"},
             },
