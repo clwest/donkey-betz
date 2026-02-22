@@ -122,6 +122,7 @@ class ToolDispatcher:
         self.register("workspace_tool", self._handle_workspace)
         self.register("deliverables_tool", self._handle_deliverables)
         self.register("media_tool", self._handle_media)
+        self.register("davinci_tool", self._handle_davinci)
 
         # Body system tools
         self.register("get_body_vitals", self._handle_body_vitals)
@@ -1306,6 +1307,65 @@ class ToolDispatcher:
                     }
 
             raise ValueError(f"Media asset {mid} not found")
+
+        else:
+            raise ValueError(f"Unknown action: {action}")
+
+    def _handle_davinci(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """Handle DaVinci Resolve control surface tool."""
+        from core.agents.resolve_agent import ResolveNodeClient
+
+        client = ResolveNodeClient()
+        action = payload.get('action', 'health')
+
+        if action == 'health':
+            result = client.health_check()
+            return {'action': 'health', **result}
+
+        elif action == 'render':
+            clip_paths = payload.get('clip_paths')
+            if not clip_paths:
+                raise ValueError("clip_paths required for render action")
+            template = payload.get('template', 'default_mp4')
+            timeline_name = payload.get('timeline_name')
+            result = client.start_render(
+                clip_paths=clip_paths,
+                template=template,
+                timeline_name=timeline_name,
+            )
+            return {'action': 'render', **result}
+
+        elif action == 'status':
+            job_id = payload.get('job_id')
+            if not job_id:
+                raise ValueError("job_id required for status action")
+            result = client.get_status(job_id)
+            return {'action': 'status', **result}
+
+        elif action == 'result':
+            job_id = payload.get('job_id')
+            if not job_id:
+                raise ValueError("job_id required for result action")
+            url = client.get_result_url(job_id)
+            return {'action': 'result', 'job_id': job_id, 'download_url': url}
+
+        elif action == 'jobs':
+            result = client.list_jobs()
+            return {'action': 'jobs', **result}
+
+        elif action == 'grades':
+            from resolve_node.color_grades import COLOR_GRADE_PRESETS
+            grades = [
+                {'name': name, 'description': g.get('description', ''), 'use_case': g.get('use_case', '')}
+                for name, g in COLOR_GRADE_PRESETS.items()
+            ]
+            return {'action': 'grades', 'count': len(grades), 'grades': grades}
 
         else:
             raise ValueError(f"Unknown action: {action}")
