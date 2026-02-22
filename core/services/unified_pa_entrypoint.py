@@ -500,7 +500,8 @@ class UnifiedPAEntrypoint:
                     # Session 1034: research_and_create needs longer timeout (web search + LLM generation)
                     # Session 1035: legal_assistance — agent does spider queries + OpenAI LLM calls
                     # Session 1035: agent_execution — 60s for agents that do LLM calls (30s default too tight)
-                    if intent in ('research_and_create', 'legal_assistance'):
+                    if intent in ('research_and_create', 'legal_assistance',
+                                   'image_creation', 'video_creation'):
                         tool_timeout = 120
                     elif intent == 'agent_execution':
                         tool_timeout = 60
@@ -788,7 +789,8 @@ class UnifiedPAEntrypoint:
                     actual_tool_name = arguments.pop('agent_name', tool_name)
 
                 # Determine timeout based on tool
-                if actual_tool_name in ('research_and_create_tool', 'legal_doc_drafter_agent'):
+                if actual_tool_name in ('research_and_create_tool', 'legal_doc_drafter_agent',
+                                       'image_generation_agent', 'video_generation_agent'):
                     tool_timeout = 120
                 elif actual_tool_name in ('universal_agent_tool',) or actual_tool_name.endswith('_agent'):
                     tool_timeout = 60
@@ -4921,9 +4923,21 @@ Address the user by name occasionally."""
                 agent = tool_result.get('agent', 'Agent')
                 success = tool_result.get('success', False)
                 output = tool_result.get('output', '')
+                data = tool_result.get('data', {}) or {}
 
                 if not success:
                     return f"**{agent}** could not complete the task."
+
+                # Session 1063: Render image results as markdown images
+                if intent in ('image_creation', 'image_generation') and isinstance(data, dict):
+                    images = data.get('images', [])
+                    if images and isinstance(images, list):
+                        lines = [f"**{agent}** generated {len(images)} image(s):\n"]
+                        for i, img in enumerate(images, 1):
+                            url = img.get('url', '') if isinstance(img, dict) else str(img)
+                            if url:
+                                lines.append(f"**Image {i}:**\n![Image {i}]({url})\n")
+                        return "\n".join(lines)
 
                 # Truncate long outputs
                 output_str = str(output)
