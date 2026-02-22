@@ -703,6 +703,34 @@ class UnifiedPAEntrypoint:
                         f"[{trace_id}] Degenerate text-only response at iteration {iteration+1}, "
                         f"len={len(text_content)}, content: {text_content[:200]!r}"
                     )
+                    # Session 1063: If we have successful tool runs, do a clean
+                    # summary instead of returning the generic error. The tools
+                    # DID work (e.g. images were generated) — the LLM just
+                    # degenerated when forced to text on the final iteration.
+                    successful_runs = [r for r in tool_runs if r.get('ok')]
+                    if successful_runs:
+                        logger.info(f"[{trace_id}] Attempting clean summary of {len(successful_runs)} successful tool runs")
+                        fresh_messages = self._build_messages_array(message, context)
+                        tool_summary = json.dumps(
+                            [{'tool': r.get('tool', ''), 'ok': r.get('ok'), 'result': str(r.get('result', ''))[:500]}
+                             for r in tool_runs],
+                            default=str
+                        )[:4000]
+                        fresh_messages.append({
+                            "role": "user",
+                            "content": f"Here are the tool results I gathered. Please summarize them for the user:\n{tool_summary}",
+                        })
+                        final_result = await asyncio.to_thread(
+                            self.llm_enforcer.enforce_real_ai,
+                            prompt=message,
+                            input_messages=fresh_messages,
+                            tools=None,
+                            previous_response_id=None,
+                            task_type='conversation',
+                            max_tokens=2000,
+                            agent_name='PersonalAssistant',
+                        )
+                        return (final_result.get('response', ''), tool_runs, fc_metadata, final_result.get('response_id'))
                     return (
                         "I ran into an issue processing that request. Could you try again or rephrase?",
                         tool_runs, fc_metadata, response_id,
