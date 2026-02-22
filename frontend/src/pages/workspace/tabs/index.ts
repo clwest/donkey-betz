@@ -55,3 +55,7 @@ export { ToolCallAnalyticsTab } from './ToolCallAnalyticsTab'
 
 // Session 1009: Deliverables Library
 export { DeliverablesTab } from './DeliverablesTab'
+
+// Session 1035: Workspace split — new workspace-only tabs
+export { WorkspaceOverviewTab } from './WorkspaceOverviewTab'
+export { GitTab } from './GitTab'
