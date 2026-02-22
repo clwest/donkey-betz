@@ -336,35 +336,35 @@ class ToolDispatcher:
         user_id: Optional[int],
         trace_id: str
     ) -> Dict[str, Any]:
-        """Generic handler for agent-based tools."""
-        from core.agents.registry import get_agent_registry
+        """Generic handler for agent-based tools.
 
-        # Map tool name to agent name
+        Session 1063: Use AgentRouter.route() instead of registry.execute_agent().
+        The registry only creates a DB record without running the agent.
+        AgentRouter actually executes the agent and returns an AgentResult.
+        """
+        from core.agent_router import AgentRouter
+
         agent_name = self._tool_to_agent_name(tool_name)
-
-        registry = get_agent_registry()
-        agent_metadata = registry.get_agent(agent_name)
-
-        if not agent_metadata:
-            raise ValueError(f"Agent '{agent_name}' not found for tool '{tool_name}'")
 
         # Extract task from payload
         task = payload.get('task') or payload.get('prompt') or payload.get('query', '')
         context = payload.get('context', {})
 
-        # Session 948: Use registry.execute_agent() which properly handles agent instantiation
-        # The old code incorrectly called .run() on metadata dict
-        task_data = {
-            'task': task,
-            'context': context,
-        }
-        result = registry.execute_agent(agent_name, task_data)
+        router = AgentRouter()
+        agent_result = router.route(agent_name, task, context=context)
 
-        return {
+        # Build response dict from AgentResult
+        result = {
             'agent': agent_name,
-            'output': result if result else 'Agent execution completed',
-            'success': True if result else False,
+            'success': agent_result.success if agent_result else False,
+            'output': agent_result.message if agent_result else 'Agent execution failed',
         }
+
+        # Session 1063: Preserve structured data (images, content, etc.) for formatter
+        if agent_result and agent_result.data:
+            result['data'] = agent_result.data
+
+        return result
 
     def _tool_to_agent_name(self, tool_name: str) -> str:
         """Map tool name to agent class name."""
