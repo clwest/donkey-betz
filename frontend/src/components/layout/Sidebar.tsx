@@ -26,6 +26,7 @@ import {
   Film,
   Landmark,
   FileUp,
+  HelpCircle,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -69,6 +70,7 @@ const navItems = [
   // Documents & Reference
   { path: '/documents', label: 'Documents', icon: FileUp },
   { path: '/docs-index', label: 'Docs Index', icon: Book },
+  { path: '/how-it-works', label: 'How it Works', icon: HelpCircle },
   { path: '/mythology-lab', label: 'Mythology Lab', icon: Beaker },
   // Session 872: Removed Voices - available in Workspace tab
 
