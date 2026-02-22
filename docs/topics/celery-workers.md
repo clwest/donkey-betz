@@ -1,6 +1,6 @@
 # Celery & Workers
 
-271 Celery tasks across 7 worker types with queue-based routing, memory management, and observability via CeleryTaskEvent signals. Session 1000C: Routed 60+ heavy tasks off default queue to prevent OOM. Session 1029: Rerouted 5 additional heavy tasks from default to long_running to fix recurring OOM crashes. Session 1033: Added auto_enhance_blogs + score_unscored_deliverables. Session 1034: Throttled 4 beat schedules (~40% fewer runs), media task guard, workspace path self-healing. Session 1063: Routed 46 more unrouted tasks (body checks → broadcast, LLM tasks → long_running, embeddings → ml).
+271 Celery tasks across 7 worker types with queue-based routing, memory management, and observability via CeleryTaskEvent signals. Session 1000C: Routed 60+ heavy tasks off default queue to prevent OOM. Session 1029: Rerouted 5 additional heavy tasks from default to long_running to fix recurring OOM crashes. Session 1033: Added auto_enhance_blogs + score_unscored_deliverables. Session 1034: Throttled 4 beat schedules (~40% fewer runs), media task guard, workspace path self-healing. Session 1063: Routed 46 more unrouted tasks (body checks → broadcast, LLM tasks → long_running, embeddings → ml). Session 1064: Created `sync_task_queues` management command to sync PeriodicTask.queue fields to CELERY_TASK_ROUTES — fixed 179 misrouted beat tasks.
 
 ## Worker Types (7)
 
@@ -96,6 +96,25 @@ Critical discovery: `core.tasks_agents.*` (6 tasks including `execute_agent`, `e
 | core.tasks.* heavy | ~30 | long_running | `execute_orchestration_async`, `run_conceptforge_pipeline`, `generate_content_package`, `collect_spider_data` |
 | core.tasks.* content | ~5 | content/sports | `generate_podcast_episode`, `enhance_blog`, `collect_sports_odds` |
 | core.tasks.* monitoring | ~3 | broadcast | `monitor_celery_health`, `check_kpi_alerts`, `get_event_bus_stats` |
+
+### PeriodicTask Queue Sync (Session 1064)
+
+**Problem:** 179 `PeriodicTask` records had wrong or missing `queue` values (`'default'` or NULL). `sync_celery_beat` never sets the `queue` field when creating tasks. When `PeriodicTask.queue` is set, it **overrides** `CELERY_TASK_ROUTES`, causing heavy tasks to land on the 200MB celery-worker.
+
+**Solution:** New management command `sync_task_queues` reads `CELERY_TASK_ROUTES`, resolves intended queue per task (explicit routes first, then glob patterns), and updates mismatches.
+
+```bash
+python manage.py sync_task_queues           # Dry run
+python manage.py sync_task_queues --apply   # Apply changes
+python manage.py sync_task_queues --verbose # Show all tasks
+```
+
+Added to Procfile release command (runs after `sync_celery_beat` on every deploy):
+```
+release: ... && python manage.py sync_celery_beat ... && python manage.py sync_task_queues --apply && ...
+```
+
+Result: 179 fixed, 36 already correct, 68 no route (left as-is).
 
 ### Disabled Schedules (Sessions 1027, 1029)
 
