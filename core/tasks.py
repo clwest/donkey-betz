@@ -8,6 +8,7 @@ Session 969b: Touched to trigger Celery worker restart after PA telemetry deploy
 
 from celery import shared_task
 from celery.exceptions import SoftTimeLimitExceeded
+import json
 import logging
 import time
 from datetime import datetime, timedelta
@@ -35095,21 +35096,26 @@ def process_pa_chat_task(self, user_id, message, context=None, generate_audio=Fa
 
         is_first = not ChatConversation.objects.filter(conversation_id=conversation_id).exists()
 
+        # Session 1063: Sanitize metadata — tool results may contain UUIDs,
+        # datetimes, or other non-JSON-serializable objects from agent execution.
+        raw_metadata = {
+            'trace_id': response.trace_id,
+            'intent': response.intent,
+            'routed_to': response.routed_to,
+            # Session 1036: Persist function calling metadata for multi-turn context
+            'tool_calls': response.tool_call_metadata or [],
+            'tool_results': response.tool_result_data or [],
+            'response_id': response.response_id,
+        }
+        metadata = json.loads(json.dumps(raw_metadata, default=str))
+
         chat_row = ChatConversation.objects.create(
             user=user,
             conversation_id=conversation_id,
             user_message=message,
             assistant_response=response.content or '',
             platform='web',
-            metadata={
-                'trace_id': response.trace_id,
-                'intent': response.intent,
-                'routed_to': response.routed_to,
-                # Session 1036: Persist function calling metadata for multi-turn context
-                'tool_calls': response.tool_call_metadata or [],
-                'tool_results': response.tool_result_data or [],
-                'response_id': response.response_id,
-            },
+            metadata=metadata,
             response_time_ms=response.latency_ms or elapsed_ms,
             agents_used=[r.get('tool', '') for r in (response.tool_runs or [])],
         )
