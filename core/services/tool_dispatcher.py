@@ -945,42 +945,60 @@ class ToolDispatcher:
 
         action = payload.get('action', 'list')
         limit = min(payload.get('limit', 10), 50)
+        offset = max(payload.get('offset', 0), 0)
 
         # Build base queryset scoped to user
         base_qs = Deliverable.objects.all()
         if user_id:
             base_qs = base_qs.filter(user_id=user_id)
 
-        if action == 'list':
-            qs = base_qs
+        def _apply_common_filters(qs):
+            """Apply category/agent/type/saved filters."""
             dtype = payload.get('type')
             if dtype:
                 qs = qs.filter(deliverable_type=dtype)
+            cat = payload.get('category')
+            if cat:
+                qs = qs.filter(category__iexact=cat)
+            agent = payload.get('agent')
+            if agent:
+                qs = qs.filter(agent_name__iexact=agent)
             if payload.get('saved'):
                 qs = qs.filter(is_saved=True)
+            return qs
+
+        _LIST_FIELDS = (
+            'id', 'title', 'deliverable_type', 'category',
+            'agent_name', 'quality_score', 'is_saved', 'created_at',
+        )
+
+        if action == 'list':
+            qs = _apply_common_filters(base_qs)
+            total = qs.count()
 
             items = list(
-                qs.order_by('-created_at')[:limit].values(
-                    'id', 'title', 'deliverable_type', 'category',
-                    'agent_name', 'quality_score', 'is_saved', 'created_at'
-                )
+                qs.order_by('-created_at')[offset:offset + limit].values(*_LIST_FIELDS)
             )
-            return {'action': 'list', 'count': len(items), 'items': items}
+            return {
+                'action': 'list', 'total': total, 'offset': offset,
+                'limit': limit, 'count': len(items), 'items': items,
+            }
 
         elif action == 'search':
             query = payload.get('query', '')
             if not query:
                 raise ValueError("query parameter required for search action")
 
+            qs = _apply_common_filters(base_qs.filter(title__icontains=query))
+            total = qs.count()
+
             items = list(
-                base_qs.filter(title__icontains=query)
-                .order_by('-created_at')[:limit]
-                .values(
-                    'id', 'title', 'deliverable_type', 'category',
-                    'agent_name', 'quality_score', 'is_saved', 'created_at'
-                )
+                qs.order_by('-created_at')[offset:offset + limit].values(*_LIST_FIELDS)
             )
-            return {'action': 'search', 'query': query, 'count': len(items), 'items': items}
+            return {
+                'action': 'search', 'query': query, 'total': total,
+                'offset': offset, 'limit': limit, 'count': len(items), 'items': items,
+            }
 
         elif action == 'detail':
             did = payload.get('id')
@@ -1148,18 +1166,148 @@ class ToolDispatcher:
             total = base_qs.count()
             saved = base_qs.filter(is_saved=True).count()
             templates = base_qs.filter(is_template=True).count()
+            with_user = base_qs.filter(user__isnull=False).count()
+            orphans = base_qs.filter(user__isnull=True).count()
             by_type = dict(
                 base_qs.values('deliverable_type')
                 .annotate(count=Count('id'))
                 .values_list('deliverable_type', 'count')
             )
+            by_category = dict(
+                base_qs.values('category')
+                .annotate(count=Count('id'))
+                .order_by('-count')
+                .values_list('category', 'count')[:10]
+            )
+            by_agent = dict(
+                base_qs.values('agent_name')
+                .annotate(count=Count('id'))
+                .order_by('-count')
+                .values_list('agent_name', 'count')[:10]
+            )
+            # Count duplicate excess
+            dupe_groups = list(
+                base_qs.values('title')
+                .annotate(count=Count('id'))
+                .filter(count__gt=1)
+                .order_by('-count')[:5]
+            )
+            dupe_excess = sum(d['count'] - 1 for d in dupe_groups)
             return {
                 'action': 'stats',
                 'total': total,
                 'saved': saved,
                 'templates': templates,
+                'with_user': with_user,
+                'orphans': orphans,
+                'duplicate_excess': dupe_excess,
                 'by_type': by_type,
+                'by_category': by_category,
+                'by_agent': by_agent,
+                'top_duplicates': [
+                    {'title': d['title'][:100], 'count': d['count']}
+                    for d in dupe_groups
+                ],
             }
+
+        elif action == 'cleanup':
+            strategy = payload.get('strategy', 'duplicates')
+            dry_run = payload.get('dry_run', True)
+
+            if strategy == 'duplicates':
+                # Find all titles that appear more than once
+                from django.db.models import Max
+                dupe_titles = (
+                    base_qs.values('title')
+                    .annotate(count=Count('id'), newest=Max('created_at'))
+                    .filter(count__gt=1)
+                )
+                # For each duplicate title, keep the newest, mark rest for deletion
+                to_delete_ids = []
+                summary = []
+                for group in dupe_titles:
+                    title = group['title']
+                    newest_dt = group['newest']
+                    # Keep the newest one, delete the rest
+                    dupes = list(
+                        base_qs.filter(title=title)
+                        .exclude(created_at=newest_dt)
+                        .values_list('id', flat=True)
+                    )
+                    # If multiple share the same newest timestamp, keep just one
+                    if not dupes:
+                        all_ids = list(
+                            base_qs.filter(title=title)
+                            .order_by('-created_at')
+                            .values_list('id', flat=True)
+                        )
+                        dupes = all_ids[1:]  # keep first (newest), delete rest
+                    to_delete_ids.extend(dupes)
+                    if len(summary) < 10:
+                        summary.append({'title': title[:100], 'deleting': len(dupes), 'keeping': 1})
+
+                if dry_run:
+                    return {
+                        'action': 'cleanup', 'strategy': 'duplicates', 'dry_run': True,
+                        'would_delete': len(to_delete_ids),
+                        'sample': summary,
+                        'message': f'Would delete {len(to_delete_ids)} duplicate deliverables. Set dry_run=false to execute.',
+                    }
+                else:
+                    deleted_count = Deliverable.objects.filter(id__in=to_delete_ids).delete()[0]
+                    return {
+                        'action': 'cleanup', 'strategy': 'duplicates', 'dry_run': False,
+                        'deleted': deleted_count,
+                        'sample': summary,
+                        'message': f'Deleted {deleted_count} duplicate deliverables.',
+                    }
+
+            elif strategy == 'orphans':
+                orphan_qs = base_qs.filter(user__isnull=True, is_saved=False)
+                count = orphan_qs.count()
+                sample = list(
+                    orphan_qs.order_by('-created_at')[:10]
+                    .values('id', 'title', 'agent_name', 'category')
+                )
+                if dry_run:
+                    return {
+                        'action': 'cleanup', 'strategy': 'orphans', 'dry_run': True,
+                        'would_delete': count,
+                        'sample': [{'title': s['title'][:100], 'agent': s['agent_name'], 'category': s['category']} for s in sample],
+                        'message': f'Would delete {count} orphan deliverables (no user, not saved). Set dry_run=false to execute.',
+                    }
+                else:
+                    deleted_count = orphan_qs.delete()[0]
+                    return {
+                        'action': 'cleanup', 'strategy': 'orphans', 'dry_run': False,
+                        'deleted': deleted_count,
+                        'message': f'Deleted {deleted_count} orphan deliverables.',
+                    }
+
+            elif strategy == 'low_quality':
+                lq_qs = base_qs.filter(quality_score__lt=0.5, is_saved=False)
+                count = lq_qs.count()
+                sample = list(
+                    lq_qs.order_by('quality_score')[:10]
+                    .values('id', 'title', 'quality_score', 'agent_name')
+                )
+                if dry_run:
+                    return {
+                        'action': 'cleanup', 'strategy': 'low_quality', 'dry_run': True,
+                        'would_delete': count,
+                        'sample': [{'title': s['title'][:100], 'quality': s['quality_score'], 'agent': s['agent_name']} for s in sample],
+                        'message': f'Would delete {count} low-quality deliverables (score < 0.5, not saved). Set dry_run=false to execute.',
+                    }
+                else:
+                    deleted_count = lq_qs.delete()[0]
+                    return {
+                        'action': 'cleanup', 'strategy': 'low_quality', 'dry_run': False,
+                        'deleted': deleted_count,
+                        'message': f'Deleted {deleted_count} low-quality deliverables.',
+                    }
+
+            else:
+                raise ValueError(f"Unknown cleanup strategy: {strategy}. Use 'duplicates', 'orphans', or 'low_quality'.")
 
         else:
             raise ValueError(f"Unknown action: {action}")

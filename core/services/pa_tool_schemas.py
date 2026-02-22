@@ -918,30 +918,40 @@ PA_TOOL_SCHEMAS = [
         "name": "deliverables_tool",
         "description": (
             "Full CRUD access to the Deliverables Library. "
-            "Supported actions: list, search, detail, save, unsave, stats, create, update, delete. "
+            "Supported actions: list, search, detail, save, unsave, stats, create, update, delete, cleanup. "
             "Use 'create' to save new content (scripts, plans, notes, etc.). "
             "Use 'update' to change a deliverable's title, content, type, format, or tags. "
-            "Use 'delete' to permanently remove a deliverable. "
-            "Use 'list'/'search' to browse, 'detail' to read full content, "
-            "'save'/'unsave' to bookmark, 'stats' for aggregate counts."
+            "Use 'delete' to permanently remove a single deliverable. "
+            "Use 'cleanup' to bulk-remove duplicates or orphans (use dry_run=true first to preview). "
+            "Use 'list'/'search' to browse (supports offset for pagination), 'detail' to read full content, "
+            "'save'/'unsave' to bookmark, 'stats' for aggregate counts by type/category/agent."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "search", "detail", "save", "unsave", "stats", "create", "update", "delete"],
-                    "description": "list=browse, search=find by query, detail=full content, save/unsave=bookmark, stats=counts, create=new deliverable, update=edit existing, delete=remove permanently.",
+                    "enum": ["list", "search", "detail", "save", "unsave", "stats", "create", "update", "delete", "cleanup"],
+                    "description": "list=browse, search=find by query, detail=full content, save/unsave=bookmark, stats=counts, create=new, update=edit, delete=remove one, cleanup=bulk remove duplicates/orphans.",
                 },
                 "id": {"type": "string", "description": "UUID of deliverable (required for detail, save, unsave, update, delete)"},
                 "query": {"type": "string", "description": "Search query for title matching"},
                 "type": {"type": "string", "description": "Filter by or set deliverable type (document, image, report, analysis, script, plan, etc.)"},
+                "category": {"type": "string", "description": "Filter by category (e.g. 'Finance', 'Research', 'PA Created')"},
+                "agent": {"type": "string", "description": "Filter by agent_name (e.g. 'StockAnalystAgent', 'ResearchAgent')"},
                 "title": {"type": "string", "description": "Title for create or update"},
                 "content": {"type": "string", "description": "Full content for create or update"},
                 "content_format": {"type": "string", "enum": ["markdown", "text", "html", "json"], "description": "Content format (default: markdown)"},
                 "tags": {"type": "string", "description": "Comma-separated tags for update (e.g. 'finance, report, q1')"},
                 "saved": {"type": "boolean", "description": "Filter to saved items only"},
-                "limit": {"type": "integer", "description": "Max items to return (default 10)"},
+                "limit": {"type": "integer", "description": "Max items to return (default 10, max 50)"},
+                "offset": {"type": "integer", "description": "Skip first N items for pagination (default 0). Use with limit to page through results."},
+                "strategy": {
+                    "type": "string",
+                    "enum": ["duplicates", "orphans", "low_quality"],
+                    "description": "Cleanup strategy: duplicates=keep newest per title, delete rest. orphans=delete deliverables with no user. low_quality=delete items with quality_score < 0.5.",
+                },
+                "dry_run": {"type": "boolean", "description": "If true, cleanup returns what WOULD be deleted without actually deleting. Always use dry_run=true first."},
             },
             "required": ["action"],
         },
