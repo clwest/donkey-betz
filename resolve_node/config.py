@@ -19,8 +19,9 @@ JOBS_DIR.mkdir(exist_ok=True)
 RESULTS_DIR.mkdir(exist_ok=True)
 
 # Server configuration
+# Railway injects PORT; fall back to RENDER_NODE_PORT for local dev
 HOST = os.getenv("RENDER_NODE_HOST", "0.0.0.0")
-PORT = int(os.getenv("RENDER_NODE_PORT", "5001"))
+PORT = int(os.getenv("PORT", os.getenv("RENDER_NODE_PORT", "5001")))
 
 # Security
 RENDER_NODE_TOKEN = os.getenv("RENDER_NODE_TOKEN", "dev-token-change-in-production")
