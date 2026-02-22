@@ -1080,6 +1080,66 @@ class ToolDispatcher:
                 'message': f'Created and saved "{obj.title}" to your Deliverables library.',
             }
 
+        elif action == 'update':
+            did = payload.get('id')
+            if not did:
+                raise ValueError("id parameter required for update action")
+
+            obj = base_qs.filter(id=did).first()
+            if not obj:
+                raise ValueError(f"Deliverable {did} not found")
+
+            update_fields = []
+            if 'title' in payload:
+                obj.title = payload['title'].strip()[:255]
+                update_fields.append('title')
+            if 'content' in payload:
+                obj.content = payload['content']
+                preview = payload['content'][:500]
+                if len(payload['content']) > 500:
+                    preview += '...'
+                obj.preview_content = preview
+                update_fields.extend(['content', 'preview_content'])
+            if 'type' in payload:
+                obj.deliverable_type = payload['type']
+                update_fields.append('deliverable_type')
+            if 'content_format' in payload:
+                obj.content_format = payload['content_format']
+                update_fields.append('content_format')
+            if 'tags' in payload:
+                obj.tags = [t.strip() for t in payload['tags'].split(',') if t.strip()]
+                update_fields.append('tags')
+
+            if not update_fields:
+                raise ValueError("update requires at least one of: title, content, type, content_format, tags")
+
+            obj.save(update_fields=update_fields)
+            return {
+                'action': 'update',
+                'id': str(obj.id),
+                'title': obj.title,
+                'updated_fields': update_fields,
+                'message': f'Updated "{obj.title}" ({", ".join(update_fields)}).',
+            }
+
+        elif action == 'delete':
+            did = payload.get('id')
+            if not did:
+                raise ValueError("id parameter required for delete action")
+
+            obj = base_qs.filter(id=did).first()
+            if not obj:
+                raise ValueError(f"Deliverable {did} not found")
+
+            title = obj.title
+            obj.delete()
+            return {
+                'action': 'delete',
+                'id': str(did),
+                'title': title,
+                'message': f'Permanently deleted "{title}" from your Deliverables library.',
+            }
+
         elif action == 'stats':
             total = base_qs.count()
             saved = base_qs.filter(is_saved=True).count()
