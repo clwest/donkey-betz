@@ -1,10 +1,10 @@
 // Session 825: Slim WorkspacePage Orchestrator
-// Reduced from 3,825 lines to ~400 lines by delegating to modular components
-// This file orchestrates the Workspace tabs and handles top-level state
+// Session 1035: Refocused to workspace-only tabs (Overview, Files, Operations, Git, Triggers)
+// System-wide tabs moved to PlatformPage (/platform)
 
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   FolderOpen,
   RefreshCw,
@@ -13,20 +13,17 @@ import {
   XCircle,
   Wifi,
   WifiOff,
-  Target,
-  BookOpen,
   History,
   Plus,
-  Server,
   GitBranch,
-  Palette,
-  Database,
   FileText,
   Code,
   Terminal,
   ChevronRight,
-  GraduationCap,  // Session 870: Learning Journey tab icon
-  Gavel,  // Session 927: Boardroom tab icon
+  Zap,
+  LayoutDashboard,
+  FolderTree,
+  Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
@@ -37,60 +34,29 @@ import { useAuthStore } from '@/stores/authStore'
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
 import SmartOutputRenderer from '@/components/SmartOutputRenderer'
 
-// Import modular workspace components
-// Session 971b: Reduced to 9 canonical tabs — legacy tabs still importable
+// Import workspace-only tab components
 import {
-  CommandTab,
-  KnowledgeTab,
+  WorkspaceOverviewTab,
+  FilesTab,
   OperationsTab,
-  ContentStudioTab,
-  InitiativesTab,
-  BoardroomTab,
-  LearningJourneyTab,
-  // Session 971b: Merged adapter tabs
-  SystemTab,
-  DataIntelTab,
+  GitTab,
+  TriggersTab,
 } from './workspace/tabs'
 import { Toast } from './workspace/components'
 import type { Workspace, WorkspaceTab, ActionResult } from './workspace/types'
-import { normalizeWorkspaceTab, legacyTabToSubTab } from './workspace/types'
-import { useWorkspaceTabTracking } from '@/hooks/usePageTracking'  // Session 971b: Tab telemetry
+import { PLATFORM_TABS, LEGACY_TO_PLATFORM } from './workspace/types'
+import { useWorkspaceTabTracking } from '@/hooks/usePageTracking'
 
-// Session 971b: Tab groups — 9 tabs in 4 logical clusters (down from 18 in 5)
-const tabGroups = [
-  {
-    label: 'Core',
-    tabs: [
-      { id: 'command' as WorkspaceTab, label: 'Command', icon: Target },
-      { id: 'initiatives' as WorkspaceTab, label: 'Initiatives', icon: GitBranch },
-      { id: 'boardroom' as WorkspaceTab, label: 'Boardroom', icon: Gavel },
-    ],
-  },
-  {
-    label: 'Content',
-    tabs: [
-      { id: 'content' as WorkspaceTab, label: 'Content', icon: Palette },
-    ],
-  },
-  {
-    label: 'System',
-    tabs: [
-      { id: 'system' as WorkspaceTab, label: 'System', icon: Server },
-      { id: 'operations' as WorkspaceTab, label: 'Ops', icon: History },
-    ],
-  },
-  {
-    label: 'Data',
-    tabs: [
-      { id: 'dataintel' as WorkspaceTab, label: 'Data & Intel', icon: Database },
-      { id: 'knowledge' as WorkspaceTab, label: 'Knowledge', icon: BookOpen },
-      { id: 'learning' as WorkspaceTab, label: 'Learn', icon: GraduationCap },
-    ],
-  },
+// Session 1035: 5 workspace-only tabs
+const workspaceTabs = [
+  { id: 'overview' as WorkspaceTab, label: 'Overview', icon: LayoutDashboard },
+  { id: 'files' as WorkspaceTab, label: 'Files', icon: FolderTree },
+  { id: 'operations' as WorkspaceTab, label: 'Operations', icon: History },
+  { id: 'git' as WorkspaceTab, label: 'Git', icon: GitBranch },
+  { id: 'triggers' as WorkspaceTab, label: 'Triggers', icon: Zap },
 ]
 
-// Flat list for URL validation
-const allTabs = tabGroups.flatMap(g => g.tabs)
+const validWorkspaceTabs = new Set(workspaceTabs.map(t => t.id))
 
 // Workspace Selector Modal
 function WorkspaceSelectorModal({
@@ -380,10 +346,9 @@ function OperationContentModal({
                       <span className="text-primary-400"> • {operation.workspace_name}</span>
                     )}
                   </p>
-                  {/* Session 855: Show file path prominently */}
                   {operation.file_path && (
                     <p className="text-xs text-gray-500 font-mono mt-0.5 truncate max-w-lg" title={operation.file_path}>
-                      📁 {operation.file_path}
+                      {operation.file_path}
                     </p>
                   )}
                 </>
@@ -445,7 +410,6 @@ function OperationContentModal({
                         <span className="text-xs px-1.5 py-0.5 rounded bg-primary-500/20 text-primary-400">Markdown</span>
                       )}
                     </h4>
-                    {/* Session 833: Toggle for markdown files */}
                     {isMarkdownFile && (
                       <div className="flex rounded-lg border border-dark-border overflow-hidden">
                         <button
@@ -473,8 +437,6 @@ function OperationContentModal({
                       </div>
                     )}
                   </div>
-                  {/* Session 833: Show rendered markdown or raw diff based on toggle */}
-                  {/* Session 943: Unified prose styling */}
                   {isMarkdownFile && viewMode === 'rendered' ? (
                     <div className="prose prose-invert prose-dark prose-sm max-w-none bg-dark-bg p-4 rounded overflow-y-auto max-h-96">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -499,7 +461,6 @@ function OperationContentModal({
                       <span className="text-xs px-1.5 py-0.5 rounded bg-primary-500/20 text-primary-400">Markdown</span>
                     )}
                   </h4>
-                  {/* Session 943: Unified prose styling */}
                   {operation.file_path?.endsWith('.md') ? (
                     <div className="prose prose-invert prose-dark prose-sm max-w-none bg-dark-bg p-4 rounded overflow-y-auto max-h-96">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -551,7 +512,7 @@ function OperationContentModal({
                 </div>
               )}
 
-              {/* Session 834: Agent Output Data - rendered nicely */}
+              {/* Agent Output Data - rendered nicely */}
               {operation.output_data && (
                 <div className="card">
                   <h4 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
@@ -581,7 +542,6 @@ function OperationContentModal({
                     <span className="text-gray-500">Type:</span>
                     <p className="font-medium">{operation.operation_type}</p>
                   </div>
-                  {/* Session 855: Show agent execution time prominently if available */}
                   {operation.agent_execution_time_ms ? (
                     <div>
                       <span className="text-gray-500">Agent Time:</span>
@@ -627,52 +587,44 @@ function OperationContentModal({
 }
 
 export default function WorkspacePage() {
-  // Session 948: URL tab routing - support /workspace?tab=initiatives
   const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   const rawUrlTab = searchParams.get('tab') || ''
 
-  // Session 971b: Normalize legacy tab params (e.g., ?tab=infrastructure → system)
-  const validTabs = allTabs.map(t => t.id)
-  const normalizedTab = rawUrlTab ? normalizeWorkspaceTab(rawUrlTab) : 'command'
-  const initialTab = validTabs.includes(normalizedTab) ? normalizedTab : 'command'
+  // Session 1035: Redirect platform tabs to /platform
+  useEffect(() => {
+    if (rawUrlTab) {
+      // Direct platform tab
+      if (PLATFORM_TABS.has(rawUrlTab)) {
+        navigate(`/platform?tab=${rawUrlTab}`, { replace: true })
+        return
+      }
+      // Legacy tab that maps to a platform tab
+      const legacyPlatform = LEGACY_TO_PLATFORM[rawUrlTab]
+      if (legacyPlatform) {
+        navigate(`/platform?tab=${legacyPlatform}`, { replace: true })
+        return
+      }
+    }
+  }, [rawUrlTab, navigate])
 
-  // Session 971b: Track which legacy sub-tab the user was targeting
-  const [legacySubTab, setLegacySubTab] = useState<string | undefined>(
-    () => legacyTabToSubTab(rawUrlTab)
-  )
+  // Determine active workspace tab
+  const initialTab: WorkspaceTab = (rawUrlTab && validWorkspaceTabs.has(rawUrlTab as WorkspaceTab))
+    ? rawUrlTab as WorkspaceTab
+    : 'overview'
 
   const [activeTab, setActiveTab] = useState<WorkspaceTab>(initialTab)
 
-  // Session 971b: Track workspace tab changes for telemetry
   useWorkspaceTabTracking(activeTab)
 
-  // Session 948: Sync URL when tab changes
   const handleTabChange = (tab: WorkspaceTab) => {
     setActiveTab(tab)
-    setLegacySubTab(undefined)  // Clear legacy sub-tab hint on manual switch
     setSearchParams({ tab }, { replace: true })
   }
-
-  // Session 948: Handle external navigation (e.g., from Command Center)
-  // Session 971b: Normalize incoming tab params
-  useEffect(() => {
-    if (rawUrlTab) {
-      const normalized = normalizeWorkspaceTab(rawUrlTab)
-      if (validTabs.includes(normalized) && normalized !== activeTab) {
-        setActiveTab(normalized)
-        setLegacySubTab(legacyTabToSubTab(rawUrlTab))
-      }
-      // Update URL to canonical tab name if it was a legacy value
-      if (rawUrlTab !== normalized) {
-        setSearchParams({ tab: normalized }, { replace: true })
-      }
-    }
-  }, [rawUrlTab])
 
   const [showWorkspaceSelector, setShowWorkspaceSelector] = useState(false)
   const [showRegisterModal, setShowRegisterModal] = useState(false)
   const [actionResult, setActionResult] = useState<ActionResult | null>(null)
-  const [expandedActivityIds, setExpandedActivityIds] = useState<Set<string>>(new Set())
   const [viewingOperationId, setViewingOperationId] = useState<string | null>(null)
 
   const queryClient = useQueryClient()
@@ -745,18 +697,6 @@ export default function WorkspacePage() {
   const showSuccess = (message: string) => setActionResult({ type: 'success', message })
   const showError = (message: string) => setActionResult({ type: 'error', message })
 
-  const toggleActivityExpanded = (id: string) => {
-    setExpandedActivityIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
-      }
-      return next
-    })
-  }
-
   // Clear toast
   useEffect(() => {
     if (actionResult) {
@@ -809,7 +749,7 @@ export default function WorkspacePage() {
         <div>
           <CompactBreadcrumb currentPage="Workspace" className="mb-2" />
           <h1 className="text-2xl font-bold">Workspace</h1>
-          <p className="text-sm text-gray-400 mt-1">SKIN Layer - Agent Project Execution System</p>
+          <p className="text-sm text-gray-400 mt-1">Project workspace — files, operations, git, triggers</p>
         </div>
         <div className="flex items-center gap-3">
           {/* WebSocket status */}
@@ -872,61 +812,37 @@ export default function WorkspacePage() {
       {/* Main content when workspace is selected */}
       {activeWorkspace && (
         <>
-          {/* Tab Navigation - 5 grouped clusters */}
-          <div className="flex items-center gap-1 border-b border-dark-border pb-2 flex-wrap">
-            {tabGroups.map((group, gi) => (
-              <div key={group.label} className="flex items-center">
-                {gi > 0 && (
-                  <div className="w-px h-6 bg-dark-border mx-1.5 flex-shrink-0" />
+          {/* Tab Navigation — 5 workspace tabs */}
+          <div className="flex items-center gap-1 border-b border-dark-border pb-2">
+            {workspaceTabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap',
+                  activeTab === tab.id
+                    ? 'bg-primary-500/20 text-primary-400'
+                    : 'text-gray-500 hover:text-white hover:bg-dark-border/50'
                 )}
-                <div className="flex items-center gap-0.5">
-                  {group.tabs.map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => handleTabChange(tab.id)}
-                      className={cn(
-                        'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap',
-                        activeTab === tab.id
-                          ? 'bg-primary-500/20 text-primary-400'
-                          : 'text-gray-500 hover:text-white hover:bg-dark-border/50'
-                      )}
-                    >
-                      <tab.icon size={14} />
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              >
+                <tab.icon size={14} />
+                {tab.label}
+              </button>
             ))}
           </div>
 
-          {/* Session 971b: Tab Content — 9 canonical tabs */}
-          {activeTab === 'command' && (
-            <CommandTab
-              setActiveTab={handleTabChange}
-              expandedActivityIds={expandedActivityIds}
-              toggleActivityExpanded={toggleActivityExpanded}
+          {/* Tab Content */}
+          {activeTab === 'overview' && (
+            <WorkspaceOverviewTab
+              activeWorkspace={activeWorkspace}
+              onNavigateTab={handleTabChange}
+              onScan={() => scanMutation.mutate(activeWorkspace.id)}
+              isScanPending={scanMutation.isPending}
             />
           )}
 
-          {activeTab === 'initiatives' && <InitiativesTab />}
-
-          {activeTab === 'boardroom' && <BoardroomTab />}
-
-          {activeTab === 'content' && (
-            <ContentStudioTab
-              initialSubTab={legacySubTab}
-              activeWorkspaceId={activeWorkspace?.id}
-            />
-          )}
-
-          {/* Session 971b: Merged System tab (Infra + Orch + Triggers) */}
-          {activeTab === 'system' && (
-            <SystemTab
-              initialSubTab={legacySubTab}
-              showSuccess={showSuccess}
-              showError={showError}
-            />
+          {activeTab === 'files' && (
+            <FilesTab activeWorkspaceId={activeWorkspace.id} />
           )}
 
           {activeTab === 'operations' && (
@@ -938,14 +854,20 @@ export default function WorkspacePage() {
             />
           )}
 
-          {/* Session 971b: Merged Data & Intel tab (DataSources + Intelligence) */}
-          {activeTab === 'dataintel' && (
-            <DataIntelTab initialSubTab={legacySubTab} />
+          {activeTab === 'git' && (
+            <GitTab
+              activeWorkspace={activeWorkspace}
+              showSuccess={showSuccess}
+              showError={showError}
+            />
           )}
 
-          {activeTab === 'knowledge' && <KnowledgeTab />}
-
-          {activeTab === 'learning' && <LearningJourneyTab />}
+          {activeTab === 'triggers' && (
+            <TriggersTab
+              showSuccess={showSuccess}
+              showError={showError}
+            />
+          )}
         </>
       )}
 

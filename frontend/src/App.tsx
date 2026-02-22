@@ -14,6 +14,7 @@ import LegalPage from '@/pages/LegalPage'
 import PortfolioPage from '@/pages/PortfolioPage'
 import AdminPage from '@/pages/AdminPage'
 import WorkspacePage from '@/pages/WorkspacePageNew'  // Session 825: New modular workspace
+import PlatformPage from '@/pages/PlatformPage'  // Session 1035: System-wide dashboard
 import AdvisorsPage from '@/pages/AdvisorsPage'
 import NeuralOrchestraPage from '@/pages/NeuralOrchestraPage'
 import ConversationContractPage from '@/pages/ConversationContractPage'
@@ -68,6 +69,7 @@ function App() {
         <Route path="government" element={<GovernmentPage />} />
         <Route path="admin" element={<AdminPage />} />
         <Route path="workspace" element={<WorkspacePage />} />
+        <Route path="platform" element={<PlatformPage />} />
 
         {/* Standalone pages kept — distinct UI not duplicated in workspace */}
         <Route path="advisors" element={<AdvisorsPage />} />

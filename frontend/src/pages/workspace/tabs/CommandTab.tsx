@@ -53,10 +53,10 @@ import {
   DreamDetailModal,
   DecisionDetailModal,
 } from '@/components/platform'
-import type { WorkspaceTab } from '../types'
+// Session 1035: CommandTab is used by PlatformPage — setActiveTab accepts string (platform tab IDs)
 
 interface CommandTabProps {
-  setActiveTab: (tab: WorkspaceTab) => void
+  setActiveTab: (tab: string) => void
   expandedActivityIds: Set<string>
   toggleActivityExpanded: (id: string) => void
 }
@@ -880,7 +880,7 @@ interface ActivityFeedSectionProps {
   onViewDream?: (id: string) => void
   onViewDecision?: (id: string) => void
   // Session 857: Navigate within workspace instead of external navigation
-  setActiveTab?: (tab: WorkspaceTab) => void
+  setActiveTab?: (tab: string) => void
 }
 
 function ActivityFeedSection({
