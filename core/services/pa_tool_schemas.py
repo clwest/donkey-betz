@@ -917,21 +917,25 @@ PA_TOOL_SCHEMAS = [
         "type": "function",
         "name": "deliverables_tool",
         "description": (
-            "Browse, search, and manage the Deliverables Library. "
+            "Browse, search, create, and manage the Deliverables Library. "
             "Use when the user asks about deliverables, saved outputs, agent results, "
-            "or wants to save/unsave items in their library."
+            "or wants to save/unsave items in their library. "
+            "Use 'create' to save new content (scripts, plans, notes, etc.) directly."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "search", "detail", "save", "unsave", "stats"],
-                    "description": "Deliverables action",
+                    "enum": ["list", "search", "detail", "save", "unsave", "stats", "create"],
+                    "description": "Deliverables action. Use 'create' to save new content to the library.",
                 },
                 "id": {"type": "string", "description": "UUID of deliverable"},
                 "query": {"type": "string", "description": "Search query for title matching"},
-                "type": {"type": "string", "description": "Filter by deliverable type (document, image, report, analysis, etc.)"},
+                "type": {"type": "string", "description": "Filter by deliverable type (document, image, report, analysis, script, plan, etc.)"},
+                "title": {"type": "string", "description": "Title for new deliverable (required for create)"},
+                "content": {"type": "string", "description": "Full content to save (required for create)"},
+                "content_format": {"type": "string", "enum": ["markdown", "text", "html", "json"], "description": "Content format (default: markdown)"},
                 "saved": {"type": "boolean", "description": "Filter to saved items only"},
                 "limit": {"type": "integer", "description": "Max items to return (default 10)"},
             },
