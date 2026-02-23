@@ -2818,7 +2818,7 @@ def run_spider_network(self):
     return results
 
 
-@shared_task
+@shared_task(ignore_result=True)
 def backfill_spider_embeddings(batch_size: int = 200):
     """
     Session 293: Generate embeddings for SpiderData entries that don't have them.
