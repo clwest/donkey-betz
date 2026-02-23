@@ -159,20 +159,25 @@ class BoardroomMLService:
         item_content = f"{item.title} {item.summary}"
 
         try:
-            # Get embedding for new item
-            item_embedding = self.embedding_service.get_embedding_sync(item_content)
+            # Collect all texts for a single batch embedding call
+            past_items_list = list(past_decisions[:100])
+            all_texts = [item_content] + [
+                f"{pi.title} {pi.summary}" for pi in past_items_list
+            ]
 
-            if item_embedding is None:
+            # One API call instead of N individual calls — fixes 3GB memory spike
+            all_embeddings = self.embedding_service.get_embeddings_sync(all_texts)
+
+            if not all_embeddings or all_embeddings[0] is None:
                 return None
+
+            item_embedding = all_embeddings[0]
 
             # Find similar past items
             similar_items = []
 
-            for past_item in past_decisions[:100]:  # Check recent 100
-                past_content = f"{past_item.title} {past_item.summary}"
-
-                # Try to get cached embedding or compute
-                past_embedding = self.embedding_service.get_embedding_sync(past_content)
+            for i, past_item in enumerate(past_items_list):
+                past_embedding = all_embeddings[i + 1] if (i + 1) < len(all_embeddings) else None
 
                 if past_embedding is not None:
                     similarity = self._cosine_similarity(item_embedding, past_embedding)

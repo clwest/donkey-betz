@@ -25607,7 +25607,7 @@ def process_human_attention_lifecycle():
 # Session 954: Boardroom ML Predictions
 # =============================================================================
 
-@shared_task(name='core.tasks.enrich_boardroom_ml_predictions')
+@shared_task(name='core.tasks.enrich_boardroom_ml_predictions', ignore_result=True)
 def enrich_boardroom_ml_predictions():
     """
     Session 954: Enrich pending attention items with ML predictions.
