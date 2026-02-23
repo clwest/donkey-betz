@@ -1,7 +1,7 @@
 # Session 1064 — PeriodicTask Queue Sync Fix
 
 **Date:** February 22, 2026
-**PR:** (pending)
+**PRs:** #1415 (queue sync), #1416 (deliverables title lookup)
 
 ---
 
@@ -64,3 +64,16 @@ Temporary diagnostic script used during investigation. No longer needed.
 ## Key Insight
 
 `CELERY_TASK_ROUTES` is a runtime router that Celery uses when dispatching tasks. But `PeriodicTask.queue` is a DB field that celery-beat sends directly in the task message. If `PeriodicTask.queue` is set (even to 'default'), it **overrides** the router. If it's NULL, behavior depends on whether celery-beat loads router config. The safest approach is to always set `PeriodicTask.queue` to match `CELERY_TASK_ROUTES` explicitly.
+
+---
+
+## deliverables_tool: title-based lookup
+
+**Problem:** detail/update/delete/save/unsave actions required UUID, which users can't easily copy from the UI.
+
+**Fix:** Added `_resolve_deliverable()` helper in `tool_dispatcher.py`. All 5 ID-requiring actions now accept either `id` (UUID) or `title` (exact match first, then partial). If multiple matches, returns disambiguation list with IDs so the PA can ask the user to pick.
+
+| File | Change |
+|------|--------|
+| `core/services/tool_dispatcher.py` | `_resolve_deliverable()` helper, updated detail/save/unsave/update/delete |
+| `core/services/pa_tool_schemas.py` | Updated `id` field description to mention title fallback |

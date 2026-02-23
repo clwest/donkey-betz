@@ -8,7 +8,7 @@
 
 ## Session 1064 — What's Done So Far
 
-### PeriodicTask Queue Sync Fix (PR pending)
+### PeriodicTask Queue Sync Fix (PR #1415 — MERGED & DEPLOYED)
 
 **Problem:** 179 `PeriodicTask` records in django_celery_beat DB had wrong/missing `queue` values, overriding `CELERY_TASK_ROUTES` and sending heavy tasks to the 200MB celery-worker.
 
@@ -17,9 +17,13 @@
 2. Added `sync_task_queues --apply` to Procfile release command (runs after `sync_celery_beat` on every deploy).
 3. Deleted `check_routes.py` temp diagnostic script.
 
-**Status:** Code committed. **NOT YET applied on Railway.** Next step: deploy or `railway run python manage.py sync_task_queues --apply`, then redeploy celery-worker + celery-long-running.
+**Status:** Applied on Railway (177 tasks fixed). celery-worker, celery-long-running, and celery-beat all redeployed. One post-fix crash from stale queued task — worker auto-recovered.
 
-**Dry run result:** 179 fixed, 36 already correct, 68 no route (skipped).
+### deliverables_tool: title-based lookup (PR #1416)
+
+**Problem:** detail/update/delete/save/unsave required UUID — users can't copy UUIDs from the UI.
+
+**Fix:** `_resolve_deliverable()` helper in `tool_dispatcher.py`. All 5 actions now accept `id` OR `title` (exact match first, then partial). Multiple matches return disambiguation list.
 
 ---
 
