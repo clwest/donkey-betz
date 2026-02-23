@@ -596,6 +596,7 @@ CELERY_WORKER_PREFETCH_MULTIPLIER = 1  # Session 984: Reduced from 4 to limit me
 CELERY_TASK_ACKS_LATE = True
 CELERY_WORKER_DISABLE_RATE_LIMITS = False
 CELERY_TASK_REJECT_ON_WORKER_LOST = True
+CELERY_RESULT_EXPIRES = 3600  # 1 hour — prevent Redis bloat from uncollected results
 
 # Session 984: Worker memory management
 # Railway (Linux): Procfile uses --pool=prefork for memory recycling via max-tasks-per-child
