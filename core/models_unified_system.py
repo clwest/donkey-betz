@@ -3243,6 +3243,11 @@ class SpiderData(models.Model):
     class Meta:
         app_label = 'core'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['is_processed', 'created_at'], name='spiderdata_proc_created'),
+            models.Index(fields=['spider_name', 'created_at'], name='spiderdata_spider_created'),
+            models.Index(fields=['data_type', 'created_at'], name='spiderdata_type_created'),
+        ]
 
 
 class SpiderDataAnnotation(models.Model):
