@@ -91,6 +91,12 @@ FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
 BACKEND_URL = os.environ.get('BACKEND_URL', 'http://localhost:8000')
 WEBSOCKET_URL = os.environ.get('WEBSOCKET_URL', 'ws://localhost:8001')
 
+# Session 1064: Platform Hardening Configuration
+LUNGS_ENFORCE_HARD_LIMIT = os.environ.get('LUNGS_ENFORCE_HARD_LIMIT', 'true').lower() == 'true'
+CELERY_TASK_EVENT_RETENTION_DAYS = int(os.environ.get('CELERY_TASK_EVENT_RETENTION_DAYS', '30'))
+LLM_CALL_LOG_RETENTION_DAYS = int(os.environ.get('LLM_CALL_LOG_RETENTION_DAYS', '30'))
+BODY_THROTTLE_MAX_DELAY_SECONDS = int(os.environ.get('BODY_THROTTLE_MAX_DELAY_SECONDS', '30'))
+
 # Application definition
 INSTALLED_APPS = [
     # ASGI/WebSocket support (MUST be first)
@@ -981,6 +987,10 @@ CELERY_TASK_ROUTES = {
     # Session 1031: Dream surfacing — lightweight DB queries only
     'core.tasks.surface_top_dreams': {'queue': 'default'},
 
+    # Session 1064: Telemetry cleanup — weekly DB deletes, safe on broadcast worker
+    'core.tasks.cleanup_celery_task_events': {'queue': 'broadcast'},
+    'core.tasks.cleanup_llm_call_logs': {'queue': 'broadcast'},
+
     # Session 976: PA chat — dedicated queue so user isn't blocked by spider/body-system traffic
     'core.tasks.process_pa_chat_task': {'queue': 'pa'},
 
@@ -1217,7 +1227,7 @@ CELERY_TASK_ROUTES = {
     'core.tasks.run_diagnostic_pipeline_task': {'queue': 'long_running'},
     'core.tasks.run_proactive_system_check': {'queue': 'long_running'},
     'core.tasks.run_agent_health_rotation': {'queue': 'long_running'},
-    'core.tasks.run_daily_priority_scan': {'queue': 'long_running'},
+    'core.tasks.run_daily_priority_scan': {'queue': 'broadcast'},
     'core.tasks.generate_content_package': {'queue': 'long_running'},
     'core.tasks.generate_ai_series': {'queue': 'long_running'},
     'core.tasks.generate_podcast_episode': {'queue': 'content'},

@@ -122,6 +122,26 @@ class LLMEnforcer:
         """
         logger.info(f"🔒 ENFORCING REAL AI for {agent_name} - Task: {task_type}")
 
+        # Session 1064: Check LUNGS budget before making LLM call
+        try:
+            from django.conf import settings as django_settings
+            if getattr(django_settings, 'LUNGS_ENFORCE_HARD_LIMIT', True):
+                from core.services.lungs import get_lungs_monitor
+                lungs = get_lungs_monitor()
+                can_proceed, reason = lungs.can_breathe(agent=agent_name)
+                if not can_proceed:
+                    logger.warning(f"LUNGS hard limit: blocking LLM call for {agent_name}: {reason}")
+                    return {
+                        'success': False,
+                        'response': f'[BLOCKED: {reason}]',
+                        'error': f'Budget exhausted: {reason}',
+                        'blocked_by_lungs': True,
+                        'agent': agent_name,
+                        'call_id': hashlib.md5(f"{agent_name}_{datetime.now()}".encode()).hexdigest()[:8],
+                    }
+        except Exception:
+            pass  # Never block LLM calls due to LUNGS errors
+
         # Check if we have any LLM available
         if not self.openai_client and not self.anthropic_client:
             error_msg = "❌ CRITICAL: No LLM clients available! Cannot generate AI response."
@@ -549,6 +569,8 @@ class LLMEnforcer:
                 output_tokens=output_tokens,
                 total_tokens=total_tokens,
                 estimated_cost_usd=cost,
+                # TODO(Session 1064): populate tenant= once request-context
+                # tenant resolution is available in the LLM call path.
                 metadata={
                     'agent_name': agent_name,
                     'model': model,

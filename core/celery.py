@@ -2406,6 +2406,29 @@ app.conf.beat_schedule = {
             'expires': 3600,
         },
     },
+    # Session 1064: Telemetry cleanup — prevent unbounded table growth
+    'cleanup-celery-task-events': {
+        'task': 'core.tasks.cleanup_celery_task_events',
+        'schedule': crontab(day_of_week='sunday', hour=4, minute=0),  # Weekly Sunday 4 AM
+        'options': {
+            'expires': 7200,
+        },
+    },
+    'cleanup-llm-call-logs': {
+        'task': 'core.tasks.cleanup_llm_call_logs',
+        'schedule': crontab(day_of_week='sunday', hour=4, minute=15),  # Weekly Sunday 4:15 AM
+        'options': {
+            'expires': 7200,
+        },
+    },
+    # Session 1064: Daily priority scan — was routed but never scheduled
+    'daily-priority-scan': {
+        'task': 'core.tasks.run_daily_priority_scan',
+        'schedule': crontab(hour=6, minute=0),  # Daily 6 AM
+        'options': {
+            'expires': 3600,
+        },
+    },
 }
 
 # Task routing configuration
