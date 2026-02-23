@@ -220,7 +220,8 @@ class LLMEnforcer:
                 'tokens': response.get('tokens', 0),
                 'cost': response.get('cost', 0),
                 'call_id': call_id,
-                'agent': agent_name
+                'agent': agent_name,
+                'truncated': response.get('truncated', False),
             }
 
             # Session 125: Include tool calls if present
@@ -391,12 +392,15 @@ class LLMEnforcer:
             total_tokens = 0
             cost = 0.0
 
-        # Session 266: Detect truncation - check if output_tokens hit the max limit
-        # If output tokens are >= max_tokens - 10, likely truncated
+        # Session 266/1065: Detect truncation — authoritative API check first, heuristic fallback
         truncated = False
-        if usage and output_tokens >= (max_tokens - 10):
+        if hasattr(response, 'status') and response.status == 'incomplete':
             truncated = True
-            logger.warning(f"⚠️ Response likely truncated: {output_tokens} output tokens (max: {max_tokens})")
+            reason = getattr(getattr(response, 'incomplete_details', None), 'reason', 'unknown')
+            logger.warning(f"⚠️ Response truncated (status=incomplete, reason={reason})")
+        elif usage and output_tokens >= (max_tokens - 10):
+            truncated = True
+            logger.warning(f"⚠️ Response likely truncated (heuristic): {output_tokens} output tokens (max: {max_tokens})")
 
         # Build response dict
         result = {
