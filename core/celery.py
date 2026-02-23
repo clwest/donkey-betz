@@ -378,7 +378,7 @@ app.conf.beat_schedule = {
     'backfill-spider-embeddings': {
         'task': 'core.tasks.backfill_spider_embeddings',
         'schedule': crontab(minute='*/10'),  # Every 10 minutes
-        'kwargs': {'batch_size': 500},  # Session 604: Increased from 200 to 500
+        'kwargs': {'batch_size': 100},  # Session 1066: Reduced from 500 — batch API call, 500 was 3.7GB spike
         'options': {
             'expires': 600,  # Expire after 10 minutes
         }

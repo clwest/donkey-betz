@@ -451,6 +451,8 @@ class SpiderSemanticSearch:
 
         stats = {'processed': 0, 'succeeded': 0, 'failed': 0, 'skipped': 0, 'marked_empty': 0}
 
+        # Phase 1: Collect texts, skip empties
+        entries_with_text = []  # (entry, text) pairs
         for entry in entries:
             stats['processed'] += 1
 
@@ -471,22 +473,42 @@ class SpiderSemanticSearch:
             # Skip entries with no items
             if not items:
                 stats['skipped'] += 1
-                # Session 394: Mark as empty so we don't reprocess
-                # Session 782: Don't set embedding=[] - pgvector requires at least 1 dimension
-                # Just mark embedding_text and query excludes these entries
                 entry.embedding_text = "[NO_ITEMS]"
                 entry.save(update_fields=['embedding_text'])
                 stats['marked_empty'] += 1
                 continue
 
-            # Session 792: Use new return value format
-            result = self.generate_entry_embedding(entry, mark_empty=True)
-            if result == 'success':
-                stats['succeeded'] += 1
-            elif result == 'no_text':
-                # Entry had items but no searchable text - now marked as [NO_ITEMS]
+            text = entry.get_searchable_text()
+            if not text:
                 stats['skipped'] += 1
                 stats['marked_empty'] += 1
+                entry.embedding_text = "[NO_ITEMS]"
+                entry.save(update_fields=['embedding_text'])
+                continue
+
+            entries_with_text.append((entry, text[:8000]))
+
+        if not entries_with_text:
+            logger.info(f"Spider embedding backfill: {stats}")
+            return stats
+
+        # Phase 2: Batch embed all texts in one API call (fixes 3.7GB memory spike)
+        texts = [t for _, t in entries_with_text]
+        try:
+            embeddings = self.embedding_service.get_embeddings_sync(texts)
+        except Exception as e:
+            logger.error(f"Batch embedding failed: {e}")
+            stats['failed'] += len(entries_with_text)
+            return stats
+
+        # Phase 3: Save results
+        for i, (entry, text) in enumerate(entries_with_text):
+            embedding = embeddings[i] if i < len(embeddings) else None
+            if embedding:
+                entry.embedding = embedding
+                entry.embedding_text = text[:1000]
+                entry.save(update_fields=['embedding', 'embedding_text'])
+                stats['succeeded'] += 1
             else:
                 stats['failed'] += 1
 
