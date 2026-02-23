@@ -127,8 +127,52 @@ async def health():
     return {
         "status": "healthy",
         "queue_size": job_queue.queue.qsize() if job_queue else 0,
-        "active_jobs": len(job_queue.jobs) if job_queue else 0
+        "active_jobs": len(job_queue.jobs) if job_queue else 0,
+        "demo_mode": config.DEMO_MODE,
     }
+
+
+def _enforce_demo_mode(clip_paths: List[str]):
+    """Block clip paths that aren't inside demo_assets/ when RESOLVE_DEMO_MODE=true."""
+    if not config.DEMO_MODE:
+        return
+
+    demo_dir = str(config.DEMO_ASSETS_DIR.resolve())
+    allowed_prefixes = config.DEMO_ALLOWED_URL_PREFIXES
+
+    for path in clip_paths:
+        # Remote URL check
+        if path.startswith(("http://", "https://")):
+            if not any(path.startswith(prefix) for prefix in allowed_prefixes):
+                raise HTTPException(
+                    status_code=403,
+                    detail={
+                        "error": "Demo mode: remote URL blocked",
+                        "code": "DEMO_001",
+                        "message": (
+                            f"RESOLVE_DEMO_MODE is active. Remote URL '{path}' is not in the "
+                            f"allowed prefixes: {allowed_prefixes or '(none)'}. "
+                            f"Only local files in {demo_dir}/ are permitted."
+                        ),
+                    },
+                )
+            continue
+
+        # Local path check — must resolve inside demo_assets/
+        resolved = str(Path(path).resolve())
+        if not resolved.startswith(demo_dir):
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "error": "Demo mode: path outside demo_assets",
+                    "code": "DEMO_002",
+                    "message": (
+                        f"RESOLVE_DEMO_MODE is active. Path '{path}' resolves to '{resolved}' "
+                        f"which is outside the allowed directory: {demo_dir}/. "
+                        f"Move your clip into demo_assets/ or disable demo mode."
+                    ),
+                },
+            )
 
 
 @app.post("/render/start", response_model=RenderStartResponse)
@@ -151,6 +195,9 @@ async def start_render(
     """
     # Verify token
     verify_token(x_render_token)
+
+    # Session 1065: Demo mode guardrail
+    _enforce_demo_mode(request.clip_paths)
 
     try:
         # Create render job
