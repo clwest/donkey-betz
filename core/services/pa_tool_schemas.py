@@ -934,7 +934,7 @@ PA_TOOL_SCHEMAS = [
                     "enum": ["list", "search", "detail", "save", "unsave", "stats", "create", "update", "delete", "cleanup"],
                     "description": "list=browse, search=find by query, detail=full content, save/unsave=bookmark, stats=counts, create=new, update=edit, delete=remove one, cleanup=bulk remove duplicates/orphans.",
                 },
-                "id": {"type": "string", "description": "UUID of deliverable (required for detail, save, unsave, update, delete)"},
+                "id": {"type": "string", "description": "UUID of deliverable. For detail/save/unsave/update/delete you can pass EITHER id OR title — title lookup is supported so users don't need to copy UUIDs."},
                 "query": {"type": "string", "description": "Search query for title matching"},
                 "type": {"type": "string", "description": "Filter by or set deliverable type (document, image, report, analysis, script, plan, etc.)"},
                 "category": {"type": "string", "description": "Filter by category (e.g. 'Finance', 'Research', 'PA Created')"},
