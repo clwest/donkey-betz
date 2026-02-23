@@ -116,6 +116,8 @@ release: ... && python manage.py sync_celery_beat ... && python manage.py sync_t
 
 Result: 179 fixed, 36 already correct, 68 no route (left as-is).
 
+**Critical gotcha:** `django_celery_beat`'s `DatabaseScheduler.update_from_dict()` resets `PeriodicTask.queue` to NULL on every celery-beat restart (for entries without explicit `options.queue`). Fix: `QueuePreservingScheduler` in `core/schedulers.py` — subclasses `ModelEntry` to omit `queue` from `update_or_create` defaults when not explicitly set. Configured via `CELERY_BEAT_SCHEDULER = 'core.schedulers:QueuePreservingScheduler'` in settings.py.
+
 ### Disabled Schedules (Sessions 1027, 1029)
 
 3 remediation execution schedules disabled (PR #1271) + 3 metric trigger rules disabled (PRs #1283, #1284). Discovery + assignment still run. Beat schedules persisted in DB — commenting out code alone does NOT disable them; must also `PeriodicTask.objects.filter(name='...').update(enabled=False)`.

@@ -1253,7 +1253,7 @@ CELERY_TASK_ROUTES = {
 # Celery Worker Settings
 CELERY_WORKER_CONCURRENCY = int(os.environ.get('CELERY_WORKER_CONCURRENCY', '4'))
 CELERY_TASK_ALWAYS_EAGER = os.environ.get('CELERY_TASK_ALWAYS_EAGER', 'False') == 'True'
-CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+CELERY_BEAT_SCHEDULER = 'core.schedulers:QueuePreservingScheduler'
 
 # Session 1007: Removed ~600 lines of dead CELERY_BEAT_SCHEDULE.
 # The authoritative beat schedule is in core/celery.py (app.conf.beat_schedule).

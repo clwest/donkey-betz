@@ -65,6 +65,25 @@ Temporary diagnostic script used during investigation. No longer needed.
 
 `CELERY_TASK_ROUTES` is a runtime router that Celery uses when dispatching tasks. But `PeriodicTask.queue` is a DB field that celery-beat sends directly in the task message. If `PeriodicTask.queue` is set (even to 'default'), it **overrides** the router. If it's NULL, behavior depends on whether celery-beat loads router config. The safest approach is to always set `PeriodicTask.queue` to match `CELERY_TASK_ROUTES` explicitly.
 
+## Critical Discovery: DatabaseScheduler Resets Queue Values
+
+**Problem:** After applying `sync_task_queues`, celery-worker kept crashing because queue values were reverting to NULL. Root cause: `django_celery_beat`'s `DatabaseScheduler.setup_schedule()` calls `update_from_dict(app.conf.beat_schedule)` on every celery-beat startup. For each beat schedule entry, `ModelEntry._unpack_options()` returns `{'queue': None}` when no queue is specified, and `update_or_create(defaults={..., 'queue': None})` overwrites DB queue values.
+
+**Flow:**
+1. Release command: `sync_celery_beat` → `sync_task_queues --apply` (sets correct queues)
+2. celery-beat starts → `DatabaseScheduler.setup_schedule()` → `update_from_dict()` → resets all queues to NULL
+3. Tasks dispatched with NULL queue → bypass `CELERY_TASK_ROUTES` → land on default (200MB celery-worker)
+
+**Fix:** Created `core/schedulers.py` with `QueuePreservingScheduler`:
+- `QueuePreservingModelEntry._unpack_options()` omits `queue` from result when `queue=None`
+- `update_or_create` no longer overwrites queue with NULL
+- Changed `CELERY_BEAT_SCHEDULER` in settings.py to `core.schedulers:QueuePreservingScheduler`
+
+| File | Change |
+|------|--------|
+| `core/schedulers.py` | NEW — QueuePreservingScheduler + QueuePreservingModelEntry |
+| `core/settings.py` line 1256 | Changed scheduler class to `core.schedulers:QueuePreservingScheduler` |
+
 ---
 
 ## deliverables_tool: title-based lookup

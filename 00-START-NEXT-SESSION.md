@@ -19,6 +19,16 @@
 
 **Status:** Applied on Railway (177 tasks fixed). celery-worker, celery-long-running, and celery-beat all redeployed. One post-fix crash from stale queued task — worker auto-recovered.
 
+### QueuePreservingScheduler (PR #1417)
+
+**Problem:** `sync_task_queues` fixes kept reverting. Root cause: `django_celery_beat`'s `DatabaseScheduler.update_from_dict()` calls `_unpack_options(queue=None)` for every beat schedule entry without an explicit queue. This passes `queue=None` into `update_or_create(defaults=...)`, which **overwrites** DB queue values back to NULL every time celery-beat restarts.
+
+**Fix:**
+1. Created `core/schedulers.py` — `QueuePreservingModelEntry` subclass omits `queue` from `update_or_create` defaults when not explicitly set, so existing DB values are preserved.
+2. Updated `CELERY_BEAT_SCHEDULER` in settings.py to use `core.schedulers:QueuePreservingScheduler`.
+
+**Result:** `sync_task_queues` fixes now persist across celery-beat restarts. The release command chain (`sync_celery_beat` → `sync_task_queues`) sets correct queues once, and `QueuePreservingScheduler` prevents them from being reset.
+
 ### deliverables_tool: title-based lookup (PR #1416)
 
 **Problem:** detail/update/delete/save/unsave required UUID — users can't copy UUIDs from the UI.
