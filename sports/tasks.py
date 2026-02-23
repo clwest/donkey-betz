@@ -68,6 +68,27 @@ def evaluate_completed_predictions(hours_back=24):
         logger.warning(
             f"⚠️  Models need retraining: {', '.join([s.upper() for s in retraining_candidates])}"
         )
+        # Session 1064: Dispatch retraining instead of just logging
+        # Guards: dedup candidates, cooldown window (6h), structured logging
+        try:
+            from django.core.cache import cache
+            from ml.tasks import retrain_sport_model
+            dispatched = []
+            for sport in set(retraining_candidates):  # dedup
+                cooldown_key = f'retrain_cooldown:{sport}'
+                if cache.get(cooldown_key):
+                    logger.info(f"Skipping retrain for {sport}: cooldown active")
+                    continue
+                retrain_sport_model.delay(sport)
+                cache.set(cooldown_key, True, timeout=6 * 3600)  # 6h cooldown
+                dispatched.append(sport)
+                logger.info(
+                    f"retrain_dispatched: sport={sport} "
+                    f"accuracy={results['by_sport'].get(sport, {}).get('accuracy', 'N/A')}%"
+                )
+            results['retrain_dispatched'] = dispatched
+        except Exception as e:
+            logger.error(f"Failed to dispatch retraining: {e}")
         results['needs_retraining'] = retraining_candidates
     else:
         logger.info("✅ All models performing within acceptable range")
