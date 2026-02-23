@@ -987,6 +987,22 @@ CELERY_TASK_ROUTES = {
     # Session 1031: Dream surfacing — lightweight DB queries only
     'core.tasks.surface_top_dreams': {'queue': 'default'},
 
+    # Session 1065: Move heavy tasks off default queue to prevent celery-worker OOM
+    # auto_process_extracted_artifacts: iterates up to 42K+ artifacts in batches of 2000
+    # process_gates_and_deploy_pilots: instantiates OpenAI() per gate for doc generation
+    # record_all_user_style_evolution: loads ALL active users × 3 domains with LearningService
+    # ai_promote_decisions: GPT-5-mini batch of 50 decisions
+    # send_personalized_opportunity_alerts: N users × N opportunities loop
+    # update_learning_profiles: iterates ALL users with distributions
+    # validate_knowledge_sources: iterates 3900+ unvalidated sources
+    'core.tasks.auto_process_extracted_artifacts': {'queue': 'long_running'},
+    'core.tasks.process_gates_and_deploy_pilots': {'queue': 'long_running'},
+    'core.tasks.record_all_user_style_evolution': {'queue': 'long_running'},
+    'core.tasks.ai_promote_decisions': {'queue': 'long_running'},
+    'core.tasks.send_personalized_opportunity_alerts': {'queue': 'long_running'},
+    'core.tasks.update_learning_profiles': {'queue': 'long_running'},
+    'core.tasks.validate_knowledge_sources': {'queue': 'long_running'},
+
     # Session 1064: Telemetry cleanup — weekly DB deletes, safe on broadcast worker
     'core.tasks.cleanup_celery_task_events': {'queue': 'broadcast'},
     'core.tasks.cleanup_llm_call_logs': {'queue': 'broadcast'},

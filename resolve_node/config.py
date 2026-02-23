@@ -59,6 +59,15 @@ RENDER_TIMEOUT = 3600  # 1 hour max per job
 UPLOAD_MAX_RETRIES = 3
 UPLOAD_RETRY_DELAY = 5  # seconds
 
+# Demo mode — restrict renders to demo_assets/ only (no real footage)
+DEMO_MODE = os.getenv("RESOLVE_DEMO_MODE", "false").lower() == "true"
+DEMO_ASSETS_DIR = BASE_DIR / "demo_assets"
+DEMO_ALLOWED_URL_PREFIXES = [
+    p.strip()
+    for p in os.getenv("RESOLVE_DEMO_ALLOWED_URL_PREFIXES", "").split(",")
+    if p.strip()
+]
+
 # Logging
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

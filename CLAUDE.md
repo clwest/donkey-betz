@@ -107,6 +107,8 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 | [API_PATH_POLICY.md](docs/API_PATH_POLICY.md) | API path conventions |
 | [DREAM_INITIATIVE_WORKFLOW.md](docs/DREAM_INITIATIVE_WORKFLOW.md) | Initiative 5-stage pipeline |
 | [DISCORD_INTEGRATION.md](docs/DISCORD_INTEGRATION.md) | Discord bot: 112 commands |
+| [demo_mode.md](docs/demo_mode.md) | Resolve demo mode guardrails, demo clip generation |
+| [governance_redesign.md](docs/governance_redesign.md) | Governance UX redesign spec, 7 implementation tickets |
 
 **Documentation Index:** Run `python manage.py build_docs_index` to regenerate `docs/INDEX.md`
 

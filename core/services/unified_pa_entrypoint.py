@@ -81,6 +81,19 @@ class UnifiedPAEntrypoint:
     Into ONE consistent interface.
     """
 
+    # Session 1065: Signals that suggest the user wants a long-form response
+    _LONG_RESPONSE_SIGNALS = re.compile(
+        r'\b(analy[zs]|evaluat|comprehensive|detailed|in.depth|thorough|'
+        r'compare.*contrast|full.*report|write.*essay|write.*blog|'
+        r'list.*all|summarize.*everything)\b', re.IGNORECASE
+    )
+
+    @staticmethod
+    def _estimate_max_tokens(message: str) -> int:
+        if UnifiedPAEntrypoint._LONG_RESPONSE_SIGNALS.search(message):
+            return 3500
+        return 2000
+
     # Session 959: Intent-to-enrichment mapping
     # Determines which intelligence services fire for each intent
     INTENT_ENRICHMENT_MAP = {
@@ -681,7 +694,7 @@ class UnifiedPAEntrypoint:
                 tools=PA_TOOL_SCHEMAS if not is_final else None,
                 previous_response_id=response_id,
                 task_type='conversation',
-                max_tokens=2000,
+                max_tokens=self._estimate_max_tokens(message),
                 agent_name='PersonalAssistant',
             )
 
@@ -735,6 +748,31 @@ class UnifiedPAEntrypoint:
                         "I ran into an issue processing that request. Could you try again or rephrase?",
                         tool_runs, fc_metadata, response_id,
                     )
+                # Session 1065: Auto-continue truncated text responses
+                if result.get('truncated') and response_id:
+                    parts = [result.get('response', '')]
+                    for cont_i in range(2):
+                        logger.info(f"[{trace_id}] Truncation continuation {cont_i+1}/2 ({len(''.join(parts))} chars so far)")
+                        cont_result = await asyncio.to_thread(
+                            self.llm_enforcer.enforce_real_ai,
+                            prompt="continue",
+                            input_messages=[{"role": "user", "content": "continue"}],
+                            tools=None,
+                            previous_response_id=response_id,
+                            task_type='conversation',
+                            max_tokens=2000,
+                            agent_name='PersonalAssistant',
+                        )
+                        if not cont_result.get('success'):
+                            break
+                        response_id = cont_result.get('response_id', response_id)
+                        parts.append(cont_result.get('response', ''))
+                        if not cont_result.get('truncated'):
+                            break
+                    combined = ''.join(parts)
+                    logger.info(f"[{trace_id}] Truncation resolved: {len(parts)} parts, {len(combined)} chars")
+                    return (combined, tool_runs, fc_metadata, response_id)
+
                 return (result.get('response', ''), tool_runs, fc_metadata, response_id)
 
             # Session 1043: Detect degenerate loops — LLM stuck repeating itself

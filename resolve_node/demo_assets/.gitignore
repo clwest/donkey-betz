@@ -1,0 +1,4 @@
+# Generated demo clips — regenerate locally via generate_demo_clip.sh
+*.mp4
+*.mov
+*.avi
