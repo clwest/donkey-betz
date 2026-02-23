@@ -1023,6 +1023,19 @@ CELERY_TASK_ROUTES = {
     'core.tasks.auto_enhance_blogs': {'queue': 'content'},  # EditorAgent LLM per blog
     'core.tasks.score_unscored_deliverables': {'queue': 'content'},  # Quality scoring
 
+    # Session 1066b: Tasks caught by telemetry spiking on celery-worker
+    # send_proactive_opportunity_alerts: 3GB spike — N users × N opportunities loop
+    # poll_processing_videos: 1.2GB spike — video processing accumulates responses
+    # aggregate_tool_call_stats: 480MB spike — scans all ToolCallRecord rows
+    # apply_mood_trigger_rules: 385MB spike — lightweight but triggers on default
+    # check_workflow_schedules/sync_workflow_schedules: workflow iteration
+    'core.tasks.send_proactive_opportunity_alerts': {'queue': 'long_running'},
+    'core.tasks.poll_processing_videos': {'queue': 'content'},
+    'core.tasks.aggregate_tool_call_stats': {'queue': 'long_running'},
+    'core.tasks.apply_mood_trigger_rules': {'queue': 'broadcast'},
+    'core.tasks.check_workflow_schedules': {'queue': 'broadcast'},
+    'core.tasks.sync_workflow_schedules': {'queue': 'broadcast'},
+
     # Session 1064: Telemetry cleanup — weekly DB deletes, safe on broadcast worker
     'core.tasks.cleanup_celery_task_events': {'queue': 'broadcast'},
     'core.tasks.cleanup_llm_call_logs': {'queue': 'broadcast'},
