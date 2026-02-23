@@ -1122,14 +1122,20 @@ Execute this task with maximum efficiency and creativity. You have full autonomy
 
 # Revenue Integration Tasks
 
-@shared_task(bind=True)
+@shared_task(bind=True, ignore_result=True)
 def monitor_and_process_opportunities(self):
     """
     Continuously monitor platforms and process new opportunities.
-    Runs every hour to check for new opportunities from spider network.
+    Runs every 20 minutes to check for new opportunities from spider network.
 
     Session 729 Fix: Updated to use spider_decision_bridge instead of
     non-existent SpiderNetwork module.
+
+    Session 1066: Fixed 1.1GB memory spike:
+    - Capped at 5 opportunities per run (was 20) — reduces per-child footprint
+    - Single asyncio.run() instead of leaked new_event_loop() per opportunity
+    - Added ignore_result=True (return dict never read)
+    - Routed to long_running queue (loads torch/transformers via AIIncomeBuilder)
     """
     try:
         from .revenue_integration import RevenueIncomeIntegration
@@ -1148,70 +1154,56 @@ def monitor_and_process_opportunities(self):
         opportunities = Opportunity.objects.filter(
             status='active'
         ).order_by('-created_at')[:50]
-        # Filter out opportunities that already have action plans
-        opportunities = [opp for opp in opportunities if str(opp.id) not in existing_plan_ids][:20]
+        # Session 1066: Capped at 5 (was 20) — each loads ML models + writes files
+        opportunities = [opp for opp in opportunities if str(opp.id) not in existing_plan_ids][:5]
 
         logger.info(f"Found {len(opportunities)} unprocessed opportunities")
 
         processed_count = 0
         action_plans_created = 0
 
-        for opp in opportunities:
-            try:
-                # Convert to dict for processing
-                # Session 729: Use correct field names from Opportunity model
-                opp_data = {
-                    'id': str(opp.id),
-                    'title': opp.title,
-                    'description': opp.description or '',
-                    'platform': opp.source or 'unknown',
-                    'budget': float(opp.potential_revenue) if opp.potential_revenue else 0,
-                    'skills_required': opp.requirements or [],
-                    'url': opp.url or '',
-                    'match_score': opp.match_score,
-                    'opportunity_type': opp.opportunity_type,
-                }
+        # Session 1066: Single asyncio.run() instead of leaked new_event_loop() per opp
+        async def _process_all(opps):
+            nonlocal processed_count, action_plans_created
+            for opp in opps:
+                try:
+                    opp_data = {
+                        'id': str(opp.id),
+                        'title': opp.title,
+                        'description': opp.description or '',
+                        'platform': opp.source or 'unknown',
+                        'budget': float(opp.potential_revenue) if opp.potential_revenue else 0,
+                        'skills_required': opp.requirements or [],
+                        'url': opp.url or '',
+                        'match_score': opp.match_score,
+                        'opportunity_type': opp.opportunity_type,
+                    }
 
-                # Process each opportunity
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                result = loop.run_until_complete(
-                    integration.process_opportunity(opp_data)
-                )
+                    result = await integration.process_opportunity(opp_data)
 
-                if result.get('success'):
-                    processed_count += 1
-                    logger.info(f"✅ Processed opportunity: {opp.title[:50]}")
+                    if result.get('success'):
+                        processed_count += 1
+                        logger.info(f"✅ Processed opportunity: {opp.title[:50]}")
 
-                    # Check if action plan was created
-                    if result.get('plan_id'):
-                        action_plans_created += 1
+                        if result.get('plan_id'):
+                            action_plans_created += 1
 
-                    # Trigger proposal submission if confidence is high
-                    if result.get('success_probability', 0) > 0.7:
-                        submit_proposal_automatically.delay(
-                            result.get('proposal', {}),
-                            result.get('tracking_id')
-                        )
+                        if result.get('success_probability', 0) > 0.7:
+                            submit_proposal_automatically.delay(
+                                result.get('proposal', {}),
+                                result.get('tracking_id')
+                            )
 
-            except Exception as e:
-                logger.error(f"Error processing opportunity {opp.id}: {e}")
-                continue
+                except Exception as e:
+                    logger.error(f"Error processing opportunity {opp.id}: {e}")
+                    continue
+
+        asyncio.run(_process_all(opportunities))
 
         logger.info(f"📊 Processed {processed_count} opportunities, created {action_plans_created} action plans")
-        return {
-            'status': 'success',
-            'processed': processed_count,
-            'action_plans_created': action_plans_created,
-            'total': len(opportunities)
-        }
 
     except Exception as e:
         logger.error(f"Error in opportunity monitoring: {e}")
-        return {
-            'status': 'error',
-            'message': str(e)
-        }
 
 
 @shared_task
