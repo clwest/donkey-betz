@@ -972,6 +972,42 @@ class ToolDispatcher:
             'agent_name', 'quality_score', 'is_saved', 'created_at',
         )
 
+        def _resolve_deliverable(qs, payload, action_name):
+            """Resolve a deliverable by id OR title. Returns (obj, None) or (None, error_dict)."""
+            did = payload.get('id')
+            if did:
+                obj = qs.filter(id=did).first()
+                if not obj:
+                    raise ValueError(f"Deliverable {did} not found")
+                return obj, None
+
+            # Fallback: resolve by title
+            title_q = payload.get('title', '').strip() or payload.get('query', '').strip()
+            if not title_q:
+                raise ValueError(f"id or title required for {action_name} action")
+
+            # Try exact match first, then partial
+            matches = qs.filter(title__iexact=title_q)
+            if not matches.exists():
+                matches = qs.filter(title__icontains=title_q)
+
+            count = matches.count()
+            if count == 0:
+                raise ValueError(f'No deliverable found matching "{title_q}"')
+            if count == 1:
+                return matches.first(), None
+            # Multiple matches — return disambiguation list
+            items = list(
+                matches.order_by('-created_at')[:10]
+                .values('id', 'title', 'deliverable_type', 'created_at')
+            )
+            return None, {
+                'action': action_name,
+                'error': 'multiple_matches',
+                'message': f'Found {count} deliverables matching "{title_q}". Please specify which one by id or a more specific title.',
+                'matches': items,
+            }
+
         if action == 'list':
             qs = _apply_common_filters(base_qs)
             total = qs.count()
@@ -1001,13 +1037,9 @@ class ToolDispatcher:
             }
 
         elif action == 'detail':
-            did = payload.get('id')
-            if not did:
-                raise ValueError("id parameter required for detail action")
-
-            obj = base_qs.filter(id=did).first()
-            if not obj:
-                raise ValueError(f"Deliverable {did} not found")
+            obj, disambiguation = _resolve_deliverable(base_qs, payload, 'detail')
+            if disambiguation:
+                return disambiguation
 
             return {
                 'action': 'detail',
@@ -1027,23 +1059,17 @@ class ToolDispatcher:
             }
 
         elif action == 'save':
-            did = payload.get('id')
-            if not did:
-                raise ValueError("id parameter required for save action")
-            obj = base_qs.filter(id=did).first()
-            if not obj:
-                raise ValueError(f"Deliverable {did} not found")
+            obj, disambiguation = _resolve_deliverable(base_qs, payload, 'save')
+            if disambiguation:
+                return disambiguation
             obj.is_saved = True
             obj.save(update_fields=['is_saved'])
             return {'action': 'save', 'id': str(obj.id), 'title': obj.title, 'saved': True}
 
         elif action == 'unsave':
-            did = payload.get('id')
-            if not did:
-                raise ValueError("id parameter required for unsave action")
-            obj = base_qs.filter(id=did).first()
-            if not obj:
-                raise ValueError(f"Deliverable {did} not found")
+            obj, disambiguation = _resolve_deliverable(base_qs, payload, 'unsave')
+            if disambiguation:
+                return disambiguation
             obj.is_saved = False
             obj.save(update_fields=['is_saved'])
             return {'action': 'unsave', 'id': str(obj.id), 'title': obj.title, 'saved': False}
@@ -1103,13 +1129,9 @@ class ToolDispatcher:
             }
 
         elif action == 'update':
-            did = payload.get('id')
-            if not did:
-                raise ValueError("id parameter required for update action")
-
-            obj = base_qs.filter(id=did).first()
-            if not obj:
-                raise ValueError(f"Deliverable {did} not found")
+            obj, disambiguation = _resolve_deliverable(base_qs, payload, 'update')
+            if disambiguation:
+                return disambiguation
 
             update_fields = []
             if 'title' in payload:
@@ -1145,19 +1167,16 @@ class ToolDispatcher:
             }
 
         elif action == 'delete':
-            did = payload.get('id')
-            if not did:
-                raise ValueError("id parameter required for delete action")
-
-            obj = base_qs.filter(id=did).first()
-            if not obj:
-                raise ValueError(f"Deliverable {did} not found")
+            obj, disambiguation = _resolve_deliverable(base_qs, payload, 'delete')
+            if disambiguation:
+                return disambiguation
 
             title = obj.title
+            del_id = str(obj.id)
             obj.delete()
             return {
                 'action': 'delete',
-                'id': str(did),
+                'id': del_id,
                 'title': title,
                 'message': f'Permanently deleted "{title}" from your Deliverables library.',
             }
