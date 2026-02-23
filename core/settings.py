@@ -1004,6 +1004,25 @@ CELERY_TASK_ROUTES = {
     'core.tasks.update_learning_profiles': {'queue': 'long_running'},
     'core.tasks.validate_knowledge_sources': {'queue': 'long_running'},
 
+    # Session 1066: Move remaining heavy unrouted tasks off default queue
+    # These were falling through to celery-worker (512MB) and piling up at peak times
+    # LLM / heavy iteration tasks → long_running (c=1, 512MB, recycled aggressively)
+    'core.tasks.run_daily_learning_pipeline': {'queue': 'long_running'},  # Chains 5 sub-tasks, loads all users
+    'core.tasks.execute_pending_opportunity_tasks': {'queue': 'long_running'},  # Runs agents per opportunity
+    'core.tasks.agent_think_and_synthesize': {'queue': 'long_running'},  # LLM synthesis per agent
+    'core.tasks.discover_success_patterns': {'queue': 'long_running'},  # Iterates all distributions × 90 days
+    'core.tasks.generate_user_insights': {'queue': 'long_running'},  # LLM insight generation per user
+    'core.tasks.run_proactive_system_check': {'queue': 'long_running'},  # Chains alerts + suggestions + automations
+    'core.tasks.generate_smart_suggestions': {'queue': 'long_running'},  # LLM suggestion generation
+    'core.tasks.score_opportunities_from_spider_data': {'queue': 'long_running'},  # Scores up to 100 spider items
+    'core.tasks.process_gate_progression': {'queue': 'long_running'},  # Gate waiving + pilot starts
+    'core.tasks.generate_human_attention_items': {'queue': 'long_running'},  # Scans failed executions + stale items
+    # Content pipeline tasks that call LLM → content worker
+    'core.tasks.reevaluate_enhanced_blogs': {'queue': 'content'},  # PublishGate LLM calls per blog
+    'core.tasks.evaluate_unscored_blogs': {'queue': 'content'},  # PublishGate LLM calls per blog
+    'core.tasks.auto_enhance_blogs': {'queue': 'content'},  # EditorAgent LLM per blog
+    'core.tasks.score_unscored_deliverables': {'queue': 'content'},  # Quality scoring
+
     # Session 1064: Telemetry cleanup — weekly DB deletes, safe on broadcast worker
     'core.tasks.cleanup_celery_task_events': {'queue': 'broadcast'},
     'core.tasks.cleanup_llm_call_logs': {'queue': 'broadcast'},
