@@ -201,10 +201,13 @@ or
         Returns:
             Summary dict with counts
         """
-        # Get pending decisions
+        # Get pending decisions, excluding high-risk impact areas that require human judgment
+        from core.services.decision_promotion_rules import NEVER_AUTO_AREAS
         decisions = AgentDecisionSummary.objects.filter(
             is_canonical=False,
             status=status_filter
+        ).exclude(
+            impact_area__in=NEVER_AUTO_AREAS
         ).order_by('-created_at')[:batch_size]
 
         total = decisions.count()
