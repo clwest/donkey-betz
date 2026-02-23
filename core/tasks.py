@@ -1356,6 +1356,24 @@ def execute_agent_task(
     from core.services.context_tracing import ContextTracer, auto_repair_context
     from decimal import Decimal
 
+    # Session 1064: Respect body throttle mode — proportional delay when system stressed
+    # Note: body health tasks (run_heartbeat, check_breathing, etc.), PA chat
+    # (process_pa_chat_task), and gate progression (process_gate_progression) are
+    # separate Celery tasks that never flow through execute_agent_task — they are
+    # naturally exempt. All agent work dispatched here is deferrable.
+    try:
+        from core.services.body_coordinator import BodyCoordinator
+        from django.conf import settings as django_settings
+        coordinator = BodyCoordinator()
+        throttle = coordinator.get_throttle_factor()
+        if throttle < 1.0:
+            max_delay = getattr(django_settings, 'BODY_THROTTLE_MAX_DELAY_SECONDS', 30)
+            delay = int((1.0 - throttle) * max_delay)
+            logger.info(f"Body throttle {throttle:.1f}: delaying {agent_name} by {delay}s")
+            time.sleep(delay)
+    except Exception:
+        pass  # Never block agent execution due to body system errors
+
     # Session 875: Initialize context tracer for bad context forensics
     tracer = ContextTracer(source=f"execute_agent_task:{agent_name}")
 
@@ -7517,7 +7535,7 @@ def _extract_hivemind_knowledge(session, completed_contributions):
 # Session 244: Agent Conversations (Inter-Agent Chat)
 # =============================================================================
 
-@shared_task(bind=True)
+@shared_task(bind=True, soft_time_limit=1800, time_limit=1860)
 def run_agent_conversation(self, max_conversations: int = 3, max_messages: int = 6):
     """
     Generate autonomous conversations between agents.
@@ -8495,6 +8513,9 @@ Operating Constraints:
             'timestamp': timezone.now().isoformat()
         }
 
+    except SoftTimeLimitExceeded:
+        logger.error("[CONVERSATIONS] run_multi_agent_conversation timed out (soft_time_limit=1800s)")
+        return {'status': 'failed', 'error': 'Celery soft_time_limit exceeded', 'timed_out': True}
     except Exception as e:
         logger.exception(f"💬 [CONVERSATIONS] Conversation cycle failed: {e}")
         return {'status': 'failed', 'error': str(e)}
@@ -8503,7 +8524,7 @@ Operating Constraints:
 # ==================== SESSION 360: MULTI-AGENT CONVERSATIONS ====================
 
 
-@shared_task(bind=True, max_retries=2)
+@shared_task(bind=True, max_retries=2, soft_time_limit=1800, time_limit=1860)
 def run_multi_agent_conversation(self, max_conversations: int = 2, participants_per_conversation: int = 4, max_rounds: int = 3):
     """
     Session 360: Generate panel-style conversations with 3-5 agents.
@@ -10327,6 +10348,9 @@ Next Steps:
             'conclusion': conclusion if messages else None
         }
 
+    except SoftTimeLimitExceeded:
+        logger.error("[CONVERSATIONS] run_agent_conversation timed out (soft_time_limit=1800s)")
+        return {'status': 'failed', 'error': 'Celery soft_time_limit exceeded', 'timed_out': True}
     except Exception as e:
         logger.exception(f"🗣️ [PROJECT-CONVERSATION] Failed: {e}")
         return {'status': 'failed', 'error': str(e)}
@@ -11323,7 +11347,7 @@ def cleanup_stale_dreams(self, max_age_hours: int = 72):
         return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task(bind=True)
+@shared_task(bind=True, soft_time_limit=1800, time_limit=1860)
 def execute_dream_implementations(self, max_implementations: int = 5):
     """
     Session 368: Agent Execution Engine - Agents execute their implementation plans.
@@ -11490,6 +11514,9 @@ def execute_dream_implementations(self, max_implementations: int = 5):
             'timestamp': timezone.now().isoformat()
         }
 
+    except SoftTimeLimitExceeded:
+        logger.error("[EXECUTION-ENGINE] execute_dream_implementations timed out (soft_time_limit=1800s)")
+        return {'status': 'failed', 'error': 'Celery soft_time_limit exceeded', 'timed_out': True}
     except Exception as e:
         logger.exception(f"⚡ [EXECUTION-ENGINE] Execution failed: {e}")
         return {'status': 'failed', 'error': str(e)}
@@ -14288,6 +14315,33 @@ def cleanup_spider_item_hashes(days_to_keep: int = 7):
     except Exception as e:
         logger.error(f"🧹 [SESSION 616] Hash cleanup failed: {e}")
         return {'status': 'error', 'error': str(e)}
+
+
+# Session 1064: Telemetry cleanup — prevent unbounded table growth
+@shared_task
+def cleanup_celery_task_events(days_to_keep: int = None):
+    """Delete CeleryTaskEvent records older than retention period."""
+    from django.conf import settings as django_settings
+    from core.models_celery_telemetry import CeleryTaskEvent
+    if days_to_keep is None:
+        days_to_keep = getattr(django_settings, 'CELERY_TASK_EVENT_RETENTION_DAYS', 30)
+    cutoff = timezone.now() - timedelta(days=days_to_keep)
+    count, _ = CeleryTaskEvent.objects.filter(started_at__lt=cutoff).delete()
+    logger.info(f"Cleaned up {count} CeleryTaskEvent records older than {days_to_keep} days")
+    return {'deleted': count, 'retention_days': days_to_keep}
+
+
+@shared_task
+def cleanup_llm_call_logs(days_to_keep: int = None):
+    """Delete LLMCallLog records older than retention period."""
+    from django.conf import settings as django_settings
+    from core.models_llm_routing import LLMCallLog
+    if days_to_keep is None:
+        days_to_keep = getattr(django_settings, 'LLM_CALL_LOG_RETENTION_DAYS', 30)
+    cutoff = timezone.now() - timedelta(days=days_to_keep)
+    count, _ = LLMCallLog.objects.filter(created_at__lt=cutoff).delete()
+    logger.info(f"Cleaned up {count} LLMCallLog records older than {days_to_keep} days")
+    return {'deleted': count, 'retention_days': days_to_keep}
 
 
 @shared_task
@@ -20771,7 +20825,7 @@ def generate_self_blog_deliberation_task(self, tone='enthusiastic', word_count=1
 # SESSION 544: AUTONOMOUS REASONING ENGINE - THE THINKING LOOP
 # =============================================================================
 
-@shared_task(bind=True)
+@shared_task(bind=True, soft_time_limit=1800, time_limit=1860)
 def run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_hours=24):
     """
     The Autonomous Reasoning Engine's thinking loop.
@@ -21088,6 +21142,17 @@ def run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_hours=2
             'concerns_verified': verification_result
         }
 
+    except SoftTimeLimitExceeded:
+        logger.error("[THINKING] run_autonomous_thinking_cycle timed out (soft_time_limit=1800s)")
+        try:
+            if 'thought' in locals() and thought:
+                thought.execution_status = 'failed'
+                thought.reflection = "Celery soft_time_limit exceeded"
+                thought.completed_at = timezone.now()
+                thought.save()
+        except Exception:
+            pass
+        return {'success': False, 'error': 'Celery soft_time_limit exceeded', 'timed_out': True}
     except Exception as e:
         logger.error(f"🧠 [THINKING] Cycle failed: {e}", exc_info=True)
         # Session 782: Mark thought as failed if it was created
@@ -21243,7 +21308,7 @@ def batch_extract_artifacts(hours_back: int = 24, limit: int = 50):
 # ============================================================================
 
 
-@shared_task
+@shared_task(soft_time_limit=600, time_limit=660)
 def execute_approved_artifacts(limit: int = 10):
     """
     Process all approved artifacts waiting for execution.
@@ -21272,6 +21337,9 @@ def execute_approved_artifacts(limit: int = 10):
             **results
         }
 
+    except SoftTimeLimitExceeded:
+        logger.error("[EXECUTION BATCH] execute_approved_artifacts timed out (soft_time_limit=600s)")
+        return {'success': False, 'error': 'Celery soft_time_limit exceeded', 'timed_out': True}
     except Exception as e:
         logger.error(f"⚡ [EXECUTION BATCH] Failed: {e}", exc_info=True)
         return {
@@ -21340,7 +21408,7 @@ def generate_weekly_synthesis(days_back: int = 7):
         }
 
 
-@shared_task
+@shared_task(soft_time_limit=600, time_limit=660)
 def generate_pending_reviews():
     """
     Session 556 - Option C: Auto-generate review documents for pending artifacts.
@@ -21457,6 +21525,9 @@ def generate_pending_reviews():
             **results
         }
 
+    except SoftTimeLimitExceeded:
+        logger.error("[AUTO-REVIEW] generate_pending_reviews timed out (soft_time_limit=600s)")
+        return {'success': False, 'error': 'Celery soft_time_limit exceeded', 'timed_out': True}
     except Exception as e:
         logger.error(f"📋 [AUTO-REVIEW] Failed: {e}", exc_info=True)
         return {
@@ -25596,7 +25667,7 @@ def enrich_boardroom_ml_predictions():
 # Session 766: HiveMind Execution Pipeline
 # =============================================================================
 
-@shared_task(name='core.tasks.process_hivemind_sessions')
+@shared_task(name='core.tasks.process_hivemind_sessions', soft_time_limit=1800, time_limit=1860)
 def process_hivemind_sessions(limit: int = 3):
     """
     Session 766: Process completed HiveMind sessions via Orchestration.
@@ -25631,6 +25702,9 @@ def process_hivemind_sessions(limit: int = 3):
             'failed': fail_count,
         }
 
+    except SoftTimeLimitExceeded:
+        logger.error("[HIVEMIND] process_hivemind_sessions timed out (soft_time_limit=1800s)")
+        return {'status': 'failed', 'error': 'Celery soft_time_limit exceeded', 'timed_out': True}
     except Exception as e:
         logger.error(f"❌ [HIVEMIND] Processing failed: {e}")
         return {
@@ -27358,7 +27432,7 @@ def check_orchestration_auto_approvals():
 # ==================== SESSION 766: DREAM EXECUTION PIPELINE TASKS ====================
 
 
-@shared_task
+@shared_task(soft_time_limit=1800, time_limit=1860)
 def execute_approved_dreams_via_orchestration(limit: int = 10):
     """
     Session 766: Execute approved dreams through the Orchestration Layer.
@@ -27399,6 +27473,9 @@ def execute_approved_dreams_via_orchestration(limit: int = 10):
             'results': results,
         }
 
+    except SoftTimeLimitExceeded:
+        logger.error("[DREAM ORCHESTRATION] execute_approved_dreams_via_orchestration timed out (soft_time_limit=1800s)")
+        return {'success': False, 'error': 'Celery soft_time_limit exceeded', 'timed_out': True}
     except Exception as e:
         logger.error(f"💭 [DREAM ORCHESTRATION] Failed to process dreams: {e}", exc_info=True)
         return {'success': False, 'error': str(e)}
@@ -32531,7 +32608,7 @@ Recommendation:
 # =============================================================================
 
 
-@shared_task(bind=True, max_retries=1, default_retry_delay=60)
+@shared_task(bind=True, max_retries=1, default_retry_delay=60, soft_time_limit=1800, time_limit=1860)
 def run_triggered_conversation(
     self,
     topic: str,
@@ -32629,6 +32706,9 @@ def run_triggered_conversation(
             'hive_session_id': hive_session_id,  # Session 902
         }
 
+    except SoftTimeLimitExceeded:
+        logger.error("[TRIGGERED-CONVO] run_triggered_conversation timed out (soft_time_limit=1800s)")
+        return {'success': False, 'topic': topic, 'error': 'Celery soft_time_limit exceeded', 'timed_out': True}
     except Exception as e:
         logger.error(f"❌ [TRIGGERED-CONVO] Failed: {e}")
 
@@ -35232,7 +35312,7 @@ def generate_step_content(self, step_id):
 # Session 1000: Intelligence Desks — run all 4 desk coordinators daily
 # =============================================================================
 
-@shared_task(name='core.tasks.run_all_desks_intelligence')
+@shared_task(name='core.tasks.run_all_desks_intelligence', soft_time_limit=1800, time_limit=1860)
 def run_all_desks_intelligence():
     """
     Session 1000: Run all 4 intelligence desk coordinators sequentially.
@@ -35253,6 +35333,15 @@ def run_all_desks_intelligence():
 
     CACHE_TTL = 6 * 3600  # 6 hours
 
+    try:
+        return _run_desks_inner(_time, traceback, cache, gc, CACHE_TTL)
+    except SoftTimeLimitExceeded:
+        logger.error("[SESSION 1000] run_all_desks_intelligence timed out (soft_time_limit=1800s)")
+        return {'desks_completed': 0, 'desks_failed': 0, 'timing': {},
+                'error': 'Celery soft_time_limit exceeded', 'timed_out': True}
+
+
+def _run_desks_inner(_time, traceback, cache, gc, CACHE_TTL):
     desks_completed = 0
     desks_failed = 0
     timing = {}
