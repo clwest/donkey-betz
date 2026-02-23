@@ -22323,7 +22323,7 @@ def market_movement_alerts():
 # SESSION 561: LINE MOVEMENT CHARTS - ODDS SNAPSHOT TASK
 # =============================================================================
 
-@shared_task
+@shared_task(ignore_result=True)
 def snapshot_odds_for_line_movement():
     """
     Session 561: Capture current odds for line movement tracking.
