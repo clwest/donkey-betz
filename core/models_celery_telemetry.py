@@ -37,6 +37,9 @@ class CeleryTaskEvent(models.Model):
     started_at = models.DateTimeField(default=timezone.now, db_index=True)
     finished_at = models.DateTimeField(null=True, blank=True)
     duration_seconds = models.FloatField(null=True, blank=True)
+    rss_mb_start = models.FloatField(null=True, blank=True, help_text='RSS in MB when task began')
+    rss_mb_end = models.FloatField(null=True, blank=True, help_text='RSS in MB when task finished')
+    rss_delta_mb = models.FloatField(null=True, blank=True, help_text='RSS growth during task (end - start)')
     error_type = models.CharField(max_length=255, blank=True, default='')
     error_message = models.TextField(blank=True, default='')
 

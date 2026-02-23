@@ -766,7 +766,7 @@ def cleanup_expired_boardroom_items(days_old: int = 7):
         raise
 
 
-@shared_task
+@shared_task(ignore_result=True)
 def auto_process_extracted_artifacts(
     stale_days: int = 7,
     archive_days: int = 14,
@@ -3702,7 +3702,7 @@ def poll_pending_3d_models():
     }
 
 
-@shared_task
+@shared_task(ignore_result=True)
 def record_all_user_style_evolution():
     """
     Daily task to record style evolution snapshots for all active users.
@@ -7535,7 +7535,7 @@ def _extract_hivemind_knowledge(session, completed_contributions):
 # Session 244: Agent Conversations (Inter-Agent Chat)
 # =============================================================================
 
-@shared_task(bind=True, soft_time_limit=1800, time_limit=1860)
+@shared_task(bind=True, soft_time_limit=1800, time_limit=1860, ignore_result=True)
 def run_agent_conversation(self, max_conversations: int = 3, max_messages: int = 6):
     """
     Generate autonomous conversations between agents.
@@ -8524,7 +8524,7 @@ Operating Constraints:
 # ==================== SESSION 360: MULTI-AGENT CONVERSATIONS ====================
 
 
-@shared_task(bind=True, max_retries=2, soft_time_limit=1800, time_limit=1860)
+@shared_task(bind=True, max_retries=2, soft_time_limit=1800, time_limit=1860, ignore_result=True)
 def run_multi_agent_conversation(self, max_conversations: int = 2, participants_per_conversation: int = 4, max_rounds: int = 3):
     """
     Session 360: Generate panel-style conversations with 3-5 agents.
@@ -20825,7 +20825,7 @@ def generate_self_blog_deliberation_task(self, tone='enthusiastic', word_count=1
 # SESSION 544: AUTONOMOUS REASONING ENGINE - THE THINKING LOOP
 # =============================================================================
 
-@shared_task(bind=True, soft_time_limit=1800, time_limit=1860)
+@shared_task(bind=True, soft_time_limit=1800, time_limit=1860, ignore_result=True)
 def run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_hours=24):
     """
     The Autonomous Reasoning Engine's thinking loop.
@@ -21308,7 +21308,7 @@ def batch_extract_artifacts(hours_back: int = 24, limit: int = 50):
 # ============================================================================
 
 
-@shared_task(soft_time_limit=600, time_limit=660)
+@shared_task(soft_time_limit=600, time_limit=660, ignore_result=True)
 def execute_approved_artifacts(limit: int = 10):
     """
     Process all approved artifacts waiting for execution.
@@ -23383,7 +23383,7 @@ def report_pending_review_metrics():
 
 # ==================== SESSION 658: AI DECISION PROMOTER ====================
 
-@shared_task
+@shared_task(ignore_result=True)
 def ai_promote_decisions(batch_size: int = 50):
     """
     Session 658: AI-powered decision auto-promotion using GPT-5-mini.
@@ -24925,7 +24925,7 @@ def _send_implementation_discord(results: dict):
 # SESSION 619: AUTOMATIC GATE PROCESSING AND PILOT DEPLOYMENT
 # =============================================================================
 
-@shared_task(name='core.tasks.process_gates_and_deploy_pilots')
+@shared_task(name='core.tasks.process_gates_and_deploy_pilots', ignore_result=True)
 def process_gates_and_deploy_pilots(batch_size: int = 10, risk_levels: list = None):
     """
     Session 619: Automatically process MEDIUM/HIGH risk gates and deploy pilots.
@@ -32608,7 +32608,7 @@ Recommendation:
 # =============================================================================
 
 
-@shared_task(bind=True, max_retries=1, default_retry_delay=60, soft_time_limit=1800, time_limit=1860)
+@shared_task(bind=True, max_retries=1, default_retry_delay=60, soft_time_limit=1800, time_limit=1860, ignore_result=True)
 def run_triggered_conversation(
     self,
     topic: str,
@@ -34607,7 +34607,7 @@ def _extract_agent_content(result) -> str:
     return best
 
 
-@shared_task(bind=True, queue='default', max_retries=2)
+@shared_task(bind=True, queue='default', max_retries=2, ignore_result=True)
 def generate_initiative_stage_document(self, initiative_id: str, stage_num: int):
     """
     Session 905: Generate a document for a specific initiative stage.
