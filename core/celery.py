@@ -23,7 +23,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/15'),  # Every 15 minutes
         'options': {
             'expires': 900,  # Expire after 15 minutes if not executed
-            'queue': 'default',  # Session 1004: I/O-bound scraping, not memory-bound
         }
     },
     'refresh-ai-opportunities': {
@@ -31,7 +30,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/30'),  # Every 30 minutes
         'options': {
             'expires': 1800,
-            'queue': 'default',  # Session 1004: I/O-bound, not memory-bound
         }
     },
     'sync-revenue-metrics': {
@@ -39,7 +37,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0),  # Every hour
         'options': {
             'expires': 3600,
-            'queue': 'default',  # Session 1000C: light DB queries
         }
     },
     'sync-shared-memory': {
@@ -47,7 +44,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/10'),  # Every 10 minutes
         'options': {
             'expires': 600,
-            'queue': 'long_running',  # Session 1000C: matches intelligence.* route
         }
     },
     'clean-stale-data': {
@@ -55,7 +51,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=2, minute=0),  # Daily at 2 AM
         'options': {
             'expires': 7200,
-            'queue': 'default',  # Session 1000C: light DB cleanup
         }
     },
     'warm-up-spiders': {
@@ -63,7 +58,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours
         'options': {
             'expires': 14400,
-            'queue': 'default',  # Session 1004: I/O-bound initialization, not memory-bound
         }
     },
     # ML Model Training & Prediction Tasks (Session 24: Updated retraining pipeline)
@@ -87,7 +81,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(day_of_week=0, hour=10, minute=0),  # Sunday 10 AM
         'options': {
             'expires': 3600,
-            'queue': 'content',  # Session 1000C: content generation
         }
     },
     'cleanup-old-model-files': {
@@ -95,7 +88,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(day_of_week=1, hour=1, minute=0),  # Monday 1 AM
         'options': {
             'expires': 3600,
-            'queue': 'ml',  # Session 1000C: matches ml.* route
         }
     },
     # Session 616: Clean up old spider item hashes
@@ -104,7 +96,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=3, minute=30),  # Daily at 3:30 AM
         'options': {
             'expires': 3600,
-            'queue': 'default',  # Session 1000C: light DB cleanup
         }
     },
     # Session 687: Human Interface attention items from system events
@@ -113,7 +104,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/15'),  # Every 15 minutes
         'options': {
             'expires': 900,
-            'queue': 'default',  # Session 1000C: DB queries only
         }
     },
     # Session 766: Human Attention lifecycle (auto-expire, auto-approve, escalation)
@@ -122,7 +112,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/10'),  # Every 10 minutes
         'options': {
             'expires': 600,
-            'queue': 'default',  # Session 1000C: DB lifecycle updates
         }
     },
     # Session 1031: Surface top dreams as boardroom attention items
@@ -131,7 +120,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=9, minute=0),  # Daily at 9 AM
         'options': {
             'expires': 3600,
-            'queue': 'default',  # Lightweight DB queries only
         }
     },
     # Session 954: Boardroom ML predictions - enrich pending items with content-aware predictions
@@ -140,7 +128,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/15'),  # Every 15 minutes
         'options': {
             'expires': 900,
-            'queue': 'ml',  # Session 1000C: calls OpenAI embedding API
         }
     },
     # Session 766: HiveMind synthesis to Orchestration
@@ -149,7 +136,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/30'),  # Every 30 minutes
         'options': {
             'expires': 1800,
-            'queue': 'long_running',  # Session 1000C: triggers agent workflows
         }
     },
     # Session 766: High-scoring opportunities to Orchestration
@@ -158,7 +144,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/20'),  # Every 20 minutes
         'options': {
             'expires': 1200,
-            'queue': 'long_running',  # Session 1000C: triggers execution pipelines
         }
     },
     # Session 766: Spider Action Pipeline - convert spider data to actions
@@ -167,7 +152,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/30'),  # Every 30 minutes
         'options': {
             'expires': 1800,
-            'queue': 'long_running',  # Session 1000C: triggers agent pipelines
         }
     },
     # Session 766: Gate Progression Pipeline - auto-progress gates and start pilots
@@ -176,7 +160,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/15'),  # Every 15 minutes
         'options': {
             'expires': 900,
-            'queue': 'default',  # Session 1000C: DB updates only
         }
     },
     # Session 766: Content Idea Pipeline - mine Dreams/Conversations for content ideas
@@ -185,7 +168,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour='*/6'),  # Every 6 hours
         'options': {
             'expires': 21600,
-            'queue': 'content',  # Session 1000C: content generation
         }
     },
     # Session 794: Self-Blog Generation - was in settings.py but overwritten by celery.py
@@ -197,7 +179,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0, hour='*/6'),  # Every 6 hours at :00
         'options': {
             'expires': 21600,  # 6 hours
-            'queue': 'content',  # Session 1000C: matches content route
         }
     },
     # Session 1003: Re-evaluate enhanced blogs (EditorAgent reviewed → quality gate)
@@ -206,7 +187,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour='*/3', minute=30),
         'options': {
             'expires': 10800,
-            'queue': 'content',
         },
     },
     # Session 1008: Score unscored legacy blogs so they can enter the publish pipeline
@@ -215,7 +195,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour='*/4', minute=15),
         'options': {
             'expires': 14400,
-            'queue': 'content',
         },
     },
     # Session 1003: Auto-publish approved blogs
@@ -224,7 +203,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour='*/2', minute=0),
         'options': {
             'expires': 7200,
-            'queue': 'content',
         },
     },
     # Session 1033: Auto-enhance blogs stuck in needs_enhancement
@@ -233,7 +211,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour='*/4', minute=45),  # Every 4h at :45
         'options': {
             'expires': 14400,
-            'queue': 'content',
         },
     },
     # Session 1033: Score deliverables with default quality scores
@@ -242,7 +219,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour='*/6', minute=15),  # Every 6h at :15
         'options': {
             'expires': 21600,
-            'queue': 'default',
         },
     },
     # Session 1007: Aggregate tool call stats daily for dashboard queries
@@ -251,7 +227,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=2, minute=30),  # Daily at 2:30 AM
         'options': {
             'expires': 7200,
-            'queue': 'default',
         },
     },
     # Sports Prediction Evaluation & Bet Settlement
@@ -327,7 +302,6 @@ app.conf.beat_schedule = {
         'args': (30,),  # Days before expiring
         'options': {
             'expires': 7200,  # Session 1000C: was missing expires entirely
-            'queue': 'long_running',  # Session 1000C: matches intelligence.* route
         }
     },
     # Session 727: Missing Intelligence Tasks (found in deep system audit)
@@ -373,7 +347,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/5'),  # Every 5 minutes
         'options': {
             'expires': 300,  # Expire after 5 minutes if not executed
-            'queue': 'default',  # Session 1000C: light DB processing
         }
     },
     # Session 707: Core Spider Data Processing (core.models_unified_system.SpiderData)
@@ -383,7 +356,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/2'),  # Every 2 minutes (faster to catch up backlog)
         'options': {
             'expires': 120,  # Expire after 2 minutes if not executed
-            'queue': 'default',  # Session 1000C: light DB processing
         }
     },
     # Session 139: Background 3D Model Status Polling
@@ -392,7 +364,6 @@ app.conf.beat_schedule = {
         'schedule': 60.0,  # Every 60 seconds (was 30s, throttled Session 1056)
         'options': {
             'expires': 55,  # Expire before next run
-            'queue': 'default',  # Session 1000C: light API polling
         }
     },
     # Session 207: Spider Network Execution (Updated Session 293: 15 min interval)
@@ -401,7 +372,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/15'),  # Every 15 minutes (was 30)
         'options': {
             'expires': 900,  # Expire after 15 minutes
-            'queue': 'long_running',  # Session 1000C: matches long_running route
         }
     },
     # Session 293: Spider Embedding Backfill
@@ -411,7 +381,6 @@ app.conf.beat_schedule = {
         'kwargs': {'batch_size': 500},  # Session 604: Increased from 200 to 500
         'options': {
             'expires': 600,  # Expire after 10 minutes
-            'queue': 'ml',  # Session 1000C: calls OpenAI embedding API
         }
     },
     # Session 490: Memory Embedding Backfill
@@ -420,7 +389,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/30'),  # Every 30 minutes
         'options': {
             'expires': 1800,  # Expire after 30 minutes
-            'queue': 'ml',  # Session 1000C: calls OpenAI embedding API
         }
     },
     # Session 729: Conversation Memory Embedding Backfill
@@ -429,7 +397,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/30'),  # Every 30 minutes
         'options': {
             'expires': 1800,  # Expire after 30 minutes
-            'queue': 'ml',  # Session 1000C: calls OpenAI embedding API
         }
     },
     # Session 915: Stage Document Backfill - Generate missing stage documents
@@ -440,7 +407,6 @@ app.conf.beat_schedule = {
         'kwargs': {'stage_num': 1, 'limit': 200},
         'options': {
             'expires': 900,  # Expire after 15 minutes
-            'queue': 'default',
         }
     },
     # Session 210: Style Evolution Tracking
@@ -1581,7 +1547,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours at :00
         'options': {
             'expires': 14400,  # 4 hours
-            'queue': 'long_running',
         }
     },
 
@@ -1591,7 +1556,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=30, hour='*/6'),  # Every 6 hours at :30
         'options': {
             'expires': 21600,  # 6 hours
-            'queue': 'long_running',
         }
     },
 
@@ -1601,7 +1565,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0, hour='9,12,16', day_of_week='1-5'),  # Market hours M-F
         'options': {
             'expires': 3600,  # 1 hour
-            'queue': 'long_running',
         }
     },
 
@@ -1611,7 +1574,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=15, hour='*/4'),  # Every 4 hours at :15
         'options': {
             'expires': 14400,  # 4 hours
-            'queue': 'long_running',
         }
     },
 
@@ -1623,7 +1585,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=45, hour='*/6'),  # Every 6 hours at :45
         'options': {
             'expires': 21600,  # 6 hours
-            'queue': 'long_running',
         }
     },
 
@@ -1633,7 +1594,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0, hour=9, day_of_week=1),  # Monday 9 AM
         'options': {
             'expires': 86400,  # 24 hours
-            'queue': 'long_running',
         }
     },
 
@@ -1707,7 +1667,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour='*/4', minute=20),  # Every 4 hours at :20
         'options': {
             'expires': 14400,  # 4 hours
-            'queue': 'long_running',  # Uses OpenAI API, may take time
         },
         'kwargs': {
             'batch_size': 50,  # Process 50 decisions per run
@@ -1721,7 +1680,6 @@ app.conf.beat_schedule = {
         'schedule': 300.0,  # Every 5 minutes (was 60s, throttled Session 1056)
         'options': {
             'expires': 290,  # Expire before next run
-            'queue': 'broadcast',  # Session 1004: Moved off long_running (was blocking desks)
         }
     },
     # Session 702: LUNGS Service - Resource & Capacity Management
@@ -1731,7 +1689,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/15'),  # Every 15 minutes
         'options': {
             'expires': 840,  # 14 minutes
-            'queue': 'default',
         }
     },
     'lungs-daily-forecast': {
@@ -1739,7 +1696,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=8, minute=0),  # Daily at 8 AM
         'options': {
             'expires': 3600,
-            'queue': 'default',
         }
     },
     'lungs-daily-reset': {
@@ -1747,7 +1703,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=0, minute=1),  # Daily at 00:01
         'options': {
             'expires': 3600,
-            'queue': 'default',
         }
     },
     # Session 703: CIRCULATORY SYSTEM - Data Flow Monitoring
@@ -1757,7 +1712,6 @@ app.conf.beat_schedule = {
         'schedule': 120.0,  # Every 2 minutes (was 30s, throttled Session 1056)
         'options': {
             'expires': 110,  # Expire before next check
-            'queue': 'broadcast',  # High-frequency status task
         }
     },
     # Session 704: SPINE - Central API Router
@@ -1767,7 +1721,6 @@ app.conf.beat_schedule = {
         'schedule': 300.0,  # Every 5 minutes (was 60s, throttled Session 1056)
         'options': {
             'expires': 290,  # Expire before next check
-            'queue': 'broadcast',  # Status monitoring task
         }
     },
     # Session 705: IMMUNE SYSTEM - Security & Threat Detection
@@ -1777,7 +1730,6 @@ app.conf.beat_schedule = {
         'schedule': 180.0,  # Every 3 minutes (was 45s, throttled Session 1056)
         'options': {
             'expires': 170,  # Expire before next scan
-            'queue': 'broadcast',  # Status monitoring task
         }
     },
     # Session 706: DIGESTIVE SYSTEM - Data Ingestion & Processing
@@ -1787,7 +1739,6 @@ app.conf.beat_schedule = {
         'schedule': 300.0,  # Every 5 minutes (was 60s, throttled Session 1056)
         'options': {
             'expires': 290,  # Expire before next check
-            'queue': 'broadcast',  # Status monitoring task
         }
     },
     # Session 707: MUSCULAR SYSTEM - Agent Work Execution
@@ -1797,7 +1748,6 @@ app.conf.beat_schedule = {
         'schedule': 300.0,  # Every 5 minutes (was 90s, throttled Session 1056)
         'options': {
             'expires': 290,  # Expire before next check
-            'queue': 'broadcast',  # Status monitoring task
         }
     },
     # Session 721: BRAIN SYSTEM - Cognitive Processing & Reasoning
@@ -1807,7 +1757,6 @@ app.conf.beat_schedule = {
         'schedule': 300.0,  # Every 5 minutes (was 60s, throttled Session 1056)
         'options': {
             'expires': 290,  # Expire before next check
-            'queue': 'broadcast',  # Status monitoring task
         }
     },
     # Session 723: SKIN SYSTEM - Project Workspace Health
@@ -1817,7 +1766,6 @@ app.conf.beat_schedule = {
         'schedule': 300.0,  # Every 5 minutes (was 90s, throttled Session 1056)
         'options': {
             'expires': 290,  # Expire before next check
-            'queue': 'broadcast',  # Status monitoring task
         }
     },
     # Session 724: NERVOUS SYSTEM - WebSocket Communication Health
@@ -1827,7 +1775,6 @@ app.conf.beat_schedule = {
         'schedule': 180.0,  # Every 3 minutes (was 60s, throttled Session 1056)
         'options': {
             'expires': 170,  # Expire before next check
-            'queue': 'broadcast',  # Session 1004: Moved off long_running (was blocking desks)
         }
     },
     # Session 711: BODY COORDINATOR - Autonomic Nervous System
@@ -1837,7 +1784,6 @@ app.conf.beat_schedule = {
         'schedule': 60.0,  # Every 60 seconds
         'options': {
             'expires': 55,  # Expire before next check
-            'queue': 'broadcast',  # Status monitoring task
         }
     },
     # ==========================================================================
@@ -1849,7 +1795,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours
         'options': {
             'expires': 14400,  # 4 hours
-            'queue': 'long_running',
         }
     },
     'run-blockchain-monitoring-agents': {
@@ -1857,7 +1802,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=30, hour='*/6'),  # Every 6 hours at :30
         'options': {
             'expires': 21600,  # 6 hours
-            'queue': 'long_running',
         }
     },
     # Session 1007: Removed duplicate 'run-business-strategy-agents' (overwritten by Session 807 entry).
@@ -1870,7 +1814,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=10, hour='*/3'),  # Every 3 hours at :10
         'options': {
             'expires': 10800,  # 3 hours
-            'queue': 'long_running',
         }
     },
     'run-strategy-marketing-agents': {
@@ -1878,7 +1821,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=20, hour='*/4'),  # Every 4 hours at :20
         'options': {
             'expires': 14400,  # 4 hours
-            'queue': 'long_running',
         }
     },
     # Session 1007: Removed duplicate 'run-research-analysis-agents' (overwritten by Session 807 entry).
@@ -1887,7 +1829,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=40, hour='*/3'),  # Every 3 hours at :40
         'options': {
             'expires': 10800,  # 3 hours
-            'queue': 'long_running',
         }
     },
     'run-prediction-market-agents': {
@@ -1895,7 +1836,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=50, hour='*/2'),  # Every 2 hours at :50
         'options': {
             'expires': 7200,  # 2 hours
-            'queue': 'sports',
         }
     },
     'run-narrative-culture-agents': {
@@ -1903,7 +1843,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=15, hour='*/6'),  # Every 6 hours at :15
         'options': {
             'expires': 21600,  # 6 hours
-            'queue': 'long_running',
         }
     },
     'run-development-tech-agents': {
@@ -1911,7 +1850,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=25, hour='*/4'),  # Every 4 hours at :25
         'options': {
             'expires': 14400,  # 4 hours
-            'queue': 'long_running',
         }
     },
     'run-executive-leadership-agents': {
@@ -1919,7 +1857,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=35, hour='*/6'),  # Every 6 hours at :35
         'options': {
             'expires': 21600,  # 6 hours
-            'queue': 'long_running',
         }
     },
     'run-podcast-debate-agents': {
@@ -1927,7 +1864,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=45, hour='*/8'),  # Every 8 hours at :45
         'options': {
             'expires': 28800,  # 8 hours
-            'queue': 'long_running',
         }
     },
     # Session 1007: Removed duplicate 'run-content-studio-agents' (overwritten by Session 807 entry).
@@ -1938,7 +1874,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours at :00
         'options': {
             'expires': 14400,  # 4 hours
-            'queue': 'agents',
         }
     },
     'run-quality-audit-agents': {
@@ -1946,7 +1881,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=15, hour='*/4'),  # Every 4 hours at :15
         'options': {
             'expires': 14400,  # 4 hours
-            'queue': 'agents',
         }
     },
     'run-specialty-agents': {
@@ -1954,7 +1888,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=30, hour='*/8'),  # Every 8 hours at :30
         'options': {
             'expires': 28800,  # 8 hours
-            'queue': 'long_running',
         }
     },
     # =========================================================================
@@ -1965,7 +1898,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(day_of_week=0, hour=6, minute=0),  # Weekly on Sunday at 6 AM
         'options': {
             'expires': 21600,  # 6 hours
-            'queue': 'long_running',
         }
     },
     # Session 743: Content Diversity Orchestrator
@@ -1974,7 +1906,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour='6,18', minute=0),  # Twice daily at 6 AM and 6 PM
         'options': {
             'expires': 7200,  # 2 hours
-            'queue': 'content',
         }
     },
     # Session 744: Celery Health Monitoring (Phase 1 Foundation)
@@ -1983,7 +1914,6 @@ app.conf.beat_schedule = {
         'schedule': 300.0,  # Every 5 minutes (was 120s, throttled Session 1056)
         'options': {
             'expires': 290,  # Expire before next run
-            'queue': 'default',  # Session 1000C: was 'celery' (dead queue, no worker consumes it)
         }
     },
     # ==========================================================================
@@ -1995,7 +1925,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/5'),  # Every 5 minutes
         'options': {
             'expires': 300,  # 5 minutes
-            'queue': 'default',  # Session 1000C: light DB timeout checks
         }
     },
     # Check for auto-approvals on expired approval gates
@@ -2004,7 +1933,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/5'),  # Every 5 minutes
         'options': {
             'expires': 300,  # 5 minutes
-            'queue': 'default',  # Session 1000C: light DB checks
         }
     },
     # Session 766: Execute approved dreams through orchestration layer
@@ -2013,7 +1941,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/10'),  # Every 10 minutes
         'options': {
             'expires': 600,  # 10 minutes
-            'queue': 'long_running',  # Session 1000C: triggers full agent execution
         }
     },
     # ==========================================================================
@@ -2025,7 +1952,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0, hour='*/6'),  # Every 6 hours
         'options': {
             'expires': 3600,
-            'queue': 'long_running',  # Agent execution may take time
         }
     },
     # Daily summary at midnight
@@ -2034,7 +1960,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0, hour=0),  # Daily at midnight
         'options': {
             'expires': 3600,
-            'queue': 'default',
         }
     },
     # Research task every 8 hours (3x daily)
@@ -2043,7 +1968,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=30, hour='*/8'),  # Every 8 hours at :30
         'options': {
             'expires': 3600,
-            'queue': 'long_running',
         }
     },
     # Content generation every 12 hours (2x daily)
@@ -2052,7 +1976,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0, hour='6,18'),  # 6 AM and 6 PM
         'options': {
             'expires': 3600,
-            'queue': 'long_running',
         }
     },
     # ==========================================================================
@@ -2065,136 +1988,136 @@ app.conf.beat_schedule = {
         'task': 'core.tasks.agent_category_rotation',
         'schedule': crontab(minute=0, hour='*/6'),
         'args': ('research',),
-        'options': {'expires': 7200, 'queue': 'long_running'}
+        'options': {'expires': 7200}
     },
     # Strategy agents - Daily at 7 AM
     'agent-category-strategy': {
         'task': 'core.tasks.agent_category_rotation',
         'schedule': crontab(minute=0, hour=7),
         'args': ('strategy',),
-        'options': {'expires': 7200, 'queue': 'long_running'}
+        'options': {'expires': 7200}
     },
     # Content agents - Every 8 hours at :15
     'agent-category-content': {
         'task': 'core.tasks.agent_category_rotation',
         'schedule': crontab(minute=15, hour='*/8'),
         'args': ('content',),
-        'options': {'expires': 7200, 'queue': 'long_running'}
+        'options': {'expires': 7200}
     },
     # Financial agents - Every 4 hours (market hours focus)
     'agent-category-financial': {
         'task': 'core.tasks.agent_category_rotation',
         'schedule': crontab(minute=30, hour='*/4'),
         'args': ('financial',),
-        'options': {'expires': 7200, 'queue': 'long_running'}
+        'options': {'expires': 7200}
     },
     # Predictions agents - Every 6 hours at :45
     'agent-category-predictions': {
         'task': 'core.tasks.agent_category_rotation',
         'schedule': crontab(minute=45, hour='*/6'),
         'args': ('predictions',),
-        'options': {'expires': 7200, 'queue': 'long_running'}
+        'options': {'expires': 7200}
     },
     # Blockchain agents - Every 4 hours at :20
     'agent-category-blockchain': {
         'task': 'core.tasks.agent_category_rotation',
         'schedule': crontab(minute=20, hour='*/4'),
         'args': ('blockchain',),
-        'options': {'expires': 7200, 'queue': 'long_running'}
+        'options': {'expires': 7200}
     },
     # Narrative agents - Every 8 hours at :40
     'agent-category-narrative': {
         'task': 'core.tasks.agent_category_rotation',
         'schedule': crontab(minute=40, hour='*/8'),
         'args': ('narrative',),
-        'options': {'expires': 7200, 'queue': 'long_running'}
+        'options': {'expires': 7200}
     },
     # Podcast agents - Every 12 hours at :00
     'agent-category-podcast': {
         'task': 'core.tasks.agent_category_rotation',
         'schedule': crontab(minute=0, hour='5,17'),
         'args': ('podcast',),
-        'options': {'expires': 7200, 'queue': 'long_running'}
+        'options': {'expires': 7200}
     },
     # Development agents - Every 8 hours at :50
     'agent-category-development': {
         'task': 'core.tasks.agent_category_rotation',
         'schedule': crontab(minute=50, hour='*/8'),
         'args': ('development',),
-        'options': {'expires': 7200, 'queue': 'long_running'}
+        'options': {'expires': 7200}
     },
     # Media agents - Every 12 hours at :10
     'agent-category-media': {
         'task': 'core.tasks.agent_category_rotation',
         'schedule': crontab(minute=10, hour='8,20'),
         'args': ('media',),
-        'options': {'expires': 7200, 'queue': 'long_running'}
+        'options': {'expires': 7200}
     },
     # Executive agents - Daily at 8 AM
     'agent-category-executive': {
         'task': 'core.tasks.agent_category_rotation',
         'schedule': crontab(minute=0, hour=8),
         'args': ('executive',),
-        'options': {'expires': 7200, 'queue': 'long_running'}
+        'options': {'expires': 7200}
     },
     # Coordination agents - Every 6 hours at :25
     'agent-category-coordination': {
         'task': 'core.tasks.agent_category_rotation',
         'schedule': crontab(minute=25, hour='*/6'),
         'args': ('coordination',),
-        'options': {'expires': 7200, 'queue': 'long_running'}
+        'options': {'expires': 7200}
     },
     # System agents - Every 4 hours at :05
     'agent-category-system': {
         'task': 'core.tasks.agent_category_rotation',
         'schedule': crontab(minute=5, hour='*/4'),
         'args': ('system',),
-        'options': {'expires': 7200, 'queue': 'long_running'}
+        'options': {'expires': 7200}
     },
     # Security agents - Every 6 hours at :35
     'agent-category-security': {
         'task': 'core.tasks.agent_category_rotation',
         'schedule': crontab(minute=35, hour='*/6'),
         'args': ('security',),
-        'options': {'expires': 7200, 'queue': 'long_running'}
+        'options': {'expires': 7200}
     },
     # Assistant agents - Daily at 9 AM
     'agent-category-assistant': {
         'task': 'core.tasks.agent_category_rotation',
         'schedule': crontab(minute=0, hour=9),
         'args': ('assistant',),
-        'options': {'expires': 7200, 'queue': 'long_running'}
+        'options': {'expires': 7200}
     },
     # Full rotation - Weekly on Sunday at 3 AM (all 74 agents)
     'agent-full-rotation-weekly': {
         'task': 'core.tasks.full_agent_rotation',
         'schedule': crontab(minute=0, hour=3, day_of_week=0),  # Sunday 3 AM
-        'options': {'expires': 14400, 'queue': 'long_running'}
+        'options': {'expires': 14400}
     },
     # Session 807: Agent exercise schedules for weak muscles
     # Research agents - Session 1035: Throttled 2h → 4h to reduce cost
     'run-research-analysis-agents': {
         'task': 'core.tasks.run_research_analysis_agents',
         'schedule': crontab(minute=15, hour='*/4'),  # Every 4 hours at :15
-        'options': {'expires': 14400, 'queue': 'agents'}
+        'options': {'expires': 14400}
     },
     # Content studio agents - Every 4 hours (TopicMinerAgent, ContrarianAgent)
     'run-content-studio-agents': {
         'task': 'core.tasks.run_content_studio_agents',
         'schedule': crontab(minute=30, hour='*/4'),  # Every 4 hours at :30
-        'options': {'expires': 14400, 'queue': 'agents'}
+        'options': {'expires': 14400}
     },
     # Campaign/series agents - Every 6 hours (AISeriesWorkflowAgent, CampaignOrchestratorAgent)
     'run-campaign-series-agents': {
         'task': 'core.tasks.run_campaign_series_agents',
         'schedule': crontab(minute=45, hour='*/6'),  # Every 6 hours at :45
-        'options': {'expires': 21600, 'queue': 'agents'}
+        'options': {'expires': 21600}
     },
     # Business strategy agents - Every 8 hours (CompetitorAnalysisAgent, etc.)
     'run-business-strategy-agents': {
         'task': 'core.tasks.run_business_strategy_agents',
         'schedule': crontab(minute=0, hour='*/8'),  # Every 8 hours at :00
-        'options': {'expires': 28800, 'queue': 'agents'}
+        'options': {'expires': 28800}
     },
 
     # ==================== SESSION 808: ORPHANED TASKS FIX ====================
@@ -2202,19 +2125,19 @@ app.conf.beat_schedule = {
     'sync-workflow-schedules': {
         'task': 'core.tasks.sync_workflow_schedules',
         'schedule': crontab(minute='*/5'),  # Every 5 minutes
-        'options': {'expires': 300, 'queue': 'default'}
+        'options': {'expires': 300}
     },
     # Workflow check fallback - Every minute to catch missed scheduled workflows
     'check-workflow-schedules': {
         'task': 'core.tasks.check_workflow_schedules',
         'schedule': crontab(minute='*'),  # Every minute
-        'options': {'expires': 60, 'queue': 'default'}
+        'options': {'expires': 60}
     },
     # Autonomy engine - Every 30 minutes to run autonomous actions
     'run-autonomy-cycle': {
         'task': 'core.tasks.run_autonomy_cycle',
         'schedule': crontab(minute='*/30'),  # Every 30 minutes
-        'options': {'expires': 1800, 'queue': 'long_running'}
+        'options': {'expires': 1800}
     },
     # Session 1009: Removed phantom 'run-autonomous-content-studio' (autonomous_studio.run_main_loop doesn't exist)
 
@@ -2230,28 +2153,28 @@ app.conf.beat_schedule = {
     'discover-and-import-audits': {
         'task': 'core.tasks.discover_and_import_audits',
         'schedule': crontab(hour=0, minute=0),
-        'options': {'expires': 3600, 'queue': 'long_running'}
+        'options': {'expires': 3600}
     },
     'assign-open-findings-to-agents': {
         'task': 'core.tasks.assign_open_findings_to_agents',
         'schedule': crontab(minute=0, hour='*/2'),
-        'options': {'expires': 7200, 'queue': 'agents'}
+        'options': {'expires': 7200}
     },
     # Session 1026: DISABLED — execution burns $9/day in empty sandbox
     # 'execute-remediation-tasks': {
     #     'task': 'core.tasks.execute_remediation_tasks',
     #     'schedule': crontab(minute=30, hour='*/4'),
-    #     'options': {'expires': 14400, 'queue': 'agents'}
+    #     'options': {'expires': 14400}
     # },
     # 'verify-completed-fixes': {
     #     'task': 'core.tasks.verify_completed_fixes',
     #     'schedule': crontab(minute=0, hour='*/6'),
-    #     'options': {'expires': 21600, 'queue': 'long_running'}
+    #     'options': {'expires': 21600}
     # },
     # 'run-autonomous-remediation-cycle': {
     #     'task': 'core.tasks.run_autonomous_remediation_cycle',
     #     'schedule': crontab(hour=2, minute=0),
-    #     'options': {'expires': 7200, 'queue': 'long_running'}
+    #     'options': {'expires': 7200}
     # },
 
     # ==================== SESSION 823: PERIODIC SYSTEM SELF-AUDIT ====================
@@ -2260,7 +2183,7 @@ app.conf.beat_schedule = {
     'run-system-self-audit': {
         'task': 'core.tasks.run_system_self_audit',
         'schedule': crontab(hour=3, minute=0, day_of_week=0),  # Sundays at 3 AM
-        'options': {'expires': 7200, 'queue': 'long_running'}
+        'options': {'expires': 7200}
     },
 
     # ==================== SESSION 823: METRICS ACTION TRIGGERS ====================
@@ -2269,7 +2192,7 @@ app.conf.beat_schedule = {
     'run-metrics-action-check': {
         'task': 'core.tasks.run_metrics_action_check',
         'schedule': crontab(minute=0),  # Every hour at :00
-        'options': {'expires': 3600, 'queue': 'long_running'}
+        'options': {'expires': 3600}
     },
 
     # ==================== SESSION 856: DIAGNOSTIC PIPELINE ====================
@@ -2283,7 +2206,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/15'),  # Every 15 minutes
         'options': {
             'expires': 900,  # 15 minutes
-            'queue': 'long_running',
         }
     },
 
@@ -2315,7 +2237,6 @@ app.conf.beat_schedule = {
         'kwargs': {'limit': 50, 'auto_approve': True},  # Session 926: 50 per run (was 10)
         'options': {
             'expires': 800,  # Just under 15 minutes
-            'queue': 'long_running',
         }
     },
 
@@ -2325,7 +2246,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/30'),  # Every 30 minutes
         'options': {
             'expires': 1790,  # Just under 30 minutes
-            'queue': 'default',
         }
     },
 
@@ -2360,7 +2280,6 @@ app.conf.beat_schedule = {
         'kwargs': {'max_topics': 3},
         'options': {
             'expires': 3500,
-            'queue': 'long_running',
         }
     },
 
@@ -2469,7 +2388,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0, hour=6),
         'options': {
             'expires': 3600,
-            'queue': 'long_running',
         },
     },
     # Session 1032: Daily cleanup of fuzzy-duplicate conversations
@@ -2478,7 +2396,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=4, minute=30),  # Daily at 4:30 AM
         'options': {
             'expires': 3600,
-            'queue': 'default',  # Lightweight DB queries only
         },
     },
     # Session 1055: Periodic workspace rescan to keep PA context fresh
@@ -2487,7 +2404,6 @@ app.conf.beat_schedule = {
         'schedule': crontab(day_of_week=3, hour=3, minute=45),  # Wednesday 3:45 AM
         'options': {
             'expires': 3600,
-            'queue': 'default',  # File I/O scan, no API calls
         },
     },
 }
