@@ -34652,7 +34652,8 @@ def _extract_agent_content(result) -> str:
     return best
 
 
-@shared_task(bind=True, queue='default', max_retries=2, ignore_result=True)
+@shared_task(bind=True, queue='default', max_retries=1, ignore_result=True,
+             soft_time_limit=600, time_limit=660)
 def generate_initiative_stage_document(self, initiative_id: str, stage_num: int):
     """
     Session 905: Generate a document for a specific initiative stage.
@@ -34938,6 +34939,19 @@ Stage {stage_num} ({config['template']}) should include:
             'initiative_name': initiative.name,
             'drift_checked': True,
         }
+
+    except SoftTimeLimitExceeded:
+        logger.error(
+            f"📝 [STAGE-GEN] ⏰ Stage {stage_num} for '{initiative.name[:50]}' "
+            f"timed out (10min soft limit)"
+        )
+        try:
+            stage.status = 'PENDING'
+            stage.notes = (stage.notes or '') + f"\n[Timeout] Generation exceeded 10 minute limit"
+            stage.save()
+        except Exception:
+            pass
+        return {'success': False, 'error': f'Stage {stage_num} generation timed out (600s)'}
 
     except Exception as e:
         logger.error(f"📝 [STAGE-GEN] ❌ Error generating Stage {stage_num}: {e}")
