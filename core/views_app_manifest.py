@@ -94,6 +94,7 @@ def _fallback_manifest() -> dict:
             'spider_network': True,
             'body_systems': True,
         },
+        'api_dependencies': {},
     }
 
 
@@ -137,6 +138,13 @@ def get_manifest_data(user) -> dict:
     role = _user_role(user)
     routes = _filter_routes(manifest.get('routes', []), role)
 
+    # Filter api_dependencies to only include routes the user can see
+    visible_paths = {r['path'] for r in routes}
+    api_deps = {
+        k: v for k, v in manifest.get('api_dependencies', {}).items()
+        if k in visible_paths
+    }
+
     return {
         'build_sha': manifest.get('build_sha', 'unknown'),
         'build_timestamp': manifest.get('build_timestamp'),
@@ -145,6 +153,7 @@ def get_manifest_data(user) -> dict:
         'routes': routes,
         'studios': manifest.get('studios', {}),
         'capabilities': manifest.get('capabilities', {}),
+        'api_dependencies': api_deps,
         'user_role': role,
         'user_id': user.id,
     }
