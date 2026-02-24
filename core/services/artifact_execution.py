@@ -62,54 +62,34 @@ class ArtifactExecutionService:
 
     def execute_approved_artifacts(self, limit: int = 10) -> Dict[str, Any]:
         """
-        Process all approved artifacts waiting for execution.
+        Fan-out approved artifacts as individual Celery subtasks.
 
-        Returns dict with processing results.
+        Session 1068: Changed from sequential (hitting 660s time limit with 10
+        synchronous agent calls) to fan-out — each artifact gets its own subtask
+        with its own time limit.  The batch task now finishes in <1s.
         """
         from core.models_conversation_artifacts import ExtractedArtifact
 
         # Find approved artifacts without successful executions
-        approved = ExtractedArtifact.objects.filter(
-            status='approved'
-        ).exclude(
-            executions__status='completed'
-        ).order_by('-composite_score')[:limit]
-
-        results = {
-            'processed': 0,
-            'succeeded': 0,
-            'failed': 0,
-            'skipped': 0,
-            'executions': []
-        }
-
-        for artifact in approved:
-            try:
-                execution = self.execute_artifact(artifact)
-                if execution.status == 'completed':
-                    results['succeeded'] += 1
-                else:
-                    results['failed'] += 1
-                results['executions'].append({
-                    'artifact_id': str(artifact.id),
-                    'execution_id': str(execution.id),
-                    'status': execution.status,
-                    'agent': execution.agent_name,
-                })
-            except Exception as e:
-                logger.error(f"Failed to execute artifact {artifact.id}: {e}")
-                results['failed'] += 1
-                results['executions'].append({
-                    'artifact_id': str(artifact.id),
-                    'error': str(e),
-                })
-
-            results['processed'] += 1
-
-        logger.info(
-            f"Artifact execution batch: {results['succeeded']}/{results['processed']} succeeded"
+        approved = list(
+            ExtractedArtifact.objects.filter(
+                status='approved'
+            ).exclude(
+                executions__status='completed'
+            ).order_by('-composite_score')[:limit]
+            .values_list('id', flat=True)
         )
-        return results
+
+        if not approved:
+            logger.info("[EXECUTION BATCH] No approved artifacts pending execution")
+            return {'dispatched': 0}
+
+        from core.tasks import execute_single_artifact
+        for artifact_id in approved:
+            execute_single_artifact.delay(str(artifact_id))
+
+        logger.info(f"[EXECUTION BATCH] Dispatched {len(approved)} artifact subtasks")
+        return {'dispatched': len(approved), 'artifact_ids': [str(a) for a in approved]}
 
     def execute_artifact(self, artifact) -> 'ArtifactExecution':
         """
