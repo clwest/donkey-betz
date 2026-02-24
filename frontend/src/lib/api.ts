@@ -543,6 +543,8 @@ export const decisionsApi = {
   // Session 942: Bulk actions
   bulkPromote: (decisionIds: string[]) => api.post('/boardroom/decisions/bulk-promote/', { decision_ids: decisionIds }),
   bulkReject: (decisionIds: string[]) => api.post('/boardroom/decisions/bulk-reject/', { decision_ids: decisionIds }),
+  // Session 1067: Governance stats for full-page view
+  governanceStats: () => api.get('/boardroom/governance-stats/'),
 }
 
 // Session 710: Body Health Dashboard API
