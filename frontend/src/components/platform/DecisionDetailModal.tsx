@@ -47,9 +47,9 @@ interface Decision {
   payload: Record<string, unknown>
   priority_score: number
   impact_estimate: number
-  ml_prediction: string
+  ml_prediction: string | { prediction?: string; reasoning?: string; predicted_at?: string; similar_items?: unknown[]; approval_probability?: number }
   ml_confidence: number
-  ml_recommendation: string
+  ml_recommendation: string | { prediction?: string; reasoning?: string }
   decision: string
   decision_feedback: string
   decision_confidence: number
@@ -281,7 +281,9 @@ export function DecisionDetailModal({ decisionId, onClose }: DecisionDetailModal
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-gray-400">Recommendation:</span>
                         <span className="text-sm font-medium text-white px-2 py-0.5 bg-primary-500/20 rounded">
-                          {decision.ml_recommendation}
+                          {typeof decision.ml_recommendation === 'string'
+                            ? decision.ml_recommendation
+                            : decision.ml_recommendation.prediction || 'unknown'}
                         </span>
                       </div>
                     )}
@@ -300,7 +302,11 @@ export function DecisionDetailModal({ decisionId, onClose }: DecisionDetailModal
                     {decision.ml_prediction && (
                       <div className="mt-2">
                         <span className="text-sm text-gray-400">Prediction:</span>
-                        <p className="text-sm text-gray-200 mt-1">{decision.ml_prediction}</p>
+                        <p className="text-sm text-gray-200 mt-1">
+                          {typeof decision.ml_prediction === 'string'
+                            ? decision.ml_prediction
+                            : decision.ml_prediction.prediction || decision.ml_prediction.reasoning || 'N/A'}
+                        </p>
                       </div>
                     )}
                   </div>
