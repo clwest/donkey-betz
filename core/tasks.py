@@ -21308,44 +21308,62 @@ def batch_extract_artifacts(hours_back: int = 24, limit: int = 50):
 # ============================================================================
 
 
-@shared_task(soft_time_limit=600, time_limit=660, ignore_result=True)
+@shared_task(soft_time_limit=30, time_limit=60, ignore_result=True)
 def execute_approved_artifacts(limit: int = 10):
     """
-    Process all approved artifacts waiting for execution.
+    Fan-out dispatcher: find approved artifacts and dispatch each as its own subtask.
+
+    Session 1068: Changed from sequential execution (caused TimeLimitExceeded every
+    run — 10 synchronous agent calls in a 660s window) to fan-out pattern.
+    Each artifact now executes in its own ``execute_single_artifact`` subtask.
 
     Run via Celery Beat every 15 minutes.
-
-    Args:
-        limit: Max artifacts to process per batch
-
-    Returns:
-        dict with batch results
     """
     try:
         from core.services.artifact_execution import execution_service
-
         results = execution_service.execute_approved_artifacts(limit=limit)
+        return {'success': True, **results}
+    except Exception as e:
+        logger.error(f"[EXECUTION BATCH] Failed to dispatch: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
 
-        if results['processed'] > 0:
-            logger.info(f"⚡ [EXECUTION BATCH] Processed {results['processed']} artifacts: "
-                       f"{results['succeeded']} succeeded, {results['failed']} failed")
-        else:
-            logger.info("⚡ [EXECUTION BATCH] No approved artifacts pending execution")
 
-        return {
-            'success': True,
-            **results
-        }
+@shared_task(soft_time_limit=300, time_limit=330, ignore_result=True)
+def execute_single_artifact(artifact_id: str):
+    """
+    Session 1068: Execute a single approved artifact via agent routing.
+
+    Has its own 5-minute soft / 5.5-minute hard time limit so one slow agent
+    cannot block the entire batch.
+    """
+    try:
+        from core.services.artifact_execution import execution_service
+        from core.models_conversation_artifacts import ExtractedArtifact
+
+        artifact = ExtractedArtifact.objects.get(id=artifact_id)
+        execution = execution_service.execute_artifact(artifact)
+        logger.info(f"[ARTIFACT] {artifact_id} executed via {execution.agent_name}: {execution.status}")
+        return {'success': True, 'status': execution.status}
 
     except SoftTimeLimitExceeded:
-        logger.error("[EXECUTION BATCH] execute_approved_artifacts timed out (soft_time_limit=600s)")
-        return {'success': False, 'error': 'Celery soft_time_limit exceeded', 'timed_out': True}
+        logger.error(f"[ARTIFACT] {artifact_id} timed out (soft_time_limit=300s)")
+        # Mark execution as failed if one exists
+        try:
+            from core.models_conversation_artifacts import ArtifactExecution
+            running = ArtifactExecution.objects.filter(
+                artifact_id=artifact_id, status='running'
+            ).first()
+            if running:
+                running.status = 'failed'
+                running.error_message = 'Celery soft_time_limit exceeded (300s)'
+                running.completed_at = timezone.now()
+                running.save()
+        except Exception:
+            pass
+        return {'success': False, 'error': 'timeout'}
     except Exception as e:
-        logger.error(f"⚡ [EXECUTION BATCH] Failed: {e}", exc_info=True)
-        return {
-            'success': False,
-            'error': str(e)
-        }
+        logger.error(f"[ARTIFACT] {artifact_id} failed: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
 
 
 @shared_task
