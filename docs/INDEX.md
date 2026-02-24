@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-02-23 23:46
+**Generated:** 2026-02-24 00:12
 **Current Session:** 1073
 **Total Documentation:** 1799 files | 618,606 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/agents/README.md` | 60 | Agent Documentation |
+| `docs/architecture/README.md` | 60 | Architecture Documentation |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 42 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -149,7 +149,7 @@
 | [FRONTEND_BACKEND_DATA_FLOW_AUDIT.md](FRONTEND_BACKEND_DATA_FLOW_AUDIT.md) | 402 | 2026-02-15 |
 | [FRONTEND_INTEGRATION_NOTE.md](FRONTEND_INTEGRATION_NOTE.md) | 128 | 2026-01-21 |
 | [GOLDEN_GOOSE_STRATEGY.md](GOLDEN_GOOSE_STRATEGY.md) | 751 | 2026-01-21 |
-| [INDEX.md](INDEX.md) | 354 | 2026-02-23 |
+| [INDEX.md](INDEX.md) | 354 | 2026-02-24 |
 | [INTELLIGENCE_SYSTEMS.md](INTELLIGENCE_SYSTEMS.md) | 530 | 2026-01-21 |
 | [KNOWLEDGE_PIPELINE.md](KNOWLEDGE_PIPELINE.md) | 475 | 2026-01-21 |
 | [LEGAL_ASSISTANT.md](LEGAL_ASSISTANT.md) | 442 | 2026-01-21 |
@@ -210,8 +210,8 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 354 | 2026-02-23 23:46 |
-| WEB_API_CONTRACTS.md | mobile | 683 | 2026-02-23 23:46 |
+| WEB_API_CONTRACTS.md | mobile | 683 | 2026-02-24 00:02 |
+| INDEX.md | docs | 354 | 2026-02-24 00:02 |
 | PA_LAYER1_SURFACE_MAP.md | handoffs | 194 | 2026-02-23 22:59 |
 | PA_SYSTEMS_MAP_6_LAYER.md | handoffs | 601 | 2026-02-23 22:35 |
 | SESSION_1071_PA_PLATFORM_AWARENESS.md | handoffs | 105 | 2026-02-23 21:43 |
