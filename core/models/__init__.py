@@ -163,6 +163,9 @@ from ..models_code_artifacts import CodeArtifact
 # Import tenant model (Session 1039 - Multi-Tenant Customer Access)
 from ..models_tenant import Tenant
 
+# Import mobile models (Session 1073 - Mobile Push Notifications)
+from ..models_mobile import MobilePushToken
+
 # Import learning journey models (Session 773 - Learning Journeys)
 from ..models_learning_journey import (
     LearningJourneyTemplate,
@@ -375,4 +378,7 @@ __all__ = [
 
     # Tenant - Multi-Tenant Customer Access (Session 1039)
     'Tenant',
+
+    # Mobile - Push Notifications (Session 1073)
+    'MobilePushToken',
 ]

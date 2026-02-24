@@ -4393,6 +4393,15 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Session 1073: Mobile Push Notifications
+# =========================================================================
+from core.views_mobile import register_push_token
+
+urlpatterns += [
+    path('api/v1/mobile/push/register/', register_push_token, name='mobile-push-register'),
+]
+
+# =========================================================================
 # Session 688: React Frontend Catch-All (MUST BE LAST!)
 # =========================================================================
 # This catches all remaining routes and serves the React SPA.
