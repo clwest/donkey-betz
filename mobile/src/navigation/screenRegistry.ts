@@ -6,6 +6,7 @@ import CommandCenterScreen from '../screens/CommandCenterScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import BoardroomHomeScreen from '../screens/boardroom/BoardroomHomeScreen';
 import GovernanceHomeScreen from '../screens/governance/GovernanceHomeScreen';
+import DiagnosticsScreen from '../screens/DiagnosticsScreen';
 
 // ── Registry ─────────────────────────────────────────────────────────────────
 // Maps manifest route paths → RN screen components.
@@ -71,6 +72,10 @@ const SCREEN_REGISTRY: Record<string, ScreenEntry> = {
   '/settings': {
     component: PlaceholderScreen,
     icon: 'settings',
+  },
+  '/diagnostics': {
+    component: DiagnosticsScreen,
+    icon: 'info',
   },
 };
 
