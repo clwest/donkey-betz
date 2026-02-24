@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-02-24 01:19
+**Generated:** 2026-02-24 01:24
 **Current Session:** 1073
 **Total Documentation:** 1799 files | 618,606 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,205 |
+| Total cross-references | 2,206 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/capabilities/05_Spider_Networks/README.md` | 60 | 🕷️ SPIDER NETWORKS - Intelligent Data Gathering Ar |
+| `docs/archive/SYSTEM_CAPABILITIES-original/06_Decision_Systems/README.md` | 60 | 🎯 DECISION COMMAND SYSTEMS - AI-Powered Decision I |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 42 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -210,7 +210,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 354 | 2026-02-24 01:14 |
+| INDEX.md | docs | 354 | 2026-02-24 01:20 |
 | WEB_API_CONTRACTS.md | mobile | 683 | 2026-02-24 00:02 |
 | PA_LAYER1_SURFACE_MAP.md | handoffs | 194 | 2026-02-23 22:59 |
 | PA_SYSTEMS_MAP_6_LAYER.md | handoffs | 601 | 2026-02-23 22:35 |
