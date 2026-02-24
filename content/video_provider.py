@@ -98,6 +98,19 @@ class RunwayMLProvider:
             }
             model = model_mapping.get(quality, quality)
 
+            # Session 1069: Validate inputs before API call to prevent 400 errors
+            VALID_TEXT_MODELS = {"veo3.1", "veo3.1_fast"}
+            VALID_TEXT_RATIOS = {"1920:1080", "1080:1920", "1280:720", "720:1280"}
+            if model not in VALID_TEXT_MODELS:
+                logger.warning(f"⚠️ Invalid text_to_video model '{model}', defaulting to veo3.1_fast")
+                model = "veo3.1_fast"
+            if duration not in (4, 6, 8):
+                logger.warning(f"⚠️ Invalid duration {duration}s, defaulting to 4s")
+                duration = 4
+            if ratio not in VALID_TEXT_RATIOS:
+                logger.warning(f"⚠️ Invalid ratio '{ratio}', defaulting to 1920:1080")
+                ratio = "1920:1080"
+
             # Prepare request payload (camelCase for Runway API)
             payload = {
                 "model": model,
@@ -119,6 +132,11 @@ class RunwayMLProvider:
             )
 
             if response.status_code != 200:
+                # Session 1069: Log full response body for 400 errors to aid debugging
+                logger.error(
+                    f"[RUNWAY] text_to_video HTTP {response.status_code}: "
+                    f"{response.text[:500]}"
+                )
                 error = ErrorMessageBuilder.parse_api_error("Runway ML", response.status_code, response.text)
                 return VideoGenerationResult(
                     success=False,
@@ -212,6 +230,19 @@ class RunwayMLProvider:
             }
             model = model_mapping.get(quality, quality)
 
+            # Session 1069: Validate inputs before API call to prevent 400 errors
+            VALID_IMG_MODELS = {"gen4_turbo"}
+            VALID_IMG_RATIOS = {"1280:720", "720:1280", "1104:832", "832:1104", "960:960", "1584:672"}
+            if model not in VALID_IMG_MODELS:
+                logger.warning(f"⚠️ Invalid image_to_video model '{model}', defaulting to gen4_turbo")
+                model = "gen4_turbo"
+            if duration not in (4, 5, 6, 8, 10):
+                logger.warning(f"⚠️ Invalid i2v duration {duration}s, defaulting to 5s")
+                duration = 5
+            if ratio not in VALID_IMG_RATIOS:
+                logger.warning(f"⚠️ Invalid i2v ratio '{ratio}', defaulting to 1280:720")
+                ratio = "1280:720"
+
             # Prepare request payload (camelCase for Runway API)
             payload = {
                 "model": model,
@@ -243,6 +274,11 @@ class RunwayMLProvider:
             logger.info(f"📥 [RUNWAY] Response status: {response.status_code}")
 
             if response.status_code != 200:
+                # Session 1069: Log full response body for 400 errors to aid debugging
+                logger.error(
+                    f"[RUNWAY] image_to_video HTTP {response.status_code}: "
+                    f"{response.text[:500]}"
+                )
                 error = ErrorMessageBuilder.parse_api_error("Runway ML", response.status_code, response.text)
                 return VideoGenerationResult(
                     success=False,
@@ -512,9 +548,12 @@ class RunwayMLProvider:
         if image_input.startswith('http'):
             # Session 176: Localhost URLs need to be converted to base64 or uploaded
             if 'localhost' in image_input or '127.0.0.1' in image_input:
-                # This is a localhost URL, convert to base64
-                logger.info(f"⚠️ Localhost URL detected, converting to base64...")
-                # Fall through to local file handling below
+                # Session 1069: Localhost URLs can't be fetched by Runway — reject early
+                logger.error(f"⚠️ Localhost URL cannot be used with Runway API: {image_input[:100]}")
+                raise ValueError(
+                    f"Cannot use localhost URL for video generation. "
+                    f"Image must be a public URL or base64 data."
+                )
             else:
                 # True public URL - RunwayML can fetch directly
                 return image_input
@@ -524,9 +563,13 @@ class RunwayMLProvider:
             with open(image_input, 'rb') as f:
                 image_data = base64.b64encode(f.read()).decode('utf-8')
                 return f"data:image/jpeg;base64,{image_data}"
-        except:
-            # Assume it's already in a format RunwayML can handle
-            return image_input
+        except FileNotFoundError:
+            # Session 1069: Don't silently return invalid input — raise so caller can handle
+            logger.error(f"⚠️ Image file not found: {image_input}")
+            raise ValueError(f"Image file not found: {image_input}")
+        except Exception as e:
+            logger.error(f"⚠️ Failed to read image file: {image_input}: {e}")
+            raise ValueError(f"Failed to prepare image: {e}")
     
     def _estimate_generation_time(self, quality: str, duration: int) -> int:
         """Estimate generation time in seconds"""
