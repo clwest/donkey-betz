@@ -456,6 +456,30 @@ export function BoardroomTab() {
     )
   }
 
+  // Session 1067: Detect and clean raw Python dict/JSON summaries from spider data
+  const cleanRawSummary = (text: string): string => {
+    if (/^\s*\{.*'[a-z_]+':/i.test(text) || /^\s*\[?\s*\{.*"[a-z_]+":/i.test(text)) {
+      try {
+        const jsonStr = text.replace(/'/g, '"').replace(/None/g, 'null').replace(/True/g, 'true').replace(/False/g, 'false')
+        const parsed = JSON.parse(jsonStr)
+        if (parsed.items && Array.isArray(parsed.items)) {
+          const titles = parsed.items.slice(0, 5).map((it: any) => it.title).filter(Boolean)
+          if (titles.length) return titles.join(' | ')
+        }
+        for (const key of ['title', 'summary', 'description', 'content']) {
+          if (parsed[key]) return String(parsed[key])
+        }
+      } catch {
+        const titleMatches = text.match(/'title':\s*'([^']+)'/g)
+        if (titleMatches) {
+          return titleMatches.slice(0, 5).map(m => m.replace(/'title':\s*'/, '').replace(/'$/, '')).join(' | ')
+        }
+      }
+      return 'Spider data (structured)'
+    }
+    return text
+  }
+
   // Session 972: Strip provenance markdown header from agent messages
   const stripProvenance = (text: string): string => {
     return text.replace(/^---\n## Report Provenance[\s\S]*?---\n?/, '').trim()
@@ -579,7 +603,7 @@ export function BoardroomTab() {
     const agentName = typeof item.payload?.agent_name === 'string' ? item.payload.agent_name : null
 
     // Clean summary: strip provenance header, skip if only metadata remains
-    const cleanSummary = item.summary ? stripProvenance(item.summary) : null
+    const cleanSummary = item.summary ? cleanRawSummary(stripProvenance(item.summary)) : null
     const showSummary = cleanSummary && cleanSummary.length > 10
 
     return (
