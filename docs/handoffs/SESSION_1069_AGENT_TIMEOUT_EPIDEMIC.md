@@ -1,7 +1,7 @@
 # Session 1069: Agent Timeout Epidemic Fix
 
 **Date:** 2026-02-23
-**PRs:** #1436
+**PRs:** #1436, #1438
 
 ## What Was Done
 
@@ -65,11 +65,35 @@ Queried Railway PA for detailed failure analysis across 7 days:
 | `core/agents/workflow_agent.py` | Reduced iterations 5→3, wall clock 45min→10min |
 | `core/tasks.py` | Added time limits + SoftTimeLimitExceeded handler to stage doc task, max_retries 2→1 |
 
-## Items Investigated but Not Fixed (Low Priority)
+## Fixes — PR #1438
 
-1. **VideoAgent `generate_video` 400 errors** — 2 occurrences in 7 days, external Runway ML API issue. Ratios and durations are hardcoded correctly in `_execute_generate_video`.
-2. **Redis connection failure** — 1 occurrence, intermittent Railway Redis restart. Not a code bug.
-3. **ResearchAgent `.get()` bug** — Already fixed in Session 1068 PR #1431. Remaining failures in logs are from executions that started before deployment.
+### 4. VideoAgent Input Validation
+
+**Root cause:** `RunwayMLProvider.text_to_video()` and `image_to_video()` had no input validation — invalid model names, durations, and ratios were passed directly to the Runway ML API, causing HTTP 400 errors.
+
+**Fixes:**
+- Added model name whitelist validation (invalid → default to `veo3.1_fast`/`gen4_turbo`)
+- Added duration range validation (invalid → default to 4s/5s)
+- Added ratio whitelist validation (invalid → default to `1920:1080`/`1280:720`)
+- Log full HTTP response body on non-200 errors for debugging
+- Fixed bare `except` in `_prepare_image` — now raises `ValueError` with details
+- Fixed localhost URL fallthrough bug — reject early with clear error message
+
+### 5. Redis-Resilient Legal Agent Dispatch
+
+**Root cause:** `_handle_legal_agent` called `draft_legal_document_task.delay()` without try/except. When Redis broker was temporarily unreachable, the exception crashed the PA tool handler.
+
+**Fix:** Wrapped `.delay()` with try/except — returns meaningful error message instead of crashing.
+
+## Files Changed
+
+| File | Change |
+|------|--------|
+| `core/agent_router.py` | Parallelized 11 context-gathering calls with ThreadPoolExecutor + 10s timeout |
+| `core/agents/workflow_agent.py` | Reduced iterations 5→3, wall clock 45min→10min |
+| `core/tasks.py` | Added time limits + SoftTimeLimitExceeded handler to stage doc task, max_retries 2→1 |
+| `content/video_provider.py` | Input validation for model/duration/ratio, error logging, _prepare_image fixes |
+| `core/services/tool_dispatcher.py` | Try/except around legal agent Celery dispatch |
 
 ## Expected Impact
 
