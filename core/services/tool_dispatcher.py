@@ -423,7 +423,7 @@ class ToolDispatcher:
             'workflow_orchestration_agent': 'WorkflowAgent',
             'create_brand_video': 'WorkflowAgent',
             'create_project_from_research': 'WorkflowAgent',
-            'strategic_review': 'StrategyAgent',
+            'strategic_review': 'ContentStrategyAgent',  # Session 1068: StrategyAgent doesn't exist
             'coleadership_agent': 'CoLeadershipAgent',
             'legal_doc_drafter_agent': 'LegalDocDrafterAgent',
         }
@@ -841,8 +841,12 @@ class ToolDispatcher:
         Session 1062: Added auto-routing via AgentRouter when agent_name
         not provided. Previously required agent_name which the schema
         didn't expose, causing "agent_name is required" errors.
+        Session 1068: Switched from registry.execute_agent() to
+        AgentRouter.route() — same path as _handle_agent_tool. Also resolves
+        snake_case tool names GPT passes (e.g. 'content_writer_agent') to
+        PascalCase agent names (e.g. 'ContentWriterAgent').
         """
-        from core.agents.registry import get_agent_registry
+        from core.agent_router import AgentRouter
 
         agent_name = payload.get('agent_name', '')
         task = payload.get('task', '')
@@ -851,36 +855,32 @@ class ToolDispatcher:
         if not task:
             raise ValueError("task is required")
 
-        # Session 1062: Auto-route to best agent when no name given
+        # GPT often passes tool names (snake_case) instead of agent class names
+        if agent_name and '_' in agent_name:
+            agent_name = self._tool_to_agent_name(agent_name)
+
+        # Auto-route to best agent when no name given
+        router = AgentRouter()
         if not agent_name:
-            from core.agent_router import AgentRouter
-            router = AgentRouter()
-            # Try to find agent name mentioned in the task text
             for name in router.AGENT_MAP:
                 if name.lower() in task.lower():
                     agent_name = name
                     break
-            # Fallback: use ResearchAgent for general tasks
             if not agent_name:
                 agent_name = 'ResearchAgent'
 
-        registry = get_agent_registry()
-        agent_metadata = registry.get_agent(agent_name)
+        agent_result = router.route(agent_name, task, context=context)
 
-        if not agent_metadata:
-            raise ValueError(f"Agent '{agent_name}' not found")
-
-        # Session 948: Use execute_agent instead of calling .run() on metadata dict
-        task_data = {'task': task, 'context': context}
-        result = registry.execute_agent(agent_name, task_data)
-
-        return {
+        result = {
             'agent': agent_name,
             'task': task[:200],
-            'output': result if result else 'Agent execution completed',
-            'success': True if result else False,
+            'output': agent_result.message if agent_result else 'Agent execution failed',
+            'success': agent_result.success if agent_result else False,
             'auto_routed': not payload.get('agent_name'),
         }
+        if agent_result and agent_result.data:
+            result['data'] = agent_result.data
+        return result
 
     def _handle_workspace(
         self,

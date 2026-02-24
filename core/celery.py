@@ -1391,11 +1391,11 @@ app.conf.beat_schedule = {
         }
     },
     # SESSION 555 PHASE B: ARTIFACT EXECUTION PIPELINE
-    # Execute approved artifacts via agent routing
+    # Session 1068: Now a fan-out dispatcher (<1s) — safe to process more per batch
     'execute-approved-artifacts': {
         'task': 'core.tasks.execute_approved_artifacts',
         'schedule': crontab(minute='*/15'),  # Every 15 minutes
-        'kwargs': {'limit': 10},
+        'kwargs': {'limit': 25},  # Session 1068: raised from 10 (dispatcher is instant now)
         'options': {
             'expires': 900,  # 15 minutes
         }

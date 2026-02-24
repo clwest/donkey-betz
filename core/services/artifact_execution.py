@@ -70,12 +70,14 @@ class ArtifactExecutionService:
         """
         from core.models_conversation_artifacts import ExtractedArtifact
 
-        # Find approved artifacts without successful executions
+        # Find approved artifacts without successful or in-flight executions
         approved = list(
             ExtractedArtifact.objects.filter(
                 status='approved'
             ).exclude(
                 executions__status='completed'
+            ).exclude(
+                executions__status='running'  # Session 1068: avoid re-dispatching in-flight
             ).order_by('-composite_score')[:limit]
             .values_list('id', flat=True)
         )
@@ -189,8 +191,20 @@ class ArtifactExecutionService:
         )
 
     def _build_task(self, artifact) -> str:
-        """Build a task description from the artifact."""
-        # Format based on artifact type
+        """Build a task description from the artifact.
+
+        Session 1068: Insight artifacts get a concise prompt to prevent
+        agents from sprawling into 45-minute research sessions.
+        """
+        if artifact.artifact_type == 'insight':
+            # Concise prompt: 3 bullet points max, no web research needed
+            return (
+                f"Summarize this insight into 3 concrete next-steps (one sentence each). "
+                f"Do NOT do web research or tool calls — just synthesize.\n\n"
+                f"Insight: {artifact.title}\n"
+                f"Detail: {artifact.description}\n"
+            )
+
         type_prefixes = {
             'proposal': 'Implement this proposal',
             'experiment': 'Design and set up this experiment',
@@ -198,7 +212,6 @@ class ArtifactExecutionService:
             'risk': 'Develop mitigation strategy for this risk',
             'question': 'Provide analysis and recommendation for',
             'data_spec': 'Implement this technical specification',
-            'insight': 'Create actionable recommendations from this insight',
         }
 
         prefix = type_prefixes.get(artifact.artifact_type, 'Execute')
