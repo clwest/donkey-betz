@@ -25475,15 +25475,38 @@ def generate_human_attention_items():
 
             for data in recent_spider_data:
                 title = ''
+                summary = 'New data available'
                 if data.raw_data and isinstance(data.raw_data, dict):
-                    title = data.raw_data.get('title', '')
+                    rd = data.raw_data
+                    title = rd.get('title', '')
+                    # Session 1067: Build human-readable summary instead of str(dict)
+                    # Try top-level text fields first
+                    for key in ('summary', 'description', 'content', 'text', 'headline'):
+                        if isinstance(rd.get(key), str) and len(rd[key]) > 10:
+                            summary = rd[key][:300]
+                            break
+                    else:
+                        # For list-style data (e.g. news items), summarize first few titles
+                        items = rd.get('items') or rd.get('results') or rd.get('articles') or []
+                        if isinstance(items, list) and items:
+                            titles = [
+                                str(it.get('title', ''))[:80]
+                                for it in items[:5]
+                                if isinstance(it, dict) and it.get('title')
+                            ]
+                            if titles:
+                                summary = ' | '.join(titles)
+                            else:
+                                summary = f"{len(items)} items from {data.spider_name}"
+                        elif title:
+                            summary = f"{data.data_type.replace('_', ' ').title()} from {data.spider_name}"
                 if not title:
                     title = f"Spider Data: {data.data_type.replace('_', ' ').title()}"
                 attention_bridge.create_spider_alert(
                     spider_name=data.spider_name,
                     alert_type=data.data_type,
                     title=title[:200],
-                    summary=str(data.raw_data)[:300] if data.raw_data else 'New data available',
+                    summary=summary[:300],
                     data=data.raw_data,
                     urgency='medium'
                 )

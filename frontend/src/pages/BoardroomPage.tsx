@@ -136,6 +136,36 @@ const timeAgo = (dateStr: string) => {
   return `${days}d ago`
 }
 
+// Session 1067: Detect and clean raw Python dict/JSON summaries from spider data
+const cleanRawSummary = (text: string): string => {
+  // Detect Python dict repr: starts with { and has single-quoted keys
+  if (/^\s*\{.*'[a-z_]+':/i.test(text) || /^\s*\[?\s*\{.*"[a-z_]+":/i.test(text)) {
+    try {
+      // Try parsing as JSON (replace single quotes with double for Python dicts)
+      const jsonStr = text.replace(/'/g, '"').replace(/None/g, 'null').replace(/True/g, 'true').replace(/False/g, 'false')
+      const parsed = JSON.parse(jsonStr)
+      // Extract readable content from parsed object
+      if (parsed.items && Array.isArray(parsed.items)) {
+        const titles = parsed.items.slice(0, 5).map((it: any) => it.title).filter(Boolean)
+        if (titles.length) return titles.join(' | ')
+      }
+      if (parsed.title) return String(parsed.title)
+      if (parsed.summary) return String(parsed.summary)
+      if (parsed.description) return String(parsed.description)
+      if (parsed.content) return String(parsed.content)
+    } catch {
+      // If JSON parse fails, try regex extraction of titles
+      const titleMatches = text.match(/'title':\s*'([^']+)'/g)
+      if (titleMatches) {
+        const titles = titleMatches.slice(0, 5).map(m => m.replace(/'title':\s*'/, '').replace(/'$/, ''))
+        return titles.join(' | ')
+      }
+    }
+    return 'Spider data (structured)'
+  }
+  return text
+}
+
 const stripProvenance = (text: string): string =>
   text.replace(/^---\n## Report Provenance[\s\S]*?---\n?/, '').trim()
 
@@ -281,7 +311,7 @@ function ItemDrawer({
 
   const resultData = item.payload?.result_data
   const richContent = extractResultContent(resultData)
-  const cleanSummary = item.summary ? stripProvenance(item.summary) : null
+  const cleanSummary = item.summary ? cleanRawSummary(stripProvenance(item.summary)) : null
   const showSummary = cleanSummary && cleanSummary.length > 10
 
   return (
