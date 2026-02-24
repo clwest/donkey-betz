@@ -22,13 +22,36 @@ import {
   Zap,
   ListChecks,
   ScrollText,
+  ExternalLink,
+  Gavel,
+  ChevronDown,
+  ChevronRight,
+  X,
+  ThumbsUp,
+  Target,
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/cn'
-import { platformApi } from '@/lib/api'
+import { platformApi, decisionsApi } from '@/lib/api'
 import { EmergencyControls, DecisionDetailModal } from '@/components/platform'
 import { ErrorState } from '@/components/ErrorState'
 
 type GovernanceTab = 'alerts' | 'gates' | 'decisions' | 'activity'
+
+interface BoardroomDecision {
+  id: string
+  topic: string
+  decision_type: string
+  decision_type_display: string
+  impact_area: string
+  impact_area_display: string
+  key_insights: string[]
+  recommended_stance: string
+  suggested_feature?: string
+  status: string
+  created_at: string
+  participants?: string[]
+}
 
 interface FeedbackMessage {
   type: 'success' | 'error' | 'info'
@@ -38,11 +61,13 @@ interface FeedbackMessage {
 
 export default function GovernancePage() {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<GovernanceTab>('alerts')
   const [isPolling, setIsPolling] = useState(true)
   const [remediationLimit, setRemediationLimit] = useState(20)
   const [feedback, setFeedback] = useState<FeedbackMessage | null>(null)
   const [selectedDecisionId, setSelectedDecisionId] = useState<string | null>(null)
+  const [drawerDecision, setDrawerDecision] = useState<BoardroomDecision | null>(null)
 
   // Governance data
   const {
@@ -86,7 +111,40 @@ export default function GovernancePage() {
     refetchInterval: isPolling ? 30000 : false,
   })
 
+  // Session 1067: Boardroom decisions for Critical Decisions section
+  const {
+    data: boardroomData,
+    isLoading: loadingBoardroom,
+  } = useQuery({
+    queryKey: ['governance-boardroom-decisions'],
+    queryFn: async () => {
+      const res = await decisionsApi.list(50)
+      return res.data
+    },
+    refetchInterval: 30000,
+  })
+
+  const draftDecisions: BoardroomDecision[] = (boardroomData?.decisions || []).filter(
+    (d: BoardroomDecision) => d.status === 'draft'
+  )
+
   // Mutations
+  const promoteMutation = useMutation({
+    mutationFn: (decisionId: string) => decisionsApi.promote(decisionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['governance-boardroom-decisions'] })
+      setDrawerDecision(null)
+    },
+  })
+
+  const rejectMutation = useMutation({
+    mutationFn: (decisionId: string) => decisionsApi.reject(decisionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['governance-boardroom-decisions'] })
+      setDrawerDecision(null)
+    },
+  })
+
   const emergencyHaltMutation = useMutation({
     mutationFn: () => platformApi.emergencyHalt(),
     onSuccess: () => {
@@ -317,6 +375,82 @@ export default function GovernancePage() {
             }}
           />
         </div>
+
+        {/* Session 1067: Critical Decisions — always visible above tabs */}
+        {draftDecisions.length > 0 && (
+          <div className="px-6 pt-4">
+            <div className="card border-amber-500/30">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-md font-semibold uppercase flex items-center gap-2">
+                  <Gavel size={16} className="text-amber-400" />
+                  <span className="text-amber-400">Critical Decisions</span>
+                  <span className="px-2 py-0.5 text-xs rounded-full bg-amber-500/20 text-amber-400">
+                    {draftDecisions.length}
+                  </span>
+                </h3>
+                <button
+                  onClick={() => navigate('/boardroom')}
+                  className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-primary-400 transition-colors"
+                >
+                  <ExternalLink size={12} />
+                  Open Boardroom
+                </button>
+              </div>
+              <div className="space-y-3">
+                {draftDecisions.map((decision) => (
+                  <div
+                    key={decision.id}
+                    onClick={() => setDrawerDecision(decision)}
+                    className="p-4 bg-dark-bg border border-dark-border rounded-lg cursor-pointer hover:border-gray-600 transition-colors group"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                          <span className="px-2 py-0.5 text-xs rounded bg-purple-500/20 text-purple-400">
+                            {decision.decision_type_display || decision.decision_type}
+                          </span>
+                          <span className="px-2 py-0.5 text-xs rounded bg-dark-border text-gray-400">
+                            {decision.impact_area_display || decision.impact_area}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {new Date(decision.created_at).toLocaleString()}
+                          </span>
+                        </div>
+                        <h4 className="text-sm font-medium text-gray-200 group-hover:text-primary-400 transition-colors line-clamp-2">
+                          {decision.topic}
+                        </h4>
+                        {decision.recommended_stance && (
+                          <p className="text-xs text-gray-400 mt-1.5 line-clamp-2">
+                            <span className="text-gray-500 font-medium">Stance:</span>{' '}
+                            {decision.recommended_stance}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                        <button
+                          onClick={() => promoteMutation.mutate(decision.id)}
+                          disabled={promoteMutation.isPending}
+                          className="p-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors"
+                          title="Promote"
+                        >
+                          <CheckCircle size={14} />
+                        </button>
+                        <button
+                          onClick={() => rejectMutation.mutate(decision.id)}
+                          disabled={rejectMutation.isPending}
+                          className="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+                          title="Reject"
+                        >
+                          <XCircle size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Feedback Message */}
         {feedback && Date.now() - feedback.timestamp < 30000 && (
@@ -648,12 +782,135 @@ export default function GovernancePage() {
         </div>
       </div>
 
-      {/* Decision Detail Modal */}
+      {/* Decision Detail Modal (from Gates tab) */}
       {selectedDecisionId && (
         <DecisionDetailModal
           decisionId={selectedDecisionId}
           onClose={() => setSelectedDecisionId(null)}
         />
+      )}
+
+      {/* Session 1067: Boardroom Decision Details Drawer */}
+      {drawerDecision && (
+        <>
+          <div className="fixed inset-0 bg-black/40 z-40" onClick={() => setDrawerDecision(null)} />
+          <div className="fixed inset-y-0 right-0 w-[500px] max-w-full bg-dark-card border-l border-dark-border shadow-2xl z-50 flex flex-col">
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between p-4 border-b border-dark-border">
+              <div className="flex items-center gap-2">
+                <Gavel size={18} className="text-primary-400" />
+                <span className="font-semibold">Decision Details</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setDrawerDecision(null); navigate('/boardroom') }}
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs bg-dark-border rounded-lg hover:bg-gray-700 transition-colors text-gray-400"
+                >
+                  <ExternalLink size={12} /> Boardroom
+                </button>
+                <button onClick={() => setDrawerDecision(null)} className="p-1.5 hover:bg-dark-border rounded-lg transition-colors">
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Drawer Body */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* Type + Impact badges */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2 py-0.5 text-xs rounded bg-purple-500/20 text-purple-400">
+                  {drawerDecision.decision_type_display || drawerDecision.decision_type}
+                </span>
+                <span className="px-2 py-0.5 text-xs rounded bg-blue-500/20 text-blue-400">
+                  {drawerDecision.impact_area_display || drawerDecision.impact_area}
+                </span>
+                <span className="text-xs text-gray-500">
+                  {new Date(drawerDecision.created_at).toLocaleString()}
+                </span>
+              </div>
+
+              {/* Topic */}
+              <div>
+                <h4 className="text-xs font-semibold text-gray-400 uppercase mb-2 flex items-center gap-1">
+                  <Target size={12} /> Topic
+                </h4>
+                <p className="text-sm text-gray-200 leading-relaxed">{drawerDecision.topic}</p>
+              </div>
+
+              {/* Recommended Stance */}
+              {drawerDecision.recommended_stance && (
+                <div className="bg-primary-500/10 border border-primary-500/20 rounded-lg p-4">
+                  <h4 className="text-xs font-semibold text-primary-400 uppercase mb-2 flex items-center gap-1">
+                    <ThumbsUp size={12} /> Recommended Stance
+                  </h4>
+                  <p className="text-sm text-gray-200 leading-relaxed">{drawerDecision.recommended_stance}</p>
+                </div>
+              )}
+
+              {/* Key Insights */}
+              {drawerDecision.key_insights && drawerDecision.key_insights.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-semibold text-gray-400 uppercase mb-2 flex items-center gap-1">
+                    <AlertCircle size={12} /> Key Insights
+                  </h4>
+                  <ul className="space-y-2">
+                    {drawerDecision.key_insights.map((insight, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-sm text-gray-300">
+                        <span className="w-5 h-5 shrink-0 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center text-xs font-medium mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <span className="leading-relaxed">{insight}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Suggested Feature */}
+              {drawerDecision.suggested_feature && (
+                <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                  <h4 className="text-xs font-semibold text-green-400 uppercase mb-2">Suggested Feature</h4>
+                  <p className="text-sm text-gray-200">{drawerDecision.suggested_feature}</p>
+                </div>
+              )}
+
+              {/* Participants */}
+              {drawerDecision.participants && drawerDecision.participants.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-semibold text-gray-400 uppercase mb-2">Participants</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {drawerDecision.participants.map((p, idx) => (
+                      <span key={idx} className="px-2 py-1 bg-dark-border rounded text-xs text-gray-300">{p}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ID */}
+              <div className="text-xs text-gray-500 pt-2 border-t border-dark-border font-mono">
+                ID: {drawerDecision.id}
+              </div>
+            </div>
+
+            {/* Drawer Actions */}
+            <div className="p-4 border-t border-dark-border flex items-center gap-3">
+              <button
+                onClick={() => promoteMutation.mutate(drawerDecision.id)}
+                disabled={promoteMutation.isPending}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors font-medium disabled:opacity-50"
+              >
+                <CheckCircle size={16} /> Promote
+              </button>
+              <button
+                onClick={() => rejectMutation.mutate(drawerDecision.id)}
+                disabled={rejectMutation.isPending}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors font-medium disabled:opacity-50"
+              >
+                <XCircle size={16} /> Reject
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   )
