@@ -1,95 +1,89 @@
-# Session 1064 - Start Here
+# Session 1071 - Start Here
 
-**Previous Sessions:** 1063 (PA Tools Expansion — deliverables update/delete/cleanup/pagination, media_tool, davinci_tool, resolve-node Railway deploy, celery OOM fixes), 1062 (PA Async Tool Pattern + Celery-Content OOM Fix), 1061 (Sports Betting Accuracy Handler), 1060 (PA Real-World Testing — 3 degenerate detector fixes, tool call observability, FC sanitizer)
-**Date:** February 22, 2026
+**Previous Sessions:** 1070 (Decision Gates — 4-question classification gate, stop auto-approving insights, boardroom classification UI), 1069 (Agent Timeout Epidemic — parallelize context gathering, reduce timeouts), 1068 (Artifact Execution Fix — fan-out execution, blank error messages, PA tool dispatch errors, error_summary_tool), 1067 (Boardroom/Governance Pages — critical decisions, spider attention items, decision modal fixes)
+**Date:** February 23, 2026
 **Status:** 218 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2, 43 tool schemas, 63+ handlers)** | 13 ACTIVE initiatives | 57 COMPLETED
 
 ---
 
-## Session 1064 — What's Done So Far
+## Session 1070 — What Happened
 
-### PeriodicTask Queue Sync Fix (PR #1415 — MERGED & DEPLOYED)
+### Decision Gates: Classification Before Execution (PR #1440 — MERGED & DEPLOYED)
 
-**Problem:** 179 `PeriodicTask` records in django_celery_beat DB had wrong/missing `queue` values, overriding `CELERY_TASK_ROUTES` and sending heavy tasks to the 200MB celery-worker.
+**Problem:** The system treated "insight exists" as "action should follow" without a human decision in between. All insights were auto-approved by `triage_extracted_artifacts` in `core/tasks.py`, bypassing any human classification.
 
-**Fix:**
-1. Created `core/management/commands/sync_task_queues.py` — reads `CELERY_TASK_ROUTES`, resolves intended queue per enabled PeriodicTask, updates mismatches. Supports `--apply` and `--verbose`.
-2. Added `sync_task_queues --apply` to Procfile release command (runs after `sync_celery_beat` on every deploy).
-3. Deleted `check_routes.py` temp diagnostic script.
+**Fix — 4-Question Classification Gate:**
+1. **What is this?** — research_finding / actionable_recommendation / scope_change / risk_flag / informational
+2. **Who is it for?** — platform / end_users / founder / agents / public
+3. **What data is allowed?** — public_only / internal_ops / api_data / user_data / all
+4. **What phase is approved?** — research / prototype / pilot / production / none
 
-**Status:** Applied on Railway (177 tasks fixed). celery-worker, celery-long-running, and celery-beat all redeployed. One post-fix crash from stale queued task — worker auto-recovered.
+**Changes:**
+| File | Change |
+|------|--------|
+| `core/models_conversation_artifacts.py` | `classified`, `classified_at`, `classified_by`, `classification` fields + `classify()` method |
+| `core/models_document_registry.py` | `target_audience`, `data_scope` on Initiative + `can_auto_progress` blocks at Stage 2+ |
+| `core/tasks.py` (lines 842-867) | **Core fix:** auto-reject noise only (score < 0.3), all others stay `pending` |
+| `core/services/artifact_execution.py` | Gate check: unclassified artifacts approved after 2026-02-24 cannot execute |
+| `core/views_artifacts.py` | `POST api/artifacts/<uuid>/classify/` + `GET api/artifacts/needs-classification/` |
+| `core/urls.py` | 2 new routes |
+| `core/services/pa_tool_schemas.py` | `list_unclassified` + `classify_suggest` actions on boardroom_tool |
+| `core/services/tool_dispatcher.py` | 2 new boardroom_tool handlers (list + suggest) |
+| `frontend/src/pages/BoardroomPage.tsx` | "Needs Classification" tab with inline 4-dropdown forms |
+| `frontend/src/lib/api.ts` | `classificationApi` with 2 methods |
+| `core/migrations/0256_decision_gates.py` | Schema + data migration (324 artifacts grandfathered) |
 
-### QueuePreservingScheduler (PR #1417)
+**Key Numbers:**
+| Metric | Value |
+|--------|-------|
+| Artifacts grandfathered | 324 |
+| Pending needing classification | 2,339 |
+| Gate activation date | 2026-02-24 |
+| Noise threshold (auto-reject) | composite_score < 0.3 |
+| Unclassified query threshold | composite_score >= 0.4 |
 
-**Problem:** `sync_task_queues` fixes kept reverting. Root cause: `django_celery_beat`'s `DatabaseScheduler.update_from_dict()` calls `_unpack_options(queue=None)` for every beat schedule entry without an explicit queue. This passes `queue=None` into `update_or_create(defaults=...)`, which **overwrites** DB queue values back to NULL every time celery-beat restarts.
-
-**Fix:**
-1. Created `core/schedulers.py` — `QueuePreservingModelEntry` subclass omits `queue` from `update_or_create` defaults when not explicitly set, so existing DB values are preserved.
-2. Updated `CELERY_BEAT_SCHEDULER` in settings.py to use `core.schedulers:QueuePreservingScheduler`.
-
-**Result:** `sync_task_queues` fixes now persist across celery-beat restarts. The release command chain (`sync_celery_beat` → `sync_task_queues`) sets correct queues once, and `QueuePreservingScheduler` prevents them from being reset.
-
-### deliverables_tool: title-based lookup (PR #1416)
-
-**Problem:** detail/update/delete/save/unsave required UUID — users can't copy UUIDs from the UI.
-
-**Fix:** `_resolve_deliverable()` helper in `tool_dispatcher.py`. All 5 actions now accept `id` OR `title` (exact match first, then partial). Multiple matches return disambiguation list.
-
----
-
-## Session 1063 — What Happened
-
-### PA Tools Expansion (PRs #1407-#1411)
-
-Systematically exposed missing capabilities to the PA, driven by live PA conversation where it identified its own gaps:
-
-| PR | Feature | Details |
-|----|---------|---------|
-| #1407 | deliverables_tool update/delete | 9 actions, better schema descriptions so GPT-5.2 knows all capabilities |
-| #1408 | resolve_agent in run_agent + media_tool | PA can now delegate to ResolveAgent and browse ImageHistory/VideoHistory/AudioHistory |
-| #1409 | davinci_tool | Direct DaVinci control: health, render, status, result, jobs, grades |
-| #1410 | resolve-node Railway service | FastAPI server deployed as standalone Railway service |
-| #1411 | deliverables pagination + cleanup | offset pagination, category/agent filters, bulk cleanup (duplicates/orphans/low_quality with dry_run) |
-
-### resolve-node Railway Deploy
-
-| Item | Value |
-|------|-------|
-| Public URL | `https://resolve-node-production.up.railway.app` |
-| Start command | `bash -c "cd resolve_node && MOCK_MODE=true uvicorn app:app --host 0.0.0.0 --port ${PORT:-5001}"` |
-| Target port | 8080 (Railway injects PORT=8080) |
-| Status | ONLINE, healthy, mock mode |
-
-**Key env vars (set on celery-pa):** `RESOLVE_NODE_URL=https://resolve-node-production.up.railway.app`, `RENDER_NODE_TOKEN=<token>`
-
-### Celery OOM Fixes (PRs #1412, #1413)
-
-| Worker | Change | PR |
-|--------|--------|-----|
-| celery-worker | max-tasks-per-child 10→5 | #1412 |
-| celery-long-running | concurrency 3→1, max-tasks 10→3 | #1413 |
+**Verified on Railway:** Migration applied, `needs-classification` endpoint returns data, grandfather clause working.
 
 ---
 
-## Current System Health (post-Session 1063)
+## Sessions 1067-1069 — Recent Context
+
+### Session 1069: Agent Timeout Epidemic (PRs #1436-#1438)
+- Parallelized context gathering in agent execution (was sequential, causing 30s+ timeouts)
+- Video provider input validation fix
+- Redis-resilient legal dispatch
+
+### Session 1068: Artifact Execution Fix (PRs #1431-#1434)
+- Fan-out artifact execution to prevent TimeLimitExceeded
+- Blank error messages on agent failures fixed
+- PA tool dispatch errors resolved
+- error_summary_tool enhanced with timeout breakdown
+
+### Session 1067: Boardroom/Governance Pages (PRs #1427-#1430)
+- Critical decisions on Governance page with details drawer
+- Spider attention items showing raw dict fixed
+- ML prediction object handling in DecisionDetailModal
+
+---
+
+## Current System Health (post-Session 1070)
 
 | Metric | Value |
 |--------|-------|
 | PA routing | **GPT-5.2 function calling** (`PA_USE_FUNCTION_CALLING=true`) |
-| PA tools | **43 schemas, 63+ handlers** — media_tool + davinci_tool added |
-| DaVinci render node | **ONLINE** (mock mode) at `resolve-node-production.up.railway.app` |
+| PA tools | **43 schemas, 63+ handlers** — boardroom_tool extended with classify |
+| Decision gates | **ACTIVE** — 2,339 artifacts need classification |
 | Platform health score | **100** (7/7 components healthy) |
 | Celery throughput | **1291 tasks/hour, 99.3% success** |
-| Beat schedule | **21 tasks throttled** + `dispatch-pending-action-items` every 30 min |
 | Agents routable | **All 218** (82 AGENT_MAP + 139 DynamicPersonaAgent + 2 blocked) |
-| Initiatives | **13 ACTIVE**, 57 COMPLETED, 5 TRIAGE, 12 ARCHIVED (87 total) |
+| Initiatives | **13 ACTIVE**, 57 COMPLETED |
 
 ---
 
 ## Known Issues / Open Items
 
-### Celery OOM (root cause fixed Session 1064)
-celery-worker and celery-long-running were OOMing. Root cause: 179 PeriodicTask records had stale queue values overriding CELERY_TASK_ROUTES. Fix: `sync_task_queues` management command (runs on every deploy). **Needs Railway deploy** to take effect. Previous mitigations (lower concurrency/max-tasks) also still in place.
+### 2,339 Artifacts Need Classification
+The decision gates are live but 2,339 pending artifacts need human classification before they can progress. The Boardroom page "Needs Classification" tab shows these. PA can help via `boardroom_tool(action=list_unclassified)` and `boardroom_tool(action=classify_suggest)`.
 
 ### Data Layer Gaps (discovered in PA testing)
 1. **Revenue tracker**: $0 ingested, 0 records — needs Stripe/affiliate/ad data source integration
@@ -122,8 +116,14 @@ import urllib.request, json, time
 TOKEN = 'YOUR_TOKEN'
 BASE = 'https://donkey-betz-platform-production.up.railway.app'
 
-# 1. Verify PA responds
-data = json.dumps({'message': 'Check system health and DaVinci render node status'}).encode()
+# 1. Verify classification endpoint
+resp = urllib.request.urlopen(f'{BASE}/api/artifacts/needs-classification/?limit=3')
+data = json.loads(resp.read())
+print(f"Unclassified artifacts: {data['total_unclassified']}")
+print(f"Sample: {[a['title'] for a in data['artifacts'][:3]]}")
+
+# 2. Verify PA responds
+data = json.dumps({'message': 'Check system health and list unclassified artifacts'}).encode()
 req = urllib.request.Request(f'{BASE}/api/pa/chat/', data=data, headers={
     'Authorization': f'Token {TOKEN}',
     'Content-Type': 'application/json'
@@ -139,34 +139,23 @@ req = urllib.request.Request(f'{BASE}/api/pa/chat/status/{task_id}/', headers={
 result = json.loads(urllib.request.urlopen(req).read())
 print(f"Status: {result['status']}")
 print(result.get('content', '')[:500])
-
-# 2. Verify resolve-node directly
-import urllib.request
-resp = urllib.request.urlopen('https://resolve-node-production.up.railway.app/health')
-print(json.loads(resp.read()))
-# Expected: {"status":"healthy","queue_size":0,"active_jobs":0}
 ```
 
 ---
 
 ## Critical Patterns & Gotchas
 
+**Decision Gates (Session 1070):**
+- Classification is decoupled from approval — `classify()` and `approve()` are separate operations
+- `auto_approve` parameter in classify API is a convenience shortcut, not a coupling
+- `classify_suggest` PA handler returns suggestions but NEVER applies them — human must confirm
+- Grandfather clause: artifacts approved before 2026-02-24 skip classification gate
+- Noise threshold (< 0.3) auto-rejects; 0.3-0.4 stays pending but hidden from classification UI (threshold >= 0.4)
+- Initiative `can_auto_progress` blocks at Stage 2+ if `target_audience` or `data_scope` empty
+
+**PA async flow (Session 974b):** POST `/api/pa/chat/` returns `{task_id}`. Poll GET `/api/pa/chat/status/<task_id>/` until `status != 'processing'`. Auth: `Authorization: Token <token>`.
+
 **Railway resolve-node deployment (Session 1063):**
 - Railway doesn't auto-create services from Procfile entries — must manually create via + Create
 - Start command needs `bash -c "..."` wrapper — Railway doesn't run through a shell by default
-- Railway injects PORT (usually 8080), overriding app defaults — public domain target port must match
-- `RESOLVE_NODE_URL` + `RENDER_NODE_TOKEN` must be on **celery-pa** service (where PA tool handlers execute)
-
-**deliverables_tool cleanup (Session 1063):** 3 strategies (duplicates/orphans/low_quality), all support `dry_run=true`. Duplicates keeps newest per title, deletes rest. Orphans deletes deliverables with no user. Low_quality deletes short content (<50 chars).
-
-**PA degenerate detector patterns (Session 1060):** `_is_degenerate_content()` has 4 patterns. Pattern 1 (repetitive chunks) requires >40% ratio. Pattern 2 (filler words) uses word-boundary matching with narrow list.
-
-**PA loop-break must drop previous_response_id (Session 1060):** When breaking out of loops, NEVER use `previous_response_id` from the current response — rebuild fresh messages via `_build_messages_array()`.
-
-**PA tool calls now logged (Session 1060):** `ToolCallRecord` entries with `agent_name='PersonalAssistant'`. PA trace_id (format `pa-N-hex`) is in `task_summary` field.
-
-**Initiative daily creation cap (Session 1059):** 15/day rolling limit. Similarity dedup includes COMPLETED initiatives from last 48h.
-
-**PA Railway URL (Session 1057):** Use `https://donkey-betz-platform-production.up.railway.app` (NOT `donkeybetz.com`).
-
-**PA async flow (Session 974b):** POST `/api/pa/chat/` returns `{task_id}`. Poll GET `/api/pa/chat/status/<task_id>/` until `status != 'processing'`. Auth: `Authorization: Token <token>`.
+- `RESOLVE_NODE_URL` + `RENDER_NODE_TOKEN` must be on **celery-pa** service
