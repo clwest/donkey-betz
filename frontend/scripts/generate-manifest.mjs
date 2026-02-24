@@ -77,6 +77,7 @@ try {
 const routes = extractArray(manifestSrc, 'APP_ROUTES');
 const studios = extractRecord(manifestSrc, 'STUDIO_CONFIG');
 const capabilities = extractRecord(manifestSrc, 'APP_CAPABILITIES');
+const apiDependencies = extractRecord(manifestSrc, 'API_DEPENDENCIES');
 
 const manifest = {
   build_sha: gitSha,
@@ -86,6 +87,7 @@ const manifest = {
   routes,
   studios,
   capabilities,
+  api_dependencies: apiDependencies,
 };
 
 // ── Write to dist ───────────────────────────────────────────────────────────
