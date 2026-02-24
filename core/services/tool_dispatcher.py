@@ -5625,6 +5625,20 @@ class ToolDispatcher:
                 'total': tc_total,
                 'by_agent_tool': by_agent_tool,
             }
+            # Session 1068: Include individual rows so PA can see error messages
+            if action == 'detailed' or hours >= 24:
+                detail_rows = list(
+                    failed_tc.order_by('-created_at')[:item_limit]
+                    .values('created_at', 'agent_name', 'tool_name',
+                            'error_type', 'error_message', 'latency_ms',
+                            'task_summary')
+                )
+                for row in detail_rows:
+                    if row.get('created_at'):
+                        row['created_at'] = row['created_at'].isoformat()
+                    if row.get('error_message'):
+                        row['error_message'] = row['error_message'][:500]
+                errors['failed_tool_calls']['details'] = detail_rows
             total_errors += tc_total
         except Exception as e:
             errors['failed_tool_calls'] = {'error': str(e)}
@@ -5650,6 +5664,48 @@ class ToolDispatcher:
             total_errors += ft_total
         except Exception as e:
             errors['failed_celery_tasks'] = {'error': str(e)}
+
+        # 5. Session 1068: Agent timeout breakdown (top timeout-prone agents)
+        try:
+            from core.models_unified_system import AgentExecution
+            timeout_qs = AgentExecution.objects.filter(
+                created_at__gte=cutoff,
+                status='failed',
+                error_message__icontains='timed out after 45 minutes'
+            )
+            timeout_by_agent = list(
+                timeout_qs.values('agent__name')
+                .annotate(timeouts=Count('id'))
+                .order_by('-timeouts')[:10]
+            )
+            errors['agent_timeouts'] = {
+                'total': timeout_qs.count(),
+                'by_agent': timeout_by_agent,
+            }
+            total_errors += timeout_qs.count()
+
+            # Include recent non-timeout agent failures with error messages
+            if action == 'detailed' or hours >= 24:
+                recent_failures = list(
+                    AgentExecution.objects.filter(
+                        created_at__gte=cutoff,
+                        status='failed',
+                    ).exclude(
+                        error_message__icontains='timed out after 45 minutes'
+                    ).order_by('-created_at')[:item_limit]
+                    .values('agent__name', 'task', 'error_message',
+                            'created_at', 'execution_time_ms')
+                )
+                for row in recent_failures:
+                    if row.get('created_at'):
+                        row['created_at'] = row['created_at'].isoformat()
+                    if row.get('error_message'):
+                        row['error_message'] = row['error_message'][:500]
+                    if row.get('task'):
+                        row['task'] = row['task'][:200]
+                errors['agent_failures_detail'] = recent_failures
+        except Exception as e:
+            errors['agent_timeouts'] = {'error': str(e)}
 
         # Compute severity
         if total_errors == 0:
