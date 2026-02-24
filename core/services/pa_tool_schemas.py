@@ -682,14 +682,21 @@ PA_TOOL_SCHEMAS = [
         "name": "error_summary_tool",
         "description": (
             "Get a summary of recent errors and failures across the platform. "
+            "Covers failure signatures, tool call failures (with error messages), "
+            "Celery task failures, and agent timeout breakdowns by agent name. "
             "Use when the user asks about errors, failures, what went wrong, "
-            "or error logs."
+            "timeouts, or error logs."
         ),
         "parameters": {
             "type": "object",
             "properties": {
-                "hours": {"type": "integer", "description": "Look back N hours (default 24)"},
-                "limit": {"type": "integer", "description": "Max errors (default 20)"},
+                "action": {
+                    "type": "string",
+                    "enum": ["summary", "detailed"],
+                    "description": "summary=counts only, detailed=include individual error messages (default summary)"
+                },
+                "hours": {"type": "integer", "description": "Look back N hours (default 24, use 72 or 168 for wider view)"},
+                "limit": {"type": "integer", "description": "Max items per category (default 20)"},
             },
         },
     },
