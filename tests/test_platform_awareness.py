@@ -92,9 +92,9 @@ class TestDeployVerify:
 # ── Studio APIs ──────────────────────────────────────────────────────────────
 
 class TestStudioAPIs:
-    def test_gallery_list(self):
+    def test_agents_list(self):
         resp = requests.get(
-            f'{BASE_URL}/api/v1/gallery/list/',
+            f'{BASE_URL}/api/v1/agents/list/',
             headers=_headers(),
             timeout=10,
         )
