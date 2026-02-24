@@ -534,6 +534,19 @@ export const timeCapsuleApi = {
 }
 
 // Session 696: Decisions API for Decision Insights Panel
+// Session 1070: Decision Gate Classification API
+export const classificationApi = {
+  listUnclassified: (limit = 50) =>
+    api.get(`/artifacts/needs-classification/?limit=${limit}`),
+  classifyArtifact: (artifactId: string, classification: {
+    what_is_this: string
+    who_is_it_for: string
+    data_allowed: string
+    phase_approved: string
+  }, autoApprove = false) =>
+    api.post(`/artifacts/${artifactId}/classify/`, { ...classification, auto_approve: autoApprove }),
+}
+
 export const decisionsApi = {
   list: (limit = 50) => api.get(`/boardroom/decisions/?limit=${limit}`),
   detail: (decisionId: string) => api.get(`/boardroom/decisions/${decisionId}/`),
