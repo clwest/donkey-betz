@@ -364,15 +364,16 @@ You orchestrate. You don't create content directly."""
                 # Build prompt with context and any previous results
                 full_prompt = self._build_intelligent_prompt(task, scifi_context, spider_context)
 
-                # Allow up to 5 delegation rounds for complex workflows
-                max_iterations = 5
+                # Session 1069: Reduced from 5 to 3 — most workflows complete in
+                # 2-3 steps; extra iterations cause 45-minute timeout kills.
+                max_iterations = 3
                 conversation_history = []
 
                 for iteration in range(max_iterations):
-                    if time.time() - start_time > 2700:  # 45 min wall clock
+                    if time.time() - start_time > 600:  # Session 1069: 10 min wall clock (was 45 min)
                         logger.warning(
                             f"[WorkflowAgent] Stopping after {iteration} iterations "
-                            f"— approaching timeout"
+                            f"— approaching 10min wall clock limit"
                         )
                         break
 

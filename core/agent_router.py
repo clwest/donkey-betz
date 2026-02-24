@@ -82,6 +82,7 @@ Available Agents:
 """
 
 import logging
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from typing import Dict, Any, Optional, Type
 from django.utils import timezone
 from django.db.models import F
@@ -899,28 +900,60 @@ class AgentRouter:
             user_docs_context = pre_gathered_context.get('user_docs_context', {})  # Session 1035
             logger.info(f"Using pre-gathered context for {agent_name} (context gathering done outside timeout)")
         else:
-            # Gather context (original behavior)
-            scifi_context = self._get_scifi_context(agent_name, task)
-            # Session 744: Use SpiderContextBuilder for agent-specific spider context
-            spider_context = self._get_spider_context(task, agent_name=agent_name)
-            # Session 744 Phase 3: Get learning patterns for this agent
-            learning_context = self._get_learning_context(agent_name, task)
-            # Session 744 Phase 4: Get advisor wisdom for this agent
-            advisor_context = self._get_advisor_context(agent_name, task)
-            # Session 744 Phase 5: Get performance feedback for this agent
-            feedback_context = self._get_feedback_context(agent_name, task)
-            # Session 744: Get knowledge-first routing context (checks existing knowledge BEFORE external queries)
-            knowledge_context = self._get_knowledge_context(agent_name, task)
-            # Session 798: Get workspace context for file operations
-            workspace_context = self._get_workspace_context(agent_name, task)
-            # Session 798: Get documentation context for system awareness
-            docs_context = self._get_docs_context(agent_name, task)
-            # Session 858: Get user context for personalization
-            user_context = self._get_user_context(agent_name, task)
-            # Session 949: Get risk-aware RAG context (critical docs, incidents, findings)
-            risk_context = self._get_risk_aware_context(task)
-            # Session 1035: Get user-uploaded documents via RAG
-            user_docs_context = self._get_user_documents_context(task)
+            # Session 1069: Parallel context gathering with per-call timeout.
+            # Previously sequential (11 calls × up to 30s each = 5+ min risk).
+            # Now parallel with 10s timeout per call — total max ~10s.
+            def _safe_ctx(fn):
+                """Wrap context call with DB connection cleanup for thread safety."""
+                try:
+                    from django.db import close_old_connections
+                    close_old_connections()
+                    return fn()
+                except Exception as e:
+                    logger.warning(f"[CONTEXT] {fn.__name__ if hasattr(fn, '__name__') else 'unknown'} failed: {e}")
+                    return {}
+                finally:
+                    from django.db import close_old_connections
+                    close_old_connections()
+
+            _ctx_fns = {
+                'scifi_context': lambda: self._get_scifi_context(agent_name, task),
+                'spider_context': lambda: self._get_spider_context(task, agent_name=agent_name),
+                'learning_context': lambda: self._get_learning_context(agent_name, task),
+                'advisor_context': lambda: self._get_advisor_context(agent_name, task),
+                'feedback_context': lambda: self._get_feedback_context(agent_name, task),
+                'knowledge_context': lambda: self._get_knowledge_context(agent_name, task),
+                'workspace_context': lambda: self._get_workspace_context(agent_name, task),
+                'docs_context': lambda: self._get_docs_context(agent_name, task),
+                'user_context': lambda: self._get_user_context(agent_name, task),
+                'risk_context': lambda: self._get_risk_aware_context(task),
+                'user_docs_context': lambda: self._get_user_documents_context(task),
+            }
+
+            _gathered = {}
+            with ThreadPoolExecutor(max_workers=11) as _pool:
+                _futures = {key: _pool.submit(_safe_ctx, fn) for key, fn in _ctx_fns.items()}
+                for key, future in _futures.items():
+                    try:
+                        _gathered[key] = future.result(timeout=10)
+                    except FuturesTimeoutError:
+                        logger.warning(f"[CONTEXT] {key} timed out (10s)")
+                        _gathered[key] = {}
+                    except Exception as e:
+                        logger.warning(f"[CONTEXT] {key} failed: {type(e).__name__}: {e}")
+                        _gathered[key] = {}
+
+            scifi_context = _gathered['scifi_context']
+            spider_context = _gathered['spider_context']
+            learning_context = _gathered['learning_context']
+            advisor_context = _gathered['advisor_context']
+            feedback_context = _gathered['feedback_context']
+            knowledge_context = _gathered['knowledge_context']
+            workspace_context = _gathered['workspace_context']
+            docs_context = _gathered['docs_context']
+            user_context = _gathered['user_context']
+            risk_context = _gathered['risk_context']
+            user_docs_context = _gathered['user_docs_context']
 
         # Session 522: Special handling for ContentWriterAgent - use SmartTrendingService
         # with dynamic year references and DuckDuckGo fallback for fresh 2025 data
