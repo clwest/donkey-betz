@@ -129,12 +129,34 @@ class ExtractedArtifact(models.Model):
         help_text="Combined score for ranking in queue"
     )
 
+    # Session 1070: Decision gate classification fields
+    classified = models.BooleanField(
+        default=False,
+        help_text="Whether this artifact has been classified via decision gate"
+    )
+    classified_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When the artifact was classified"
+    )
+    classified_by = models.ForeignKey(
+        'core.UnifiedUser',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='classified_artifacts',
+        help_text="Who classified this artifact"
+    )
+    classification = models.JSONField(
+        default=dict, blank=True,
+        help_text="Decision gate answers: what_is_this, who_is_it_for, data_allowed, phase_approved"
+    )
+
     class Meta:
         ordering = ['-extracted_at']
         indexes = [
             models.Index(fields=['status', 'artifact_type']),
             models.Index(fields=['composite_score']),
             models.Index(fields=['conversation', 'artifact_type']),
+            models.Index(fields=['status', 'classified']),
         ]
         verbose_name = 'Extracted Artifact'
         verbose_name_plural = 'Extracted Artifacts'
@@ -174,6 +196,24 @@ class ExtractedArtifact(models.Model):
         self.decided_by = user
         self.decision_notes = notes
         self.save()
+
+    def classify(self, classification: dict, user=None):
+        """
+        Session 1070: Apply decision gate classification.
+
+        classification should contain:
+        - what_is_this: research_finding|actionable_recommendation|scope_change|risk_flag|informational
+        - who_is_it_for: platform|end_users|founder|agents|public
+        - data_allowed: public_only|internal_ops|api_data|user_data|all
+        - phase_approved: research|prototype|pilot|production|none
+        """
+        self.classified = True
+        self.classified_at = timezone.now()
+        self.classified_by = user
+        self.classification = classification
+        self.save(update_fields=[
+            'classified', 'classified_at', 'classified_by', 'classification'
+        ])
 
 
 class ArtifactExtractionLog(models.Model):

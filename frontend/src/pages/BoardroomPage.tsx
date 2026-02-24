@@ -34,7 +34,7 @@ import {
   BarChart3,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { humanApi, decisionsApi } from '@/lib/api'
+import { humanApi, decisionsApi, classificationApi } from '@/lib/api'
 
 // --- Types (mirrored from BoardroomTab) ---
 
@@ -85,7 +85,50 @@ interface Decision {
   participants?: string[]
 }
 
-type TabView = 'inbox' | 'history'
+// Session 1070: Added 'classify' tab for decision gates
+interface UnclassifiedArtifact {
+  id: string
+  type: string
+  type_display: string
+  title: string
+  description: string
+  source_agent?: string
+  composite_score: number
+  classified: boolean
+  classification: Record<string, string>
+  extracted_at?: string
+}
+
+const WHAT_IS_THIS_OPTIONS = [
+  { value: 'research_finding', label: 'Research Finding' },
+  { value: 'actionable_recommendation', label: 'Actionable Recommendation' },
+  { value: 'scope_change', label: 'Scope Change' },
+  { value: 'risk_flag', label: 'Risk Flag' },
+  { value: 'informational', label: 'Informational' },
+]
+const WHO_IS_IT_FOR_OPTIONS = [
+  { value: 'platform', label: 'Platform' },
+  { value: 'end_users', label: 'End Users' },
+  { value: 'founder', label: 'Founder' },
+  { value: 'agents', label: 'Agents' },
+  { value: 'public', label: 'Public' },
+]
+const DATA_ALLOWED_OPTIONS = [
+  { value: 'public_only', label: 'Public Only' },
+  { value: 'internal_ops', label: 'Internal Ops' },
+  { value: 'api_data', label: 'API Data' },
+  { value: 'user_data', label: 'User Data' },
+  { value: 'all', label: 'All' },
+]
+const PHASE_APPROVED_OPTIONS = [
+  { value: 'research', label: 'Research' },
+  { value: 'prototype', label: 'Prototype' },
+  { value: 'pilot', label: 'Pilot' },
+  { value: 'production', label: 'Production' },
+  { value: 'none', label: 'None' },
+]
+
+type TabView = 'inbox' | 'history' | 'classify'
 type UrgencyFilter = 'all' | 'critical' | 'high' | 'medium' | 'low'
 type SortOption = 'newest' | 'oldest' | 'urgency'
 
@@ -507,7 +550,52 @@ export default function BoardroomPage() {
     refetchInterval: 30000,
   })
 
+  // Session 1070: Fetch unclassified artifacts
+  const {
+    data: unclassifiedData,
+    isLoading: loadingUnclassified,
+    refetch: refetchUnclassified,
+  } = useQuery({
+    queryKey: ['boardroom-unclassified'],
+    queryFn: async () => {
+      const res = await classificationApi.listUnclassified(50)
+      return res.data
+    },
+    refetchInterval: 30000,
+  })
+
+  // Session 1070: Classification form state per artifact
+  const [classificationForms, setClassificationForms] = useState<Record<string, {
+    what_is_this: string
+    who_is_it_for: string
+    data_allowed: string
+    phase_approved: string
+  }>>({})
+
+  const updateClassificationForm = (artifactId: string, field: string, value: string) => {
+    setClassificationForms(prev => ({
+      ...prev,
+      [artifactId]: { ...prev[artifactId], [field]: value },
+    }))
+  }
+
+  const isClassificationComplete = (artifactId: string) => {
+    const form = classificationForms[artifactId]
+    return form?.what_is_this && form?.who_is_it_for && form?.data_allowed && form?.phase_approved
+  }
+
   // Mutations
+  const classifyMutation = useMutation({
+    mutationFn: ({ artifactId, autoApprove }: { artifactId: string; autoApprove: boolean }) => {
+      const form = classificationForms[artifactId]
+      return classificationApi.classifyArtifact(artifactId, form, autoApprove)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['boardroom-unclassified'] })
+      queryClient.invalidateQueries({ queryKey: ['boardroom-attention'] })
+    },
+  })
+
   const decideMutation = useMutation({
     mutationFn: ({ itemId, decision }: { itemId: string; decision: string }) =>
       humanApi.decide(itemId, decision),
@@ -635,8 +723,9 @@ export default function BoardroomPage() {
   // Stats
   const pendingCount = statsData?.pending_count ?? attentionItems.length
   const decidedToday = statsData?.decided_today ?? 0
-  const mlAccuracy = statsData?.ml_accuracy ?? null
+  const unclassifiedCount = unclassifiedData?.total_unclassified ?? unclassifiedData?.count ?? 0
   const avgResponseTime = statsData?.avg_response_time_hours ?? null
+  const unclassifiedArtifacts: UnclassifiedArtifact[] = unclassifiedData?.artifacts ?? []
 
   return (
     <div className="flex-1 overflow-hidden flex flex-col">
@@ -651,7 +740,7 @@ export default function BoardroomPage() {
             </div>
           </div>
           <button
-            onClick={() => { refetchAttention(); refetchDecisions() }}
+            onClick={() => { refetchAttention(); refetchDecisions(); refetchUnclassified() }}
             className="flex items-center gap-2 px-3 py-2 bg-dark-border rounded-lg hover:bg-gray-700 transition-colors text-sm"
           >
             <RefreshCw size={14} className={loadingAttention || loadingDecisions ? 'animate-spin' : ''} />
@@ -675,12 +764,13 @@ export default function BoardroomPage() {
             </div>
             <div className="text-2xl font-bold text-green-400">{decidedToday}</div>
           </div>
-          <div className="p-4 bg-dark-card border border-dark-border rounded-lg">
+          <div className="p-4 bg-dark-card border border-dark-border rounded-lg cursor-pointer hover:border-amber-500/30 transition-colors"
+            onClick={() => setActiveTab('classify')}>
             <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-              <Target size={14} /> ML Accuracy
+              <Target size={14} /> Needs Classification
             </div>
-            <div className="text-2xl font-bold text-primary-400">
-              {mlAccuracy !== null ? `${Math.round(mlAccuracy * 100)}%` : '--'}
+            <div className={cn("text-2xl font-bold", unclassifiedCount > 0 ? "text-amber-400" : "text-green-400")}>
+              {unclassifiedCount}
             </div>
           </div>
           <div className="p-4 bg-dark-card border border-dark-border rounded-lg">
@@ -721,6 +811,21 @@ export default function BoardroomPage() {
           <Gavel size={16} />
           Draft Decisions
           <span className="px-2 py-0.5 text-xs rounded-full bg-dark-border">{decisions.length}</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('classify')}
+          className={cn(
+            'flex items-center gap-2 px-4 py-3 font-medium transition-colors border-b-2',
+            activeTab === 'classify'
+              ? 'text-amber-400 border-amber-500'
+              : 'text-gray-400 border-transparent hover:text-white'
+          )}
+        >
+          <Target size={16} />
+          Needs Classification
+          {unclassifiedCount > 0 && (
+            <span className="px-2 py-0.5 text-xs rounded-full bg-amber-500/20 text-amber-400">{unclassifiedCount}</span>
+          )}
         </button>
       </div>
 
@@ -940,7 +1045,7 @@ export default function BoardroomPage() {
               </div>
             )}
           </div>
-        ) : (
+        ) : activeTab === 'history' ? (
           /* Draft Decisions Tab */
           <div className="p-6 space-y-4">
             {/* Select All */}
@@ -1075,6 +1180,126 @@ export default function BoardroomPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Needs Classification Tab */
+          <div className="p-6 space-y-4">
+            <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm text-amber-300">
+              Artifacts below need classification before they can be approved. Answer the 4 questions for each item.
+            </div>
+            {loadingUnclassified ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="animate-spin text-amber-400" size={28} />
+              </div>
+            ) : unclassifiedArtifacts.length === 0 ? (
+              <div className="text-center py-16 text-gray-500">
+                <CheckCircle className="mx-auto mb-3" size={36} />
+                <p className="text-lg">All artifacts classified</p>
+                <p className="text-sm mt-1">No pending items need classification</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {unclassifiedArtifacts.map((artifact) => {
+                  const form = classificationForms[artifact.id] || {}
+                  const complete = isClassificationComplete(artifact.id)
+                  return (
+                    <div key={artifact.id} className="bg-dark-card border border-dark-border rounded-lg p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="px-2 py-0.5 text-xs rounded bg-dark-border text-gray-400">{artifact.type_display || artifact.type}</span>
+                            <span className="text-xs text-gray-500">{artifact.composite_score?.toFixed(2)}</span>
+                          </div>
+                          <h4 className="font-medium text-sm">{artifact.title}</h4>
+                          <p className="text-xs text-gray-400 mt-1 line-clamp-2">{artifact.description}</p>
+                          <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                            {artifact.source_agent && <span>Source: {artifact.source_agent}</span>}
+                            {artifact.extracted_at && <span>{timeAgo(artifact.extracted_at)}</span>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Classification Form */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs text-gray-500 block mb-1">What is this?</label>
+                          <select
+                            value={form.what_is_this || ''}
+                            onChange={e => updateClassificationForm(artifact.id, 'what_is_this', e.target.value)}
+                            className="w-full px-2 py-1.5 text-xs bg-dark-bg border border-dark-border rounded-lg text-gray-300 focus:outline-none focus:border-amber-500"
+                          >
+                            <option value="">Select...</option>
+                            {WHAT_IS_THIS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 block mb-1">Who is it for?</label>
+                          <select
+                            value={form.who_is_it_for || ''}
+                            onChange={e => updateClassificationForm(artifact.id, 'who_is_it_for', e.target.value)}
+                            className="w-full px-2 py-1.5 text-xs bg-dark-bg border border-dark-border rounded-lg text-gray-300 focus:outline-none focus:border-amber-500"
+                          >
+                            <option value="">Select...</option>
+                            {WHO_IS_IT_FOR_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 block mb-1">Data allowed?</label>
+                          <select
+                            value={form.data_allowed || ''}
+                            onChange={e => updateClassificationForm(artifact.id, 'data_allowed', e.target.value)}
+                            className="w-full px-2 py-1.5 text-xs bg-dark-bg border border-dark-border rounded-lg text-gray-300 focus:outline-none focus:border-amber-500"
+                          >
+                            <option value="">Select...</option>
+                            {DATA_ALLOWED_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 block mb-1">Phase approved?</label>
+                          <select
+                            value={form.phase_approved || ''}
+                            onChange={e => updateClassificationForm(artifact.id, 'phase_approved', e.target.value)}
+                            className="w-full px-2 py-1.5 text-xs bg-dark-bg border border-dark-border rounded-lg text-gray-300 focus:outline-none focus:border-amber-500"
+                          >
+                            <option value="">Select...</option>
+                            {PHASE_APPROVED_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          onClick={() => classifyMutation.mutate({ artifactId: artifact.id, autoApprove: true })}
+                          disabled={!complete || classifyMutation.isPending}
+                          className={cn(
+                            "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                            complete
+                              ? "bg-green-500/20 text-green-400 hover:bg-green-500/30"
+                              : "bg-dark-border text-gray-600 cursor-not-allowed"
+                          )}
+                        >
+                          {classifyMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
+                          Classify & Approve
+                        </button>
+                        <button
+                          onClick={() => classifyMutation.mutate({ artifactId: artifact.id, autoApprove: false })}
+                          disabled={!complete || classifyMutation.isPending}
+                          className={cn(
+                            "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                            complete
+                              ? "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
+                              : "bg-dark-border text-gray-600 cursor-not-allowed"
+                          )}
+                        >
+                          Classify Only
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>

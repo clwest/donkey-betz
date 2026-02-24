@@ -840,31 +840,24 @@ def auto_process_extracted_artifacts(
         }
 
         # =====================================================================
-        # 1. AUTO-APPROVE: Insights (informational only)
-        # Aggressive: ALL insights | Standard: score < 0.5
+        # 1. Session 1070: AUTO-REJECT very low-score noise insights only.
+        # All other insights stay 'pending' until human classifies + approves.
+        # (Previously this block auto-approved insights, which bypassed
+        #  the decision gate — the core semantic bug this session fixes.)
         # =====================================================================
-        if aggressive:
-            # Aggressive: Approve ALL insights - they're informational
-            insights = ExtractedArtifact.objects.filter(
-                status='pending',
-                artifact_type='insight'
-            )[:batch_size]
-            note = 'Auto-approved: Insight (informational, aggressive mode)'
-        else:
-            # Standard: Only low-score insights
-            insights = ExtractedArtifact.objects.filter(
-                status='pending',
-                artifact_type='insight',
-                composite_score__lt=0.5
-            )[:batch_size]
-            note = 'Auto-approved: Low-score insight (informational)'
+        noise_insights = ExtractedArtifact.objects.filter(
+            status='pending',
+            artifact_type='insight',
+            composite_score__lt=0.3
+        )[:batch_size]
+        noise_note = 'Auto-rejected: Very low-score insight (noise, composite < 0.3)'
 
-        for artifact in insights:
-            artifact.status = 'approved'
+        for artifact in noise_insights:
+            artifact.status = 'rejected'
             artifact.decided_at = now
-            artifact.decision_notes = note
+            artifact.decision_notes = noise_note
             artifact.save(update_fields=['status', 'decided_at', 'decision_notes'])
-            stats['insights_approved'] += 1
+            stats['insights_approved'] += 1  # reusing key for backwards compat
             stats['total_processed'] += 1
 
         # =====================================================================
