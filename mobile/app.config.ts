@@ -10,6 +10,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: 'automatic',
   scheme: 'donkeybetz',
   newArchEnabled: true,
+  runtimeVersion: {
+    policy: 'appVersion',
+  },
+  updates: {
+    url: `https://u.expo.dev/${process.env.EAS_PROJECT_ID ?? ''}`,
+    fallbackToCacheTimeout: 5000,
+  },
   splash: {
     image: './assets/splash-icon.png',
     resizeMode: 'contain',
