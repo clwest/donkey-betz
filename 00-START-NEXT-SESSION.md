@@ -1,109 +1,66 @@
-# Session 1072 - Start Here
+# Session 1073 - Start Here
 
-**Previous Sessions:** 1071 (PA Platform Awareness — 7-part spec: manifest endpoint, deploy verification, studio tool, PA service account, Playwright smoke tests), 1070 (Decision Gates — 4-question classification gate), 1069 (Agent Timeout Epidemic — parallelize context gathering), 1068 (Artifact Execution Fix — fan-out execution, blank error messages)
+**Previous Sessions:** 1072 (PA apiDependencies manifest — 67 endpoints across 7 routes, list_api_dependencies action), 1071 (PA Platform Awareness — manifest, deploy verify, studio tool, service account), 1070 (Decision Gates — 4-question classification gate)
 **Date:** February 23, 2026
 **Status:** 218 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2, 45 tool schemas, 65 handlers)** | 13 ACTIVE initiatives | 57 COMPLETED
 
 ---
 
-## Session 1071 — What Happened
+## Session 1072 — What Happened
 
-### PA Platform-Wide Awareness + Control (PR #1442 — MERGED)
+### PA apiDependencies Manifest (PR #1447 — MERGED)
 
-**Problem:** The PA had tool-level access to backend data but couldn't enumerate frontend routes, verify deployments, or generate media through a unified interface.
+**Problem:** The PA's Layer #1 Surface Map identified a gap: the manifest covers routes + studios + capabilities but lacks per-route API dependency mapping. The PA could enumerate all 30 routes but couldn't answer "what APIs does the boardroom page use?" without guessing.
 
-**Fix — 7-Part Implementation:**
+**Fix — 5 files, no new files:**
 
-| Part | What | Key Files |
-|------|------|-----------|
-| 1 | Frontend capabilities manifest (30 routes, 3 studios, 8 flags) | `frontend/src/appManifest.ts`, `scripts/generate-manifest.mjs` |
-| 2 | RBAC-filtered manifest endpoint + `platform_awareness_tool` (5 actions) | `core/views_app_manifest.py` |
-| 3 | UI smoke test runner (Playwright, dev/CI only) | `core/management/commands/run_ui_smoke.py` |
-| 4 | Deploy verification endpoint + CLI command (8 health checks) | `core/views_deploy_verify.py`, `run_smoke_tests.py` |
-| 5 | Unified `studio_tool` (5 actions: generate_image/video/audio, job_status, list_jobs) | `tool_dispatcher.py` |
-| 6 | PA service account (`pa-service` user + DRF token, idempotent on deploy) | `setup_pa_service_account.py`, `Procfile` |
-| 7 | Acceptance tests (8 tests, 5 classes) | `tests/test_platform_awareness.py` |
+| File | Change |
+|------|--------|
+| `frontend/src/appManifest.ts` | Added `ApiDependency` interface + `API_DEPENDENCIES` record (67 endpoints across 7 routes, 23 empty) |
+| `frontend/scripts/generate-manifest.mjs` | Extract `API_DEPENDENCIES` into `__manifest.json` |
+| `core/views_app_manifest.py` | RBAC-filtered `api_dependencies` passthrough + fallback |
+| `core/services/pa_tool_schemas.py` | Added `list_api_dependencies` action + `writes_only` param to `platform_awareness_tool` |
+| `core/services/tool_dispatcher.py` | Added `list_api_dependencies` handler + extended `system_overview` with dependency stats |
 
-**Verified locally:** Frontend build generates `__manifest.json` (30 routes), 65 handlers registered, URL patterns resolve, PA service account created.
+**Endpoint coverage:**
 
----
+| Route | Read | Write | Total |
+|-------|------|-------|-------|
+| `/boardroom` | 4 | 8 | 12 |
+| `/governance` | 4 | 3 | 7 |
+| `/` (Command Center) | 13 | 6 | 19 |
+| `/workspace` | 3 | 0 | 3 |
+| `/content` | 4 | 0 | 4 |
+| `/betting` | 11 | 3 | 14 |
+| `/stocks` | 8 | 0 | 8 |
+| **Total** | **47** | **20** | **67** |
 
-## Priority: Verify on Railway (Production)
-
-This session deployed new endpoints and PA tools. **Must verify on Railway before anything else.**
-
-### Step 1: Deploy to Railway
-Push to GitHub triggers auto-deploy. Verify the release command runs `setup_pa_service_account`:
-```bash
-railway logs -s web --filter "PA_SERVICE_TOKEN" | head -1
-```
-
-### Step 2: Verify new endpoints
-```python
-import urllib.request, json
-
-TOKEN = 'YOUR_TOKEN'
-BASE = 'https://donkey-betz-platform-production.up.railway.app'
-
-# 1. Manifest endpoint
-req = urllib.request.Request(f'{BASE}/api/app/manifest/', headers={
-    'Authorization': f'Token {TOKEN}'
-})
-data = json.loads(urllib.request.urlopen(req).read())
-print(f"Routes: {data['route_count']}, Studios: {list(data['studios'].keys())}")
-print(f"Build SHA: {data['build_sha']}, Role: {data['user_role']}")
-
-# 2. Deploy verification (admin only)
-req = urllib.request.Request(f'{BASE}/api/deploy/verify/', method='POST', headers={
-    'Authorization': f'Token {TOKEN}'
-})
-data = json.loads(urllib.request.urlopen(req).read())
-print(f"Deploy checks: {data['passed']}/{data['total']} passed, all_ok={data['all_ok']}")
-for r in data['results']:
-    print(f"  {'✓' if r['ok'] else '✗'} {r['name']}: {r['detail']} ({r['latency_ms']}ms)")
-```
-
-### Step 3: Test PA tools via chat
-```python
-import urllib.request, json, time
-
-TOKEN = 'YOUR_TOKEN'
-BASE = 'https://donkey-betz-platform-production.up.railway.app'
-
-# Test platform_awareness_tool
-msg = json.dumps({'message': 'What pages and features are available in the app?'}).encode()
-req = urllib.request.Request(f'{BASE}/api/assistant/chat/', data=msg, headers={
-    'Authorization': f'Token {TOKEN}',
-    'Content-Type': 'application/json'
-})
-resp = json.loads(urllib.request.urlopen(req).read())
-task_id = resp['task_id']
-print(f'Task: {task_id}')
-
-time.sleep(15)
-req = urllib.request.Request(f'{BASE}/api/assistant/chat/status/{task_id}/', headers={
-    'Authorization': f'Token {TOKEN}'
-})
-result = json.loads(urllib.request.urlopen(req).read())
-print(result.get('content', '')[:800])
-```
-
-### Step 4: Run acceptance tests
-```bash
-TEST_BASE_URL=https://donkey-betz-platform-production.up.railway.app \
-PA_SERVICE_TOKEN=<from railway logs> \
-ADMIN_TOKEN=<your admin token> \
-pytest tests/test_platform_awareness.py -v
-```
+**Verified locally:** Frontend build → `__manifest.json` has 30 routes + 67 endpoints. `list_api_dependencies` for `/boardroom` → 12 endpoints. `writes_only` filter → 8 writes. `system_overview` → `api_dependency_routes: 30, api_dependency_total_endpoints: 67`.
 
 ---
 
-## Current System Health (post-Session 1071)
+## Priority: Continue PA Layer Work
+
+Session 1072 completed the **apiDependencies gap** identified in the PA's Layer #1 Surface Map. The PA can now:
+1. Enumerate per-route API dependencies with `platform_awareness_tool(action=list_api_dependencies)`
+2. Filter mutations with `writes_only=true`
+3. See dependency stats in `system_overview`
+
+### Next PA tasks to consider:
+- **Deploy to Railway** and test via PA chat: "What APIs does the boardroom page use?"
+- **Populate remaining 23 empty routes** incrementally (currently empty arrays)
+- **PA Layer #2+** from the Systems Map series (see `docs/handoffs/PA_LAYER1_SURFACE_MAP.md`)
+- **Test untested PA tools** (25+ still need verification — see list below)
+
+---
+
+## Current System Health (post-Session 1072)
 
 | Metric | Value |
 |--------|-------|
 | PA routing | **GPT-5.2 function calling** (`PA_USE_FUNCTION_CALLING=true`) |
-| PA tools | **45 schemas, 65 handlers** — +platform_awareness_tool, +studio_tool |
+| PA tools | **45 schemas, 65 handlers** — includes `list_api_dependencies` action |
+| PA API coverage | **67 endpoints mapped** across 7 key routes |
 | Decision gates | **ACTIVE** — 2,339 artifacts need classification |
 | Platform health score | **100** (7/7 components healthy) |
 | Celery throughput | **1291 tasks/hour, 99.3% success** |
@@ -138,6 +95,12 @@ High-priority: `brainstorm_tool`, `dream_tool`, `content_review_tool`, `learning
 ---
 
 ## Critical Patterns & Gotchas
+
+**API Dependencies (Session 1072):**
+- `API_DEPENDENCIES` in `appManifest.ts` is the source of truth — 7 routes populated, 23 empty
+- `list_api_dependencies` supports `path` (single route) and `writes_only` (mutation filter)
+- RBAC filtering: non-admin users only see deps for routes they can access
+- Remaining 23 routes return empty arrays — PA reports "no dependency data available" rather than guessing
 
 **Platform Awareness (Session 1071):**
 - `__manifest.json` is generated at frontend build time — if not rebuilt, backend uses hardcoded fallback
