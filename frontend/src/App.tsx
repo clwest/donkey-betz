@@ -29,6 +29,8 @@ import ImageStudioPage from '@/pages/ImageStudioPage'
 import VideoStudioPage from '@/pages/VideoStudioPage'
 import GovernmentPage from '@/pages/GovernmentPage'
 import HowItWorksPage from '@/pages/HowItWorksPage'
+import BoardroomPage from '@/pages/BoardroomPage'  // Session 1067: Full-page boardroom
+import GovernancePage from '@/pages/GovernancePage'  // Session 1067: Full-page governance
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -71,6 +73,10 @@ function App() {
         <Route path="admin" element={<AdminPage />} />
         <Route path="workspace" element={<WorkspacePage />} />
         <Route path="platform" element={<PlatformPage />} />
+
+        {/* Session 1067: Full-page boardroom + governance */}
+        <Route path="boardroom" element={<BoardroomPage />} />
+        <Route path="governance" element={<GovernancePage />} />
 
         {/* Standalone pages kept — distinct UI not duplicated in workspace */}
         <Route path="advisors" element={<AdvisorsPage />} />

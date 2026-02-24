@@ -5,6 +5,7 @@ import { cn } from '@/lib/cn'
 import {
   LayoutDashboard,
   MessageSquare,
+  Gavel,
   Bot,
   Palette,
   Settings,
@@ -14,6 +15,7 @@ import {
   Scale,
   DollarSign,
   Shield,
+  ShieldCheck,
   FolderCog,
   LayoutGrid,
   FileText,
@@ -56,6 +58,10 @@ const navItems = [
   { path: '/workspace', label: 'Workspace', icon: FolderCog },
   { path: '/image-studio', label: 'Image Studio', icon: Palette },
   { path: '/video-studio', label: 'Video Studio', icon: Film },
+
+  // Session 1067: Full-page boardroom & governance
+  { path: '/boardroom', label: 'Boardroom', icon: Gavel },
+  { path: '/governance', label: 'Governance', icon: ShieldCheck },
 
   // Core Navigation
   { path: '/agents', label: 'Agents', icon: Bot },
@@ -114,7 +120,10 @@ export default function Sidebar() {
   const getBadgeCount = (path: string): number | null => {
     switch (path) {
       case '/human':
+      case '/boardroom':
         return pendingDecisions > 0 ? pendingDecisions : null
+      case '/governance':
+        return criticalGates > 0 ? criticalGates : null
       case '/workspace':
         // Show badge if there are running pilots or critical gates
         return runningPilots > 0 || criticalGates > 0
