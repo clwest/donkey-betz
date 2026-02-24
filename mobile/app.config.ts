@@ -56,5 +56,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         color: '#6366f1',
       },
     ],
+    [
+      '@sentry/react-native/expo',
+      {
+        organization: process.env.SENTRY_ORG ?? '',
+        project: process.env.SENTRY_PROJECT ?? 'donkeybetz-mobile',
+      },
+    ],
   ],
 });

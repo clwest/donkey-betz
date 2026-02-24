@@ -12,18 +12,33 @@ import {
   addNotificationResponseListener,
   handleInitialNotification,
 } from './src/push/notificationHandlers';
+import { initSentry, setSentryUser, SentryErrorBoundary } from './src/observability/sentry';
+import OfflineBanner from './src/observability/OfflineBanner';
+
+// Initialize Sentry before any rendering
+initSentry();
 
 // Configure foreground notification display once at module level
 configureForegroundHandler();
 
-export default function App() {
+function App() {
   const status = useAuthStore((s) => s.status);
+  const user = useAuthStore((s) => s.user);
   const hydrate = useAuthStore((s) => s.hydrate);
   const pushRegistered = useRef(false);
 
   useEffect(() => {
     hydrate();
   }, [hydrate]);
+
+  // Set Sentry user context on auth change
+  useEffect(() => {
+    if (status === 'signedIn' && user) {
+      setSentryUser({ id: String(user.id), username: user.username });
+    } else {
+      setSentryUser(null);
+    }
+  }, [status, user]);
 
   // Register push token after sign-in
   useEffect(() => {
@@ -60,11 +75,15 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={styles.root}>
+      <OfflineBanner />
       <AppNavigator />
       <StatusBar style="light" />
     </GestureHandlerRootView>
   );
 }
+
+// Wrap root component with Sentry error boundary
+export default SentryErrorBoundary(App);
 
 const styles = StyleSheet.create({
   root: {
