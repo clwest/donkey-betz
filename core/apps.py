@@ -72,6 +72,12 @@ class CoreConfig(AppConfig):
         except ImportError:
             pass  # Experiment linker not available
 
+        # Session 1073: Connect push notification signals
+        try:
+            import core.signals_push_notifications  # noqa: F401
+        except ImportError:
+            pass  # Push notification signals not available
+
     def _should_run_startup_check(self):
         """Determine if we should run the startup health check"""
         # Check if DATABASE_AUDIT_ON_STARTUP is enabled
