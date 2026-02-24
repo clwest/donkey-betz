@@ -1119,13 +1119,15 @@ PA_TOOL_SCHEMAS = [
                     "enum": [
                         "get_manifest", "list_routes", "check_route",
                         "system_overview", "verify_deploy",
+                        "list_api_dependencies",
                     ],
                     "description": (
                         "get_manifest: full manifest (routes, studios, capabilities). "
                         "list_routes: filter routes by category or auth. "
                         "check_route: verify a specific route exists. "
                         "system_overview: summary counts. "
-                        "verify_deploy: run deploy health checks (admin only)."
+                        "verify_deploy: run deploy health checks (admin only). "
+                        "list_api_dependencies: list API endpoints a route depends on."
                     ),
                 },
                 "category": {
@@ -1135,11 +1137,15 @@ PA_TOOL_SCHEMAS = [
                 },
                 "path": {
                     "type": "string",
-                    "description": "Route path to check (for check_route, e.g. '/governance')",
+                    "description": "Route path to check (for check_route) or filter (for list_api_dependencies), e.g. '/governance'",
                 },
                 "auth_required": {
                     "type": "boolean",
                     "description": "Filter routes by auth requirement (for list_routes)",
+                },
+                "writes_only": {
+                    "type": "boolean",
+                    "description": "If true, only return mutation (write) endpoints (for list_api_dependencies)",
                 },
             },
             "required": ["action"],

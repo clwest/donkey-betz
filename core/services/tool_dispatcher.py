@@ -7615,6 +7615,7 @@ RESEARCH DATA:
                 categories[cat] = categories.get(cat, 0) + 1
             studios = manifest.get('studios', {})
             capabilities = manifest.get('capabilities', {})
+            api_deps = manifest.get('api_dependencies', {})
             return {
                 'route_count': len(routes),
                 'routes_by_category': categories,
@@ -7623,7 +7624,31 @@ RESEARCH DATA:
                 'capability_count': sum(1 for v in capabilities.values() if v),
                 'capabilities': capabilities,
                 'build_sha': manifest.get('build_sha', 'unknown'),
+                'api_dependency_routes': len(api_deps),
+                'api_dependency_total_endpoints': sum(len(v) for v in api_deps.values() if isinstance(v, list)),
             }
+
+        if action == 'list_api_dependencies':
+            api_deps = manifest.get('api_dependencies', {})
+            path = payload.get('path')
+            writes_only = payload.get('writes_only', False)
+            if path:
+                deps = api_deps.get(path, [])
+                if not isinstance(deps, list):
+                    deps = []
+                if writes_only:
+                    deps = [d for d in deps if isinstance(d, dict) and d.get('writes')]
+                return {'route': path, 'endpoint_count': len(deps), 'endpoints': deps}
+            else:
+                result = {}
+                for rp, rp_deps in api_deps.items():
+                    if not isinstance(rp_deps, list):
+                        continue
+                    filtered = rp_deps
+                    if writes_only:
+                        filtered = [d for d in rp_deps if isinstance(d, dict) and d.get('writes')]
+                    result[rp] = {'endpoint_count': len(filtered), 'endpoints': filtered}
+                return {'route_count': len(result), 'routes': result}
 
         return {'error': f'Unknown action: {action}'}
 
