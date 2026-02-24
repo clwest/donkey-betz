@@ -1101,6 +1101,92 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
+    # ── Platform Awareness ─────────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "platform_awareness_tool",
+        "description": (
+            "Enumerate platform capabilities: UI routes, studios, feature flags, "
+            "and deploy verification. Use when the user asks what pages exist, "
+            "what features are available, what the app can do, about routes, "
+            "capabilities, studios, or wants to verify a deployment."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "get_manifest", "list_routes", "check_route",
+                        "system_overview", "verify_deploy",
+                    ],
+                    "description": (
+                        "get_manifest: full manifest (routes, studios, capabilities). "
+                        "list_routes: filter routes by category or auth. "
+                        "check_route: verify a specific route exists. "
+                        "system_overview: summary counts. "
+                        "verify_deploy: run deploy health checks (admin only)."
+                    ),
+                },
+                "category": {
+                    "type": "string",
+                    "enum": ["command", "studio", "intelligence", "domain", "reference", "admin", "auth"],
+                    "description": "Filter routes by category (for list_routes)",
+                },
+                "path": {
+                    "type": "string",
+                    "description": "Route path to check (for check_route, e.g. '/governance')",
+                },
+                "auth_required": {
+                    "type": "boolean",
+                    "description": "Filter routes by auth requirement (for list_routes)",
+                },
+            },
+            "required": ["action"],
+        },
+    },
+
+    # ── Studio Tool (unified generation) ─────────────────────────────────────
+    {
+        "type": "function",
+        "name": "studio_tool",
+        "description": (
+            "Unified creative studio: generate images, videos, and audio. "
+            "Use when the user asks to create or generate media content — "
+            "'generate an image', 'create a video', 'make audio', 'TTS'. "
+            "Also check job status and list recent media jobs."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "generate_image", "generate_video", "generate_audio",
+                        "job_status", "list_jobs",
+                    ],
+                    "description": (
+                        "generate_image: create an AI image from prompt. "
+                        "generate_video: create a video from prompt/image. "
+                        "generate_audio: text-to-speech audio. "
+                        "job_status: check status of a generation job. "
+                        "list_jobs: recent generation history."
+                    ),
+                },
+                "prompt": {"type": "string", "description": "Generation prompt / text to speak"},
+                "style": {"type": "string", "description": "Visual style or mood (for image/video)"},
+                "model": {"type": "string", "description": "Specific model to use (e.g. dall-e-3, stability-ai)"},
+                "width": {"type": "integer", "description": "Image width in pixels"},
+                "height": {"type": "integer", "description": "Image height in pixels"},
+                "duration": {"type": "integer", "description": "Video duration in seconds"},
+                "voice": {"type": "string", "description": "Voice name for TTS"},
+                "job_id": {"type": "string", "description": "Job/task ID for status check"},
+                "limit": {"type": "integer", "description": "Max items for list_jobs (default 10)"},
+            },
+            "required": ["action"],
+        },
+    },
+
     # ── Session 1048: Task Volume Breakdown ──────────────────────────────────
     {
         "type": "function",
@@ -1195,6 +1281,8 @@ TOOL_ENRICHMENT_MAP = {
     'run_agent': ['intelligence_enricher'],
     'legal_doc_drafter_agent': ['domain_context'],
     'task_breakdown_tool': [],
+    'platform_awareness_tool': [],
+    'studio_tool': ['intelligence_enricher'],
 }
 
 # Reverse map: tool name -> canonical intent name for enrichment pipeline
@@ -1241,4 +1329,6 @@ TOOL_TO_INTENT_MAP = {
     'run_agent': 'agent_execution',
     'legal_doc_drafter_agent': 'legal_assistance',
     'task_breakdown_tool': 'task_breakdown',
+    'platform_awareness_tool': 'platform_awareness',
+    'studio_tool': 'studio',
 }

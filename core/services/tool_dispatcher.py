@@ -201,6 +201,10 @@ class ToolDispatcher:
         # Session 1048: Task volume breakdown
         self.register("task_breakdown_tool", self._handle_task_breakdown)
 
+        # Session 1071: Platform awareness + studio tools
+        self.register("platform_awareness_tool", self._handle_platform_awareness)
+        self.register("studio_tool", self._handle_studio)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):
@@ -7531,6 +7535,215 @@ RESEARCH DATA:
             'by_task': by_task,
             'by_agent': by_agent,
         }
+
+
+    # ── Session 1071: Platform Awareness ─────────────────────────────────────
+
+    def _handle_platform_awareness(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """Platform awareness: manifest, routes, capabilities, deploy verification."""
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        from core.views_app_manifest import get_manifest_data
+
+        action = payload.get('action', 'get_manifest')
+
+        # Resolve user object for RBAC filtering
+        user = None
+        if user_id:
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                pass
+
+        if action == 'verify_deploy':
+            # Admin-only deploy verification
+            if user and (user.is_superuser or user.is_staff):
+                from core.views_deploy_verify import run_verification
+                import os
+                base_url = os.getenv(
+                    'DEPLOY_BASE_URL',
+                    'https://donkey-betz-platform-production.up.railway.app'
+                )
+                from rest_framework.authtoken.models import Token
+                token_obj = Token.objects.filter(user=user).first()
+                token = token_obj.key if token_obj else None
+                return run_verification(base_url, token=token)
+            return {'error': 'Admin access required for deploy verification'}
+
+        if not user:
+            # If no user, return unfiltered manifest
+            from core.views_app_manifest import _load_manifest
+            manifest = _load_manifest()
+        else:
+            manifest = get_manifest_data(user)
+
+        routes = manifest.get('routes', [])
+
+        if action == 'get_manifest':
+            return manifest
+
+        if action == 'list_routes':
+            category = payload.get('category')
+            auth_required = payload.get('auth_required')
+            filtered = routes
+            if category:
+                filtered = [r for r in filtered if r.get('category') == category]
+            if auth_required is not None:
+                filtered = [r for r in filtered if r.get('authRequired') == auth_required]
+            return {
+                'count': len(filtered),
+                'routes': filtered,
+            }
+
+        if action == 'check_route':
+            path = payload.get('path', '')
+            match = next((r for r in routes if r.get('path') == path), None)
+            if match:
+                return {'exists': True, 'route': match}
+            return {'exists': False, 'path': path}
+
+        if action == 'system_overview':
+            categories = {}
+            for r in routes:
+                cat = r.get('category', 'unknown')
+                categories[cat] = categories.get(cat, 0) + 1
+            studios = manifest.get('studios', {})
+            capabilities = manifest.get('capabilities', {})
+            return {
+                'route_count': len(routes),
+                'routes_by_category': categories,
+                'studio_count': sum(1 for s in studios.values() if isinstance(s, dict) and s.get('enabled')),
+                'studios': list(studios.keys()),
+                'capability_count': sum(1 for v in capabilities.values() if v),
+                'capabilities': capabilities,
+                'build_sha': manifest.get('build_sha', 'unknown'),
+            }
+
+        return {'error': f'Unknown action: {action}'}
+
+    # ── Session 1071: Studio Tool ────────────────────────────────────────────
+
+    def _handle_studio(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """Unified creative studio: generate images, videos, audio, check jobs."""
+        action = payload.get('action', 'list_jobs')
+
+        if action == 'generate_image':
+            task = payload.get('prompt', '')
+            context = {}
+            if payload.get('style'):
+                context['style'] = payload['style']
+            if payload.get('model'):
+                context['model'] = payload['model']
+            if payload.get('width'):
+                context['width'] = payload['width']
+            if payload.get('height'):
+                context['height'] = payload['height']
+            return self._handle_agent_tool(
+                'image_generation_agent',
+                {'task': task, 'context': context},
+                user_id, trace_id,
+            )
+
+        if action == 'generate_video':
+            task = payload.get('prompt', '')
+            context = {}
+            if payload.get('style'):
+                context['style'] = payload['style']
+            if payload.get('duration'):
+                context['duration'] = payload['duration']
+            return self._handle_agent_tool(
+                'video_generation_agent',
+                {'task': task, 'context': context},
+                user_id, trace_id,
+            )
+
+        if action == 'generate_audio':
+            task = payload.get('prompt', '')
+            context = {}
+            if payload.get('voice'):
+                context['voice'] = payload['voice']
+            return self._handle_agent_tool(
+                'audio_generation_agent',
+                {'task': task, 'context': context},
+                user_id, trace_id,
+            )
+
+        if action == 'job_status':
+            job_id = payload.get('job_id')
+            if not job_id:
+                return {'error': 'job_id is required for job_status'}
+            # Check CeleryTaskEvent first
+            try:
+                from core.models_celery_telemetry import CeleryTaskEvent
+                event = CeleryTaskEvent.objects.filter(task_id=job_id).first()
+                if event:
+                    return {
+                        'job_id': job_id,
+                        'status': event.status,
+                        'started_at': event.started_at.isoformat() if event.started_at else None,
+                        'finished_at': event.finished_at.isoformat() if event.finished_at else None,
+                        'duration_ms': round(event.duration_seconds * 1000) if event.duration_seconds else None,
+                    }
+            except Exception:
+                pass
+            return {'job_id': job_id, 'status': 'unknown'}
+
+        if action == 'list_jobs':
+            limit = min(int(payload.get('limit', 10)), 50)
+            jobs = []
+            try:
+                from core.models import ImageHistory
+                for img in ImageHistory.objects.order_by('-created_at')[:limit]:
+                    jobs.append({
+                        'id': str(img.id),
+                        'type': 'image',
+                        'prompt': getattr(img, 'prompt', '')[:100] if getattr(img, 'prompt', '') else '',
+                        'created_at': img.created_at.isoformat() if hasattr(img, 'created_at') and img.created_at else None,
+                    })
+            except Exception:
+                pass
+            try:
+                from core.models import VideoHistory
+                for vid in VideoHistory.objects.order_by('-created_at')[:limit]:
+                    jobs.append({
+                        'id': str(vid.id),
+                        'type': 'video',
+                        'prompt': getattr(vid, 'prompt', '')[:100] if getattr(vid, 'prompt', '') else '',
+                        'created_at': vid.created_at.isoformat() if hasattr(vid, 'created_at') and vid.created_at else None,
+                    })
+            except Exception:
+                pass
+            try:
+                from core.models import AudioHistory
+                for aud in AudioHistory.objects.order_by('-created_at')[:limit]:
+                    jobs.append({
+                        'id': str(aud.id),
+                        'type': 'audio',
+                        'prompt': getattr(aud, 'text', '')[:100] if getattr(aud, 'text', '') else '',
+                        'created_at': aud.created_at.isoformat() if hasattr(aud, 'created_at') and aud.created_at else None,
+                    })
+            except Exception:
+                pass
+            # Sort by created_at descending
+            jobs.sort(key=lambda j: j.get('created_at') or '', reverse=True)
+            return {
+                'count': len(jobs[:limit]),
+                'jobs': jobs[:limit],
+            }
+
+        return {'error': f'Unknown studio action: {action}'}
 
 
 # Singleton instance
