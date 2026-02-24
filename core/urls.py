@@ -3774,6 +3774,10 @@ urlpatterns += [
     path('api/artifacts/<uuid:artifact_id>/executions/', lambda r, artifact_id: __import__('core.views_artifacts', fromlist=['list_executions']).list_executions(r, artifact_id), name='artifacts-executions'),
     path('api/artifacts/executions/<uuid:execution_id>/', lambda r, execution_id: __import__('core.views_artifacts', fromlist=['get_execution']).get_execution(r, execution_id), name='execution-detail'),
 
+    # Session 1070: Decision Gate Classification
+    path('api/artifacts/needs-classification/', lambda r: __import__('core.views_artifacts', fromlist=['list_unclassified_artifacts']).list_unclassified_artifacts(r), name='artifacts-needs-classification'),
+    path('api/artifacts/<uuid:artifact_id>/classify/', lambda r, artifact_id: __import__('core.views_artifacts', fromlist=['classify_artifact']).classify_artifact(r, artifact_id), name='artifacts-classify'),
+
     # =========================================================================
     # Session 555: Review Documents API (Chief of Staff Layer Phase D)
     # =========================================================================

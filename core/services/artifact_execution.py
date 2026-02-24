@@ -108,6 +108,20 @@ class ArtifactExecutionService:
         if artifact.status != 'approved':
             raise ValueError(f"Artifact {artifact.id} is not approved (status: {artifact.status})")
 
+        # Session 1070: Decision gate — require classification for artifacts
+        # approved after the gate activation date. Grandfathers existing ones.
+        from datetime import datetime as _dt
+        gate_activation = timezone.make_aware(_dt(2026, 2, 24))
+        approved_after_gate = (
+            artifact.decided_at and artifact.decided_at >= gate_activation
+        )
+        if approved_after_gate and not artifact.classified:
+            raise ValueError(
+                f"Artifact {artifact.id} requires classification before execution. "
+                "Use the classification endpoint to set what_is_this, who_is_it_for, "
+                "data_allowed, and phase_approved."
+            )
+
         # Determine which agent should handle this
         agent_name = self._select_agent(artifact)
         task_description = self._build_task(artifact)
