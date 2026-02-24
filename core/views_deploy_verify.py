@@ -19,12 +19,12 @@ logger = logging.getLogger(__name__)
 VERIFICATION_CHECKS = [
     ('health', 'GET', '/api/v1/health/', 200),
     ('manifest', 'GET', '/api/app/manifest/', 200),
-    ('boardroom_stats', 'GET', '/api/boardroom/stats/', 200),
-    ('governance_stats', 'GET', '/api/governance/stats/', 200),
-    ('gallery_list', 'GET', '/api/v1/gallery/list/', 200),
+    ('governance_stats', 'GET', '/api/boardroom/governance-stats/', 200),
+    ('agents_list', 'GET', '/api/v1/agents/list/', 200),
     ('video_gallery', 'GET', '/api/v1/video/gallery/', 200),
     ('pa_context', 'GET', '/api/assistant/context/', 200),
     ('platform_mission', 'GET', '/api/platform/mission/', 200),
+    ('home_boot', 'GET', '/api/home/boot/', 200),
 ]
 
 
@@ -45,10 +45,12 @@ def run_verification(base_url: str, token: str | None = None) -> dict:
     for name, method, path, expected_status in VERIFICATION_CHECKS:
         url = base_url.rstrip('/') + path
         t0 = time.time()
+        status_code = None
         try:
-            resp = requests.request(method, url, headers=headers, timeout=10)
-            ok = resp.status_code == expected_status
-            detail = f'{resp.status_code}'
+            resp = requests.request(method, url, headers=headers, timeout=15)
+            status_code = resp.status_code
+            ok = status_code == expected_status
+            detail = f'{status_code}'
             if not ok:
                 detail += f' (expected {expected_status})'
         except requests.RequestException as exc:
@@ -59,7 +61,7 @@ def run_verification(base_url: str, token: str | None = None) -> dict:
         results.append({
             'name': name,
             'ok': ok,
-            'status_code': resp.status_code if 'resp' in dir() and hasattr(resp, 'status_code') else None,
+            'status_code': status_code,
             'detail': detail,
             'latency_ms': elapsed_ms,
         })
