@@ -952,7 +952,8 @@ CELERY_TASK_ROUTES = {
     # Session 1040: Moved 3 heavy tasks off content → long_running to fix OOM
     # Content worker was crashing with 25+ completed initiatives driving heavy LLM tasks
     'core.tasks.generate_initiative_stage_document': {'queue': 'long_running'},  # TechnicalDocumentAgent, heavy context build
-    'core.tasks.execute_approved_artifacts': {'queue': 'long_running'},  # Code artifact processing, max 324s
+    'core.tasks.execute_approved_artifacts': {'queue': 'long_running'},  # Session 1068: now just a fan-out dispatcher (<1s)
+    'core.tasks.execute_single_artifact': {'queue': 'long_running'},  # Session 1068: per-artifact agent execution, 5min limit
     'core.tasks.generate_pending_reviews': {'queue': 'long_running'},  # LLM review generation, max 254s
     # Session 1000: Intelligence desks — 4 coordinators, heavy memory
     'core.tasks.run_all_desks_intelligence': {'queue': 'long_running'},

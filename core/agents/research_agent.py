@@ -649,6 +649,11 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                         )
 
                         tool_result = self._execute_tool_call(tool_name, arguments)
+                        # Session 1068: Guard against non-dict returns (causes
+                        # "'str' object has no attribute 'get'" — 2 failures on 2026-02-23)
+                        if not isinstance(tool_result, dict):
+                            logger.warning(f"ResearchAgent: _execute_tool_call({tool_name}) returned {type(tool_result).__name__}, wrapping")
+                            tool_result = {'success': False, 'data': tool_result, 'error': 'non-dict tool result'}
                         tool_calls_made.append({
                             'tool': tool_name,
                             'arguments': arguments,
@@ -682,6 +687,8 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                         if search_query:
                             logger.info(f"[Fallback] GPT skipped web_search, running: {search_query[:80]}")
                             web_result = self._execute_tool_call('web_search', {'query': search_query, 'num_results': 10})
+                            if not isinstance(web_result, dict):
+                                web_result = {'success': False, 'data': web_result, 'error': 'non-dict tool result'}
                             if web_result.get('success'):
                                 all_results.append({'source': 'web_search', 'data': web_result.get('data', web_result)})
                                 tool_calls_made.append({'tool': 'web_search', 'arguments': {'query': search_query}, 'result': web_result})
