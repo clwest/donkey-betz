@@ -444,11 +444,21 @@ class ToolDispatcher:
         context = payload.get('context', {})
 
         from core.tasks import draft_legal_document_task
-        task = draft_legal_document_task.delay(
-            task_description=task_description,
-            context=context,
-            user_id=user_id,
-        )
+        # Session 1069: Wrap .delay() to handle Redis/broker connection failures gracefully
+        try:
+            task = draft_legal_document_task.delay(
+                task_description=task_description,
+                context=context,
+                user_id=user_id,
+            )
+        except Exception as e:
+            logger.error(f"[LEGAL] Failed to dispatch Celery task: {e}")
+            return {
+                'agent': 'LegalDocDrafterAgent',
+                'action': 'draft_legal_document',
+                'success': False,
+                'error': f'Task queue unavailable: {type(e).__name__}. Please try again in a few minutes.',
+            }
 
         return {
             'agent': 'LegalDocDrafterAgent',
