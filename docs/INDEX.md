@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-02-24 00:43
+**Generated:** 2026-02-24 00:59
 **Current Session:** 1073
 **Total Documentation:** 1799 files | 618,606 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,199 |
+| Total cross-references | 2,205 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/00-START-HERE/README.md` | 60 | 🚀 START HERE - Unified Donkey Betz Platform |
+| `docs/features/README.md` | 60 | Feature Documentation |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 42 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -210,7 +210,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 354 | 2026-02-24 00:35 |
+| INDEX.md | docs | 354 | 2026-02-24 00:52 |
 | WEB_API_CONTRACTS.md | mobile | 683 | 2026-02-24 00:02 |
 | PA_LAYER1_SURFACE_MAP.md | handoffs | 194 | 2026-02-23 22:59 |
 | PA_SYSTEMS_MAP_6_LAYER.md | handoffs | 601 | 2026-02-23 22:35 |
