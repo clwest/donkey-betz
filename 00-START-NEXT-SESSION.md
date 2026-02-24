@@ -1,81 +1,113 @@
-# Session 1071 - Start Here
+# Session 1072 - Start Here
 
-**Previous Sessions:** 1070 (Decision Gates — 4-question classification gate, stop auto-approving insights, boardroom classification UI), 1069 (Agent Timeout Epidemic — parallelize context gathering, reduce timeouts), 1068 (Artifact Execution Fix — fan-out execution, blank error messages, PA tool dispatch errors, error_summary_tool), 1067 (Boardroom/Governance Pages — critical decisions, spider attention items, decision modal fixes)
+**Previous Sessions:** 1071 (PA Platform Awareness — 7-part spec: manifest endpoint, deploy verification, studio tool, PA service account, Playwright smoke tests), 1070 (Decision Gates — 4-question classification gate), 1069 (Agent Timeout Epidemic — parallelize context gathering), 1068 (Artifact Execution Fix — fan-out execution, blank error messages)
 **Date:** February 23, 2026
-**Status:** 218 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2, 43 tool schemas, 63+ handlers)** | 13 ACTIVE initiatives | 57 COMPLETED
+**Status:** 218 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2, 45 tool schemas, 65 handlers)** | 13 ACTIVE initiatives | 57 COMPLETED
 
 ---
 
-## Session 1070 — What Happened
+## Session 1071 — What Happened
 
-### Decision Gates: Classification Before Execution (PR #1440 — MERGED & DEPLOYED)
+### PA Platform-Wide Awareness + Control (PR #1442 — MERGED)
 
-**Problem:** The system treated "insight exists" as "action should follow" without a human decision in between. All insights were auto-approved by `triage_extracted_artifacts` in `core/tasks.py`, bypassing any human classification.
+**Problem:** The PA had tool-level access to backend data but couldn't enumerate frontend routes, verify deployments, or generate media through a unified interface.
 
-**Fix — 4-Question Classification Gate:**
-1. **What is this?** — research_finding / actionable_recommendation / scope_change / risk_flag / informational
-2. **Who is it for?** — platform / end_users / founder / agents / public
-3. **What data is allowed?** — public_only / internal_ops / api_data / user_data / all
-4. **What phase is approved?** — research / prototype / pilot / production / none
+**Fix — 7-Part Implementation:**
 
-**Changes:**
-| File | Change |
-|------|--------|
-| `core/models_conversation_artifacts.py` | `classified`, `classified_at`, `classified_by`, `classification` fields + `classify()` method |
-| `core/models_document_registry.py` | `target_audience`, `data_scope` on Initiative + `can_auto_progress` blocks at Stage 2+ |
-| `core/tasks.py` (lines 842-867) | **Core fix:** auto-reject noise only (score < 0.3), all others stay `pending` |
-| `core/services/artifact_execution.py` | Gate check: unclassified artifacts approved after 2026-02-24 cannot execute |
-| `core/views_artifacts.py` | `POST api/artifacts/<uuid>/classify/` + `GET api/artifacts/needs-classification/` |
-| `core/urls.py` | 2 new routes |
-| `core/services/pa_tool_schemas.py` | `list_unclassified` + `classify_suggest` actions on boardroom_tool |
-| `core/services/tool_dispatcher.py` | 2 new boardroom_tool handlers (list + suggest) |
-| `frontend/src/pages/BoardroomPage.tsx` | "Needs Classification" tab with inline 4-dropdown forms |
-| `frontend/src/lib/api.ts` | `classificationApi` with 2 methods |
-| `core/migrations/0256_decision_gates.py` | Schema + data migration (324 artifacts grandfathered) |
+| Part | What | Key Files |
+|------|------|-----------|
+| 1 | Frontend capabilities manifest (30 routes, 3 studios, 8 flags) | `frontend/src/appManifest.ts`, `scripts/generate-manifest.mjs` |
+| 2 | RBAC-filtered manifest endpoint + `platform_awareness_tool` (5 actions) | `core/views_app_manifest.py` |
+| 3 | UI smoke test runner (Playwright, dev/CI only) | `core/management/commands/run_ui_smoke.py` |
+| 4 | Deploy verification endpoint + CLI command (8 health checks) | `core/views_deploy_verify.py`, `run_smoke_tests.py` |
+| 5 | Unified `studio_tool` (5 actions: generate_image/video/audio, job_status, list_jobs) | `tool_dispatcher.py` |
+| 6 | PA service account (`pa-service` user + DRF token, idempotent on deploy) | `setup_pa_service_account.py`, `Procfile` |
+| 7 | Acceptance tests (8 tests, 5 classes) | `tests/test_platform_awareness.py` |
 
-**Key Numbers:**
-| Metric | Value |
-|--------|-------|
-| Artifacts grandfathered | 324 |
-| Pending needing classification | 2,339 |
-| Gate activation date | 2026-02-24 |
-| Noise threshold (auto-reject) | composite_score < 0.3 |
-| Unclassified query threshold | composite_score >= 0.4 |
-
-**Verified on Railway:** Migration applied, `needs-classification` endpoint returns data, grandfather clause working.
+**Verified locally:** Frontend build generates `__manifest.json` (30 routes), 65 handlers registered, URL patterns resolve, PA service account created.
 
 ---
 
-## Sessions 1067-1069 — Recent Context
+## Priority: Verify on Railway (Production)
 
-### Session 1069: Agent Timeout Epidemic (PRs #1436-#1438)
-- Parallelized context gathering in agent execution (was sequential, causing 30s+ timeouts)
-- Video provider input validation fix
-- Redis-resilient legal dispatch
+This session deployed new endpoints and PA tools. **Must verify on Railway before anything else.**
 
-### Session 1068: Artifact Execution Fix (PRs #1431-#1434)
-- Fan-out artifact execution to prevent TimeLimitExceeded
-- Blank error messages on agent failures fixed
-- PA tool dispatch errors resolved
-- error_summary_tool enhanced with timeout breakdown
+### Step 1: Deploy to Railway
+Push to GitHub triggers auto-deploy. Verify the release command runs `setup_pa_service_account`:
+```bash
+railway logs -s web --filter "PA_SERVICE_TOKEN" | head -1
+```
 
-### Session 1067: Boardroom/Governance Pages (PRs #1427-#1430)
-- Critical decisions on Governance page with details drawer
-- Spider attention items showing raw dict fixed
-- ML prediction object handling in DecisionDetailModal
+### Step 2: Verify new endpoints
+```python
+import urllib.request, json
+
+TOKEN = 'YOUR_TOKEN'
+BASE = 'https://donkey-betz-platform-production.up.railway.app'
+
+# 1. Manifest endpoint
+req = urllib.request.Request(f'{BASE}/api/app/manifest/', headers={
+    'Authorization': f'Token {TOKEN}'
+})
+data = json.loads(urllib.request.urlopen(req).read())
+print(f"Routes: {data['route_count']}, Studios: {list(data['studios'].keys())}")
+print(f"Build SHA: {data['build_sha']}, Role: {data['user_role']}")
+
+# 2. Deploy verification (admin only)
+req = urllib.request.Request(f'{BASE}/api/deploy/verify/', method='POST', headers={
+    'Authorization': f'Token {TOKEN}'
+})
+data = json.loads(urllib.request.urlopen(req).read())
+print(f"Deploy checks: {data['passed']}/{data['total']} passed, all_ok={data['all_ok']}")
+for r in data['results']:
+    print(f"  {'✓' if r['ok'] else '✗'} {r['name']}: {r['detail']} ({r['latency_ms']}ms)")
+```
+
+### Step 3: Test PA tools via chat
+```python
+import urllib.request, json, time
+
+TOKEN = 'YOUR_TOKEN'
+BASE = 'https://donkey-betz-platform-production.up.railway.app'
+
+# Test platform_awareness_tool
+msg = json.dumps({'message': 'What pages and features are available in the app?'}).encode()
+req = urllib.request.Request(f'{BASE}/api/assistant/chat/', data=msg, headers={
+    'Authorization': f'Token {TOKEN}',
+    'Content-Type': 'application/json'
+})
+resp = json.loads(urllib.request.urlopen(req).read())
+task_id = resp['task_id']
+print(f'Task: {task_id}')
+
+time.sleep(15)
+req = urllib.request.Request(f'{BASE}/api/assistant/chat/status/{task_id}/', headers={
+    'Authorization': f'Token {TOKEN}'
+})
+result = json.loads(urllib.request.urlopen(req).read())
+print(result.get('content', '')[:800])
+```
+
+### Step 4: Run acceptance tests
+```bash
+TEST_BASE_URL=https://donkey-betz-platform-production.up.railway.app \
+PA_SERVICE_TOKEN=<from railway logs> \
+ADMIN_TOKEN=<your admin token> \
+pytest tests/test_platform_awareness.py -v
+```
 
 ---
 
-## Current System Health (post-Session 1070)
+## Current System Health (post-Session 1071)
 
 | Metric | Value |
 |--------|-------|
 | PA routing | **GPT-5.2 function calling** (`PA_USE_FUNCTION_CALLING=true`) |
-| PA tools | **43 schemas, 63+ handlers** — boardroom_tool extended with classify |
+| PA tools | **45 schemas, 65 handlers** — +platform_awareness_tool, +studio_tool |
 | Decision gates | **ACTIVE** — 2,339 artifacts need classification |
 | Platform health score | **100** (7/7 components healthy) |
 | Celery throughput | **1291 tasks/hour, 99.3% success** |
-| Agents routable | **All 218** (82 AGENT_MAP + 139 DynamicPersonaAgent + 2 blocked) |
+| Agents routable | **All 218** |
 | Initiatives | **13 ACTIVE**, 57 COMPLETED |
 
 ---
@@ -83,21 +115,18 @@
 ## Known Issues / Open Items
 
 ### 2,339 Artifacts Need Classification
-The decision gates are live but 2,339 pending artifacts need human classification before they can progress. The Boardroom page "Needs Classification" tab shows these. PA can help via `boardroom_tool(action=list_unclassified)` and `boardroom_tool(action=classify_suggest)`.
+Decision gates live since Session 1070. PA can help: `boardroom_tool(action=list_unclassified)` and `boardroom_tool(action=classify_suggest)`.
 
-### Data Layer Gaps (discovered in PA testing)
-1. **Revenue tracker**: $0 ingested, 0 records — needs Stripe/affiliate/ad data source integration
-2. **Stock intelligence**: no watchlist concept — ticker-addressed only, needs portfolio model
+### Data Layer Gaps
+1. **Revenue tracker**: $0 ingested, 0 records — needs Stripe/affiliate/ad data source
+2. **Stock intelligence**: no watchlist concept — ticker-addressed only
 3. **ML predictions table**: deprecated with 0 records
 
 ### Deliverable Cleanup Ready
-cleanup tool built but not yet run. PA can do:
-- `deliverables_tool cleanup strategy=duplicates dry_run=true` — preview duplicate removal
-- `deliverables_tool cleanup strategy=orphans dry_run=true` — preview orphan removal
-- Production had ~382 duplicate excess deliverables at time of analysis
+PA can run: `deliverables_tool cleanup strategy=duplicates dry_run=true` (~382 duplicate excess)
 
 ### 25+ Untested PA Tools
-High-priority untested: `brainstorm_tool`, `dream_tool`, `content_review_tool`, `learning_patterns_tool`, `opportunity_manager_tool`, `pilots_tool`, `reasoning_engine_tool`, `legal_doc_drafter_agent`, `legislation_tool`, `media_tool`, `davinci_tool`
+High-priority: `brainstorm_tool`, `dream_tool`, `content_review_tool`, `learning_patterns_tool`, `opportunity_manager_tool`, `pilots_tool`, `reasoning_engine_tool`, `legal_doc_drafter_agent`, `legislation_tool`, `media_tool`, `davinci_tool`
 
 ### Other Open Items
 - Railway cost: $1,200→$1,500/month limit, ~47k tasks/day
@@ -108,54 +137,20 @@ High-priority untested: `brainstorm_tool`, `dream_tool`, `content_review_tool`, 
 
 ---
 
-## Verify Before Starting
-
-```python
-import urllib.request, json, time
-
-TOKEN = 'YOUR_TOKEN'
-BASE = 'https://donkey-betz-platform-production.up.railway.app'
-
-# 1. Verify classification endpoint
-resp = urllib.request.urlopen(f'{BASE}/api/artifacts/needs-classification/?limit=3')
-data = json.loads(resp.read())
-print(f"Unclassified artifacts: {data['total_unclassified']}")
-print(f"Sample: {[a['title'] for a in data['artifacts'][:3]]}")
-
-# 2. Verify PA responds
-data = json.dumps({'message': 'Check system health and list unclassified artifacts'}).encode()
-req = urllib.request.Request(f'{BASE}/api/pa/chat/', data=data, headers={
-    'Authorization': f'Token {TOKEN}',
-    'Content-Type': 'application/json'
-})
-resp = json.loads(urllib.request.urlopen(req).read())
-task_id = resp['task_id']
-print(f'Task ID: {task_id}')
-
-time.sleep(10)
-req = urllib.request.Request(f'{BASE}/api/pa/chat/status/{task_id}/', headers={
-    'Authorization': f'Token {TOKEN}',
-})
-result = json.loads(urllib.request.urlopen(req).read())
-print(f"Status: {result['status']}")
-print(result.get('content', '')[:500])
-```
-
----
-
 ## Critical Patterns & Gotchas
 
+**Platform Awareness (Session 1071):**
+- `__manifest.json` is generated at frontend build time — if not rebuilt, backend uses hardcoded fallback
+- `deploy_verify` calls the platform's OWN endpoints via `requests` — the server must be fully up
+- `setup_pa_service_account` runs in Procfile release — check Railway logs for token
+- `platform_awareness_tool` and `studio_tool` are the 2 new PA tools (registered as handlers 64-65)
+- `studio_tool` delegates to existing agents (ImageAgent, VideoAgent, AudioAgent) — no duplication
+
 **Decision Gates (Session 1070):**
-- Classification is decoupled from approval — `classify()` and `approve()` are separate operations
-- `auto_approve` parameter in classify API is a convenience shortcut, not a coupling
-- `classify_suggest` PA handler returns suggestions but NEVER applies them — human must confirm
+- Classification is decoupled from approval — `classify()` and `approve()` are separate
 - Grandfather clause: artifacts approved before 2026-02-24 skip classification gate
-- Noise threshold (< 0.3) auto-rejects; 0.3-0.4 stays pending but hidden from classification UI (threshold >= 0.4)
-- Initiative `can_auto_progress` blocks at Stage 2+ if `target_audience` or `data_scope` empty
+- Noise threshold (< 0.3) auto-rejects; >= 0.4 shown in classification UI
 
-**PA async flow (Session 974b):** POST `/api/pa/chat/` returns `{task_id}`. Poll GET `/api/pa/chat/status/<task_id>/` until `status != 'processing'`. Auth: `Authorization: Token <token>`.
+**PA async flow:** POST `/api/assistant/chat/` → `{task_id}`. Poll GET `/api/assistant/chat/status/<task_id>/`.
 
-**Railway resolve-node deployment (Session 1063):**
-- Railway doesn't auto-create services from Procfile entries — must manually create via + Create
-- Start command needs `bash -c "..."` wrapper — Railway doesn't run through a shell by default
-- `RESOLVE_NODE_URL` + `RENDER_NODE_TOKEN` must be on **celery-pa** service
+**Railway:** `railway run python manage.py run_smoke_tests --token <token>` for CLI deploy checks.
