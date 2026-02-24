@@ -1509,7 +1509,11 @@ def execute_agent_task(
                 'metadata': getattr(result, 'data', {}) or {},
             }
             if not result.success:
-                execution_record.error_message = result.error or 'Unknown error'
+                # Session 1068: Ensure error_message is never blank — fall back through
+                # error, message, then generic label
+                execution_record.error_message = (
+                    result.error or result.message or 'Agent returned failure with no error details'
+                )[:2000]
             execution_record.completed_at = timezone.now()
             execution_record.save()
 
@@ -1565,7 +1569,7 @@ def execute_agent_task(
         # Update execution record on failure
         if execution_record:
             execution_record.status = 'failed'
-            execution_record.error_message = str(e)
+            execution_record.error_message = str(e) or f'{type(e).__name__}: (no message)'
             execution_record.execution_time_ms = execution_time_ms
             execution_record.completed_at = timezone.now()
             execution_record.save()
