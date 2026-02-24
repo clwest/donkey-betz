@@ -434,6 +434,16 @@ class Initiative(models.Model):
         help_text='Session 1016: Why this initiative is blocked/stalled'
     )
 
+    # Session 1070: Decision gate classification fields
+    target_audience = models.CharField(
+        max_length=50, blank=True, default='',
+        help_text='Session 1070: Who is this for? (platform/end_users/founder/agents/public)'
+    )
+    data_scope = models.CharField(
+        max_length=50, blank=True, default='',
+        help_text='Session 1070: What data is allowed? (public_only/internal_ops/api_data/user_data/all)'
+    )
+
     # Session 1043: Human-friendly sequential IDs (INIT-000001)
     seq_id = models.PositiveIntegerField(
         null=True,
@@ -894,6 +904,10 @@ class Initiative(models.Model):
         if self.requires_boardroom_approval and not self.boardroom_approved:
             return False
 
+        # Session 1070: Block at Stage 2+ if decision gate fields are empty
+        if self.current_stage >= 2 and (not self.target_audience or not self.data_scope):
+            return False
+
         # Allow Stage 1 to progress without intent (to generate initial research)
         # But pause at Stage 2+ if no intent is set
         if self.current_stage > 1 and not self.founder_intent_set:
@@ -914,6 +928,15 @@ class Initiative(models.Model):
         # Session 914.6: Check boardroom approval separately
         if self.requires_boardroom_approval and not self.boardroom_approved:
             return 'Requires Boardroom approval - not yet approved'
+
+        # Session 1070: Decision gate classification required at Stage 2+
+        if self.current_stage >= 2 and (not self.target_audience or not self.data_scope):
+            missing = []
+            if not self.target_audience:
+                missing.append('target_audience')
+            if not self.data_scope:
+                missing.append('data_scope')
+            return f'Decision gate: missing classification fields ({", ".join(missing)})'
 
         if self.current_stage > 1 and not self.founder_intent_set:
             return 'Awaiting founder intent - set execution_speed, risk_tolerance, and stop_rule'

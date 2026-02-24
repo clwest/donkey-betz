@@ -277,6 +277,10 @@ def _serialize_artifact(artifact, full=False):
         'extracted_at': artifact.extracted_at.isoformat() if artifact.extracted_at else None,
     }
 
+    # Session 1070: Include classification fields
+    data['classified'] = artifact.classified
+    data['classification'] = artifact.classification or {}
+
     if full:
         data.update({
             'details': artifact.details,
@@ -285,9 +289,123 @@ def _serialize_artifact(artifact, full=False):
             'decided_at': artifact.decided_at.isoformat() if artifact.decided_at else None,
             'decided_by': artifact.decided_by.username if artifact.decided_by else None,
             'decision_notes': artifact.decision_notes,
+            'classified_at': artifact.classified_at.isoformat() if artifact.classified_at else None,
+            'classified_by': artifact.classified_by.username if artifact.classified_by else None,
         })
 
     return data
+
+
+# ============================================================================
+# Session 1070: Decision Gate Classification Endpoints
+# ============================================================================
+
+VALID_WHAT_IS_THIS = {'research_finding', 'actionable_recommendation', 'scope_change', 'risk_flag', 'informational'}
+VALID_WHO_IS_IT_FOR = {'platform', 'end_users', 'founder', 'agents', 'public'}
+VALID_DATA_ALLOWED = {'public_only', 'internal_ops', 'api_data', 'user_data', 'all'}
+VALID_PHASE_APPROVED = {'research', 'prototype', 'pilot', 'production', 'none'}
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def classify_artifact(request, artifact_id):
+    """
+    Classify an artifact via the decision gate.
+
+    POST /api/artifacts/<uuid>/classify/
+    Body: {
+        "what_is_this": "research_finding|actionable_recommendation|scope_change|risk_flag|informational",
+        "who_is_it_for": "platform|end_users|founder|agents|public",
+        "data_allowed": "public_only|internal_ops|api_data|user_data|all",
+        "phase_approved": "research|prototype|pilot|production|none",
+        "auto_approve": false  // optional — also approve the artifact
+    }
+    """
+    try:
+        artifact = ExtractedArtifact.objects.get(id=artifact_id)
+        data = json.loads(request.body) if request.body else {}
+
+        what_is_this = data.get('what_is_this', '')
+        who_is_it_for = data.get('who_is_it_for', '')
+        data_allowed = data.get('data_allowed', '')
+        phase_approved = data.get('phase_approved', '')
+        auto_approve = data.get('auto_approve', False)
+
+        # Validate
+        errors = []
+        if what_is_this not in VALID_WHAT_IS_THIS:
+            errors.append(f'what_is_this must be one of: {sorted(VALID_WHAT_IS_THIS)}')
+        if who_is_it_for not in VALID_WHO_IS_IT_FOR:
+            errors.append(f'who_is_it_for must be one of: {sorted(VALID_WHO_IS_IT_FOR)}')
+        if data_allowed not in VALID_DATA_ALLOWED:
+            errors.append(f'data_allowed must be one of: {sorted(VALID_DATA_ALLOWED)}')
+        if phase_approved not in VALID_PHASE_APPROVED:
+            errors.append(f'phase_approved must be one of: {sorted(VALID_PHASE_APPROVED)}')
+
+        if errors:
+            return JsonResponse({'success': False, 'errors': errors}, status=400)
+
+        user = request.user if request.user.is_authenticated else None
+
+        classification = {
+            'what_is_this': what_is_this,
+            'who_is_it_for': who_is_it_for,
+            'data_allowed': data_allowed,
+            'phase_approved': phase_approved,
+        }
+        artifact.classify(classification, user=user)
+
+        if auto_approve and artifact.status == 'pending':
+            artifact.approve(user=user, notes='Classified & approved via decision gate')
+
+        logger.info(f"Artifact {artifact_id} classified: {classification}")
+
+        return JsonResponse({
+            'success': True,
+            'artifact': _serialize_artifact(artifact),
+            'message': 'Artifact classified' + (' and approved' if auto_approve else ''),
+        })
+
+    except ExtractedArtifact.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Artifact not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error classifying artifact {artifact_id}: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def list_unclassified_artifacts(request):
+    """
+    List pending, unclassified artifacts that need human classification.
+
+    GET /api/artifacts/needs-classification/
+    Query params:
+    - limit: max results (default 50)
+    """
+    try:
+        limit = min(int(request.GET.get('limit', 50)), 100)
+
+        artifacts = ExtractedArtifact.objects.filter(
+            status='pending',
+            classified=False,
+            composite_score__gte=0.4,
+        ).select_related(
+            'conversation', 'source_agent'
+        ).order_by('-composite_score')[:limit]
+
+        return JsonResponse({
+            'success': True,
+            'artifacts': [_serialize_artifact(a) for a in artifacts],
+            'count': len(artifacts),
+            'total_unclassified': ExtractedArtifact.objects.filter(
+                status='pending', classified=False
+            ).count(),
+        })
+
+    except Exception as e:
+        logger.error(f"Error listing unclassified artifacts: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 # ============================================================================

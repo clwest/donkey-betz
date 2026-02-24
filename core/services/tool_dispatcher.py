@@ -2556,8 +2556,103 @@ class ToolDispatcher:
             else:
                 raise ValueError(f"Invalid triage_type: {triage_type}. Use 'attention' or 'decisions'")
 
+        # Session 1070: Decision gate actions
+        elif action == 'list_unclassified':
+            from core.models_conversation_artifacts import ExtractedArtifact
+            artifacts = ExtractedArtifact.objects.filter(
+                status='pending',
+                classified=False,
+                composite_score__gte=0.4,
+            ).order_by('-composite_score')[:limit]
+
+            items = []
+            for a in artifacts:
+                items.append({
+                    'id': str(a.id),
+                    'title': a.title,
+                    'type': a.artifact_type,
+                    'description': a.description[:200],
+                    'composite_score': a.composite_score,
+                    'source_agent': a.source_agent.name if a.source_agent else None,
+                    'extracted_at': a.extracted_at.isoformat() if a.extracted_at else None,
+                })
+
+            return {
+                'action': 'list_unclassified',
+                'count': len(items),
+                'items': items,
+                'note': 'These artifacts need classification before they can be approved. '
+                        'Each needs: what_is_this, who_is_it_for, data_allowed, phase_approved.',
+            }
+
+        elif action == 'classify_suggest':
+            from core.models_conversation_artifacts import ExtractedArtifact
+            artifact_id = payload.get('artifact_id') or payload.get('id')
+            if not artifact_id:
+                raise ValueError("artifact_id is required for classify_suggest")
+
+            artifact = ExtractedArtifact.objects.select_related('source_agent').get(id=artifact_id)
+            title_lower = artifact.title.lower()
+            desc_lower = artifact.description.lower()
+
+            # Deterministic heuristic for what_is_this
+            if artifact.artifact_type == 'risk':
+                what_is_this = 'risk_flag'
+            elif artifact.artifact_type == 'insight':
+                what_is_this = 'informational'
+            elif artifact.artifact_type in ('proposal', 'action_item'):
+                what_is_this = 'actionable_recommendation'
+            elif artifact.artifact_type == 'experiment':
+                what_is_this = 'research_finding'
+            elif any(w in title_lower for w in ['scope', 'expand', 'pivot', 'redesign']):
+                what_is_this = 'scope_change'
+            else:
+                what_is_this = 'research_finding'
+
+            # who_is_it_for heuristic
+            if any(w in desc_lower for w in ['user', 'customer', 'subscriber']):
+                who_is_it_for = 'end_users'
+            elif any(w in desc_lower for w in ['platform', 'system', 'infra', 'celery', 'redis']):
+                who_is_it_for = 'platform'
+            elif any(w in desc_lower for w in ['agent', 'spider', 'ml ']):
+                who_is_it_for = 'agents'
+            else:
+                who_is_it_for = 'founder'
+
+            # data_allowed heuristic
+            if any(w in desc_lower for w in ['user data', 'personal', 'private']):
+                data_allowed = 'user_data'
+            elif any(w in desc_lower for w in ['api', 'external']):
+                data_allowed = 'api_data'
+            elif any(w in desc_lower for w in ['internal', 'ops']):
+                data_allowed = 'internal_ops'
+            else:
+                data_allowed = 'public_only'
+
+            # phase_approved heuristic
+            if artifact.composite_score >= 0.8:
+                phase_approved = 'pilot'
+            elif artifact.composite_score >= 0.6:
+                phase_approved = 'prototype'
+            else:
+                phase_approved = 'research'
+
+            return {
+                'action': 'classify_suggest',
+                'artifact_id': str(artifact.id),
+                'artifact_title': artifact.title,
+                'suggestions': {
+                    'what_is_this': what_is_this,
+                    'who_is_it_for': who_is_it_for,
+                    'data_allowed': data_allowed,
+                    'phase_approved': phase_approved,
+                },
+                'note': 'These are AI suggestions based on heuristics. '
+                        'Human must confirm before applying.',
+            }
+
         else:
-            raise ValueError(f"Unknown action: {action}. Valid actions: stats, lookup, list_attention, list_decisions, approve_attention, ignore_attention, promote_decision, reject_decision, get_triage_batch")
+            raise ValueError(f"Unknown action: {action}. Valid actions: stats, lookup, list_attention, list_decisions, approve_attention, ignore_attention, promote_decision, reject_decision, get_triage_batch, list_unclassified, classify_suggest")
 
     def _handle_brainstorm(
         self,
