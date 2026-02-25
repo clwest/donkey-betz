@@ -98,12 +98,26 @@ class ExecutionRun(models.Model):
 
     # ── Plan ─────────────────────────────────────────────────────────────
     plan_json = models.JSONField(
-        default=list,
-        help_text='Ordered list of plan steps: [{command, description, tier}, ...]',
+        default=dict,
+        help_text='Normalized PlanV1 JSON: {version, title, context, steps}',
     )
     plan_summary = models.TextField(
         blank=True,
         help_text='Human-readable summary of what this run does',
+    )
+
+    # ── Step-level execution state ─────────────────────────────────────
+    current_step_index = models.IntegerField(
+        default=0,
+        help_text='Index of the next step to execute (resume point after approval)',
+    )
+    awaiting_approval_step_id = models.CharField(
+        max_length=100, blank=True,
+        help_text='Step ID that caused the run to pause for approval',
+    )
+    approved_steps = models.JSONField(
+        default=list,
+        help_text='List of step IDs that have been explicitly approved',
     )
 
     # ── Policy ───────────────────────────────────────────────────────────
@@ -216,16 +230,35 @@ class ExecutionRun(models.Model):
         self.completed_at = timezone.now()
         self.save(update_fields=['status', 'completed_at'])
 
-    def request_approval(self) -> None:
+    def request_approval(self, step_id: str = '') -> None:
         self.status = 'awaiting_approval'
-        self.save(update_fields=['status'])
+        self.awaiting_approval_step_id = step_id
+        self.save(update_fields=['status', 'awaiting_approval_step_id'])
 
     def approve(self, user) -> None:
+        """Legacy: approve entire run (blanket approval)."""
         from django.utils import timezone
         self.approved_by = user
         self.approved_at = timezone.now()
-        self.status = 'queued'  # Re-queue for execution
-        self.save(update_fields=['approved_by', 'approved_at', 'status'])
+        self.status = 'queued'
+        self.awaiting_approval_step_id = ''
+        self.save(update_fields=['approved_by', 'approved_at', 'status', 'awaiting_approval_step_id'])
+
+    def approve_step(self, user, step_id: str) -> None:
+        """Approve a specific step and re-queue the run."""
+        from django.utils import timezone
+        approved = self.approved_steps or []
+        if step_id not in approved:
+            approved.append(step_id)
+        self.approved_steps = approved
+        self.approved_by = user
+        self.approved_at = timezone.now()
+        self.status = 'queued'
+        self.awaiting_approval_step_id = ''
+        self.save(update_fields=[
+            'approved_steps', 'approved_by', 'approved_at',
+            'status', 'awaiting_approval_step_id',
+        ])
 
     def generate_working_branch(self) -> str:
         """Generate a working branch name from the run ID and summary."""

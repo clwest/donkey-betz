@@ -40,7 +40,10 @@ def execute_run_task(self, run_id: str) -> None:
     driver = ExecutorDriver(run)
     driver.execute()
 
-    # Post lifecycle event to collaboration protocol
+    # Refresh from DB (driver may have changed status)
+    run.refresh_from_db()
+
+    # Post lifecycle event to collaboration protocol (for terminal states)
     _post_lifecycle_event(run)
 
     logger.info('[Executor] Run %s finished with status %s', run_id, run.status)
