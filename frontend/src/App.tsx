@@ -31,6 +31,7 @@ import GovernmentPage from '@/pages/GovernmentPage'
 import HowItWorksPage from '@/pages/HowItWorksPage'
 import BoardroomPage from '@/pages/BoardroomPage'  // Session 1067: Full-page boardroom
 import GovernancePage from '@/pages/GovernancePage'  // Session 1067: Full-page governance
+import ExecutorPage from '@/pages/ExecutorPage'  // Session 1076: Executor runs UI
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -93,6 +94,7 @@ function App() {
         <Route path="image-studio" element={<ImageStudioPage />} />
         <Route path="video-studio" element={<VideoStudioPage />} />
         <Route path="how-it-works" element={<HowItWorksPage />} />
+        <Route path="executor" element={<ExecutorPage />} />
       </Route>
     </Routes>
   )
