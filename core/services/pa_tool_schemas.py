@@ -1169,12 +1169,14 @@ PA_TOOL_SCHEMAS = [
                     "type": "string",
                     "enum": [
                         "generate_image", "generate_video", "generate_audio",
+                        "generate_talking_video",
                         "job_status", "list_jobs",
                     ],
                     "description": (
                         "generate_image: create an AI image from prompt. "
                         "generate_video: create a video from prompt/image. "
                         "generate_audio: text-to-speech audio. "
+                        "generate_talking_video: create a talking-head video from character image + script (TTS + animation + lip sync). "
                         "job_status: check status of a generation job. "
                         "list_jobs: recent generation history."
                     ),
@@ -1184,8 +1186,10 @@ PA_TOOL_SCHEMAS = [
                 "model": {"type": "string", "description": "Specific model to use (e.g. dall-e-3, stability-ai)"},
                 "width": {"type": "integer", "description": "Image width in pixels"},
                 "height": {"type": "integer", "description": "Image height in pixels"},
-                "duration": {"type": "integer", "enum": [4, 6, 8], "description": "Video duration in seconds (4, 6, or 8)"},
+                "duration": {"type": "integer", "enum": [4, 5, 6, 8, 10], "description": "Video duration in seconds"},
                 "ratio": {"type": "string", "enum": ["1920:1080", "1080:1920", "1280:720", "720:1280"], "description": "Video aspect ratio"},
+                "image_url": {"type": "string", "description": "URL of character image to animate (for generate_talking_video)"},
+                "script": {"type": "string", "description": "Text script for the character to speak (for generate_talking_video)"},
                 "voice": {"type": "string", "description": "Voice name for TTS"},
                 "job_id": {"type": "string", "description": "Job/task ID for status check"},
                 "limit": {"type": "integer", "description": "Max items for list_jobs (default 10)"},

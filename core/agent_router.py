@@ -91,6 +91,7 @@ from core.agents.base_agent import BaseAgent, AgentResult
 from core.agents.image_agent import ImageAgent
 from core.agents.video_agent import VideoAgent
 from core.agents.audio_agent import AudioAgent
+from core.agents.talking_character_agent import TalkingCharacterAgent
 from core.agents.three_d_agent import ThreeDAgent
 from core.agents.image_editing_agent import ImageEditingAgent
 from core.agents.video_editing_agent import VideoEditingAgent
@@ -279,6 +280,7 @@ class AgentRouter:
         "ImageAgent": ImageAgent,
         "VideoAgent": VideoAgent,
         "AudioAgent": AudioAgent,
+        "TalkingCharacterAgent": TalkingCharacterAgent,
         "ThreeDAgent": ThreeDAgent,
 
         # Editing Agents

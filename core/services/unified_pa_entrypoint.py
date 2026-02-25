@@ -873,7 +873,8 @@ class UnifiedPAEntrypoint:
                 # Determine timeout based on tool
                 if actual_tool_name in ('research_and_create_tool', 'legal_doc_drafter_agent',
                                        'image_generation_agent', 'video_generation_agent',
-                                       'video_editing_agent', 'studio_tool'):
+                                       'video_editing_agent', 'studio_tool',
+                                       'talking_character_agent'):
                     tool_timeout = 120
                 elif actual_tool_name in ('universal_agent_tool',) or actual_tool_name.endswith('_agent'):
                     tool_timeout = 60
@@ -1772,6 +1773,12 @@ class UnifiedPAEntrypoint:
             'create image', 'generate image', 'logo', 'banner'
         ]):
             return ('image_creation', 'image_generation_agent')
+
+        if any(phrase in message_lower for phrase in [
+            'talking head', 'talking character', 'talking video',
+            'talking avatar',
+        ]):
+            return ('video_creation', 'studio_tool')
 
         if any(word in message_lower for word in [
             'create video', 'generate video', 'animate'
