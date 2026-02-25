@@ -7682,17 +7682,26 @@ RESEARCH DATA:
             )
 
         if action == 'generate_video':
-            task = payload.get('prompt', '')
+            # Session 1077: Dispatch to Celery async to avoid PA tool timeout
+            # (synchronous _handle_agent_tool was causing 30s/120s timeouts)
+            from core.tasks import execute_agent_task
+            task_text = payload.get('prompt', '')
             context = {}
             if payload.get('style'):
                 context['style'] = payload['style']
             if payload.get('duration'):
                 context['duration'] = payload['duration']
-            return self._handle_agent_tool(
-                'video_generation_agent',
-                {'task': task, 'context': context},
-                user_id, trace_id,
+            if payload.get('ratio'):
+                context['ratio'] = payload['ratio']
+            celery_task = execute_agent_task.delay(
+                'video_generation_agent', task_text, context
             )
+            return {
+                'task_id': str(celery_task.id),
+                'mode': 'async',
+                'agent': 'video_generation_agent',
+                'message': f'Video generation dispatched (task {celery_task.id}). Use job_status to check progress.',
+            }
 
         if action == 'generate_audio':
             task = payload.get('prompt', '')

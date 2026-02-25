@@ -123,6 +123,9 @@ class RunwayMLProvider:
             if kwargs.get('seed'):
                 payload['seed'] = kwargs['seed']
 
+            # Session 1077: Log outbound payload for debugging 400 errors
+            logger.info(f"[RUNWAY] text_to_video payload: {payload}")
+
             # Submit generation request
             response = requests.post(
                 f"{self.api_base}/text_to_video",  # Updated endpoint path
@@ -138,9 +141,12 @@ class RunwayMLProvider:
                     f"{response.text[:500]}"
                 )
                 error = ErrorMessageBuilder.parse_api_error("Runway ML", response.status_code, response.text)
+                # Session 1077: Include raw provider response alongside user message
+                # so PA can surface the real error to the user
+                raw_detail = response.text[:300] if response.text else ''
                 return VideoGenerationResult(
                     success=False,
-                    error_message=error["user_message"]
+                    error_message=f"{error['user_message']} | Provider detail: {raw_detail}"
                 )
 
             data = response.json()
