@@ -264,6 +264,15 @@ def pa_chat_status(request, task_id):
                 'status': 'failed',
                 'error': str(result.result) if result.result else 'Processing failed',
             })
+        elif result.state == 'PENDING':
+            # Session 1076: PENDING means Celery has no record of this task —
+            # either it was never dispatched, or the result expired from Redis.
+            # Return failed instead of processing to stop infinite UI polling.
+            return Response({
+                'success': False,
+                'status': 'failed',
+                'error': 'Task not found or result expired. Please retry.',
+            })
         else:
             return Response({
                 'success': True,
