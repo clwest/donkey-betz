@@ -12,34 +12,24 @@
         "simulator": true
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "http://localhost:8000/api"
+        "EXPO_PUBLIC_API_BASE_URL": "https://donkey-betz-platform-production.up.railway.app/api",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "preview": {
       "distribution": "internal",
       "channel": "preview",
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://donkey-betz-platform-production.up.railway.app/api"
+        "EXPO_PUBLIC_API_BASE_URL": "https://donkey-betz-platform-production.up.railway.app/api",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "production": {
       "autoIncrement": true,
       "channel": "production",
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://donkey-betz-platform-production.up.railway.app/api"
-      }
-    }
-  },
-  "submit": {
-    "production": {
-      "ios": {
-        "appleId": "",
-        "ascAppId": "",
-        "appleTeamId": ""
-      },
-      "android": {
-        "serviceAccountKeyPath": "",
-        "track": "internal"
+        "EXPO_PUBLIC_API_BASE_URL": "https://donkey-betz-platform-production.up.railway.app/api",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     }
   }
