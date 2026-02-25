@@ -2,12 +2,27 @@ import http from './http';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+export interface ToolRunResult {
+  agent?: string;
+  success?: boolean;
+  data?: {
+    video_url?: string;
+    thumbnail_url?: string;
+    final_video_url?: string;
+    status?: string;
+    task_id?: string;
+  };
+  video_url?: string;
+  thumbnail_url?: string;
+}
+
 export interface ToolRun {
   tool: string;
   ok: boolean;
   latency_ms: number;
   error_code?: string;
   error_message?: string;
+  result?: ToolRunResult;
 }
 
 export interface PAChatResponse {

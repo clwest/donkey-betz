@@ -8,6 +8,7 @@ import BoardroomHomeScreen from '../screens/boardroom/BoardroomHomeScreen';
 import GovernanceHomeScreen from '../screens/governance/GovernanceHomeScreen';
 import InitiativesHomeScreen from '../screens/initiatives/InitiativesHomeScreen';
 import AgentsScreen from '../screens/AgentsScreen';
+import MediaScreen from '../screens/MediaScreen';
 import DiagnosticsScreen from '../screens/DiagnosticsScreen';
 
 // ── Registry ─────────────────────────────────────────────────────────────────
@@ -70,6 +71,10 @@ const SCREEN_REGISTRY: Record<string, ScreenEntry> = {
   '/agents': {
     component: AgentsScreen,
     icon: 'users',
+  },
+  '/media': {
+    component: MediaScreen,
+    icon: 'image',
   },
   '/portfolio': {
     component: PlaceholderScreen,
