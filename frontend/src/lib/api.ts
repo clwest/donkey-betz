@@ -3980,6 +3980,20 @@ export const auditApi = {
     api.get('/v1/signal-clusters/', { params }),
 }
 
+// Session 1076: Executor Runs API
+export const executorApi = {
+  list: () => api.get('/v1/executor/runs/list/'),
+  detail: (id: string) => api.get(`/v1/executor/runs/${id}/`),
+  logs: (id: string) => api.get(`/v1/executor/runs/${id}/logs/`),
+  diff: (id: string) => api.get(`/v1/executor/runs/${id}/diff/`),
+  create: (data: { plan: unknown; summary?: string; conversation_id?: string }) =>
+    api.post('/v1/executor/runs/', data),
+  cancel: (id: string) => api.post(`/v1/executor/runs/${id}/cancel/`),
+  approve: (id: string) => api.post(`/v1/executor/runs/${id}/approve/`),
+  approveStep: (id: string, stepId: string) =>
+    api.post(`/v1/executor/runs/${id}/approve-step/`, { step_id: stepId }),
+}
+
 // Session 1009: Deliverables Library API
 export const deliverablesApi = {
   list: (params?: { type?: string; category?: string; agent?: string; saved?: boolean; template?: boolean; source?: string; search?: string; page?: number; per_page?: number }) =>

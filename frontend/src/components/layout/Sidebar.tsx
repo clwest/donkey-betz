@@ -29,6 +29,7 @@ import {
   Landmark,
   FileUp,
   HelpCircle,
+  Play,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -62,6 +63,9 @@ const navItems = [
   // Session 1067: Full-page boardroom & governance
   { path: '/boardroom', label: 'Boardroom', icon: Gavel },
   { path: '/governance', label: 'Governance', icon: ShieldCheck },
+
+  // Session 1076: Executor runs
+  { path: '/executor', label: 'Executor', icon: Play },
 
   // Core Navigation
   { path: '/agents', label: 'Agents', icon: Bot },
