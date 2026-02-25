@@ -77,6 +77,23 @@ class ChatConversation(models.Model):
     user_message = models.TextField()
     assistant_response = models.TextField()
 
+    # Session 1074: Actor source — who posted this message
+    SOURCE_CHOICES = [
+        ('web', 'Web App'),
+        ('mobile', 'Mobile App'),
+        ('discord', 'Discord'),
+        ('api', 'API'),
+        ('claude-code', 'Claude Code'),
+        ('pa', 'Personal Assistant'),
+    ]
+    source = models.CharField(
+        max_length=30,
+        choices=SOURCE_CHOICES,
+        default='web',
+        db_index=True,
+        help_text="Actor who posted this message (user via web/mobile, claude-code, pa)"
+    )
+
     # Session 455: Cross-platform tracking
     PLATFORM_CHOICES = [
         ('web', 'Web App'),

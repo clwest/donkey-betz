@@ -15,7 +15,7 @@ import { useLocation } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import {
   Bot, User, Send, X, Minus, Maximize2, MessageSquare,
-  Loader2, Copy, ThumbsUp, ThumbsDown, Trash2, Clock, Plus,
+  Loader2, Copy, ThumbsUp, ThumbsDown, Trash2, Clock, Plus, Terminal,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { assistantApi } from '@/lib/api'
@@ -294,21 +294,31 @@ export default function GlobalPADock() {
               messages.map((message) => (
                 <div
                   key={message.id}
-                  className={cn('flex gap-2', message.role === 'user' ? 'justify-end' : 'justify-start')}
+                  className={cn(
+                    'flex gap-2',
+                    message.source === 'claude-code' ? 'justify-start' : message.role === 'user' ? 'justify-end' : 'justify-start'
+                  )}
                 >
-                  {message.role === 'assistant' && (
+                  {message.role === 'assistant' && message.source !== 'claude-code' && (
                     <div className="h-6 w-6 rounded-full bg-primary-600/20 flex items-center justify-center flex-shrink-0">
                       <Bot size={12} className="text-primary-400" />
                     </div>
                   )}
+                  {message.source === 'claude-code' && (
+                    <div className="h-6 w-6 rounded-full bg-emerald-600/20 flex items-center justify-center flex-shrink-0">
+                      <Terminal size={12} className="text-emerald-400" />
+                    </div>
+                  )}
 
-                  <div className={cn('max-w-[80%] group', message.role === 'user' && 'order-first')}>
+                  <div className={cn('max-w-[80%] group', message.role === 'user' && message.source !== 'claude-code' && 'order-first')}>
                     <div
                       className={cn(
                         'rounded-lg px-3 py-2 text-sm',
-                        message.role === 'user'
-                          ? 'bg-primary-600 text-white'
-                          : 'bg-dark-bg border border-dark-border'
+                        message.source === 'claude-code'
+                          ? 'bg-emerald-900/30 border border-emerald-500/20'
+                          : message.role === 'user'
+                            ? 'bg-primary-600 text-white'
+                            : 'bg-dark-bg border border-dark-border'
                       )}
                     >
                       {message.role === 'assistant' ? (
@@ -327,6 +337,11 @@ export default function GlobalPADock() {
                             </span>
                           ))}
                         </div>
+                      )}
+                      {message.source === 'claude-code' && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono mt-1 inline-block">
+                          Claude Code
+                        </span>
                       )}
                     </div>
 

@@ -35248,6 +35248,7 @@ def process_pa_chat_task(self, user_id, message, context=None, generate_audio=Fa
             user_message=message,
             assistant_response=response.content or '',
             platform=platform,
+            source=source,  # Session 1074: Collaboration protocol actor tracking
             metadata=metadata,
             response_time_ms=response.latency_ms or elapsed_ms,
             agents_used=[r.get('tool', '') for r in (response.tool_runs or [])],

@@ -1018,23 +1018,28 @@ def get_pa_conversation(request, conversation_id):
 
         messages = []
         for row in rows:
+            # Session 1074: Use real source field, fallback to metadata for old rows
             meta = row.metadata or {}
-            source_label = meta.get('source', row.platform)
+            source_label = getattr(row, 'source', None) or meta.get('source', row.platform)
+            structured_type = meta.get('structured_type')
+
             messages.append({
                 'id': f'{row.pk}-user',
                 'role': 'user',
                 'content': row.user_message,
                 'timestamp': row.created_at.isoformat(),
                 'source': source_label,
+                **({"structured_type": structured_type} if structured_type else {}),
             })
-            messages.append({
-                'id': f'{row.pk}-assistant',
-                'role': 'assistant',
-                'content': row.assistant_response,
-                'timestamp': row.created_at.isoformat(),
-                'tools_used': row.agents_used or [],
-                'source': 'pa',
-            })
+            if row.assistant_response:
+                messages.append({
+                    'id': f'{row.pk}-assistant',
+                    'role': 'assistant',
+                    'content': row.assistant_response,
+                    'timestamp': row.created_at.isoformat(),
+                    'tools_used': row.agents_used or [],
+                    'source': 'pa',
+                })
 
         return Response({
             'success': True,
