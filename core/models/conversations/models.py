@@ -82,6 +82,7 @@ class ChatConversation(models.Model):
         ('web', 'Web App'),
         ('discord', 'Discord'),
         ('api', 'API'),
+        ('mobile', 'Mobile App'),
     ]
     platform = models.CharField(
         max_length=20,

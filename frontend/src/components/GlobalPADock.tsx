@@ -92,6 +92,7 @@ export default function GlobalPADock() {
       assistantApi.paChat(message, {
         context: { current_page: location.pathname },
         conversation_id: activeConversationId || undefined,
+        source: 'web-dock',
       }),
     onSuccess: (response) => {
       const taskId = response.data.task_id

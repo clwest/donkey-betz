@@ -5894,18 +5894,25 @@ Be concise, conversational, and personalized. Address the user by name."""
                 cursor.execute("SET LOCAL statement_timeout = '5000'")
             recent = ChatConversation.objects.filter(
                 user=self.user,
-                platform='web',
-            ).order_by('-created_at')[:10]  # Last 10 exchanges
+            ).exclude(platform='discord').order_by('-created_at')[:10]  # Last 10 exchanges
 
             # Build history in chronological order (oldest first)
             turns = []
             for chat in reversed(list(recent)):
                 if chat.user_message:
-                    turns.append({
+                    meta = chat.metadata or {}
+                    src = meta.get('source', '')
+                    content = chat.user_message
+                    # Prefix non-web messages with source for speaker attribution
+                    # (avoids OpenAI 'name' field which affects model behavior)
+                    if src and src not in ('web', 'web-dock'):
+                        content = f"[{src}] {content}"
+                    turn = {
                         'role': 'user',
-                        'content': chat.user_message,
+                        'content': content,
                         'timestamp': chat.created_at.isoformat() if chat.created_at else '',
-                    })
+                    }
+                    turns.append(turn)
                 if chat.assistant_response:
                     turn = {
                         'role': 'assistant',

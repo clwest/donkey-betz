@@ -18,6 +18,7 @@ interface Message {
   timestamp: string // ISO string for persistence
   tools_used?: string[]
   feedback?: 'positive' | 'negative'
+  source?: string
 }
 
 interface ConversationSummary {
@@ -126,12 +127,13 @@ export const usePAStore = create<PAState>()(
           if (data.success) {
             set({
               activeConversationId: id,
-              messages: data.messages.map((m: { id: string; role: 'user' | 'assistant'; content: string; timestamp: string; tools_used?: string[] }) => ({
+              messages: data.messages.map((m: { id: string; role: 'user' | 'assistant'; content: string; timestamp: string; tools_used?: string[]; source?: string }) => ({
                 id: m.id,
                 role: m.role,
                 content: m.content,
                 timestamp: m.timestamp,
                 tools_used: m.tools_used || [],
+                source: m.source,
               })),
             })
           }
