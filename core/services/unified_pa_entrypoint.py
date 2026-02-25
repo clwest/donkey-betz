@@ -437,8 +437,18 @@ class UnifiedPAEntrypoint:
                 )
 
             # Session 940: Check for triage start commands
-            message_lower = message.lower()
-            if 'triage' in message_lower:
+            # Only trigger on explicit commands, not conversational mentions
+            message_lower = message.lower().strip()
+            _triage_start_patterns = (
+                'triage attention', 'triage decisions', 'triage items',
+                'start triage', 'begin triage', 'let\'s triage',
+                'run triage', 'do triage',
+            )
+            _is_triage_command = (
+                message_lower in ('triage', 'triage please')
+                or any(message_lower.startswith(p) for p in _triage_start_patterns)
+            )
+            if _is_triage_command:
                 if 'attention' in message_lower or 'review' in message_lower:
                     content = await self.start_triage('attention')
                 elif 'decision' in message_lower:
