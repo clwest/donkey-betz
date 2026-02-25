@@ -35190,7 +35190,7 @@ def cleanup_audio_cache():
 # =============================================================================
 
 @shared_task(bind=True, time_limit=300, soft_time_limit=280)
-def process_pa_chat_task(self, user_id, message, context=None, generate_audio=False, conversation_id=None):
+def process_pa_chat_task(self, user_id, message, context=None, generate_audio=False, conversation_id=None, source='web', platform='web'):
     """
     Session 974b: Async PA chat processing to avoid Railway proxy timeouts.
     Runs UnifiedPAEntrypoint in Celery worker, stores result in Redis via Celery result backend.
@@ -35224,7 +35224,7 @@ def process_pa_chat_task(self, user_id, message, context=None, generate_audio=Fa
         from core.models import ChatConversation
 
         if not conversation_id:
-            conversation_id, _ = ChatConversation.get_or_create_session(user=user, platform='web')
+            conversation_id, _ = ChatConversation.get_or_create_session(user=user, platform=platform)
 
         is_first = not ChatConversation.objects.filter(conversation_id=conversation_id).exists()
 
@@ -35238,6 +35238,7 @@ def process_pa_chat_task(self, user_id, message, context=None, generate_audio=Fa
             'tool_calls': response.tool_call_metadata or [],
             'tool_results': response.tool_result_data or [],
             'response_id': response.response_id,
+            'source': source,
         }
         metadata = json.loads(json.dumps(raw_metadata, default=str))
 
@@ -35246,7 +35247,7 @@ def process_pa_chat_task(self, user_id, message, context=None, generate_audio=Fa
             conversation_id=conversation_id,
             user_message=message,
             assistant_response=response.content or '',
-            platform='web',
+            platform=platform,
             metadata=metadata,
             response_time_ms=response.latency_ms or elapsed_ms,
             agents_used=[r.get('tool', '') for r in (response.tool_runs or [])],

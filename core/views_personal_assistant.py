@@ -201,6 +201,8 @@ def unified_pa_chat(request):
         context = request.data.get('context', {})
         generate_audio = request.data.get('generate_audio', False)
         conversation_id = request.data.get('conversation_id')
+        source = request.data.get('source', 'web')
+        platform = request.data.get('platform', 'web')
 
         if not message:
             return Response({'error': 'Message is required'}, status=400)
@@ -213,6 +215,8 @@ def unified_pa_chat(request):
             context=context,
             generate_audio=generate_audio,
             conversation_id=conversation_id,
+            source=source,
+            platform=platform,
         )
 
         return Response({
@@ -939,7 +943,7 @@ def list_pa_conversations(request):
 
         conversations = (
             ChatConversation.objects
-            .filter(user=request.user, platform='web')
+            .filter(user=request.user).exclude(platform='discord')
             .values('conversation_id')
             .annotate(
                 message_count=Count('id'),
@@ -1014,11 +1018,14 @@ def get_pa_conversation(request, conversation_id):
 
         messages = []
         for row in rows:
+            meta = row.metadata or {}
+            source_label = meta.get('source', row.platform)
             messages.append({
                 'id': f'{row.pk}-user',
                 'role': 'user',
                 'content': row.user_message,
                 'timestamp': row.created_at.isoformat(),
+                'source': source_label,
             })
             messages.append({
                 'id': f'{row.pk}-assistant',
@@ -1026,6 +1033,7 @@ def get_pa_conversation(request, conversation_id):
                 'content': row.assistant_response,
                 'timestamp': row.created_at.isoformat(),
                 'tools_used': row.agents_used or [],
+                'source': 'pa',
             })
 
         return Response({

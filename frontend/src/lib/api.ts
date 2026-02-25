@@ -1116,7 +1116,7 @@ export const assistantApi = {
 
   // Session 934: UnifiedPA chat - dedicated endpoint with full tool_runs visibility
   // Session 974b: Returns task_id for async polling (Celery)
-  paChat: (message: string, options?: { context?: Record<string, unknown>; generate_audio?: boolean; conversation_id?: string }) =>
+  paChat: (message: string, options?: { context?: Record<string, unknown>; generate_audio?: boolean; conversation_id?: string; source?: string; platform?: string }) =>
     api.post<PAChatAsyncResponse>('/pa/chat/', { message, ...options }),
 
   // Session 974b: Poll async PA chat task status
