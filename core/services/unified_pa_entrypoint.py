@@ -486,6 +486,11 @@ class UnifiedPAEntrypoint:
                 )
                 tool_runs = tool_runs_raw
 
+                # Session 1076: Fix hallucinated Cloudinary URLs in LLM response.
+                # The LLM sometimes constructs URLs from prompt text instead of
+                # copying the real URL from tool results.
+                content = self._fix_hallucinated_urls(content, tool_runs_raw, trace_id)
+
                 # Infer intent from tool names for enrichment
                 tool_names = [r.get('tool', '') for r in tool_runs_raw]
                 intent = self._infer_intent_from_tools(tool_names)
@@ -923,6 +928,69 @@ class UnifiedPAEntrypoint:
 
         # Safety: shouldn't normally reach here
         return ("I wasn't able to complete that request.", tool_runs, fc_metadata, response_id)
+
+    @staticmethod
+    def _fix_hallucinated_urls(content: str, tool_runs: list, trace_id: str) -> str:
+        """Session 1076: Replace hallucinated Cloudinary URLs with real ones.
+
+        The LLM sometimes constructs Cloudinary URLs from prompt text instead
+        of copying the actual URL returned by the tool. This method:
+        1. Collects all real Cloudinary URLs from tool results
+        2. Finds all Cloudinary URLs in the response text
+        3. Replaces any hallucinated URL (not in the real set) with the closest
+           real URL from the same tool run.
+        """
+        import re
+
+        if not content or 'cloudinary' not in content:
+            return content
+
+        # Collect real URLs from tool results
+        real_urls: list[str] = []
+        for run in (tool_runs or []):
+            result = run.get('result', {}) or {}
+            if isinstance(result, dict):
+                # Direct image_url field
+                if result.get('image_url'):
+                    real_urls.append(result['image_url'])
+                # images list with url field
+                for img in (result.get('images') or result.get('data', {}).get('images', []) or []):
+                    if isinstance(img, dict) and img.get('url'):
+                        real_urls.append(img['url'])
+                # Nested output (agent results)
+                output = result.get('output', '')
+                if isinstance(output, str):
+                    for m in re.finditer(r'https://res\.cloudinary\.com/[^\s\)\"\']+', output):
+                        real_urls.append(m.group(0))
+
+        if not real_urls:
+            return content
+
+        real_url_set = set(real_urls)
+
+        # Find all Cloudinary URLs in the response
+        url_pattern = re.compile(r'https://res\.cloudinary\.com/[^\s\)\"\']+')
+        response_urls = url_pattern.findall(content)
+
+        if not response_urls:
+            return content
+
+        # Replace hallucinated URLs with the first real URL
+        replaced = False
+        for resp_url in response_urls:
+            if resp_url not in real_url_set:
+                # This URL was hallucinated — replace with real URL
+                content = content.replace(resp_url, real_urls[0])
+                replaced = True
+                logger.warning(
+                    f"[{trace_id}] Replaced hallucinated URL "
+                    f"({resp_url[:80]}...) with real URL ({real_urls[0][:80]}...)"
+                )
+
+        if replaced:
+            logger.info(f"[{trace_id}] Fixed hallucinated Cloudinary URLs in response")
+
+        return content
 
     @staticmethod
     def _truncate_tool_output(output: str, limit: int = 16000) -> str:
