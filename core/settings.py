@@ -605,6 +605,20 @@ CELERY_WORKER_MAX_TASKS_PER_CHILD = 50  # Recycle prefork children after 50 task
 CELERY_WORKER_MAX_MEMORY_PER_CHILD = 300_000  # 300MB per child (KB), kills bloated children
 CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 min soft limit (warn before 30 min hard kill)
 
+# ── Session 1074: Executor Settings ──────────────────────────────────────────
+# Single-repo MVP — pinned to this repo and main branch.
+EXECUTOR_SINGLE_REPO_MODE = True
+EXECUTOR_REPO_URL = os.environ.get(
+    'EXECUTOR_REPO_URL', 'https://github.com/clwest/donkey-betz-platform'
+)
+EXECUTOR_DEFAULT_BASE_BRANCH = 'main'
+EXECUTOR_PROTECTED_BRANCHES = ['main', 'production']
+EXECUTOR_NETWORK_EGRESS_DEFAULT = False
+EXECUTOR_MAX_RUN_SECONDS = int(os.environ.get('EXECUTOR_MAX_RUN_SECONDS', '1800'))
+EXECUTOR_WORKDIR_ROOT = os.environ.get(
+    'EXECUTOR_WORKDIR_ROOT', os.path.join(BASE_DIR, '.executor_runs')
+)
+
 # Logging Configuration
 LOGGING = {
     'version': 1,

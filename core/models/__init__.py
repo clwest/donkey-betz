@@ -154,6 +154,9 @@ from ..models_deliberation import (
     DocVersion,
 )
 
+# Import executor models (Session 1074 - Three-Way Collaboration Executor)
+from .executor import ExecutionRun
+
 # Import Celery telemetry models (Session 983 - Celery Observability)
 from ..models_celery_telemetry import CeleryTaskEvent
 
