@@ -4402,6 +4402,24 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Session 1074: Executor Single-Repo MVP
+# =========================================================================
+from core.views_executor_runs import (
+    create_run, list_runs, run_detail, run_logs, run_diff,
+    cancel_run, approve_run,
+)
+
+urlpatterns += [
+    path('api/v1/executor/runs/', create_run, name='executor-create-run'),
+    path('api/v1/executor/runs/list/', list_runs, name='executor-list-runs'),
+    path('api/v1/executor/runs/<uuid:run_id>/', run_detail, name='executor-run-detail'),
+    path('api/v1/executor/runs/<uuid:run_id>/logs/', run_logs, name='executor-run-logs'),
+    path('api/v1/executor/runs/<uuid:run_id>/diff/', run_diff, name='executor-run-diff'),
+    path('api/v1/executor/runs/<uuid:run_id>/cancel/', cancel_run, name='executor-cancel-run'),
+    path('api/v1/executor/runs/<uuid:run_id>/approve/', approve_run, name='executor-approve-run'),
+]
+
+# =========================================================================
 # Session 688: React Frontend Catch-All (MUST BE LAST!)
 # =========================================================================
 # This catches all remaining routes and serves the React SPA.
