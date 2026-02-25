@@ -7703,6 +7703,27 @@ RESEARCH DATA:
                 'message': f'Video generation dispatched (task {celery_task.id}). Use job_status to check progress.',
             }
 
+        if action == 'generate_talking_video':
+            # Dispatch to Celery async — pipeline is long-running (TTS + video + lip sync)
+            from core.tasks import execute_agent_task
+            task_text = payload.get('script') or payload.get('prompt', '')
+            context = {
+                'image_url': payload.get('image_url', ''),
+                'script': task_text,
+                'voice': payload.get('voice', 'Rachel'),
+                'duration': payload.get('duration', 5),
+                'lipsync_model': payload.get('lipsync_model', 'auto'),
+            }
+            celery_task = execute_agent_task.delay(
+                'talking_character_agent', task_text, context
+            )
+            return {
+                'task_id': str(celery_task.id),
+                'mode': 'async',
+                'agent': 'talking_character_agent',
+                'message': f'Talking character video dispatched (task {celery_task.id}). Use job_status to check progress.',
+            }
+
         if action == 'generate_audio':
             task = payload.get('prompt', '')
             context = {}
