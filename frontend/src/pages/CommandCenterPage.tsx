@@ -28,7 +28,7 @@ import {
   Bug, ChevronDown, ChevronUp,
   ExternalLink, Workflow, Database,
   PanelLeftClose, PanelLeftOpen, Plus, Brain,
-  BarChart3, Shield, BookOpen,
+  BarChart3, Shield, BookOpen, Terminal,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -815,7 +815,7 @@ export default function CommandCenterPage() {
 
             const content = status.data.content || 'No response'
             const toolNames = (status.data.tool_runs || []).map((r) => r.tool)
-            addPAMessage({ role: 'assistant', content, tools_used: toolNames })
+            addPAMessage({ role: 'assistant', content, tools_used: toolNames, source: 'pa' })
 
             if (status.data.conversation_id && !activeConversationId) {
               setActiveConversationId(status.data.conversation_id)
@@ -1375,28 +1375,54 @@ export default function CommandCenterPage() {
               messages.map((message, index) => (
                 <div
                   key={message.id}
-                  className={cn('flex gap-2', message.role === 'user' ? 'justify-end' : 'justify-start')}
+                  className={cn(
+                    'flex gap-2',
+                    message.source === 'claude-code' ? 'justify-start' : message.role === 'user' ? 'justify-end' : 'justify-start'
+                  )}
                 >
-                  {message.role === 'assistant' && (
+                  {/* Avatar: PA (bot), Claude Code (terminal), or none for user */}
+                  {message.role === 'assistant' && message.source !== 'claude-code' && (
                     <div className="h-7 w-7 rounded-full bg-primary-600/20 flex items-center justify-center flex-shrink-0">
                       <Bot size={14} className="text-primary-400" />
                     </div>
                   )}
+                  {message.source === 'claude-code' && (
+                    <div className="h-7 w-7 rounded-full bg-emerald-600/20 flex items-center justify-center flex-shrink-0">
+                      <Terminal size={14} className="text-emerald-400" />
+                    </div>
+                  )}
 
-                  <div className={cn('max-w-[75%] group', message.role === 'user' && 'order-first')}>
+                  <div className={cn('max-w-[75%] group', message.role === 'user' && message.source !== 'claude-code' && 'order-first')}>
                     <div className={cn(
                       'rounded-lg px-3 py-2 text-sm',
-                      message.role === 'user'
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-dark-card border border-dark-border'
+                      message.source === 'claude-code'
+                        ? 'bg-emerald-900/30 border border-emerald-500/20'
+                        : message.role === 'user'
+                          ? 'bg-primary-600 text-white'
+                          : 'bg-dark-card border border-dark-border'
                     )}>
                       {message.role === 'assistant' ? (
                         <ChatMarkdown content={message.content} />
                       ) : (
                         <p className="whitespace-pre-wrap">{message.content}</p>
                       )}
-                      {message.source && !['web', 'web-dock', 'pa'].includes(message.source) && (
-                        <span className="text-[10px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-400 font-mono mt-1 inline-block">
+                      {message.source === 'claude-code' && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono mt-1 inline-block">
+                          Claude Code
+                        </span>
+                      )}
+                      {message.source === 'mobile' && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-400 font-mono mt-1 inline-block">
+                          Mobile
+                        </span>
+                      )}
+                      {message.source === 'discord' && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-mono mt-1 inline-block">
+                          Discord
+                        </span>
+                      )}
+                      {message.source && !['web', 'web-dock', 'pa', 'claude-code', 'mobile', 'discord'].includes(message.source) && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-mono mt-1 inline-block">
                           via {message.source}
                         </span>
                       )}
