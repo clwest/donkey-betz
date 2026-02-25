@@ -61,6 +61,7 @@ def _fallback_manifest() -> dict:
             {'path': '/analytics', 'label': 'Analytics', 'authRequired': True, 'category': 'command'},
             {'path': '/image-studio', 'label': 'Image Studio', 'authRequired': True, 'category': 'studio'},
             {'path': '/video-studio', 'label': 'Video Studio', 'authRequired': True, 'category': 'studio'},
+            {'path': '/initiatives', 'label': 'Initiatives', 'authRequired': True, 'category': 'command'},
             {'path': '/intelligence', 'label': 'Intelligence', 'authRequired': True, 'category': 'intelligence'},
             {'path': '/agents', 'label': 'Agents', 'authRequired': True, 'category': 'intelligence'},
             {'path': '/advisors', 'label': 'Advisors', 'authRequired': True, 'category': 'intelligence'},

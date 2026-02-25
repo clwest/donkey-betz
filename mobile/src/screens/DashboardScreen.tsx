@@ -246,7 +246,11 @@ export default function DashboardScreen() {
       )}
 
       {/* ── Initiatives ──────────────────────────────────── */}
-      <View style={styles.card}>
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.7}
+        onPress={() => navigation.navigate('/initiatives')}
+      >
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>Initiatives</Text>
           <Text style={styles.mutedText}>{initiatives.length} total</Text>
@@ -268,7 +272,7 @@ export default function DashboardScreen() {
         ) : (
           <Text style={styles.mutedText}>No initiatives</Text>
         )}
-      </View>
+      </TouchableOpacity>
 
       {/* ── Recent Activity ──────────────────────────────── */}
       <View style={styles.card}>

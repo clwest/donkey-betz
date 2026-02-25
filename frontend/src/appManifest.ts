@@ -28,6 +28,7 @@ export const APP_ROUTES: AppRoute[] = [
   { path: '/workspace', label: 'Workspace', authRequired: true, category: 'command' },
   { path: '/boardroom', label: 'Boardroom', authRequired: true, category: 'command' },
   { path: '/governance', label: 'Governance', authRequired: true, category: 'command' },
+  { path: '/initiatives', label: 'Initiatives', authRequired: true, category: 'command' },
   { path: '/platform', label: 'Platform', authRequired: true, category: 'command' },
   { path: '/billing', label: 'Billing', authRequired: true, category: 'command' },
   { path: '/analytics', label: 'Analytics', authRequired: true, category: 'command' },
