@@ -53,6 +53,7 @@ class FullStackDeveloperAgent(BaseAgent):
     """Agent specialized in building complete full-stack features."""
 
     name = "FullStackDeveloperAgent"
+    llm_timeout = 180.0  # Session 1074: TDD generation needs 3 min
     requires_system_context = True  # Session 820: Inject CLAUDE.md + critical docs
 
     # Session 856: Content review configuration

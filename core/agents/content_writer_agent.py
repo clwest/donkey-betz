@@ -214,6 +214,7 @@ class ContentWriterAgent(BaseAgent):
     """
 
     name = "ContentWriterAgent"
+    llm_timeout = 180.0  # Session 1074: Long-form content generation needs 3 min
 
     # Base system prompt - will be enhanced with intelligent context
     system_prompt = """You are ContentWriterAgent, a professional content writer who transforms research into compelling written content.

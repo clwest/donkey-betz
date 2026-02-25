@@ -476,6 +476,10 @@ class BaseAgent(ABC, TimeTravelMixin):
 
     # ==================== Lazy-Loaded Services ====================
 
+    # Session 1074: Per-agent LLM timeout. Document-generation agents override
+    # to 180s because gpt-5-mini reasoning + long output needs more than 60s.
+    llm_timeout: float = 60.0
+
     @property
     def client(self) -> OpenAI:
         """Lazy-load OpenAI client with timeout to prevent hanging requests."""
@@ -484,9 +488,10 @@ class BaseAgent(ABC, TimeTravelMixin):
             # Session 411: Add timeout to prevent indefinite hangs
             # Session 1020: Reduced from 120s to 60s — if OpenAI hasn't responded
             # in 60s it's having issues; agents with tool loops compound this delay
+            # Session 1074: Use per-agent llm_timeout class attribute
             self._client = OpenAI(
                 api_key=settings.OPENAI_API_KEY,
-                timeout=60.0  # 1 minute timeout for API calls
+                timeout=self.llm_timeout,
             )
         return self._client
 
@@ -2213,8 +2218,8 @@ Consider these trends when crafting the response to maximize relevance and engag
 
         except TimeoutError as e:
             # Session 411: Handle timeout specifically
-            logger.error(f"OpenAI API timeout in {self.name} after 120s: {e}")
-            raise TimeoutError(f"OpenAI API request timed out after 120 seconds in {self.name}")
+            logger.error(f"OpenAI API timeout in {self.name} after {self.llm_timeout}s: {e}")
+            raise TimeoutError(f"OpenAI API request timed out after {self.llm_timeout}s in {self.name}")
         except Exception as e:
             logger.error(f"OpenAI API error in {self.name}: {e}")
             raise
@@ -2262,12 +2267,25 @@ Consider these trends when crafting the response to maximize relevance and engag
                 last_exception = e
                 error_str = str(e).lower()
 
+                # Session 1074: Distinguish API timeouts (model too slow, NOT retryable)
+                # from connection errors (transient, retryable). Retrying a 60s timeout
+                # 3 times wastes 180s and always fails identically.
+                from openai import APITimeoutError
+                is_api_timeout = isinstance(e, APITimeoutError)
+
                 # Check if this is a retryable error
                 is_rate_limit = '429' in str(e) or 'rate limit' in error_str
                 is_server_error = any(code in str(e) for code in ['500', '502', '503', '504'])
-                is_connection_error = 'connection' in error_str or 'timeout' in error_str
+                is_connection_error = 'connection' in error_str and not is_api_timeout
 
                 is_retryable = is_rate_limit or is_server_error or is_connection_error
+
+                if is_api_timeout:
+                    logger.error(
+                        f"[Session 1074] {self.name} LLM call timed out after {self.llm_timeout}s "
+                        f"(not retrying — increase llm_timeout for heavy agents): {e}"
+                    )
+                    raise
 
                 if not is_retryable or attempt >= max_retries:
                     # Not retryable or out of retries
@@ -2338,12 +2356,23 @@ Consider these trends when crafting the response to maximize relevance and engag
                 last_exception = e
                 error_str = str(e).lower()
 
+                # Session 1074: Don't retry API timeouts (see _call_llm_with_retry)
+                from openai import APITimeoutError
+                is_api_timeout = isinstance(e, APITimeoutError)
+
                 # Check if this is a retryable error
                 is_rate_limit = '429' in str(e) or 'rate limit' in error_str
                 is_server_error = any(code in str(e) for code in ['500', '502', '503', '504'])
-                is_connection_error = 'connection' in error_str or 'timeout' in error_str
+                is_connection_error = 'connection' in error_str and not is_api_timeout
 
                 is_retryable = is_rate_limit or is_server_error or is_connection_error
+
+                if is_api_timeout:
+                    logger.error(
+                        f"[Session 1074] {self.name} completion timed out after {self.llm_timeout}s "
+                        f"(not retrying): {e}"
+                    )
+                    raise
 
                 if not is_retryable or attempt >= max_retries:
                     # Not retryable or out of retries
