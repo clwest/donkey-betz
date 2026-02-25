@@ -114,7 +114,7 @@ def generate_speech_with_retry(
     voice_id: str,
     stability: float = 0.5,
     similarity_boost: float = 0.75,
-    model_id: str = "eleven_monolingual_v1",
+    model_id: str = "eleven_turbo_v2_5",
     max_retries: int = 3,
     base_timeout: int = 60
 ) -> Dict[str, Any]:
@@ -368,7 +368,7 @@ def generate_audio_cached(
     agent_name: str = None,
     stability: float = 0.5,
     similarity_boost: float = 0.75,
-    model_id: str = "eleven_monolingual_v1",
+    model_id: str = "eleven_turbo_v2_5",
 ) -> Dict[str, Any]:
     """
     Generate TTS audio with caching support.
