@@ -4,6 +4,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'DonkeyBetz',
   slug: 'donkeybetz',
+  owner: 'donkeyking',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
@@ -14,7 +15,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     policy: 'appVersion',
   },
   updates: {
-    url: `https://u.expo.dev/${process.env.EAS_PROJECT_ID ?? ''}`,
+    url: `https://u.expo.dev/${process.env.EAS_PROJECT_ID ?? '5fcd4ff0-bb20-40c6-b9f4-a0a6753a066d'}`,
     fallbackToCacheTimeout: 5000,
   },
   splash: {
@@ -26,6 +27,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supportsTablet: true,
     bundleIdentifier: 'com.donkeybetz.app',
     infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
       NSMicrophoneUsageDescription:
         'DonkeyBetz uses the microphone for voice commands to the Personal Assistant.',
     },
@@ -44,7 +46,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL ?? 'https://donkey-betz-platform-production.up.railway.app/api',
     eas: {
-      projectId: process.env.EAS_PROJECT_ID ?? '',
+      projectId: process.env.EAS_PROJECT_ID ?? '5fcd4ff0-bb20-40c6-b9f4-a0a6753a066d',
     },
   },
   plugins: [
