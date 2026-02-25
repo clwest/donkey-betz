@@ -57,7 +57,7 @@ export interface ConversationDetail {
 
 export async function paChat(
   message: string,
-  options?: { conversation_id?: string; context?: Record<string, unknown> },
+  options?: { conversation_id?: string; context?: Record<string, unknown>; source?: string; platform?: string },
 ): Promise<PAChatResponse> {
   const { data } = await http.post<PAChatResponse>('/pa/chat/', {
     message,

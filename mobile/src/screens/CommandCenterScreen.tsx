@@ -113,6 +113,8 @@ export default function CommandCenterScreen() {
       const response = await assistantApi.paChat(text, {
         conversation_id: conversationId ?? undefined,
         context: { current_page: '/command-center', platform: 'mobile' },
+        source: 'mobile',
+        platform: 'mobile',
       });
 
       pollForResult(response.task_id, loadingMsg.id);

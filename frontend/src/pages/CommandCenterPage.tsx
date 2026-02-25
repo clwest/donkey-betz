@@ -49,6 +49,7 @@ interface Message {
   timestamp: Date
   tools_used?: string[]
   feedback?: 'positive' | 'negative'
+  source?: string
 }
 
 interface BootData {
@@ -799,7 +800,7 @@ export default function CommandCenterPage() {
   // Chat — Session 974b: Async dispatch + polling via Celery
   const chatMutation = useMutation({
     mutationFn: (message: string) =>
-      assistantApi.paChat(message, { conversation_id: activeConversationId || undefined }),
+      assistantApi.paChat(message, { conversation_id: activeConversationId || undefined, source: 'web' }),
     onSuccess: (response) => {
       const taskId = response.data.task_id
       setIsPolling(true)
@@ -1321,6 +1322,20 @@ export default function CommandCenterPage() {
             </div>
           </div>
 
+          {/* Conversation ID */}
+          {activeConversationId && (
+            <div className="flex items-center gap-2 px-3 py-1 text-xs text-gray-500">
+              <span className="font-mono truncate">{activeConversationId}</span>
+              <button
+                onClick={() => navigator.clipboard.writeText(activeConversationId)}
+                className="p-0.5 rounded hover:bg-dark-border"
+                title="Copy conversation ID"
+              >
+                <Copy size={10} />
+              </button>
+            </div>
+          )}
+
           {/* Messages */}
           <div ref={chatContainerRef} className="flex-1 overflow-auto space-y-3 pb-3">
             {messages.length === 0 ? (
@@ -1379,6 +1394,11 @@ export default function CommandCenterPage() {
                         <ChatMarkdown content={message.content} />
                       ) : (
                         <p className="whitespace-pre-wrap">{message.content}</p>
+                      )}
+                      {message.source && !['web', 'web-dock', 'pa'].includes(message.source) && (
+                        <span className="text-[10px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-400 font-mono mt-1 inline-block">
+                          via {message.source}
+                        </span>
                       )}
                       {message.tools_used && message.tools_used.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-dark-border/50">
