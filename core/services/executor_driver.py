@@ -1,7 +1,9 @@
 """
-Session 1074: Executor Driver — per-run ephemeral execution.
+Session 1074/1075: Executor Driver — per-run ephemeral execution.
 
-Clones the repo, creates a working branch, runs plan steps, captures artifacts.
+Clones the repo, creates a working branch, runs PlanV1 steps, captures artifacts.
+Supports shell and apply_patch step types with step-level approval gating.
+
 MVP uses subprocess. Docker can replace this later without API changes.
 
 See: docs/decisions/ADR-0001-execution-per-run-ephemeral-containers.md
@@ -13,12 +15,11 @@ import logging
 import os
 import shutil
 import subprocess
+import tempfile
 import time
 from pathlib import Path
 
 from django.conf import settings
-
-from core.services.executor_policy import classify_command
 
 logger = logging.getLogger(__name__)
 
@@ -35,9 +36,14 @@ class ExecutorDriver:
     def execute(self) -> None:
         """Full execution lifecycle: setup, run steps, capture artifacts, cleanup."""
         try:
-            self.run.start()
+            # Only call start() on first execution (not resume)
+            if self.run.status != 'running':
+                self.run.start()
             self._log(f'Starting execution run {self.run.id}')
-            self._post_status('Executor run started', f'{self.run.plan_summary}\n\nSteps: {self.run.steps_total}')
+            self._post_status(
+                'Executor run started',
+                f'{self.run.plan_summary}\n\nSteps: {self.run.steps_total}',
+            )
 
             self._setup_workspace()
             self._create_working_branch()
@@ -53,6 +59,11 @@ class ExecutorDriver:
                 log='\n'.join(self.log_lines),
             )
 
+        except ExecutorAwaitingApproval:
+            # Not a failure — run is paused, awaiting human approval.
+            self._log(f'Paused for approval at step: {self.run.awaiting_approval_step_id}')
+            self.run.log_text = '\n'.join(self.log_lines)
+            self.run.save(update_fields=['log_text'])
         except ExecutorTimeout as e:
             self._log(f'TIMEOUT: {e}')
             self.run.fail(error=str(e), log='\n'.join(self.log_lines))
@@ -92,64 +103,155 @@ class ExecutorDriver:
     # ── Execution ────────────────────────────────────────────────────────
 
     def _run_plan_steps(self) -> None:
-        """Execute each plan step, enforcing policy."""
-        steps = self.run.plan_json or []
+        """Execute PlanV1 steps with step-level approval gating."""
+        plan = self.run.plan_json or {}
+        steps = plan.get('steps', [])
         self.run.steps_total = len(steps)
         self.run.save(update_fields=['steps_total'])
 
         start_time = time.time()
+        start_index = self.run.current_step_index or 0
+        approved_steps = set(self.run.approved_steps or [])
+        classifier_enabled = getattr(settings, 'EXECUTOR_CLASSIFIER_GATING_ENABLED', False)
 
-        for i, step in enumerate(steps):
+        for i in range(start_index, len(steps)):
+            step = steps[i]
+            step_id = step.get('id', f's{i}')
+            step_type = step.get('type', 'shell')
+            desc = f"Step {step_id} ({step_type})"
+
             # Check timeout
             elapsed = time.time() - start_time
             if elapsed > self.timeout:
                 raise ExecutorTimeout(
-                    f'Run exceeded {self.timeout}s timeout at step {i}'
+                    f'Run exceeded {self.timeout}s timeout at step {step_id}'
                 )
 
-            cmd = step.get('command', '')
-            desc = step.get('description', f'Step {i}')
+            # ── Approval gating (precedence: explicit > network:on > classifier) ──
+            needs_approval = self._step_needs_approval(
+                step, step_id, approved_steps, classifier_enabled
+            )
+            if needs_approval:
+                self.run.current_step_index = i
+                self.run.current_step = desc
+                self.run.save(update_fields=['current_step_index', 'current_step'])
+                self.run.request_approval(step_id=step_id)
+                self._post_status(
+                    'Executor run needs approval',
+                    f'Paused at {desc}.\n\nReason: {needs_approval}',
+                )
+                raise ExecutorAwaitingApproval(
+                    f'{desc} requires approval: {needs_approval}'
+                )
 
-            # Policy check
+            # ── Execute step ──
+            self._log(f'[Step {i + 1}/{len(steps)}] {desc}')
+            self.run.current_step = desc
+            self.run.steps_completed = i
+            self.run.current_step_index = i
+            self.run.save(update_fields=['current_step', 'steps_completed', 'current_step_index'])
+
+            remaining = self.timeout - (time.time() - start_time)
+
+            if step_type == 'shell':
+                self._execute_shell_step(step, remaining)
+            elif step_type == 'apply_patch':
+                self._execute_patch_step(step)
+            else:
+                raise ExecutorBlocked(f'Unknown step type: {step_type!r}')
+
+            self._log(f'  OK')
+
+        self.run.steps_completed = len(steps)
+        self.run.current_step_index = len(steps)
+        self.run.save(update_fields=['steps_completed', 'current_step_index'])
+
+    def _step_needs_approval(
+        self,
+        step: dict,
+        step_id: str,
+        approved_steps: set[str],
+        classifier_enabled: bool,
+    ) -> str:
+        """Check if a step needs approval. Returns reason string or empty string."""
+        # Already approved — skip all checks
+        if step_id in approved_steps:
+            return ''
+
+        # 1) Explicit requires_approval flag (highest precedence)
+        if step.get('requires_approval'):
+            return 'Step has requires_approval=true'
+
+        # 2) network:on auto-requires approval
+        if step.get('network') == 'on':
+            return 'Step has network=on (network egress requires approval)'
+
+        # 3) Classifier-based Tier B gating (only if enabled)
+        if classifier_enabled and step.get('type') == 'shell':
+            from core.services.executor_policy import classify_command
+            cmd = step.get('cmd', '')
             policy = classify_command(cmd)
             if policy.tier == 'C':
                 raise ExecutorBlocked(
-                    f'Step {i} blocked by policy: {cmd!r} — {policy.reason}'
+                    f'Step {step_id} blocked by policy: {cmd!r} — {policy.reason}'
                 )
             if policy.tier == 'B':
-                # For MVP: if not pre-approved, block
-                if not self.run.approved_at:
-                    self.run.approval_required_steps = self.run.approval_required_steps or []
-                    if i not in self.run.approval_required_steps:
-                        self.run.approval_required_steps.append(i)
-                        self.run.save(update_fields=['approval_required_steps'])
-                    self.run.request_approval()
-                    raise ExecutorBlocked(
-                        f'Step {i} requires approval: {cmd!r} — {policy.reason}'
-                    )
+                return f'Classifier Tier B: {policy.reason}'
 
-            self._log(f'[Step {i}/{len(steps)}] {desc}')
-            self._log(f'  $ {cmd}')
+        return ''
 
-            self.run.current_step = desc
-            self.run.steps_completed = i
-            self.run.save(update_fields=['current_step', 'steps_completed'])
+    # ── Step executors ───────────────────────────────────────────────────
 
-            remaining = self.timeout - (time.time() - start_time)
+    def _execute_shell_step(self, step: dict, remaining: float) -> None:
+        """Execute a shell step."""
+        cmd = step.get('cmd', '')
+        cwd = step.get('cwd', '.')
+
+        # Resolve cwd relative to workdir
+        if self.workdir and cwd != '.':
+            effective_cwd = str(self.workdir / cwd)
+        else:
+            effective_cwd = str(self.workdir) if self.workdir else None
+
+        self._log(f'  $ {cmd}')
+        result = self._shell(
+            cmd,
+            cwd=effective_cwd,
+            timeout=int(max(remaining, 10)),
+        )
+        if result.returncode != 0:
+            error_msg = f'Shell step failed (exit {result.returncode}): {cmd}'
+            self._log(f'  FAILED: exit {result.returncode}')
+            raise RuntimeError(error_msg)
+
+    def _execute_patch_step(self, step: dict) -> None:
+        """Execute an apply_patch step."""
+        patch_text = step.get('patch', '')
+        self._log(f'  Applying patch ({len(patch_text)} bytes)')
+
+        if not self.workdir:
+            raise RuntimeError('No workspace available for apply_patch')
+
+        # Write patch to temp file and apply
+        with tempfile.NamedTemporaryFile(
+            mode='w', suffix='.patch', dir=str(self.workdir), delete=False
+        ) as f:
+            f.write(patch_text)
+            patch_path = f.name
+
+        try:
             result = self._shell(
-                cmd,
+                f'git apply --verbose {patch_path}',
                 cwd=str(self.workdir),
-                timeout=int(max(remaining, 10)),
             )
             if result.returncode != 0:
-                error_msg = f'Step {i} failed (exit {result.returncode}): {cmd}'
-                self._log(f'  FAILED: exit {result.returncode}')
-                raise RuntimeError(error_msg)
-
-            self._log(f'  OK (exit {result.returncode})')
-
-        self.run.steps_completed = len(steps)
-        self.run.save(update_fields=['steps_completed'])
+                self._log(f'  FAILED: git apply exit {result.returncode}')
+                raise RuntimeError(f'Patch apply failed (exit {result.returncode})')
+        finally:
+            try:
+                os.unlink(patch_path)
+            except OSError:
+                pass
 
     # ── Artifact capture ─────────────────────────────────────────────────
 
@@ -162,7 +264,7 @@ class ExecutorDriver:
             return ''
         try:
             result = self._shell('git diff HEAD', cwd=str(self.workdir))
-            return result.stdout[:500_000]  # Cap at 500KB
+            return result.stdout[:500_000]
         except Exception:
             return ''
 
@@ -210,7 +312,6 @@ class ExecutorDriver:
             timeout=timeout or self.timeout,
             env={**os.environ, 'GIT_TERMINAL_PROMPT': '0'},
         )
-        # Log output
         if result.stdout.strip():
             for line in result.stdout.strip().splitlines()[:50]:
                 self._log(f'    {line}')
@@ -249,4 +350,9 @@ class ExecutorTimeout(Exception):
 
 
 class ExecutorBlocked(Exception):
+    pass
+
+
+class ExecutorAwaitingApproval(Exception):
+    """Raised when a step needs approval — NOT a failure."""
     pass
