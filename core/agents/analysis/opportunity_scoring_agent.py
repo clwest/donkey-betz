@@ -143,6 +143,7 @@ class OpportunityScoringAgent(BaseAgent):
     """
 
     name = "OpportunityScoringAgent"
+    llm_timeout = 180.0  # Session 1074: Multi-industry scoring needs 3 min
 
     system_prompt = """You are OpportunityScoringAgent, the Opportunity Engine.
 
