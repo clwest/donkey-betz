@@ -7,6 +7,7 @@ import DashboardScreen from '../screens/DashboardScreen';
 import BoardroomHomeScreen from '../screens/boardroom/BoardroomHomeScreen';
 import GovernanceHomeScreen from '../screens/governance/GovernanceHomeScreen';
 import InitiativesHomeScreen from '../screens/initiatives/InitiativesHomeScreen';
+import AgentsScreen from '../screens/AgentsScreen';
 import DiagnosticsScreen from '../screens/DiagnosticsScreen';
 
 // ── Registry ─────────────────────────────────────────────────────────────────
@@ -67,7 +68,7 @@ const SCREEN_REGISTRY: Record<string, ScreenEntry> = {
     icon: 'cpu',
   },
   '/agents': {
-    component: PlaceholderScreen,
+    component: AgentsScreen,
     icon: 'users',
   },
   '/portfolio': {
