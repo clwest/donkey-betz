@@ -18,7 +18,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from core.models import ExecutionRun
+from core.models import ExecutionRun, Repo
 from core.services.executor_policy import classify_plan
 
 logger = logging.getLogger(__name__)
@@ -45,9 +45,13 @@ def create_run(request):
     if not plan:
         return Response({'error': 'Plan is required (list of steps)'}, status=400)
 
-    # Enforce single-repo mode
-    repo_url = settings.EXECUTOR_REPO_URL
-    base_branch = settings.EXECUTOR_DEFAULT_BASE_BRANCH
+    # Resolve repo from registry
+    repo = _resolve_repo(request)
+    if isinstance(repo, Response):
+        return repo  # Error response
+
+    repo_url = repo.repo_url
+    base_branch = repo.default_base_branch
 
     # Classify all steps
     policy = classify_plan(plan)
@@ -64,6 +68,7 @@ def create_run(request):
 
     # Create the run
     run = ExecutionRun.objects.create(
+        repo=repo,
         repo_url=repo_url,
         base_branch=base_branch,
         plan_json=plan,
@@ -200,11 +205,47 @@ def approve_run(request, run_id):
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+def _resolve_repo(request):
+    """Resolve the target Repo from the registry.
+
+    In single-repo mode, always returns the default repo.
+    In multi-repo mode (future), accepts repo_id from the request.
+    Returns a Repo instance or a Response (error).
+    """
+    if settings.EXECUTOR_SINGLE_REPO_MODE:
+        default_name = getattr(settings, 'EXECUTOR_DEFAULT_REPO_NAME', 'donkey-betz-platform')
+        try:
+            return Repo.objects.get(name=default_name, is_active=True)
+        except Repo.DoesNotExist:
+            return Response(
+                {'error': f'Default repo "{default_name}" not found in registry'},
+                status=500,
+            )
+
+    # Multi-repo mode (future): accept repo_id from client
+    repo_id = request.data.get('repo_id')
+    if not repo_id:
+        return Response({'error': 'repo_id is required in multi-repo mode'}, status=400)
+    try:
+        return Repo.objects.get(id=repo_id, is_active=True)
+    except Repo.DoesNotExist:
+        return Response({'error': 'Repo not found or inactive'}, status=404)
+
+
 def _serialize_run(run) -> dict:
+    repo_data = None
+    if run.repo_id:
+        repo_data = {
+            'id': str(run.repo.id),
+            'name': run.repo.name,
+            'repo_url': run.repo.repo_url,
+        }
+
     return {
         'id': str(run.id),
         'status': run.status,
         'plan_summary': run.plan_summary,
+        'repo': repo_data,
         'repo_url': run.repo_url,
         'base_branch': run.base_branch,
         'working_branch': run.working_branch,

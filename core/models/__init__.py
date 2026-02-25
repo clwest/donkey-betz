@@ -155,7 +155,8 @@ from ..models_deliberation import (
 )
 
 # Import executor models (Session 1074 - Three-Way Collaboration Executor)
-from .executor import ExecutionRun
+# Session 1075: Added Repo registry for multi-repo architecture
+from .executor import ExecutionRun, Repo
 
 # Import Celery telemetry models (Session 983 - Celery Observability)
 from ..models_celery_telemetry import CeleryTaskEvent
@@ -384,4 +385,8 @@ __all__ = [
 
     # Mobile - Push Notifications (Session 1073)
     'MobilePushToken',
+
+    # Executor - Repo Registry (Session 1075)
+    'Repo',
+    'ExecutionRun',
 ]
