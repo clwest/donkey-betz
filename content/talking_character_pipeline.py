@@ -397,6 +397,22 @@ class TalkingCharacterPipeline:
             result.error_message = str(e)
             return result
 
+    def _mark_video_history_failed(self, video_task_id: str, error_message: str):
+        """Mark the VideoHistory record as failed so media library stays clean."""
+        if not video_task_id:
+            return
+        try:
+            from content.models import VideoHistory
+            vh = VideoHistory.objects.filter(video_id=video_task_id).first()
+            if vh:
+                vh.status = 'failed'
+                vh.parameters['pipeline_stage'] = 'failed'
+                vh.parameters['error'] = error_message[:500]
+                vh.save()
+                logger.info(f"[PIPELINE] Marked VideoHistory {vh.id} as failed")
+        except Exception as e:
+            logger.warning(f"Failed to mark VideoHistory as failed: {e}")
+
     def check_video_status(self, task_id: str) -> Dict[str, Any]:
         """Check status of Runway video generation task"""
         return self.video_provider.check_status(task_id).__dict__
@@ -471,6 +487,7 @@ class TalkingCharacterPipeline:
                 result.status = PipelineStatus.FAILED
                 result.failed_stage = "image_to_video"
                 result.error_message = video_status.get('error_message', 'Video generation failed')
+                self._mark_video_history_failed(result.video_task_id, result.error_message)
                 return result
 
             time.sleep(5)  # Poll every 5 seconds
@@ -480,6 +497,7 @@ class TalkingCharacterPipeline:
             result.status = PipelineStatus.FAILED
             result.failed_stage = "image_to_video"
             result.error_message = "Video generation timed out"
+            self._mark_video_history_failed(result.video_task_id, "Video generation timed out")
             return result
 
         result.base_video_url = video_url
@@ -510,6 +528,27 @@ class TalkingCharacterPipeline:
                 result.progress_message = "✅ Talking character video complete!"
                 result.duration_seconds = duration
 
+                # Update VideoHistory with final lip-synced video URL
+                if self.user and result.video_task_id:
+                    try:
+                        from content.models import VideoHistory
+                        vh = VideoHistory.objects.filter(
+                            video_id=result.video_task_id
+                        ).first()
+                        if vh:
+                            vh.video_url = result.final_video_url
+                            vh.status = 'processed'
+                            vh.duration = duration
+                            vh.parameters['final_video_url'] = result.final_video_url
+                            vh.parameters['base_video_url'] = result.base_video_url
+                            vh.parameters['audio_url'] = result.audio_url
+                            vh.parameters['pipeline_stage'] = 'completed'
+                            vh.parameters['actual_cost'] = result.actual_cost
+                            vh.save()
+                            logger.info(f"✅ [PIPELINE] Updated VideoHistory {vh.id} with final video")
+                    except Exception as e:
+                        logger.warning(f"⚠️ Failed to update VideoHistory: {e}")
+
                 logger.info(f"🎉 [PIPELINE] COMPLETE! Final video: {result.final_video_url[:60]}...")
                 return result
 
@@ -518,6 +557,7 @@ class TalkingCharacterPipeline:
                 result.status = PipelineStatus.FAILED
                 result.failed_stage = "lip_sync"
                 result.error_message = lipsync_status.get('error', 'Lip sync failed')
+                self._mark_video_history_failed(result.video_task_id, result.error_message)
                 return result
 
             time.sleep(5)  # Poll every 5 seconds
@@ -527,6 +567,7 @@ class TalkingCharacterPipeline:
         result.status = PipelineStatus.FAILED
         result.failed_stage = "lip_sync"
         result.error_message = "Lip sync timed out"
+        self._mark_video_history_failed(result.video_task_id, "Lip sync timed out")
         return result
 
 
