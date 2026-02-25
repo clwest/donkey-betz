@@ -4406,7 +4406,7 @@ urlpatterns += [
 # =========================================================================
 from core.views_executor_runs import (
     create_run, list_runs, run_detail, run_logs, run_diff,
-    cancel_run, approve_run,
+    cancel_run, approve_run, approve_step,
 )
 
 urlpatterns += [
@@ -4417,6 +4417,7 @@ urlpatterns += [
     path('api/v1/executor/runs/<uuid:run_id>/diff/', run_diff, name='executor-run-diff'),
     path('api/v1/executor/runs/<uuid:run_id>/cancel/', cancel_run, name='executor-cancel-run'),
     path('api/v1/executor/runs/<uuid:run_id>/approve/', approve_run, name='executor-approve-run'),
+    path('api/v1/executor/runs/<uuid:run_id>/approve-step/', approve_step, name='executor-approve-step'),
 ]
 
 # =========================================================================

@@ -619,6 +619,11 @@ EXECUTOR_MAX_RUN_SECONDS = int(os.environ.get('EXECUTOR_MAX_RUN_SECONDS', '1800'
 EXECUTOR_WORKDIR_ROOT = os.environ.get(
     'EXECUTOR_WORKDIR_ROOT', os.path.join(BASE_DIR, '.executor_runs')
 )
+# When True, the Tier A/B/C pattern classifier gates steps (Tier B → approval).
+# When False (default), only explicit requires_approval and network:on trigger approval.
+EXECUTOR_CLASSIFIER_GATING_ENABLED = os.environ.get(
+    'EXECUTOR_CLASSIFIER_GATING_ENABLED', 'false'
+).lower() == 'true'
 
 # Logging Configuration
 LOGGING = {
