@@ -527,9 +527,13 @@ you already have, then call generate_image immediately. Do not delegate first.""
                         'prompt': parameters['prompt']
                     }]
 
+                # Session 1076: Build explicit URL list so the LLM copies real URLs
+                # instead of hallucinating URLs from the prompt text.
+                url_list = ' | '.join(img.get('url', '') for img in images if img.get('url'))
+
                 return {
                     'success': True,
-                    'message': f"Generated {len(images)} image(s)",
+                    'message': f"Generated {len(images)} image(s). IMPORTANT — use these exact URLs (do not construct or modify them): {url_list}",
                     'images': images
                 }
             else:
