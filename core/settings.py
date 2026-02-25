@@ -608,6 +608,7 @@ CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 min soft limit (warn before 30 min h
 # ── Session 1074: Executor Settings ──────────────────────────────────────────
 # Single-repo MVP — pinned to this repo and main branch.
 EXECUTOR_SINGLE_REPO_MODE = True
+EXECUTOR_DEFAULT_REPO_NAME = 'donkey-betz-platform'
 EXECUTOR_REPO_URL = os.environ.get(
     'EXECUTOR_REPO_URL', 'https://github.com/clwest/donkey-betz-platform'
 )

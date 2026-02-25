@@ -1,5 +1,6 @@
 """
 Session 1074: ExecutionRun model — per-run ephemeral executor.
+Session 1075: Repo registry model — multi-repo architecture.
 
 Tracks plan-based execution runs with artifact capture (logs, diffs,
 changed files). Integrates with the three-way collaboration protocol.
@@ -12,6 +13,48 @@ import uuid
 
 from django.conf import settings as django_settings
 from django.db import models
+
+
+class Repo(models.Model):
+    """A registered repository that the executor can operate on."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(
+        max_length=200, unique=True,
+        help_text='Human-readable repo name (e.g. "donkey-betz-platform")',
+    )
+    repo_url = models.URLField(
+        unique=True,
+        help_text='Git clone URL',
+    )
+    default_base_branch = models.CharField(
+        max_length=100, default='main',
+        help_text='Default branch to clone from',
+    )
+    allowed_base_branches = models.JSONField(
+        default=list,
+        help_text='Branches allowed as base for executor runs',
+    )
+    protected_branches = models.JSONField(
+        default=list,
+        help_text='Branches that cannot be pushed to directly',
+    )
+    policy_profile = models.CharField(
+        max_length=50, default='moderate',
+        help_text='Policy profile name (moderate = Tier A/B/C)',
+    )
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        db_table = 'executor_repos'
+        ordering = ['name']
+
+    def __str__(self) -> str:
+        return f'{self.name} ({self.repo_url})'
 
 
 class ExecutionRun(models.Model):
@@ -33,6 +76,13 @@ class ExecutionRun(models.Model):
     )
 
     # ── Repo & branch ────────────────────────────────────────────────────
+    repo = models.ForeignKey(
+        Repo,
+        on_delete=models.PROTECT,
+        null=True, blank=True,
+        related_name='runs',
+        help_text='Registry repo (null for runs created before repo registry)',
+    )
     repo_url = models.URLField(
         default='https://github.com/clwest/donkey-betz-platform',
         help_text='Always pinned to settings.EXECUTOR_REPO_URL in single-repo mode',
