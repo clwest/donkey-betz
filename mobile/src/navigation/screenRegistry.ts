@@ -6,6 +6,7 @@ import CommandCenterScreen from '../screens/CommandCenterScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import BoardroomHomeScreen from '../screens/boardroom/BoardroomHomeScreen';
 import GovernanceHomeScreen from '../screens/governance/GovernanceHomeScreen';
+import InitiativesHomeScreen from '../screens/initiatives/InitiativesHomeScreen';
 import DiagnosticsScreen from '../screens/DiagnosticsScreen';
 
 // ── Registry ─────────────────────────────────────────────────────────────────
@@ -56,6 +57,10 @@ const SCREEN_REGISTRY: Record<string, ScreenEntry> = {
   '/stocks': {
     component: PlaceholderScreen,
     icon: 'activity',
+  },
+  '/initiatives': {
+    component: InitiativesHomeScreen,
+    icon: 'target',
   },
   '/intelligence': {
     component: PlaceholderScreen,
