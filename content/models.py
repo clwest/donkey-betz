@@ -2167,6 +2167,7 @@ class VideoHistory(UnifiedBaseModel):
             ('image_to_video', 'Image to Video'),
             ('extend_video', 'Video Extension'),  # Session 66 Part 2: Runway Extend
             ('chained_video', 'Chained Video'),  # Session 67: DaVinci Resolve chaining
+            ('talking_character', 'Talking Character'),  # Talking-head pipeline
             ('uploaded', 'User Uploaded'),  # Session 451: User uploads
         ],
         help_text="Type of video generation"
@@ -2189,6 +2190,7 @@ class VideoHistory(UnifiedBaseModel):
             ('veo3.1_fast', 'Runway Veo 3.1 Fast'),
             ('veo3.1', 'Runway Veo 3.1'),
             ('gen4_turbo', 'Runway Gen-4 Turbo'),
+            ('runway_gen4_turbo', 'Runway Gen-4 Turbo (Pipeline)'),
         ],
         help_text="AI model used for generation"
     )
