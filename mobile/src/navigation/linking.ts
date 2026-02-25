@@ -20,6 +20,7 @@ export const linking: LinkingOptions<any> = {
       '/content': 'content',
       '/betting': 'betting',
       '/stocks': 'stocks',
+      '/initiatives': 'initiatives',
       '/intelligence': 'intelligence',
       '/agents': 'agents',
       '/portfolio': 'portfolio',
