@@ -139,6 +139,7 @@ from core.agents.registry import (
 from core.agents.image_agent import ImageAgent
 from core.agents.video_agent import VideoAgent, get_video_agent
 from core.agents.audio_agent import AudioAgent, get_audio_agent
+from core.agents.talking_character_agent import TalkingCharacterAgent, get_talking_character_agent
 from core.agents.three_d_agent import ThreeDAgent
 
 # Editing Agents
@@ -338,6 +339,8 @@ __all__ = [
     'get_video_agent',
     'AudioAgent',
     'get_audio_agent',
+    'TalkingCharacterAgent',
+    'get_talking_character_agent',
     'ThreeDAgent',
 
     # Editing Agents (2)
