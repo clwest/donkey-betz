@@ -73,6 +73,7 @@ class WorkflowAgent(BaseAgent):
     """
 
     name = "WorkflowAgent"
+    llm_timeout = 180.0  # Session 1074: Multi-step orchestration needs 3 min
 
     # Session 856: Content review configuration
     actionable_config = ActionableOutputConfig(

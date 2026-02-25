@@ -74,6 +74,7 @@ class CTOAgent(BaseAgent):
     """
 
     name = "CTOAgent"
+    llm_timeout = 180.0  # Session 1074: Architecture blueprints need 3 min
     requires_system_context = True  # Session 820: Inject CLAUDE.md + critical docs
 
     system_prompt = """You are CTOAgent, the Chief Technology Officer AI assistant.
