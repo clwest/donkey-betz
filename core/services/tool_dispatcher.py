@@ -7754,7 +7754,9 @@ RESEARCH DATA:
         if action == 'generate_image':
             # Session 1088: Dispatch to Celery async to avoid PA/Railway proxy timeout
             from core.tasks import execute_agent_task
-            task_text = payload.get('prompt', '')
+            raw_prompt = payload.get('prompt', '')
+            # Prefix with "Generate image:" so _is_media_task_blocked() recognizes it
+            task_text = f'Generate image: {raw_prompt}' if not raw_prompt.lower().startswith(('generat', 'creat', 'make', 'design', 'draw', 'render', 'produc')) else raw_prompt
             context = {}
             if payload.get('style'):
                 context['style'] = payload['style']
@@ -7778,9 +7780,9 @@ RESEARCH DATA:
 
         if action == 'generate_video':
             # Session 1077: Dispatch to Celery async to avoid PA tool timeout
-            # (synchronous _handle_agent_tool was causing 30s/120s timeouts)
             from core.tasks import execute_agent_task
-            task_text = payload.get('prompt', '')
+            raw_prompt = payload.get('prompt', '')
+            task_text = f'Generate video: {raw_prompt}' if not raw_prompt.lower().startswith(('generat', 'creat', 'make', 'produc', 'render')) else raw_prompt
             context = {}
             if payload.get('style'):
                 context['style'] = payload['style']
@@ -7803,10 +7805,11 @@ RESEARCH DATA:
         if action == 'generate_talking_video':
             # Dispatch to Celery async — pipeline is long-running (TTS + video + lip sync)
             from core.tasks import execute_agent_task
-            task_text = payload.get('script') or payload.get('prompt', '')
+            raw_script = payload.get('script') or payload.get('prompt', '')
+            task_text = f'Generate talking character video: {raw_script}'
             context = {
                 'image_url': payload.get('image_url', ''),
-                'script': task_text,
+                'script': raw_script,
                 'voice': payload.get('voice', 'Rachel'),
                 'duration': payload.get('duration', 5),
                 'lipsync_model': payload.get('lipsync_model', 'auto'),
@@ -7826,7 +7829,8 @@ RESEARCH DATA:
         if action == 'generate_audio':
             # Session 1088: Dispatch to Celery async (matches video/image pattern)
             from core.tasks import execute_agent_task
-            task_text = payload.get('prompt', '')
+            raw_prompt = payload.get('prompt', '')
+            task_text = f'Generate audio: {raw_prompt}' if not raw_prompt.lower().startswith(('generat', 'creat', 'make', 'produc', 'render')) else raw_prompt
             context = {}
             if payload.get('voice'):
                 context['voice'] = payload['voice']
