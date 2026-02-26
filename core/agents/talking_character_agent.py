@@ -72,15 +72,30 @@ class TalkingCharacterAgent(BaseAgent):
                         },
                         "duration": {
                             "type": "integer",
-                            "description": "Video duration in seconds (5 or 10)",
+                            "description": "Video duration in seconds (5 or 10). Base animation length before looping.",
                             "enum": [5, 10],
-                            "default": 5,
+                            "default": 10,
+                        },
+                        "sync_mode": {
+                            "type": "string",
+                            "description": "Lip sync mode: loop (repeats animation to match audio length), cut_off (truncates at video end), bounce (ping-pong loop)",
+                            "enum": ["loop", "cut_off", "bounce"],
+                            "default": "loop",
                         },
                         "lipsync_model": {
                             "type": "string",
                             "description": "Lip-sync model: auto (default), latentsync (cartoon), sync_labs (photorealistic)",
                             "enum": ["auto", "latentsync", "sync_labs"],
                             "default": "auto",
+                        },
+                        "color_grade": {
+                            "type": "string",
+                            "description": "Optional DaVinci Resolve color grade preset for post-processing",
+                            "enum": [
+                                "cinematic_warm", "cinematic_cool", "cyberpunk_neon",
+                                "vintage_film", "moody_dark", "natural_vibrant",
+                                "sunset_golden", "nordic_cool", "pastel_soft",
+                            ],
                         },
                     },
                     "required": ["image_url", "script"],
@@ -155,8 +170,10 @@ class TalkingCharacterAgent(BaseAgent):
                 image_url = context.get('image_url', '')
                 script = context.get('script') or task
                 voice = context.get('voice', 'Rachel')
-                duration = int(context.get('duration', 5))
+                duration = int(context.get('duration', 10))
+                sync_mode = context.get('sync_mode', 'loop')
                 lipsync_model = context.get('lipsync_model', 'auto')
+                color_grade = context.get('color_grade')
 
                 if not image_url:
                     return AgentResult(
@@ -182,7 +199,9 @@ class TalkingCharacterAgent(BaseAgent):
                     text=script,
                     voice=voice,
                     duration=duration,
+                    sync_mode=sync_mode,
                     lipsync_model=lipsync_model,
+                    color_grade=color_grade,
                 )
 
                 execution_time = int((time.time() - start_time) * 1000)
@@ -262,8 +281,10 @@ class TalkingCharacterAgent(BaseAgent):
                 image_url=arguments.get('image_url', ''),
                 text=arguments.get('script', ''),
                 voice=arguments.get('voice', 'Rachel'),
-                duration=arguments.get('duration', 5),
+                duration=arguments.get('duration', 10),
+                sync_mode=arguments.get('sync_mode', 'loop'),
                 lipsync_model=arguments.get('lipsync_model', 'auto'),
+                color_grade=arguments.get('color_grade'),
             )
             return {
                 'success': result.success,
