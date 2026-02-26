@@ -404,11 +404,14 @@ class ToolDispatcher:
         return mappings.get(tool_name, tool_name.replace('_agent', '').title() + 'Agent')
 
     def _get_agent_execution_output(self, celery_task_id: str, execution_id: str = None) -> Dict[str, Any]:
-        """Enrich job_status with AgentExecution output data (deliverables, media URLs).
+        """Enrich job_status with AgentExecution output data — full content, media URLs, deliverables.
 
         Session 1088: Bridge between Celery task IDs and rich agent outputs.
-        Looks up AgentExecution by execution_id (from task return value) or
-        by matching the celery_task_id stored in input_data.
+        Session 1089: Deep extraction for all agent types:
+          - ContentWriterAgent: metadata.content.full_text (or metadata.full_text)
+          - ImageAgent: metadata.images[*].url
+          - VideoAgent/AudioAgent/TalkingCharacterAgent: metadata media URLs
+          - Generic: output.content as fallback
         """
         extras: Dict[str, Any] = {}
         try:
@@ -419,7 +422,6 @@ class ToolDispatcher:
             if execution_id:
                 execution = AgentExecution.objects.filter(id=execution_id).first()
             if not execution:
-                # Fallback: find recent execution that stored this celery_task_id
                 execution = AgentExecution.objects.filter(
                     input_data__celery_task_id=celery_task_id,
                 ).order_by('-created_at').first()
@@ -431,50 +433,87 @@ class ToolDispatcher:
             extras['execution_id'] = str(execution.id)
 
             output = execution.output_data or {}
+            metadata = output.get('metadata', {}) or {}
+            if not isinstance(metadata, dict):
+                metadata = {}
 
-            # Extract content preview
-            content = output.get('content', '')
-            if content:
-                extras['content_preview'] = content[:500]
+            # --- Content extraction (deep) ---
+            # Priority: metadata.content.full_text > metadata.full_text > output.content
+            full_text = ''
 
-            # Extract media URLs from metadata
-            metadata = output.get('metadata', {})
-            if isinstance(metadata, dict):
-                for key in ('image_url', 'video_url', 'audio_url', 'thumbnail_url',
-                            'file_url', 'cloudinary_url', 'final_video_url'):
-                    if metadata.get(key):
-                        extras[key] = metadata[key]
+            # ContentWriterAgent: result.data = {'content': {'full_text': '...', 'sections': [...]}}
+            meta_content = metadata.get('content')
+            if isinstance(meta_content, dict):
+                full_text = meta_content.get('full_text', '')
+            elif isinstance(meta_content, str) and meta_content:
+                full_text = meta_content
 
-                # Deliverable info
-                if metadata.get('deliverable_id'):
-                    extras['deliverable_id'] = metadata['deliverable_id']
-                if metadata.get('deliverable_title'):
-                    extras['deliverable_title'] = metadata['deliverable_title']
+            # Some agents put full_text directly in metadata
+            if not full_text:
+                full_text = metadata.get('full_text', '')
 
-            # Check for deliverables created around the same time
+            # Fallback: output['content'] (result.message — usually a summary)
+            if not full_text:
+                full_text = output.get('content', '') or ''
+
+            if full_text:
+                extras['content'] = full_text[:3000]
+                extras['content_preview'] = full_text[:500]
+
+            # --- Image extraction ---
+            images = metadata.get('images', [])
+            if isinstance(images, list) and images:
+                image_urls = [img.get('url', '') for img in images if isinstance(img, dict) and img.get('url')]
+                if image_urls:
+                    extras['image_urls'] = image_urls
+                    extras['image_url'] = image_urls[0]
+                    extras['image_count'] = len(image_urls)
+
+            # --- Direct media URL keys ---
+            for key in ('image_url', 'video_url', 'audio_url', 'thumbnail_url',
+                        'file_url', 'cloudinary_url', 'final_video_url'):
+                val = metadata.get(key)
+                if val and key not in extras:
+                    extras[key] = val
+
+            # --- Deliverable info from metadata ---
+            if metadata.get('deliverable_id'):
+                extras['deliverable_id'] = metadata['deliverable_id']
+            if metadata.get('deliverable_title'):
+                extras['deliverable_title'] = metadata['deliverable_title']
+
+            # --- Deliverable lookup by agent + time window ---
             if not extras.get('deliverable_id'):
                 try:
                     from core.models_deliverables import Deliverable
+                    end_time = (execution.completed_at or execution.created_at) + timedelta(seconds=30)
                     recent_del = Deliverable.objects.filter(
                         agent_name=execution.agent.name,
                         created_at__gte=execution.created_at - timedelta(seconds=10),
-                        created_at__lte=(execution.completed_at or execution.created_at) + timedelta(seconds=30),
+                        created_at__lte=end_time,
                     ).order_by('-created_at').first()
                     if recent_del:
                         extras['deliverable_id'] = str(recent_del.id)
                         extras['deliverable_title'] = recent_del.title
+                        # If no content yet, pull from deliverable
+                        if not extras.get('content') and recent_del.content:
+                            extras['content'] = recent_del.content[:3000]
+                            extras['content_preview'] = recent_del.content[:500]
                 except Exception:
                     pass
 
-            # Check for media history created around the same time
-            if not any(k.endswith('_url') for k in extras):
+            # --- Image history fallback ---
+            if not extras.get('image_url'):
                 try:
                     from core.models import ImageHistory
                     recent_img = ImageHistory.objects.filter(
                         created_at__gte=execution.created_at,
                     ).order_by('-created_at').first()
                     if recent_img and hasattr(recent_img, 'file_path') and recent_img.file_path:
-                        extras['image_url'] = recent_img.file_path if recent_img.file_path.startswith('http') else ''
+                        if recent_img.file_path.startswith('http'):
+                            extras['image_url'] = recent_img.file_path
+                            if hasattr(recent_img, 'prompt') and recent_img.prompt:
+                                extras['image_prompt'] = recent_img.prompt[:200]
                 except Exception:
                     pass
 
@@ -7842,11 +7881,13 @@ RESEARCH DATA:
                         result['success'] = task_return.get('success', True)
                         result['agent'] = task_return.get('agent_name', '')
                         result['execution_time_ms'] = task_return.get('execution_time_ms')
-                        result['content'] = task_return.get('content', '')
-                        # Enrich with AgentExecution for deliverables/media URLs
+                        # Enrich with full content/media from AgentExecution
                         exec_id = task_return.get('execution_id')
                         if exec_id:
                             result.update(self._get_agent_execution_output(job_id, exec_id))
+                        # Fallback: use content from task return if enrichment found nothing
+                        if not result.get('content'):
+                            result['content'] = task_return.get('content', '')
                 elif state == 'FAILURE':
                     result['status'] = 'failed'
                     result['error'] = str(async_result.result)[:500] if async_result.result else 'Unknown error'
