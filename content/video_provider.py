@@ -89,6 +89,13 @@ class RunwayMLProvider:
             if enhance_prompt:
                 prompt = self._enhance_prompt(prompt, style, enhancement_level)
 
+            # Session 1088: Truncate AFTER enhancement — enhancement adds 50-100+ chars
+            # that previously pushed prompts past Runway's limit, causing 400 errors.
+            MAX_PROMPT = 500  # Conservative limit (Runway accepts up to ~1000)
+            if len(prompt) > MAX_PROMPT:
+                prompt = prompt[:MAX_PROMPT - 3] + "..."
+                logger.info(f"[RUNWAY] Truncated enhanced prompt to {MAX_PROMPT} chars")
+
             # Map old model names to new ones
             model_mapping = {
                 "gen3a_turbo": "veo3.1_fast",
@@ -135,15 +142,14 @@ class RunwayMLProvider:
             )
 
             if response.status_code != 200:
-                # Session 1069: Log full response body for 400 errors to aid debugging
+                # Session 1088: Log full response body (increased from 500 to 2000 chars)
                 logger.error(
                     f"[RUNWAY] text_to_video HTTP {response.status_code}: "
-                    f"{response.text[:500]}"
+                    f"{response.text[:2000]}"
                 )
                 error = ErrorMessageBuilder.parse_api_error("Runway ML", response.status_code, response.text)
-                # Session 1077: Include raw provider response alongside user message
-                # so PA can surface the real error to the user
-                raw_detail = response.text[:300] if response.text else ''
+                # Session 1088: Include more of the raw response (was 300, now 800)
+                raw_detail = response.text[:800] if response.text else ''
                 return VideoGenerationResult(
                     success=False,
                     error_message=f"{error['user_message']} | Provider detail: {raw_detail}"
@@ -224,6 +230,12 @@ class RunwayMLProvider:
             if enhance_prompt:
                 motion_prompt = self._enhance_motion_prompt(motion_prompt)
 
+            # Session 1088: Truncate AFTER enhancement to prevent 400 errors
+            MAX_MOTION_PROMPT = 500
+            if len(motion_prompt) > MAX_MOTION_PROMPT:
+                motion_prompt = motion_prompt[:MAX_MOTION_PROMPT - 3] + "..."
+                logger.info(f"[RUNWAY] Truncated enhanced motion prompt to {MAX_MOTION_PROMPT} chars")
+
             # Handle image input (URL or base64)
             image_data = self._prepare_image(image_url)
 
@@ -280,15 +292,16 @@ class RunwayMLProvider:
             logger.info(f"📥 [RUNWAY] Response status: {response.status_code}")
 
             if response.status_code != 200:
-                # Session 1069: Log full response body for 400 errors to aid debugging
+                # Session 1088: Log full response body (increased from 500 to 2000 chars)
                 logger.error(
                     f"[RUNWAY] image_to_video HTTP {response.status_code}: "
-                    f"{response.text[:500]}"
+                    f"{response.text[:2000]}"
                 )
                 error = ErrorMessageBuilder.parse_api_error("Runway ML", response.status_code, response.text)
+                raw_detail = response.text[:800] if response.text else ''
                 return VideoGenerationResult(
                     success=False,
-                    error_message=error["user_message"]
+                    error_message=f"{error['user_message']} | Provider detail: {raw_detail}"
                 )
 
             data = response.json()
@@ -488,6 +501,9 @@ class RunwayMLProvider:
 
         # If it's already a base64 string
         if image_input.startswith('data:image'):
+            # Session 1088: Guard against oversized base64 payloads (>10MB → Runway 400)
+            if len(image_input) > 10_000_000:
+                logger.warning(f"⚠️ Base64 image too large ({len(image_input) // 1_000_000}MB), Runway may reject")
             return image_input
 
         # Check if it's a local media path (relative or full URL)
