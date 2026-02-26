@@ -1067,6 +1067,7 @@ PA_TOOL_SCHEMAS = [
                         "marketing_strategy_agent", "content_writer_agent",
                         "workflow_orchestration_agent", "coleadership_agent",
                         "strategic_review",
+                        "create_brand_video", "create_project_from_research",
                     ],
                     "description": (
                         "Which agent to run. resolve_agent = DaVinci Resolve rendering & color grading. "
@@ -1242,6 +1243,399 @@ PA_TOOL_SCHEMAS = [
             "required": ["action"],
         },
     },
+
+    # ── Session 1088: Individual Agent Schemas ──────────────────────────────
+    # These give the LLM direct routing signals instead of going through
+    # the generic `run_agent` meta-tool. Each maps 1:1 to a ToolDispatcher
+    # handler registered via _handle_agent_tool.
+
+    # ── Image Editing ────────────────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "image_editing_agent",
+        "description": (
+            "Edit an existing image: upscale, remove background, apply filters, "
+            "crop, resize, add text overlay, style transfer, inpainting, outpainting. "
+            "Use when the user wants to modify, enhance, or transform an existing image."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "task": {
+                    "type": "string",
+                    "description": "What to do with the image (e.g. 'remove background from this image', 'upscale 4x')",
+                },
+                "context": {
+                    "type": "object",
+                    "description": "Additional context: image_url, edit_type, parameters",
+                },
+            },
+            "required": ["task"],
+        },
+    },
+
+    # ── Video Editing ────────────────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "video_editing_agent",
+        "description": (
+            "Edit an existing video: trim, cut, speed change, add effects, "
+            "concatenate clips, add text overlay, transitions, reverse. "
+            "Use when the user wants to modify, trim, speed up, slow down, "
+            "or combine existing video clips. Uses ffmpeg."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "task": {
+                    "type": "string",
+                    "description": "What to do with the video (e.g. 'trim to first 10 seconds', 'speed up 2x', 'add fade transition')",
+                },
+                "context": {
+                    "type": "object",
+                    "description": "Additional context: video_url, edit_type, start_time, end_time, speed_factor",
+                },
+            },
+            "required": ["task"],
+        },
+    },
+
+    # ── 3D Generation ────────────────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "three_d_generation_agent",
+        "description": (
+            "Generate 3D models from text descriptions or images. "
+            "Use when the user asks to create a 3D model, 3D object, "
+            "3D scene, or convert an image to 3D."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "task": {
+                    "type": "string",
+                    "description": "Description of the 3D model to generate",
+                },
+                "context": {
+                    "type": "object",
+                    "description": "Additional context: style, format, reference_image_url",
+                },
+            },
+            "required": ["task"],
+        },
+    },
+
+    # ── Character Training ───────────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "character_training_agent",
+        "description": (
+            "Train a custom character model from reference images for consistent "
+            "character generation. Use when the user wants to create a character, "
+            "train a character model, upload character reference images, or create "
+            "a consistent character identity."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "task": {
+                    "type": "string",
+                    "description": "Character training task (e.g. 'train a character named Alex from these reference images')",
+                },
+                "context": {
+                    "type": "object",
+                    "description": "Additional context: character_name, reference_image_urls, style, description",
+                },
+            },
+            "required": ["task"],
+        },
+    },
+
+    # ── Competitor Analysis ──────────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "competitor_analysis_agent",
+        "description": (
+            "Analyze competitors: market positioning, strengths, weaknesses, "
+            "product comparison, pricing analysis, market share. Use when the "
+            "user asks about competitors, competitive landscape, market analysis, "
+            "or wants to compare products/services against rivals."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "task": {
+                    "type": "string",
+                    "description": "Competitor analysis task (e.g. 'analyze top competitors in the AI writing space')",
+                },
+                "context": {
+                    "type": "object",
+                    "description": "Additional context: industry, competitors, focus_areas",
+                },
+            },
+            "required": ["task"],
+        },
+    },
+
+    # ── Customer Research ────────────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "customer_research_agent",
+        "description": (
+            "Research target customers: demographics, pain points, buying behavior, "
+            "user personas, customer journey mapping, needs analysis. Use when the "
+            "user asks about target audience, customer segments, user research, "
+            "or wants to understand their customers better."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "task": {
+                    "type": "string",
+                    "description": "Customer research task (e.g. 'create user personas for a SaaS productivity tool')",
+                },
+                "context": {
+                    "type": "object",
+                    "description": "Additional context: product, industry, target_market",
+                },
+            },
+            "required": ["task"],
+        },
+    },
+
+    # ── Brand Strategy ───────────────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "brand_strategy_agent",
+        "description": (
+            "Develop brand strategy: positioning, messaging, voice, identity, "
+            "brand architecture, differentiation. Use when the user asks about "
+            "branding, brand positioning, brand identity, messaging strategy, "
+            "or brand differentiation."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "task": {
+                    "type": "string",
+                    "description": "Brand strategy task (e.g. 'create a brand positioning statement for our AI platform')",
+                },
+                "context": {
+                    "type": "object",
+                    "description": "Additional context: company, product, target_audience, competitors",
+                },
+            },
+            "required": ["task"],
+        },
+    },
+
+    # ── Content Strategy ─────────────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "content_strategy_agent",
+        "description": (
+            "Develop content strategy: editorial calendar, content pillars, "
+            "distribution plan, SEO strategy, content audit. Use when the "
+            "user asks about content planning, editorial strategy, content "
+            "calendar, content distribution, or content optimization."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "task": {
+                    "type": "string",
+                    "description": "Content strategy task (e.g. 'create a 3-month content calendar for our tech blog')",
+                },
+                "context": {
+                    "type": "object",
+                    "description": "Additional context: audience, topics, channels, goals",
+                },
+            },
+            "required": ["task"],
+        },
+    },
+
+    # ── Marketing Strategy ───────────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "marketing_strategy_agent",
+        "description": (
+            "Develop marketing strategy: campaign planning, channel strategy, "
+            "go-to-market plan, growth strategy, marketing funnel optimization. "
+            "Use when the user asks about marketing plans, campaigns, growth "
+            "strategies, go-to-market, or marketing channels."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "task": {
+                    "type": "string",
+                    "description": "Marketing strategy task (e.g. 'create a go-to-market plan for our new product launch')",
+                },
+                "context": {
+                    "type": "object",
+                    "description": "Additional context: product, budget, timeline, target_market",
+                },
+            },
+            "required": ["task"],
+        },
+    },
+
+    # ── Content Writer ───────────────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "content_writer_agent",
+        "description": (
+            "Write content: blog posts, articles, marketing copy, social media "
+            "posts, email newsletters, product descriptions, whitepapers, case "
+            "studies. Use when the user asks to write, draft, or create any "
+            "written content. Saves output to Deliverables library."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "task": {
+                    "type": "string",
+                    "description": "Writing task (e.g. 'write a blog post about AI trends in 2026')",
+                },
+                "context": {
+                    "type": "object",
+                    "description": "Additional context: content_type, tone, audience, word_count, keywords",
+                },
+            },
+            "required": ["task"],
+        },
+    },
+
+    # ── Workflow Orchestration ────────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "workflow_orchestration_agent",
+        "description": (
+            "Orchestrate multi-step workflows that chain multiple agents together. "
+            "Use when the user wants a complex workflow: research then write, "
+            "analyze then create, or any multi-agent pipeline that requires "
+            "coordinating several agents in sequence."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "task": {
+                    "type": "string",
+                    "description": "Workflow description (e.g. 'research AI trends then write a blog post about the findings')",
+                },
+                "context": {
+                    "type": "object",
+                    "description": "Additional context: steps, agents, output_format",
+                },
+            },
+            "required": ["task"],
+        },
+    },
+
+    # ── Co-Leadership Assessment ─────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "coleadership_agent",
+        "description": (
+            "Co-leadership and organizational assessment: team dynamics, "
+            "leadership evaluation, organizational health, collaboration patterns. "
+            "Use when the user asks about team leadership, organizational "
+            "assessment, team dynamics, or leadership strategy."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "task": {
+                    "type": "string",
+                    "description": "Leadership assessment task",
+                },
+                "context": {
+                    "type": "object",
+                    "description": "Additional context: team, organization, focus_area",
+                },
+            },
+            "required": ["task"],
+        },
+    },
+
+    # ── Strategic Review ─────────────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "strategic_review",
+        "description": (
+            "Conduct a strategic review: evaluate strategy, assess market position, "
+            "review business model, SWOT analysis, strategic recommendations. "
+            "Use when the user asks for a strategic review, strategy evaluation, "
+            "SWOT analysis, or strategic assessment."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "task": {
+                    "type": "string",
+                    "description": "Strategic review task (e.g. 'conduct a SWOT analysis of our content platform')",
+                },
+                "context": {
+                    "type": "object",
+                    "description": "Additional context: company, industry, focus_areas",
+                },
+            },
+            "required": ["task"],
+        },
+    },
+
+    # ── Create Brand Video (compound workflow) ───────────────────────────────
+    {
+        "type": "function",
+        "name": "create_brand_video",
+        "description": (
+            "Create a brand video by orchestrating multiple agents: script writing, "
+            "image generation, video generation, and editing. Use when the user "
+            "wants to create a complete brand video, promotional video, or "
+            "marketing video from scratch."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "task": {
+                    "type": "string",
+                    "description": "Brand video description (e.g. 'create a 30-second promotional video for our AI platform')",
+                },
+                "context": {
+                    "type": "object",
+                    "description": "Additional context: brand, style, duration, target_audience, key_messages",
+                },
+            },
+            "required": ["task"],
+        },
+    },
+
+    # ── Create Project from Research (compound workflow) ─────────────────────
+    {
+        "type": "function",
+        "name": "create_project_from_research",
+        "description": (
+            "Create a full project from research: web research, analysis, "
+            "project planning, deliverable creation. Use when the user wants "
+            "to research a topic and create a complete project or initiative "
+            "from the findings."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "task": {
+                    "type": "string",
+                    "description": "Research-to-project task (e.g. 'research the AI agent market and create a project plan')",
+                },
+                "context": {
+                    "type": "object",
+                    "description": "Additional context: topic, scope, output_format, depth",
+                },
+            },
+            "required": ["task"],
+        },
+    },
 ]
 
 
@@ -1294,6 +1688,22 @@ TOOL_ENRICHMENT_MAP = {
     'task_breakdown_tool': [],
     'platform_awareness_tool': [],
     'studio_tool': ['intelligence_enricher'],
+    # Session 1088: Individual agent schemas
+    'image_editing_agent': ['intelligence_enricher'],
+    'video_editing_agent': ['intelligence_enricher'],
+    'three_d_generation_agent': ['intelligence_enricher'],
+    'character_training_agent': ['intelligence_enricher'],
+    'competitor_analysis_agent': ['domain_context', 'spider_trends', 'strategic_memory'],
+    'customer_research_agent': ['domain_context', 'spider_trends'],
+    'brand_strategy_agent': ['domain_context', 'strategic_memory'],
+    'content_strategy_agent': ['domain_context', 'spider_trends', 'strategic_memory'],
+    'marketing_strategy_agent': ['domain_context', 'spider_trends', 'strategic_memory'],
+    'content_writer_agent': ['domain_context', 'spider_trends'],
+    'workflow_orchestration_agent': ['intelligence_enricher'],
+    'coleadership_agent': ['intelligence_enricher', 'strategic_memory'],
+    'strategic_review': ['domain_context', 'strategic_memory'],
+    'create_brand_video': ['intelligence_enricher'],
+    'create_project_from_research': ['domain_context', 'spider_trends'],
 }
 
 # Reverse map: tool name -> canonical intent name for enrichment pipeline
@@ -1342,4 +1752,20 @@ TOOL_TO_INTENT_MAP = {
     'task_breakdown_tool': 'task_breakdown',
     'platform_awareness_tool': 'platform_awareness',
     'studio_tool': 'studio',
+    # Session 1088: Individual agent schemas
+    'image_editing_agent': 'agent_execution',
+    'video_editing_agent': 'agent_execution',
+    'three_d_generation_agent': 'agent_execution',
+    'character_training_agent': 'agent_execution',
+    'competitor_analysis_agent': 'agent_execution',
+    'customer_research_agent': 'agent_execution',
+    'brand_strategy_agent': 'agent_execution',
+    'content_strategy_agent': 'agent_execution',
+    'marketing_strategy_agent': 'agent_execution',
+    'content_writer_agent': 'agent_execution',
+    'workflow_orchestration_agent': 'agent_execution',
+    'coleadership_agent': 'agent_execution',
+    'strategic_review': 'agent_execution',
+    'create_brand_video': 'agent_execution',
+    'create_project_from_research': 'agent_execution',
 }
