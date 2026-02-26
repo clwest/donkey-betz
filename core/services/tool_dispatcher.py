@@ -91,7 +91,7 @@ class ToolDispatcher:
     def _register_default_handlers(self):
         """Register handlers for all known tools."""
         # Creation tools
-        self.register("image_generation_agent", self._handle_image_generation)
+        self.register("image_generation_agent", self._handle_agent_tool)
         self.register("image_editing_agent", self._handle_agent_tool)
         self.register("video_generation_agent", self._handle_agent_tool)
         self.register("video_editing_agent", self._handle_agent_tool)
@@ -108,7 +108,7 @@ class ToolDispatcher:
         self.register("brand_strategy_agent", self._handle_agent_tool)
         self.register("content_strategy_agent", self._handle_agent_tool)
         self.register("marketing_strategy_agent", self._handle_agent_tool)
-        self.register("content_writer_agent", self._handle_content_writer)
+        self.register("content_writer_agent", self._handle_agent_tool)
 
         # ML Pipeline tools
         self.register("opportunity_manager_tool", self._handle_opportunity_manager)
@@ -346,68 +346,35 @@ class ToolDispatcher:
         user_id: Optional[int],
         trace_id: str
     ) -> Dict[str, Any]:
-        """Generic handler for agent-based tools.
+        """Generic handler for agent-based tools — dispatches to Celery async.
 
-        Session 1063: Use AgentRouter.route() instead of registry.execute_agent().
-        The registry only creates a DB record without running the agent.
-        AgentRouter actually executes the agent and returns an AgentResult.
+        Session 1088: Converted from synchronous AgentRouter.route() to Celery
+        async dispatch. All agent tools were timing out (30-60s) when called
+        synchronously from the PA. Now returns task_id immediately.
 
-        Session 1065: After execution, find the Deliverable the agent saved,
-        assign the PA user to it, and return deliverable_id so the formatter
-        can tell the user where to find it.
+        Deliverable lookup happens in execute_agent_task after completion.
+        PA user assignment is handled via context['user_id'].
         """
-        from core.agent_router import AgentRouter
+        from core.tasks import execute_agent_task
 
         agent_name = self._tool_to_agent_name(tool_name)
 
-        # Extract task from payload
-        task = payload.get('task') or payload.get('prompt') or payload.get('query', '')
+        task_text = payload.get('task') or payload.get('prompt') or payload.get('query', '')
         context = payload.get('context', {})
+        if user_id:
+            context['user_id'] = user_id
 
-        router = AgentRouter()
-        agent_result = router.route(agent_name, task, context=context)
+        celery_task = execute_agent_task.delay(tool_name, task_text, context)
 
-        # Build response dict from AgentResult
-        result = {
+        return {
+            'task_id': str(celery_task.id),
+            'mode': 'async',
             'agent': agent_name,
-            'success': agent_result.success if agent_result else False,
-            'output': agent_result.message if agent_result else 'Agent execution failed',
+            'message': (
+                f'{agent_name} dispatched (task {celery_task.id}). '
+                f'Use job_status to check progress.'
+            ),
         }
-
-        # Session 1063: Preserve structured data (images, content, etc.) for formatter
-        if agent_result and agent_result.data:
-            result['data'] = agent_result.data
-
-        # Session 1065: Find the Deliverable the agent just saved and attach
-        # the PA user so it shows as "You" in the Deliverables tab.
-        if agent_result and agent_result.success:
-            try:
-                from core.models_deliverables import Deliverable
-                from django.utils import timezone
-                from datetime import timedelta
-
-                recent = Deliverable.objects.filter(
-                    agent_name=agent_name,
-                    created_at__gte=timezone.now() - timedelta(seconds=120),
-                ).order_by('-created_at').first()
-
-                if recent:
-                    result['deliverable_id'] = str(recent.id)
-                    result['deliverable_title'] = recent.title
-
-                    # Assign PA user so source indicator shows "You"
-                    if user_id and not recent.user:
-                        from django.contrib.auth import get_user_model
-                        User = get_user_model()
-                        try:
-                            recent.user = User.objects.get(id=user_id)
-                            recent.save(update_fields=['user', 'updated_at'])
-                        except User.DoesNotExist:
-                            pass
-            except Exception as e:
-                logger.debug(f"Could not find deliverable for {agent_name}: {e}")
-
-        return result
 
     def _tool_to_agent_name(self, tool_name: str) -> str:
         """Map tool name to agent class name."""
@@ -7740,15 +7707,23 @@ RESEARCH DATA:
             }
 
         if action == 'generate_audio':
-            task = payload.get('prompt', '')
+            # Session 1088: Dispatch to Celery async (matches video/image pattern)
+            from core.tasks import execute_agent_task
+            task_text = payload.get('prompt', '')
             context = {}
             if payload.get('voice'):
                 context['voice'] = payload['voice']
-            return self._handle_agent_tool(
-                'audio_generation_agent',
-                {'task': task, 'context': context},
-                user_id, trace_id,
+            if user_id:
+                context['user_id'] = user_id
+            celery_task = execute_agent_task.delay(
+                'audio_generation_agent', task_text, context
             )
+            return {
+                'task_id': str(celery_task.id),
+                'mode': 'async',
+                'agent': 'AudioAgent',
+                'message': f'Audio generation dispatched (task {celery_task.id}). Use job_status to check progress.',
+            }
 
         if action == 'job_status':
             job_id = payload.get('job_id')
@@ -7814,54 +7789,6 @@ RESEARCH DATA:
             }
 
         return {'error': f'Unknown studio action: {action}'}
-
-    def _handle_image_generation(
-        self,
-        tool_name: str,
-        payload: Dict[str, Any],
-        user_id: Optional[int],
-        trace_id: str
-    ) -> Dict[str, Any]:
-        """Session 1088: Dispatch ImageAgent to Celery async to avoid PA timeout."""
-        from core.tasks import execute_agent_task
-
-        task_text = payload.get('task') or payload.get('prompt') or payload.get('query', '')
-        context = payload.get('context', {})
-        if user_id:
-            context['user_id'] = user_id
-        celery_task = execute_agent_task.delay(
-            'image_generation_agent', task_text, context
-        )
-        return {
-            'task_id': str(celery_task.id),
-            'mode': 'async',
-            'agent': 'ImageAgent',
-            'message': f'Image generation dispatched (task {celery_task.id}). Use job_status to check progress.',
-        }
-
-    def _handle_content_writer(
-        self,
-        tool_name: str,
-        payload: Dict[str, Any],
-        user_id: Optional[int],
-        trace_id: str
-    ) -> Dict[str, Any]:
-        """Session 1088: Dispatch ContentWriterAgent to Celery async to avoid PA timeout."""
-        from core.tasks import execute_agent_task
-
-        task_text = payload.get('task') or payload.get('prompt') or payload.get('query', '')
-        context = payload.get('context', {})
-        if user_id:
-            context['user_id'] = user_id
-        celery_task = execute_agent_task.delay(
-            'content_writer_agent', task_text, context
-        )
-        return {
-            'task_id': str(celery_task.id),
-            'mode': 'async',
-            'agent': 'ContentWriterAgent',
-            'message': f'Content writing dispatched (task {celery_task.id}). Use job_status to check progress.',
-        }
 
     def _handle_persona(
         self,
