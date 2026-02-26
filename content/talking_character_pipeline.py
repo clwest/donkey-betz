@@ -478,11 +478,14 @@ class TalkingCharacterPipeline:
         while time.time() - start_time < timeout:
             video_status = self.check_video_status(result.video_task_id)
 
-            if video_status.get('status') == 'SUCCEEDED':
+            # check_video_status returns VideoGenerationResult.__dict__ where
+            # status is already lowercased by the provider: 'completed', 'failed', etc.
+            vs = video_status.get('status', '')
+            if vs in ('SUCCEEDED', 'completed'):
                 video_url = video_status.get('video_url')
                 logger.info(f"✅ [PIPELINE] Video ready: {video_url[:60]}...")
                 break
-            elif video_status.get('status') == 'FAILED':
+            elif vs in ('FAILED', 'failed'):
                 result.success = False
                 result.status = PipelineStatus.FAILED
                 result.failed_stage = "image_to_video"
