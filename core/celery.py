@@ -238,6 +238,14 @@ app.conf.beat_schedule = {
             'expires': 7200,
         }
     },
+    # Session 1088: Line movement + sharp action analysis (runs 30min after predictions)
+    'run-market-analysis': {
+        'task': 'sports.run_market_analysis',
+        'schedule': crontab(minute=45, hour='*/2'),  # Every 2 hours at :45
+        'options': {
+            'expires': 7200,
+        }
+    },
     'update-game-scores': {
         'task': 'sports.update_game_scores',
         'schedule': crontab(minute='*/30'),  # Every 30 minutes

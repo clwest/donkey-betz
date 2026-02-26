@@ -1082,6 +1082,52 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
+    # ── Persona Agents (DB-only specialists) ─────────────────────────────────
+    {
+        "type": "function",
+        "name": "persona_tool",
+        "description": (
+            "Access 139 specialized AI persona agents across 14 categories: "
+            "income generation, career development, job search, content creation, "
+            "marketing, finance, investment, AI/ML, business strategy, analytics, "
+            "creative design, automation, consulting, and research. "
+            "Use 'list' to browse available personas by category. "
+            "Use 'invoke' to delegate a task to a specific persona. "
+            "Use when the user asks for help with income, careers, job hunting, "
+            "freelancing, budgeting, resume writing, interview prep, marketing "
+            "campaigns, data analysis, business planning, or any specialized skill "
+            "not covered by the core creative/research agents."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list", "invoke"],
+                    "description": "list = browse personas by category; invoke = run a specific persona",
+                },
+                "category": {
+                    "type": "string",
+                    "enum": [
+                        "income", "career", "job_search", "content", "marketing",
+                        "finance", "investment", "ai_ml", "business", "analytics",
+                        "creative", "automation", "consulting", "research",
+                    ],
+                    "description": "Filter personas by category (for list action)",
+                },
+                "persona_name": {
+                    "type": "string",
+                    "description": "Exact name of the persona to invoke (from list results)",
+                },
+                "task": {
+                    "type": "string",
+                    "description": "Task description for the persona to execute",
+                },
+            },
+            "required": ["action"],
+        },
+    },
+
     # ── Legal Doc Drafter ───────────────────────────────────────────────────
     {
         "type": "function",
@@ -1688,6 +1734,7 @@ TOOL_ENRICHMENT_MAP = {
     'task_breakdown_tool': [],
     'platform_awareness_tool': [],
     'studio_tool': ['intelligence_enricher'],
+    'persona_tool': ['domain_context', 'spider_trends'],
     # Session 1088: Individual agent schemas
     'image_editing_agent': ['intelligence_enricher'],
     'video_editing_agent': ['intelligence_enricher'],
@@ -1752,6 +1799,7 @@ TOOL_TO_INTENT_MAP = {
     'task_breakdown_tool': 'task_breakdown',
     'platform_awareness_tool': 'platform_awareness',
     'studio_tool': 'studio',
+    'persona_tool': 'agent_execution',
     # Session 1088: Individual agent schemas
     'image_editing_agent': 'agent_execution',
     'video_editing_agent': 'agent_execution',
