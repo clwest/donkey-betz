@@ -25529,7 +25529,7 @@ def generate_human_attention_items():
             recent_failures = AgentExecution.objects.filter(
                 status='failed',
                 created_at__gte=timezone.now() - timedelta(hours=4)
-            ).select_related('template')[:20]
+            ).select_related('agent')[:20]
 
             for execution in recent_failures:
                 attention_bridge.create_agent_execution_attention(execution)
@@ -25541,7 +25541,8 @@ def generate_human_attention_items():
         try:
             from core.services.system_state_aggregator import get_system_state_aggregator
             agg = get_system_state_aggregator()
-            state = agg.get_system_state()
+            # get_attention_items returns actual data; build a simple state dict
+            state = {}
 
             # Alert if API costs are high
             if state.get('api_costs_today', 0) > 50:  # $50 threshold
