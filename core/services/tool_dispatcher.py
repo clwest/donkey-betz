@@ -91,7 +91,7 @@ class ToolDispatcher:
     def _register_default_handlers(self):
         """Register handlers for all known tools."""
         # Creation tools
-        self.register("image_generation_agent", self._handle_agent_tool)
+        self.register("image_generation_agent", self._handle_image_generation)
         self.register("image_editing_agent", self._handle_agent_tool)
         self.register("video_generation_agent", self._handle_agent_tool)
         self.register("video_editing_agent", self._handle_agent_tool)
@@ -108,7 +108,7 @@ class ToolDispatcher:
         self.register("brand_strategy_agent", self._handle_agent_tool)
         self.register("content_strategy_agent", self._handle_agent_tool)
         self.register("marketing_strategy_agent", self._handle_agent_tool)
-        self.register("content_writer_agent", self._handle_agent_tool)
+        self.register("content_writer_agent", self._handle_content_writer)
 
         # ML Pipeline tools
         self.register("opportunity_manager_tool", self._handle_opportunity_manager)
@@ -7668,7 +7668,9 @@ RESEARCH DATA:
         action = payload.get('action', 'list_jobs')
 
         if action == 'generate_image':
-            task = payload.get('prompt', '')
+            # Session 1088: Dispatch to Celery async to avoid PA/Railway proxy timeout
+            from core.tasks import execute_agent_task
+            task_text = payload.get('prompt', '')
             context = {}
             if payload.get('style'):
                 context['style'] = payload['style']
@@ -7678,11 +7680,17 @@ RESEARCH DATA:
                 context['width'] = payload['width']
             if payload.get('height'):
                 context['height'] = payload['height']
-            return self._handle_agent_tool(
-                'image_generation_agent',
-                {'task': task, 'context': context},
-                user_id, trace_id,
+            if user_id:
+                context['user_id'] = user_id
+            celery_task = execute_agent_task.delay(
+                'image_generation_agent', task_text, context
             )
+            return {
+                'task_id': str(celery_task.id),
+                'mode': 'async',
+                'agent': 'image_generation_agent',
+                'message': f'Image generation dispatched (task {celery_task.id}). Use job_status to check progress.',
+            }
 
         if action == 'generate_video':
             # Session 1077: Dispatch to Celery async to avoid PA tool timeout
@@ -7806,6 +7814,54 @@ RESEARCH DATA:
             }
 
         return {'error': f'Unknown studio action: {action}'}
+
+    def _handle_image_generation(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """Session 1088: Dispatch ImageAgent to Celery async to avoid PA timeout."""
+        from core.tasks import execute_agent_task
+
+        task_text = payload.get('task') or payload.get('prompt') or payload.get('query', '')
+        context = payload.get('context', {})
+        if user_id:
+            context['user_id'] = user_id
+        celery_task = execute_agent_task.delay(
+            'image_generation_agent', task_text, context
+        )
+        return {
+            'task_id': str(celery_task.id),
+            'mode': 'async',
+            'agent': 'ImageAgent',
+            'message': f'Image generation dispatched (task {celery_task.id}). Use job_status to check progress.',
+        }
+
+    def _handle_content_writer(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """Session 1088: Dispatch ContentWriterAgent to Celery async to avoid PA timeout."""
+        from core.tasks import execute_agent_task
+
+        task_text = payload.get('task') or payload.get('prompt') or payload.get('query', '')
+        context = payload.get('context', {})
+        if user_id:
+            context['user_id'] = user_id
+        celery_task = execute_agent_task.delay(
+            'content_writer_agent', task_text, context
+        )
+        return {
+            'task_id': str(celery_task.id),
+            'mode': 'async',
+            'agent': 'ContentWriterAgent',
+            'message': f'Content writing dispatched (task {celery_task.id}). Use job_status to check progress.',
+        }
 
     def _handle_persona(
         self,
