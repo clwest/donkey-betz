@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FlatList,
+  Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   StyleSheet,
   Text,
@@ -13,6 +15,7 @@ import {
 import Markdown from 'react-native-markdown-display';
 import { useAuthStore } from '../auth/authStore';
 import * as assistantApi from '../api/assistant';
+import MediaAttachments from '../components/MediaAttachments';
 import {
   getActiveConversationId,
   setActiveConversationId,
@@ -26,6 +29,7 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   toolRuns?: assistantApi.ToolRun[];
+  audioUrl?: string | null;
   loading?: boolean;
 }
 
@@ -44,6 +48,7 @@ export default function CommandCenterScreen() {
   const [sending, setSending] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
 
   const flatListRef = useRef<FlatList>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -159,6 +164,7 @@ export default function CommandCenterScreen() {
                     ...m,
                     content: status.content ?? '',
                     toolRuns: status.tool_runs,
+                    audioUrl: status.audio_url,
                     loading: false,
                   }
                 : m,
@@ -210,13 +216,35 @@ export default function CommandCenterScreen() {
       );
     }
 
+    const imageRules = {
+      image: (
+        node: { attributes: { src?: string; alt?: string } },
+      ) => (
+        <TouchableOpacity
+          key={node.attributes.src}
+          onPress={() => setZoomImage(node.attributes.src ?? null)}
+          activeOpacity={0.8}
+        >
+          <Image
+            source={{ uri: node.attributes.src }}
+            style={styles.inlineImage}
+            resizeMode="cover"
+            accessibilityLabel={node.attributes.alt ?? 'image'}
+          />
+        </TouchableOpacity>
+      ),
+    };
+
     return (
       <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
         {isUser ? (
           <Text style={styles.userText}>{item.content}</Text>
         ) : (
-          <Markdown style={markdownStyles}>{item.content}</Markdown>
+          <Markdown style={markdownStyles} rules={imageRules}>
+            {item.content}
+          </Markdown>
         )}
+        <MediaAttachments toolRuns={item.toolRuns} audioUrl={item.audioUrl} />
         {item.toolRuns && item.toolRuns.length > 0 && (
           <View style={styles.toolBar}>
             {item.toolRuns.map((t, i) => (
@@ -262,6 +290,23 @@ export default function CommandCenterScreen() {
           <Text style={styles.errorBannerText}>{error}</Text>
         </TouchableOpacity>
       )}
+
+      {/* Image zoom modal */}
+      <Modal visible={!!zoomImage} transparent animationType="fade">
+        <TouchableOpacity
+          style={styles.zoomOverlay}
+          activeOpacity={1}
+          onPress={() => setZoomImage(null)}
+        >
+          {zoomImage && (
+            <Image
+              source={{ uri: zoomImage }}
+              style={styles.zoomImage}
+              resizeMode="contain"
+            />
+          )}
+        </TouchableOpacity>
+      </Modal>
 
       {/* Input */}
       <View style={styles.inputRow}>
@@ -404,10 +449,27 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
+  inlineImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    marginVertical: 8,
+  },
+  zoomOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  zoomImage: {
+    width: '95%',
+    height: '80%',
+  },
 });
 
 const markdownStyles = {
   body: { color: '#d1d5db', fontSize: 15, lineHeight: 22 },
+  image: { borderRadius: 8, marginVertical: 8 },
   heading1: { color: '#ffffff', fontSize: 20, fontWeight: '700' as const, marginBottom: 8 },
   heading2: { color: '#ffffff', fontSize: 18, fontWeight: '600' as const, marginBottom: 6 },
   heading3: { color: '#ffffff', fontSize: 16, fontWeight: '600' as const, marginBottom: 4 },

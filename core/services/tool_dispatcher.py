@@ -7693,6 +7693,8 @@ RESEARCH DATA:
                 context['duration'] = payload['duration']
             if payload.get('ratio'):
                 context['ratio'] = payload['ratio']
+            if user_id:
+                context['user_id'] = user_id
             celery_task = execute_agent_task.delay(
                 'video_generation_agent', task_text, context
             )
@@ -7714,6 +7716,8 @@ RESEARCH DATA:
                 'duration': payload.get('duration', 5),
                 'lipsync_model': payload.get('lipsync_model', 'auto'),
             }
+            if user_id:
+                context['user_id'] = user_id
             celery_task = execute_agent_task.delay(
                 'talking_character_agent', task_text, context
             )

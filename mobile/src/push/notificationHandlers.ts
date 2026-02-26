@@ -18,12 +18,29 @@ import * as Linking from 'expo-linking';
  */
 export function configureForegroundHandler(): void {
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-    }),
+    handleNotification: async (notification) => {
+      const data = notification.request.content.data as
+        | { object_type?: string }
+        | undefined;
+
+      // Suppress disruptive banner for media completions — the user
+      // will see the result inline or in the Media gallery.
+      if (data?.object_type === 'media_complete') {
+        return {
+          shouldShowBanner: false,
+          shouldShowList: true,
+          shouldPlaySound: false,
+          shouldSetBadge: true,
+        };
+      }
+
+      return {
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+      };
+    },
   });
 }
 
