@@ -337,10 +337,10 @@ class TalkingCharacterPipeline:
 
         try:
             # Session 177: Model selection logic
-            # Default to latentsync for better cartoon/stylized character support
+            # LatentSync (bytedance/latentsync) removed from Replicate — default to sync_labs
             if lipsync_model == "auto":
-                lipsync_model = "latentsync"  # Default to cartoon-optimized model
-                logger.info(f"🎨 [PIPELINE] Auto-selected LatentSync (cartoon-optimized)")
+                lipsync_model = "sync_labs"
+                logger.info(f"🎨 [PIPELINE] Auto-selected Sync Labs Lipsync-2")
 
             result.current_stage = "Syncing lip movements"
             result.progress_percent = 70
