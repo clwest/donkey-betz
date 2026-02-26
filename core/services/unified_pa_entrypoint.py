@@ -1275,6 +1275,14 @@ class UnifiedPAEntrypoint:
             "Call tools when you need data. Do NOT guess or fabricate data.",
             "You can call multiple tools in sequence if needed.",
             "After getting tool results, provide a concise, conversational summary.",
+            "",
+            "MEDIA FORMATTING:",
+            "When a tool returns generated media (images, videos, audio):",
+            "- Show images inline using markdown: ![description](url)",
+            "- For videos/audio, say 'Your [type] is ready!' and link to the Media library: [View in Media Library](/media)",
+            "- NEVER dump raw Cloudinary or Resolve node URLs as plain text",
+            "- If a job is still processing (mode=async), tell the user it's generating and they'll be notified when ready",
+            "- For job status results, summarize the status conversationally instead of showing raw JSON",
             "If the user refers to items from a previous response (e.g. '#2', 'the first one'), "
             "use your conversation history to resolve the reference.",
             "",
@@ -5106,6 +5114,27 @@ Address the user by name occasionally."""
                             url = img.get('url', '') if isinstance(img, dict) else str(img)
                             if url:
                                 lines.append(f"**Image {i}:**\n![Image {i}]({url})\n")
+                        lines.append("\n[View in Media Library](/media)")
+                        if saved_note:
+                            lines.append(saved_note)
+                        return "\n".join(lines)
+
+                # Session 1080: Format video/audio async results as in-app links
+                if intent in ('video_creation', 'video_generation') and isinstance(data, dict):
+                    video_url = data.get('final_video_url') or data.get('video_url') or tool_result.get('video_url')
+                    task_id = tool_result.get('task_id') or data.get('task_id')
+                    if task_id and not video_url:
+                        return (
+                            f"**{agent}** is generating your video. "
+                            f"You'll be notified when it's ready!\n\n"
+                            f"[View in Media Library](/media)"
+                        )
+                    if video_url:
+                        thumb = data.get('thumbnail_url') or tool_result.get('thumbnail_url')
+                        lines = [f"Your video is ready!\n"]
+                        if thumb:
+                            lines.append(f"![Video thumbnail]({thumb})\n")
+                        lines.append("[View in Media Library](/media)")
                         if saved_note:
                             lines.append(saved_note)
                         return "\n".join(lines)
