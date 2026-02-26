@@ -432,7 +432,7 @@ class TalkingCharacterPipeline:
         temperature: float = 0.5,
         lipsync_model: str = "auto",
         project_id: str = None,
-        timeout: int = 300
+        timeout: int = 600
     ) -> PipelineResult:
         """
         Generate a talking character video synchronously (blocking).
