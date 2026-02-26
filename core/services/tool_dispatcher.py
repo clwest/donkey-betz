@@ -7813,6 +7813,9 @@ RESEARCH DATA:
                 'voice': payload.get('voice', 'Rachel'),
                 'duration': payload.get('duration', 5),
                 'lipsync_model': payload.get('lipsync_model', 'auto'),
+                'mode': payload.get('mode', 'loop'),
+                'sync_mode': payload.get('sync_mode', 'loop'),
+                'color_grade': payload.get('color_grade'),
             }
             if user_id:
                 context['user_id'] = str(user_id)
