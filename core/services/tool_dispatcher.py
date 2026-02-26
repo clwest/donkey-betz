@@ -362,7 +362,7 @@ class ToolDispatcher:
         task_text = payload.get('task') or payload.get('prompt') or payload.get('query', '')
         context = payload.get('context', {})
         if user_id:
-            context['user_id'] = user_id
+            context['user_id'] = str(user_id)
 
         celery_task = execute_agent_task.apply_async(args=[agent_name, task_text, context], queue='agents')
 
@@ -929,7 +929,7 @@ class ToolDispatcher:
                 agent_name = 'ResearchAgent'
 
         if user_id:
-            context['user_id'] = user_id
+            context['user_id'] = str(user_id)
 
         celery_task = execute_agent_task.apply_async(args=[agent_name, task_text, context], queue='agents')
 
@@ -6409,7 +6409,7 @@ class ToolDispatcher:
             from core.tasks import execute_agent_task
             celery_task = execute_agent_task.apply_async(
                 args=['GamePredictor', f'Generate a full betting brief ({action})',
-                      {'user_id': user_id, 'action': action}],
+                      {'user_id': str(user_id) if user_id else None, 'action': action}],
                 queue='agents',
             )
             return {
@@ -7726,7 +7726,7 @@ RESEARCH DATA:
             if payload.get('height'):
                 context['height'] = payload['height']
             if user_id:
-                context['user_id'] = user_id
+                context['user_id'] = str(user_id)
             celery_task = execute_agent_task.apply_async(
                 args=['image_generation_agent', task_text, context], queue='agents',
             )
@@ -7750,7 +7750,7 @@ RESEARCH DATA:
             if payload.get('ratio'):
                 context['ratio'] = payload['ratio']
             if user_id:
-                context['user_id'] = user_id
+                context['user_id'] = str(user_id)
             celery_task = execute_agent_task.apply_async(
                 args=['video_generation_agent', task_text, context], queue='agents',
             )
@@ -7773,7 +7773,7 @@ RESEARCH DATA:
                 'lipsync_model': payload.get('lipsync_model', 'auto'),
             }
             if user_id:
-                context['user_id'] = user_id
+                context['user_id'] = str(user_id)
             celery_task = execute_agent_task.apply_async(
                 args=['talking_character_agent', task_text, context], queue='agents',
             )
@@ -7792,7 +7792,7 @@ RESEARCH DATA:
             if payload.get('voice'):
                 context['voice'] = payload['voice']
             if user_id:
-                context['user_id'] = user_id
+                context['user_id'] = str(user_id)
             celery_task = execute_agent_task.apply_async(
                 args=['audio_generation_agent', task_text, context], queue='agents',
             )
