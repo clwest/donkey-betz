@@ -7767,12 +7767,12 @@ RESEARCH DATA:
             if user_id:
                 context['user_id'] = str(user_id)
             celery_task = execute_agent_task.apply_async(
-                args=['image_generation_agent', task_text, context], queue='agents',
+                args=['ImageAgent', task_text, context], queue='agents',
             )
             return {
                 'task_id': str(celery_task.id),
                 'mode': 'async',
-                'agent': 'image_generation_agent',
+                'agent': 'ImageAgent',
                 'message': f'Image generation dispatched (task {celery_task.id}). Use job_status to check progress.',
             }
 
@@ -7791,12 +7791,12 @@ RESEARCH DATA:
             if user_id:
                 context['user_id'] = str(user_id)
             celery_task = execute_agent_task.apply_async(
-                args=['video_generation_agent', task_text, context], queue='agents',
+                args=['VideoAgent', task_text, context], queue='agents',
             )
             return {
                 'task_id': str(celery_task.id),
                 'mode': 'async',
-                'agent': 'video_generation_agent',
+                'agent': 'VideoAgent',
                 'message': f'Video generation dispatched (task {celery_task.id}). Use job_status to check progress.',
             }
 
@@ -7814,12 +7814,12 @@ RESEARCH DATA:
             if user_id:
                 context['user_id'] = str(user_id)
             celery_task = execute_agent_task.apply_async(
-                args=['talking_character_agent', task_text, context], queue='agents',
+                args=['TalkingCharacterAgent', task_text, context], queue='agents',
             )
             return {
                 'task_id': str(celery_task.id),
                 'mode': 'async',
-                'agent': 'talking_character_agent',
+                'agent': 'TalkingCharacterAgent',
                 'message': f'Talking character video dispatched (task {celery_task.id}). Use job_status to check progress.',
             }
 
@@ -7833,7 +7833,7 @@ RESEARCH DATA:
             if user_id:
                 context['user_id'] = str(user_id)
             celery_task = execute_agent_task.apply_async(
-                args=['audio_generation_agent', task_text, context], queue='agents',
+                args=['AudioAgent', task_text, context], queue='agents',
             )
             return {
                 'task_id': str(celery_task.id),
