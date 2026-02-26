@@ -17,19 +17,36 @@ Cost per 10-second base video: ~$0.60-1.00 (longer with loop mode)
 - TTS: ~$0.05
 - Image-to-Video: ~$0.15 (10 Runway credits)
 - Lip Sync: ~$0.50+ (scales with final duration in loop mode)
+
+Modes:
+- loop: Single Runway clip looped to match audio length (fast, cheap, visible seams)
+- multi_clip: N unique Runway clips with varied motion, concatenated via ffmpeg (3-6x cost, no loop seams)
 """
 
 import logging
-import time
+import math
 import os
-from typing import Dict, Any, Optional, List
-from dataclasses import dataclass, field
+import subprocess
+import tempfile
+import time
+from typing import Dict, Any, Optional, Tuple
+from dataclasses import dataclass
 from enum import Enum
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from django.conf import settings
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
+
+# Varied motion suffixes for multi_clip mode — cycled if more clips than variations
+MOTION_VARIATIONS = [
+    "",
+    ", with a gentle head tilt to the left",
+    ", with a subtle nod",
+    ", with a slight smile forming",
+    ", looking slightly to the right",
+    ", with a soft blink and slight eyebrow raise",
+]
 
 
 class PipelineStatus(Enum):
@@ -147,7 +164,8 @@ class TalkingCharacterPipeline:
         sync_mode: str = "loop",
         temperature: float = 0.5,
         lipsync_model: str = "auto",
-        project_id: str = None
+        project_id: str = None,
+        mode: str = "loop",
     ) -> PipelineResult:
         """
         Start async generation of a talking character video.
@@ -179,7 +197,15 @@ class TalkingCharacterPipeline:
         cost_estimate = self.estimate_cost(text, duration)
         result.estimated_cost = cost_estimate['total_cost']
 
-        logger.info(f"🎬 [PIPELINE] Starting talking character generation")
+        # multi_clip mode requires synchronous polling + ffmpeg; warn and fall back in async
+        if mode == "multi_clip":
+            logger.warning(
+                "[PIPELINE] multi_clip mode not supported in async — "
+                "falling back to loop mode (use generate_talking_video_sync for multi_clip)"
+            )
+            mode = "loop"
+
+        logger.info(f"🎬 [PIPELINE] Starting talking character generation (mode={mode})")
         logger.info(f"   Image: {image_url[:60]}...")
         logger.info(f"   Text: {text[:50]}...")
         logger.info(f"   Voice: {voice}, Duration: {duration}s")
@@ -401,6 +427,156 @@ class TalkingCharacterPipeline:
             result.error_message = str(e)
             return result
 
+    def _generate_multi_clip_base_video(
+        self,
+        image_url: str,
+        text: str,
+        motion_prompt: str,
+        duration: int,
+        timeout: int,
+        start_time: float,
+    ) -> Tuple[Optional[str], str]:
+        """
+        Generate N unique Runway clips with varied motion prompts, concatenate via ffmpeg.
+
+        Returns:
+            (video_url, error) — video_url is None on failure
+        """
+        import requests as req
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+
+        estimated_audio_secs = len(text) / 15  # ~15 chars/sec
+        num_clips = min(math.ceil(estimated_audio_secs / duration), 6)
+        num_clips = max(num_clips, 2)  # at least 2 clips for multi_clip to make sense
+
+        logger.info(
+            f"🎬 [MULTI_CLIP] Generating {num_clips} clips "
+            f"(~{estimated_audio_secs:.0f}s audio, {duration}s each)"
+        )
+
+        # Build varied prompts
+        prompts = []
+        for i in range(num_clips):
+            variation = MOTION_VARIATIONS[i % len(MOTION_VARIATIONS)]
+            prompts.append(f"{motion_prompt}{variation}")
+
+        # Submit all Runway i2v calls in parallel
+        def _submit_clip(prompt: str) -> str:
+            """Submit a single Runway i2v call, return task_id."""
+            result = self.video_provider.image_to_video(
+                image_url=image_url,
+                motion_prompt=prompt,
+                duration=duration,
+            )
+            if not result.success:
+                raise RuntimeError(f"Runway submission failed: {result.error_message}")
+            return result.task_id
+
+        task_ids = []
+        with ThreadPoolExecutor(max_workers=num_clips) as executor:
+            futures = {executor.submit(_submit_clip, p): i for i, p in enumerate(prompts)}
+            for future in as_completed(futures):
+                idx = futures[future]
+                try:
+                    task_id = future.result()
+                    task_ids.append((idx, task_id))
+                    logger.info(f"🎬 [MULTI_CLIP] Clip {idx} submitted: {task_id[:20]}...")
+                except Exception as e:
+                    return None, f"Failed to submit clip {idx}: {e}"
+
+        task_ids.sort(key=lambda x: x[0])  # maintain order
+
+        # Poll all tasks until complete or timeout
+        clip_urls = [None] * num_clips
+        pending = {task_id: idx for idx, task_id in task_ids}
+
+        while pending and (time.time() - start_time) < timeout:
+            for task_id, idx in list(pending.items()):
+                status = self.video_provider.check_status(task_id)
+                vs = status.status if hasattr(status, 'status') else ''
+                if vs in ('SUCCEEDED', 'completed'):
+                    url = status.video_url if hasattr(status, 'video_url') else ''
+                    clip_urls[idx] = url
+                    del pending[task_id]
+                    logger.info(f"✅ [MULTI_CLIP] Clip {idx} ready")
+                elif vs in ('FAILED', 'failed'):
+                    err = status.error_message if hasattr(status, 'error_message') else 'unknown'
+                    return None, f"Clip {idx} failed: {err}"
+            if pending:
+                time.sleep(5)
+
+        if pending:
+            return None, f"Timed out waiting for {len(pending)} clips"
+
+        # Download clips to temp dir
+        tmp_dir = tempfile.mkdtemp(prefix="multi_clip_")
+        try:
+            clip_paths = []
+            for i, url in enumerate(clip_urls):
+                clip_path = os.path.join(tmp_dir, f"clip_{i:02d}.mp4")
+                resp = req.get(url, timeout=60)
+                resp.raise_for_status()
+                with open(clip_path, 'wb') as f:
+                    f.write(resp.content)
+                clip_paths.append(clip_path)
+                logger.info(f"📥 [MULTI_CLIP] Downloaded clip {i}: {len(resp.content)} bytes")
+
+            # ffmpeg concat
+            output_path = os.path.join(tmp_dir, "concatenated.mp4")
+            concat_list = os.path.join(tmp_dir, "concat.txt")
+            with open(concat_list, 'w') as f:
+                for path in clip_paths:
+                    f.write(f"file '{path}'\n")
+
+            # Try fast concat demuxer first (no re-encode)
+            cmd = [
+                'ffmpeg', '-f', 'concat', '-safe', '0', '-i', concat_list,
+                '-c', 'copy', '-y', output_path,
+            ]
+            logger.info(f"🔧 [MULTI_CLIP] ffmpeg concat: {num_clips} clips")
+            proc = subprocess.run(cmd, capture_output=True, timeout=120)
+
+            if proc.returncode != 0:
+                # Fallback: re-encode with filter_complex (video-only, Runway clips have no audio)
+                logger.warning("[MULTI_CLIP] Concat demuxer failed, trying filter_complex re-encode")
+                input_args = []
+                filter_parts = []
+                for i, path in enumerate(clip_paths):
+                    input_args.extend(['-i', path])
+                    filter_parts.append(f'[{i}:v:0]')
+
+                filter_complex = f"{''.join(filter_parts)}concat=n={len(clip_paths)}:v=1:a=0[v]"
+                cmd = ['ffmpeg'] + input_args + [
+                    '-filter_complex', filter_complex,
+                    '-map', '[v]', '-y', output_path,
+                ]
+                proc = subprocess.run(cmd, capture_output=True, timeout=120)
+
+                if proc.returncode != 0:
+                    stderr = proc.stderr.decode(errors='replace')[:500]
+                    return None, f"ffmpeg concat failed: {stderr}"
+
+            # Upload concatenated video
+            with open(output_path, 'rb') as f:
+                content = f.read()
+
+            filename = f"videos/multi_clip/multi_clip_{int(time.time())}.mp4"
+            saved_path = default_storage.save(filename, ContentFile(content))
+            video_url = default_storage.url(saved_path)
+
+            logger.info(
+                f"✅ [MULTI_CLIP] Concatenated {num_clips} clips → {video_url[:60]}..."
+            )
+            return video_url, ""
+
+        except Exception as e:
+            return None, f"Multi-clip post-processing failed: {e}"
+        finally:
+            # Clean up temp dir
+            import shutil
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
     def _mark_video_history_failed(self, video_task_id: str, error_message: str):
         """Mark the VideoHistory record as failed so media library stays clean."""
         if not video_task_id:
@@ -437,7 +613,8 @@ class TalkingCharacterPipeline:
         lipsync_model: str = "auto",
         project_id: str = None,
         timeout: int = 600,
-        color_grade: Optional[str] = None
+        color_grade: Optional[str] = None,
+        mode: str = "loop",
     ) -> PipelineResult:
         """
         Generate a talking character video synchronously (blocking).
@@ -461,62 +638,113 @@ class TalkingCharacterPipeline:
         """
         start_time = time.time()
 
-        # Start async pipeline (TTS + Video task creation)
-        result = self.generate_talking_video_async(
-            image_url=image_url,
-            text=text,
-            voice=voice,
-            motion_prompt=motion_prompt,
-            duration=duration,
-            sync_mode=sync_mode,
-            temperature=temperature,
-            project_id=project_id
-        )
+        if mode == "multi_clip":
+            # ── Multi-clip path ──────────────────────────────────────
+            # TTS first, then N parallel Runway clips → ffmpeg concat → lip sync
+            result = PipelineResult(
+                success=False,
+                status=PipelineStatus.PENDING,
+                created_at=timezone.now().isoformat(),
+            )
+            cost_estimate = self.estimate_cost(text, duration)
+            num_clips = min(math.ceil(len(text) / 15 / duration), 6)
+            result.estimated_cost = cost_estimate['total_cost'] * max(num_clips, 2)
 
-        if not result.success:
-            return result
+            logger.info(f"🎬 [MULTI_CLIP] Starting multi-clip pipeline (~{num_clips} clips)")
 
-        # Wait for video generation
-        logger.info(f"⏳ [PIPELINE] Waiting for video generation...")
-        video_url = None
+            # Stage 1: TTS
+            try:
+                result.status = PipelineStatus.GENERATING_AUDIO
+                audio_result = self.audio_provider.text_to_speech(text=text, voice=voice)
+                if not audio_result.get('success'):
+                    result.status = PipelineStatus.FAILED
+                    result.failed_stage = "tts"
+                    result.error_message = audio_result.get('error', 'TTS generation failed')
+                    return result
+                result.audio_url = audio_result.get('audio_url', '')
+                logger.info(f"✅ [MULTI_CLIP] TTS complete: {result.audio_url[:60]}...")
+            except Exception as e:
+                result.status = PipelineStatus.FAILED
+                result.failed_stage = "tts"
+                result.error_message = str(e)
+                return result
 
-        while time.time() - start_time < timeout:
-            video_status = self.check_video_status(result.video_task_id)
+            # Stage 2: Multi-clip generation + ffmpeg concat
+            result.status = PipelineStatus.ANIMATING_IMAGE
+            video_url, error = self._generate_multi_clip_base_video(
+                image_url=image_url,
+                text=text,
+                motion_prompt=motion_prompt,
+                duration=duration,
+                timeout=timeout,
+                start_time=start_time,
+            )
+            if not video_url:
+                result.status = PipelineStatus.FAILED
+                result.failed_stage = "multi_clip_video"
+                result.error_message = error
+                return result
 
-            # check_video_status returns VideoGenerationResult.__dict__ where
-            # status is already lowercased by the provider: 'completed', 'failed', etc.
-            vs = video_status.get('status', '')
-            if vs in ('SUCCEEDED', 'completed'):
-                video_url = video_status.get('video_url')
-                logger.info(f"✅ [PIPELINE] Video ready: {video_url[:60]}...")
-                break
-            elif vs in ('FAILED', 'failed'):
+            result.base_video_url = video_url
+            # Force cut_off — concatenated video already matches audio length
+            sync_mode = "cut_off"
+        else:
+            # ── Single-clip (loop) path ──────────────────────────────
+            # Start async pipeline (TTS + Video task creation)
+            result = self.generate_talking_video_async(
+                image_url=image_url,
+                text=text,
+                voice=voice,
+                motion_prompt=motion_prompt,
+                duration=duration,
+                sync_mode=sync_mode,
+                temperature=temperature,
+                project_id=project_id,
+            )
+
+            if not result.success:
+                return result
+
+            # Wait for video generation
+            logger.info(f"⏳ [PIPELINE] Waiting for video generation...")
+            video_url = None
+
+            while time.time() - start_time < timeout:
+                video_status = self.check_video_status(result.video_task_id)
+
+                vs = video_status.get('status', '')
+                if vs in ('SUCCEEDED', 'completed'):
+                    video_url = video_status.get('video_url')
+                    logger.info(f"✅ [PIPELINE] Video ready: {video_url[:60]}...")
+                    break
+                elif vs in ('FAILED', 'failed'):
+                    result.success = False
+                    result.status = PipelineStatus.FAILED
+                    result.failed_stage = "image_to_video"
+                    result.error_message = video_status.get('error_message', 'Video generation failed')
+                    self._mark_video_history_failed(result.video_task_id, result.error_message)
+                    return result
+
+                time.sleep(5)
+
+            if not video_url:
                 result.success = False
                 result.status = PipelineStatus.FAILED
                 result.failed_stage = "image_to_video"
-                result.error_message = video_status.get('error_message', 'Video generation failed')
-                self._mark_video_history_failed(result.video_task_id, result.error_message)
+                result.error_message = "Video generation timed out"
+                self._mark_video_history_failed(result.video_task_id, "Video generation timed out")
                 return result
 
-            time.sleep(5)  # Poll every 5 seconds
+            result.base_video_url = video_url
 
-        if not video_url:
-            result.success = False
-            result.status = PipelineStatus.FAILED
-            result.failed_stage = "image_to_video"
-            result.error_message = "Video generation timed out"
-            self._mark_video_history_failed(result.video_task_id, "Video generation timed out")
-            return result
-
-        result.base_video_url = video_url
-
+        # ── Lip sync (shared by both paths) ──────────────────────────
         # Start lip sync with model selection
         lipsync_result = self.continue_pipeline_after_video(
             audio_url=result.audio_url,
-            video_url=video_url,
+            video_url=result.base_video_url,
             sync_mode=sync_mode,
             temperature=temperature,
-            lipsync_model=lipsync_model
+            lipsync_model=lipsync_model,
         )
 
         if not lipsync_result.success:
