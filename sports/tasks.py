@@ -435,3 +435,58 @@ def verify_betting_outcomes():
             logger.error(f"  - {err}")
 
     return summary
+
+
+@shared_task(name='sports.run_market_analysis')
+def run_market_analysis():
+    """
+    Session 1088: Run LineMovementAnalyzer and SharpActionDetector to detect
+    sharp money movements and professional betting patterns.
+
+    Called after GamePredictor generates predictions, so there's fresh odds
+    data to analyze for line movements and sharp action signals.
+    """
+    from core.agents.markets.line_movement_analyzer import LineMovementAnalyzer
+    from core.agents.markets.sharp_action_detector import SharpActionDetector
+
+    results = {}
+
+    # 1. Line Movement Analysis
+    try:
+        analyzer = LineMovementAnalyzer()
+        lm_result = analyzer.execute(
+            task="Detect reverse line movements, steam moves, and stale lines across active games",
+            context={},
+        )
+        results['line_movement'] = {
+            'success': lm_result.success,
+            'signals': len(lm_result.data.get('movements', [])) if lm_result.data else 0,
+        }
+        logger.info(
+            f"LineMovementAnalyzer: success={lm_result.success}, "
+            f"signals={results['line_movement']['signals']}"
+        )
+    except Exception as e:
+        logger.error(f"LineMovementAnalyzer failed: {e}")
+        results['line_movement'] = {'success': False, 'error': str(e)}
+
+    # 2. Sharp Action Detection
+    try:
+        detector = SharpActionDetector()
+        sa_result = detector.execute(
+            task="Identify sharp vs public book divergences and syndicate betting patterns",
+            context={},
+        )
+        results['sharp_action'] = {
+            'success': sa_result.success,
+            'signals': len(sa_result.data.get('signals', [])) if sa_result.data else 0,
+        }
+        logger.info(
+            f"SharpActionDetector: success={sa_result.success}, "
+            f"signals={results['sharp_action']['signals']}"
+        )
+    except Exception as e:
+        logger.error(f"SharpActionDetector failed: {e}")
+        results['sharp_action'] = {'success': False, 'error': str(e)}
+
+    return results
