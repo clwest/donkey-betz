@@ -1468,10 +1468,14 @@ def execute_agent_task(
 
         # Session 1031: Dedup — skip if this agent already ran a very similar task recently
         # Exclude the execution_record we just created (it would always match itself)
+        # Only dedup against SUCCESSFUL completions — failed/deduped tasks should be retryable
         dedup_qs = AgentExecution.objects.filter(
             agent__name=agent_name,
             created_at__gte=timezone.now() - timedelta(hours=2),
             task__startswith=task[:80],
+            status='completed',
+        ).exclude(
+            output_data__skipped='dedup',
         )
         if execution_record:
             dedup_qs = dedup_qs.exclude(id=execution_record.id)
