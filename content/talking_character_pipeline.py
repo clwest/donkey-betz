@@ -13,10 +13,10 @@ Use Cases:
 - Marketing content with brand characters
 - Social media content
 
-Cost per 10-second video: ~$0.60-1.00
+Cost per 10-second base video: ~$0.60-1.00 (longer with loop mode)
 - TTS: ~$0.05
 - Image-to-Video: ~$0.15 (10 Runway credits)
-- Lip Sync: ~$0.50 (10 seconds × $0.05)
+- Lip Sync: ~$0.50+ (scales with final duration in loop mode)
 """
 
 import logging
@@ -143,8 +143,8 @@ class TalkingCharacterPipeline:
         text: str,
         voice: str = "Rachel",
         motion_prompt: str = "subtle talking motion, slight head movements",
-        duration: int = 5,
-        sync_mode: str = "cut_off",
+        duration: int = 10,
+        sync_mode: str = "loop",
         temperature: float = 0.5,
         lipsync_model: str = "auto",
         project_id: str = None
@@ -161,7 +161,7 @@ class TalkingCharacterPipeline:
             voice: ElevenLabs voice name (default: Rachel)
             motion_prompt: Motion description for video generation
             duration: Target duration in seconds (5 or 10)
-            sync_mode: Lip sync mode (cut_off, loop, bounce)
+            sync_mode: Lip sync mode (loop, cut_off, bounce)
             temperature: Lip sync expression intensity (0-1)
             lipsync_model: Which model to use (auto/latentsync/sync_labs)
             project_id: Optional project association
@@ -212,6 +212,10 @@ class TalkingCharacterPipeline:
             result.progress_percent = 30
 
             logger.info(f"✅ [PIPELINE] TTS complete: {result.audio_url[:60]}...")
+
+            # Log estimated audio duration for debugging/cost estimation
+            estimated_audio_secs = len(text) / 15  # ~15 chars/sec
+            logger.info(f"📏 [PIPELINE] Estimated audio: {estimated_audio_secs:.0f}s, video base: {duration}s, sync_mode: {sync_mode}")
 
         except Exception as e:
             logger.error(f"❌ [PIPELINE] TTS error: {e}")
@@ -305,7 +309,7 @@ class TalkingCharacterPipeline:
         self,
         audio_url: str,
         video_url: str,
-        sync_mode: str = "cut_off",
+        sync_mode: str = "loop",
         temperature: float = 0.5,
         lipsync_model: str = "auto"
     ) -> PipelineResult:
@@ -427,12 +431,13 @@ class TalkingCharacterPipeline:
         text: str,
         voice: str = "Rachel",
         motion_prompt: str = "subtle talking motion, slight head movements",
-        duration: int = 5,
-        sync_mode: str = "cut_off",
+        duration: int = 10,
+        sync_mode: str = "loop",
         temperature: float = 0.5,
         lipsync_model: str = "auto",
         project_id: str = None,
-        timeout: int = 600
+        timeout: int = 600,
+        color_grade: Optional[str] = None
     ) -> PipelineResult:
         """
         Generate a talking character video synchronously (blocking).
@@ -551,6 +556,37 @@ class TalkingCharacterPipeline:
                             logger.info(f"✅ [PIPELINE] Updated VideoHistory {vh.id} with final video")
                     except Exception as e:
                         logger.warning(f"⚠️ Failed to update VideoHistory: {e}")
+
+                # Optional DaVinci Resolve color grade post-processing
+                if color_grade:
+                    try:
+                        from core.agents.resolve_agent import ResolveNodeClient
+                        client = ResolveNodeClient()
+                        health = client.health_check()
+                        if health.get('status') == 'ok':
+                            logger.info(f"🎨 [PIPELINE] Sending to DaVinci for color grade: {color_grade}")
+                            render = client.start_render(
+                                clip_paths=[result.final_video_url],
+                                template='default_mp4',
+                            )
+                            if render.get('job_id'):
+                                job_id = render['job_id']
+                                while time.time() - start_time < timeout:
+                                    status = client.get_status(job_id)
+                                    if status.get('status') == 'done':
+                                        result_url = client.get_result_url(job_id)
+                                        if result_url:
+                                            result.final_video_url = result_url
+                                            logger.info(f"✅ [PIPELINE] DaVinci render complete: {result_url[:60]}...")
+                                        break
+                                    elif status.get('status') == 'error':
+                                        logger.warning("DaVinci render failed, using lip-synced video")
+                                        break
+                                    time.sleep(5)
+                        else:
+                            logger.warning("DaVinci Resolve not available, skipping color grade")
+                    except Exception as e:
+                        logger.warning(f"DaVinci post-processing failed: {e}")
 
                 logger.info(f"🎉 [PIPELINE] COMPLETE! Final video: {result.final_video_url[:60]}...")
                 return result
