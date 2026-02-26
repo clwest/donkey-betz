@@ -88,6 +88,12 @@ class TalkingCharacterAgent(BaseAgent):
                             "enum": ["auto", "latentsync", "sync_labs"],
                             "default": "auto",
                         },
+                        "mode": {
+                            "type": "string",
+                            "description": "Video mode: loop (repeats base animation, fast/cheap) or multi_clip (unique clips per segment, 3-6x cost but no visible loops)",
+                            "enum": ["loop", "multi_clip"],
+                            "default": "loop",
+                        },
                         "color_grade": {
                             "type": "string",
                             "description": "Optional DaVinci Resolve color grade preset for post-processing",
@@ -173,6 +179,7 @@ class TalkingCharacterAgent(BaseAgent):
                 duration = int(context.get('duration', 10))
                 sync_mode = context.get('sync_mode', 'loop')
                 lipsync_model = context.get('lipsync_model', 'auto')
+                mode = context.get('mode', 'loop')
                 color_grade = context.get('color_grade')
 
                 if not image_url:
@@ -202,6 +209,7 @@ class TalkingCharacterAgent(BaseAgent):
                     sync_mode=sync_mode,
                     lipsync_model=lipsync_model,
                     color_grade=color_grade,
+                    mode=mode,
                 )
 
                 execution_time = int((time.time() - start_time) * 1000)
@@ -285,6 +293,7 @@ class TalkingCharacterAgent(BaseAgent):
                 sync_mode=arguments.get('sync_mode', 'loop'),
                 lipsync_model=arguments.get('lipsync_model', 'auto'),
                 color_grade=arguments.get('color_grade'),
+                mode=arguments.get('mode', 'loop'),
             )
             return {
                 'success': result.success,
