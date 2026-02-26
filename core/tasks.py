@@ -1527,6 +1527,39 @@ def execute_agent_task(
             f"(success={result.success}, time={execution_time_ms}ms)"
         )
 
+        # Push notification for completed media jobs
+        _MEDIA_AGENTS = frozenset({
+            'ImageAgent', 'VideoAgent', 'AudioAgent', 'TalkingCharacterAgent',
+            'ImageEditingAgent', 'VideoEditingAgent', 'ThreeDAgent', 'ResolveAgent',
+            # Also match router-normalized names
+            'image_generation_agent', 'video_generation_agent',
+            'audio_generation_agent', 'talking_character_agent',
+        })
+        _MEDIA_TYPE_LABELS = {
+            'ImageAgent': 'image', 'VideoAgent': 'video',
+            'AudioAgent': 'audio', 'TalkingCharacterAgent': 'talking character video',
+            'ImageEditingAgent': 'edited image', 'VideoEditingAgent': 'edited video',
+            'ThreeDAgent': '3D render', 'ResolveAgent': 'color-graded video',
+            'image_generation_agent': 'image', 'video_generation_agent': 'video',
+            'audio_generation_agent': 'audio', 'talking_character_agent': 'talking character video',
+        }
+        if agent_name in _MEDIA_AGENTS and result.success:
+            push_user_id = context.get('user_id')
+            if push_user_id:
+                try:
+                    from core.services.expo_push import send_push_to_user
+                    media_type = _MEDIA_TYPE_LABELS.get(agent_name, 'media')
+                    send_push_to_user(
+                        user_id=push_user_id,
+                        title=f'Your {media_type} is ready!',
+                        body=(task[:80] + '...') if len(task) > 80 else task,
+                        route='/media',
+                        object_type='media_complete',
+                        object_id=str(execution_record.id) if execution_record else None,
+                    )
+                except Exception as e:
+                    logger.warning('[execute_agent_task] Push failed: %s', e)
+
         return {
             'success': result.success,
             'agent_name': agent_name,
