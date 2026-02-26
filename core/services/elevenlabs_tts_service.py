@@ -78,6 +78,53 @@ def get_elevenlabs_api_key() -> Optional[str]:
     return os.getenv('ELEVENLABS_API_KEY') or settings.EXTERNAL_API_KEYS.get('ELEVENLABS_API_KEY')
 
 
+def check_quota() -> Dict[str, Any]:
+    """
+    Check ElevenLabs account quota before making TTS calls.
+
+    Returns dict with:
+        - ok: bool (True if quota available)
+        - character_count: int (used this period)
+        - character_limit: int (total allowed)
+        - remaining: int
+        - remaining_pct: float (0-100)
+        - error: str (if check failed)
+    """
+    api_key = get_elevenlabs_api_key()
+    if not api_key:
+        return {'ok': False, 'error': 'ElevenLabs API key not configured'}
+
+    try:
+        resp = requests.get(
+            'https://api.elevenlabs.io/v1/user/subscription',
+            headers={'xi-api-key': api_key},
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            return {'ok': False, 'error': f'Quota check HTTP {resp.status_code}'}
+
+        data = resp.json()
+        used = data.get('character_count', 0)
+        limit = data.get('character_limit', 0)
+        remaining = max(0, limit - used)
+        pct = (remaining / limit * 100) if limit > 0 else 0
+
+        if pct < 5:
+            logger.warning(f"⚠️ ElevenLabs quota critically low: {remaining}/{limit} chars ({pct:.1f}%)")
+
+        return {
+            'ok': remaining > 100,
+            'character_count': used,
+            'character_limit': limit,
+            'remaining': remaining,
+            'remaining_pct': round(pct, 1),
+            'tier': data.get('tier', 'unknown'),
+        }
+    except Exception as e:
+        logger.warning(f"ElevenLabs quota check failed: {e}")
+        return {'ok': True, 'error': f'Quota check failed: {e}', 'remaining_pct': -1}
+
+
 def calculate_adaptive_timeout(text: str, base_timeout: int = 60) -> int:
     """
     Calculate adaptive timeout based on text length.
@@ -141,6 +188,21 @@ def generate_speech_with_retry(
     api_key = get_elevenlabs_api_key()
     if not api_key:
         return {'success': False, 'error': 'ElevenLabs API key not configured'}
+
+    # Pre-flight quota check — fail fast if quota exhausted
+    quota = check_quota()
+    if not quota.get('ok') and quota.get('remaining', 1) == 0:
+        return {
+            'success': False,
+            'error': (
+                f"ElevenLabs quota exhausted: {quota.get('character_count', '?')}"
+                f"/{quota.get('character_limit', '?')} characters used. "
+                f"Tier: {quota.get('tier', 'unknown')}. "
+                "Upgrade plan or wait for quota reset."
+            ),
+            'retries_used': 0,
+            'quota': quota,
+        }
 
     # Calculate adaptive timeout
     timeout = calculate_adaptive_timeout(text, base_timeout)

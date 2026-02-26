@@ -29206,15 +29206,14 @@ AGENT_WORKSPACE_REGISTRY = {
         'task_template': 'Create video production brief for {topic}',
         'default_topic': 'AI explainer videos',
     },
-    # Session 1029: AudioAgent removed — ElevenLabs quota exceeded.
-    # Re-add when quota resets or is upgraded.
-    # 'AudioAgent': {
-    #     'category': 'media',
-    #     'output_dir': 'media/audio',
-    #     'output_type': 'creative_brief',
-    #     'task_template': 'Create audio production brief for {topic}',
-    #     'default_topic': 'podcast intro music',
-    # },
+    # Session 1088: Re-enabled (unblocked Session 1068, quota replenished)
+    'AudioAgent': {
+        'category': 'media',
+        'output_dir': 'media/audio',
+        'output_type': 'creative_brief',
+        'task_template': 'Create audio production brief for {topic}',
+        'default_topic': 'podcast intro music',
+    },
     'ThreeDAgent': {
         'category': 'media',
         'output_dir': 'media/3d',
@@ -31134,7 +31133,7 @@ def run_content_creation_agents():
     """
     agents = [
         'ImageAgent', 'VideoAgent',
-        # Session 1027: AudioAgent removed — ElevenLabs quota exceeded, 100% failure
+        'AudioAgent',  # Session 1088: Re-enabled (unblocked Session 1068, quota replenished)
         'ThreeDAgent',
         'ContentWriterAgent', 'ContentExecutorAgent',
         'ImageEditingAgent', 'VideoEditingAgent', 'ResolveAgent'
@@ -34177,7 +34176,8 @@ def dispatch_pending_action_items(self):
     logger.info("[ACTION-DISPATCH] Starting dispatch cycle")
 
     # Blocked agents (same as execute_agent_task)
-    _BLOCKED_AGENTS = frozenset({'CodeGeneratorAgent', 'AudioAgent'})
+    # Session 1088: Removed AudioAgent — unblocked in Session 1068 but this list was missed
+    _BLOCKED_AGENTS = frozenset({'CodeGeneratorAgent'})
 
     # Query pending items on ACTIVE initiatives, auto-dispatch stages only
     items = (
