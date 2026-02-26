@@ -537,7 +537,7 @@ class TalkingCharacterPipeline:
                         ).first()
                         if vh:
                             vh.video_url = result.final_video_url
-                            vh.status = 'processed'
+                            vh.status = 'completed'
                             vh.duration = duration
                             vh.parameters['final_video_url'] = result.final_video_url
                             vh.parameters['base_video_url'] = result.base_video_url
