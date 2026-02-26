@@ -18,10 +18,13 @@ export interface MediaItem {
 
 interface RawImageItem {
   id: string;
+  url?: string;
+  thumbnail_url?: string;
   file_path?: string;
   cloudinary_url?: string;
   prompt?: string;
   model?: string;
+  model_used?: string;
   image_type?: string;
   created_at?: string;
   is_favorite?: boolean;
@@ -35,23 +38,25 @@ interface RawVideoItem {
   thumbnail_url?: string;
   prompt?: string;
   model?: string;
+  model_used?: string;
   video_type?: string;
   created_at?: string;
   is_favorite?: boolean;
   duration?: number;
+  status?: string;
 }
 
 // ── Normalizers ──────────────────────────────────────────────────────────────
 
 function normalizeImage(raw: RawImageItem): MediaItem {
-  const url = raw.cloudinary_url || raw.file_path || null;
+  const url = raw.url || raw.cloudinary_url || raw.file_path || null;
   return {
     id: raw.id,
     type: 'image',
-    thumbnailUrl: url,
+    thumbnailUrl: raw.thumbnail_url || url,
     fullUrl: url,
     prompt: raw.prompt ?? '',
-    model: raw.model ?? '',
+    model: raw.model_used || raw.model || '',
     createdAt: raw.created_at ?? '',
     isFavorite: raw.is_favorite ?? false,
     width: raw.width,
@@ -66,7 +71,7 @@ function normalizeVideo(raw: RawVideoItem): MediaItem {
     thumbnailUrl: raw.thumbnail_url ?? null,
     fullUrl: raw.video_url ?? null,
     prompt: raw.prompt ?? '',
-    model: raw.model ?? '',
+    model: raw.model_used || raw.model || '',
     createdAt: raw.created_at ?? '',
     isFavorite: raw.is_favorite ?? false,
     duration: raw.duration,
@@ -104,12 +109,13 @@ export async function getVideoHistory(params?: {
     videos?: RawVideoItem[];
     count?: number;
     total?: number;
+    total_count?: number;
   }>('/v1/video/history/', { params });
 
   const raw = data.results ?? data.videos ?? [];
   return {
     items: raw.map(normalizeVideo),
-    total: data.count ?? data.total ?? raw.length,
+    total: data.total_count ?? data.count ?? data.total ?? raw.length,
   };
 }
 
