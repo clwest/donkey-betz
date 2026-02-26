@@ -403,6 +403,85 @@ class ToolDispatcher:
         }
         return mappings.get(tool_name, tool_name.replace('_agent', '').title() + 'Agent')
 
+    def _get_agent_execution_output(self, celery_task_id: str, execution_id: str = None) -> Dict[str, Any]:
+        """Enrich job_status with AgentExecution output data (deliverables, media URLs).
+
+        Session 1088: Bridge between Celery task IDs and rich agent outputs.
+        Looks up AgentExecution by execution_id (from task return value) or
+        by matching the celery_task_id stored in input_data.
+        """
+        extras: Dict[str, Any] = {}
+        try:
+            from core.models_unified_system import AgentExecution
+            from datetime import timedelta
+
+            execution = None
+            if execution_id:
+                execution = AgentExecution.objects.filter(id=execution_id).first()
+            if not execution:
+                # Fallback: find recent execution that stored this celery_task_id
+                execution = AgentExecution.objects.filter(
+                    input_data__celery_task_id=celery_task_id,
+                ).order_by('-created_at').first()
+
+            if not execution:
+                return extras
+
+            extras['agent'] = extras.get('agent') or execution.agent.name
+            extras['execution_id'] = str(execution.id)
+
+            output = execution.output_data or {}
+
+            # Extract content preview
+            content = output.get('content', '')
+            if content:
+                extras['content_preview'] = content[:500]
+
+            # Extract media URLs from metadata
+            metadata = output.get('metadata', {})
+            if isinstance(metadata, dict):
+                for key in ('image_url', 'video_url', 'audio_url', 'thumbnail_url',
+                            'file_url', 'cloudinary_url', 'final_video_url'):
+                    if metadata.get(key):
+                        extras[key] = metadata[key]
+
+                # Deliverable info
+                if metadata.get('deliverable_id'):
+                    extras['deliverable_id'] = metadata['deliverable_id']
+                if metadata.get('deliverable_title'):
+                    extras['deliverable_title'] = metadata['deliverable_title']
+
+            # Check for deliverables created around the same time
+            if not extras.get('deliverable_id'):
+                try:
+                    from core.models_deliverables import Deliverable
+                    recent_del = Deliverable.objects.filter(
+                        agent_name=execution.agent.name,
+                        created_at__gte=execution.created_at - timedelta(seconds=10),
+                        created_at__lte=(execution.completed_at or execution.created_at) + timedelta(seconds=30),
+                    ).order_by('-created_at').first()
+                    if recent_del:
+                        extras['deliverable_id'] = str(recent_del.id)
+                        extras['deliverable_title'] = recent_del.title
+                except Exception:
+                    pass
+
+            # Check for media history created around the same time
+            if not any(k.endswith('_url') for k in extras):
+                try:
+                    from core.models import ImageHistory
+                    recent_img = ImageHistory.objects.filter(
+                        created_at__gte=execution.created_at,
+                    ).order_by('-created_at').first()
+                    if recent_img and hasattr(recent_img, 'file_path') and recent_img.file_path:
+                        extras['image_url'] = recent_img.file_path if recent_img.file_path.startswith('http') else ''
+                except Exception:
+                    pass
+
+        except Exception as e:
+            logger.debug(f"_get_agent_execution_output failed: {e}")
+        return extras
+
     def _handle_legal_agent(
         self,
         tool_name: str,
@@ -7728,20 +7807,57 @@ RESEARCH DATA:
             job_id = payload.get('job_id')
             if not job_id:
                 return {'error': 'job_id is required for job_status'}
-            # Check CeleryTaskEvent first
+
+            # 1. Check CeleryTaskEvent (completed tasks with telemetry)
             try:
                 from core.models_celery_telemetry import CeleryTaskEvent
                 event = CeleryTaskEvent.objects.filter(task_id=job_id).first()
                 if event:
-                    return {
+                    result = {
                         'job_id': job_id,
                         'status': event.status,
                         'started_at': event.started_at.isoformat() if event.started_at else None,
                         'finished_at': event.finished_at.isoformat() if event.finished_at else None,
                         'duration_ms': round(event.duration_seconds * 1000) if event.duration_seconds else None,
                     }
+                    # Enrich with AgentExecution output if available
+                    result.update(self._get_agent_execution_output(job_id))
+                    return result
             except Exception:
                 pass
+
+            # 2. Check Celery AsyncResult (in-flight or recently completed)
+            try:
+                from celery.result import AsyncResult
+                async_result = AsyncResult(job_id)
+                state = async_result.state  # PENDING, STARTED, SUCCESS, FAILURE, RETRY, REVOKED
+                result = {
+                    'job_id': job_id,
+                    'status': state.lower(),
+                }
+                if state == 'SUCCESS':
+                    task_return = async_result.result or {}
+                    if isinstance(task_return, dict):
+                        result['status'] = 'completed'
+                        result['success'] = task_return.get('success', True)
+                        result['agent'] = task_return.get('agent_name', '')
+                        result['execution_time_ms'] = task_return.get('execution_time_ms')
+                        result['content'] = task_return.get('content', '')
+                        # Enrich with AgentExecution for deliverables/media URLs
+                        exec_id = task_return.get('execution_id')
+                        if exec_id:
+                            result.update(self._get_agent_execution_output(job_id, exec_id))
+                elif state == 'FAILURE':
+                    result['status'] = 'failed'
+                    result['error'] = str(async_result.result)[:500] if async_result.result else 'Unknown error'
+                elif state == 'STARTED':
+                    result['status'] = 'running'
+                elif state == 'PENDING':
+                    result['status'] = 'queued'
+                return result
+            except Exception as e:
+                logger.debug(f"AsyncResult check failed for {job_id}: {e}")
+
             return {'job_id': job_id, 'status': 'unknown'}
 
         if action == 'list_jobs':
