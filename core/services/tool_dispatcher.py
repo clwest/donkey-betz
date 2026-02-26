@@ -364,7 +364,7 @@ class ToolDispatcher:
         if user_id:
             context['user_id'] = user_id
 
-        celery_task = execute_agent_task.delay(agent_name, task_text, context)
+        celery_task = execute_agent_task.apply_async(args=[agent_name, task_text, context], queue='agents')
 
         return {
             'task_id': str(celery_task.id),
@@ -931,7 +931,7 @@ class ToolDispatcher:
         if user_id:
             context['user_id'] = user_id
 
-        celery_task = execute_agent_task.delay(agent_name, task_text, context)
+        celery_task = execute_agent_task.apply_async(args=[agent_name, task_text, context], queue='agents')
 
         return {
             'task_id': str(celery_task.id),
@@ -6407,10 +6407,10 @@ class ToolDispatcher:
             # Session 1088: Dispatch to Celery async — generate_brief() is slow
             # and was causing 30s TOOL_TIMEOUT in the PA.
             from core.tasks import execute_agent_task
-            celery_task = execute_agent_task.delay(
-                'GamePredictor',
-                f'Generate a full betting brief ({action})',
-                {'user_id': user_id, 'action': action},
+            celery_task = execute_agent_task.apply_async(
+                args=['GamePredictor', f'Generate a full betting brief ({action})',
+                      {'user_id': user_id, 'action': action}],
+                queue='agents',
             )
             return {
                 'task_id': str(celery_task.id),
@@ -7727,8 +7727,8 @@ RESEARCH DATA:
                 context['height'] = payload['height']
             if user_id:
                 context['user_id'] = user_id
-            celery_task = execute_agent_task.delay(
-                'image_generation_agent', task_text, context
+            celery_task = execute_agent_task.apply_async(
+                args=['image_generation_agent', task_text, context], queue='agents',
             )
             return {
                 'task_id': str(celery_task.id),
@@ -7751,8 +7751,8 @@ RESEARCH DATA:
                 context['ratio'] = payload['ratio']
             if user_id:
                 context['user_id'] = user_id
-            celery_task = execute_agent_task.delay(
-                'video_generation_agent', task_text, context
+            celery_task = execute_agent_task.apply_async(
+                args=['video_generation_agent', task_text, context], queue='agents',
             )
             return {
                 'task_id': str(celery_task.id),
@@ -7774,8 +7774,8 @@ RESEARCH DATA:
             }
             if user_id:
                 context['user_id'] = user_id
-            celery_task = execute_agent_task.delay(
-                'talking_character_agent', task_text, context
+            celery_task = execute_agent_task.apply_async(
+                args=['talking_character_agent', task_text, context], queue='agents',
             )
             return {
                 'task_id': str(celery_task.id),
@@ -7793,8 +7793,8 @@ RESEARCH DATA:
                 context['voice'] = payload['voice']
             if user_id:
                 context['user_id'] = user_id
-            celery_task = execute_agent_task.delay(
-                'audio_generation_agent', task_text, context
+            celery_task = execute_agent_task.apply_async(
+                args=['audio_generation_agent', task_text, context], queue='agents',
             )
             return {
                 'task_id': str(celery_task.id),
