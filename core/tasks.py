@@ -1438,16 +1438,26 @@ def execute_agent_task(
 
         execution_record = None
         if agent_obj:
+            # Session 1088: Sanitize input_data — context may contain UUID objects
+            # (e.g. user_id, experiment_id) that aren't JSON-serializable.
+            import json as _json
+            _raw_input = {
+                'task': task,
+                'context': context,
+                'source': 'conversation_action_dispatch',
+                'celery_task_id': str(self.request.id),
+            }
+            try:
+                input_data = _json.loads(_json.dumps(_raw_input, default=str))
+            except (TypeError, ValueError):
+                input_data = {'task': task, 'source': 'conversation_action_dispatch',
+                              'celery_task_id': str(self.request.id)}
+
             execution_record = AgentExecution.objects.create(
                 agent=agent_obj,
                 task=task[:500],  # Truncate for DB field
                 status='in_progress',
-                input_data={
-                    'task': task,
-                    'context': context,
-                    'source': 'conversation_action_dispatch',
-                    'celery_task_id': str(self.request.id),  # Session 1088: Link for job_status lookup
-                },
+                input_data=input_data,
                 experiment=experiment,  # Session 841: Link to experiment for scoped metrics
             )
 
