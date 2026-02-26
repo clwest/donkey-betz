@@ -5926,11 +5926,23 @@ def run_agent_learning_cycle():
             ALL_KNOWLEDGE_TYPES = ['trend', 'opportunity', 'market', 'user_behavior', 'content_idea',
                                    'tool_discovery', 'pricing', 'research', 'insight', 'strategy',
                                    'collaborative_insight']
+            # Session 1035: Recency gate — only transfer knowledge updated within 90 days
+            # Prevents stale/outdated data from propagating through the learning network
+            recency_cutoff = timezone.now() - timedelta(days=90)
             teacher_knowledge = AgentKnowledgeSource.objects.filter(
                 agent=teacher,
                 is_active=True,
-                knowledge_type__in=connection.shareable_knowledge_types or ALL_KNOWLEDGE_TYPES
+                knowledge_type__in=connection.shareable_knowledge_types or ALL_KNOWLEDGE_TYPES,
+                last_updated_at__gte=recency_cutoff,
+            ).exclude(
+                # Also honor expires_at if set
+                expires_at__lt=timezone.now(),
             ).order_by('-confidence_score', '-last_updated_at')[:5]
+
+            if not teacher_knowledge:
+                logger.debug(
+                    f"🧠 [LEARNING] {teacher.name} has no knowledge updated within 90 days — skipping"
+                )
 
             for knowledge in teacher_knowledge:
                 # Session 358: Enhanced Delta Detection using semantic similarity
@@ -6041,8 +6053,20 @@ def run_agent_learning_cycle():
                 usefulness = random.uniform(0.6, 1.0)  # Simulate usefulness
 
                 # Session 532: Include actual knowledge content in transfer summary
+                # Session 1035: Include timestamps and source provenance
                 knowledge_content = knowledge.summary[:500] if knowledge.summary else ""
-                transfer_summary = f"{teacher.name} shared '{clean_title}' with {student.name}.\n\n{knowledge_content}"
+                data_window = f"Data from: {knowledge.first_discovered_at.strftime('%Y-%m-%d')}"
+                if knowledge.last_updated_at:
+                    data_window += f" → {knowledge.last_updated_at.strftime('%Y-%m-%d')}"
+                source_info = ""
+                if knowledge.source_spider_names:
+                    real_spiders = [s for s in knowledge.source_spider_names if not s.startswith('learned_from_')]
+                    if real_spiders:
+                        source_info = f"\nSources: {', '.join(real_spiders[:5])}"
+                transfer_summary = (
+                    f"{teacher.name} shared '{clean_title}' with {student.name}.\n"
+                    f"{data_window}{source_info}\n\n{knowledge_content}"
+                )
 
                 transfer = KnowledgeTransfer.objects.create(
                     connection=connection,
@@ -6058,6 +6082,11 @@ def run_agent_learning_cycle():
                 # Session 532: Include full summary for richer knowledge transfer
                 student_summary = f"Learned from {teacher.name}:\n\n{knowledge.summary}" if knowledge.summary else f"Knowledge transferred from {teacher.name}"
 
+                # Session 1035: Carry original freshness instead of resetting to 1.0
+                # This prevents stale knowledge from appearing "fresh" after transfer
+                knowledge_age_days = (timezone.now() - knowledge.first_discovered_at).days if knowledge.first_discovered_at else 0
+                inherited_freshness = max(0.1, 1.0 - (knowledge_age_days / 180.0))  # Decays over 6 months
+
                 new_knowledge = AgentKnowledgeSource.objects.create(
                     agent=student,
                     knowledge_type=knowledge.knowledge_type,
@@ -6069,8 +6098,9 @@ def run_agent_learning_cycle():
                     data_points_count=knowledge.data_points_count,
                     confidence_score=knowledge.confidence_score * 0.9,  # Slightly lower confidence
                     relevance_score=knowledge.relevance_score,
-                    freshness_score=1.0,  # Fresh for student
+                    freshness_score=inherited_freshness,  # Session 1035: Inherit age-based freshness
                     is_active=True,
+                    expires_at=knowledge.expires_at,  # Session 1035: Carry expiry from source
                 )
 
                 transfers_made += 1
