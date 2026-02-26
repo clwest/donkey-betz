@@ -96,8 +96,8 @@ def send_message(message, conversation_id=None, context=None):
 
     payload = {
         "message": message,
-        "context": {**(context or {}), "source": "claude_code", "platform": "cli"},
-        "source": "claude_code",
+        "context": {**(context or {}), "source": "claude-code", "platform": "cli"},
+        "source": "claude-code",
         "platform": "cli",
     }
     if conversation_id:
