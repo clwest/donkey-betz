@@ -205,6 +205,9 @@ class ToolDispatcher:
         self.register("platform_awareness_tool", self._handle_platform_awareness)
         self.register("studio_tool", self._handle_studio)
 
+        # Session 1088: Persona agents — 139 DB-only specialists
+        self.register("persona_tool", self._handle_persona)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):
@@ -7803,6 +7806,89 @@ RESEARCH DATA:
             }
 
         return {'error': f'Unknown studio action: {action}'}
+
+    def _handle_persona(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """Session 1088: Browse and invoke 139 DB-only persona agents."""
+        from core.models_unified_system import Agent as AgentModel
+        from core.agent_router import AgentRouter
+
+        action = payload.get('action', 'list')
+
+        if action == 'list':
+            category = payload.get('category')
+            qs = AgentModel.objects.filter(is_active=True)
+
+            # Exclude AGENT_MAP agents so we only show DB-only personas
+            map_names = set(AgentRouter.AGENT_MAP.keys())
+            qs = qs.exclude(name__in=map_names)
+
+            if category:
+                qs = qs.filter(agent_type=category)
+
+            personas = list(
+                qs.order_by('agent_type', 'name')
+                .values('name', 'agent_type', 'specialization', 'description',
+                        'effectiveness_score', 'total_executions')[:50]
+            )
+
+            # Truncate descriptions for LLM context
+            for p in personas:
+                if p.get('description') and len(p['description']) > 150:
+                    p['description'] = p['description'][:147] + '...'
+
+            # Category summary
+            from collections import Counter
+            all_types = list(
+                AgentModel.objects.filter(is_active=True)
+                .exclude(name__in=map_names)
+                .values_list('agent_type', flat=True)
+            )
+            categories = dict(Counter(all_types).most_common())
+
+            return {
+                'action': 'list',
+                'filter': category,
+                'count': len(personas),
+                'personas': personas,
+                'categories': categories,
+            }
+
+        if action == 'invoke':
+            persona_name = payload.get('persona_name')
+            task = payload.get('task')
+            if not persona_name:
+                return {'error': 'persona_name is required for invoke action'}
+            if not task:
+                return {'error': 'task is required for invoke action'}
+
+            # Verify persona exists and is active
+            agent_obj = AgentModel.objects.filter(
+                name=persona_name, is_active=True
+            ).first()
+            if not agent_obj:
+                return {'error': f'Persona "{persona_name}" not found or inactive'}
+
+            # Route through AgentRouter (DynamicPersonaAgent fallback)
+            router = AgentRouter()
+            result = router.route(persona_name, task, context=payload.get('context', {}))
+
+            response = {
+                'action': 'invoke',
+                'persona': persona_name,
+                'success': result.success if result else False,
+                'output': result.message if result else 'Persona execution failed',
+            }
+            if result and result.data:
+                response['data'] = result.data
+            return response
+
+        return {'error': f'Unknown persona action: {action}'}
 
 
 # Singleton instance
