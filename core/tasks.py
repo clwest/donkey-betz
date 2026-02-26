@@ -1446,7 +1446,7 @@ def execute_agent_task(
                     'task': task,
                     'context': context,
                     'source': 'conversation_action_dispatch',
-                    'celery_task_id': self.request.id,  # Session 1088: Link for job_status lookup
+                    'celery_task_id': str(self.request.id),  # Session 1088: Link for job_status lookup
                 },
                 experiment=experiment,  # Session 841: Link to experiment for scoped metrics
             )
