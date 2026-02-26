@@ -508,7 +508,13 @@ class RunwayMLProvider:
 
         # Check if it's a local media path (relative or full URL)
         # Session 183: Also check for relative paths like 'generated_images/...'
-        is_local_media = (
+        # Session 1088: Cloudinary URLs contain '/media/' but are NOT local — exclude
+        # known CDN hosts from the local-media check.
+        _is_cdn_url = (
+            image_input.startswith('http') and
+            any(h in image_input for h in ('cloudinary.com/', 'res.cloudinary.com/'))
+        )
+        is_local_media = not _is_cdn_url and (
             image_input.startswith('/media/') or  # Absolute path with /media/
             image_input.startswith('generated_images/') or  # Session 183: Relative path in MEDIA_ROOT
             image_input.startswith('minifigs/') or  # Session 183: Another relative path type
