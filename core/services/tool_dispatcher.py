@@ -364,7 +364,7 @@ class ToolDispatcher:
         if user_id:
             context['user_id'] = user_id
 
-        celery_task = execute_agent_task.delay(tool_name, task_text, context)
+        celery_task = execute_agent_task.delay(agent_name, task_text, context)
 
         return {
             'task_id': str(celery_task.id),
@@ -822,21 +822,17 @@ class ToolDispatcher:
         """
         Handle universal agent tool - invoke agent by name or auto-route.
 
-        Session 1062: Added auto-routing via AgentRouter when agent_name
-        not provided. Previously required agent_name which the schema
-        didn't expose, causing "agent_name is required" errors.
-        Session 1068: Switched from registry.execute_agent() to
-        AgentRouter.route() — same path as _handle_agent_tool. Also resolves
-        snake_case tool names GPT passes (e.g. 'content_writer_agent') to
-        PascalCase agent names (e.g. 'ContentWriterAgent').
+        Session 1088: Converted to Celery async dispatch (same pattern as
+        _handle_agent_tool) to eliminate 60s PA timeouts.
         """
+        from core.tasks import execute_agent_task
         from core.agent_router import AgentRouter
 
         agent_name = payload.get('agent_name', '')
-        task = payload.get('task', '')
+        task_text = payload.get('task', '')
         context = payload.get('context', {})
 
-        if not task:
+        if not task_text:
             raise ValueError("task is required")
 
         # GPT often passes tool names (snake_case) instead of agent class names
@@ -844,27 +840,30 @@ class ToolDispatcher:
             agent_name = self._tool_to_agent_name(agent_name)
 
         # Auto-route to best agent when no name given
-        router = AgentRouter()
         if not agent_name:
+            router = AgentRouter()
             for name in router.AGENT_MAP:
-                if name.lower() in task.lower():
+                if name.lower() in task_text.lower():
                     agent_name = name
                     break
             if not agent_name:
                 agent_name = 'ResearchAgent'
 
-        agent_result = router.route(agent_name, task, context=context)
+        if user_id:
+            context['user_id'] = user_id
 
-        result = {
+        celery_task = execute_agent_task.delay(agent_name, task_text, context)
+
+        return {
+            'task_id': str(celery_task.id),
+            'mode': 'async',
             'agent': agent_name,
-            'task': task[:200],
-            'output': agent_result.message if agent_result else 'Agent execution failed',
-            'success': agent_result.success if agent_result else False,
             'auto_routed': not payload.get('agent_name'),
+            'message': (
+                f'{agent_name} dispatched (task {celery_task.id}). '
+                f'Use job_status to check progress.'
+            ),
         }
-        if agent_result and agent_result.data:
-            result['data'] = agent_result.data
-        return result
 
     def _handle_workspace(
         self,
@@ -6326,20 +6325,20 @@ class ToolDispatcher:
             return {'action': 'wagers', 'items': items, 'total': total}
 
         elif action in ('brief', 'live_odds'):
-            try:
-                from core.services.sports_betting_coordinator import SportsBettingCoordinator
-                coordinator = SportsBettingCoordinator()
-                brief = coordinator.generate_brief()
-                return {
-                    'action': action,
-                    'executive_summary': brief.get('executive_summary', ''),
-                    'top_plays': brief.get('top_plays', []),
-                    'agents_run': brief.get('agents_run', []),
-                    'generation_time_seconds': brief.get('generation_time_seconds', 0),
-                }
-            except Exception as e:
-                logger.warning(f"SportsBettingCoordinator failed: {e}")
-                return {'action': action, 'top_plays': [], 'error': str(e)}
+            # Session 1088: Dispatch to Celery async — generate_brief() is slow
+            # and was causing 30s TOOL_TIMEOUT in the PA.
+            from core.tasks import execute_agent_task
+            celery_task = execute_agent_task.delay(
+                'GamePredictor',
+                f'Generate a full betting brief ({action})',
+                {'user_id': user_id, 'action': action},
+            )
+            return {
+                'task_id': str(celery_task.id),
+                'mode': 'async',
+                'action': action,
+                'message': f'Betting brief dispatched (task {celery_task.id}). Use job_status to check progress.',
+            }
 
         else:
             logger.warning(f"Unknown sports_betting action '{action}', defaulting to overview")
