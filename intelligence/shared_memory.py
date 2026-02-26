@@ -14,6 +14,7 @@ Key Features:
 
 import json
 import logging
+import os
 from typing import Dict, List, Any, Optional
 from datetime import timedelta
 from django.utils import timezone
@@ -24,12 +25,12 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 # Redis connection for persistent shared memory
-redis_client = redis.Redis(
-    host=getattr(settings, 'REDIS_HOST', 'localhost'),
-    port=getattr(settings, 'REDIS_PORT', 6379),
-    db=2,  # Use db=2 for shared memory
-    decode_responses=True
-)
+# Use REDIS_URL (set by Railway) with fallback to localhost for local dev
+_redis_url = getattr(settings, 'REDIS_URL', os.environ.get('REDIS_URL', 'redis://localhost:6379/2'))
+try:
+    redis_client = redis.from_url(_redis_url, db=2, decode_responses=True)
+except Exception:
+    redis_client = redis.Redis(host='localhost', port=6379, db=2, decode_responses=True)
 
 
 class SharedMemorySystem:
