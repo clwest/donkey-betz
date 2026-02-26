@@ -1467,11 +1467,15 @@ def execute_agent_task(
         agent_name = _apply_task_routing_override(agent_name, task)
 
         # Session 1031: Dedup — skip if this agent already ran a very similar task recently
-        recent_dup = AgentExecution.objects.filter(
+        # Exclude the execution_record we just created (it would always match itself)
+        dedup_qs = AgentExecution.objects.filter(
             agent__name=agent_name,
             created_at__gte=timezone.now() - timedelta(hours=2),
             task__startswith=task[:80],
-        ).exists()
+        )
+        if execution_record:
+            dedup_qs = dedup_qs.exclude(id=execution_record.id)
+        recent_dup = dedup_qs.exists()
         if recent_dup:
             logger.info(
                 f"[execute_agent_task] Dedup skip: {agent_name} already ran "
