@@ -1498,8 +1498,16 @@ def execute_agent_task(
                 'conversation_id': conversation_id,
             }
 
-        # Route to agent
-        router = AgentRouter()
+        # Route to agent — resolve user from context so media is owned correctly
+        _route_user = None
+        _route_user_id = context.get('user_id')
+        if _route_user_id:
+            try:
+                from django.contrib.auth import get_user_model
+                _route_user = get_user_model().objects.filter(id=_route_user_id).first()
+            except Exception:
+                pass
+        router = AgentRouter(user=_route_user)
         result = router.route(
             agent_name=agent_name,
             task=task,
