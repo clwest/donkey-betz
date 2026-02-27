@@ -22,6 +22,11 @@ import {
   getQueuesOverview,
   getCostOverview,
   getRunTrace,
+  getConfigOverview,
+  toggleConfigProvider,
+  upsertConfigFlag,
+  deleteConfigFlag,
+  getConfigChanges,
   getAutopilotPolicies,
   toggleAutopilotPolicy,
   evaluateAutopilot,
@@ -38,6 +43,7 @@ import {
   type QueueWindow,
   type CostParams,
   type AutopilotHistoryParams,
+  type ConfigChangesParams,
 } from '@/lib/cockpitApi'
 
 export function useRuns(params?: RunsParams) {
@@ -250,6 +256,60 @@ export function useRunTrace(runId: string | undefined) {
     queryKey: ['cockpit-run-trace', runId],
     queryFn: () => getRunTrace(runId!),
     enabled: !!runId,
+  })
+}
+
+// --- Config Control Plane ---
+
+export function useConfigOverview() {
+  return useQuery({
+    queryKey: ['cockpit-config'],
+    queryFn: () => getConfigOverview(),
+    refetchInterval: 60_000,
+  })
+}
+
+export function useToggleConfigProvider() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (providerId: string) => toggleConfigProvider(providerId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cockpit-config'] })
+      qc.invalidateQueries({ queryKey: ['cockpit-config-changes'] })
+      qc.invalidateQueries({ queryKey: ['cockpit-audit'] })
+    },
+  })
+}
+
+export function useUpsertConfigFlag() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: { key: string; value: unknown; description?: string; category?: string }) =>
+      upsertConfigFlag(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cockpit-config'] })
+      qc.invalidateQueries({ queryKey: ['cockpit-config-changes'] })
+      qc.invalidateQueries({ queryKey: ['cockpit-audit'] })
+    },
+  })
+}
+
+export function useDeleteConfigFlag() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (flagId: string) => deleteConfigFlag(flagId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cockpit-config'] })
+      qc.invalidateQueries({ queryKey: ['cockpit-config-changes'] })
+    },
+  })
+}
+
+export function useConfigChanges(params?: ConfigChangesParams) {
+  return useQuery({
+    queryKey: ['cockpit-config-changes', params],
+    queryFn: () => getConfigChanges(params),
+    refetchInterval: 30_000,
   })
 }
 

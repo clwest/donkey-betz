@@ -1458,6 +1458,11 @@ from core.views_diagnostics import (
     cockpit_autopilot_evaluate,  # Focus Cockpit: evaluate autopilot policies
     cockpit_autopilot_history,  # Focus Cockpit: autopilot event history
     cockpit_run_trace,  # Focus Cockpit: run trace debugger
+    cockpit_config_overview,  # Focus Cockpit: config overview
+    cockpit_config_toggle_provider,  # Focus Cockpit: toggle provider
+    cockpit_config_flags,  # Focus Cockpit: feature flags CRUD
+    cockpit_config_delete_flag,  # Focus Cockpit: delete flag
+    cockpit_config_changes,  # Focus Cockpit: config change log
     # Session 871: Removed unused import: diagnostic_dashboard
 )
 
@@ -1663,6 +1668,12 @@ urlpatterns = [
     path('api/cockpit/autopilot/history/', cockpit_autopilot_history, name='cockpit-autopilot-history'),
     # P15: Run Trace
     path('api/cockpit/runs/<str:run_id>/trace/', cockpit_run_trace, name='cockpit-run-trace'),
+    # P16: Config Control Plane
+    path('api/cockpit/config/', cockpit_config_overview, name='cockpit-config-overview'),
+    path('api/cockpit/config/providers/<str:provider_id>/toggle/', cockpit_config_toggle_provider, name='cockpit-config-toggle-provider'),
+    path('api/cockpit/config/flags/', cockpit_config_flags, name='cockpit-config-flags'),
+    path('api/cockpit/config/flags/<str:flag_id>/delete/', cockpit_config_delete_flag, name='cockpit-config-delete-flag'),
+    path('api/cockpit/config/changes/', cockpit_config_changes, name='cockpit-config-changes'),
     path('diagnostics/websockets/', WebSocketDiagnosticsView.as_view(), name='websocket-diagnostics'),
     path("api/llm/chat/", llm_chat),
     # AI Building Products page (moved up to ensure it's matched first)

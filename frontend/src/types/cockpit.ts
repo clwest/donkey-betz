@@ -482,6 +482,86 @@ export interface RunTraceResponse {
   timeline: TraceTimelineEvent[]
 }
 
+// --- Config Control Plane ---
+
+export interface ConfigProvider {
+  id: UUID
+  name: string
+  display_name: string
+  is_active: boolean
+  is_available: boolean
+  supports_tools: boolean
+  supports_vision: boolean
+  supports_streaming: boolean
+  model_count: number
+  last_health_check: ISODateString | null
+}
+
+export interface ConfigModel {
+  id: UUID
+  model_id: string
+  provider: string
+  is_active: boolean
+}
+
+export interface ConfigFlag {
+  id: UUID
+  key: string
+  value: unknown
+  description: string
+  category: string
+  is_sensitive: boolean
+  updated_at: ISODateString | null
+}
+
+export interface ConfigOverviewResponse {
+  providers: ConfigProvider[]
+  models: ConfigModel[]
+  flags: ConfigFlag[]
+  env: {
+    debug: boolean
+    database: string
+    redis: boolean
+    celery_broker: boolean
+    railway: boolean
+  }
+}
+
+export interface ConfigToggleProviderResponse {
+  ok: boolean
+  provider: string
+  is_active: boolean
+}
+
+export interface ConfigFlagsResponse {
+  flags: ConfigFlag[]
+}
+
+export interface ConfigUpsertFlagResponse {
+  ok: boolean
+  id: UUID
+  key: string
+  value: unknown
+  created: boolean
+}
+
+export interface ConfigChangeEntry {
+  id: UUID
+  actor: string
+  action: string
+  target_type: string
+  target_id: string
+  request_body: Record<string, unknown>
+  response_summary: Record<string, unknown>
+  created_at: ISODateString | null
+}
+
+export interface ConfigChangesResponse {
+  hours: number
+  total: number
+  items: ConfigChangeEntry[]
+}
+
 // --- Autopilot ---
 
 export interface AutopilotPolicy {
