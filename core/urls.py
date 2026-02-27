@@ -1463,6 +1463,10 @@ from core.views_diagnostics import (
     cockpit_config_flags,  # Focus Cockpit: feature flags CRUD
     cockpit_config_delete_flag,  # Focus Cockpit: delete flag
     cockpit_config_changes,  # Focus Cockpit: config change log
+    cockpit_incidents_list,  # Focus Cockpit: incidents list/create
+    cockpit_incident_detail,  # Focus Cockpit: incident detail
+    cockpit_incident_update,  # Focus Cockpit: update incident
+    cockpit_incident_add_event,  # Focus Cockpit: add incident event
     # Session 871: Removed unused import: diagnostic_dashboard
 )
 
@@ -1674,6 +1678,11 @@ urlpatterns = [
     path('api/cockpit/config/flags/', cockpit_config_flags, name='cockpit-config-flags'),
     path('api/cockpit/config/flags/<str:flag_id>/delete/', cockpit_config_delete_flag, name='cockpit-config-delete-flag'),
     path('api/cockpit/config/changes/', cockpit_config_changes, name='cockpit-config-changes'),
+    # P17: Incident Commander
+    path('api/cockpit/incidents/', cockpit_incidents_list, name='cockpit-incidents-list'),
+    path('api/cockpit/incidents/<str:incident_id>/', cockpit_incident_detail, name='cockpit-incident-detail'),
+    path('api/cockpit/incidents/<str:incident_id>/update/', cockpit_incident_update, name='cockpit-incident-update'),
+    path('api/cockpit/incidents/<str:incident_id>/events/', cockpit_incident_add_event, name='cockpit-incident-add-event'),
     path('diagnostics/websockets/', WebSocketDiagnosticsView.as_view(), name='websocket-diagnostics'),
     path("api/llm/chat/", llm_chat),
     # AI Building Products page (moved up to ensure it's matched first)
