@@ -131,7 +131,13 @@ def poll_result(task_id):
         if task_status == "completed":
             return data, None
         elif task_status == "failed":
-            return None, data.get("error", "Task failed")
+            err = data.get("error", "Task failed")
+            # Session 1075: "Task not found" means celery hasn't picked it up yet
+            # (e.g. during deploy). Retry instead of failing immediately.
+            if "not found" in err.lower() and time.time() - start < POLL_TIMEOUT:
+                time.sleep(POLL_INTERVAL)
+                continue
+            return None, err
         elif task_status == "processing":
             time.sleep(POLL_INTERVAL)
         else:

@@ -2998,7 +2998,7 @@ class ToolDispatcher:
 
         action = payload.get('action', 'list')
         # Session 1075: GPT-5.2 often calls approve/reject instead of publish/archive
-        ACTION_ALIASES = {'approve': 'publish', 'reject': 'archive'}
+        ACTION_ALIASES = {'approve': 'publish', 'reject': 'archive', 'get': 'details'}
         action = ACTION_ALIASES.get(action, action)
         limit = payload.get('limit', 10)
         content_type = payload.get('type')  # blog, document, report, analysis, etc.
