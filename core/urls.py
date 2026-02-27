@@ -1429,6 +1429,19 @@ from core.views_diagnostics import (
     websocket_test_page,
     config_snapshot,        # Session 1069: Cross-service config comparison
     debug_raise_500,        # Session 1069: Middleware verification endpoint
+    cockpit_error_summary,  # Focus Cockpit: error signatures
+    cockpit_runs_list,      # Focus Cockpit: agent execution runs
+    cockpit_inbox,          # Focus Cockpit: read-only inbox aggregation
+    cockpit_create_blog,    # Focus Cockpit: create blog post
+    cockpit_create_talking_video,  # Focus Cockpit: create talking video
+    cockpit_job_status,     # Focus Cockpit: poll job status
+    cockpit_ops_overview,   # Focus Cockpit: ops health overview
+    cockpit_library_deliverables,  # Focus Cockpit: library deliverables
+    cockpit_library_media,  # Focus Cockpit: library media
+    cockpit_approvals_list,  # Focus Cockpit: actionable approvals
+    cockpit_approve_decision,  # Focus Cockpit: approve/reject decision
+    cockpit_approve_gate,  # Focus Cockpit: approve/block gate
+    cockpit_alerts,  # Focus Cockpit: in-app alerts
     # Session 871: Removed unused import: diagnostic_dashboard
 )
 
@@ -1600,6 +1613,20 @@ urlpatterns = [
     # Session 1069: Cross-service config snapshot + middleware test
     path('api/internal/config-snapshot/', config_snapshot, name='config-snapshot'),
     path('api/internal/debug-raise-500/', debug_raise_500, name='debug-raise-500'),
+    # Focus Cockpit API
+    path('api/cockpit/errors/', cockpit_error_summary, name='cockpit-error-summary'),
+    path('api/cockpit/runs/', cockpit_runs_list, name='cockpit-runs-list'),
+    path('api/cockpit/inbox/', cockpit_inbox, name='cockpit-inbox'),
+    path('api/cockpit/create/blog/', cockpit_create_blog, name='cockpit-create-blog'),
+    path('api/cockpit/create/talking-video/', cockpit_create_talking_video, name='cockpit-create-talking-video'),
+    path('api/cockpit/create/status/<str:job_id>/', cockpit_job_status, name='cockpit-job-status'),
+    path('api/cockpit/ops/overview/', cockpit_ops_overview, name='cockpit-ops-overview'),
+    path('api/cockpit/library/deliverables/', cockpit_library_deliverables, name='cockpit-library-deliverables'),
+    path('api/cockpit/library/media/', cockpit_library_media, name='cockpit-library-media'),
+    path('api/cockpit/approvals/', cockpit_approvals_list, name='cockpit-approvals-list'),
+    path('api/cockpit/approvals/decision/<str:item_id>/decide/', cockpit_approve_decision, name='cockpit-approve-decision'),
+    path('api/cockpit/approvals/gate/<str:gate_id>/decide/', cockpit_approve_gate, name='cockpit-approve-gate'),
+    path('api/cockpit/alerts/', cockpit_alerts, name='cockpit-alerts'),
     path('diagnostics/websockets/', WebSocketDiagnosticsView.as_view(), name='websocket-diagnostics'),
     path("api/llm/chat/", llm_chat),
     # AI Building Products page (moved up to ensure it's matched first)
