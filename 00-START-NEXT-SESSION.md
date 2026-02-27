@@ -49,6 +49,12 @@
 - **923 stale PilotExecutions** completed as partial (running >1 week → completed:partial)
 - Remaining: 0 active deliberations, 89 running pilots (<1 week old)
 
+### Zombie Work Reaper Added (Celery Beat)
+- New `reap_zombie_work` task runs every 30 minutes
+- Closes deliberation sessions stuck in 'active' with 0 progress (>1h old)
+- Completes pilot executions stuck in 'running' (>7 days) as partial
+- Prevents manual cleanup needed this session (132 zombies + 923 stale pilots)
+
 ### content_review_tool Action Mismatch Fixed
 - GPT-5.2 consistently called `approve/reject` but handler only accepted `publish/archive`
 - Caused 9 tool failures in 72h
