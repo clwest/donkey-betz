@@ -86,6 +86,17 @@
 - **initiative_tool details**: catches invalid UUID strings like "pipeline_health", suggests correct tool, falls back to name search
 - **debug-raise-500 endpoint**: gated behind `DEBUG=True` to stop 7 noise errors/day on Railway prod
 
+### Spider Scan TimeLimitExceeded Fixed
+- `scan_spider_opportunities` consistently hit 960s hard limit (2 failures/24h)
+- Root cause: `SoftTimeLimitExceeded` can't interrupt `asyncio.run()` — signal not processed inside event loop
+- Added `asyncio.wait_for(timeout=780)` inside the async function (13 min, before 15 min soft limit)
+- Scan now self-terminates cleanly with empty result instead of being killed
+
+### Smoke Suite Assertions Fixed
+- `deliverables_stats` and `opportunities_stats` endpoints return `{success, stats}` not `{total, by_status}`
+- Fixed `has_key` assertions to check for `stats` key instead of `total`
+- 15/20 checks now visible on Railway (partial deploy), all passing after fix
+
 ### PA Smoke Tests 14/14 Green (pre-expansion)
 - Verified after Railway celery-pa redeployed with initiative query fix
 - `http_smoke_test(suite='pa_tools_smoke')` — all 14 checks passing on Railway prod
