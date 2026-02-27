@@ -1434,3 +1434,137 @@ def cockpit_library_media(request):
     page = items[offset:offset + limit]
 
     return JsonResponse({'total': total, 'offset': offset, 'limit': limit, 'items': page})
+
+
+# ─── Focus Cockpit: Approvals ──────────────────────────────────────────────────
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def cockpit_approvals_list(request):
+    """List actionable items: pending human decisions + gates awaiting approval."""
+    from django.utils.timezone import now
+    from datetime import timedelta
+
+    hours = int(request.GET.get('hours', 168))  # default 7 days
+    limit = min(int(request.GET.get('limit', 50)), 100)
+    cutoff = now() - timedelta(hours=hours)
+    items = []
+
+    # 1. Human decisions pending action
+    try:
+        from core.models_human_interface import HumanAttentionItem
+        pending = HumanAttentionItem.objects.filter(
+            status__in=['pending', 'viewed'],
+            created_at__gte=cutoff,
+        ).order_by('-priority_score', '-created_at')[:limit]
+        for item in pending:
+            items.append({
+                'id': str(item.id),
+                'kind': 'decision',
+                'title': item.title,
+                'summary': item.summary[:300] if item.summary else '',
+                'urgency': item.urgency,
+                'status': item.status,
+                'source_agent': item.source_agent or '',
+                'ml_recommendation': item.ml_recommendation or '',
+                'created_at': item.created_at.isoformat() if item.created_at else None,
+            })
+    except Exception as e:
+        logger.debug("Approvals decisions error: %s", e)
+
+    # 2. Gates awaiting approval (ready or in_progress)
+    try:
+        from core.models_pilot_readiness import PilotReadinessGate
+        gates = PilotReadinessGate.objects.filter(
+            status__in=['ready', 'in_progress'],
+            created_at__gte=cutoff,
+        ).select_related('decision').order_by('-created_at')[:limit]
+        for gate in gates:
+            items.append({
+                'id': str(gate.id),
+                'kind': 'gate',
+                'title': f"Gate: {gate.decision.topic if gate.decision else 'Unknown'}",
+                'summary': gate.summary or '',
+                'urgency': gate.risk_level or 'medium',
+                'status': gate.status,
+                'source_agent': '',
+                'ml_recommendation': '',
+                'created_at': gate.created_at.isoformat() if gate.created_at else None,
+            })
+    except Exception as e:
+        logger.debug("Approvals gates error: %s", e)
+
+    # Sort by urgency tier then date
+    urgency_order = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
+    items.sort(key=lambda x: (urgency_order.get(x['urgency'], 9), x['created_at'] or ''), reverse=False)
+
+    return JsonResponse({'hours': hours, 'total': len(items), 'items': items[:limit]})
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def cockpit_approve_decision(request, item_id):
+    """Approve or reject a HumanAttentionItem."""
+    from core.models_human_interface import HumanAttentionItem
+
+    try:
+        item = HumanAttentionItem.objects.get(id=item_id)
+    except HumanAttentionItem.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Item not found'}, status=404)
+
+    try:
+        body = json.loads(request.body or b'{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
+
+    decision = body.get('decision', '')
+    if decision not in ('approve', 'reject'):
+        return JsonResponse({'ok': False, 'error': 'decision must be approve or reject'}, status=400)
+
+    feedback = body.get('feedback', '')
+    item.record_decision(decision=decision, feedback=feedback, confidence=1.0)
+
+    return JsonResponse({
+        'ok': True,
+        'id': str(item.id),
+        'decision': decision,
+        'status': item.status,
+    })
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def cockpit_approve_gate(request, gate_id):
+    """Approve or block a PilotReadinessGate."""
+    from core.models_pilot_readiness import PilotReadinessGate
+
+    try:
+        gate = PilotReadinessGate.objects.get(id=gate_id)
+    except PilotReadinessGate.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Gate not found'}, status=404)
+
+    try:
+        body = json.loads(request.body or b'{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
+
+    action = body.get('action', '')
+    notes = body.get('notes', '')
+
+    if action == 'approve':
+        ok = gate.approve(approved_by='cockpit-operator', notes=notes)
+        if not ok:
+            return JsonResponse({'ok': False, 'error': f'Gate cannot be approved in status={gate.status}'}, status=400)
+    elif action == 'block':
+        if not notes:
+            return JsonResponse({'ok': False, 'error': 'notes required when blocking'}, status=400)
+        gate.block(reason=notes)
+    else:
+        return JsonResponse({'ok': False, 'error': 'action must be approve or block'}, status=400)
+
+    return JsonResponse({
+        'ok': True,
+        'id': str(gate.id),
+        'action': action,
+        'status': gate.status,
+    })

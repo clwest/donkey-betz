@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getRuns,
   getRunDetail,
@@ -8,11 +8,14 @@ import {
   getMedia,
   getDeliverables,
   getOpsOverview,
+  getApprovals,
+  decideApproval,
   type RunsParams,
   type InboxParams,
   type MediaParams,
   type DeliverableParams,
   type OpsParams,
+  type ApprovalsParams,
 } from '@/lib/cockpitApi'
 
 export function useRuns(params?: RunsParams) {
@@ -81,5 +84,25 @@ export function useOpsOverview(params?: OpsParams) {
     queryKey: ['cockpit-ops', params],
     queryFn: () => getOpsOverview(params),
     refetchInterval: 30_000,
+  })
+}
+
+export function useApprovals(params?: ApprovalsParams) {
+  return useQuery({
+    queryKey: ['cockpit-approvals', params],
+    queryFn: () => getApprovals(params),
+    refetchInterval: 20_000,
+  })
+}
+
+export function useDecideApproval() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { kind: 'decision' | 'gate'; id: string; payload: Record<string, string> }) =>
+      decideApproval(vars.kind, vars.id, vars.payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cockpit-approvals'] })
+      qc.invalidateQueries({ queryKey: ['cockpit-inbox'] })
+    },
   })
 }
