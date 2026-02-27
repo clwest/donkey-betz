@@ -5,6 +5,7 @@ Covers:
 - _resolve_variables: substitution, early-fail on unresolved vars
 - _run_step: per-step headers merge, resolve error handling
 - run_smoke_test: depends_on / skip semantics, test_run_id injection
+- Suite integrity: check counts, no duplicates, required fields
 """
 
 import json
@@ -13,6 +14,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from core.tools.http_smoke_test import (
+    BUILTIN_SUITES,
     _check_assertion,
     _extract_value,
     _resolve_variables,
@@ -325,3 +327,40 @@ class TestRunSmokeTest:
             })
         assert "skipped" in result
         assert result["skipped"] == 0
+
+
+# ── Suite integrity ───────────────────────────────────────────────────────
+
+
+class TestSuiteIntegrity:
+    """Session 1075: Verify built-in suites have correct structure."""
+
+    EXPECTED_COUNTS = {
+        'cockpit_health': 18,
+        'cockpit_incidents_crud': 8,
+        'pa_tools_smoke': 20,
+    }
+
+    def test_all_expected_suites_exist(self):
+        for name in self.EXPECTED_COUNTS:
+            assert name in BUILTIN_SUITES, f"Missing suite: {name}"
+
+    @pytest.mark.parametrize("suite_name,expected", EXPECTED_COUNTS.items())
+    def test_suite_check_counts(self, suite_name, expected):
+        actual = len(BUILTIN_SUITES[suite_name])
+        assert actual == expected, (
+            f"{suite_name}: expected {expected} checks, got {actual}"
+        )
+
+    @pytest.mark.parametrize("suite_name", EXPECTED_COUNTS.keys())
+    def test_no_duplicate_step_names(self, suite_name):
+        names = [s['name'] for s in BUILTIN_SUITES[suite_name]]
+        dupes = [n for n in names if names.count(n) > 1]
+        assert not dupes, f"Duplicate step names in {suite_name}: {set(dupes)}"
+
+    @pytest.mark.parametrize("suite_name", EXPECTED_COUNTS.keys())
+    def test_steps_have_required_fields(self, suite_name):
+        for step in BUILTIN_SUITES[suite_name]:
+            assert 'name' in step, f"Step missing 'name' in {suite_name}"
+            assert 'method' in step, f"Step '{step.get('name')}' missing 'method'"
+            assert 'path' in step, f"Step '{step.get('name')}' missing 'path'"
