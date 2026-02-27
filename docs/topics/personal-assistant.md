@@ -121,6 +121,7 @@ With `previous_response_id`, follow-up turns hit the 90% cached input discount (
 **pipeline_orchestrator_tool:** status (initiatives by stage + by_status breakdown)
 **stock_intelligence_tool:** overview, briefs, alerts, predictions, sec_filings
 **spider_data_tool:** recent, by_type, by_spider, summary, trigger
+**http_smoke_test:** Run endpoint smoke tests against Railway prod or localhost. Two built-in suites: `cockpit_health` (18 GET checks) and `cockpit_incidents_crud` (6-step mutating CRUD lifecycle with variable capture). Supports custom step definitions with assertions (`status`, `has_key`, `json_path`) and `{{variable}}` interpolation. Auth via `PA_API_TOKEN` env var on celery-pa. Safety: SSRF allowlist (*.railway.app, localhost), 50-step cap, 1MB response cap, 20s timeout. Code: `core/tools/http_smoke_test.py`.
 
 ## Agent Introspection Taxonomy (Session 1035)
 
