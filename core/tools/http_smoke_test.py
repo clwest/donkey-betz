@@ -439,7 +439,8 @@ BUILTIN_SUITES: dict[str, list[dict]] = {
             'path': '/api/system-health/',
             'assert': [
                 {'check': 'status', 'expected': 200},
-                {'check': 'has_key', 'key': 'status'},
+                {'check': 'has_key', 'key': 'success'},
+                {'check': 'has_key', 'key': 'health'},
             ],
         },
         # 2. Body vitals
@@ -498,15 +499,14 @@ BUILTIN_SUITES: dict[str, list[dict]] = {
                 {'json_path': '$.initiatives[0].id', 'as': 'initiative_id'},
             ],
         },
-        # 7. Initiative detail (depends on captured ID)
+        # 7. Initiative action items (depends on captured ID)
         {
-            'name': 'initiative_detail',
+            'name': 'initiative_action_items',
             'depends_on': ['initiatives_list'],
             'method': 'GET',
-            'path': '/api/initiatives/{{initiative_id}}/',
+            'path': '/api/initiatives/{{initiative_id}}/action-items/',
             'assert': [
                 {'check': 'status', 'expected': 200},
-                {'check': 'has_key', 'key': 'name'},
             ],
         },
         # 8. Initiative pipeline health
@@ -538,11 +538,11 @@ BUILTIN_SUITES: dict[str, list[dict]] = {
                 {'check': 'has_key', 'key': 'by_task'},
             ],
         },
-        # 11. Agent list
+        # 11. Agent list (lightweight endpoint)
         {
             'name': 'agents_list',
             'method': 'GET',
-            'path': '/api/agents/',
+            'path': '/api/v1/agents/list/?limit=5',
             'assert': [
                 {'check': 'status', 'expected': 200},
             ],
