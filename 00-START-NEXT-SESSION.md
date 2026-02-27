@@ -20,6 +20,15 @@
 - **0 unclassified remaining**
 - Added `classify_apply` and `classify_apply_batch` actions to boardroom_tool
 
+### Content Pipeline Fully Triaged
+- **7,503 ready deliverables** processed on Railway prod
+- 5,796 approved (quality ≥ 0.7), 1,707 archived (quality < 0.7)
+- **0 ready_for_review remaining**
+
+### Gate-Stuck Regeneration Fixed
+- `GateProgressionPipeline` was regenerating gate_stuck items after they were ignored (status='acted')
+- Fixed: check now uses `status__in=['pending', 'acted']` to prevent re-creation
+
 ### PA Smoke Tests 14/14 Green
 - Verified after Railway celery-pa redeployed with initiative query fix
 - `http_smoke_test(suite='pa_tools_smoke')` — all 14 checks passing on Railway prod
@@ -61,15 +70,12 @@
 | Celery throughput | **~1,177 tasks/hour, 99.5% success** |
 | Agents routable | **All 218** |
 | Initiatives | **0 ACTIVE**, 59 COMPLETED, 9 TRIAGE, 23 ARCHIVED |
-| Content pipeline | **578 published**, 0 pending_review, 35 ready_for_review (non-blog) |
+| Content pipeline | **6,374 published**, 0 pending_review, 0 ready_for_review |
 | Action items | **0 pending** |
 
 ---
 
 ## Known Issues / Open Items
-
-### Content Ready for Review (35 items)
-Non-blog content: 14 audio, 8 video, 5 image, 5 script, 1 research, 1 doc, 1 analysis. Most are low-quality (0.3-0.35) except 1 marketing analysis (0.85) and 6 items at 0.7.
 
 ### Data Layer Gaps
 1. **Revenue tracker**: $0 — deferred until user base grows beyond single-user dev
