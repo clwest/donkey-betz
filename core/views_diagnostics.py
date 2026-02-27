@@ -3019,6 +3019,29 @@ def cockpit_config_overview(request):
             'last_health_check': p.last_health_check.isoformat() if p.last_health_check else None,
         })
 
+    # Session 1075: Fall back to LLMProviderRegistry if DB tables are empty
+    if not providers:
+        try:
+            from core.services.llm_provider_registry import LLMProviderRegistry
+            registry = LLMProviderRegistry()
+            for name, prov in registry.providers.items():
+                available = prov.is_available() if hasattr(prov, 'is_available') else False
+                models_for = getattr(prov, 'MODELS', getattr(prov, 'models', []))
+                providers.append({
+                    'id': name,
+                    'name': name,
+                    'display_name': name.title(),
+                    'is_active': True,
+                    'is_available': available,
+                    'supports_tools': getattr(prov, 'supports_tools', True),
+                    'supports_vision': getattr(prov, 'supports_vision', False),
+                    'supports_streaming': getattr(prov, 'supports_streaming', True),
+                    'model_count': len(models_for) if isinstance(models_for, (list, dict)) else 0,
+                    'last_health_check': None,
+                })
+        except Exception as e:
+            logger.warning(f"[Cockpit] LLMProviderRegistry fallback failed: {e}")
+
     models_list = []
     for m in LLMModel.objects.select_related('provider').order_by('provider__name', 'model_id'):
         models_list.append({
@@ -3027,6 +3050,21 @@ def cockpit_config_overview(request):
             'provider': m.provider.name,
             'is_active': m.is_active if hasattr(m, 'is_active') else True,
         })
+
+    # Session 1075: Fall back to registry models if DB is empty
+    if not models_list:
+        try:
+            from core.services.llm_provider_registry import LLMProviderRegistry
+            registry = LLMProviderRegistry()
+            for m in registry.get_available_models():
+                models_list.append({
+                    'id': f"{m['provider']}:{m['model']}",
+                    'model_id': m['model'],
+                    'provider': m['provider'],
+                    'is_active': True,
+                })
+        except Exception:
+            pass
 
     flags = []
     for cfg in SystemConfiguration.objects.filter(is_active=True).order_by('category', 'key'):
