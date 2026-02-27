@@ -154,7 +154,7 @@ class SpiderIntelligenceService:
 
         return None
 
-    def get_trending_topics(self, category: str = None, hours: int = 168, limit: int = 10, include_jobs: bool = False) -> list:
+    def get_trending_topics(self, category: str = None, hours: int = 168, limit: int = 10, include_jobs: bool = False, max_entries: int = None) -> list:
         """
         Session 237: Improved trending topic extraction.
         Session 385: Enhanced to include sample articles for each topic.
@@ -191,6 +191,9 @@ class SpiderIntelligenceService:
             if spider_names:
                 queryset = queryset.filter(spider_name__in=spider_names)
 
+        # Session 1068: Defer heavy fields not needed for trending analysis
+        queryset = queryset.defer('embedding', 'item_embeddings', 'embedding_text', 'processed_data', 'insights')
+
         # Separate tracking for tags vs extracted keywords
         tag_counts = Counter()  # Tags are highest quality
         tag_sources = defaultdict(set)
@@ -203,7 +206,8 @@ class SpiderIntelligenceService:
         keyword_articles = defaultdict(list)  # keyword -> list of articles
 
         # Session 814: Limit entries scanned to prevent slow queries
-        for entry in queryset[:self.MAX_ENTRIES_TO_SCAN]:
+        scan_limit = max_entries if max_entries is not None else self.MAX_ENTRIES_TO_SCAN
+        for entry in queryset[:scan_limit]:
             if not entry.raw_data:
                 continue
 
@@ -345,7 +349,7 @@ class SpiderIntelligenceService:
 
         return keywords
 
-    def get_market_insights(self) -> dict:
+    def get_market_insights(self, max_entries: int = None) -> dict:
         """
         Get financial/crypto market insights from spider data.
 
@@ -358,13 +362,13 @@ class SpiderIntelligenceService:
         crypto_data = self.SpiderData.objects.filter(
             spider_name__in=['coingecko', 'etherscan', 'financial'],
             created_at__gte=since
-        ).order_by('-created_at')
+        ).defer('embedding', 'item_embeddings', 'embedding_text', 'processed_data', 'insights').order_by('-created_at')
 
         # Get stock data
         stock_data = self.SpiderData.objects.filter(
             spider_name__in=['yahoo_finance', 'seekingalpha'],
             created_at__gte=since
-        ).order_by('-created_at')
+        ).defer('embedding', 'item_embeddings', 'embedding_text', 'processed_data', 'insights').order_by('-created_at')
 
         insights = {
             'crypto': [],
@@ -375,8 +379,9 @@ class SpiderIntelligenceService:
 
         # Process crypto data
         # Session 814: Limit entries to prevent slow queries
+        scan_limit = max_entries if max_entries is not None else self.MAX_ENTRIES_TO_SCAN
         seen_crypto = set()
-        for entry in crypto_data[:self.MAX_ENTRIES_TO_SCAN]:
+        for entry in crypto_data[:scan_limit]:
             raw_data = self._parse_raw_data(entry.raw_data)
             if raw_data is None:
                 continue
@@ -397,9 +402,8 @@ class SpiderIntelligenceService:
                 insights['last_updated'] = entry.created_at.isoformat()
 
         # Process stock data
-        # Session 814: Limit entries to prevent slow queries
         seen_stocks = set()
-        for entry in stock_data[:self.MAX_ENTRIES_TO_SCAN]:
+        for entry in stock_data[:scan_limit]:
             raw_data = self._parse_raw_data(entry.raw_data)
             if raw_data is None:
                 continue
@@ -426,7 +430,7 @@ class SpiderIntelligenceService:
 
         return insights
 
-    def get_tech_trends(self, hours: int = 24, limit: int = 15, topic_filter: str = None, include_producthunt: bool = True) -> dict:
+    def get_tech_trends(self, hours: int = 24, limit: int = 15, topic_filter: str = None, include_producthunt: bool = True, max_entries: int = None) -> dict:
         """
         Get technology trends from HackerNews, DevTo, TechCrunch, etc.
 
@@ -453,7 +457,7 @@ class SpiderIntelligenceService:
         tech_data = self.SpiderData.objects.filter(
             spider_name__in=spider_sources,
             created_at__gte=since
-        ).order_by('-created_at')
+        ).defer('embedding', 'item_embeddings', 'embedding_text', 'processed_data', 'insights').order_by('-created_at')
 
         # Session 272: Topic-specific keywords for filtering (all lowercase for matching)
         topic_keywords = {
@@ -504,7 +508,8 @@ class SpiderIntelligenceService:
         seen_titles = set()  # Session 222: Deduplicate discussions
 
         # Session 814: Limit entries scanned to prevent slow queries
-        for entry in tech_data[:self.MAX_ENTRIES_TO_SCAN]:
+        scan_limit = max_entries if max_entries is not None else self.MAX_ENTRIES_TO_SCAN
+        for entry in tech_data[:scan_limit]:
             raw_data = self._parse_raw_data(entry.raw_data)
             if raw_data is None:
                 continue
@@ -617,7 +622,7 @@ class SpiderIntelligenceService:
 
         return trends
 
-    def get_job_market_summary(self, hours: int = 48, limit: int = 20) -> dict:
+    def get_job_market_summary(self, hours: int = 48, limit: int = 20, max_entries: int = None) -> dict:
         """
         Get remote job market summary.
 
@@ -629,7 +634,7 @@ class SpiderIntelligenceService:
         job_data = self.SpiderData.objects.filter(
             spider_name__in=self.CATEGORY_MAPPINGS['jobs'],
             created_at__gte=since
-        ).order_by('-created_at')
+        ).defer('embedding', 'item_embeddings', 'embedding_text', 'processed_data', 'insights').order_by('-created_at')
 
         summary = {
             'jobs': [],
@@ -644,7 +649,8 @@ class SpiderIntelligenceService:
         seen_jobs = set()
 
         # Session 814: Limit entries to prevent slow queries
-        for entry in job_data[:self.MAX_ENTRIES_TO_SCAN]:
+        scan_limit = max_entries if max_entries is not None else self.MAX_ENTRIES_TO_SCAN
+        for entry in job_data[:scan_limit]:
             raw_data = self._parse_raw_data(entry.raw_data)
             if raw_data is None:
                 continue
@@ -910,6 +916,9 @@ class SpiderIntelligenceService:
 
         queryset = queryset.exclude(spider_name__in=self.NOISY_SPIDERS)
 
+        # Session 1068: Defer heavy fields not needed for keyword search
+        queryset = queryset.defer('embedding', 'item_embeddings', 'embedding_text', 'processed_data', 'insights')
+
         results = []
         seen = set()
 
@@ -1159,7 +1168,7 @@ class SpiderIntelligenceService:
 
         return (intersection / len(query_words)) + phrase_bonus
 
-    def get_creative_trends(self, hours: int = 48, limit: int = 10) -> dict:
+    def get_creative_trends(self, hours: int = 48, limit: int = 10, max_entries: int = None) -> dict:
         """
         Session 266: Get trending creative/design styles from spider data.
 
@@ -1180,7 +1189,7 @@ class SpiderIntelligenceService:
         creative_data = self.SpiderData.objects.filter(
             spider_name__in=creative_spiders,
             created_at__gte=since
-        ).order_by('-created_at')
+        ).defer('embedding', 'item_embeddings', 'embedding_text', 'processed_data', 'insights').order_by('-created_at')
 
         # Design terms to extract
         design_styles = {
@@ -1208,7 +1217,8 @@ class SpiderIntelligenceService:
         sources_found = set()
 
         # Session 814: Limit entries to prevent slow queries
-        for entry in creative_data[:self.MAX_ENTRIES_TO_SCAN]:
+        scan_limit = max_entries if max_entries is not None else self.MAX_ENTRIES_TO_SCAN
+        for entry in creative_data[:scan_limit]:
             raw_data = self._parse_raw_data(entry.raw_data)
             if raw_data is None:
                 continue
