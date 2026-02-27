@@ -159,6 +159,7 @@ class FailureDetection(models.Model):
         CELERY_TASK = 'celery_task', 'Celery Task'
         API_CALL = 'api_call', 'API Call'
         PROVIDER = 'provider', 'Provider'
+        HTTP_REQUEST = 'http_request', 'HTTP Request'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 

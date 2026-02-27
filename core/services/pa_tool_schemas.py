@@ -1686,6 +1686,62 @@ PA_TOOL_SCHEMAS = [
             "required": ["task"],
         },
     },
+
+
+    # ── Session 1069: Platform Config — runtime environment introspection ────
+    {
+        "type": "function",
+        "name": "platform_config_tool",
+        "description": (
+            "Inspect runtime platform configuration: active LLM providers, "
+            "environment variables (secrets masked), Django settings, feature flags, "
+            "and Railway service info. Use when the user asks about configuration, "
+            "what provider is active, environment setup, what settings are in use, "
+            "or debugging 'works locally but not on Railway' issues."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["overview", "llm_providers", "env_vars", "feature_flags"],
+                    "description": (
+                        "overview=key settings summary (default), "
+                        "llm_providers=active LLM provider details, "
+                        "env_vars=all env vars with secrets masked, "
+                        "feature_flags=platform feature flags and toggles"
+                    ),
+                },
+            },
+        },
+    },
+
+    # ── Session 1069: DB Health — migration status and schema introspection ──
+    {
+        "type": "function",
+        "name": "db_health_tool",
+        "description": (
+            "Check database health: migration status, table row counts, "
+            "PostgreSQL connection info, pgvector extension status, and schema "
+            "validation. Use when the user asks about database health, pending "
+            "migrations, table sizes, pgvector status, or database issues."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["overview", "migrations", "tables", "pgvector"],
+                    "description": (
+                        "overview=connection + migration summary (default), "
+                        "migrations=list unapplied migrations, "
+                        "tables=row counts for key tables, "
+                        "pgvector=vector extension status and embedding counts"
+                    ),
+                },
+            },
+        },
+    },
 ]
 
 
@@ -1737,6 +1793,8 @@ TOOL_ENRICHMENT_MAP = {
     'legal_doc_drafter_agent': ['domain_context'],
     'task_breakdown_tool': [],
     'platform_awareness_tool': [],
+    'platform_config_tool': [],
+    'db_health_tool': [],
     'studio_tool': ['intelligence_enricher'],
     'persona_tool': ['domain_context', 'spider_trends'],
     # Session 1088: Individual agent schemas
@@ -1802,6 +1860,8 @@ TOOL_TO_INTENT_MAP = {
     'legal_doc_drafter_agent': 'legal_assistance',
     'task_breakdown_tool': 'task_breakdown',
     'platform_awareness_tool': 'platform_awareness',
+    'platform_config_tool': 'system_health',
+    'db_health_tool': 'system_health',
     'studio_tool': 'studio',
     'persona_tool': 'agent_execution',
     # Session 1088: Individual agent schemas
