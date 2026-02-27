@@ -2900,3 +2900,195 @@ def cockpit_run_trace(request, run_id):
         'audit_entries': audit_entries,
         'timeline': timeline,
     })
+
+
+# ── P16: Configuration Control Plane ────────────────────────────────
+
+@csrf_exempt
+@require_http_methods(['GET'])
+def cockpit_config_overview(request):
+    """Platform config overview: providers, models, flags, env info."""
+    from core.models_llm_routing import LLMProvider, LLMModel
+    from core.models.system import SystemConfiguration
+    import os
+
+    providers = []
+    for p in LLMProvider.objects.all().order_by('name'):
+        model_count = LLMModel.objects.filter(provider=p).count()
+        providers.append({
+            'id': str(p.id),
+            'name': p.name,
+            'display_name': p.display_name or p.name,
+            'is_active': p.is_active,
+            'is_available': p.is_available,
+            'supports_tools': p.supports_tools,
+            'supports_vision': p.supports_vision,
+            'supports_streaming': p.supports_streaming,
+            'model_count': model_count,
+            'last_health_check': p.last_health_check.isoformat() if p.last_health_check else None,
+        })
+
+    models_list = []
+    for m in LLMModel.objects.select_related('provider').order_by('provider__name', 'model_id'):
+        models_list.append({
+            'id': str(m.id),
+            'model_id': m.model_id,
+            'provider': m.provider.name,
+            'is_active': m.is_active if hasattr(m, 'is_active') else True,
+        })
+
+    flags = []
+    for cfg in SystemConfiguration.objects.filter(is_active=True).order_by('category', 'key'):
+        flags.append({
+            'id': str(cfg.id),
+            'key': cfg.key,
+            'value': cfg.value,
+            'description': cfg.description or '',
+            'category': cfg.category or 'general',
+            'is_sensitive': cfg.is_sensitive,
+            'updated_at': cfg.updated_at.isoformat() if cfg.updated_at else None,
+        })
+
+    return JsonResponse({
+        'providers': providers,
+        'models': models_list,
+        'flags': flags,
+        'env': {
+            'debug': os.environ.get('DEBUG', 'False') == 'True',
+            'database': 'postgresql',
+            'redis': bool(os.environ.get('REDIS_URL')),
+            'celery_broker': bool(os.environ.get('CELERY_BROKER_URL', os.environ.get('REDIS_URL'))),
+            'railway': bool(os.environ.get('RAILWAY_ENVIRONMENT')),
+        },
+    })
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def cockpit_config_toggle_provider(request, provider_id):
+    """Toggle a provider's is_active flag."""
+    from core.models_llm_routing import LLMProvider
+    import json
+
+    try:
+        provider = LLMProvider.objects.get(id=provider_id)
+    except LLMProvider.DoesNotExist:
+        return JsonResponse({'error': 'Provider not found'}, status=404)
+
+    provider.is_active = not provider.is_active
+    provider.save(update_fields=['is_active', 'updated_at'])
+
+    _audit_log(request, 'config.toggle_provider', 'LLMProvider', str(provider.id),
+               {'provider': provider.name, 'is_active': provider.is_active},
+               {'ok': True, 'is_active': provider.is_active})
+
+    return JsonResponse({'ok': True, 'provider': provider.name, 'is_active': provider.is_active})
+
+
+@csrf_exempt
+@require_http_methods(['GET', 'POST'])
+def cockpit_config_flags(request):
+    """List or upsert feature flags (SystemConfiguration)."""
+    from core.models.system import SystemConfiguration
+    import json
+
+    if request.method == 'GET':
+        flags = []
+        for cfg in SystemConfiguration.objects.filter(is_active=True).order_by('category', 'key'):
+            flags.append({
+                'id': str(cfg.id),
+                'key': cfg.key,
+                'value': cfg.value,
+                'description': cfg.description or '',
+                'category': cfg.category or 'general',
+                'is_sensitive': cfg.is_sensitive,
+                'updated_at': cfg.updated_at.isoformat() if cfg.updated_at else None,
+            })
+        return JsonResponse({'flags': flags})
+
+    # POST: upsert a flag
+    body = json.loads(request.body or b'{}')
+    key = body.get('key', '').strip()
+    if not key:
+        return JsonResponse({'error': 'key is required'}, status=400)
+
+    value = body.get('value')
+    description = body.get('description', '')
+    category = body.get('category', 'general')
+
+    cfg, created = SystemConfiguration.objects.update_or_create(
+        key=key,
+        defaults={
+            'value': value,
+            'description': description,
+            'category': category,
+            'is_active': True,
+        },
+    )
+
+    _audit_log(request, 'config.upsert_flag', 'SystemConfiguration', str(cfg.id),
+               {'key': key, 'value': value, 'created': created},
+               {'ok': True, 'id': str(cfg.id)})
+
+    return JsonResponse({
+        'ok': True,
+        'id': str(cfg.id),
+        'key': cfg.key,
+        'value': cfg.value,
+        'created': created,
+    })
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def cockpit_config_delete_flag(request, flag_id):
+    """Soft-delete a feature flag."""
+    from core.models.system import SystemConfiguration
+
+    try:
+        cfg = SystemConfiguration.objects.get(id=flag_id)
+    except SystemConfiguration.DoesNotExist:
+        return JsonResponse({'error': 'Flag not found'}, status=404)
+
+    cfg.is_active = False
+    cfg.save(update_fields=['is_active', 'updated_at'])
+
+    _audit_log(request, 'config.delete_flag', 'SystemConfiguration', str(cfg.id),
+               {'key': cfg.key}, {'ok': True})
+
+    return JsonResponse({'ok': True, 'key': cfg.key})
+
+
+@csrf_exempt
+@require_http_methods(['GET'])
+def cockpit_config_changes(request):
+    """Recent config-related changes from audit log."""
+    from core.models_cockpit_audit import CockpitAuditLog
+    from django.utils import timezone
+    from datetime import timedelta
+
+    hours = min(int(request.GET.get('hours', 48)), 720)
+    limit = min(int(request.GET.get('limit', 50)), 200)
+    since = timezone.now() - timedelta(hours=hours)
+
+    entries = list(
+        CockpitAuditLog.objects
+        .filter(created_at__gte=since, action__startswith='config.')
+        .select_related('user')
+        .order_by('-created_at')[:limit]
+    )
+
+    items = []
+    for e in entries:
+        items.append({
+            'id': str(e.id),
+            'actor': e.user.username if e.user else 'system',
+            'action': e.action,
+            'target_type': e.target_type,
+            'target_id': e.target_id,
+            'request_body': e.request_body or {},
+            'response_summary': e.response_summary or {},
+            'created_at': e.created_at.isoformat() if e.created_at else None,
+        })
+
+    return JsonResponse({'hours': hours, 'total': len(items), 'items': items})
