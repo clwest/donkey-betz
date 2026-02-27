@@ -1602,7 +1602,17 @@ def scan_spider_opportunities(self):
 
         async def run_scan():
             await spider_decision_bridge.initialize()
-            opportunities = await spider_decision_bridge.scan_for_opportunities()
+            # Session 1075: asyncio timeout (13 min) ensures we finish before
+            # Celery soft_time_limit (15 min). SoftTimeLimitExceeded can't
+            # interrupt asyncio.run(), so we must enforce time inside the loop.
+            try:
+                opportunities = await asyncio.wait_for(
+                    spider_decision_bridge.scan_for_opportunities(),
+                    timeout=780,  # 13 minutes
+                )
+            except asyncio.TimeoutError:
+                logger.warning("🕷️ Spider scan hit 13min async timeout, returning empty")
+                return [], {}
             stats = await spider_decision_bridge.get_statistics()
             return opportunities, stats
 
