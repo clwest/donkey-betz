@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,202 |
+| Total cross-references | 2,203 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/experimental/super_system/README.md` | 59 | 🌐 THE SUPER SYSTEM |
+| `docs/archive/old-structure/plans/README.md` | 60 | 📋 Strategic Plans & Roadmaps |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 42 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
