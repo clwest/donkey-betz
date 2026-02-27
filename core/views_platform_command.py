@@ -529,7 +529,7 @@ def _get_recent_activity() -> List[Dict[str, Any]]:
         if ex.output_data:
             # Try to get a summary or description from output
             if isinstance(ex.output_data, dict):
-                output_summary = ex.output_data.get('summary') or ex.output_data.get('description') or ex.output_data.get('content', '')[:500]
+                output_summary = ex.output_data.get('summary') or ex.output_data.get('description') or (ex.output_data.get('content') or '')[:500]
                 # Extract tool results if present
                 if 'tool_results' in ex.output_data:
                     tool_results = ex.output_data.get('tool_results', [])[:5]  # Limit to 5 tools
