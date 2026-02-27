@@ -1161,3 +1161,167 @@ def cockpit_job_status(request, job_id):
         pass
 
     return JsonResponse(result)
+
+
+# ── Focus Cockpit Ops endpoint ───────────────────────────────────────────────
+
+@require_http_methods(["GET"])
+def cockpit_ops_overview(request):
+    """
+    Ops overview for Focus Cockpit — composes health checks, top failing agents,
+    top error signatures, and recent failed runs.
+    Query params: hours (default 24), limit (default 5)
+    """
+    if not (request.user and request.user.is_authenticated):
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    from django.utils import timezone
+    from django.db.models import Count, Max, Q
+    from datetime import timedelta
+
+    hours = int(request.GET.get('hours', 24))
+    limit = min(int(request.GET.get('limit', 5)), 20)
+    cutoff = timezone.now() - timedelta(hours=hours)
+
+    result = {
+        'hours': hours,
+        'generated_at': timezone.now().isoformat(),
+        'health': {'overall_tone': 'green', 'checks': []},
+        'top_failing_agents': [],
+        'top_error_signatures': [],
+        'recent_failed_runs': [],
+    }
+
+    # 1. Health checks
+    checks = []
+
+    # Web — we're responding, so it's ok
+    checks.append({'key': 'web', 'label': 'Web', 'tone': 'green', 'status': 'ok', 'detail': 'Responding'})
+
+    # Database
+    try:
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        checks.append({'key': 'db', 'label': 'Database', 'tone': 'green', 'status': 'ok', 'detail': 'Connected'})
+    except Exception as e:
+        checks.append({'key': 'db', 'label': 'Database', 'tone': 'red', 'status': 'down', 'detail': str(e)[:100]})
+
+    # Redis
+    try:
+        r = get_redis_client()
+        if r and r.ping():
+            checks.append({'key': 'redis', 'label': 'Redis', 'tone': 'green', 'status': 'ok', 'detail': 'Connected'})
+        else:
+            checks.append({'key': 'redis', 'label': 'Redis', 'tone': 'red', 'status': 'down', 'detail': 'Not responding'})
+    except Exception as e:
+        checks.append({'key': 'redis', 'label': 'Redis', 'tone': 'red', 'status': 'down', 'detail': str(e)[:100]})
+
+    # Celery — check recent task events
+    try:
+        from core.models_celery_telemetry import CeleryTaskEvent
+        one_hour_ago = timezone.now() - timedelta(hours=1)
+        recent_failures = CeleryTaskEvent.objects.filter(status='FAILURE', started_at__gte=one_hour_ago).count()
+        recent_successes = CeleryTaskEvent.objects.filter(status='SUCCESS', started_at__gte=one_hour_ago).count()
+        if recent_failures == 0 and recent_successes > 0:
+            checks.append({'key': 'celery', 'label': 'Celery', 'tone': 'green', 'status': 'ok', 'detail': f'{recent_successes} tasks/hr'})
+        elif recent_failures > 0:
+            checks.append({'key': 'celery', 'label': 'Celery', 'tone': 'amber', 'status': 'degraded', 'detail': f'{recent_failures} failures in last hour'})
+        else:
+            checks.append({'key': 'celery', 'label': 'Celery', 'tone': 'gray', 'status': 'idle', 'detail': 'No recent tasks'})
+    except Exception:
+        checks.append({'key': 'celery', 'label': 'Celery', 'tone': 'gray', 'status': 'unknown', 'detail': 'Cannot check'})
+
+    # Body system components
+    try:
+        from core.models_heart import ComponentStatus
+        for cs in ComponentStatus.objects.all()[:8]:
+            tone = 'green' if cs.is_healthy else ('red' if cs.status == 'critical' else 'amber')
+            checks.append({
+                'key': cs.component,
+                'label': cs.display_name,
+                'tone': tone,
+                'status': cs.status,
+                'detail': f'Last check: {cs.last_check.strftime("%H:%M")}' if cs.last_check else '',
+            })
+    except Exception:
+        pass
+
+    # Derive overall tone
+    tones = [c['tone'] for c in checks]
+    if 'red' in tones:
+        result['health']['overall_tone'] = 'red'
+    elif 'amber' in tones:
+        result['health']['overall_tone'] = 'amber'
+    result['health']['checks'] = checks
+
+    # 2. Top failing agents
+    try:
+        from core.models_unified_system import AgentExecution
+        agg = list(
+            AgentExecution.objects.filter(created_at__gte=cutoff)
+            .values('agent__name')
+            .annotate(
+                failed_count=Count('id', filter=Q(status='failed')),
+                total_count=Count('id'),
+                last_failed_at=Max('completed_at', filter=Q(status='failed')),
+            )
+            .filter(failed_count__gt=0)
+            .order_by('-failed_count')[:limit]
+        )
+        for a in agg:
+            total = a['total_count'] or 1
+            result['top_failing_agents'].append({
+                'agent_name': a['agent__name'],
+                'failed_count': a['failed_count'],
+                'total_count': a['total_count'],
+                'failure_rate': round(a['failed_count'] / total, 4),
+                'last_failed_at': a['last_failed_at'].isoformat() if a['last_failed_at'] else None,
+            })
+    except Exception as e:
+        logger.debug("Ops top_failing_agents error: %s", e)
+
+    # 3. Top error signatures
+    try:
+        from core.models_diagnostic_pipeline import FailureSignature
+        sigs = list(
+            FailureSignature.objects.filter(
+                status='active', last_seen_at__gte=cutoff,
+            ).order_by('-occurrence_count')[:limit]
+            .values('signature', 'occurrence_count', 'last_seen_at', 'description')
+        )
+        for s in sigs:
+            result['top_error_signatures'].append({
+                'signature': s['signature'],
+                'source': 'agent',
+                'count': s['occurrence_count'],
+                'last_seen': s['last_seen_at'].isoformat() if s.get('last_seen_at') else None,
+                'sample_error': s.get('description', '')[:200],
+            })
+    except Exception as e:
+        logger.debug("Ops top_error_signatures error: %s", e)
+
+    # 4. Recent failed runs
+    try:
+        from core.models_unified_system import AgentExecution
+        failed = list(
+            AgentExecution.objects.filter(status='failed', created_at__gte=cutoff)
+            .select_related('agent')
+            .order_by('-created_at')[:limit]
+            .values('id', 'agent__name', 'task', 'status', 'created_at', 'completed_at', 'execution_time_ms', 'tokens_used')
+        )
+        for r in failed:
+            result['recent_failed_runs'].append({
+                'id': str(r['id']),
+                'agent_name': r['agent__name'],
+                'task': r['task'][:200] if r['task'] else '',
+                'status': r['status'],
+                'created_at': r['created_at'].isoformat() if r['created_at'] else None,
+                'completed_at': r['completed_at'].isoformat() if r['completed_at'] else None,
+                'execution_time_ms': r['execution_time_ms'],
+                'tokens_used': r['tokens_used'] or 0,
+            })
+    except Exception as e:
+        logger.debug("Ops recent_failed_runs error: %s", e)
+
+    return JsonResponse(result)

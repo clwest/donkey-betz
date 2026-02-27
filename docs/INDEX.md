@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-02-26 23:17
+**Generated:** 2026-02-26 23:26
 **Current Session:** 1073
 **Total Documentation:** 1802 files | 618,937 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/SYSTEM_CAPABILITIES-original/README.md` | 59 | 🚀 UNIFIED DONKEY BETZ - SYSTEM CAPABILITIES DOCUME |
+| `docs/agents/README.md` | 60 | Agent Documentation |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 42 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -211,7 +211,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 355 | 2026-02-26 23:12 |
+| INDEX.md | docs | 355 | 2026-02-26 23:18 |
 | ADR-0002-moderate-dangerous-action-policy.md | decisions | 63 | 2026-02-25 13:27 |
 | ADR-0001-execution-per-run-ephemeral-containers.md | decisions | 44 | 2026-02-25 13:27 |
 | collaboration-protocol.md | topics | 223 | 2026-02-25 12:36 |
