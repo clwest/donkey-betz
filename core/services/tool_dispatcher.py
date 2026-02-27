@@ -2997,6 +2997,9 @@ class ToolDispatcher:
         from django.db.models import Count
 
         action = payload.get('action', 'list')
+        # Session 1075: GPT-5.2 often calls approve/reject instead of publish/archive
+        ACTION_ALIASES = {'approve': 'publish', 'reject': 'archive'}
+        action = ACTION_ALIASES.get(action, action)
         limit = payload.get('limit', 10)
         content_type = payload.get('type')  # blog, document, report, analysis, etc.
         category = payload.get('category')  # Marketing, Development, etc.
@@ -3245,7 +3248,7 @@ class ToolDispatcher:
 
         else:
             raise ValueError(
-                f"Unknown action: {action}. Valid actions: list, stats, details, publish, archive"
+                f"Unknown action: {action}. Valid actions: list, stats, details, publish, archive (aliases: approve=publish, reject=archive)"
             )
 
     def _handle_blog_query(
