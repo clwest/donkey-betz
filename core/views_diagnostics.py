@@ -728,8 +728,11 @@ def debug_raise_500(request):
     """
     Session 1069: Intentionally raises an exception to verify
     RequestErrorCaptureMiddleware is capturing HTTP 500s.
-    Staff-only. POST required to prevent accidental triggers.
+    Staff-only, DEBUG-only. POST required to prevent accidental triggers.
     """
+    from django.conf import settings
+    if not settings.DEBUG:
+        return JsonResponse({'error': 'Only available in DEBUG mode'}, status=404)
     if not (request.user and request.user.is_authenticated and request.user.is_staff):
         return JsonResponse({'error': 'Staff only'}, status=403)
 
