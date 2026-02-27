@@ -2329,3 +2329,403 @@ def cockpit_cost_overview(request):
         'by_model': by_model,
         'by_agent': by_agent,
     })
+
+
+# ---------------------------------------------------------------------------
+# P14: Autopilot
+# ---------------------------------------------------------------------------
+
+# Default policies seeded on first access
+_DEFAULT_POLICIES = [
+    {
+        'key': 'failure_spike_pause',
+        'label': 'Auto-pause failing agents',
+        'description': 'Pause agents with failure rate above threshold in the evaluation window.',
+        'thresholds': {'failure_rate_pct': 50, 'min_runs': 3, 'window_hours': 1},
+        'cooldown_minutes': 60,
+        'max_actions_per_run': 5,
+    },
+    {
+        'key': 'cost_spike_alert',
+        'label': 'Cost spike incident note',
+        'description': 'Create incident note when cost delta exceeds threshold vs previous window.',
+        'thresholds': {'cost_delta_pct': 100, 'window_hours': 24},
+        'cooldown_minutes': 120,
+        'max_actions_per_run': 1,
+    },
+    {
+        'key': 'queue_backlog_alert',
+        'label': 'Queue backlog incident note',
+        'description': 'Create incident note when failure rate across all queues exceeds threshold.',
+        'thresholds': {'failure_rate_pct': 30, 'window_minutes': 60},
+        'cooldown_minutes': 60,
+        'max_actions_per_run': 1,
+    },
+    {
+        'key': 'stale_agent_alert',
+        'label': 'Flag stale agents',
+        'description': 'Create incident note for agents with no runs in the specified hours.',
+        'thresholds': {'stale_hours': 48, 'min_expected_runs': 1},
+        'cooldown_minutes': 720,
+        'max_actions_per_run': 3,
+    },
+]
+
+
+def _seed_policies():
+    """Seed default policies if none exist."""
+    from core.models_cockpit_autopilot import CockpitAutopilotPolicy
+    if CockpitAutopilotPolicy.objects.exists():
+        return
+    for p in _DEFAULT_POLICIES:
+        CockpitAutopilotPolicy.objects.create(**p)
+
+
+@csrf_exempt
+@require_http_methods(['GET'])
+def cockpit_autopilot_policies(request):
+    """List all autopilot policies."""
+    from core.models_cockpit_autopilot import CockpitAutopilotPolicy
+    _seed_policies()
+
+    policies = list(
+        CockpitAutopilotPolicy.objects.all().values(
+            'id', 'key', 'label', 'description', 'enabled',
+            'thresholds', 'cooldown_minutes', 'max_actions_per_run',
+            'last_evaluated_at', 'last_fired_at',
+        )
+    )
+    for p in policies:
+        p['id'] = str(p['id'])
+        p['last_evaluated_at'] = p['last_evaluated_at'].isoformat() if p['last_evaluated_at'] else None
+        p['last_fired_at'] = p['last_fired_at'].isoformat() if p['last_fired_at'] else None
+
+    return JsonResponse({'total': len(policies), 'items': policies})
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def cockpit_autopilot_toggle(request, policy_id):
+    """Enable or disable an autopilot policy."""
+    from core.models_cockpit_autopilot import CockpitAutopilotPolicy
+
+    try:
+        policy = CockpitAutopilotPolicy.objects.get(id=policy_id)
+    except CockpitAutopilotPolicy.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Policy not found'}, status=404)
+
+    policy.enabled = not policy.enabled
+    policy.save(update_fields=['enabled', 'updated_at'])
+
+    resp = {'ok': True, 'key': policy.key, 'enabled': policy.enabled}
+    _audit_log(request, f'autopilot.toggle_{("on" if policy.enabled else "off")}',
+               'AutopilotPolicy', str(policy.id), {}, resp)
+    return JsonResponse(resp)
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def cockpit_autopilot_evaluate(request):
+    """Evaluate all enabled policies. mode=dry_run (default) or execute."""
+    from core.models_cockpit_autopilot import CockpitAutopilotPolicy, CockpitAutopilotEvent
+    from django.utils.timezone import now
+    from datetime import timedelta
+
+    try:
+        body = json.loads(request.body or b'{}')
+    except json.JSONDecodeError:
+        body = {}
+
+    mode = body.get('mode', 'dry_run')
+    if mode not in ('dry_run', 'execute'):
+        return JsonResponse({'ok': False, 'error': 'mode must be dry_run or execute'}, status=400)
+
+    _seed_policies()
+    policies = list(CockpitAutopilotPolicy.objects.filter(enabled=True))
+    results = []
+
+    for policy in policies:
+        # Cooldown check
+        if policy.last_fired_at and mode == 'execute':
+            cooldown_end = policy.last_fired_at + timedelta(minutes=policy.cooldown_minutes)
+            if now() < cooldown_end:
+                results.append({
+                    'policy': policy.key,
+                    'skipped': True,
+                    'reason': f'Cooldown until {cooldown_end.isoformat()}',
+                    'actions': [],
+                })
+                continue
+
+        actions = _evaluate_policy(policy, mode, request)
+
+        policy.last_evaluated_at = now()
+        if actions and mode == 'execute':
+            policy.last_fired_at = now()
+        policy.save(update_fields=['last_evaluated_at', 'last_fired_at', 'updated_at'])
+
+        results.append({
+            'policy': policy.key,
+            'skipped': False,
+            'actions': actions,
+        })
+
+    _audit_log(request, f'autopilot.evaluate_{mode}', 'AutopilotPolicy', '',
+               {'mode': mode, 'policies_evaluated': len(policies)},
+               {'total_actions': sum(len(r['actions']) for r in results)})
+
+    return JsonResponse({
+        'ok': True,
+        'mode': mode,
+        'evaluated_at': now().isoformat(),
+        'results': results,
+    })
+
+
+def _evaluate_policy(policy, mode, request):
+    """Evaluate a single policy and return list of proposed/executed actions."""
+    from core.models_cockpit_autopilot import CockpitAutopilotEvent
+
+    handler = _POLICY_EVALUATORS.get(policy.key)
+    if not handler:
+        return []
+
+    proposed = handler(policy)
+    actions = []
+
+    for p in proposed[:policy.max_actions_per_run]:
+        executed = False
+        result = {}
+
+        if mode == 'execute':
+            result = _execute_action(p, request)
+            executed = result.get('ok', False)
+
+        event = CockpitAutopilotEvent.objects.create(
+            policy=policy,
+            mode=mode,
+            proposed_action=p['action'],
+            target_type=p.get('target_type', ''),
+            target_id=p.get('target_id', ''),
+            reason=p.get('reason', ''),
+            executed=executed,
+            result=result,
+        )
+
+        actions.append({
+            'event_id': str(event.id),
+            'action': p['action'],
+            'target_type': p.get('target_type', ''),
+            'target_id': p.get('target_id', ''),
+            'reason': p.get('reason', ''),
+            'executed': executed,
+            'result': result,
+        })
+
+    return actions
+
+
+def _eval_failure_spike_pause(policy):
+    """Find agents with high failure rates."""
+    from core.models_unified_system import AgentExecution
+    from django.utils.timezone import now
+    from datetime import timedelta
+    from django.db.models import Count, Q
+
+    t = policy.thresholds
+    hours = t.get('failure_rate_pct_window', t.get('window_hours', 1))
+    min_runs = t.get('min_runs', 3)
+    threshold = t.get('failure_rate_pct', 50)
+    cutoff = now() - timedelta(hours=hours)
+
+    agents = (
+        AgentExecution.objects.filter(created_at__gte=cutoff)
+        .values('agent__name')
+        .annotate(
+            total=Count('id'),
+            failed=Count('id', filter=Q(status='failed')),
+        )
+        .filter(total__gte=min_runs)
+    )
+
+    proposals = []
+    for a in agents:
+        rate = (a['failed'] / a['total']) * 100 if a['total'] else 0
+        if rate >= threshold:
+            # Skip already-paused agents
+            from core.models_cockpit_agent_state import CockpitAgentState
+            state = CockpitAgentState.objects.filter(agent_name=a['agent__name']).first()
+            if state and not state.enabled:
+                continue
+            proposals.append({
+                'action': 'agent.pause',
+                'target_type': 'Agent',
+                'target_id': a['agent__name'],
+                'reason': f"Failure rate {rate:.0f}% ({a['failed']}/{a['total']}) in last {hours}h",
+            })
+    return proposals
+
+
+def _eval_cost_spike_alert(policy):
+    """Check if cost delta exceeds threshold."""
+    from core.models_llm_routing import LLMCallLog
+    from django.utils.timezone import now
+    from datetime import timedelta
+    from django.db.models import Sum
+
+    t = policy.thresholds
+    hours = t.get('window_hours', 24)
+    threshold = t.get('cost_delta_pct', 100)
+    cutoff = now() - timedelta(hours=hours)
+    prev_cutoff = cutoff - timedelta(hours=hours)
+
+    cost_now = float(LLMCallLog.objects.filter(created_at__gte=cutoff).aggregate(c=Sum('cost'))['c'] or 0)
+    cost_prev = float(LLMCallLog.objects.filter(created_at__gte=prev_cutoff, created_at__lt=cutoff).aggregate(c=Sum('cost'))['c'] or 0)
+
+    if cost_prev > 0:
+        delta = ((cost_now - cost_prev) / cost_prev) * 100
+        if delta >= threshold:
+            return [{
+                'action': 'create_incident_note',
+                'target_type': 'CostSpike',
+                'target_id': f'{hours}h',
+                'reason': f"Cost spike +{delta:.0f}%: ${cost_now:.2f} vs ${cost_prev:.2f} (prev {hours}h)",
+            }]
+    return []
+
+
+def _eval_queue_backlog_alert(policy):
+    """Check if queue failure rate is alarming."""
+    from core.models_celery_telemetry import CeleryTaskEvent
+    from django.utils.timezone import now
+    from datetime import timedelta
+    from django.db.models import Count, Q
+
+    t = policy.thresholds
+    minutes = t.get('window_minutes', 60)
+    threshold = t.get('failure_rate_pct', 30)
+    cutoff = now() - timedelta(minutes=minutes)
+
+    totals = CeleryTaskEvent.objects.filter(started_at__gte=cutoff).aggregate(
+        total=Count('id'),
+        failed=Count('id', filter=Q(status='FAILURE')),
+    )
+    total = totals['total'] or 0
+    failed = totals['failed'] or 0
+    if total >= 5 and (failed / total * 100) >= threshold:
+        return [{
+            'action': 'create_incident_note',
+            'target_type': 'QueueBacklog',
+            'target_id': f'{minutes}m',
+            'reason': f"Queue failure rate {failed}/{total} ({failed/total*100:.0f}%) in last {minutes}m",
+        }]
+    return []
+
+
+def _eval_stale_agent_alert(policy):
+    """Find agents with no recent runs."""
+    from core.models_unified_system import Agent, AgentExecution
+    from django.utils.timezone import now
+    from datetime import timedelta
+    from django.db.models import Max
+
+    t = policy.thresholds
+    stale_hours = t.get('stale_hours', 48)
+    cutoff = now() - timedelta(hours=stale_hours)
+
+    agents_with_runs = set(
+        AgentExecution.objects.filter(created_at__gte=cutoff)
+        .values_list('agent__name', flat=True).distinct()
+    )
+    all_agents = set(Agent.objects.filter(is_active=True).values_list('name', flat=True))
+    stale = all_agents - agents_with_runs
+
+    proposals = []
+    for name in sorted(stale):
+        last = AgentExecution.objects.filter(agent__name=name).aggregate(last=Max('created_at'))['last']
+        last_str = last.isoformat() if last else 'never'
+        proposals.append({
+            'action': 'create_incident_note',
+            'target_type': 'StaleAgent',
+            'target_id': name,
+            'reason': f"No runs in {stale_hours}h (last run: {last_str})",
+        })
+    return proposals
+
+
+_POLICY_EVALUATORS = {
+    'failure_spike_pause': _eval_failure_spike_pause,
+    'cost_spike_alert': _eval_cost_spike_alert,
+    'queue_backlog_alert': _eval_queue_backlog_alert,
+    'stale_agent_alert': _eval_stale_agent_alert,
+}
+
+
+def _execute_action(proposal, request):
+    """Execute a proposed autopilot action using existing cockpit mutations."""
+    action = proposal['action']
+    target_id = proposal.get('target_id', '')
+    reason = proposal.get('reason', '')
+
+    if action == 'agent.pause':
+        from core.models_unified_system import Agent
+        from core.models_cockpit_agent_state import CockpitAgentState
+        from django.utils.timezone import now as tz_now
+        try:
+            Agent.objects.get(name=target_id, is_active=True)
+        except Agent.DoesNotExist:
+            return {'ok': False, 'error': 'Agent not found'}
+        CockpitAgentState.objects.update_or_create(
+            agent_name=target_id,
+            defaults={
+                'enabled': False,
+                'paused_reason': f'[autopilot] {reason}',
+                'paused_at': tz_now(),
+                'updated_by': None,
+            },
+        )
+        _audit_log(request, 'autopilot.agent.pause', 'Agent', target_id, {'reason': reason},
+                   {'ok': True})
+        return {'ok': True, 'action': 'paused'}
+
+    elif action == 'create_incident_note':
+        from core.models_deliverables import Deliverable
+        import uuid as uuid_mod
+        from django.utils.text import slugify
+        from django.utils.timezone import now as tz_now
+        title = f"[Autopilot] {proposal.get('target_type', 'Alert')}: {target_id}"
+        slug = f"{slugify(title[:60]) or 'autopilot'}-{uuid_mod.uuid4().hex[:8]}"
+        content = f"# Autopilot Incident\n\n**Reason:** {reason}\n\n**Target:** {proposal.get('target_type', '')} — {target_id}\n\n**Created:** {tz_now().isoformat()}\n"
+        deliverable = Deliverable.objects.create(
+            title=title, slug=slug, deliverable_type='document',
+            category='Incident', tags=['incident', 'autopilot'],
+            agent_name='cockpit-autopilot', content=content,
+            content_format='markdown', status='ready',
+            metadata={'source': 'autopilot', 'reason': reason},
+        )
+        _audit_log(request, 'autopilot.incident_note', 'Deliverable', str(deliverable.id),
+                   {'reason': reason}, {'ok': True})
+        return {'ok': True, 'action': 'incident_created', 'id': str(deliverable.id)}
+
+    return {'ok': False, 'error': f'Unknown action: {action}'}
+
+
+@csrf_exempt
+@require_http_methods(['GET'])
+def cockpit_autopilot_history(request):
+    """List recent autopilot events."""
+    from core.models_cockpit_autopilot import CockpitAutopilotEvent
+    limit = min(int(request.GET.get('limit', 50)), 200)
+
+    events = list(
+        CockpitAutopilotEvent.objects.select_related('policy')[:limit].values(
+            'id', 'policy__key', 'mode', 'proposed_action',
+            'target_type', 'target_id', 'reason', 'executed', 'result', 'created_at',
+        )
+    )
+    for e in events:
+        e['id'] = str(e['id'])
+        e['policy_key'] = e.pop('policy__key')
+        e['created_at'] = e['created_at'].isoformat() if e['created_at'] else None
+
+    return JsonResponse({'total': len(events), 'items': events})

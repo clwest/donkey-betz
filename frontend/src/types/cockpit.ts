@@ -418,6 +418,67 @@ export interface OpsOverviewResponse {
   recent_failed_runs: RunSummary[]
 }
 
+// --- Autopilot ---
+
+export interface AutopilotPolicy {
+  id: UUID
+  key: string
+  label: string
+  description: string
+  enabled: boolean
+  thresholds: Record<string, number>
+  cooldown_minutes: number
+  max_actions_per_run: number
+  last_evaluated_at: ISODateString | null
+  last_fired_at: ISODateString | null
+}
+
+export interface AutopilotPoliciesResponse {
+  policies: AutopilotPolicy[]
+}
+
+export interface AutopilotToggleResponse {
+  ok: boolean
+  policy_id: string
+  enabled: boolean
+}
+
+export interface AutopilotAction {
+  policy_key: string
+  proposed_action: string
+  target_type: string
+  target_id: string
+  reason: string
+  executed: boolean
+  result: Record<string, unknown>
+}
+
+export interface AutopilotEvaluateResponse {
+  ok: boolean
+  mode: 'dry_run' | 'execute'
+  actions: AutopilotAction[]
+}
+
+export interface AutopilotEvent {
+  id: UUID
+  policy_key: string
+  mode: string
+  proposed_action: string
+  target_type: string
+  target_id: string
+  reason: string
+  executed: boolean
+  result: Record<string, unknown>
+  created_at: ISODateString
+}
+
+export interface AutopilotHistoryResponse {
+  total: number
+  items: AutopilotEvent[]
+}
+
+// --- Ops ---
+
 export interface PlatformConfigResponse {
   debug: boolean
   allowed_hosts: string[]
