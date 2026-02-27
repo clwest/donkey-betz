@@ -35292,8 +35292,11 @@ def process_pa_chat_task(self, user_id, message, context=None, generate_audio=Fa
     User = get_user_model()
     user = User.objects.get(id=user_id)
 
-    from core.services.unified_pa_entrypoint import get_unified_pa
-    pa = get_unified_pa(user)
+    # Session 1068: Create fresh PA instance per task instead of caching.
+    # Cached instances accumulate state across 50+ tasks, causing memory leaks.
+    # Conversation history is loaded from DB on init (<100ms), so no functional loss.
+    from core.services.unified_pa_entrypoint import UnifiedPAEntrypoint
+    pa = UnifiedPAEntrypoint(user)
 
     start_ms = time.time()
     # Session 976: Run async PA in a fresh event loop to avoid deadlock
