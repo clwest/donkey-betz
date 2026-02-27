@@ -1429,6 +1429,8 @@ from core.views_diagnostics import (
     websocket_test_page,
     config_snapshot,        # Session 1069: Cross-service config comparison
     debug_raise_500,        # Session 1069: Middleware verification endpoint
+    cockpit_error_summary,  # Focus Cockpit: error signatures
+    cockpit_runs_list,      # Focus Cockpit: agent execution runs
     # Session 871: Removed unused import: diagnostic_dashboard
 )
 
@@ -1600,6 +1602,9 @@ urlpatterns = [
     # Session 1069: Cross-service config snapshot + middleware test
     path('api/internal/config-snapshot/', config_snapshot, name='config-snapshot'),
     path('api/internal/debug-raise-500/', debug_raise_500, name='debug-raise-500'),
+    # Focus Cockpit API
+    path('api/cockpit/errors/', cockpit_error_summary, name='cockpit-error-summary'),
+    path('api/cockpit/runs/', cockpit_runs_list, name='cockpit-runs-list'),
     path('diagnostics/websockets/', WebSocketDiagnosticsView.as_view(), name='websocket-diagnostics'),
     path("api/llm/chat/", llm_chat),
     # AI Building Products page (moved up to ensure it's matched first)
