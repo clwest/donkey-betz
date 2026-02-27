@@ -913,8 +913,19 @@ Return a comprehensive competitive landscape analysis with DOMAIN-RELEVANT data.
                 gpt_response = self._call_openai(full_prompt)
 
                 # Process tool calls
+                # Session 1075: Time budget — stop calling tools after 10 min
+                # to leave time for synthesis before Celery kills us at 15 min
+                TIME_BUDGET_SECONDS = 600  # 10 minutes
                 if gpt_response.get('tool_calls'):
                     for tool_call in gpt_response['tool_calls']:
+                        elapsed = time.time() - start_time
+                        if elapsed > TIME_BUDGET_SECONDS:
+                            logger.warning(
+                                f"⏱️ [Session 1075] Time budget exhausted ({elapsed:.0f}s > {TIME_BUDGET_SECONDS}s), "
+                                f"skipping remaining {len(gpt_response['tool_calls']) - len(tool_calls_made)} tool calls"
+                            )
+                            break
+
                         tool_name = tool_call['name']
                         arguments = tool_call['arguments']
 
@@ -946,7 +957,7 @@ Return a comprehensive competitive landscape analysis with DOMAIN-RELEVANT data.
                 # Fallback: if GPT didn't call web_search, make an explicit call
                 # to ensure we always combine spider + web data
                 tools_used = {tc['tool'] for tc in tool_calls_made}
-                if 'web_search' not in tools_used:
+                if 'web_search' not in tools_used and (time.time() - start_time) < TIME_BUDGET_SECONDS:
                     search_query = self._extract_search_query(task)
                     if search_query:
                         logger.info(f"[Fallback] GPT skipped web_search, running: {search_query[:80]}")
