@@ -45,6 +45,7 @@ import CockpitLibraryPage from '@/pages/cockpit/LibraryPage'
 import CockpitErrorsPage from '@/pages/cockpit/ErrorsPage'
 import CockpitErrorDetailPage from '@/pages/cockpit/ErrorDetailPage'
 import CockpitOpsPage from '@/pages/cockpit/OpsPage'
+import CockpitApprovalsPage from '@/pages/cockpit/ApprovalsPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -122,6 +123,7 @@ function App() {
         <Route path="errors" element={<CockpitErrorsPage />} />
         <Route path="errors/:signatureId" element={<CockpitErrorDetailPage />} />
         <Route path="ops" element={<CockpitOpsPage />} />
+        <Route path="approvals" element={<CockpitApprovalsPage />} />
       </Route>
     </Routes>
   )

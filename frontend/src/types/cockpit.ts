@@ -87,6 +87,37 @@ export interface InboxResponse {
   items: InboxItem[]
 }
 
+// --- Approvals ---
+
+export type ApprovalKind = 'decision' | 'gate'
+
+export interface ApprovalItem {
+  id: string
+  kind: ApprovalKind
+  title: string
+  summary: string
+  urgency: InboxSeverity
+  status: string
+  source_agent: string
+  ml_recommendation: string
+  created_at: ISODateString
+}
+
+export interface ApprovalsResponse {
+  hours: number
+  total: number
+  items: ApprovalItem[]
+}
+
+export interface ApprovalActionResponse {
+  ok: boolean
+  id: string
+  decision?: string
+  action?: string
+  status: string
+  error?: string
+}
+
 // --- Library ---
 
 export type LibraryItemKind = 'image' | 'video' | 'audio' | 'document'

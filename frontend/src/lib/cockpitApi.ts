@@ -8,6 +8,8 @@ import type {
   MediaItem,
   DeliverableItem,
   PaginatedResponse,
+  ApprovalsResponse,
+  ApprovalActionResponse,
   PlatformConfigResponse,
 } from '@/types/cockpit'
 
@@ -48,6 +50,26 @@ export interface InboxParams {
 
 export async function getInbox(params?: InboxParams) {
   const { data } = await api.get<InboxResponse>('/cockpit/inbox/', { params })
+  return data
+}
+
+// --- Approvals ---
+
+export interface ApprovalsParams {
+  hours?: number
+  limit?: number
+}
+
+export async function getApprovals(params?: ApprovalsParams) {
+  const { data } = await api.get<ApprovalsResponse>('/cockpit/approvals/', { params })
+  return data
+}
+
+export async function decideApproval(kind: 'decision' | 'gate', id: string, payload: Record<string, string>) {
+  const path = kind === 'decision'
+    ? `/cockpit/approvals/decision/${id}/decide/`
+    : `/cockpit/approvals/gate/${id}/decide/`
+  const { data } = await api.post<ApprovalActionResponse>(path, payload)
   return data
 }
 
