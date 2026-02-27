@@ -170,6 +170,8 @@ from ..models_tenant import Tenant
 # Import mobile models (Session 1073 - Mobile Push Notifications)
 from ..models_mobile import MobilePushToken
 
+from ..models_cockpit_audit import CockpitAuditLog
+
 # Import learning journey models (Session 773 - Learning Journeys)
 from ..models_learning_journey import (
     LearningJourneyTemplate,
@@ -389,4 +391,7 @@ __all__ = [
     # Executor - Repo Registry (Session 1075)
     'Repo',
     'ExecutionRun',
+
+    # Cockpit Audit Log (P11)
+    'CockpitAuditLog',
 ]

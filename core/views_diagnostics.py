@@ -17,6 +17,27 @@ import traceback
 
 logger = logging.getLogger(__name__)
 
+
+def _audit_log(request, action, target_type='', target_id='', request_body=None, response_summary=None):
+    """Write an append-only audit log entry for cockpit mutations."""
+    try:
+        from core.models_cockpit_audit import CockpitAuditLog
+        user = request.user if hasattr(request, 'user') and request.user.is_authenticated else None
+        ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', ''))
+        if ',' in ip:
+            ip = ip.split(',')[0].strip()
+        CockpitAuditLog.objects.create(
+            user=user,
+            action=action,
+            target_type=target_type,
+            target_id=str(target_id),
+            request_body=request_body or {},
+            response_summary=response_summary or {},
+            ip_address=ip or None,
+        )
+    except Exception as e:
+        logger.debug("Audit log write failed: %s", e)
+
 def get_redis_client():
     """Get Redis client for diagnostics"""
     try:
@@ -1524,12 +1545,9 @@ def cockpit_approve_decision(request, item_id):
     feedback = body.get('feedback', '')
     item.record_decision(decision=decision, feedback=feedback, confidence=1.0)
 
-    return JsonResponse({
-        'ok': True,
-        'id': str(item.id),
-        'decision': decision,
-        'status': item.status,
-    })
+    resp = {'ok': True, 'id': str(item.id), 'decision': decision, 'status': item.status}
+    _audit_log(request, f'approve_decision_{decision}', 'HumanAttentionItem', item_id, body, resp)
+    return JsonResponse(resp)
 
 
 @csrf_exempt
@@ -1562,12 +1580,9 @@ def cockpit_approve_gate(request, gate_id):
     else:
         return JsonResponse({'ok': False, 'error': 'action must be approve or block'}, status=400)
 
-    return JsonResponse({
-        'ok': True,
-        'id': str(gate.id),
-        'action': action,
-        'status': gate.status,
-    })
+    resp = {'ok': True, 'id': str(gate.id), 'action': action, 'status': gate.status}
+    _audit_log(request, f'approve_gate_{action}', 'PilotReadinessGate', gate_id, body, resp)
+    return JsonResponse(resp)
 
 
 # ─── Focus Cockpit: Alerts ─────────────────────────────────────────────────────
@@ -1773,12 +1788,9 @@ def cockpit_retry_run(request, run_id):
             args=[agent_name, task_text, context],
             queue='agents',
         )
-        return JsonResponse({
-            'ok': True,
-            'original_run_id': str(original.id),
-            'new_task_id': str(result.id),
-            'agent_name': agent_name,
-        })
+        resp = {'ok': True, 'original_run_id': str(original.id), 'new_task_id': str(result.id), 'agent_name': agent_name}
+        _audit_log(request, 'retry_run', 'AgentExecution', run_id, {'agent_name': agent_name}, resp)
+        return JsonResponse(resp)
     except Exception as e:
         return JsonResponse({'ok': False, 'error': str(e)}, status=500)
 
@@ -1835,11 +1847,49 @@ def cockpit_create_incident_note(request):
                 'created_via': 'cockpit-remediation',
             },
         )
-        return JsonResponse({
+        resp = {
             'ok': True,
             'id': str(deliverable.id),
             'title': deliverable.title,
             'slug': deliverable.slug,
-        })
+        }
+        _audit_log(request, 'create_incident_note', 'Deliverable', str(deliverable.id), body, resp)
+        return JsonResponse(resp)
     except Exception as e:
         return JsonResponse({'ok': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(['GET'])
+def cockpit_audit_list(request):
+    """List cockpit audit log entries with optional filters."""
+    from core.models_cockpit_audit import CockpitAuditLog
+    from django.utils.timezone import now
+    from datetime import timedelta
+
+    hours = int(request.GET.get('hours', 168))  # default 7 days
+    limit = min(int(request.GET.get('limit', 100)), 500)
+    action_filter = request.GET.get('action', '')
+
+    cutoff = now() - timedelta(hours=hours)
+    qs = CockpitAuditLog.objects.filter(created_at__gte=cutoff)
+    if action_filter:
+        qs = qs.filter(action__icontains=action_filter)
+
+    total = qs.count()
+    entries = list(qs.select_related('user')[:limit].values(
+        'id', 'action', 'target_type', 'target_id',
+        'request_body', 'response_summary', 'ip_address', 'created_at',
+        'user__username',
+    ))
+    for e in entries:
+        e['id'] = str(e['id'])
+        e['actor'] = e.pop('user__username') or 'system'
+        e['created_at'] = e['created_at'].isoformat() if e['created_at'] else None
+
+    return JsonResponse({
+        'hours': hours,
+        'total': total,
+        'limit': limit,
+        'items': entries,
+    })

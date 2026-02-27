@@ -222,6 +222,27 @@ export interface CreateRecipe {
   fields: CreateField[]
 }
 
+// --- Audit Log ---
+
+export interface AuditLogEntry {
+  id: string
+  actor: string
+  action: string
+  target_type: string
+  target_id: string
+  request_body: Record<string, unknown>
+  response_summary: Record<string, unknown>
+  ip_address: string | null
+  created_at: ISODateString
+}
+
+export interface AuditLogResponse {
+  hours: number
+  total: number
+  limit: number
+  items: AuditLogEntry[]
+}
+
 // --- Ops ---
 
 // --- Ops ---
