@@ -19,6 +19,8 @@ import {
   agentRunNow,
   agentPause,
   agentResume,
+  getQueuesOverview,
+  getCostOverview,
   type RunsParams,
   type InboxParams,
   type MediaParams,
@@ -28,6 +30,8 @@ import {
   type ApprovalsParams,
   type AuditLogParams,
   type AgentFleetParams,
+  type QueueWindow,
+  type CostParams,
 } from '@/lib/cockpitApi'
 
 export function useRuns(params?: RunsParams) {
@@ -210,5 +214,25 @@ export function useAgentResume() {
       qc.invalidateQueries({ queryKey: ['cockpit-agent-detail'] })
       qc.invalidateQueries({ queryKey: ['cockpit-audit'] })
     },
+  })
+}
+
+// --- Queues ---
+
+export function useQueuesOverview(window: QueueWindow = '60m') {
+  return useQuery({
+    queryKey: ['cockpit-queues', window],
+    queryFn: () => getQueuesOverview(window),
+    refetchInterval: 15_000,
+  })
+}
+
+// --- Cost ---
+
+export function useCostOverview(params?: CostParams) {
+  return useQuery({
+    queryKey: ['cockpit-cost', params],
+    queryFn: () => getCostOverview(params),
+    refetchInterval: 60_000,
   })
 }

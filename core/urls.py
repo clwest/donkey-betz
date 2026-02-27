@@ -1451,6 +1451,8 @@ from core.views_diagnostics import (
     cockpit_agent_run_now,  # Focus Cockpit: run agent now
     cockpit_agent_pause,  # Focus Cockpit: pause agent
     cockpit_agent_resume,  # Focus Cockpit: resume agent
+    cockpit_queues_overview,  # Focus Cockpit: queue/worker/task load
+    cockpit_cost_overview,  # Focus Cockpit: cost/token/provider usage
     # Session 871: Removed unused import: diagnostic_dashboard
 )
 
@@ -1646,6 +1648,9 @@ urlpatterns = [
     path('api/cockpit/agents/<str:agent_name>/run-now/', cockpit_agent_run_now, name='cockpit-agent-run-now'),
     path('api/cockpit/agents/<str:agent_name>/pause/', cockpit_agent_pause, name='cockpit-agent-pause'),
     path('api/cockpit/agents/<str:agent_name>/resume/', cockpit_agent_resume, name='cockpit-agent-resume'),
+    # P13: Queues + Cost
+    path('api/cockpit/queues/', cockpit_queues_overview, name='cockpit-queues-overview'),
+    path('api/cockpit/cost/', cockpit_cost_overview, name='cockpit-cost-overview'),
     path('diagnostics/websockets/', WebSocketDiagnosticsView.as_view(), name='websocket-diagnostics'),
     path("api/llm/chat/", llm_chat),
     # AI Building Products page (moved up to ensure it's matched first)
