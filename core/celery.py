@@ -2332,6 +2332,18 @@ app.conf.beat_schedule = {
         }
     },
 
+    # Session 1075: Zombie Work Reaper
+    # Closes stalled deliberation sessions (active, 0 turns, >1h)
+    # Completes stale pilot executions (running >7 days → partial)
+    'reap-zombie-work': {
+        'task': 'core.tasks.reap_zombie_work',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'options': {
+            'expires': 1800,  # 30 minutes
+            'queue': 'default',
+        }
+    },
+
     # Session 926: Audio Cache Cleanup for Universal Agent Voice System
     # Evicts old cache entries to manage storage (>30 days with <5 accesses)
     'cleanup-audio-cache': {
