@@ -392,7 +392,6 @@ class TalkingCharacterPipeline:
                 lipsync_result = self.replicate_provider.lip_sync_latent(
                     video_url=video_url,
                     audio_url=audio_url,
-                    bbox_shift=0
                 )
             else:
                 # Sync Labs Lipsync-2 - optimized for photorealistic humans

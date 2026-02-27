@@ -770,11 +770,15 @@ class ReplicateProvider:
                 error_message=str(e)
             )
 
+    # Session 1069: LatentSync version hash — community model requires explicit version
+    LATENTSYNC_VERSION = "637ce1919f807ca20da3a448ddc2743535d2853649574cd52a933120e9b9e293"
+
     def lip_sync_latent(
         self,
         video_url: str,
         audio_url: str,
-        bbox_shift: int = 0
+        guidance_scale: float = 1.0,
+        seed: int = 0
     ) -> LipSyncResult:
         """
         Generate video with lip-synced speech using ByteDance LatentSync
@@ -788,13 +792,14 @@ class ReplicateProvider:
         Args:
             video_url: URL to input video file (.mp4)
             audio_url: URL to input audio file (.wav, .mp3)
-            bbox_shift: Bounding box shift for face detection (0 = default)
+            guidance_scale: Guidance scale (0-10, default 1)
+            seed: Random seed (0 = random)
 
         Returns:
             LipSyncResult with prediction_id for polling
 
         Cost: ~$0.05-0.10 per second of output video
-        Model: bytedance/latentsync (January 2025)
+        Model: bytedance/latentsync v637ce191 (March 2025)
         """
 
         if not self.available:
@@ -821,14 +826,15 @@ class ReplicateProvider:
             logger.info(f"   Audio: {audio_url[:80]}...")
             logger.info(f"   Model: ByteDance LatentSync (cartoon-optimized)")
 
-            # Use ByteDance LatentSync model - optimized for stylized content
-            # Model: bytedance/latentsync
+            # Session 1069: Use version= instead of model= — community models
+            # require explicit version hash (model= returns 404)
             prediction = self.client.predictions.create(
-                model="bytedance/latentsync",
+                version=self.LATENTSYNC_VERSION,
                 input={
                     "video": video_url,
                     "audio": audio_url,
-                    "bbox_shift": bbox_shift
+                    "guidance_scale": guidance_scale,
+                    "seed": seed
                 }
             )
 
