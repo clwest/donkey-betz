@@ -708,3 +708,134 @@ def debug_raise_500(request):
         return JsonResponse({'error': 'Staff only'}, status=403)
 
     raise RuntimeError("Session 1069: Test 500 for middleware verification")
+
+
+# ── Focus Cockpit API endpoints ──────────────────────────────────────────────
+
+@require_http_methods(["GET"])
+def cockpit_error_summary(request):
+    """
+    Error summary for Focus Cockpit.
+    Aggregates failure signatures + Celery failures in the given time window.
+    Query params: hours (default 24)
+    """
+    if not (request.user and request.user.is_authenticated):
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    from django.utils import timezone
+    from datetime import timedelta
+
+    hours = int(request.GET.get('hours', 24))
+    cutoff = timezone.now() - timedelta(hours=hours)
+
+    signatures = []
+    total = 0
+
+    # Failure signatures (agent-level)
+    try:
+        from core.models_diagnostic_pipeline import FailureSignature
+        sigs = list(
+            FailureSignature.objects.filter(
+                status='active', last_seen_at__gte=cutoff
+            ).order_by('-occurrence_count')[:20]
+            .values('signature', 'occurrence_count', 'last_seen_at', 'description')
+        )
+        for s in sigs:
+            signatures.append({
+                'signature': s['signature'],
+                'source': 'agent',
+                'count': s['occurrence_count'],
+                'last_seen': s['last_seen_at'].isoformat() if s.get('last_seen_at') else None,
+                'sample_error': s.get('description', ''),
+            })
+            total += s['occurrence_count']
+    except Exception:
+        pass
+
+    # Celery task failures
+    try:
+        from core.models_celery_telemetry import CeleryTaskEvent
+        from django.db.models import Count, Max
+        celery_fails = list(
+            CeleryTaskEvent.objects.filter(
+                status='FAILURE', started_at__gte=cutoff
+            ).values('task_name')
+            .annotate(count=Count('id'), last_seen=Max('started_at'))
+            .order_by('-count')[:20]
+        )
+        for cf in celery_fails:
+            # Grab a sample error message
+            sample = CeleryTaskEvent.objects.filter(
+                task_name=cf['task_name'], status='FAILURE', started_at__gte=cutoff
+            ).exclude(error_message='').values_list('error_message', flat=True).first() or ''
+            signatures.append({
+                'signature': cf['task_name'],
+                'source': 'celery',
+                'count': cf['count'],
+                'last_seen': cf['last_seen'].isoformat() if cf.get('last_seen') else None,
+                'sample_error': sample[:300],
+            })
+            total += cf['count']
+    except Exception:
+        pass
+
+    return JsonResponse({
+        'hours': hours,
+        'total_failures': total,
+        'signatures': signatures,
+    })
+
+
+@require_http_methods(["GET"])
+def cockpit_runs_list(request):
+    """
+    Recent agent execution runs for Focus Cockpit.
+    Query params: status, agent, hours (default 24), limit (default 50)
+    """
+    if not (request.user and request.user.is_authenticated):
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    from django.utils import timezone
+    from datetime import timedelta
+
+    hours = int(request.GET.get('hours', 24))
+    limit = min(int(request.GET.get('limit', 50)), 200)
+    cutoff = timezone.now() - timedelta(hours=hours)
+
+    try:
+        from core.models_unified_system import AgentExecution
+        qs = AgentExecution.objects.filter(created_at__gte=cutoff).select_related('agent')
+
+        status_filter = request.GET.get('status')
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+
+        agent_filter = request.GET.get('agent')
+        if agent_filter:
+            qs = qs.filter(agent__name__icontains=agent_filter)
+
+        runs = list(
+            qs.order_by('-created_at')[:limit]
+            .values(
+                'id', 'agent__name', 'task', 'status',
+                'created_at', 'completed_at', 'execution_time_ms', 'tokens_used',
+            )
+        )
+
+        result = []
+        for r in runs:
+            result.append({
+                'id': str(r['id']),
+                'agent_name': r['agent__name'],
+                'task': r['task'][:200] if r['task'] else '',
+                'status': r['status'],
+                'created_at': r['created_at'].isoformat() if r['created_at'] else None,
+                'completed_at': r['completed_at'].isoformat() if r['completed_at'] else None,
+                'execution_time_ms': r['execution_time_ms'],
+                'tokens_used': r['tokens_used'] or 0,
+            })
+
+        return JsonResponse(result, safe=False)
+    except Exception as e:
+        logger.exception("cockpit_runs_list error")
+        return JsonResponse({'error': str(e)}, status=500)

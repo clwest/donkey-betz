@@ -1,0 +1,133 @@
+export type UUID = string
+export type ISODateString = string
+
+// --- Runs ---
+
+export type RunStatus = 'pending' | 'in_progress' | 'completed' | 'failed'
+
+export interface RunSummary {
+  id: UUID
+  agent_name: string
+  task: string
+  status: RunStatus
+  created_at: ISODateString
+  completed_at: ISODateString | null
+  execution_time_ms: number | null
+  tokens_used: number
+}
+
+export interface RunDetail extends RunSummary {
+  input_data: Record<string, unknown>
+  output_data: Record<string, unknown>
+  error_message: string
+  cost: string
+  trace_id: UUID | null
+}
+
+// --- Errors ---
+
+export type FailureSourceType = 'agent' | 'celery'
+
+export interface FailureSignatureSummary {
+  signature: string
+  source: FailureSourceType
+  count: number
+  last_seen: ISODateString
+  sample_error: string
+}
+
+export interface ErrorSummaryResponse {
+  hours: number
+  total_failures: number
+  signatures: FailureSignatureSummary[]
+}
+
+// --- Inbox ---
+
+export type InboxItemType = 'decision' | 'gate' | 'attention' | 'error'
+
+export interface InboxBucket {
+  type: InboxItemType
+  label: string
+  count: number
+}
+
+export interface InboxItem {
+  id: UUID
+  type: InboxItemType
+  title: string
+  summary: string
+  created_at: ISODateString
+  priority: 'low' | 'medium' | 'high' | 'critical'
+}
+
+// --- Library ---
+
+export type LibraryItemKind = 'image' | 'video' | 'audio' | 'document'
+
+export interface MediaItem {
+  id: UUID
+  kind: LibraryItemKind
+  title: string
+  url: string
+  thumbnail_url?: string
+  created_at: ISODateString
+}
+
+export interface DeliverableItem {
+  id: UUID
+  title: string
+  deliverable_type: string
+  status: string
+  created_at: ISODateString
+  file_url?: string
+}
+
+// --- Create ---
+
+export type RecipeId =
+  | 'blog_post'
+  | 'social_media'
+  | 'legal_doc'
+  | 'research_brief'
+  | 'image'
+  | 'video'
+
+export interface CreateField {
+  name: string
+  label: string
+  type: 'text' | 'textarea' | 'select'
+  options?: string[]
+  required?: boolean
+}
+
+export interface CreateRecipe {
+  id: RecipeId
+  label: string
+  description: string
+  icon: string
+  fields: CreateField[]
+}
+
+// --- Ops ---
+
+export interface OpsHealthOverview {
+  status: 'healthy' | 'degraded' | 'down'
+  services: Record<string, { status: string; latency_ms?: number }>
+  uptime_seconds: number
+}
+
+export interface DbHealthResponse {
+  total_models: number
+  db_size_mb: number
+  active_connections: number
+}
+
+export interface PlatformConfigResponse {
+  debug: boolean
+  allowed_hosts: string[]
+  installed_apps: string[]
+  database_engine: string
+  redis_url: string
+  celery_broker: string
+}
