@@ -1193,6 +1193,35 @@ class ConversationOrchestrator:
 
             logger.debug(f"Turn {turn + 1}: {current_agent['name']} - tension={msg_has_tension}, grounding={msg_has_grounding}")
 
+        # Session 1075: Guard against 0-turn sessions — mark failed instead of crashing
+        if not messages:
+            logger.warning(f"⚠️ [Session 1075] Deliberation produced 0 turns for topic: {topic[:80]}")
+            if deliberation_session:
+                try:
+                    from django.utils import timezone
+                    deliberation_session.status = 'failed'
+                    deliberation_session.completed_at = timezone.now()
+                    deliberation_session.save(update_fields=['status', 'completed_at', 'updated_at'])
+                    logger.info(f"📋 [Session 1075] Marked session {deliberation_session.id} as failed (0 turns)")
+                except Exception as e:
+                    logger.warning(f"[Session 1075] Failed to mark session as failed: {e}")
+            return {
+                'messages': [],
+                'decision_summary': {},
+                'summary_validation': {'is_valid': False, 'reason': '0 turns produced'},
+                'validation': {'is_valid': False},
+                'deliberation_session_id': str(deliberation_session.id) if deliberation_session else None,
+                'state': {
+                    'total_turns': 0,
+                    'tension_turns': 0,
+                    'grounded_turns': 0,
+                    'empty_agreement_count': 0,
+                },
+                'execution_mandate': None,
+                'synthesis_contract': None,
+                'error': '0 turns produced — deliberation never started',
+            }
+
         # Extract decision summary from final message
         decision_summary = extract_decision_summary(messages[-1]['content'])
         summary_validation = validate_decision_summary(decision_summary)
