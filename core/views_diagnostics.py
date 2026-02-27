@@ -1922,10 +1922,10 @@ def cockpit_agent_fleet(request):
         )
 
     agents_qs = agents_qs.annotate(
-        recent_total=Count('agentexecution', filter=Q(agentexecution__created_at__gte=cutoff)),
-        recent_failed=Count('agentexecution', filter=Q(agentexecution__created_at__gte=cutoff, agentexecution__status='failed')),
-        recent_completed=Count('agentexecution', filter=Q(agentexecution__created_at__gte=cutoff, agentexecution__status='completed')),
-        last_run_at=Max('agentexecution__created_at'),
+        recent_total=Count('executions', filter=Q(executions__created_at__gte=cutoff)),
+        recent_failed=Count('executions', filter=Q(executions__created_at__gte=cutoff, executions__status='failed')),
+        recent_completed=Count('executions', filter=Q(executions__created_at__gte=cutoff, executions__status='completed')),
+        last_run_at=Max('executions__created_at'),
     ).order_by('-recent_total', 'name')[:limit]
 
     # Fetch cockpit state overrides
