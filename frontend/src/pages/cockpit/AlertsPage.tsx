@@ -1,9 +1,11 @@
-import { useAlerts } from '@/hooks/cockpitQueries'
+import { useState } from 'react'
+import { useAlerts, useCreateIncidentNote } from '@/hooks/cockpitQueries'
+import { getRunbook } from '@/lib/cockpitApi'
 import StatusPill from '@/components/cockpit/shared/StatusPill'
 import SkeletonRows from '@/components/cockpit/shared/SkeletonRows'
 import type { Tone } from '@/components/cockpit/shared/StatusPill'
 import type { AlertItem } from '@/types/cockpit'
-import { Bell, AlertTriangle, Bot, HeartPulse, ShieldCheck } from 'lucide-react'
+import { Bell, AlertTriangle, Bot, HeartPulse, ShieldCheck, ChevronDown, ChevronUp, FileText } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 const SEVERITY_TONE: Record<string, Tone> = {
@@ -24,6 +26,28 @@ function AlertCard({ alert }: { alert: AlertItem }) {
   const navigate = useNavigate()
   const config = KIND_CONFIG[alert.kind] ?? { icon: Bell, label: alert.kind }
   const Icon = config.icon
+  const [showRunbook, setShowRunbook] = useState(false)
+  const [runbookSteps, setRunbookSteps] = useState<string[] | null>(null)
+  const [loadingRunbook, setLoadingRunbook] = useState(false)
+  const incidentMutation = useCreateIncidentNote()
+
+  async function toggleRunbook() {
+    if (showRunbook) {
+      setShowRunbook(false)
+      return
+    }
+    if (!runbookSteps) {
+      setLoadingRunbook(true)
+      try {
+        const rb = await getRunbook(alert.kind)
+        setRunbookSteps(rb.steps)
+      } catch {
+        setRunbookSteps(['Failed to load runbook.'])
+      }
+      setLoadingRunbook(false)
+    }
+    setShowRunbook(true)
+  }
 
   return (
     <div
@@ -33,10 +57,12 @@ function AlertCard({ alert }: { alert: AlertItem }) {
           : alert.severity === 'medium'
           ? 'border-l-amber-500'
           : 'border-l-gray-600'
-      } ${config.route ? 'cursor-pointer hover:bg-dark-border/20 transition-colors' : ''}`}
-      onClick={() => config.route && navigate(config.route)}
+      }`}
     >
-      <div className="flex items-start gap-3">
+      <div
+        className={`flex items-start gap-3 ${config.route ? 'cursor-pointer' : ''}`}
+        onClick={() => config.route && navigate(config.route)}
+      >
         <Icon size={18} className={
           alert.severity === 'high' || alert.severity === 'critical'
             ? 'text-red-400 mt-0.5'
@@ -53,6 +79,42 @@ function AlertCard({ alert }: { alert: AlertItem }) {
           <p className="text-xs text-gray-500 mt-0.5">{alert.detail}</p>
         </div>
       </div>
+
+      {/* Action bar */}
+      <div className="flex items-center gap-2 mt-3 pt-2 border-t border-dark-border/50">
+        <button
+          onClick={(e) => { e.stopPropagation(); toggleRunbook() }}
+          className="text-xs text-gray-400 hover:text-gray-200 flex items-center gap-1 transition-colors"
+        >
+          {showRunbook ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+          {loadingRunbook ? 'Loading…' : 'Runbook'}
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            incidentMutation.mutate({
+              title: alert.title,
+              detail: alert.detail,
+              source_type: alert.kind,
+              source_id: alert.id,
+            })
+          }}
+          disabled={incidentMutation.isPending}
+          className="text-xs text-gray-400 hover:text-gray-200 flex items-center gap-1 transition-colors"
+        >
+          <FileText size={12} />
+          {incidentMutation.isPending ? 'Creating…' : incidentMutation.isSuccess ? 'Created' : 'Incident Note'}
+        </button>
+      </div>
+
+      {/* Runbook steps */}
+      {showRunbook && runbookSteps && (
+        <ol className="mt-2 ml-6 space-y-1 list-decimal text-xs text-gray-400">
+          {runbookSteps.map((step, i) => (
+            <li key={i}>{step}</li>
+          ))}
+        </ol>
+      )}
     </div>
   )
 }

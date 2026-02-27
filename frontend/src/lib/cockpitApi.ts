@@ -9,6 +9,9 @@ import type {
   DeliverableItem,
   PaginatedResponse,
   AlertsResponse,
+  RunbookResponse,
+  RetryRunResponse,
+  IncidentNoteResponse,
   ApprovalsResponse,
   ApprovalActionResponse,
   PlatformConfigResponse,
@@ -62,6 +65,23 @@ export interface AlertsParams {
 
 export async function getAlerts(params?: AlertsParams) {
   const { data } = await api.get<AlertsResponse>('/cockpit/alerts/', { params })
+  return data
+}
+
+// --- Remediation ---
+
+export async function getRunbook(alertKind: string) {
+  const { data } = await api.get<RunbookResponse>(`/cockpit/remediate/runbook/${alertKind}/`)
+  return data
+}
+
+export async function retryRun(runId: string) {
+  const { data } = await api.post<RetryRunResponse>(`/cockpit/remediate/retry-run/${runId}/`)
+  return data
+}
+
+export async function createIncidentNote(payload: { title: string; detail?: string; source_type?: string; source_id?: string }) {
+  const { data } = await api.post<IncidentNoteResponse>('/cockpit/remediate/incident-note/', payload)
   return data
 }
 

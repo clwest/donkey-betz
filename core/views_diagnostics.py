@@ -1687,3 +1687,159 @@ def cockpit_alerts(request):
         'total': len(alerts),
         'items': alerts,
     })
+
+
+# ─── Focus Cockpit: Remediation ────────────────────────────────────────────────
+
+# Deterministic runbook map: alert kind + optional substring → steps
+_RUNBOOKS = {
+    'error_spike': {
+        'title': 'Error Spike Runbook',
+        'steps': [
+            'Check the error signature in Errors page for sample traceback.',
+            'Identify the failing agent(s) in Ops → Top Failing Agents.',
+            'If provider-related (OpenAI, Replicate), check provider status page.',
+            'If persistent, retry the latest failed run from Run Detail.',
+            'Create an incident note to track resolution.',
+        ],
+    },
+    'agent_failure': {
+        'title': 'Agent Failure Runbook',
+        'steps': [
+            'Open Ops page and check the agent failure rate trend.',
+            'View recent failed runs for the agent in Runs page (filter by agent).',
+            'Check if the agent depends on an external API that may be down.',
+            'Retry the most recent failed run to test recovery.',
+            'If failure persists, create an incident note.',
+        ],
+    },
+    'health': {
+        'title': 'Health Degradation Runbook',
+        'steps': [
+            'Check Ops page for which component is unhealthy.',
+            'For DB issues: verify PostgreSQL connection and query performance.',
+            'For Redis issues: check Redis connection and memory usage.',
+            'For Celery issues: verify workers are running (check Railway logs).',
+            'For body system issues: check the specific ComponentStatus detail.',
+        ],
+    },
+    'approvals': {
+        'title': 'Pending Approvals Runbook',
+        'steps': [
+            'Go to Approvals page to review pending items.',
+            'Prioritize critical/high urgency items first.',
+            'Review ML recommendation before deciding.',
+            'Approve or reject with feedback for learning.',
+        ],
+    },
+}
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def cockpit_runbook(request, alert_kind):
+    """Return deterministic runbook for an alert kind."""
+    runbook = _RUNBOOKS.get(alert_kind)
+    if not runbook:
+        return JsonResponse({'ok': False, 'error': f'No runbook for kind={alert_kind}'}, status=404)
+    return JsonResponse({'ok': True, **runbook})
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def cockpit_retry_run(request, run_id):
+    """Retry a failed run by creating a new AgentExecution with the same agent + task."""
+    from core.models_unified_system import AgentExecution
+
+    try:
+        original = AgentExecution.objects.select_related('agent').get(id=run_id)
+    except AgentExecution.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Run not found'}, status=404)
+
+    if original.status != 'failed':
+        return JsonResponse({'ok': False, 'error': 'Only failed runs can be retried'}, status=400)
+
+    agent_name = original.agent.name if original.agent else None
+    if not agent_name:
+        return JsonResponse({'ok': False, 'error': 'Cannot determine agent name'}, status=400)
+
+    task_text = original.task or ''
+    context = original.input_data or {}
+    context['retried_from'] = str(original.id)
+
+    try:
+        from core.tasks import execute_agent_task
+        result = execute_agent_task.apply_async(
+            args=[agent_name, task_text, context],
+            queue='agents',
+        )
+        return JsonResponse({
+            'ok': True,
+            'original_run_id': str(original.id),
+            'new_task_id': str(result.id),
+            'agent_name': agent_name,
+        })
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def cockpit_create_incident_note(request):
+    """Create an incident note as a Deliverable tagged 'incident'."""
+    try:
+        body = json.loads(request.body or b'{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
+
+    source_type = body.get('source_type', 'alert')
+    source_id = body.get('source_id', '')
+    title = body.get('title', '')
+    detail = body.get('detail', '')
+
+    if not title:
+        return JsonResponse({'ok': False, 'error': 'title is required'}, status=400)
+
+    from django.utils.timezone import now as tz_now
+    timestamp = tz_now().isoformat()
+
+    content = f"# Incident Note\n\n"
+    content += f"**Created:** {timestamp}\n"
+    content += f"**Source:** {source_type} — {source_id}\n\n"
+    content += f"## Summary\n\n{title}\n\n"
+    if detail:
+        content += f"## Detail\n\n{detail}\n\n"
+    content += f"## Resolution\n\n_To be filled in after resolution._\n"
+
+    try:
+        from core.models_deliverables import Deliverable
+        import uuid
+        from django.utils.text import slugify
+
+        slug_base = slugify(title[:60]) or 'incident'
+        slug = f"{slug_base}-{uuid.uuid4().hex[:8]}"
+
+        deliverable = Deliverable.objects.create(
+            title=title,
+            slug=slug,
+            deliverable_type='document',
+            category='Incident',
+            tags=['incident', source_type],
+            agent_name='cockpit-operator',
+            content=content,
+            content_format='markdown',
+            status='ready',
+            metadata={
+                'source_type': source_type,
+                'source_id': source_id,
+                'created_via': 'cockpit-remediation',
+            },
+        )
+        return JsonResponse({
+            'ok': True,
+            'id': str(deliverable.id),
+            'title': deliverable.title,
+            'slug': deliverable.slug,
+        })
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=500)

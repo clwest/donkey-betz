@@ -107,6 +107,30 @@ export interface AlertsResponse {
   items: AlertItem[]
 }
 
+// --- Remediation ---
+
+export interface RunbookResponse {
+  ok: boolean
+  title: string
+  steps: string[]
+}
+
+export interface RetryRunResponse {
+  ok: boolean
+  original_run_id: string
+  new_task_id: string
+  agent_name: string
+  error?: string
+}
+
+export interface IncidentNoteResponse {
+  ok: boolean
+  id?: string
+  title?: string
+  slug?: string
+  error?: string
+}
+
 // --- Approvals ---
 
 export type ApprovalKind = 'decision' | 'gate'
