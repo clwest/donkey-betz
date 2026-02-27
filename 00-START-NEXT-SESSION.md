@@ -127,6 +127,18 @@
 - Changed to `block_ms=0` — Celery Beat handles scheduling, workers don't need to block-wait
 - Drops idle runtime from ~5s to <100ms per run (~150 runs/hour × 5s = 12.5 min/hour saved)
 
+### Cockpit Run Detail Click-Through Fixed
+- `getRunDetail()` in `cockpitApi.ts` called `/v1/agents/execution/${id}/`
+- Backend returns `{success, data: {execution: {...}}}` — nested wrapper
+- Frontend expected flat `RunDetail` shape (`run.task`, `run.agent_name`, etc.)
+- All fields showed as undefined/blank when clicking a run in the Runs tab
+- Fixed: `getRunDetail` now unwraps `data.data.execution` to flat `RunDetail`
+
+### Cockpit Config Tab Fixed (previous sub-session)
+- `LLMProvider` and `LLMModel` DB tables empty — never seeded
+- Added fallback to `LLMProviderRegistry` service (6 providers configured)
+- Config tab now shows providers and models from registry
+
 ---
 
 ## Session 1074 — What Happened
