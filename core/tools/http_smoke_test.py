@@ -577,6 +577,65 @@ BUILTIN_SUITES: dict[str, list[dict]] = {
                 {'check': 'json_path', 'path': '$.route_count', 'operator': 'gte', 'expected': 25},
             ],
         },
+        # 15. Deliverables stats (backs content_review_tool)
+        {
+            'name': 'deliverables_stats',
+            'method': 'GET',
+            'path': '/api/deliverables/stats/',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+                {'check': 'has_key', 'key': 'total'},
+            ],
+        },
+        # 16. Deliverables list
+        {
+            'name': 'deliverables_list',
+            'method': 'GET',
+            'path': '/api/deliverables/?per_page=3',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+            ],
+        },
+        # 17. Opportunities stats
+        {
+            'name': 'opportunities_stats',
+            'method': 'GET',
+            'path': '/api/opportunities/stats/',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+                {'check': 'has_key', 'key': 'total'},
+                {'check': 'has_key', 'key': 'by_status'},
+            ],
+        },
+        # 18. Pilot gates dashboard
+        {
+            'name': 'pilot_gates',
+            'method': 'GET',
+            'path': '/api/pilot-gates/?limit=3',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+            ],
+        },
+        # 19. Redis queue depths
+        {
+            'name': 'redis_queue_depths',
+            'method': 'GET',
+            'path': '/api/cockpit/queues/depths/',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+                {'check': 'has_key', 'key': 'redis_ok'},
+                {'check': 'has_key', 'key': 'queues'},
+            ],
+        },
+        # 20. Media library
+        {
+            'name': 'media_library',
+            'method': 'GET',
+            'path': '/api/cockpit/library/media/?limit=3',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+            ],
+        },
     ],
 }
 
