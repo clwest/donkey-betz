@@ -7,6 +7,7 @@ import type {
   OpsOverviewResponse,
   MediaItem,
   DeliverableItem,
+  PaginatedResponse,
   PlatformConfigResponse,
 } from '@/types/cockpit'
 
@@ -50,30 +51,32 @@ export async function getInbox(params?: InboxParams) {
   return data
 }
 
-// --- Library: Media ---
-
-export interface MediaParams {
-  kind?: string
-  limit?: number
-  offset?: number
-}
-
-export async function getMedia(params?: MediaParams) {
-  const { data } = await api.get<MediaItem[]>('/images/history/', { params })
-  return data
-}
-
 // --- Library: Deliverables ---
 
 export interface DeliverableParams {
-  status?: string
+  q?: string
   type?: string
+  days?: number
   limit?: number
   offset?: number
 }
 
 export async function getDeliverables(params?: DeliverableParams) {
-  const { data } = await api.get<DeliverableItem[]>('/deliverables/', { params })
+  const { data } = await api.get<PaginatedResponse<DeliverableItem>>('/cockpit/library/deliverables/', { params })
+  return data
+}
+
+// --- Library: Media ---
+
+export interface MediaParams {
+  media_type?: string
+  days?: number
+  limit?: number
+  offset?: number
+}
+
+export async function getMedia(params?: MediaParams) {
+  const { data } = await api.get<PaginatedResponse<MediaItem>>('/cockpit/library/media/', { params })
   return data
 }
 
