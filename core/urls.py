@@ -1457,6 +1457,7 @@ from core.views_diagnostics import (
     cockpit_autopilot_toggle,  # Focus Cockpit: toggle autopilot policy
     cockpit_autopilot_evaluate,  # Focus Cockpit: evaluate autopilot policies
     cockpit_autopilot_history,  # Focus Cockpit: autopilot event history
+    cockpit_run_trace,  # Focus Cockpit: run trace debugger
     # Session 871: Removed unused import: diagnostic_dashboard
 )
 
@@ -1660,6 +1661,8 @@ urlpatterns = [
     path('api/cockpit/autopilot/policies/<str:policy_id>/toggle/', cockpit_autopilot_toggle, name='cockpit-autopilot-toggle'),
     path('api/cockpit/autopilot/evaluate/', cockpit_autopilot_evaluate, name='cockpit-autopilot-evaluate'),
     path('api/cockpit/autopilot/history/', cockpit_autopilot_history, name='cockpit-autopilot-history'),
+    # P15: Run Trace
+    path('api/cockpit/runs/<str:run_id>/trace/', cockpit_run_trace, name='cockpit-run-trace'),
     path('diagnostics/websockets/', WebSocketDiagnosticsView.as_view(), name='websocket-diagnostics'),
     path("api/llm/chat/", llm_chat),
     # AI Building Products page (moved up to ensure it's matched first)

@@ -2729,3 +2729,174 @@ def cockpit_autopilot_history(request):
         e['created_at'] = e['created_at'].isoformat() if e['created_at'] else None
 
     return JsonResponse({'total': len(events), 'items': events})
+
+
+# ── P15: Run Trace ──────────────────────────────────────────────────
+
+@csrf_exempt
+@require_http_methods(['GET'])
+def cockpit_run_trace(request, run_id):
+    """Stitch AgentExecution + CeleryTaskEvent + LLMCallLog + AuditLog into one trace."""
+    from core.models_unified_system import AgentExecution
+    from core.models_celery_telemetry import CeleryTaskEvent
+    from core.models_llm_routing import LLMCallLog
+    from core.models_cockpit_audit import CockpitAuditLog
+    from datetime import timedelta
+
+    try:
+        run = AgentExecution.objects.select_related('agent').get(id=run_id)
+    except AgentExecution.DoesNotExist:
+        return JsonResponse({'error': 'Run not found'}, status=404)
+
+    agent_name = run.agent.name if run.agent else ''
+    started = run.created_at
+    ended = run.completed_at or (started + timedelta(hours=1))
+    # Widen window slightly to catch related events
+    window_start = started - timedelta(seconds=30)
+    window_end = ended + timedelta(seconds=30)
+
+    # Run detail
+    run_data = {
+        'id': str(run.id),
+        'agent_name': agent_name,
+        'task': run.task or '',
+        'status': run.status,
+        'created_at': started.isoformat() if started else None,
+        'completed_at': run.completed_at.isoformat() if run.completed_at else None,
+        'execution_time_ms': run.execution_time_ms,
+        'tokens_used': run.tokens_used or 0,
+        'cost': str(run.cost) if run.cost else '0',
+        'error_message': run.error_message or '',
+        'trace_id': str(run.trace_id) if run.trace_id else None,
+    }
+
+    # Celery task events within time window
+    celery_events = []
+    qs = CeleryTaskEvent.objects.filter(
+        started_at__gte=window_start,
+        started_at__lte=window_end,
+    ).order_by('started_at')[:50]
+    for ev in qs:
+        celery_events.append({
+            'task_id': ev.task_id,
+            'task_name': ev.task_name,
+            'short_name': ev.task_name.rsplit('.', 1)[-1] if ev.task_name else '',
+            'queue': ev.queue or '',
+            'worker': ev.worker or '',
+            'status': ev.status,
+            'started_at': ev.started_at.isoformat() if ev.started_at else None,
+            'finished_at': ev.finished_at.isoformat() if ev.finished_at else None,
+            'duration_seconds': ev.duration_seconds,
+            'rss_mb_start': ev.rss_mb_start,
+            'rss_mb_end': ev.rss_mb_end,
+            'rss_delta_mb': ev.rss_delta_mb,
+            'error_type': ev.error_type or '',
+            'error_message': ev.error_message or '',
+        })
+
+    # LLM calls — match by agent_name within time window
+    llm_calls = []
+    if agent_name:
+        qs_llm = LLMCallLog.objects.filter(
+            agent_name=agent_name,
+            created_at__gte=window_start,
+            created_at__lte=window_end,
+        ).order_by('created_at')[:50]
+        for c in qs_llm:
+            llm_calls.append({
+                'id': str(c.id),
+                'provider': c.provider,
+                'model_id': c.model_id,
+                'prompt_tokens': c.prompt_tokens or 0,
+                'completion_tokens': c.completion_tokens or 0,
+                'total_tokens': c.total_tokens or 0,
+                'cost': str(c.cost) if c.cost else '0',
+                'latency_ms': c.latency_ms or 0,
+                'success': c.success,
+                'error_type': c.error_type or '',
+                'error_message': c.error_message or '',
+                'created_at': c.created_at.isoformat() if c.created_at else None,
+            })
+
+    # LLM rollup
+    llm_total_cost = sum(float(c['cost']) for c in llm_calls)
+    llm_total_tokens = sum(c['total_tokens'] for c in llm_calls)
+    llm_avg_latency = (
+        round(sum(c['latency_ms'] for c in llm_calls) / len(llm_calls))
+        if llm_calls else 0
+    )
+
+    # Audit log entries related to this run
+    audit_entries = []
+    audit_qs = CockpitAuditLog.objects.filter(
+        target_id=str(run.id),
+    ).order_by('-created_at')[:20]
+    for a in audit_qs:
+        audit_entries.append({
+            'id': str(a.id),
+            'actor': a.user.username if a.user else 'system',
+            'action': a.action,
+            'target_type': a.target_type,
+            'created_at': a.created_at.isoformat() if a.created_at else None,
+        })
+
+    # Build unified timeline
+    timeline = []
+    timeline.append({
+        'type': 'run',
+        'subtype': 'started',
+        'timestamp': started.isoformat(),
+        'summary': f'Run started: {agent_name}',
+        'detail': run.task or '',
+    })
+    if run.completed_at:
+        timeline.append({
+            'type': 'run',
+            'subtype': 'completed' if run.status == 'completed' else 'failed',
+            'timestamp': run.completed_at.isoformat(),
+            'summary': f'Run {run.status}: {agent_name}',
+            'detail': run.error_message or '',
+        })
+
+    for ev in celery_events:
+        timeline.append({
+            'type': 'celery',
+            'subtype': ev['status'],
+            'timestamp': ev['started_at'] or '',
+            'summary': f"Task {ev['short_name']} [{ev['status']}]",
+            'detail': f"worker={ev['worker']} queue={ev['queue']} duration={ev['duration_seconds'] or 0:.1f}s",
+        })
+
+    for c in llm_calls:
+        timeline.append({
+            'type': 'llm',
+            'subtype': 'success' if c['success'] else 'error',
+            'timestamp': c['created_at'] or '',
+            'summary': f"LLM {c['provider']}/{c['model_id']} — {c['total_tokens']}tok ${c['cost']}",
+            'detail': c['error_message'] if not c['success'] else f"{c['latency_ms']}ms",
+        })
+
+    for a in audit_entries:
+        timeline.append({
+            'type': 'audit',
+            'subtype': a['action'],
+            'timestamp': a['created_at'] or '',
+            'summary': f"{a['actor']}: {a['action']} {a['target_type']}",
+            'detail': '',
+        })
+
+    timeline.sort(key=lambda x: x.get('timestamp') or '')
+
+    return JsonResponse({
+        'run': run_data,
+        'celery_events': celery_events,
+        'llm_calls': llm_calls,
+        'llm_summary': {
+            'total_calls': len(llm_calls),
+            'total_cost': round(llm_total_cost, 6),
+            'total_tokens': llm_total_tokens,
+            'avg_latency_ms': llm_avg_latency,
+        },
+        'audit_entries': audit_entries,
+        'timeline': timeline,
+    })

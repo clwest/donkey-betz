@@ -21,6 +21,7 @@ import {
   agentResume,
   getQueuesOverview,
   getCostOverview,
+  getRunTrace,
   getAutopilotPolicies,
   toggleAutopilotPolicy,
   evaluateAutopilot,
@@ -239,6 +240,16 @@ export function useCostOverview(params?: CostParams) {
     queryKey: ['cockpit-cost', params],
     queryFn: () => getCostOverview(params),
     refetchInterval: 60_000,
+  })
+}
+
+// --- Run Trace ---
+
+export function useRunTrace(runId: string | undefined) {
+  return useQuery({
+    queryKey: ['cockpit-run-trace', runId],
+    queryFn: () => getRunTrace(runId!),
+    enabled: !!runId,
   })
 }
 
