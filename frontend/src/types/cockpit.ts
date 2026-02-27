@@ -418,6 +418,70 @@ export interface OpsOverviewResponse {
   recent_failed_runs: RunSummary[]
 }
 
+// --- Run Trace ---
+
+export interface TraceCeleryEvent {
+  task_id: string
+  task_name: string
+  short_name: string
+  queue: string
+  worker: string
+  status: string
+  started_at: ISODateString | null
+  finished_at: ISODateString | null
+  duration_seconds: number | null
+  rss_mb_start: number | null
+  rss_mb_end: number | null
+  rss_delta_mb: number | null
+  error_type: string
+  error_message: string
+}
+
+export interface TraceLLMCall {
+  id: UUID
+  provider: string
+  model_id: string
+  prompt_tokens: number
+  completion_tokens: number
+  total_tokens: number
+  cost: string
+  latency_ms: number
+  success: boolean
+  error_type: string
+  error_message: string
+  created_at: ISODateString | null
+}
+
+export interface TraceAuditEntry {
+  id: UUID
+  actor: string
+  action: string
+  target_type: string
+  created_at: ISODateString | null
+}
+
+export interface TraceTimelineEvent {
+  type: 'run' | 'celery' | 'llm' | 'audit'
+  subtype: string
+  timestamp: string
+  summary: string
+  detail: string
+}
+
+export interface RunTraceResponse {
+  run: RunDetail & { trace_id: UUID | null }
+  celery_events: TraceCeleryEvent[]
+  llm_calls: TraceLLMCall[]
+  llm_summary: {
+    total_calls: number
+    total_cost: number
+    total_tokens: number
+    avg_latency_ms: number
+  }
+  audit_entries: TraceAuditEntry[]
+  timeline: TraceTimelineEvent[]
+}
+
 // --- Autopilot ---
 
 export interface AutopilotPolicy {
