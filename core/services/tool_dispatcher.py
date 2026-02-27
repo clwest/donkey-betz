@@ -6514,44 +6514,34 @@ class ToolDispatcher:
                 return {'action': 'accuracy', 'overall': {}, 'by_sport': [], 'wager_stats': {}, 'days': payload.get('days', 30), 'error': str(e)}
 
         elif action == 'sharp_action':
-            try:
-                from core.agents.markets.sharp_action_detector import SharpActionDetector
-                agent = SharpActionDetector()
-                result = agent.execute(
-                    task="Identify sharp betting action and stale lines",
-                    context={}
-                )
-                if result.success:
-                    signals = result.data.get('signals', [])
-                    return {
-                        'action': 'sharp_action',
-                        'items': signals[:limit],
-                        'total': len(signals),
-                    }
-                return {'action': 'sharp_action', 'items': [], 'total': 0, 'error': result.error}
-            except Exception as e:
-                logger.warning(f"SharpActionDetector failed: {e}")
-                return {'action': 'sharp_action', 'items': [], 'total': 0, 'error': str(e)}
+            # Session 1075: Dispatch async — SharpActionDetector can exceed 30s tool timeout
+            from core.tasks import execute_agent_task
+            celery_task = execute_agent_task.apply_async(
+                args=['SharpActionDetector', 'Identify sharp betting action and stale lines',
+                      {'user_id': str(user_id) if user_id else None, 'limit': limit}],
+                queue='agents',
+            )
+            return {
+                'task_id': str(celery_task.id),
+                'mode': 'async',
+                'action': 'sharp_action',
+                'message': f'Sharp action analysis dispatched (task {celery_task.id}). Use job_status to check progress.',
+            }
 
         elif action == 'line_movements':
-            try:
-                from core.agents.markets.line_movement_analyzer import LineMovementAnalyzer
-                agent = LineMovementAnalyzer()
-                result = agent.execute(
-                    task="Detect sharp money line movements",
-                    context={}
-                )
-                if result.success:
-                    movements = result.data.get('movements', [])
-                    return {
-                        'action': 'line_movements',
-                        'items': movements[:limit],
-                        'total': len(movements),
-                    }
-                return {'action': 'line_movements', 'items': [], 'total': 0, 'error': result.error}
-            except Exception as e:
-                logger.warning(f"LineMovementAnalyzer failed: {e}")
-                return {'action': 'line_movements', 'items': [], 'total': 0, 'error': str(e)}
+            # Session 1075: Dispatch async — LineMovementAnalyzer can exceed 30s tool timeout
+            from core.tasks import execute_agent_task
+            celery_task = execute_agent_task.apply_async(
+                args=['LineMovementAnalyzer', 'Detect sharp money line movements',
+                      {'user_id': str(user_id) if user_id else None, 'limit': limit}],
+                queue='agents',
+            )
+            return {
+                'task_id': str(celery_task.id),
+                'mode': 'async',
+                'action': 'line_movements',
+                'message': f'Line movement analysis dispatched (task {celery_task.id}). Use job_status to check progress.',
+            }
 
         elif action == 'wagers':
             from core.models_betting import PlacedWager

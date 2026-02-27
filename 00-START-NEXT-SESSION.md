@@ -101,6 +101,16 @@
 - Verified after Railway celery-pa redeployed with initiative query fix
 - `http_smoke_test(suite='pa_tools_smoke')` — all 14 checks passing on Railway prod
 
+### Sports Betting Tool Timeout Fix
+- `sharp_action` and `line_movements` actions were executing agents synchronously (SharpActionDetector, LineMovementAnalyzer)
+- Both exceeded the 30s PA tool timeout, causing 2 failures in 48h
+- Dispatched both to Celery async (same pattern as `brief`/`live_odds`)
+- Returns `task_id` immediately, PA can check progress via `job_status`
+
+### PA Agentic Loop Iterations Raised (5→8)
+- `max_iterations` in `_run_agentic_loop` raised from 5 to 8
+- Enables PA to handle batch operations (e.g., ignoring 15+ boardroom items) in a single conversation turn
+
 ---
 
 ## Session 1074 — What Happened
