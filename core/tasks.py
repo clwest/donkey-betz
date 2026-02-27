@@ -236,6 +236,64 @@ def cleanup_stale_agent_executions(self, minutes_threshold: int = 60):
 
 
 @shared_task
+def reap_zombie_work(
+    deliberation_stale_minutes: int = 60,
+    pilot_stale_days: int = 7,
+):
+    """
+    Session 1075: Close zombie deliberation sessions and stale pilot executions.
+
+    Deliberation sessions that are 'active' with 0 turns after the threshold
+    are clearly stalled — mark them 'failed'. Pilot executions stuck in
+    'running' for over a week are completed as 'partial'.
+
+    Args:
+        deliberation_stale_minutes: Close active sessions older than this (default 60)
+        pilot_stale_days: Complete running pilots older than this (default 7)
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+
+    now = timezone.now()
+    stats = {'deliberations_reaped': 0, 'pilots_reaped': 0}
+
+    # --- Deliberation sessions ---
+    try:
+        from core.models_deliberation import DeliberationSession
+        cutoff = now - timedelta(minutes=deliberation_stale_minutes)
+        zombies = DeliberationSession.objects.filter(
+            status='active',
+            created_at__lt=cutoff,
+        )
+        count = zombies.update(status='failed')
+        stats['deliberations_reaped'] = count
+        if count:
+            logger.info(f"🧹 [ZOMBIE-REAPER] Closed {count} stalled deliberation sessions")
+    except Exception as e:
+        logger.error(f"🧹 [ZOMBIE-REAPER] Deliberation cleanup error: {e}")
+
+    # --- Pilot executions ---
+    try:
+        from core.models_pilot_readiness import PilotExecution
+        cutoff = now - timedelta(days=pilot_stale_days)
+        stale = PilotExecution.objects.filter(
+            status='running',
+            created_at__lt=cutoff,
+        )
+        count = stale.update(status='completed', outcome='partial')
+        stats['pilots_reaped'] = count
+        if count:
+            logger.info(f"🧹 [ZOMBIE-REAPER] Completed {count} stale pilot executions as partial")
+    except Exception as e:
+        logger.error(f"🧹 [ZOMBIE-REAPER] Pilot cleanup error: {e}")
+
+    total = stats['deliberations_reaped'] + stats['pilots_reaped']
+    if total == 0:
+        logger.info("🧹 [ZOMBIE-REAPER] No zombies found")
+    return stats
+
+
+@shared_task
 def cleanup_junk_initiatives(stale_days: int = 7):
     """
     Session 926/943: Clean up junk initiatives to prevent pipeline backlogs.
