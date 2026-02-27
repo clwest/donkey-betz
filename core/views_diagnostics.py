@@ -2239,6 +2239,87 @@ def cockpit_queues_overview(request):
 
 
 # ---------------------------------------------------------------------------
+# P13A-live: Per-queue LLEN depths (real-time Redis inspection)
+# ---------------------------------------------------------------------------
+
+CELERY_QUEUE_NAMES = [
+    'default', 'agents', 'sports', 'pa', 'content',
+    'long_running', 'ml', 'broadcast',
+]
+
+
+@csrf_exempt
+@require_http_methods(['GET'])
+def cockpit_queue_depths(request):
+    """Return live Redis LLEN for every Celery queue."""
+    from django.utils.timezone import now as tz_now
+
+    r = get_redis_client()
+    if r is None:
+        return JsonResponse({
+            'redis_ok': False,
+            'error': 'REDIS_URL not configured or Redis unreachable',
+            'generated_at': datetime.utcnow().isoformat(),
+        })
+
+    try:
+        r.ping()
+    except Exception as exc:
+        return JsonResponse({
+            'redis_ok': False,
+            'error': f'Redis ping failed: {exc}',
+            'generated_at': datetime.utcnow().isoformat(),
+        })
+
+    queues = []
+    biggest_name = None
+    biggest_len = -1
+    total = 0
+
+    for qname in CELERY_QUEUE_NAMES:
+        try:
+            length = r.llen(qname)
+        except Exception:
+            length = 0
+        queues.append({'name': qname, 'pending': length})
+        total += length
+        if length > biggest_len:
+            biggest_len = length
+            biggest_name = qname
+
+    # Sort descending by pending count
+    queues.sort(key=lambda q: q['pending'], reverse=True)
+
+    # Sample up to 10 task names from the biggest queue
+    sample_tasks = []
+    if biggest_name and biggest_len > 0:
+        try:
+            raw_messages = r.lrange(biggest_name, 0, 9)
+            for raw in raw_messages:
+                try:
+                    msg = json.loads(raw) if isinstance(raw, str) else json.loads(raw.decode())
+                    # Celery v2 protocol: headers.task
+                    task_name = (msg.get('headers') or {}).get('task')
+                    if not task_name:
+                        # Celery v1 fallback
+                        task_name = (msg.get('body') or {}).get('task', 'unknown')
+                    sample_tasks.append(task_name)
+                except Exception:
+                    sample_tasks.append('(unparseable)')
+        except Exception:
+            pass
+
+    return JsonResponse({
+        'generated_at': tz_now().isoformat(),
+        'redis_ok': True,
+        'total_pending': total,
+        'queues': queues,
+        'biggest_queue': biggest_name if biggest_len > 0 else None,
+        'sample_tasks': sample_tasks,
+    })
+
+
+# ---------------------------------------------------------------------------
 # P13B: Cost / Token / Provider Usage
 # ---------------------------------------------------------------------------
 
