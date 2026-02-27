@@ -31,16 +31,20 @@ class RequestErrorCaptureMiddleware(MiddlewareMixin):
             )
             signature.increment_occurrence()
 
+            import traceback
             FailureDetection.objects.create(
                 signature=signature,
                 source_type='http_request',
-                error_type=exc_type,
-                error_message=str(exception)[:1000],
-                metadata={
+                source_name=f"{request.method} {path}",
+                error_message=f"{exc_type}: {str(exception)[:1000]}",
+                error_code='500',
+                stack_trace=''.join(traceback.format_exception(type(exception), exception, exception.__traceback__))[:4000],
+                context_snapshot={
                     'method': request.method,
                     'path': path,
-                    'user_id': getattr(request.user, 'id', None),
+                    'user_id': str(getattr(request.user, 'id', None)),
                     'view': _resolve_view_name(request),
+                    'exception_type': exc_type,
                 },
             )
         except Exception:
