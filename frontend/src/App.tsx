@@ -52,6 +52,7 @@ import CockpitAgentsPage from '@/pages/cockpit/AgentsPage'
 import CockpitQueuesPage from '@/pages/cockpit/QueuesPage'
 import CockpitCostPage from '@/pages/cockpit/CostPage'
 import CockpitAutopilotPage from '@/pages/cockpit/AutopilotPage'
+import CockpitRunTracePage from '@/pages/cockpit/RunTracePage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -125,6 +126,7 @@ function App() {
         <Route path="create/:recipeId" element={<CockpitCreateFlowPage />} />
         <Route path="runs" element={<CockpitRunsPage />} />
         <Route path="runs/:runId" element={<CockpitRunDetailPage />} />
+        <Route path="runs/:runId/trace" element={<CockpitRunTracePage />} />
         <Route path="library" element={<CockpitLibraryPage />} />
         <Route path="errors" element={<CockpitErrorsPage />} />
         <Route path="errors/:signatureId" element={<CockpitErrorDetailPage />} />

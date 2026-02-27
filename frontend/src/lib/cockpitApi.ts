@@ -25,6 +25,7 @@ import type {
   AutopilotToggleResponse,
   AutopilotEvaluateResponse,
   AutopilotHistoryResponse,
+  RunTraceResponse,
 } from '@/types/cockpit'
 
 // --- Runs ---
@@ -257,6 +258,13 @@ export interface CostParams {
 
 export async function getCostOverview(params?: CostParams) {
   const { data } = await api.get<CostOverviewResponse>('/cockpit/cost/', { params })
+  return data
+}
+
+// --- Run Trace ---
+
+export async function getRunTrace(runId: string) {
+  const { data } = await api.get<RunTraceResponse>(`/cockpit/runs/${runId}/trace/`)
   return data
 }
 
