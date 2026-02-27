@@ -434,6 +434,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/platform/celery-debug/',  # Celery status and stale task info
         '/api/platform/cleanup-stale-executions/',  # Manual cleanup of stuck tasks
 
+        # Session 1069: Internal config snapshot (no secrets, for cross-service comparison)
+        '/api/internal/config-snapshot/',
+
         # Session 893: Intel Page APIs (read-only for React frontend)
         '/api/v1/agents/unified-executions/',  # Agent execution history
         '/api/orchestrations/',  # Active orchestrations list
