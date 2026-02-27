@@ -16,6 +16,9 @@ import type {
   ApprovalActionResponse,
   PlatformConfigResponse,
   AuditLogResponse,
+  AgentFleetResponse,
+  AgentDetailResponse,
+  AgentActionResponse,
 } from '@/types/cockpit'
 
 // --- Runs ---
@@ -103,6 +106,39 @@ export async function decideApproval(kind: 'decision' | 'gate', id: string, payl
     ? `/cockpit/approvals/decision/${id}/decide/`
     : `/cockpit/approvals/gate/${id}/decide/`
   const { data } = await api.post<ApprovalActionResponse>(path, payload)
+  return data
+}
+
+// --- Agent Fleet ---
+
+export interface AgentFleetParams {
+  q?: string
+  hours?: number
+  limit?: number
+}
+
+export async function getAgentFleet(params?: AgentFleetParams) {
+  const { data } = await api.get<AgentFleetResponse>('/cockpit/agents/', { params })
+  return data
+}
+
+export async function getAgentDetail(agentName: string) {
+  const { data } = await api.get<AgentDetailResponse>(`/cockpit/agents/${agentName}/`)
+  return data
+}
+
+export async function agentRunNow(agentName: string, payload?: { task?: string }) {
+  const { data } = await api.post<AgentActionResponse>(`/cockpit/agents/${agentName}/run-now/`, payload ?? {})
+  return data
+}
+
+export async function agentPause(agentName: string, payload?: { reason?: string }) {
+  const { data } = await api.post<AgentActionResponse>(`/cockpit/agents/${agentName}/pause/`, payload ?? {})
+  return data
+}
+
+export async function agentResume(agentName: string) {
+  const { data } = await api.post<AgentActionResponse>(`/cockpit/agents/${agentName}/resume/`)
   return data
 }
 

@@ -243,7 +243,50 @@ export interface AuditLogResponse {
   items: AuditLogEntry[]
 }
 
-// --- Ops ---
+// --- Agent Fleet ---
+
+export interface AgentFleetItem {
+  id: UUID
+  name: string
+  agent_type: string
+  specialization: string
+  category: string
+  effectiveness_score: number
+  recent_total: number
+  recent_completed: number
+  recent_failed: number
+  last_run_at: ISODateString | null
+  cockpit_enabled: boolean
+  paused_reason: string
+  paused_at: ISODateString | null
+}
+
+export interface AgentFleetResponse {
+  hours: number
+  total: number
+  items: AgentFleetItem[]
+}
+
+export interface AgentDetailResponse {
+  ok: boolean
+  agent: AgentFleetItem & {
+    description: string
+    total_executions: number
+    successful_executions: number
+  }
+  recent_runs: RunSummary[]
+}
+
+export interface AgentActionResponse {
+  ok: boolean
+  agent_name: string
+  enabled?: boolean
+  task_id?: string
+  status?: string
+  paused_at?: ISODateString | null
+  paused_reason?: string
+  error?: string
+}
 
 // --- Ops ---
 
