@@ -60,7 +60,16 @@
 - Caused 9 tool failures in 72h
 - Added `ACTION_ALIASES` mapping: `approve→publish`, `reject→archive`
 
-### PA Smoke Tests 14/14 Green
+### PA Chat Retry Fix
+- `pa_chat.py` now retries on "task not found" during celery-pa deploys instead of failing
+- Previously, tasks dispatched during worker restart were immediately marked as failed
+
+### Smoke Suite Expanded to 20 Checks
+- Added 6 new endpoint checks: deliverables stats/list, opportunities stats, pilot gates, Redis queue depths, media library
+- Added suite integrity unit tests (41 total, all passing) verifying check counts, no duplicates, required fields
+- Awaiting Railway celery-pa deploy to verify on prod (builds take 25+ min)
+
+### PA Smoke Tests 14/14 Green (pre-expansion)
 - Verified after Railway celery-pa redeployed with initiative query fix
 - `http_smoke_test(suite='pa_tools_smoke')` — all 14 checks passing on Railway prod
 
