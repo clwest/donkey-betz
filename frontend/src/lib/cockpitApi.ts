@@ -19,6 +19,8 @@ import type {
   AgentFleetResponse,
   AgentDetailResponse,
   AgentActionResponse,
+  QueuesOverviewResponse,
+  CostOverviewResponse,
 } from '@/types/cockpit'
 
 // --- Runs ---
@@ -231,6 +233,26 @@ export interface AuditLogParams {
 
 export async function getAuditLog(params?: AuditLogParams) {
   const { data } = await api.get<AuditLogResponse>('/cockpit/audit/', { params })
+  return data
+}
+
+// --- Queues ---
+
+export type QueueWindow = '15m' | '60m' | '2h' | '6h' | '24h'
+
+export async function getQueuesOverview(window: QueueWindow = '60m') {
+  const { data } = await api.get<QueuesOverviewResponse>('/cockpit/queues/', { params: { window } })
+  return data
+}
+
+// --- Cost ---
+
+export interface CostParams {
+  hours?: number
+}
+
+export async function getCostOverview(params?: CostParams) {
+  const { data } = await api.get<CostOverviewResponse>('/cockpit/cost/', { params })
   return data
 }
 
