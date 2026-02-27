@@ -185,8 +185,9 @@ class UnifiedPAEntrypoint:
         'to', 'for', 'of', 'in', 'on', 'at', 'by', 'with', 'from',
     })
 
-    def __init__(self, user: User):
+    def __init__(self, user: User, conversation_id: str | None = None):
         self.user = user
+        self.conversation_id = conversation_id
         self._execution_count = 0
         self._conversation_history: List[Dict[str, Any]] = []
 
@@ -6019,9 +6020,18 @@ Be concise, conversational, and personalized. Address the user by name."""
             # 5s statement timeout: DB connection issues must not block PA startup
             with connection.cursor() as cursor:
                 cursor.execute("SET LOCAL statement_timeout = '5000'")
-            recent = ChatConversation.objects.filter(
+            qs = ChatConversation.objects.filter(
                 user=self.user,
-            ).exclude(platform='discord').order_by('-created_at')[:10]  # Last 10 exchanges
+            ).exclude(platform='discord')
+
+            if self.conversation_id:
+                # Scoped: last 20 exchanges from THIS conversation
+                recent = qs.filter(
+                    conversation_id=self.conversation_id,
+                ).order_by('-created_at')[:20]
+            else:
+                # Unscoped fallback: last 10 across all conversations (legacy)
+                recent = qs.order_by('-created_at')[:10]
 
             # Build history in chronological order (oldest first)
             turns = []
@@ -6043,7 +6053,7 @@ Be concise, conversational, and personalized. Address the user by name."""
                 if chat.assistant_response:
                     turn = {
                         'role': 'assistant',
-                        'content': chat.assistant_response[:2000],  # Session 1036: Was 500, now 2000
+                        'content': chat.assistant_response[:8000],  # Session 1085: Was 2000, now 8000 to preserve tool outputs
                         'timestamp': chat.created_at.isoformat() if chat.created_at else '',
                     }
                     # Session 1036: Include tool call metadata for function calling context
