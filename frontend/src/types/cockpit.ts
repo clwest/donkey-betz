@@ -288,6 +288,104 @@ export interface AgentActionResponse {
   error?: string
 }
 
+// --- Queues ---
+
+export interface QueueWorker {
+  worker: string
+  task_count: number
+  failure_count: number
+}
+
+export interface QueueInfo {
+  queue: string
+  count: number
+  failures: number
+}
+
+export interface QueueTask {
+  task_name: string
+  short_name: string
+  count: number
+  failures: number
+  failure_rate: number
+  avg_ms: number
+}
+
+export interface QueueFailure {
+  task_id: string
+  task_name: string
+  short_name: string
+  worker: string
+  error_type: string
+  error_message: string
+  started_at: ISODateString | null
+  queue: string
+}
+
+export interface QueuesOverviewResponse {
+  window: string
+  minutes: number
+  generated_at: ISODateString
+  summary: {
+    workers_online: number
+    tasks_total: number
+    tasks_success: number
+    tasks_failure: number
+    tasks_started: number
+    tasks_per_min: number
+    failures_per_min: number
+    avg_duration_ms: number
+  }
+  workers: QueueWorker[]
+  queues: QueueInfo[]
+  top_tasks: QueueTask[]
+  recent_failures: QueueFailure[]
+}
+
+// --- Cost ---
+
+export interface CostProviderRow {
+  provider: string
+  calls: number
+  cost: number
+  tokens: number
+  avg_latency: number
+  success_rate: number
+}
+
+export interface CostModelRow {
+  model_id: string
+  provider: string
+  calls: number
+  cost: number
+  tokens: number
+  avg_latency: number
+}
+
+export interface CostAgentRow {
+  agent_name: string
+  calls: number
+  cost: number
+  tokens: number
+}
+
+export interface CostOverviewResponse {
+  hours: number
+  generated_at: ISODateString
+  overall: {
+    total_calls: number
+    successful: number
+    total_cost: number
+    total_tokens: number
+    avg_latency_ms: number
+    cost_delta_pct: number
+    prev_cost: number
+  }
+  by_provider: CostProviderRow[]
+  by_model: CostModelRow[]
+  by_agent: CostAgentRow[]
+}
+
 // --- Ops ---
 
 export type HealthTone = 'green' | 'amber' | 'red' | 'gray'
