@@ -44,21 +44,47 @@ export interface ErrorSummaryResponse {
 
 // --- Inbox ---
 
-export type InboxItemType = 'decision' | 'gate' | 'attention' | 'error'
+export type InboxItemType = 'decision' | 'gate' | 'error_signature' | 'failed_run'
+export type InboxSeverity = 'critical' | 'high' | 'medium' | 'low'
 
-export interface InboxBucket {
-  type: InboxItemType
+export interface InboxItemCta {
   label: string
-  count: number
+  route: string
+}
+
+export interface InboxItemSource {
+  system: 'human_decisions' | 'gates' | 'errors' | 'runs'
+  id: string
+  status?: string
 }
 
 export interface InboxItem {
-  id: UUID
+  id: string
   type: InboxItemType
+  severity: InboxSeverity
   title: string
-  summary: string
-  created_at: ISODateString
-  priority: 'low' | 'medium' | 'high' | 'critical'
+  subtitle?: string | null
+  timestamp: ISODateString
+  badges: string[]
+  cta: InboxItemCta
+  source: InboxItemSource
+  preview?: { text?: string | null } | null
+}
+
+export interface InboxCounts {
+  total: number
+  decisions: number
+  gates: number
+  errors: number
+  failed_runs: number
+}
+
+export interface InboxResponse {
+  hours: number
+  limit: number
+  generated_at: ISODateString
+  counts: InboxCounts
+  items: InboxItem[]
 }
 
 // --- Library ---
