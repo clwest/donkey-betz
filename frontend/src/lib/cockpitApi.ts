@@ -53,8 +53,10 @@ export async function getRuns(params?: RunsParams) {
 }
 
 export async function getRunDetail(id: string) {
-  const { data } = await api.get<RunDetail>(`/v1/agents/execution/${id}/`)
-  return data
+  const { data } = await api.get(`/v1/agents/execution/${id}/`)
+  // Backend wraps in {success, data: {execution: {...}}} — unwrap to flat RunDetail
+  const exec = data?.data?.execution ?? data
+  return exec as RunDetail
 }
 
 // --- Errors ---
