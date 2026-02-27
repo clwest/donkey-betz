@@ -33,6 +33,21 @@ import BoardroomPage from '@/pages/BoardroomPage'  // Session 1067: Full-page bo
 import GovernancePage from '@/pages/GovernancePage'  // Session 1067: Full-page governance
 import ExecutorPage from '@/pages/ExecutorPage'  // Session 1076: Executor runs UI
 
+// Focus Cockpit
+import CockpitLayout from '@/components/cockpit/CockpitLayout'
+import CockpitHomePage from '@/pages/cockpit/HomePage'
+import CockpitInboxPage from '@/pages/cockpit/InboxPage'
+import CockpitCreateHubPage from '@/pages/cockpit/CreateHubPage'
+import CockpitCreateFlowPage from '@/pages/cockpit/CreateFlowPage'
+import CockpitRunsPage from '@/pages/cockpit/RunsPage'
+import CockpitRunDetailPage from '@/pages/cockpit/RunDetailPage'
+import CockpitLibraryPage from '@/pages/cockpit/LibraryPage'
+import CockpitErrorsPage from '@/pages/cockpit/ErrorsPage'
+import CockpitErrorDetailPage from '@/pages/cockpit/ErrorDetailPage'
+import CockpitOpsPage from '@/pages/cockpit/OpsPage'
+import CockpitApprovalsPage from '@/pages/cockpit/ApprovalsPage'
+import CockpitAlertsPage from '@/pages/cockpit/AlertsPage'
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
 
@@ -95,6 +110,22 @@ function App() {
         <Route path="video-studio" element={<VideoStudioPage />} />
         <Route path="how-it-works" element={<HowItWorksPage />} />
         <Route path="executor" element={<ExecutorPage />} />
+      </Route>
+
+      {/* Focus Cockpit — solo-operator flow */}
+      <Route path="/cockpit" element={<ProtectedRoute><CockpitLayout /></ProtectedRoute>}>
+        <Route index element={<CockpitHomePage />} />
+        <Route path="inbox" element={<CockpitInboxPage />} />
+        <Route path="create" element={<CockpitCreateHubPage />} />
+        <Route path="create/:recipeId" element={<CockpitCreateFlowPage />} />
+        <Route path="runs" element={<CockpitRunsPage />} />
+        <Route path="runs/:runId" element={<CockpitRunDetailPage />} />
+        <Route path="library" element={<CockpitLibraryPage />} />
+        <Route path="errors" element={<CockpitErrorsPage />} />
+        <Route path="errors/:signatureId" element={<CockpitErrorDetailPage />} />
+        <Route path="ops" element={<CockpitOpsPage />} />
+        <Route path="approvals" element={<CockpitApprovalsPage />} />
+        <Route path="alerts" element={<CockpitAlertsPage />} />
       </Route>
     </Routes>
   )
