@@ -6952,15 +6952,25 @@ class ToolDispatcher:
         bill_number = payload.get('bill_number', '') or payload.get('id', '')
         limit = min(payload.get('limit', 10), 20)
 
-        def _bill_data(item):
-            """Unwrap bill dict from raw_data (handles spider-network envelope)."""
+        def _bills_from_row(item):
+            """Session 1075: Extract bill dicts from a SpiderData row.
+
+            Spider stores data as {'items': [...], 'source': ..., 'dedup_stats': ...}.
+            Each element in 'items' is a bill dict with bill_number, topics, state, etc.
+            Falls back to treating raw_data itself as a single bill for legacy rows.
+            """
             raw = item.raw_data if isinstance(item.raw_data, dict) else {}
+            # Primary format: envelope with items array
+            if isinstance(raw.get('items'), list):
+                return [b for b in raw['items'] if isinstance(b, dict)]
+            # Legacy: raw_data is the bill itself
             if raw.get('bill_number'):
-                return raw
+                return [raw]
+            # Legacy: nested raw_data wrapper
             inner = raw.get('raw_data')
             if isinstance(inner, dict) and inner.get('bill_number'):
-                return inner
-            return raw
+                return [inner]
+            return []
 
         qs = SpiderData.objects.filter(spider_name='legislation').order_by('-created_at')
         total_tracked = qs.count()
@@ -6971,22 +6981,25 @@ class ToolDispatcher:
             topic_counts: Dict[str, int] = {}
             states: set = set()
             status_counts: Dict[str, int] = {}
+            bill_count = 0
             for item in recent:
-                raw = _bill_data(item)
-                for t in raw.get('topics', []):
-                    topic_counts[t] = topic_counts.get(t, 0) + 1
-                state = raw.get('state', '')
-                if state:
-                    states.add(state)
-                st = raw.get('status', '')
-                if st:
-                    status_counts[st] = status_counts.get(st, 0) + 1
+                for bill in _bills_from_row(item):
+                    bill_count += 1
+                    for t in bill.get('topics', []):
+                        topic_counts[t] = topic_counts.get(t, 0) + 1
+                    state = bill.get('state', '')
+                    if state:
+                        states.add(state)
+                    st = bill.get('status', '')
+                    if st:
+                        status_counts[st] = status_counts.get(st, 0) + 1
 
             top_topics = sorted(topic_counts.items(), key=lambda x: x[1], reverse=True)[:10]
             return {
                 'action': 'overview',
                 'total_tracked': total_tracked,
-                'recent_count': len(recent),
+                'total_bills': bill_count,
+                'recent_rows_scanned': len(recent),
                 'top_topics': [{'topic': t, 'count': c} for t, c in top_topics],
                 'states_covered': sorted(states),
                 'status_breakdown': status_counts,
@@ -6994,28 +7007,37 @@ class ToolDispatcher:
 
         elif action == 'trending':
             items = []
-            for item in qs[:limit]:
-                raw = _bill_data(item)
-                items.append({
-                    'bill_number': raw.get('bill_number', ''),
-                    'title': raw.get('title', ''),
-                    'state': raw.get('state', ''),
-                    'status': raw.get('status', ''),
-                    'last_action': raw.get('last_action', ''),
-                    'last_action_date': raw.get('last_action_date', ''),
-                    'sponsor_count': raw.get('sponsor_count', 0),
-                    'url': raw.get('url', ''),
-                })
+            for item in qs[:limit * 2]:  # scan extra rows since each has multiple bills
+                for bill in _bills_from_row(item):
+                    items.append({
+                        'bill_number': bill.get('bill_number', ''),
+                        'title': bill.get('title', ''),
+                        'state': bill.get('state', ''),
+                        'status': bill.get('status', ''),
+                        'last_action': bill.get('last_action', ''),
+                        'last_action_date': bill.get('last_action_date', ''),
+                        'sponsor_count': bill.get('sponsor_count', 0),
+                        'url': bill.get('url', ''),
+                    })
+                    if len(items) >= limit:
+                        break
+                if len(items) >= limit:
+                    break
             return {'action': 'trending', 'items': items, 'total': total_tracked}
 
         elif action == 'status' and bill_number:
-            match = qs.filter(
-                Q(raw_data__bill_number__icontains=bill_number) |
-                Q(embedding_text__icontains=bill_number)
-            ).first()
-            if not match:
+            # Search embedding_text first (most reliable), then scan items arrays
+            matches = qs.filter(Q(embedding_text__icontains=bill_number))[:10]
+            raw = None
+            for m in matches:
+                for bill in _bills_from_row(m):
+                    if bill_number.lower() in (bill.get('bill_number', '') or '').lower():
+                        raw = bill
+                        break
+                if raw:
+                    break
+            if not raw:
                 return {'action': 'status', 'found': False, 'bill_number': bill_number}
-            raw = match.raw_data if isinstance(match.raw_data, dict) else {}
             sponsors = raw.get('sponsors', [])
             return {
                 'action': 'status',
@@ -7037,13 +7059,19 @@ class ToolDispatcher:
             target = bill_number or query
             if not target:
                 return {'action': 'summary', 'error': 'Provide a bill_number or query'}
-            match = qs.filter(
-                Q(raw_data__bill_number__icontains=target) |
-                Q(embedding_text__icontains=target)
-            ).first()
-            if not match:
+            matches = qs.filter(Q(embedding_text__icontains=target))[:10]
+            raw = None
+            for m in matches:
+                for bill in _bills_from_row(m):
+                    bn = (bill.get('bill_number', '') or '').lower()
+                    ti = (bill.get('title', '') or '').lower()
+                    if target.lower() in bn or target.lower() in ti:
+                        raw = bill
+                        break
+                if raw:
+                    break
+            if not raw:
                 return {'action': 'summary', 'found': False, 'query': target}
-            raw = match.raw_data if isinstance(match.raw_data, dict) else {}
             return {
                 'action': 'summary',
                 'found': True,
@@ -7097,31 +7125,31 @@ class ToolDispatcher:
 
                     scored.sort(key=lambda x: x[0], reverse=True)
                     for sim, item in scored[:5]:
-                        raw = _bill_data(item)
-                        bn = raw.get('bill_number', '')
-                        title = raw.get('title', '')
-                        desc = raw.get('description', '')
-                        plain = raw.get('plain_summary', '')
-                        sponsors = raw.get('sponsors', [])
-                        topics = raw.get('topics', [])
-                        sponsor_names = [s.get('name', '') for s in sponsors[:3]] if sponsors else []
+                        for raw in _bills_from_row(item):
+                            bn = raw.get('bill_number', '')
+                            title = raw.get('title', '')
+                            desc = raw.get('description', '')
+                            plain = raw.get('plain_summary', '')
+                            sponsors = raw.get('sponsors', [])
+                            topics = raw.get('topics', [])
+                            sponsor_names = [s.get('name', '') for s in sponsors[:3]] if sponsors else []
 
-                        bill_ctx = f"Bill: {bn} — {title}\n"
-                        if desc:
-                            bill_ctx += f"Description: {desc}\n"
-                        if plain:
-                            bill_ctx += f"Summary: {plain}\n"
-                        if sponsor_names:
-                            bill_ctx += f"Sponsors: {', '.join(sponsor_names)}\n"
-                        if topics:
-                            bill_ctx += f"Topics: {', '.join(topics[:5])}\n"
-                        context_parts.append(bill_ctx)
-                        source_bills.append({
-                            'bill_number': bn,
-                            'title': title,
-                            'score': round(sim, 3),
-                            'url': raw.get('url', ''),
-                        })
+                            bill_ctx = f"Bill: {bn} — {title}\n"
+                            if desc:
+                                bill_ctx += f"Description: {desc}\n"
+                            if plain:
+                                bill_ctx += f"Summary: {plain}\n"
+                            if sponsor_names:
+                                bill_ctx += f"Sponsors: {', '.join(sponsor_names)}\n"
+                            if topics:
+                                bill_ctx += f"Topics: {', '.join(topics[:5])}\n"
+                            context_parts.append(bill_ctx)
+                            source_bills.append({
+                                'bill_number': bn,
+                                'title': title,
+                                'score': round(sim, 3),
+                                'url': raw.get('url', ''),
+                            })
             except Exception as e:
                 logger.warning(f"Embedding search failed for ask action: {e}")
 
@@ -7144,23 +7172,23 @@ class ToolDispatcher:
                     q_filter = Q(embedding_text__icontains=question[:20])
                 kw_matches = qs.filter(q_filter)[:5]
                 for item in kw_matches:
-                    raw = _bill_data(item)
-                    bn = raw.get('bill_number', '')
-                    title = raw.get('title', '')
-                    desc = raw.get('description', '')
-                    plain = raw.get('plain_summary', '')
-                    bill_ctx = f"Bill: {bn} — {title}\n"
-                    if desc:
-                        bill_ctx += f"Description: {desc}\n"
-                    if plain:
-                        bill_ctx += f"Summary: {plain}\n"
-                    context_parts.append(bill_ctx)
-                    source_bills.append({
-                        'bill_number': bn,
-                        'title': title,
-                        'score': 0,
-                        'url': raw.get('url', ''),
-                    })
+                    for raw in _bills_from_row(item):
+                        bn = raw.get('bill_number', '')
+                        title = raw.get('title', '')
+                        desc = raw.get('description', '')
+                        plain = raw.get('plain_summary', '')
+                        bill_ctx = f"Bill: {bn} — {title}\n"
+                        if desc:
+                            bill_ctx += f"Description: {desc}\n"
+                        if plain:
+                            bill_ctx += f"Summary: {plain}\n"
+                        context_parts.append(bill_ctx)
+                        source_bills.append({
+                            'bill_number': bn,
+                            'title': title,
+                            'score': 0,
+                            'url': raw.get('url', ''),
+                        })
 
             if not source_bills:
                 # If we have legislation data but no matches, say so specifically
@@ -7226,16 +7254,16 @@ class ToolDispatcher:
             )[:limit]
             items = []
             for item in matches:
-                raw = _bill_data(item)
-                items.append({
-                    'bill_number': raw.get('bill_number', ''),
-                    'title': raw.get('title', ''),
-                    'state': raw.get('state', ''),
-                    'status': raw.get('status', ''),
-                    'sponsor_count': raw.get('sponsor_count', 0),
-                    'last_action_date': raw.get('last_action_date', ''),
-                    'url': raw.get('url', ''),
-                })
+                for raw in _bills_from_row(item):
+                    items.append({
+                        'bill_number': raw.get('bill_number', ''),
+                        'title': raw.get('title', ''),
+                        'state': raw.get('state', ''),
+                        'status': raw.get('status', ''),
+                        'sponsor_count': raw.get('sponsor_count', 0),
+                        'last_action_date': raw.get('last_action_date', ''),
+                        'url': raw.get('url', ''),
+                    })
             return {
                 'action': 'search',
                 'query': query,
