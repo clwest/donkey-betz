@@ -1704,12 +1704,13 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["overview", "llm_providers", "env_vars", "feature_flags"],
+                    "enum": ["overview", "llm_providers", "env_vars", "feature_flags", "web_config"],
                     "description": (
-                        "overview=key settings summary (default), "
+                        "overview=key settings summary from this service (default), "
                         "llm_providers=active LLM provider details, "
                         "env_vars=all env vars with secrets masked, "
-                        "feature_flags=platform feature flags and toggles"
+                        "feature_flags=platform feature flags and toggles, "
+                        "web_config=fetch config from the web service (compare vs celery-pa)"
                     ),
                 },
             },
