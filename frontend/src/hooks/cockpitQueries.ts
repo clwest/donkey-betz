@@ -13,6 +13,7 @@ import {
   createIncidentNote,
   getApprovals,
   decideApproval,
+  getAuditLog,
   type RunsParams,
   type InboxParams,
   type MediaParams,
@@ -20,6 +21,7 @@ import {
   type OpsParams,
   type AlertsParams,
   type ApprovalsParams,
+  type AuditLogParams,
 } from '@/lib/cockpitApi'
 
 export function useRuns(params?: RunsParams) {
@@ -126,6 +128,14 @@ export function useApprovals(params?: ApprovalsParams) {
     queryKey: ['cockpit-approvals', params],
     queryFn: () => getApprovals(params),
     refetchInterval: 20_000,
+  })
+}
+
+export function useAuditLog(params?: AuditLogParams) {
+  return useQuery({
+    queryKey: ['cockpit-audit', params],
+    queryFn: () => getAuditLog(params),
+    refetchInterval: 30_000,
   })
 }
 

@@ -1445,6 +1445,7 @@ from core.views_diagnostics import (
     cockpit_runbook,  # Focus Cockpit: deterministic runbooks
     cockpit_retry_run,  # Focus Cockpit: retry failed run
     cockpit_create_incident_note,  # Focus Cockpit: create incident note
+    cockpit_audit_list,  # Focus Cockpit: audit log list
     # Session 871: Removed unused import: diagnostic_dashboard
 )
 
@@ -1633,6 +1634,7 @@ urlpatterns = [
     path('api/cockpit/remediate/runbook/<str:alert_kind>/', cockpit_runbook, name='cockpit-runbook'),
     path('api/cockpit/remediate/retry-run/<str:run_id>/', cockpit_retry_run, name='cockpit-retry-run'),
     path('api/cockpit/remediate/incident-note/', cockpit_create_incident_note, name='cockpit-incident-note'),
+    path('api/cockpit/audit/', cockpit_audit_list, name='cockpit-audit-list'),
     path('diagnostics/websockets/', WebSocketDiagnosticsView.as_view(), name='websocket-diagnostics'),
     path("api/llm/chat/", llm_chat),
     # AI Building Products page (moved up to ensure it's matched first)
