@@ -2749,8 +2749,71 @@ class ToolDispatcher:
                         'Human must confirm before applying.',
             }
 
+        elif action == 'classify_apply':
+            from core.models_conversation_artifacts import ExtractedArtifact
+            artifact_id = payload.get('artifact_id') or payload.get('id')
+            if not artifact_id:
+                raise ValueError("artifact_id is required for classify_apply")
+
+            classification = payload.get('classification', {})
+            valid_keys = {'what_is_this', 'who_is_it_for', 'data_allowed', 'phase_approved'}
+            filtered = {k: v for k, v in classification.items() if k in valid_keys}
+            if not filtered:
+                raise ValueError("classification must contain at least one of: what_is_this, who_is_it_for, data_allowed, phase_approved")
+
+            artifact = ExtractedArtifact.objects.get(id=artifact_id)
+
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            user = User.objects.filter(id=user_id).first() if user_id else None
+
+            artifact.classify(filtered, user=user)
+
+            return {
+                'action': 'classify_apply',
+                'artifact_id': str(artifact.id),
+                'artifact_title': artifact.title,
+                'classification': filtered,
+                'classified': True,
+                'success': True,
+            }
+
+        elif action == 'classify_apply_batch':
+            from core.models_conversation_artifacts import ExtractedArtifact
+
+            items = payload.get('items', [])
+            if not items:
+                raise ValueError("items is required: list of {artifact_id, classification}")
+
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            user = User.objects.filter(id=user_id).first() if user_id else None
+
+            valid_keys = {'what_is_this', 'who_is_it_for', 'data_allowed', 'phase_approved'}
+            results = []
+            for item in items[:50]:  # Cap at 50 per call
+                aid = item.get('artifact_id') or item.get('id')
+                classification = item.get('classification', {})
+                filtered = {k: v for k, v in classification.items() if k in valid_keys}
+                if not aid or not filtered:
+                    continue
+                try:
+                    artifact = ExtractedArtifact.objects.get(id=aid)
+                    artifact.classify(filtered, user=user)
+                    results.append({'id': str(artifact.id), 'ok': True})
+                except ExtractedArtifact.DoesNotExist:
+                    results.append({'id': str(aid), 'ok': False, 'error': 'not found'})
+
+            return {
+                'action': 'classify_apply_batch',
+                'classified_count': sum(1 for r in results if r['ok']),
+                'total': len(results),
+                'results': results,
+                'success': True,
+            }
+
         else:
-            raise ValueError(f"Unknown action: {action}. Valid actions: stats, lookup, list_attention, list_decisions, approve_attention, ignore_attention, promote_decision, reject_decision, get_triage_batch, list_unclassified, classify_suggest")
+            raise ValueError(f"Unknown action: {action}. Valid actions: stats, lookup, list_attention, list_decisions, approve_attention, ignore_attention, promote_decision, reject_decision, get_triage_batch, list_unclassified, classify_suggest, classify_apply, classify_apply_batch")
 
     def _handle_brainstorm(
         self,

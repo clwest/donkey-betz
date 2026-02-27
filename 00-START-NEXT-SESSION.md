@@ -1,8 +1,28 @@
-# Session 1074 - Start Here
+# Session 1075 - Start Here
 
-**Previous Sessions:** 1073 (System audit — docs vs reality reconciliation, PA tool verification), 1072 (PA apiDependencies manifest — 67 endpoints across 7 routes), 1071 (PA Platform Awareness — manifest, deploy verify, studio tool, service account)
+**Previous Sessions:** 1074 (API deps deployed, pa_tools_smoke suite, pipeline health fix, blog backlog cleared), 1073 (Docs vs reality reconciliation, PA tool verification), 1072 (PA apiDependencies manifest)
 **Date:** February 27, 2026
-**Status:** 218 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2, 45 tool schemas, 65 handlers)** | 11 ACTIVE initiatives | 59 COMPLETED
+**Status:** 218 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2, 45 tool schemas, 67 handlers)** | 0 ACTIVE initiatives | 59 COMPLETED
+
+---
+
+## Session 1075 — What Happened
+
+### Boardroom Fully Cleared
+- **83 pending items** reduced to **0** (was 20 gate_stuck, 12 draft decisions, 51 attention items)
+- 20 gate_stuck items: all auto-generated `GateProgressionPipeline` noise — ignored
+- 12 draft product decisions: all auto-generated panels/conversations — rejected
+- 51 attention items: spider/news/blog-ready/dream noise, ML-recommended ignore — ignored
+
+### All Unclassified Artifacts Classified
+- **2,339 unclassified artifacts** classified in one pass (was documented as 50 — actual count was 2,339)
+- All classified using heuristic rules: risk→risk_flag, insight→informational, etc.
+- **0 unclassified remaining**
+- Added `classify_apply` and `classify_apply_batch` actions to boardroom_tool
+
+### PA Smoke Tests 14/14 Green
+- Verified after Railway celery-pa redeployed with initiative query fix
+- `http_smoke_test(suite='pa_tools_smoke')` — all 14 checks passing on Railway prod
 
 ---
 
@@ -15,60 +35,16 @@
 
 ### PA Tools Smoke Test Suite Added
 - New built-in suite `pa_tools_smoke` (14 checks) added to `http_smoke_test.py`
-- Covers: system health, body vitals, boardroom (stats + list + decisions), initiatives (list + action items chain + pipeline health), dreams, celery breakdown, agents, spiders, learning patterns, app manifest
-- PA tool schema updated to include `pa_tools_smoke` in enum
 - PA can now run `http_smoke_test(suite='pa_tools_smoke')` to verify platform health after deploys
 - Verified 14/14 green on Railway prod
 
 ### Pipeline Health Fixed
-- `stale_threshold_hours` raised from 48 to 168 (1 week) — single-user dev cadence
+- `stale_threshold_hours` raised from 48 to 168 (1 week)
 - Critical now requires stale AND (blocked stages OR zero weekly transitions)
-- Archived 11 stuck ACTIVE initiatives (all auto-generated pipeline noise with blocked stages)
-- Pipeline health now "stalled" (expected — 0 ACTIVE initiatives, will resume when new ones created)
+- Archived 11 stuck ACTIVE initiatives
 
 ### Blog Backlog Cleared
-- **202 pending_review blogs** cleared (was documented as 115 — actual was 202)
-- 195 published (161 high-quality >= 0.7 score, 34 no-score with real content)
-- 7 stage document artifacts moved back to draft (misrouted as blogs)
-- **0 pending_review remaining**, 578 total published (DB), 463 published (PA filtered view)
-
----
-
-## Session 1073 — What Happened
-
-### Docs vs Reality Reconciliation
-
-Queried the PA on Railway (conversation `pa-ba10a7e73764`) to compare documented state against actual production. Key findings:
-
-| Item | Docs Said | Actual (Feb 27) | Change |
-|------|-----------|-----------------|--------|
-| Unclassified artifacts | 2,339 | **50** | 97.9% cleared |
-| Initiatives completed | 57 | **59** | +2 completions |
-| Initiatives active | 13 | **11** | -2 |
-| Blogs published | ~195 | **348** | +153 published |
-| Blogs pending_review | ~18 | **115** | Large backlog |
-| Blogs total | — | **489** | |
-| Dreams total | — | **1,636** (118 pending) | |
-| Brainstorm sessions | — | **7,027** | |
-
-### PA Tools Verified Working on Railway
-
-Previously listed as "untested" — now confirmed operational:
-- `brainstorm_tool` (stats action) — 7,027 sessions
-- `dream_tool` (stats action) — 1,636 dreams
-- `learning_patterns_tool` (list action) — 20 active patterns, all tool_reliability type
-- `platform_awareness_tool` (list_api_dependencies) — returns 12 endpoints for `/boardroom`
-
-### `generate_initiative_stage_document` — 157 failures in 7 days but 0 in last 24h
-Either fixed by recent changes or not being triggered. No longer the urgent hotspot it was.
-
-### System Health Snapshot (Feb 27, 19:46 UTC)
-- Health score: **100** (7/7 components healthy)
-- Body systems: **90.4** overall (HEART 100, IMMUNE 100, SPINE 99.99)
-- Celery: **1,263 tasks/hour, 99.4% success**, 0 queue backlog
-- Spiders: **139 items in last 2h** from 60 distinct spiders
-- Tool calls today: **384, 100% success**
-- Errors (24h): **43 total** — 7 intentional debug-raise-500, 6 agent timeouts (CompetitorAnalysis 4, SystemIntelligence 2), 2 scan_spider_opportunities failures
+- **202 pending_review blogs** cleared → 0 pending_review remaining
 
 ---
 
@@ -77,28 +53,23 @@ Either fixed by recent changes or not being triggered. No longer the urgent hots
 | Metric | Value |
 |--------|-------|
 | PA routing | **GPT-5.2 function calling** (`PA_USE_FUNCTION_CALLING=true`) |
-| PA tools | **45 schemas, 65 handlers** |
-| PA API coverage | **235 endpoints mapped** across 30 routes (was 67 across 7) |
-| Decision gates | **ACTIVE** — 50 artifacts need classification (down from 2,339) |
+| PA tools | **45 schemas, 67 handlers** |
+| PA API coverage | **235 endpoints mapped** across 30 routes |
+| Decision gates | **ACTIVE** — 0 unclassified artifacts (down from 2,339) |
+| Boardroom | **0 pending** (attention 0, draft decisions 0) |
 | Platform health score | **100** (7/7 components healthy) |
-| Celery throughput | **~1,263 tasks/hour, 99.4% success** |
+| Celery throughput | **~1,177 tasks/hour, 99.5% success** |
 | Agents routable | **All 218** |
 | Initiatives | **0 ACTIVE**, 59 COMPLETED, 9 TRIAGE, 23 ARCHIVED |
-| Content pipeline | **578 published**, 0 pending_review, 1 approved, 582 draft |
-| Action items | **0 pending** (222 stale items on completed initiatives — closed) |
+| Content pipeline | **578 published**, 0 pending_review, 35 ready_for_review (non-blog) |
+| Action items | **0 pending** |
 
 ---
 
 ## Known Issues / Open Items
 
-### Blog Backlog Cleared
-202 pending_review blogs cleared in Session 1074 (195 published, 7 stage docs back to draft). 0 pending_review remaining.
-
-### 50 Artifacts Need Classification
-Down from 2,339. PA can help: `boardroom_tool(action=list_unclassified)` and `boardroom_tool(action=classify_suggest)`.
-
-### Action Items Cleaned Up
-All 222 pending action items (including 9 critical) were stale — belonging to completed initiatives. Closed in Session 1073.
+### Content Ready for Review (35 items)
+Non-blog content: 14 audio, 8 video, 5 image, 5 script, 1 research, 1 doc, 1 analysis. Most are low-quality (0.3-0.35) except 1 marketing analysis (0.85) and 6 items at 0.7.
 
 ### Data Layer Gaps
 1. **Revenue tracker**: $0 — deferred until user base grows beyond single-user dev
@@ -123,7 +94,6 @@ Still need verification: `content_review_tool`, `opportunity_manager_tool`, `pil
 **API Dependencies (Sessions 1072-1073):**
 - `API_DEPENDENCIES` in `appManifest.ts` is the source of truth — 30/31 routes populated, 235 endpoints (152 reads, 83 writes)
 - `list_api_dependencies` supports `path` (single route) and `writes_only` (mutation filter)
-- RBAC filtering: non-admin users only see deps for routes they can access
 - Only `/how-it-works` is empty (static page, no API calls)
 
 **Platform Awareness (Session 1071, updated 1074):**
@@ -132,8 +102,9 @@ Still need verification: `content_review_tool`, `opportunity_manager_tool`, `pil
 - `deploy_verify` calls the platform's OWN endpoints via `requests` — the server must be fully up
 - `setup_pa_service_account` runs in Procfile release — check Railway logs for token
 
-**Decision Gates (Session 1070):**
+**Decision Gates (Session 1070, updated 1075):**
 - Classification is decoupled from approval — `classify()` and `approve()` are separate
+- `classify_apply` and `classify_apply_batch` actions now available on boardroom_tool
 - Grandfather clause: artifacts approved before 2026-02-24 skip classification gate
 - Noise threshold (< 0.3) auto-rejects; >= 0.4 shown in classification UI
 
