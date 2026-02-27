@@ -2120,3 +2120,212 @@ def cockpit_agent_resume(request, agent_name):
     }
     _audit_log(request, 'agent.resume', 'Agent', agent_name, {}, resp)
     return JsonResponse(resp)
+
+
+# ---------------------------------------------------------------------------
+# P13A: Queue / Worker / Task Load
+# ---------------------------------------------------------------------------
+
+@csrf_exempt
+@require_http_methods(['GET'])
+def cockpit_queues_overview(request):
+    """Compose queue/worker/task overview from CeleryTaskEvent + CeleryHealthService."""
+    from core.models_celery_telemetry import CeleryTaskEvent
+    from django.utils.timezone import now
+    from datetime import timedelta
+    from django.db.models import Count, Avg, Q, F
+    from django.db.models.functions import TruncHour
+
+    window = request.GET.get('window', '60m')
+    minutes = {'15m': 15, '60m': 60, '2h': 120, '6h': 360, '24h': 1440}.get(window, 60)
+    cutoff = now() - timedelta(minutes=minutes)
+
+    # Workers online (distinct workers seen in window)
+    workers = list(
+        CeleryTaskEvent.objects.filter(started_at__gte=cutoff)
+        .exclude(worker='')
+        .values('worker')
+        .annotate(
+            task_count=Count('id'),
+            failure_count=Count('id', filter=Q(status='FAILURE')),
+        )
+        .order_by('-task_count')
+    )
+
+    # Totals
+    totals = CeleryTaskEvent.objects.filter(started_at__gte=cutoff).aggregate(
+        total=Count('id'),
+        success=Count('id', filter=Q(status='SUCCESS')),
+        failure=Count('id', filter=Q(status='FAILURE')),
+        started=Count('id', filter=Q(status='STARTED')),
+        avg_duration_ms=Avg(F('duration_seconds') * 1000, filter=Q(duration_seconds__isnull=False)),
+    )
+
+    # Per-queue depths
+    queues = list(
+        CeleryTaskEvent.objects.filter(started_at__gte=cutoff)
+        .values('queue')
+        .annotate(
+            count=Count('id'),
+            failures=Count('id', filter=Q(status='FAILURE')),
+        )
+        .order_by('-count')
+    )
+
+    # Top tasks by volume
+    top_tasks_qs = (
+        CeleryTaskEvent.objects.filter(started_at__gte=cutoff)
+        .values('task_name')
+        .annotate(
+            count=Count('id'),
+            failures=Count('id', filter=Q(status='FAILURE')),
+            avg_ms=Avg(F('duration_seconds') * 1000, filter=Q(duration_seconds__isnull=False)),
+        )
+        .order_by('-count')[:15]
+    )
+    top_tasks = []
+    for t in top_tasks_qs:
+        short_name = t['task_name'].rsplit('.', 1)[-1] if t['task_name'] else t['task_name']
+        top_tasks.append({
+            'task_name': t['task_name'],
+            'short_name': short_name,
+            'count': t['count'],
+            'failures': t['failures'],
+            'failure_rate': round(t['failures'] / t['count'] * 100, 1) if t['count'] else 0,
+            'avg_ms': round(t['avg_ms'] or 0),
+        })
+
+    # Recent failures
+    recent_failures = list(
+        CeleryTaskEvent.objects.filter(started_at__gte=cutoff, status='FAILURE')
+        .order_by('-started_at')[:10]
+        .values('task_id', 'task_name', 'worker', 'error_type', 'error_message', 'started_at', 'queue')
+    )
+    for f in recent_failures:
+        f['started_at'] = f['started_at'].isoformat() if f['started_at'] else None
+        f['short_name'] = f['task_name'].rsplit('.', 1)[-1] if f['task_name'] else ''
+
+    # Tasks per minute
+    total_minutes = max(minutes, 1)
+    tasks_per_min = round((totals['total'] or 0) / total_minutes, 1)
+    failures_per_min = round((totals['failure'] or 0) / total_minutes, 2)
+
+    return JsonResponse({
+        'window': window,
+        'minutes': minutes,
+        'generated_at': now().isoformat(),
+        'summary': {
+            'workers_online': len(workers),
+            'tasks_total': totals['total'] or 0,
+            'tasks_success': totals['success'] or 0,
+            'tasks_failure': totals['failure'] or 0,
+            'tasks_started': totals['started'] or 0,
+            'tasks_per_min': tasks_per_min,
+            'failures_per_min': failures_per_min,
+            'avg_duration_ms': round(totals['avg_duration_ms'] or 0),
+        },
+        'workers': workers,
+        'queues': queues,
+        'top_tasks': top_tasks,
+        'recent_failures': recent_failures,
+    })
+
+
+# ---------------------------------------------------------------------------
+# P13B: Cost / Token / Provider Usage
+# ---------------------------------------------------------------------------
+
+@csrf_exempt
+@require_http_methods(['GET'])
+def cockpit_cost_overview(request):
+    """Compose cost/token overview from LLMCallLog."""
+    from core.models_llm_routing import LLMCallLog
+    from django.utils.timezone import now
+    from datetime import timedelta
+    from django.db.models import Sum, Count, Avg, Q
+
+    hours = int(request.GET.get('hours', 24))
+    cutoff = now() - timedelta(hours=hours)
+    prev_cutoff = cutoff - timedelta(hours=hours)
+
+    qs = LLMCallLog.objects.filter(created_at__gte=cutoff)
+    prev_qs = LLMCallLog.objects.filter(created_at__gte=prev_cutoff, created_at__lt=cutoff)
+
+    # Overall
+    overall = qs.aggregate(
+        total_calls=Count('id'),
+        successful=Count('id', filter=Q(success=True)),
+        total_cost=Sum('cost'),
+        total_tokens=Sum('total_tokens'),
+        avg_latency=Avg('latency_ms'),
+    )
+    prev_overall = prev_qs.aggregate(
+        total_cost=Sum('cost'),
+        total_calls=Count('id'),
+    )
+
+    cost_now = float(overall['total_cost'] or 0)
+    cost_prev = float(prev_overall['total_cost'] or 0)
+    cost_delta_pct = round((cost_now - cost_prev) / cost_prev * 100, 1) if cost_prev > 0 else 0
+
+    # By provider
+    by_provider = list(
+        qs.values('provider')
+        .annotate(
+            calls=Count('id'),
+            cost=Sum('cost'),
+            tokens=Sum('total_tokens'),
+            avg_latency=Avg('latency_ms'),
+            success_rate=Count('id', filter=Q(success=True)) * 100.0 / Count('id'),
+        )
+        .order_by('-cost')
+    )
+    for p in by_provider:
+        p['cost'] = float(p['cost'] or 0)
+        p['avg_latency'] = round(p['avg_latency'] or 0)
+        p['success_rate'] = round(p['success_rate'] or 0, 1)
+
+    # By model (top 10)
+    by_model = list(
+        qs.values('model_id', 'provider')
+        .annotate(
+            calls=Count('id'),
+            cost=Sum('cost'),
+            tokens=Sum('total_tokens'),
+            avg_latency=Avg('latency_ms'),
+        )
+        .order_by('-cost')[:10]
+    )
+    for m in by_model:
+        m['cost'] = float(m['cost'] or 0)
+        m['avg_latency'] = round(m['avg_latency'] or 0)
+
+    # Top agents by cost
+    by_agent = list(
+        qs.values('agent_name')
+        .annotate(
+            calls=Count('id'),
+            cost=Sum('cost'),
+            tokens=Sum('total_tokens'),
+        )
+        .order_by('-cost')[:15]
+    )
+    for a in by_agent:
+        a['cost'] = float(a['cost'] or 0)
+
+    return JsonResponse({
+        'hours': hours,
+        'generated_at': now().isoformat(),
+        'overall': {
+            'total_calls': overall['total_calls'] or 0,
+            'successful': overall['successful'] or 0,
+            'total_cost': round(cost_now, 4),
+            'total_tokens': overall['total_tokens'] or 0,
+            'avg_latency_ms': round(overall['avg_latency'] or 0),
+            'cost_delta_pct': cost_delta_pct,
+            'prev_cost': round(cost_prev, 4),
+        },
+        'by_provider': by_provider,
+        'by_model': by_model,
+        'by_agent': by_agent,
+    })
