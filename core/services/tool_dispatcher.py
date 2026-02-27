@@ -5707,6 +5707,29 @@ class ToolDispatcher:
         except Exception as e:
             health['spider_freshness'] = {'error': str(e)}
 
+        # 6. Queue depths (live Redis LLEN)
+        try:
+            from core.views_diagnostics import get_redis_client, CELERY_QUEUE_NAMES
+            r = get_redis_client()
+            if r:
+                depths = {}
+                total_pending = 0
+                for qname in CELERY_QUEUE_NAMES:
+                    try:
+                        length = r.llen(qname)
+                    except Exception:
+                        length = 0
+                    depths[qname] = length
+                    total_pending += length
+                health['queue_depths'] = {
+                    'total_pending': total_pending,
+                    'per_queue': depths,
+                }
+            else:
+                health['queue_depths'] = {'error': 'Redis unavailable'}
+        except Exception as e:
+            health['queue_depths'] = {'error': str(e)}
+
         # Compute overall assessment
         assessment = 'healthy'
         reasons = []
@@ -5735,6 +5758,16 @@ class ToolDispatcher:
             elif assessment == 'healthy':
                 assessment = 'degraded'
             reasons.append(f"{comp_data['unhealthy']} unhealthy components")
+
+        qd = health.get('queue_depths', {})
+        total_pending = qd.get('total_pending', 0)
+        if total_pending > 5000:
+            assessment = 'degraded' if assessment != 'critical' else 'critical'
+            reasons.append(f"Queue backlog: {total_pending} pending tasks")
+        elif total_pending > 1000:
+            if assessment == 'healthy':
+                assessment = 'degraded'
+            reasons.append(f"Queue backlog: {total_pending} pending tasks")
 
         health['overall_assessment'] = assessment
         health['assessment_reasons'] = reasons if reasons else ['All systems nominal']

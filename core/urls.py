@@ -1452,6 +1452,7 @@ from core.views_diagnostics import (
     cockpit_agent_pause,  # Focus Cockpit: pause agent
     cockpit_agent_resume,  # Focus Cockpit: resume agent
     cockpit_queues_overview,  # Focus Cockpit: queue/worker/task load
+    cockpit_queue_depths,  # Focus Cockpit: live Redis LLEN per queue
     cockpit_cost_overview,  # Focus Cockpit: cost/token/provider usage
     cockpit_autopilot_policies,  # Focus Cockpit: autopilot policies
     cockpit_autopilot_toggle,  # Focus Cockpit: toggle autopilot policy
@@ -1664,6 +1665,7 @@ urlpatterns = [
     path('api/cockpit/agents/<str:agent_name>/resume/', cockpit_agent_resume, name='cockpit-agent-resume'),
     # P13: Queues + Cost
     path('api/cockpit/queues/', cockpit_queues_overview, name='cockpit-queues-overview'),
+    path('api/cockpit/queues/depths/', cockpit_queue_depths, name='cockpit-queue-depths'),
     path('api/cockpit/cost/', cockpit_cost_overview, name='cockpit-cost-overview'),
     # P14: Autopilot
     path('api/cockpit/autopilot/policies/', cockpit_autopilot_policies, name='cockpit-autopilot-policies'),
