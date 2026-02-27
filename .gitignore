@@ -308,3 +308,7 @@ income_builder_outputs/
 # Session 864: Warmup Output Quarantine
 # Warmup runs save telemetry here instead of main workspace
 .warmups/
+
+# Resolve Node artifacts (rendered videos & job configs)
+resolve_node/jobs/
+resolve_node/results/
