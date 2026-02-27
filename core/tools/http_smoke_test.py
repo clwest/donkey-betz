@@ -26,6 +26,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -77,7 +78,12 @@ def _resolve_variables(template: str, variables: dict[str, str]) -> str:
         key = m.group(1)
         return variables.get(key, m.group(0))
 
-    return re.sub(r'\{\{(\w+)\}\}', _replace, template)
+    result = re.sub(r'\{\{(\w+)\}\}', _replace, template)
+    # Early-fail on unresolved vars to prevent cascading 500s
+    unresolved = re.search(r'\{\{(\w+)\}\}', result)
+    if unresolved:
+        raise ValueError(f'Unresolved variable: {{{{{unresolved.group(1)}}}}}')
+    return result
 
 
 def _extract_value(data: Any, path: str) -> Any:
@@ -133,7 +139,12 @@ def _run_step(
     """Execute one HTTP step, run assertions and captures, return result."""
     name = step.get('name', 'unnamed')
     method = step.get('method', 'GET').upper()
-    path = _resolve_variables(step.get('path', '/'), variables)
+
+    try:
+        path = _resolve_variables(step.get('path', '/'), variables)
+    except ValueError as e:
+        return {'name': name, 'ok': False, 'error': f'Variable resolution failed: {e}'}
+
     url = f"{base_url.rstrip('/')}/{path.lstrip('/')}"
 
     if not _validate_domain(url):
@@ -143,11 +154,24 @@ def _run_step(
             'error': f'SSRF blocked: {urllib.parse.urlparse(url).hostname}',
         }
 
-    # Build request
+    # Build request: auth_headers → Content-Type → step-level headers (step overrides)
     headers = {**auth_headers, 'Content-Type': 'application/json'}
+    if step.get('headers'):
+        try:
+            resolved_step_headers = {
+                k: _resolve_variables(v, variables)
+                for k, v in step['headers'].items()
+            }
+        except ValueError as e:
+            return {'name': name, 'ok': False, 'error': f'Header variable resolution failed: {e}'}
+        headers.update(resolved_step_headers)
+
     body = None
     if step.get('body'):
-        body_str = _resolve_variables(json.dumps(step['body']), variables)
+        try:
+            body_str = _resolve_variables(json.dumps(step['body']), variables)
+        except ValueError as e:
+            return {'name': name, 'ok': False, 'error': f'Body variable resolution failed: {e}'}
         body = body_str.encode('utf-8')
 
     req = urllib.request.Request(url, data=body, headers=headers, method=method)
@@ -294,13 +318,13 @@ BUILTIN_SUITES: dict[str, list[dict]] = {
     ],
 
     'cockpit_incidents_crud': [
-        # 1. Create a smoke-test incident
+        # 1. Create a smoke-test incident (tagged with test_run_id)
         {
             'name': 'create_incident',
             'method': 'POST',
             'path': '/api/cockpit/incidents/',
             'body': {
-                'title': '[SMOKE] Test incident — auto-cleanup',
+                'title': '[SMOKE][{{test_run_id}}] Test incident — auto-cleanup',
                 'severity': 'low',
                 'description': 'Automated smoke test incident. Safe to delete.',
             },
@@ -312,20 +336,51 @@ BUILTIN_SUITES: dict[str, list[dict]] = {
                 {'json_path': '$.id', 'as': 'incident_id'},
             ],
         },
-        # 2. GET detail
+        # 2. GET detail (initial — before any events)
         {
-            'name': 'get_detail',
+            'name': 'get_detail_initial',
+            'depends_on': ['create_incident'],
             'method': 'GET',
             'path': '/api/cockpit/incidents/{{incident_id}}/',
             'assert': [
                 {'check': 'status', 'expected': 200},
                 {'check': 'has_key', 'key': 'incident'},
                 {'check': 'has_key', 'key': 'events'},
+                {'check': 'json_path', 'path': '$.event_count', 'operator': 'gte', 'expected': 0},
             ],
         },
-        # 3. Add note event
+        # 3. Negative test: add note without required 'text' field
+        {
+            'name': 'negative_note_missing_text',
+            'depends_on': ['create_incident'],
+            'method': 'POST',
+            'path': '/api/cockpit/incidents/{{incident_id}}/events/',
+            'body': {
+                'event_type': 'note',
+            },
+            'assert': [
+                {'check': 'status', 'expected': 400},
+                {'check': 'json_path', 'path': '$.ok', 'operator': 'eq', 'expected': False},
+            ],
+        },
+        # 4. Negative test: add link without required fields
+        {
+            'name': 'negative_link_missing_fields',
+            'depends_on': ['create_incident'],
+            'method': 'POST',
+            'path': '/api/cockpit/incidents/{{incident_id}}/events/',
+            'body': {
+                'event_type': 'link',
+            },
+            'assert': [
+                {'check': 'status', 'expected': 400},
+                {'check': 'json_path', 'path': '$.ok', 'operator': 'eq', 'expected': False},
+            ],
+        },
+        # 5. Add note event
         {
             'name': 'add_note',
+            'depends_on': ['create_incident'],
             'method': 'POST',
             'path': '/api/cockpit/incidents/{{incident_id}}/events/',
             'body': {
@@ -333,10 +388,12 @@ BUILTIN_SUITES: dict[str, list[dict]] = {
                 'text': 'Smoke test note event',
             },
             'assert': [{'check': 'status', 'expected': 201}],
+            'capture': [{'json_path': '$.id', 'as': 'note_event_id'}],
         },
-        # 4. Add link event
+        # 6. Add link event
         {
             'name': 'add_link',
+            'depends_on': ['create_incident'],
             'method': 'POST',
             'path': '/api/cockpit/incidents/{{incident_id}}/events/',
             'body': {
@@ -346,18 +403,24 @@ BUILTIN_SUITES: dict[str, list[dict]] = {
                 'label': 'Smoke test link',
             },
             'assert': [{'check': 'status', 'expected': 201}],
+            'capture': [{'json_path': '$.id', 'as': 'link_event_id'}],
         },
-        # 5. Update status to resolved
+        # 7. Update status to resolved
         {
             'name': 'resolve_incident',
+            'depends_on': ['create_incident'],
             'method': 'POST',
             'path': '/api/cockpit/incidents/{{incident_id}}/update/',
-            'body': {'status': 'resolved'},
+            'body': {
+                'status': 'resolved',
+                'resolution_summary': 'Smoke test auto-resolved [{{test_run_id}}]',
+            },
             'assert': [{'check': 'status', 'expected': 200}],
         },
-        # 6. Verify final state
+        # 8. Verify final state (depends on all mutation steps)
         {
             'name': 'verify_resolved',
+            'depends_on': ['add_note', 'add_link', 'resolve_incident'],
             'method': 'GET',
             'path': '/api/cockpit/incidents/{{incident_id}}/',
             'assert': [
@@ -416,28 +479,56 @@ def run_smoke_test(payload: dict) -> dict:
         auth_headers['Authorization'] = f'Token {token}'
 
     # Run steps
-    variables: dict[str, str] = {}
+    test_run_id = uuid.uuid4().hex[:12]
+    variables: dict[str, str] = {'test_run_id': test_run_id}
     results = []
     passed = 0
     failed = 0
+    skipped = 0
+    step_outcomes: dict[str, str] = {}
 
     for step in steps:
+        name = step.get('name', 'unnamed')
+
+        # Check depends_on — skip if any dependency failed/skipped/missing
+        depends_on = step.get('depends_on', [])
+        skip = False
+        for dep in depends_on:
+            outcome = step_outcomes.get(dep)
+            if outcome != 'passed':
+                skip = True
+                break
+
+        if skip:
+            step_outcomes[name] = 'skipped'
+            skipped += 1
+            results.append({
+                'name': name,
+                'ok': False,
+                'skipped': True,
+                'error': f"Skipped: dependency '{dep}' {outcome or 'not found'}",
+            })
+            continue
+
         timeout_ms = step.get('timeout_ms', DEFAULT_TIMEOUT_MS)
         step_result = _run_step(step, variables, base_url, auth_headers, timeout_ms)
         results.append(step_result)
 
         if step_result.get('ok'):
             passed += 1
+            step_outcomes[name] = 'passed'
         else:
             failed += 1
+            step_outcomes[name] = 'failed'
             if fail_fast:
                 break
 
-    ok = failed == 0
+    ok = failed == 0 and skipped == 0
 
     logger.info(
         f"[http_smoke_test] suite={suite_name or 'custom'} env={environment} "
-        f"passed={passed} failed={failed} total={len(results)}"
+        f"run={test_run_id} passed={passed} failed={failed} skipped={skipped} "
+        f"total={len(results)}"
     )
 
     return {
@@ -445,8 +536,10 @@ def run_smoke_test(payload: dict) -> dict:
         'suite': suite_name or 'custom',
         'environment': environment,
         'base_url': base_url,
+        'test_run_id': test_run_id,
         'passed': passed,
         'failed': failed,
+        'skipped': skipped,
         'total': len(results),
         'results': results,
     }
