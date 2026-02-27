@@ -841,9 +841,9 @@ app.conf.beat_schedule = {
     },
     'broadcast-evolution-status': {
         'task': 'core.tasks.broadcast_evolution_status',
-        'schedule': 300.0,  # Every 5 minutes (was 120s, throttled Session 1056)
+        'schedule': 600.0,  # Every 10 minutes (was 300s/5min, throttled Session 1075 — 34s avg runtime)
         'options': {
-            'expires': 290,
+            'expires': 580,
         }
     },
     # Session 326: Project-Agent Learning Bridge
@@ -1685,9 +1685,9 @@ app.conf.beat_schedule = {
     # The central heartbeat of the AI body - monitors all vital systems
     'heart-service-heartbeat': {
         'task': 'core.tasks.run_heartbeat',
-        'schedule': 300.0,  # Every 5 minutes (was 60s, throttled Session 1056)
+        'schedule': 600.0,  # Every 10 minutes (was 300s/5min, throttled Session 1075 — 81s avg runtime)
         'options': {
-            'expires': 290,  # Expire before next run
+            'expires': 580,  # Expire before next run
         }
     },
     # Session 702: LUNGS Service - Resource & Capacity Management
@@ -1919,9 +1919,9 @@ app.conf.beat_schedule = {
     # Session 744: Celery Health Monitoring (Phase 1 Foundation)
     'check-celery-health': {
         'task': 'core.tasks.check_celery_health',
-        'schedule': 300.0,  # Every 5 minutes (was 120s, throttled Session 1056)
+        'schedule': 600.0,  # Every 10 minutes (was 300s/5min, throttled Session 1075 — 81s avg runtime)
         'options': {
-            'expires': 290,  # Expire before next run
+            'expires': 580,  # Expire before next run
         }
     },
     # ==========================================================================
