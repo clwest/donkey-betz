@@ -44,6 +44,16 @@
 - `reasoning_engine_tool`: status — operational (ThinkingAgent engine)
 - Only `legal_doc_drafter_agent` remains untested (creates deliverables)
 
+### Zombie Work Cleanup
+- **132 zombie deliberation sessions** closed (active with 0 turns, >1h old → failed)
+- **923 stale PilotExecutions** completed as partial (running >1 week → completed:partial)
+- Remaining: 0 active deliberations, 89 running pilots (<1 week old)
+
+### content_review_tool Action Mismatch Fixed
+- GPT-5.2 consistently called `approve/reject` but handler only accepted `publish/archive`
+- Caused 9 tool failures in 72h
+- Added `ACTION_ALIASES` mapping: `approve→publish`, `reject→archive`
+
 ### PA Smoke Tests 14/14 Green
 - Verified after Railway celery-pa redeployed with initiative query fix
 - `http_smoke_test(suite='pa_tools_smoke')` — all 14 checks passing on Railway prod
