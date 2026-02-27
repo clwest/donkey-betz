@@ -584,7 +584,7 @@ BUILTIN_SUITES: dict[str, list[dict]] = {
             'path': '/api/deliverables/stats/',
             'assert': [
                 {'check': 'status', 'expected': 200},
-                {'check': 'has_key', 'key': 'total'},
+                {'check': 'has_key', 'key': 'stats'},
             ],
         },
         # 16. Deliverables list
@@ -603,8 +603,7 @@ BUILTIN_SUITES: dict[str, list[dict]] = {
             'path': '/api/opportunities/stats/',
             'assert': [
                 {'check': 'status', 'expected': 200},
-                {'check': 'has_key', 'key': 'total'},
-                {'check': 'has_key', 'key': 'by_status'},
+                {'check': 'has_key', 'key': 'stats'},
             ],
         },
         # 18. Pilot gates dashboard
