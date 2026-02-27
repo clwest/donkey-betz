@@ -29,6 +29,21 @@
 - `GateProgressionPipeline` was regenerating gate_stuck items after they were ignored (status='acted')
 - Fixed: check now uses `status__in=['pending', 'acted']` to prevent re-creation
 
+### TRIAGE Initiatives Cleaned Up
+- 8 auto-generated noise initiatives archived (ThinkingAgent, DecisionExtractor, ConversationInitiativePipeline outputs)
+- 1 promoted to ACTIVE: "Capitalizing on manager, position, developer opportunity"
+- **0 TRIAGE remaining**, 1 ACTIVE
+
+### PA Tools Verified (7 of 8 remaining)
+- `content_review_tool`: stats, list, recent, get — all working
+- `media_tool`: stats, list — 9 assets (3 images, 5 videos, 1 audio)
+- `opportunity_manager_tool`: stats, list — 297 opportunities (all expired)
+- `davinci_tool`: health check — healthy, 0 queued
+- `pilots_tool`: stats — 1,540 experiments (528 completed, 1,012 running)
+- `legislation_tool`: overview — 680 bills tracked (topic/status aggregates empty)
+- `reasoning_engine_tool`: status — operational (ThinkingAgent engine)
+- Only `legal_doc_drafter_agent` remains untested (creates deliverables)
+
 ### PA Smoke Tests 14/14 Green
 - Verified after Railway celery-pa redeployed with initiative query fix
 - `http_smoke_test(suite='pa_tools_smoke')` — all 14 checks passing on Railway prod
@@ -69,7 +84,7 @@
 | Platform health score | **100** (7/7 components healthy) |
 | Celery throughput | **~1,177 tasks/hour, 99.5% success** |
 | Agents routable | **All 218** |
-| Initiatives | **0 ACTIVE**, 59 COMPLETED, 9 TRIAGE, 23 ARCHIVED |
+| Initiatives | **1 ACTIVE**, 59 COMPLETED, 0 TRIAGE, 31 ARCHIVED |
 | Content pipeline | **6,374 published**, 0 pending_review, 0 ready_for_review |
 | Action items | **0 pending** |
 
@@ -82,7 +97,8 @@
 2. **Stock intelligence**: no watchlist concept — ticker-addressed only
 
 ### Remaining Untested PA Tools
-Still need verification: `content_review_tool`, `opportunity_manager_tool`, `pilots_tool`, `reasoning_engine_tool`, `legal_doc_drafter_agent`, `legislation_tool`, `media_tool`, `davinci_tool`
+Still need verification: `legal_doc_drafter_agent` (creates deliverables — test with care)
+Verified this session: `content_review_tool`, `opportunity_manager_tool`, `pilots_tool`, `reasoning_engine_tool`, `legislation_tool`, `media_tool`, `davinci_tool`
 
 ### Other Open Items
 - API dependency routes: 30/31 populated (235 endpoints) — only `/how-it-works` empty (static page)
