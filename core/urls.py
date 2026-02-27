@@ -1442,6 +1442,9 @@ from core.views_diagnostics import (
     cockpit_approve_decision,  # Focus Cockpit: approve/reject decision
     cockpit_approve_gate,  # Focus Cockpit: approve/block gate
     cockpit_alerts,  # Focus Cockpit: in-app alerts
+    cockpit_runbook,  # Focus Cockpit: deterministic runbooks
+    cockpit_retry_run,  # Focus Cockpit: retry failed run
+    cockpit_create_incident_note,  # Focus Cockpit: create incident note
     # Session 871: Removed unused import: diagnostic_dashboard
 )
 
@@ -1627,6 +1630,9 @@ urlpatterns = [
     path('api/cockpit/approvals/decision/<str:item_id>/decide/', cockpit_approve_decision, name='cockpit-approve-decision'),
     path('api/cockpit/approvals/gate/<str:gate_id>/decide/', cockpit_approve_gate, name='cockpit-approve-gate'),
     path('api/cockpit/alerts/', cockpit_alerts, name='cockpit-alerts'),
+    path('api/cockpit/remediate/runbook/<str:alert_kind>/', cockpit_runbook, name='cockpit-runbook'),
+    path('api/cockpit/remediate/retry-run/<str:run_id>/', cockpit_retry_run, name='cockpit-retry-run'),
+    path('api/cockpit/remediate/incident-note/', cockpit_create_incident_note, name='cockpit-incident-note'),
     path('diagnostics/websockets/', WebSocketDiagnosticsView.as_view(), name='websocket-diagnostics'),
     path("api/llm/chat/", llm_chat),
     # AI Building Products page (moved up to ensure it's matched first)
