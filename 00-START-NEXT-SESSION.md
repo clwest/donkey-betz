@@ -121,6 +121,12 @@
 - Local code already fixed — awaiting Railway celery-pa redeploy to propagate assertion fix
 - `cockpit_health` suite: 18/18 passing
 
+### Event Bus Workers Non-Blocking (5s→0ms idle)
+- `create_scoring_worker`, `create_validation_worker`, `create_analytics_worker` had `block_ms=5000`
+- Caused every event bus poll to take ~5s even when idle (just blocking on empty Redis stream)
+- Changed to `block_ms=0` — Celery Beat handles scheduling, workers don't need to block-wait
+- Drops idle runtime from ~5s to <100ms per run (~150 runs/hour × 5s = 12.5 min/hour saved)
+
 ---
 
 ## Session 1074 — What Happened
