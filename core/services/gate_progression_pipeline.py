@@ -531,7 +531,7 @@ class GateProgressionPipeline:
             existing = HumanAttentionItem.objects.filter(
                 source_type='gate_stuck',
                 source_id=str(gate.id),
-                status='pending'
+                status__in=['pending', 'acted'],
             ).exists()
 
             if existing:
