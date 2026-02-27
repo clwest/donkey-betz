@@ -1,0 +1,1504 @@
+{
+  "build_sha": "770ebbbb",
+  "build_timestamp": "2026-02-27T20:14:10.977Z",
+  "env": "production",
+  "route_count": 31,
+  "routes": [
+    {
+      "path": "/login",
+      "label": "Login",
+      "authRequired": false,
+      "category": "auth"
+    },
+    {
+      "path": "/",
+      "label": "Command Center",
+      "authRequired": true,
+      "category": "command"
+    },
+    {
+      "path": "/dashboard",
+      "label": "Dashboard",
+      "authRequired": true,
+      "category": "command"
+    },
+    {
+      "path": "/workspace",
+      "label": "Workspace",
+      "authRequired": true,
+      "category": "command"
+    },
+    {
+      "path": "/boardroom",
+      "label": "Boardroom",
+      "authRequired": true,
+      "category": "command"
+    },
+    {
+      "path": "/governance",
+      "label": "Governance",
+      "authRequired": true,
+      "category": "command"
+    },
+    {
+      "path": "/initiatives",
+      "label": "Initiatives",
+      "authRequired": true,
+      "category": "command"
+    },
+    {
+      "path": "/platform",
+      "label": "Platform",
+      "authRequired": true,
+      "category": "command"
+    },
+    {
+      "path": "/billing",
+      "label": "Billing",
+      "authRequired": true,
+      "category": "command"
+    },
+    {
+      "path": "/analytics",
+      "label": "Analytics",
+      "authRequired": true,
+      "category": "command"
+    },
+    {
+      "path": "/image-studio",
+      "label": "Image Studio",
+      "authRequired": true,
+      "category": "studio",
+      "studioType": "image"
+    },
+    {
+      "path": "/video-studio",
+      "label": "Video Studio",
+      "authRequired": true,
+      "category": "studio",
+      "studioType": "video"
+    },
+    {
+      "path": "/intelligence",
+      "label": "Intelligence",
+      "authRequired": true,
+      "category": "intelligence"
+    },
+    {
+      "path": "/agents",
+      "label": "Agents",
+      "authRequired": true,
+      "category": "intelligence"
+    },
+    {
+      "path": "/advisors",
+      "label": "Advisors",
+      "authRequired": true,
+      "category": "intelligence"
+    },
+    {
+      "path": "/neural-orchestra",
+      "label": "Neural Orchestra",
+      "authRequired": true,
+      "category": "intelligence"
+    },
+    {
+      "path": "/conversation-contract",
+      "label": "Conversation Contract",
+      "authRequired": true,
+      "category": "intelligence"
+    },
+    {
+      "path": "/mythology-lab",
+      "label": "Mythology Lab",
+      "authRequired": true,
+      "category": "intelligence"
+    },
+    {
+      "path": "/content",
+      "label": "Content",
+      "authRequired": true,
+      "category": "domain"
+    },
+    {
+      "path": "/betting",
+      "label": "Betting",
+      "authRequired": true,
+      "category": "domain"
+    },
+    {
+      "path": "/stocks",
+      "label": "Stock Intelligence",
+      "authRequired": true,
+      "category": "domain"
+    },
+    {
+      "path": "/portfolio",
+      "label": "Portfolio",
+      "authRequired": true,
+      "category": "domain"
+    },
+    {
+      "path": "/legal",
+      "label": "Legal",
+      "authRequired": true,
+      "category": "domain"
+    },
+    {
+      "path": "/government",
+      "label": "Government",
+      "authRequired": true,
+      "category": "domain"
+    },
+    {
+      "path": "/documents",
+      "label": "Documents",
+      "authRequired": true,
+      "category": "domain"
+    },
+    {
+      "path": "/blog/:blogId",
+      "label": "Blog Viewer",
+      "authRequired": true,
+      "category": "domain"
+    },
+    {
+      "path": "/docs-index",
+      "label": "Docs Index",
+      "authRequired": true,
+      "category": "reference"
+    },
+    {
+      "path": "/how-it-works",
+      "label": "How It Works",
+      "authRequired": true,
+      "category": "reference"
+    },
+    {
+      "path": "/admin",
+      "label": "Admin",
+      "authRequired": true,
+      "roles": [
+        "admin"
+      ],
+      "category": "admin"
+    },
+    {
+      "path": "/settings",
+      "label": "Settings",
+      "authRequired": true,
+      "category": "admin"
+    },
+    {
+      "path": "/profile",
+      "label": "Profile",
+      "authRequired": true,
+      "category": "admin"
+    }
+  ],
+  "studios": {
+    "image": {
+      "enabled": true,
+      "path": "/image-studio",
+      "models": [
+        "stability-ai",
+        "dall-e-3",
+        "replicate"
+      ],
+      "endpoint": "/api/v1/gallery/"
+    },
+    "video": {
+      "enabled": true,
+      "path": "/video-studio",
+      "models": [
+        "runway-ml",
+        "ffmpeg-edit"
+      ],
+      "endpoint": "/api/v1/video/"
+    },
+    "audio": {
+      "enabled": true,
+      "path": "",
+      "models": [
+        "elevenlabs-tts"
+      ],
+      "endpoint": "/api/v1/audio/"
+    }
+  },
+  "capabilities": {
+    "pa_chat": true,
+    "websocket": true,
+    "media_library": true,
+    "resolve_node": true,
+    "deliberation_pipeline": true,
+    "initiative_pipeline": true,
+    "spider_network": true,
+    "body_systems": true
+  },
+  "api_dependencies": {
+    "/boardroom": [
+      {
+        "method": "GET",
+        "path": "/api/human/attention/",
+        "toolSurface": "boardroom_tool.list_attention",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/human/attention/stats/",
+        "toolSurface": "boardroom_tool.attention_stats",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/boardroom/decisions/",
+        "toolSurface": "boardroom_tool.list_decisions",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/artifacts/needs-classification/",
+        "writes": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/human/attention/{itemId}/decide/",
+        "toolSurface": "boardroom_tool.decide",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/human/attention/bulk-decide/",
+        "toolSurface": "boardroom_tool.bulk_decide",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/artifacts/{artifactId}/classify/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/boardroom/decisions/{decisionId}/promote/",
+        "toolSurface": "boardroom_tool.promote",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/boardroom/decisions/{decisionId}/reject/",
+        "toolSurface": "boardroom_tool.reject",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/boardroom/decisions/bulk-promote/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/boardroom/decisions/bulk-reject/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/human/attention/",
+        "writes": true
+      }
+    ],
+    "/governance": [
+      {
+        "method": "GET",
+        "path": "/api/platform/governance/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/self-healing/progress/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/platform/remediation/status/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/boardroom/decisions/",
+        "toolSurface": "boardroom_tool.list_decisions",
+        "writes": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/platform/emergency-halt/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/platform/skin-lock/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/platform/actions/run-remediation/",
+        "writes": true
+      }
+    ],
+    "/": [
+      {
+        "method": "GET",
+        "path": "/api/home/boot/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/body/vitals/",
+        "toolSurface": "body_systems_tool.vitals",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/human/attention/",
+        "toolSurface": "boardroom_tool.list_attention",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/orchestration/workflows/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/human/control/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/agents/list/",
+        "toolSurface": "agent_registry_tool.list",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/assistant/learning/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/learning/velocity/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/preferences/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/assistant/attention-items/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/home/intelligence-desks/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/pa/conversations/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/pa/conversations/{conversationId}/",
+        "writes": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/home/trigger-desks/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/pa/chat/",
+        "toolSurface": "pa_chat",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/assistant/transcribe/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/assistant/voice/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/tts/speak/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/assistant/feedback/",
+        "writes": true
+      }
+    ],
+    "/workspace": [
+      {
+        "method": "GET",
+        "path": "/api/workspaces/",
+        "toolSurface": "initiative_tool.list_workspaces",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/workspaces/active/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/workspaces/{id}/",
+        "writes": false
+      }
+    ],
+    "/content": [
+      {
+        "method": "GET",
+        "path": "/api/v1/gallery/all/",
+        "toolSurface": "media_tool.list",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/content-calendar/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/creative-projects/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/content/templates/",
+        "writes": false
+      }
+    ],
+    "/betting": [
+      {
+        "method": "GET",
+        "path": "/api/v1/betting/stats/",
+        "toolSurface": "betting_tool.stats",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/betting/wagers/",
+        "toolSurface": "betting_tool.list_wagers",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/betting/arbitrage/scan/",
+        "toolSurface": "betting_tool.arbitrage",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/sports/live-odds-scores/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/odds/bankroll/stats/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/odds/markets/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/betting/line-movement/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/betting/todays-games/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/betting/brief/",
+        "toolSurface": "betting_tool.brief",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/betting/sharp-action/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/betting/track-record/",
+        "writes": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/betting/quick-pick/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/betting/place/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/betting/wager/",
+        "toolSurface": "betting_tool.log_wager",
+        "writes": true
+      }
+    ],
+    "/stocks": [
+      {
+        "method": "GET",
+        "path": "/api/stocks/hub/",
+        "toolSurface": "stock_tool.hub",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/stocks/dashboard/",
+        "toolSurface": "stock_tool.dashboard",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/stocks/briefs/",
+        "toolSurface": "stock_tool.briefs",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/stocks/briefs/{id}/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/stocks/alerts/",
+        "toolSurface": "stock_tool.alerts",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/stocks/predictions/",
+        "toolSurface": "stock_tool.predictions",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/stocks/sec-filings/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/stocks/ticker/{symbol}/",
+        "writes": false
+      }
+    ],
+    "/login": [
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/login/",
+        "writes": true
+      }
+    ],
+    "/dashboard": [
+      {
+        "method": "GET",
+        "path": "/api/home/boot/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/home/intelligence-desks/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/agents/comprehensive/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/agents/health/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/recent-activity/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/agent-learning/activity/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/agent-dreams/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/agent-conversations/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/ecosystem/dashboard-summary/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/portfolio/revenue-dashboard/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/agents/learnings/current/",
+        "writes": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/home/trigger-desks/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/home/hive-mind/trigger/",
+        "writes": true
+      }
+    ],
+    "/initiatives": [
+      {
+        "method": "GET",
+        "path": "/api/initiatives/",
+        "toolSurface": "initiative_tool.list",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/initiatives/{initiativeId}/rhythm/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/initiatives/{initiativeId}/action-items/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/initiatives/{initiativeId}/origin-trace/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/initiatives/pipeline-health/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/initiatives/diagnose-stuck/",
+        "writes": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/initiatives/{initiativeId}/start-conversation/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/initiatives/populate/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/initiatives/{initiativeId}/action-items/create/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/initiatives/{initiativeId}/action-items/extract/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/action-items/{itemId}/",
+        "writes": true
+      }
+    ],
+    "/platform": [
+      {
+        "method": "GET",
+        "path": "/api/initiatives/",
+        "toolSurface": "initiative_tool.list",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/initiatives/pipeline-health/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/initiatives/diagnose-stuck/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/research/self-blog/list/",
+        "writes": false
+      }
+    ],
+    "/billing": [
+      {
+        "method": "GET",
+        "path": "/api/v1/billing/subscription-status/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/billing/plans/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/billing/payment-methods/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/billing/invoices/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/billing/upcoming-invoice/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/billing/usage/",
+        "writes": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/billing/subscribe/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/billing/cancel-subscription/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/billing/resume-subscription/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/billing/set-default-payment-method/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/billing/billing-portal/",
+        "writes": true
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/v1/billing/payment-methods/{id}/",
+        "writes": true
+      }
+    ],
+    "/analytics": [
+      {
+        "method": "GET",
+        "path": "/api/v1/analytics/overview/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/analytics/summary/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/analytics/charts/agent-activity/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/analytics/charts/revenue/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/analytics/charts/content-production/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/analytics/charts/system-health/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/analytics/top-performers/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/analytics/anomalies/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/analytics/forecast/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/analytics/reports/",
+        "writes": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/analytics/reports/generate/",
+        "writes": true
+      }
+    ],
+    "/image-studio": [
+      {
+        "method": "GET",
+        "path": "/api/v1/content/image-history/",
+        "toolSurface": "media_tool.list",
+        "writes": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/content/generate-image/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/content/optimize-prompt/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/content/upscale-image/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/content/remove-background/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/content/create-variations/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/content/toggle-favorite/",
+        "writes": true
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/v1/content/delete-image/",
+        "writes": true
+      }
+    ],
+    "/video-studio": [
+      {
+        "method": "GET",
+        "path": "/api/v1/content/video-history/",
+        "writes": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/content/generate-video/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/content/upscale-video/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/content/toggle-favorite/",
+        "writes": true
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/v1/content/delete-video/",
+        "writes": true
+      }
+    ],
+    "/intelligence": [
+      {
+        "method": "GET",
+        "path": "/api/v1/intelligence-desks/status/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/opportunities/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/opportunities/{id}/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/gates/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/gates/{id}/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/pilots/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/pilots/{id}/gates/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/experiments/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/recommendations/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/spiders/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/predictions/",
+        "writes": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/gates/{id}/approve/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/pilots/{id}/start/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/experiments/{id}/halt/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/intelligence-desks/kpi-update/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/opportunities/{id}/act/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/opportunities/{id}/dismiss/",
+        "writes": true
+      }
+    ],
+    "/agents": [
+      {
+        "method": "GET",
+        "path": "/api/v1/agents/comprehensive/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/agents/channels/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/agents/messages/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/agents/memberships/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/agents/execution-history/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/agents/monitoring/dashboard/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/agents/tools/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/agents/templates/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/agent-learning/activity/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/agent-dreams/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/agent-conversations/",
+        "writes": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/agents/messages/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/agents/templates/",
+        "writes": true
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/v1/agents/templates/{id}/",
+        "writes": true
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/v1/agents/templates/{id}/",
+        "writes": true
+      }
+    ],
+    "/advisors": [
+      {
+        "method": "GET",
+        "path": "/api/v1/advisors/",
+        "writes": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/advisors/{id}/consult/",
+        "writes": true
+      }
+    ],
+    "/neural-orchestra": [
+      {
+        "method": "GET",
+        "path": "/api/v1/neural-orchestra/feed/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/neural-orchestra/stats/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/neural-orchestra/collaborations/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/neural-orchestra/contribution-types/",
+        "writes": false
+      }
+    ],
+    "/conversation-contract": [
+      {
+        "method": "GET",
+        "path": "/api/conversation-contract/overview/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/conversation-contract/{conversationId}/",
+        "writes": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/agent-conversations/trigger/",
+        "writes": true
+      }
+    ],
+    "/mythology-lab": [
+      {
+        "method": "GET",
+        "path": "/api/mythology/stats/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/mythology/recent-events/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/mythology/quarantine/",
+        "writes": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/mythology/quarantine/{id}/approve/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/mythology/quarantine/{id}/reject/",
+        "writes": true
+      }
+    ],
+    "/portfolio": [
+      {
+        "method": "GET",
+        "path": "/api/v1/portfolio/stats/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/portfolio/platforms/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/portfolio/accounts/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/portfolio/content/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/portfolio/revenue-dashboard/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/portfolio/recommendations/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/portfolio/compare-platforms/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/portfolio/integrations/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/portfolio/platform-analytics/{platformId}/",
+        "writes": false
+      }
+    ],
+    "/legal": [
+      {
+        "method": "GET",
+        "path": "/api/v1/legal/documents/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/legal/cases/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/legal/active-case/",
+        "writes": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/legal/analyze-document/",
+        "writes": true
+      }
+    ],
+    "/government": [
+      {
+        "method": "GET",
+        "path": "/api/v1/government/hub/",
+        "writes": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/pa/chat/",
+        "toolSurface": "pa_chat",
+        "writes": true
+      }
+    ],
+    "/documents": [
+      {
+        "method": "GET",
+        "path": "/api/v1/rag/stats/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/rag/documents/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/rag/collections/",
+        "writes": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/rag/upload/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/rag/ingest-url/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/rag/ingest-youtube/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/rag/search/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/rag/documents/{id}/analyze/",
+        "writes": true
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/v1/rag/documents/{id}/",
+        "writes": true
+      }
+    ],
+    "/blog/:blogId": [
+      {
+        "method": "GET",
+        "path": "/api/v1/research/self-blog/{blogId}/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/research/self-blog/{blogId}/related/",
+        "writes": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/research/self-blog/{blogId}/approve/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/research/self-blog/{blogId}/publish/",
+        "writes": true
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/v1/research/self-blog/{blogId}/delete/",
+        "writes": true
+      }
+    ],
+    "/docs-index": [
+      {
+        "method": "GET",
+        "path": "/docs/_index.json",
+        "writes": false
+      }
+    ],
+    "/how-it-works": [],
+    "/admin": [
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/health/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/service-status/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/heart/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/health-check/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/health-check/detailed/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/celery-stats/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/spiders/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/agents/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/billing/billing-status/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/analytics/platform-analytics/",
+        "writes": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/heart/trigger/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/health-check/clear-cache/",
+        "writes": true
+      }
+    ],
+    "/settings": [
+      {
+        "method": "GET",
+        "path": "/api/v1/settings/profile/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/settings/notifications/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/settings/api-keys/",
+        "writes": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/portfolio/accounts/",
+        "writes": false
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/v1/settings/profile/",
+        "writes": true
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/v1/settings/notifications/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/settings/change-password/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/settings/api-key/generate/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/settings/export-data/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/settings/generate-avatar/",
+        "writes": true
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/v1/settings/api-keys/{id}/",
+        "writes": true
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/v1/settings/delete-account/",
+        "writes": true
+      }
+    ],
+    "/profile": [
+      {
+        "method": "GET",
+        "path": "/api/v1/settings/profile/",
+        "writes": false
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/v1/settings/profile/",
+        "writes": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/settings/generate-avatar/",
+        "writes": true
+      }
+    ]
+  }
+}
