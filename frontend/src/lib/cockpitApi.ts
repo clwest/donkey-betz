@@ -26,6 +26,11 @@ import type {
   AutopilotEvaluateResponse,
   AutopilotHistoryResponse,
   RunTraceResponse,
+  ConfigOverviewResponse,
+  ConfigToggleProviderResponse,
+  ConfigFlagsResponse,
+  ConfigUpsertFlagResponse,
+  ConfigChangesResponse,
 } from '@/types/cockpit'
 
 // --- Runs ---
@@ -265,6 +270,43 @@ export async function getCostOverview(params?: CostParams) {
 
 export async function getRunTrace(runId: string) {
   const { data } = await api.get<RunTraceResponse>(`/cockpit/runs/${runId}/trace/`)
+  return data
+}
+
+// --- Config Control Plane ---
+
+export async function getConfigOverview() {
+  const { data } = await api.get<ConfigOverviewResponse>('/cockpit/config/')
+  return data
+}
+
+export async function toggleConfigProvider(providerId: string) {
+  const { data } = await api.post<ConfigToggleProviderResponse>(`/cockpit/config/providers/${providerId}/toggle/`)
+  return data
+}
+
+export async function getConfigFlags() {
+  const { data } = await api.get<ConfigFlagsResponse>('/cockpit/config/flags/')
+  return data
+}
+
+export async function upsertConfigFlag(payload: { key: string; value: unknown; description?: string; category?: string }) {
+  const { data } = await api.post<ConfigUpsertFlagResponse>('/cockpit/config/flags/', payload)
+  return data
+}
+
+export async function deleteConfigFlag(flagId: string) {
+  const { data } = await api.post(`/cockpit/config/flags/${flagId}/delete/`)
+  return data
+}
+
+export interface ConfigChangesParams {
+  hours?: number
+  limit?: number
+}
+
+export async function getConfigChanges(params?: ConfigChangesParams) {
+  const { data } = await api.get<ConfigChangesResponse>('/cockpit/config/changes/', { params })
   return data
 }
 
