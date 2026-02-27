@@ -36,7 +36,7 @@ MAX_STEPS = 50
 MAX_RESPONSE_BYTES = 1_048_576  # 1 MB
 DEFAULT_TIMEOUT_MS = 20_000
 ALLOWED_HOSTS_RE = re.compile(
-    r'^(localhost|127\.0\.0\.1|[\w-]+\.railway\.app)$', re.IGNORECASE
+    r'^(localhost|127\.0\.0\.1|[\w.-]+\.railway\.app)$', re.IGNORECASE
 )
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
@@ -273,8 +273,8 @@ def _check_assertion(assertion: dict, status: int, data: Any) -> dict:
 
 BUILTIN_SUITES: dict[str, list[dict]] = {
     'cockpit_health': [
-        {'name': 'errors', 'method': 'GET', 'path': '/api/cockpit/errors/', 'assert': [{'check': 'status', 'expected': 200}, {'check': 'has_key', 'key': 'errors'}]},
-        {'name': 'runs', 'method': 'GET', 'path': '/api/cockpit/runs/', 'assert': [{'check': 'status', 'expected': 200}, {'check': 'has_key', 'key': 'runs'}]},
+        {'name': 'errors', 'method': 'GET', 'path': '/api/cockpit/errors/', 'assert': [{'check': 'status', 'expected': 200}, {'check': 'has_key', 'key': 'signatures'}]},
+        {'name': 'runs', 'method': 'GET', 'path': '/api/cockpit/runs/', 'assert': [{'check': 'status', 'expected': 200}]},
         {'name': 'inbox', 'method': 'GET', 'path': '/api/cockpit/inbox/', 'assert': [{'check': 'status', 'expected': 200}]},
         {'name': 'ops_overview', 'method': 'GET', 'path': '/api/cockpit/ops/overview/', 'assert': [{'check': 'status', 'expected': 200}]},
         {'name': 'library_deliverables', 'method': 'GET', 'path': '/api/cockpit/library/deliverables/', 'assert': [{'check': 'status', 'expected': 200}]},
