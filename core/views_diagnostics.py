@@ -3092,3 +3092,247 @@ def cockpit_config_changes(request):
         })
 
     return JsonResponse({'hours': hours, 'total': len(items), 'items': items})
+
+
+# ─── P17: Incident Commander ─────────────────────────────────────────────────
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def cockpit_incidents_list(request):
+    """GET: list incidents, POST: create incident."""
+    from core.models_cockpit_incidents import CockpitIncident, CockpitIncidentEvent
+    from django.db.models import Count, Max, Q
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
+
+        title = body.get('title', '').strip()
+        if not title:
+            return JsonResponse({'ok': False, 'error': 'title is required'}, status=400)
+
+        severity = body.get('severity', 'medium')
+        if severity not in ('critical', 'high', 'medium', 'low'):
+            severity = 'medium'
+
+        incident = CockpitIncident.objects.create(
+            title=title,
+            severity=severity,
+            owner=body.get('owner', ''),
+        )
+
+        # Auto-link initial evidence if provided
+        initial_links = body.get('links', [])
+        for link in initial_links[:10]:
+            link_type = link.get('type', '')
+            link_id = link.get('id', '')
+            if link_type and link_id:
+                CockpitIncidentEvent.objects.create(
+                    incident=incident,
+                    event_type='link',
+                    actor=request.user.username if hasattr(request, 'user') and request.user.is_authenticated else 'operator',
+                    content={'link_type': link_type, 'link_id': link_id, 'label': link.get('label', '')},
+                )
+
+        _audit_log(request, 'incident.create', 'incident', str(incident.id),
+                   request_body=body, response_summary={'severity': severity})
+
+        return JsonResponse({
+            'ok': True,
+            'id': str(incident.id),
+            'title': incident.title,
+            'severity': incident.severity,
+            'status': incident.status,
+            'created_at': incident.created_at.isoformat(),
+        }, status=201)
+
+    # GET: list
+    status_filter = request.GET.get('status', '')
+    severity_filter = request.GET.get('severity', '')
+    q = request.GET.get('q', '').strip()
+    limit = min(int(request.GET.get('limit', 50)), 200)
+    offset = int(request.GET.get('offset', 0))
+
+    qs = CockpitIncident.objects.all()
+    if status_filter and status_filter != 'all':
+        qs = qs.filter(status=status_filter)
+    if severity_filter:
+        qs = qs.filter(severity=severity_filter)
+    if q:
+        qs = qs.filter(title__icontains=q)
+
+    total = qs.count()
+    incidents = qs.annotate(
+        event_count=Count('events'),
+        link_count=Count('events', filter=Q(events__event_type='link')),
+        last_activity=Max('events__created_at'),
+    ).order_by('-created_at')[offset:offset + limit]
+
+    items = []
+    for inc in incidents:
+        items.append({
+            'id': str(inc.id),
+            'title': inc.title,
+            'severity': inc.severity,
+            'status': inc.status,
+            'owner': inc.owner,
+            'event_count': inc.event_count,
+            'link_count': inc.link_count,
+            'last_activity': inc.last_activity.isoformat() if inc.last_activity else None,
+            'created_at': inc.created_at.isoformat(),
+            'updated_at': inc.updated_at.isoformat(),
+        })
+
+    return JsonResponse({'total': total, 'offset': offset, 'limit': limit, 'items': items})
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def cockpit_incident_detail(request, incident_id):
+    """Get incident detail with timeline events."""
+    from core.models_cockpit_incidents import CockpitIncident, CockpitIncidentEvent
+
+    try:
+        inc = CockpitIncident.objects.get(pk=incident_id)
+    except CockpitIncident.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Incident not found'}, status=404)
+
+    events = CockpitIncidentEvent.objects.filter(incident=inc).order_by('created_at')
+
+    event_items = []
+    for ev in events:
+        event_items.append({
+            'id': str(ev.id),
+            'event_type': ev.event_type,
+            'actor': ev.actor,
+            'content': ev.content,
+            'created_at': ev.created_at.isoformat(),
+        })
+
+    return JsonResponse({
+        'ok': True,
+        'incident': {
+            'id': str(inc.id),
+            'title': inc.title,
+            'severity': inc.severity,
+            'status': inc.status,
+            'owner': inc.owner,
+            'resolution_summary': inc.resolution_summary,
+            'created_at': inc.created_at.isoformat(),
+            'updated_at': inc.updated_at.isoformat(),
+        },
+        'events': event_items,
+        'event_count': len(event_items),
+    })
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def cockpit_incident_update(request, incident_id):
+    """Update incident status, severity, owner, or resolution summary."""
+    from core.models_cockpit_incidents import CockpitIncident, CockpitIncidentEvent
+
+    try:
+        inc = CockpitIncident.objects.get(pk=incident_id)
+    except CockpitIncident.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Incident not found'}, status=404)
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
+
+    actor = request.user.username if hasattr(request, 'user') and request.user.is_authenticated else 'operator'
+    changes = {}
+
+    if 'status' in body and body['status'] in ('open', 'mitigating', 'resolved'):
+        old_status = inc.status
+        inc.status = body['status']
+        changes['status'] = {'from': old_status, 'to': body['status']}
+
+    if 'severity' in body and body['severity'] in ('critical', 'high', 'medium', 'low'):
+        old_severity = inc.severity
+        inc.severity = body['severity']
+        changes['severity'] = {'from': old_severity, 'to': body['severity']}
+
+    if 'owner' in body:
+        inc.owner = body['owner']
+        changes['owner'] = body['owner']
+
+    if 'resolution_summary' in body:
+        inc.resolution_summary = body['resolution_summary']
+        changes['resolution_summary'] = True
+
+    if changes:
+        inc.save()
+        CockpitIncidentEvent.objects.create(
+            incident=inc,
+            event_type='status_change',
+            actor=actor,
+            content=changes,
+        )
+        _audit_log(request, 'incident.update', 'incident', str(inc.id),
+                   request_body=body, response_summary=changes)
+
+    return JsonResponse({
+        'ok': True,
+        'id': str(inc.id),
+        'status': inc.status,
+        'severity': inc.severity,
+        'owner': inc.owner,
+    })
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def cockpit_incident_add_event(request, incident_id):
+    """Add a note or link event to an incident timeline."""
+    from core.models_cockpit_incidents import CockpitIncident, CockpitIncidentEvent
+
+    try:
+        inc = CockpitIncident.objects.get(pk=incident_id)
+    except CockpitIncident.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Incident not found'}, status=404)
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
+
+    event_type = body.get('event_type', '')
+    if event_type not in ('note', 'link'):
+        return JsonResponse({'ok': False, 'error': 'event_type must be note or link'}, status=400)
+
+    actor = request.user.username if hasattr(request, 'user') and request.user.is_authenticated else 'operator'
+
+    if event_type == 'note':
+        text = body.get('text', '').strip()
+        if not text:
+            return JsonResponse({'ok': False, 'error': 'text is required for notes'}, status=400)
+        content = {'text': text}
+    else:
+        link_type = body.get('link_type', '')
+        link_id = body.get('link_id', '')
+        if not link_type or not link_id:
+            return JsonResponse({'ok': False, 'error': 'link_type and link_id required'}, status=400)
+        content = {'link_type': link_type, 'link_id': link_id, 'label': body.get('label', '')}
+
+    event = CockpitIncidentEvent.objects.create(
+        incident=inc,
+        event_type=event_type,
+        actor=actor,
+        content=content,
+    )
+
+    _audit_log(request, 'incident.add_event', 'incident', str(inc.id),
+               request_body=body, response_summary={'event_id': str(event.id), 'type': event_type})
+
+    return JsonResponse({
+        'ok': True,
+        'id': str(event.id),
+        'event_type': event_type,
+        'content': content,
+        'created_at': event.created_at.isoformat(),
+    }, status=201)

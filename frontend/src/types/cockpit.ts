@@ -621,6 +621,74 @@ export interface AutopilotHistoryResponse {
   items: AutopilotEvent[]
 }
 
+// --- Incidents ---
+
+export type IncidentStatus = 'open' | 'mitigating' | 'resolved'
+
+export type IncidentEventType = 'note' | 'link' | 'status_change'
+
+export interface IncidentSummary {
+  id: UUID
+  title: string
+  severity: InboxSeverity
+  status: IncidentStatus
+  owner: string
+  event_count: number
+  link_count: number
+  last_activity: ISODateString | null
+  created_at: ISODateString
+  updated_at: ISODateString
+}
+
+export interface IncidentListResponse {
+  total: number
+  offset: number
+  limit: number
+  items: IncidentSummary[]
+}
+
+export interface IncidentEvent {
+  id: UUID
+  event_type: IncidentEventType
+  actor: string
+  content: Record<string, unknown>
+  created_at: ISODateString
+}
+
+export interface IncidentDetailResponse {
+  ok: boolean
+  incident: IncidentSummary & {
+    resolution_summary: string
+  }
+  events: IncidentEvent[]
+  event_count: number
+}
+
+export interface IncidentCreateResponse {
+  ok: boolean
+  id: UUID
+  title: string
+  severity: string
+  status: string
+  created_at: ISODateString
+}
+
+export interface IncidentUpdateResponse {
+  ok: boolean
+  id: UUID
+  status: string
+  severity: string
+  owner: string
+}
+
+export interface IncidentAddEventResponse {
+  ok: boolean
+  id: UUID
+  event_type: string
+  content: Record<string, unknown>
+  created_at: ISODateString
+}
+
 // --- Ops ---
 
 export interface PlatformConfigResponse {
