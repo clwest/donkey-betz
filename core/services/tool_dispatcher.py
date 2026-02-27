@@ -2453,7 +2453,19 @@ class ToolDispatcher:
 
             item = attention_qs.filter(id=item_id).first()
             if not item:
-                raise ValueError(f"Attention item {item_id} not found or not pending")
+                # Session 1075: Idempotent — if item exists but already acted, return success
+                already_acted = HumanAttentionItem.objects.filter(id=item_id).first()
+                if already_acted:
+                    return {
+                        'action': 'ignore_attention',
+                        'id': str(item_id),
+                        'title': already_acted.title,
+                        'new_status': already_acted.status,
+                        'success': True,
+                        'no_op': True,
+                        'note': f'Already {already_acted.status}',
+                    }
+                raise ValueError(f"Attention item {item_id} not found")
 
             # Use the model's record_decision method
             item.record_decision(
@@ -4310,12 +4322,23 @@ class ToolDispatcher:
             # Session 1043: Support lookup by human_id (INIT-000001) or seq_id number
             if initiative_id:
                 id_str = str(initiative_id).strip()
+                # Session 1075: Catch non-UUID strings like "pipeline_health"
+                if id_str.lower() in ('pipeline_health', 'pipeline-health', 'health'):
+                    return {
+                        'action': 'details',
+                        'error': 'Use pipeline_orchestrator_tool(action="status") for pipeline health',
+                        'hint': 'initiative_tool is for individual initiatives, not pipeline overview',
+                    }
                 if id_str.upper().startswith('INIT-'):
                     initiative = Initiative.objects.filter(human_id__iexact=id_str).first()
                 elif id_str.isdigit():
                     initiative = Initiative.objects.filter(seq_id=int(id_str)).first()
                 else:
-                    initiative = Initiative.objects.filter(id=initiative_id).first()
+                    try:
+                        initiative = Initiative.objects.filter(id=initiative_id).first()
+                    except (ValueError, Exception):
+                        # Invalid UUID — try name search fallback
+                        initiative = Initiative.objects.filter(name__icontains=id_str).first()
             else:
                 initiative = Initiative.objects.filter(name__icontains=name_query).first()
 
