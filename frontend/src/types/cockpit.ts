@@ -93,10 +93,12 @@ export type LibraryItemKind = 'image' | 'video' | 'audio' | 'document'
 
 export interface MediaItem {
   id: UUID
-  kind: LibraryItemKind
+  kind: 'image' | 'video'
   title: string
   url: string
   thumbnail_url?: string
+  sub_type: string
+  prompt: string
   created_at: ISODateString
 }
 
@@ -104,9 +106,19 @@ export interface DeliverableItem {
   id: UUID
   title: string
   deliverable_type: string
+  category: string
   status: string
+  agent_name: string
+  quality_score: number
+  is_saved: boolean
   created_at: ISODateString
-  file_url?: string
+}
+
+export interface PaginatedResponse<T> {
+  total: number
+  offset: number
+  limit: number
+  items: T[]
 }
 
 // --- Create ---

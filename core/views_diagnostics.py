@@ -1325,3 +1325,112 @@ def cockpit_ops_overview(request):
         logger.debug("Ops recent_failed_runs error: %s", e)
 
     return JsonResponse(result)
+
+
+# ─── Focus Cockpit: Library ────────────────────────────────────────────────────
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def cockpit_library_deliverables(request):
+    """List deliverables with search, type filter, and pagination."""
+    from core.models_deliverables import Deliverable
+    from django.db.models import Q
+    from django.utils.timezone import now
+    from datetime import timedelta
+
+    q = request.GET.get('q', '').strip()
+    dtype = request.GET.get('type', '')
+    days = int(request.GET.get('days', 30))
+    limit = min(int(request.GET.get('limit', 50)), 100)
+    offset = int(request.GET.get('offset', 0))
+
+    cutoff = now() - timedelta(hours=days * 24)
+    qs = Deliverable.objects.filter(created_at__gte=cutoff).order_by('-created_at')
+
+    if q:
+        qs = qs.filter(
+            Q(title__icontains=q) | Q(category__icontains=q) | Q(agent_name__icontains=q)
+        )
+    if dtype:
+        qs = qs.filter(deliverable_type=dtype)
+
+    total = qs.count()
+    items = list(
+        qs[offset:offset + limit].values(
+            'id', 'title', 'deliverable_type', 'category', 'status',
+            'agent_name', 'quality_score', 'is_saved', 'created_at',
+        )
+    )
+    for item in items:
+        item['id'] = str(item['id'])
+        item['created_at'] = item['created_at'].isoformat() if item['created_at'] else None
+        item['quality_score'] = float(item['quality_score'] or 0)
+
+    return JsonResponse({'total': total, 'offset': offset, 'limit': limit, 'items': items})
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def cockpit_library_media(request):
+    """List media (images + videos) with type filter and pagination."""
+    from django.utils.timezone import now
+    from datetime import timedelta
+
+    media_type = request.GET.get('media_type', 'all')
+    days = int(request.GET.get('days', 30))
+    limit = min(int(request.GET.get('limit', 50)), 100)
+    offset = int(request.GET.get('offset', 0))
+
+    cutoff = now() - timedelta(hours=days * 24)
+    items = []
+
+    if media_type in ('all', 'image'):
+        try:
+            from content.models import ImageHistory
+            images = list(
+                ImageHistory.objects.filter(created_at__gte=cutoff)
+                .order_by('-created_at')[:500]
+                .values('id', 'filename', 'file_path', 'thumbnail', 'image_type', 'prompt', 'created_at')
+            )
+            for img in images:
+                items.append({
+                    'id': str(img['id']),
+                    'kind': 'image',
+                    'title': img['filename'] or 'Untitled',
+                    'url': img['file_path'] or '',
+                    'thumbnail_url': img['thumbnail'] or '',
+                    'sub_type': img['image_type'] or '',
+                    'prompt': (img['prompt'] or '')[:200],
+                    'created_at': img['created_at'].isoformat() if img['created_at'] else None,
+                })
+        except Exception as e:
+            logger.debug("Library media images error: %s", e)
+
+    if media_type in ('all', 'video'):
+        try:
+            from content.models import VideoHistory
+            videos = list(
+                VideoHistory.objects.filter(created_at__gte=cutoff)
+                .order_by('-created_at')[:500]
+                .values('id', 'video_url', 'thumbnail_url', 'video_type', 'prompt', 'created_at')
+            )
+            for vid in videos:
+                items.append({
+                    'id': str(vid['id']),
+                    'kind': 'video',
+                    'title': (vid['prompt'] or 'Untitled')[:80],
+                    'url': vid['video_url'] or '',
+                    'thumbnail_url': vid['thumbnail_url'] or '',
+                    'sub_type': vid['video_type'] or '',
+                    'prompt': (vid['prompt'] or '')[:200],
+                    'created_at': vid['created_at'].isoformat() if vid['created_at'] else None,
+                })
+        except Exception as e:
+            logger.debug("Library media videos error: %s", e)
+
+    # Sort combined list by created_at desc
+    items.sort(key=lambda x: x['created_at'] or '', reverse=True)
+    total = len(items)
+    page = items[offset:offset + limit]
+
+    return JsonResponse({'total': total, 'offset': offset, 'limit': limit, 'items': page})

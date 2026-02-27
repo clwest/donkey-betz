@@ -64,6 +64,7 @@ export function useMedia(params?: MediaParams) {
   return useQuery({
     queryKey: ['cockpit-media', params],
     queryFn: () => getMedia(params),
+    enabled: !!params,
   })
 }
 
@@ -71,6 +72,7 @@ export function useDeliverables(params?: DeliverableParams) {
   return useQuery({
     queryKey: ['cockpit-deliverables', params],
     queryFn: () => getDeliverables(params),
+    enabled: !!params,
   })
 }
 
