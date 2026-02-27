@@ -4,9 +4,9 @@ import type {
   RunDetail,
   ErrorSummaryResponse,
   InboxResponse,
+  OpsOverviewResponse,
   MediaItem,
   DeliverableItem,
-  OpsHealthOverview,
   PlatformConfigResponse,
 } from '@/types/cockpit'
 
@@ -129,8 +129,13 @@ export async function getJobStatus(jobId: string) {
 
 // --- Ops ---
 
-export async function getHealthOverview() {
-  const { data } = await api.get<OpsHealthOverview>('/v1/health/')
+export interface OpsParams {
+  hours?: number
+  limit?: number
+}
+
+export async function getOpsOverview(params?: OpsParams) {
+  const { data } = await api.get<OpsOverviewResponse>('/cockpit/ops/overview/', { params })
   return data
 }
 

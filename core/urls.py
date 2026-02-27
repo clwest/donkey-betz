@@ -1435,6 +1435,7 @@ from core.views_diagnostics import (
     cockpit_create_blog,    # Focus Cockpit: create blog post
     cockpit_create_talking_video,  # Focus Cockpit: create talking video
     cockpit_job_status,     # Focus Cockpit: poll job status
+    cockpit_ops_overview,   # Focus Cockpit: ops health overview
     # Session 871: Removed unused import: diagnostic_dashboard
 )
 
@@ -1613,6 +1614,7 @@ urlpatterns = [
     path('api/cockpit/create/blog/', cockpit_create_blog, name='cockpit-create-blog'),
     path('api/cockpit/create/talking-video/', cockpit_create_talking_video, name='cockpit-create-talking-video'),
     path('api/cockpit/create/status/<str:job_id>/', cockpit_job_status, name='cockpit-job-status'),
+    path('api/cockpit/ops/overview/', cockpit_ops_overview, name='cockpit-ops-overview'),
     path('diagnostics/websockets/', WebSocketDiagnosticsView.as_view(), name='websocket-diagnostics'),
     path("api/llm/chat/", llm_chat),
     # AI Building Products page (moved up to ensure it's matched first)

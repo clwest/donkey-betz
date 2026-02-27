@@ -137,16 +137,36 @@ export interface CreateRecipe {
 
 // --- Ops ---
 
-export interface OpsHealthOverview {
-  status: 'healthy' | 'degraded' | 'down'
-  services: Record<string, { status: string; latency_ms?: number }>
-  uptime_seconds: number
+// --- Ops ---
+
+export type HealthTone = 'green' | 'amber' | 'red' | 'gray'
+
+export interface HealthCheck {
+  key: string
+  label: string
+  tone: HealthTone
+  status: string
+  detail: string
 }
 
-export interface DbHealthResponse {
-  total_models: number
-  db_size_mb: number
-  active_connections: number
+export interface FailingAgent {
+  agent_name: string
+  failed_count: number
+  total_count: number
+  failure_rate: number
+  last_failed_at: ISODateString | null
+}
+
+export interface OpsOverviewResponse {
+  hours: number
+  generated_at: ISODateString
+  health: {
+    overall_tone: HealthTone
+    checks: HealthCheck[]
+  }
+  top_failing_agents: FailingAgent[]
+  top_error_signatures: FailureSignatureSummary[]
+  recent_failed_runs: RunSummary[]
 }
 
 export interface PlatformConfigResponse {

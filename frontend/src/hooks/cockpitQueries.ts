@@ -7,11 +7,12 @@ import {
   getJobStatus,
   getMedia,
   getDeliverables,
-  getHealthOverview,
+  getOpsOverview,
   type RunsParams,
   type InboxParams,
   type MediaParams,
   type DeliverableParams,
+  type OpsParams,
 } from '@/lib/cockpitApi'
 
 export function useRuns(params?: RunsParams) {
@@ -73,10 +74,10 @@ export function useDeliverables(params?: DeliverableParams) {
   })
 }
 
-export function useHealthOverview() {
+export function useOpsOverview(params?: OpsParams) {
   return useQuery({
-    queryKey: ['cockpit-health'],
-    queryFn: getHealthOverview,
+    queryKey: ['cockpit-ops', params],
+    queryFn: () => getOpsOverview(params),
     refetchInterval: 30_000,
   })
 }
