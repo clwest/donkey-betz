@@ -42,8 +42,16 @@ def _audit_log(request, action, target_type='', target_id='', request_body=None,
 def get_redis_client():
     """Get Redis client for diagnostics — uses REDIS_URL (same as Celery broker)"""
     try:
-        redis_url = getattr(settings, 'REDIS_URL', None) or os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
-        return redis.StrictRedis.from_url(redis_url, decode_responses=True)
+        redis_url = getattr(settings, 'REDIS_URL', None) or os.environ.get('REDIS_URL')
+        if not redis_url:
+            logger.warning("[diagnostics] REDIS_URL not configured — skipping Redis health check")
+            return None
+        return redis.StrictRedis.from_url(
+            redis_url,
+            decode_responses=True,
+            socket_connect_timeout=2,
+            socket_timeout=2,
+        )
     except Exception:
         return None
 
@@ -1228,7 +1236,9 @@ def cockpit_ops_overview(request):
     # Redis
     try:
         r = get_redis_client()
-        if r and r.ping():
+        if r is None:
+            checks.append({'key': 'redis', 'label': 'Redis', 'tone': 'gray', 'status': 'unknown', 'detail': 'REDIS_URL not configured'})
+        elif r.ping():
             checks.append({'key': 'redis', 'label': 'Redis', 'tone': 'green', 'status': 'ok', 'detail': 'Connected'})
         else:
             checks.append({'key': 'redis', 'label': 'Redis', 'tone': 'red', 'status': 'down', 'detail': 'Not responding'})
