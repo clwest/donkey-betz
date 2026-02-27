@@ -87,9 +87,14 @@ if not DEBUG:
 
 # Platform Configuration
 PLATFORM_NAME = os.environ.get('PLATFORM_NAME', 'Unified Donkey Betz')
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
-BACKEND_URL = os.environ.get('BACKEND_URL', 'http://localhost:8000')
-WEBSOCKET_URL = os.environ.get('WEBSOCKET_URL', 'ws://localhost:8001')
+
+# Session 1069: Auto-detect Railway URLs from RAILWAY_PUBLIC_DOMAIN when env vars not set
+_railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN', '')
+_railway_base = f'https://{_railway_domain}' if _railway_domain else ''
+FRONTEND_URL = os.environ.get('FRONTEND_URL', _railway_base or 'http://localhost:3000')
+BACKEND_URL = os.environ.get('BACKEND_URL', _railway_base or 'http://localhost:8000')
+WEBSOCKET_URL = os.environ.get('WEBSOCKET_URL',
+    f'wss://{_railway_domain}' if _railway_domain else 'ws://localhost:8001')
 
 # Session 1064: Platform Hardening Configuration
 LUNGS_ENFORCE_HARD_LIMIT = os.environ.get('LUNGS_ENFORCE_HARD_LIMIT', 'true').lower() == 'true'
