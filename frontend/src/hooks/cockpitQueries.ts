@@ -31,6 +31,11 @@ import {
   toggleAutopilotPolicy,
   evaluateAutopilot,
   getAutopilotHistory,
+  getIncidents,
+  createIncident,
+  getIncidentDetail,
+  updateIncident,
+  addIncidentEvent,
   type RunsParams,
   type InboxParams,
   type MediaParams,
@@ -44,6 +49,7 @@ import {
   type CostParams,
   type AutopilotHistoryParams,
   type ConfigChangesParams,
+  type IncidentsParams,
 } from '@/lib/cockpitApi'
 
 export function useRuns(params?: RunsParams) {
@@ -352,5 +358,61 @@ export function useAutopilotHistory(params?: AutopilotHistoryParams) {
     queryKey: ['cockpit-autopilot-history', params],
     queryFn: () => getAutopilotHistory(params),
     refetchInterval: 30_000,
+  })
+}
+
+// --- Incidents ---
+
+export function useIncidents(params?: IncidentsParams) {
+  return useQuery({
+    queryKey: ['cockpit-incidents', params],
+    queryFn: () => getIncidents(params),
+    refetchInterval: 15_000,
+  })
+}
+
+export function useIncidentDetail(incidentId: string) {
+  return useQuery({
+    queryKey: ['cockpit-incident', incidentId],
+    queryFn: () => getIncidentDetail(incidentId),
+    enabled: !!incidentId,
+    refetchInterval: 10_000,
+  })
+}
+
+export function useCreateIncident() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: createIncident,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cockpit-incidents'] })
+      qc.invalidateQueries({ queryKey: ['cockpit-audit'] })
+    },
+  })
+}
+
+export function useUpdateIncident() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ incidentId, ...payload }: { incidentId: string; status?: string; severity?: string; owner?: string; resolution_summary?: string }) =>
+      updateIncident(incidentId, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cockpit-incidents'] })
+      qc.invalidateQueries({ queryKey: ['cockpit-incident'] })
+      qc.invalidateQueries({ queryKey: ['cockpit-audit'] })
+    },
+  })
+}
+
+export function useAddIncidentEvent() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ incidentId, ...payload }: { incidentId: string; event_type: 'note' | 'link'; text?: string; link_type?: string; link_id?: string; label?: string }) =>
+      addIncidentEvent(incidentId, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cockpit-incident'] })
+      qc.invalidateQueries({ queryKey: ['cockpit-incidents'] })
+      qc.invalidateQueries({ queryKey: ['cockpit-audit'] })
+    },
   })
 }

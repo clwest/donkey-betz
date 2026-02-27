@@ -31,6 +31,11 @@ import type {
   ConfigFlagsResponse,
   ConfigUpsertFlagResponse,
   ConfigChangesResponse,
+  IncidentListResponse,
+  IncidentDetailResponse,
+  IncidentCreateResponse,
+  IncidentUpdateResponse,
+  IncidentAddEventResponse,
 } from '@/types/cockpit'
 
 // --- Runs ---
@@ -334,6 +339,41 @@ export interface AutopilotHistoryParams {
 
 export async function getAutopilotHistory(params?: AutopilotHistoryParams) {
   const { data } = await api.get<AutopilotHistoryResponse>('/cockpit/autopilot/history/', { params })
+  return data
+}
+
+// --- Incidents ---
+
+export interface IncidentsParams {
+  status?: string
+  severity?: string
+  q?: string
+  limit?: number
+  offset?: number
+}
+
+export async function getIncidents(params?: IncidentsParams) {
+  const { data } = await api.get<IncidentListResponse>('/cockpit/incidents/', { params })
+  return data
+}
+
+export async function createIncident(payload: { title: string; severity?: string; owner?: string; links?: { type: string; id: string; label?: string }[] }) {
+  const { data } = await api.post<IncidentCreateResponse>('/cockpit/incidents/', payload)
+  return data
+}
+
+export async function getIncidentDetail(incidentId: string) {
+  const { data } = await api.get<IncidentDetailResponse>(`/cockpit/incidents/${incidentId}/`)
+  return data
+}
+
+export async function updateIncident(incidentId: string, payload: { status?: string; severity?: string; owner?: string; resolution_summary?: string }) {
+  const { data } = await api.post<IncidentUpdateResponse>(`/cockpit/incidents/${incidentId}/update/`, payload)
+  return data
+}
+
+export async function addIncidentEvent(incidentId: string, payload: { event_type: 'note' | 'link'; text?: string; link_type?: string; link_id?: string; label?: string }) {
+  const { data } = await api.post<IncidentAddEventResponse>(`/cockpit/incidents/${incidentId}/events/`, payload)
   return data
 }
 

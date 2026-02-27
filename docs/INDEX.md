@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-02-27 00:49
+**Generated:** 2026-02-27 08:29
 **Current Session:** 1073
 **Total Documentation:** 1802 files | 618,937 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,204 |
+| Total cross-references | 2,205 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/features/README.md` | 60 | Feature Documentation |
+| `docs/archive/SYSTEM_CAPABILITIES-original/03_Revenue_Generation/README.md` | 60 | 💰 REVENUE GENERATION SYSTEMS - Autonomous Money-Ma |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 42 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -211,7 +211,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 355 | 2026-02-27 00:46 |
+| INDEX.md | docs | 355 | 2026-02-27 00:51 |
 | ADR-0002-moderate-dangerous-action-policy.md | decisions | 63 | 2026-02-25 13:27 |
 | ADR-0001-execution-per-run-ephemeral-containers.md | decisions | 44 | 2026-02-25 13:27 |
 | collaboration-protocol.md | topics | 223 | 2026-02-25 12:36 |
