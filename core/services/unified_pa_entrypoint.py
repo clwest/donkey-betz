@@ -678,7 +678,7 @@ class UnifiedPAEntrypoint:
         message: str,
         context: Dict[str, Any],
         trace_id: str,
-        max_iterations: int = 5,
+        max_iterations: int = 8,  # Session 1075: raised from 5 to handle batch ops (15+ boardroom items)
         total_timeout: float = 120.0,
     ) -> tuple[str, List[Dict], List[Dict], Optional[str]]:
         """
