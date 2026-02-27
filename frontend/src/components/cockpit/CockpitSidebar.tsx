@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom'
 import {
   Home, Inbox, PlusCircle, Play, FolderOpen, AlertTriangle,
   Wrench, Settings, Zap, ArrowLeft, PanelLeft, PanelLeftClose, ShieldCheck, Bell, ScrollText, Bot,
-  Layers, DollarSign, Cpu, SlidersHorizontal,
+  Layers, DollarSign, Cpu, SlidersHorizontal, ShieldAlert,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -28,6 +28,7 @@ const secondaryNav = [
   { path: '/cockpit/ops', label: 'Ops', icon: Wrench },
   { path: '/cockpit/queues', label: 'Queues', icon: Layers },
   { path: '/cockpit/cost', label: 'Cost', icon: DollarSign },
+  { path: '/cockpit/incidents', label: 'Incidents', icon: ShieldAlert },
   { path: '/cockpit/autopilot', label: 'Autopilot', icon: Cpu },
   { path: '/cockpit/config', label: 'Config', icon: SlidersHorizontal },
   { path: '/cockpit/audit', label: 'Audit Log', icon: ScrollText },
