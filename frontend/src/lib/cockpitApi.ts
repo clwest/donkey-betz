@@ -15,6 +15,7 @@ import type {
   ApprovalsResponse,
   ApprovalActionResponse,
   PlatformConfigResponse,
+  AuditLogResponse,
 } from '@/types/cockpit'
 
 // --- Runs ---
@@ -181,6 +182,19 @@ export async function createTalkingVideo(payload: CreateTalkingVideoPayload) {
 
 export async function getJobStatus(jobId: string) {
   const { data } = await api.get<JobStatusResponse>(`/cockpit/create/status/${jobId}/`)
+  return data
+}
+
+// --- Audit Log ---
+
+export interface AuditLogParams {
+  hours?: number
+  limit?: number
+  action?: string
+}
+
+export async function getAuditLog(params?: AuditLogParams) {
+  const { data } = await api.get<AuditLogResponse>('/cockpit/audit/', { params })
   return data
 }
 
