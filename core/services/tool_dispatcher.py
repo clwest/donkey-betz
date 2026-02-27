@@ -208,6 +208,10 @@ class ToolDispatcher:
         # Session 1088: Persona agents — 139 DB-only specialists
         self.register("persona_tool", self._handle_persona)
 
+        # Session 1069: Platform config + DB health for PA self-awareness
+        self.register("platform_config_tool", self._handle_platform_config)
+        self.register("db_health_tool", self._handle_db_health)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):
@@ -8035,6 +8039,319 @@ RESEARCH DATA:
             return response
 
         return {'error': f'Unknown persona action: {action}'}
+
+    # ── Session 1069: Platform Config ─────────────────────────────────────────
+
+    def _handle_platform_config(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Session 1069: Platform config introspection — runtime settings, LLM providers,
+        env vars (secrets masked), and feature flags.
+        """
+        import os
+        from django.conf import settings as django_settings
+
+        action = payload.get('action', 'overview')
+
+        SECRET_PATTERNS = (
+            'KEY', 'SECRET', 'TOKEN', 'PASSWORD', 'CREDENTIAL',
+            'DSN', 'DATABASE_URL', 'REDIS_URL', 'BROKER_URL',
+        )
+
+        def _mask(key, value):
+            """Mask secret values, show first 8 chars + ..."""
+            if not value:
+                return value
+            val = str(value)
+            for pat in SECRET_PATTERNS:
+                if pat in key.upper():
+                    return val[:8] + '...' if len(val) > 8 else '***'
+            return val
+
+        if action == 'overview':
+            return {
+                'action': 'overview',
+                'platform': getattr(django_settings, 'PLATFORM_NAME', 'unknown'),
+                'debug': django_settings.DEBUG,
+                'allowed_hosts': getattr(django_settings, 'ALLOWED_HOSTS', []),
+                'default_llm_provider': getattr(django_settings, 'LLM_DEFAULT_PROVIDER', 'unknown'),
+                'database_engine': django_settings.DATABASES.get('default', {}).get('ENGINE', 'unknown'),
+                'database_name': django_settings.DATABASES.get('default', {}).get('NAME', 'unknown'),
+                'redis_url': _mask('REDIS_URL', os.environ.get('REDIS_URL', 'not set')),
+                'celery_broker': _mask('BROKER_URL', getattr(django_settings, 'CELERY_BROKER_URL', 'not set')),
+                'cors_allow_all': getattr(django_settings, 'CORS_ALLOW_ALL_ORIGINS', False),
+                'csrf_trusted_origins': getattr(django_settings, 'CSRF_TRUSTED_ORIGINS', []),
+                'frontend_url': getattr(django_settings, 'FRONTEND_URL', 'not set'),
+                'backend_url': getattr(django_settings, 'BACKEND_URL', 'not set'),
+                'railway_environment': os.environ.get('RAILWAY_ENVIRONMENT', 'local'),
+                'railway_service': os.environ.get('RAILWAY_SERVICE_NAME', 'local'),
+            }
+
+        elif action == 'llm_providers':
+            providers = {}
+            # OpenAI
+            openai_key = os.environ.get('OPENAI_API_KEY', '')
+            providers['openai'] = {
+                'configured': bool(openai_key),
+                'key_prefix': openai_key[:8] + '...' if openai_key else 'not set',
+            }
+            # Anthropic
+            anthropic_key = os.environ.get('ANTHROPIC_API_KEY', '')
+            providers['anthropic'] = {
+                'configured': bool(anthropic_key),
+                'key_prefix': anthropic_key[:8] + '...' if anthropic_key else 'not set',
+            }
+            # Together AI
+            together_key = os.environ.get('TOGETHER_API_KEY', '')
+            providers['together_ai'] = {
+                'configured': bool(together_key),
+                'key_prefix': together_key[:8] + '...' if together_key else 'not set',
+            }
+            # DeepSeek
+            deepseek_key = os.environ.get('DEEPSEEK_API_KEY', '')
+            providers['deepseek'] = {
+                'configured': bool(deepseek_key),
+                'key_prefix': deepseek_key[:8] + '...' if deepseek_key else 'not set',
+            }
+            # Gemini
+            gemini_key = os.environ.get('GEMINI_API_KEY', os.environ.get('GOOGLE_API_KEY', ''))
+            providers['gemini'] = {
+                'configured': bool(gemini_key),
+                'key_prefix': gemini_key[:8] + '...' if gemini_key else 'not set',
+            }
+            # Ollama
+            ollama_url = os.environ.get('OLLAMA_BASE_URL', getattr(django_settings, 'OLLAMA_BASE_URL', ''))
+            providers['ollama'] = {
+                'configured': bool(ollama_url),
+                'base_url': ollama_url or 'not set',
+            }
+            return {
+                'action': 'llm_providers',
+                'default_provider': getattr(django_settings, 'LLM_DEFAULT_PROVIDER', 'unknown'),
+                'providers': providers,
+            }
+
+        elif action == 'env_vars':
+            # Show all env vars with secrets masked
+            env_snapshot = {}
+            for key in sorted(os.environ.keys()):
+                # Skip overly noisy system vars
+                if key.startswith(('__', 'npm_', 'LESS_', 'LS_')):
+                    continue
+                env_snapshot[key] = _mask(key, os.environ[key])
+            return {
+                'action': 'env_vars',
+                'count': len(env_snapshot),
+                'variables': env_snapshot,
+            }
+
+        elif action == 'feature_flags':
+            flags = {}
+            flag_attrs = [
+                'LUNGS_ENFORCE_HARD_LIMIT',
+                'CELERY_TASK_EVENT_RETENTION_DAYS',
+                'LLM_CALL_LOG_RETENTION_DAYS',
+                'BODY_THROTTLE_MAX_DELAY_SECONDS',
+                'CONTENT_AUTO_PUBLISH',
+                'SPIDER_ENABLED',
+                'DREAM_ENABLED',
+            ]
+            for attr in flag_attrs:
+                flags[attr] = getattr(django_settings, attr, 'not set')
+            return {
+                'action': 'feature_flags',
+                'flags': flags,
+            }
+
+        return {'error': f'Unknown platform_config action: {action}'}
+
+    # ── Session 1069: DB Health ───────────────────────────────────────────────
+
+    def _handle_db_health(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Session 1069: Database health — connection status, migration state,
+        table row counts, and pgvector extension status.
+        """
+        from django.db import connection
+
+        action = payload.get('action', 'overview')
+
+        if action == 'overview':
+            result = {'action': 'overview'}
+
+            # Connection check
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT version()")
+                    row = cursor.fetchone()
+                    result['postgres_version'] = row[0] if row else 'unknown'
+                    result['connected'] = True
+            except Exception as e:
+                result['connected'] = False
+                result['connection_error'] = str(e)
+                return result
+
+            # Database name and size
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT current_database(), pg_size_pretty(pg_database_size(current_database()))")
+                    row = cursor.fetchone()
+                    if row:
+                        result['database_name'] = row[0]
+                        result['database_size'] = row[1]
+            except Exception as e:
+                result['db_size_error'] = str(e)
+
+            # Migration summary
+            try:
+                from django.core.management import call_command
+                from io import StringIO
+                out = StringIO()
+                call_command('showmigrations', '--plan', stdout=out)
+                lines = out.getvalue().strip().split('\n')
+                applied = sum(1 for l in lines if l.strip().startswith('[X]'))
+                unapplied = sum(1 for l in lines if l.strip().startswith('[ ]'))
+                result['migrations'] = {
+                    'applied': applied,
+                    'unapplied': unapplied,
+                    'status': 'up_to_date' if unapplied == 0 else f'{unapplied}_pending',
+                }
+                if unapplied > 0:
+                    result['migrations']['pending'] = [
+                        l.strip()[4:] for l in lines if l.strip().startswith('[ ]')
+                    ][:20]
+            except Exception as e:
+                result['migrations'] = {'error': str(e)}
+
+            # pgvector check
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT extversion FROM pg_extension WHERE extname = 'vector'")
+                    row = cursor.fetchone()
+                    result['pgvector'] = {
+                        'installed': bool(row),
+                        'version': row[0] if row else None,
+                    }
+            except Exception as e:
+                result['pgvector'] = {'error': str(e)}
+
+            return result
+
+        elif action == 'migrations':
+            try:
+                from django.core.management import call_command
+                from io import StringIO
+                out = StringIO()
+                call_command('showmigrations', '--plan', stdout=out)
+                lines = out.getvalue().strip().split('\n')
+                unapplied = [l.strip()[4:] for l in lines if l.strip().startswith('[ ]')]
+                applied_count = sum(1 for l in lines if l.strip().startswith('[X]'))
+                return {
+                    'action': 'migrations',
+                    'applied_count': applied_count,
+                    'unapplied_count': len(unapplied),
+                    'unapplied': unapplied[:50],
+                    'status': 'up_to_date' if not unapplied else 'pending',
+                }
+            except Exception as e:
+                return {'action': 'migrations', 'error': str(e)}
+
+        elif action == 'tables':
+            try:
+                key_tables = [
+                    'core_chatconversation', 'core_agentexecution',
+                    'core_toolcallrecord', 'core_initiative',
+                    'core_spiderdata', 'core_deliverable',
+                    'core_failuresignature', 'core_failuredetection',
+                    'core_celerytaskevent', 'core_llmcalllog',
+                    'core_selfblog', 'core_heartbeat',
+                    'core_signalcluster', 'core_agentdream',
+                    'core_humanattentionitem', 'core_mlprediction',
+                    'core_imagehistory', 'core_videohistory',
+                    'core_audiohistory',
+                ]
+                table_counts = {}
+                with connection.cursor() as cursor:
+                    for table in key_tables:
+                        try:
+                            cursor.execute(
+                                "SELECT reltuples::bigint FROM pg_class WHERE relname = %s",
+                                [table]
+                            )
+                            row = cursor.fetchone()
+                            table_counts[table] = row[0] if row else 0
+                        except Exception:
+                            table_counts[table] = 'error'
+                return {
+                    'action': 'tables',
+                    'table_count': len(table_counts),
+                    'row_counts': table_counts,
+                    'note': 'Row counts are estimates from pg_class.reltuples (fast, updated by ANALYZE)',
+                }
+            except Exception as e:
+                return {'action': 'tables', 'error': str(e)}
+
+        elif action == 'pgvector':
+            result = {'action': 'pgvector'}
+            try:
+                with connection.cursor() as cursor:
+                    # Extension status
+                    cursor.execute("SELECT extversion FROM pg_extension WHERE extname = 'vector'")
+                    row = cursor.fetchone()
+                    result['installed'] = bool(row)
+                    result['version'] = row[0] if row else None
+
+                    if row:
+                        # Count vector columns
+                        cursor.execute("""
+                            SELECT table_name, column_name
+                            FROM information_schema.columns
+                            WHERE udt_name = 'vector'
+                            ORDER BY table_name
+                        """)
+                        vector_cols = cursor.fetchall()
+                        result['vector_columns'] = [
+                            {'table': r[0], 'column': r[1]} for r in vector_cols
+                        ]
+                        result['vector_column_count'] = len(vector_cols)
+
+                        # Count rows with embeddings in key table
+                        try:
+                            cursor.execute("""
+                                SELECT reltuples::bigint FROM pg_class
+                                WHERE relname = 'core_spiderdata'
+                            """)
+                            row = cursor.fetchone()
+                            result['spider_data_rows'] = row[0] if row else 0
+                        except Exception:
+                            pass
+
+                        # Vector indexes
+                        cursor.execute("""
+                            SELECT indexname, tablename
+                            FROM pg_indexes
+                            WHERE indexdef LIKE '%%vector%%' OR indexdef LIKE '%%ivfflat%%' OR indexdef LIKE '%%hnsw%%'
+                        """)
+                        indexes = cursor.fetchall()
+                        result['vector_indexes'] = [
+                            {'index': r[0], 'table': r[1]} for r in indexes
+                        ]
+            except Exception as e:
+                result['error'] = str(e)
+            return result
+
+        return {'error': f'Unknown db_health action: {action}'}
 
 
 # Singleton instance
