@@ -4,7 +4,7 @@ import StatusPill from '@/components/cockpit/shared/StatusPill'
 import SkeletonRows from '@/components/cockpit/shared/SkeletonRows'
 import { RUN_STATUS_LABEL, RUN_STATUS_TONE } from '@/components/cockpit/runs/runStatus'
 import { formatDateTime, formatDurationMs } from '@/lib/time'
-import { ArrowLeft, RotateCcw, FileText } from 'lucide-react'
+import { ArrowLeft, RotateCcw, FileText, Activity } from 'lucide-react'
 import type { RunStatus } from '@/types/cockpit'
 
 export default function CockpitRunDetailPage() {
@@ -41,6 +41,13 @@ export default function CockpitRunDetailPage() {
               <p className="text-sm text-gray-400 mt-1">{run.agent_name}</p>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate(`/cockpit/runs/${runId}/trace`)}
+                className="btn text-xs px-3 py-1.5 flex items-center gap-1.5"
+              >
+                <Activity size={14} />
+                View Trace
+              </button>
               <StatusPill
                 label={RUN_STATUS_LABEL[run.status as RunStatus] ?? run.status}
                 tone={RUN_STATUS_TONE[run.status as RunStatus] ?? 'gray'}
