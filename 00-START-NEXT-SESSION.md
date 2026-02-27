@@ -20,10 +20,11 @@
 - PA can now run `http_smoke_test(suite='pa_tools_smoke')` to verify platform health after deploys
 - Verified 14/14 green on Railway prod
 
-### Pipeline Health Threshold Tuned
+### Pipeline Health Fixed
 - `stale_threshold_hours` raised from 48 to 168 (1 week) — single-user dev cadence
 - Critical now requires stale AND (blocked stages OR zero weekly transitions)
-- Prevents false "critical" alerts when initiatives are simply idle
+- Archived 11 stuck ACTIVE initiatives (all auto-generated pipeline noise with blocked stages)
+- Pipeline health now "stalled" (expected — 0 ACTIVE initiatives, will resume when new ones created)
 
 ### Blog Backlog Cleared
 - **202 pending_review blogs** cleared (was documented as 115 — actual was 202)
@@ -82,7 +83,7 @@ Either fixed by recent changes or not being triggered. No longer the urgent hots
 | Platform health score | **100** (7/7 components healthy) |
 | Celery throughput | **~1,263 tasks/hour, 99.4% success** |
 | Agents routable | **All 218** |
-| Initiatives | **11 ACTIVE**, 59 COMPLETED, 9 TRIAGE, 12 ARCHIVED |
+| Initiatives | **0 ACTIVE**, 59 COMPLETED, 9 TRIAGE, 23 ARCHIVED |
 | Content pipeline | **578 published**, 0 pending_review, 1 approved, 582 draft |
 | Action items | **0 pending** (222 stale items on completed initiatives — closed) |
 
