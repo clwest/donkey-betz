@@ -330,7 +330,7 @@ BUILTIN_SUITES: dict[str, list[dict]] = {
             'path': '/api/cockpit/incidents/{{incident_id}}/events/',
             'body': {
                 'event_type': 'note',
-                'content': 'Smoke test note event',
+                'text': 'Smoke test note event',
             },
             'assert': [{'check': 'status', 'expected': 201}],
         },
@@ -341,7 +341,9 @@ BUILTIN_SUITES: dict[str, list[dict]] = {
             'path': '/api/cockpit/incidents/{{incident_id}}/events/',
             'body': {
                 'event_type': 'link',
-                'content': 'https://example.com/smoke-test',
+                'link_type': 'url',
+                'link_id': 'https://example.com/smoke-test',
+                'label': 'Smoke test link',
             },
             'assert': [{'check': 'status', 'expected': 201}],
         },
