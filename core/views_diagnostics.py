@@ -653,3 +653,58 @@ def websocket_test_page(request):
     """
     from django.http import HttpResponse
     return HttpResponse(html, content_type='text/html')
+
+
+# ── Session 1069: Internal config snapshot for cross-service comparison ──────
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def config_snapshot(request):
+    """
+    Session 1069: Returns masked config snapshot from THIS service's perspective.
+    Called by celery-pa's platform_config_tool(action='web_config') to compare
+    web vs celery environments. No auth required — secrets are masked.
+    """
+    import os
+
+    SECRET_PATTERNS = ('KEY', 'SECRET', 'TOKEN', 'PASSWORD', 'CREDENTIAL',
+                       'DSN', 'DATABASE_URL', 'REDIS_URL', 'BROKER_URL')
+
+    def _mask(key, value):
+        if not value:
+            return value
+        val = str(value)
+        for pat in SECRET_PATTERNS:
+            if pat in key.upper():
+                return val[:8] + '...' if len(val) > 8 else '***'
+        return val
+
+    return JsonResponse({
+        'service': os.environ.get('RAILWAY_SERVICE_NAME', 'local'),
+        'railway_environment': os.environ.get('RAILWAY_ENVIRONMENT', 'local'),
+        'debug': settings.DEBUG,
+        'frontend_url': getattr(settings, 'FRONTEND_URL', 'not set'),
+        'backend_url': getattr(settings, 'BACKEND_URL', 'not set'),
+        'default_llm_provider': getattr(settings, 'LLM_DEFAULT_PROVIDER', 'unknown'),
+        'allowed_hosts': getattr(settings, 'ALLOWED_HOSTS', []),
+        'database_engine': settings.DATABASES.get('default', {}).get('ENGINE', 'unknown'),
+        'database_name': settings.DATABASES.get('default', {}).get('NAME', 'unknown'),
+        'redis_url': _mask('REDIS_URL', os.environ.get('REDIS_URL', 'not set')),
+        'cors_allow_all': getattr(settings, 'CORS_ALLOW_ALL_ORIGINS', False),
+    })
+
+
+# ── Session 1069: Debug 500 endpoint for middleware verification ─────────────
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def debug_raise_500(request):
+    """
+    Session 1069: Intentionally raises an exception to verify
+    RequestErrorCaptureMiddleware is capturing HTTP 500s.
+    Staff-only. POST required to prevent accidental triggers.
+    """
+    if not (request.user and request.user.is_authenticated and request.user.is_staff):
+        return JsonResponse({'error': 'Staff only'}, status=403)
+
+    raise RuntimeError("Session 1069: Test 500 for middleware verification")

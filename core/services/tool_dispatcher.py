@@ -8076,6 +8076,7 @@ RESEARCH DATA:
         if action == 'overview':
             return {
                 'action': 'overview',
+                'service_context': os.environ.get('RAILWAY_SERVICE_NAME', 'local'),
                 'platform': getattr(django_settings, 'PLATFORM_NAME', 'unknown'),
                 'debug': django_settings.DEBUG,
                 'allowed_hosts': getattr(django_settings, 'ALLOWED_HOSTS', []),
@@ -8090,6 +8091,43 @@ RESEARCH DATA:
                 'backend_url': getattr(django_settings, 'BACKEND_URL', 'not set'),
                 'railway_environment': os.environ.get('RAILWAY_ENVIRONMENT', 'local'),
                 'railway_service': os.environ.get('RAILWAY_SERVICE_NAME', 'local'),
+            }
+
+        elif action == 'web_config':
+            # Fetch config from the web service via its internal API
+            # so the PA can compare web vs celery-pa environments
+            import urllib.request
+            import json as _json
+            web_url = os.environ.get(
+                'WEB_SERVICE_URL',
+                'https://donkey-betz-platform-production.up.railway.app'
+            )
+            try:
+                req = urllib.request.Request(
+                    f'{web_url}/api/v1/health/',
+                    headers={'Accept': 'application/json'},
+                )
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    health_data = _json.loads(resp.read())
+            except Exception as e:
+                health_data = {'error': str(e)}
+
+            try:
+                req2 = urllib.request.Request(
+                    f'{web_url}/api/internal/config-snapshot/',
+                    headers={'Accept': 'application/json'},
+                )
+                with urllib.request.urlopen(req2, timeout=5) as resp:
+                    web_config = _json.loads(resp.read())
+            except Exception as e:
+                web_config = {'error': str(e), 'note': 'config-snapshot endpoint may not be deployed yet'}
+
+            return {
+                'action': 'web_config',
+                'service_context': 'web (remote)',
+                'web_service_url': web_url,
+                'health': health_data,
+                'config': web_config,
             }
 
         elif action == 'llm_providers':

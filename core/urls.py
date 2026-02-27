@@ -1427,6 +1427,8 @@ from core.views_diagnostics import (
     test_spider_network,
     test_income_builder,
     websocket_test_page,
+    config_snapshot,        # Session 1069: Cross-service config comparison
+    debug_raise_500,        # Session 1069: Middleware verification endpoint
     # Session 871: Removed unused import: diagnostic_dashboard
 )
 
@@ -1595,6 +1597,9 @@ urlpatterns = [
     path('api/diagnostics/test-spiders/', test_spider_network, name='diagnostics-test-spiders'),
     path('api/diagnostics/test-income-builder/', test_income_builder, name='diagnostics-test-income'),
     path('diagnostics/websocket-test/', websocket_test_page, name='diagnostics-websocket-test'),
+    # Session 1069: Cross-service config snapshot + middleware test
+    path('api/internal/config-snapshot/', config_snapshot, name='config-snapshot'),
+    path('api/internal/debug-raise-500/', debug_raise_500, name='debug-raise-500'),
     path('diagnostics/websockets/', WebSocketDiagnosticsView.as_view(), name='websocket-diagnostics'),
     path("api/llm/chat/", llm_chat),
     # AI Building Products page (moved up to ensure it's matched first)
