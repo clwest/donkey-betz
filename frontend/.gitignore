@@ -4,7 +4,8 @@ node_modules
 .pnp.js
 
 # Build
-dist
+dist/*
+!dist/__manifest.json
 dist-ssr
 *.local
 
