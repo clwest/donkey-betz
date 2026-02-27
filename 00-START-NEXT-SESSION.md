@@ -15,9 +15,21 @@
 
 ### PA Tools Smoke Test Suite Added
 - New built-in suite `pa_tools_smoke` (14 checks) added to `http_smoke_test.py`
-- Covers: system health, body vitals, boardroom (stats + list + decisions), initiatives (list + detail chain + pipeline health), dreams, celery breakdown, agents, spiders, learning patterns, app manifest
+- Covers: system health, body vitals, boardroom (stats + list + decisions), initiatives (list + action items chain + pipeline health), dreams, celery breakdown, agents, spiders, learning patterns, app manifest
 - PA tool schema updated to include `pa_tools_smoke` in enum
 - PA can now run `http_smoke_test(suite='pa_tools_smoke')` to verify platform health after deploys
+- Verified 14/14 green on Railway prod
+
+### Pipeline Health Threshold Tuned
+- `stale_threshold_hours` raised from 48 to 168 (1 week) — single-user dev cadence
+- Critical now requires stale AND (blocked stages OR zero weekly transitions)
+- Prevents false "critical" alerts when initiatives are simply idle
+
+### Blog Backlog Cleared
+- **202 pending_review blogs** cleared (was documented as 115 — actual was 202)
+- 195 published (161 high-quality >= 0.7 score, 34 no-score with real content)
+- 7 stage document artifacts moved back to draft (misrouted as blogs)
+- **0 pending_review remaining**, 578 total published (DB), 463 published (PA filtered view)
 
 ---
 
@@ -71,15 +83,15 @@ Either fixed by recent changes or not being triggered. No longer the urgent hots
 | Celery throughput | **~1,263 tasks/hour, 99.4% success** |
 | Agents routable | **All 218** |
 | Initiatives | **11 ACTIVE**, 59 COMPLETED, 9 TRIAGE, 12 ARCHIVED |
-| Content pipeline | **348 published**, 115 pending_review, 1 approved |
+| Content pipeline | **578 published**, 0 pending_review, 1 approved, 582 draft |
 | Action items | **0 pending** (222 stale items on completed initiatives — closed) |
 
 ---
 
 ## Known Issues / Open Items
 
-### 115 Blogs in pending_review
-Large backlog of blogs awaiting triage. PA can help: `content_review_tool(action=list)` to review, `batch_publish` or `batch_archive` for bulk actions.
+### Blog Backlog Cleared
+202 pending_review blogs cleared in Session 1074 (195 published, 7 stage docs back to draft). 0 pending_review remaining.
 
 ### 50 Artifacts Need Classification
 Down from 2,339. PA can help: `boardroom_tool(action=list_unclassified)` and `boardroom_tool(action=classify_suggest)`.
