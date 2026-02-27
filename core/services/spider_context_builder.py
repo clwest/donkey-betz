@@ -407,7 +407,8 @@ class SpiderContextBuilder:
                     trends = self.intelligence_service.get_trending_topics(
                         category=category,
                         hours=hours,
-                        limit=max_trends
+                        limit=max_trends,
+                        max_entries=50,
                     )
                     if trends:
                         all_trends.extend(trends)
@@ -433,7 +434,8 @@ class SpiderContextBuilder:
                 try:
                     tech = self.intelligence_service.get_tech_trends(
                         hours=hours,
-                        limit=max_discussions
+                        limit=max_discussions,
+                        max_entries=50,
                     )
                     if tech:
                         context['discussions'] = tech.get('discussions', [])[:max_discussions]
@@ -444,7 +446,7 @@ class SpiderContextBuilder:
             # Get creative trends if creative category is relevant
             if 'creative' in all_categories:
                 try:
-                    creative = self.intelligence_service.get_creative_trends(hours=hours)
+                    creative = self.intelligence_service.get_creative_trends(hours=hours, max_entries=50)
                     if creative and creative.get('has_live_data'):
                         context['creative_trends'] = {
                             'trending_styles': creative.get('trending_styles', [])[:5],
@@ -457,7 +459,7 @@ class SpiderContextBuilder:
             # Get market data if financial/crypto categories are relevant
             if include_market_data and any(c in all_categories for c in ['financial', 'crypto']):
                 try:
-                    market = self.intelligence_service.get_market_insights()
+                    market = self.intelligence_service.get_market_insights(max_entries=50)
                     if market:
                         context['market_data'] = {
                             'crypto': market.get('crypto', [])[:5],
@@ -470,7 +472,7 @@ class SpiderContextBuilder:
             # Get job data if jobs category is relevant
             if 'jobs' in all_categories:
                 try:
-                    jobs = self.intelligence_service.get_job_market_summary(hours=hours, limit=10)
+                    jobs = self.intelligence_service.get_job_market_summary(hours=hours, limit=10, max_entries=50)
                     if jobs and jobs.get('total_found', 0) > 0:
                         context['job_data'] = {
                             'total_jobs': jobs.get('total_found', 0),

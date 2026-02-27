@@ -404,7 +404,8 @@ class PAIntelligenceEnricher:
                 category=category,
                 hours=hours,
                 limit=limit,
-                include_jobs=False
+                include_jobs=False,
+                max_entries=50,
             )
 
             # Extract unique spider sources

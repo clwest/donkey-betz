@@ -299,7 +299,11 @@ class UnifiedPAEntrypoint:
         if self._intelligence_enricher is None:
             try:
                 from core.services.pa_intelligence_enricher import PAIntelligenceEnricher
-                self._intelligence_enricher = PAIntelligenceEnricher()
+                # Session 1068: Disable spider trends in enricher — already handled
+                # by SpiderContextBuilder, avoiding duplicate 300-record scans
+                self._intelligence_enricher = PAIntelligenceEnricher(
+                    config={'include_trends': False}
+                )
             except ImportError:
                 logger.warning("PAIntelligenceEnricher not available")
                 self._intelligence_enricher = None
