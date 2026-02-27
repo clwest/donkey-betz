@@ -21,6 +21,10 @@ import type {
   AgentActionResponse,
   QueuesOverviewResponse,
   CostOverviewResponse,
+  AutopilotPoliciesResponse,
+  AutopilotToggleResponse,
+  AutopilotEvaluateResponse,
+  AutopilotHistoryResponse,
 } from '@/types/cockpit'
 
 // --- Runs ---
@@ -253,6 +257,33 @@ export interface CostParams {
 
 export async function getCostOverview(params?: CostParams) {
   const { data } = await api.get<CostOverviewResponse>('/cockpit/cost/', { params })
+  return data
+}
+
+// --- Autopilot ---
+
+export async function getAutopilotPolicies() {
+  const { data } = await api.get<AutopilotPoliciesResponse>('/cockpit/autopilot/policies/')
+  return data
+}
+
+export async function toggleAutopilotPolicy(policyId: string) {
+  const { data } = await api.post<AutopilotToggleResponse>(`/cockpit/autopilot/policies/${policyId}/toggle/`)
+  return data
+}
+
+export async function evaluateAutopilot(mode: 'dry_run' | 'execute' = 'dry_run') {
+  const { data } = await api.post<AutopilotEvaluateResponse>('/cockpit/autopilot/evaluate/', { mode })
+  return data
+}
+
+export interface AutopilotHistoryParams {
+  hours?: number
+  limit?: number
+}
+
+export async function getAutopilotHistory(params?: AutopilotHistoryParams) {
+  const { data } = await api.get<AutopilotHistoryResponse>('/cockpit/autopilot/history/', { params })
   return data
 }
 

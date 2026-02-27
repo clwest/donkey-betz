@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Home, Inbox, PlusCircle, Play, FolderOpen, AlertTriangle, Wrench, Settings, Zap, ShieldCheck, Bell, ScrollText, Bot,
-  Layers, DollarSign,
+  Layers, DollarSign, Cpu,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -38,6 +38,7 @@ export default function CommandPalette({ open, onClose, onToggleFocusMode }: Com
     { id: 'agents', label: 'Go to Agent Fleet', icon: Bot, action: () => navigate('/cockpit/agents') },
     { id: 'queues', label: 'Go to Queues', icon: Layers, action: () => navigate('/cockpit/queues') },
     { id: 'cost', label: 'Go to Cost', icon: DollarSign, action: () => navigate('/cockpit/cost') },
+    { id: 'autopilot', label: 'Go to Autopilot', icon: Cpu, action: () => navigate('/cockpit/autopilot') },
     { id: 'settings', label: 'Go to Settings', icon: Settings, action: () => navigate('/settings') },
     { id: 'focus', label: 'Toggle Focus Mode', icon: Zap, action: onToggleFocusMode },
   ]
