@@ -69,6 +69,12 @@
 - Added suite integrity unit tests (41 total, all passing) verifying check counts, no duplicates, required fields
 - Awaiting Railway celery-pa deploy to verify on prod (builds take 25+ min)
 
+### Legislation Tool Empty Aggregates Fixed
+- `_bill_data()` assumed each SpiderData row = 1 bill, but actual format is `{'items': [...], 'source': ..., 'dedup_stats': ...}`
+- Replaced with `_bills_from_row()` that unwraps the `items` array envelope
+- Fixed all 5 actions: overview, trending, status, summary/ask (RAG search), and keyword search
+- Overview now returns `total_bills` count (actual bills across all rows)
+
 ### PA Smoke Tests 14/14 Green (pre-expansion)
 - Verified after Railway celery-pa redeployed with initiative query fix
 - `http_smoke_test(suite='pa_tools_smoke')` — all 14 checks passing on Railway prod
