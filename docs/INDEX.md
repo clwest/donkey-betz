@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-02-27 14:06
+**Generated:** 2026-02-27 14:22
 **Current Session:** 1074
 **Total Documentation:** 1802 files | 618,961 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,204 |
+| Total cross-references | 2,203 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md` | 60 | 🏆 SPORTS ANALYTICS PLATFORM - AI-Powered Betting I |
+| `docs/archive/old-structure/capabilities/02_Content_Creation/README.md` | 60 | 🎨 AI CONTENT STUDIO - The Complete Creation Suite |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 42 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -211,7 +211,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 355 | 2026-02-27 13:59 |
+| INDEX.md | docs | 355 | 2026-02-27 14:08 |
 | personal-assistant.md | topics | 132 | 2026-02-27 13:25 |
 | ADR-0002-moderate-dangerous-action-policy.md | decisions | 63 | 2026-02-25 13:27 |
 | ADR-0001-execution-per-run-ephemeral-containers.md | decisions | 44 | 2026-02-25 13:27 |

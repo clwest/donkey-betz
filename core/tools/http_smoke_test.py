@@ -485,11 +485,11 @@ BUILTIN_SUITES: dict[str, list[dict]] = {
                 {'check': 'has_key', 'key': 'count'},
             ],
         },
-        # 6. Initiatives list
+        # 6. Initiatives list (any status — ACTIVE may be 0)
         {
             'name': 'initiatives_list',
             'method': 'GET',
-            'path': '/api/initiatives/?limit=3&status=ACTIVE',
+            'path': '/api/initiatives/?limit=3',
             'assert': [
                 {'check': 'status', 'expected': 200},
                 {'check': 'has_key', 'key': 'initiatives'},
