@@ -5,6 +5,7 @@ This file creates comprehensive diagnostic endpoints to see everything happening
 
 import json
 import logging
+import os
 from datetime import datetime
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -39,14 +40,10 @@ def _audit_log(request, action, target_type='', target_id='', request_body=None,
         logger.debug("Audit log write failed: %s", e)
 
 def get_redis_client():
-    """Get Redis client for diagnostics"""
+    """Get Redis client for diagnostics — uses REDIS_URL (same as Celery broker)"""
     try:
-        return redis.StrictRedis(
-            host=settings.REDIS_HOST if hasattr(settings, 'REDIS_HOST') else 'localhost',
-            port=settings.REDIS_PORT if hasattr(settings, 'REDIS_PORT') else 6379,
-            db=0,
-            decode_responses=True
-        )
+        redis_url = getattr(settings, 'REDIS_URL', None) or os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+        return redis.StrictRedis.from_url(redis_url, decode_responses=True)
     except Exception:
         return None
 
