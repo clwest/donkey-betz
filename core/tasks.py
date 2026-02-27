@@ -13366,7 +13366,7 @@ def check_level_milestones():
         return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task(name='core.tasks.broadcast_evolution_status')
+@shared_task(name='core.tasks.broadcast_evolution_status', ignore_result=True)
 def broadcast_evolution_status():
     """
     Session 254: Broadcast evolution status via WebSocket.
@@ -26013,7 +26013,7 @@ def process_spider_actions(
 # Session 701: HEART Service - System Health Monitoring
 # =============================================================================
 
-@shared_task(name='core.tasks.run_heartbeat')
+@shared_task(name='core.tasks.run_heartbeat', ignore_result=True)
 def run_heartbeat():
     """
     Session 701: HEART Service Periodic Heartbeat
@@ -26243,7 +26243,7 @@ def reset_daily_respiratory_stats():
 # SESSION 703: CIRCULATORY SYSTEM - DATA FLOW MONITORING
 # =============================================================================
 
-@shared_task(name='core.tasks.check_circulation')
+@shared_task(name='core.tasks.check_circulation', ignore_result=True)
 def check_circulation():
     """
     Session 703: CIRCULATORY SYSTEM - Check data flow health
@@ -27411,7 +27411,7 @@ def check_content_diversity():
         return {'success': False, 'error': str(e)}
 
 
-@shared_task
+@shared_task(ignore_result=True)
 def check_celery_health():
     """
     Session 744: Check Celery infrastructure health and record status.
