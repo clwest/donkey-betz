@@ -35292,11 +35292,14 @@ def process_pa_chat_task(self, user_id, message, context=None, generate_audio=Fa
     User = get_user_model()
     user = User.objects.get(id=user_id)
 
+    # Session 1085: Resolve conversation_id BEFORE PA init so history is scoped
+    from core.models import ChatConversation
+    if not conversation_id:
+        conversation_id, _ = ChatConversation.get_or_create_session(user=user, platform=platform)
+
     # Session 1068: Create fresh PA instance per task instead of caching.
-    # Cached instances accumulate state across 50+ tasks, causing memory leaks.
-    # Conversation history is loaded from DB on init (<100ms), so no functional loss.
     from core.services.unified_pa_entrypoint import UnifiedPAEntrypoint
-    pa = UnifiedPAEntrypoint(user)
+    pa = UnifiedPAEntrypoint(user, conversation_id=conversation_id)
 
     start_ms = time.time()
     # Session 976: Run async PA in a fresh event loop to avoid deadlock
@@ -35315,11 +35318,6 @@ def process_pa_chat_task(self, user_id, message, context=None, generate_audio=Fa
 
     # Persist to ChatConversation (same logic as the former sync view)
     try:
-        from core.models import ChatConversation
-
-        if not conversation_id:
-            conversation_id, _ = ChatConversation.get_or_create_session(user=user, platform=platform)
-
         is_first = not ChatConversation.objects.filter(conversation_id=conversation_id).exists()
 
         # Session 1063: Sanitize metadata — tool results may contain UUIDs,
