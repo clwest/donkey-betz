@@ -75,6 +75,17 @@
 - Fixed all 5 actions: overview, trending, status, summary/ask (RAG search), and keyword search
 - Overview now returns `total_bills` count (actual bills across all rows)
 
+### Deliberation 0-Turn Crash Fixed
+- `generate_conversation()` crashed with `IndexError` on `messages[-1]` when turn loop produced 0 messages
+- Session left as `status='active'` with 0 turns (3 of 5 sessions in last 24h)
+- Added early return guard: if no messages, marks session as `failed` and returns clean error
+- Combined with zombie reaper: 0-turn sessions now get properly tracked
+
+### Tool Contract Hardening (3 fixes)
+- **boardroom_tool ignore_attention**: now idempotent — returns `no_op: true` for already-acted items
+- **initiative_tool details**: catches invalid UUID strings like "pipeline_health", suggests correct tool, falls back to name search
+- **debug-raise-500 endpoint**: gated behind `DEBUG=True` to stop 7 noise errors/day on Railway prod
+
 ### PA Smoke Tests 14/14 Green (pre-expansion)
 - Verified after Railway celery-pa redeployed with initiative query fix
 - `http_smoke_test(suite='pa_tools_smoke')` — all 14 checks passing on Railway prod
