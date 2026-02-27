@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Home, Inbox, PlusCircle, Play, FolderOpen, AlertTriangle, Wrench, Settings, Zap, ShieldCheck,
+  Home, Inbox, PlusCircle, Play, FolderOpen, AlertTriangle, Wrench, Settings, Zap, ShieldCheck, Bell,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -32,6 +32,7 @@ export default function CommandPalette({ open, onClose, onToggleFocusMode }: Com
     { id: 'errors', label: 'Go to Errors', icon: AlertTriangle, action: () => navigate('/cockpit/errors') },
     { id: 'ops', label: 'Go to Ops', icon: Wrench, action: () => navigate('/cockpit/ops') },
     { id: 'approvals', label: 'Go to Approvals', icon: ShieldCheck, action: () => navigate('/cockpit/approvals') },
+    { id: 'alerts', label: 'Go to Alerts', icon: Bell, action: () => navigate('/cockpit/alerts') },
     { id: 'settings', label: 'Go to Settings', icon: Settings, action: () => navigate('/settings') },
     { id: 'focus', label: 'Toggle Focus Mode', icon: Zap, action: onToggleFocusMode },
   ]

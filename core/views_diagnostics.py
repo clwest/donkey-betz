@@ -1568,3 +1568,122 @@ def cockpit_approve_gate(request, gate_id):
         'action': action,
         'status': gate.status,
     })
+
+
+# ─── Focus Cockpit: Alerts ─────────────────────────────────────────────────────
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def cockpit_alerts(request):
+    """Compose in-app alerts from multiple system sources."""
+    from django.utils.timezone import now
+    from django.db.models import Count, Q
+    from datetime import timedelta
+
+    hours = int(request.GET.get('hours', 24))
+    cutoff = now() - timedelta(hours=hours)
+    prev_cutoff = cutoff - timedelta(hours=hours)  # previous window for deltas
+    alerts = []
+
+    # 1. Error signature spikes — signatures with count increase vs previous window
+    try:
+        from core.models_diagnostic_pipeline import FailureSignature
+        current_sigs = dict(
+            FailureSignature.objects.filter(last_seen__gte=cutoff)
+            .values_list('signature', 'count')
+        )
+        prev_sigs = dict(
+            FailureSignature.objects.filter(last_seen__gte=prev_cutoff, last_seen__lt=cutoff)
+            .values_list('signature', 'count')
+        )
+        for sig, count in current_sigs.items():
+            prev = prev_sigs.get(sig, 0)
+            delta = count - prev
+            if delta >= 3 or (count >= 5 and prev == 0):
+                alerts.append({
+                    'id': f'err-spike-{sig[:40]}',
+                    'kind': 'error_spike',
+                    'severity': 'high' if delta >= 10 else 'medium',
+                    'title': f'Error spike: {sig[:80]}',
+                    'detail': f'{count} occurrences (+{delta} vs previous {hours}h)',
+                    'created_at': None,
+                })
+    except Exception as e:
+        logger.debug("Alerts error_spike: %s", e)
+
+    # 2. Agents with high failure rate
+    try:
+        from core.models_unified_system import AgentExecution
+        agg = list(
+            AgentExecution.objects.filter(created_at__gte=cutoff)
+            .values('agent__name')
+            .annotate(
+                failed=Count('id', filter=Q(status='failed')),
+                total=Count('id'),
+            )
+            .filter(failed__gte=3, total__gte=5)
+        )
+        for a in agg:
+            rate = round(a['failed'] / max(a['total'], 1) * 100, 1)
+            if rate >= 50:
+                severity = 'high'
+            elif rate >= 25:
+                severity = 'medium'
+            else:
+                continue
+            alerts.append({
+                'id': f'agent-fail-{a["agent__name"]}',
+                'kind': 'agent_failure',
+                'severity': severity,
+                'title': f'Agent failing: {a["agent__name"]}',
+                'detail': f'{a["failed"]}/{a["total"]} runs failed ({rate}%)',
+                'created_at': None,
+            })
+    except Exception as e:
+        logger.debug("Alerts agent_failure: %s", e)
+
+    # 3. Health degradation — body systems reporting unhealthy
+    try:
+        from core.models_heart import ComponentStatus
+        unhealthy = ComponentStatus.objects.filter(is_healthy=False)
+        for cs in unhealthy:
+            alerts.append({
+                'id': f'health-{cs.component}',
+                'kind': 'health',
+                'severity': 'high',
+                'title': f'Unhealthy: {cs.display_name or cs.component}',
+                'detail': f'Status: {cs.status}',
+                'created_at': cs.last_check.isoformat() if cs.last_check else None,
+            })
+    except Exception as e:
+        logger.debug("Alerts health: %s", e)
+
+    # 4. Pending approvals count
+    try:
+        from core.models_human_interface import HumanAttentionItem
+        pending_count = HumanAttentionItem.objects.filter(
+            status__in=['pending', 'viewed'],
+            created_at__gte=cutoff,
+        ).count()
+        if pending_count > 0:
+            severity = 'high' if pending_count >= 5 else 'low'
+            alerts.append({
+                'id': 'approvals-pending',
+                'kind': 'approvals',
+                'severity': severity,
+                'title': f'{pending_count} approval{"s" if pending_count != 1 else ""} pending',
+                'detail': 'Items awaiting your decision in Approvals.',
+                'created_at': None,
+            })
+    except Exception as e:
+        logger.debug("Alerts approvals: %s", e)
+
+    # Sort by severity
+    sev_order = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
+    alerts.sort(key=lambda x: sev_order.get(x['severity'], 9))
+
+    return JsonResponse({
+        'hours': hours,
+        'total': len(alerts),
+        'items': alerts,
+    })
