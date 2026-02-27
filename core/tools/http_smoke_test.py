@@ -306,10 +306,10 @@ BUILTIN_SUITES: dict[str, list[dict]] = {
             },
             'assert': [
                 {'check': 'status', 'expected': 201},
-                {'check': 'has_key', 'key': 'incident'},
+                {'check': 'has_key', 'key': 'id'},
             ],
             'capture': [
-                {'json_path': '$.incident.id', 'as': 'incident_id'},
+                {'json_path': '$.id', 'as': 'incident_id'},
             ],
         },
         # 2. GET detail
