@@ -21,6 +21,10 @@ import {
   agentResume,
   getQueuesOverview,
   getCostOverview,
+  getAutopilotPolicies,
+  toggleAutopilotPolicy,
+  evaluateAutopilot,
+  getAutopilotHistory,
   type RunsParams,
   type InboxParams,
   type MediaParams,
@@ -32,6 +36,7 @@ import {
   type AgentFleetParams,
   type QueueWindow,
   type CostParams,
+  type AutopilotHistoryParams,
 } from '@/lib/cockpitApi'
 
 export function useRuns(params?: RunsParams) {
@@ -234,5 +239,47 @@ export function useCostOverview(params?: CostParams) {
     queryKey: ['cockpit-cost', params],
     queryFn: () => getCostOverview(params),
     refetchInterval: 60_000,
+  })
+}
+
+// --- Autopilot ---
+
+export function useAutopilotPolicies() {
+  return useQuery({
+    queryKey: ['cockpit-autopilot-policies'],
+    queryFn: () => getAutopilotPolicies(),
+    refetchInterval: 30_000,
+  })
+}
+
+export function useToggleAutopilotPolicy() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (policyId: string) => toggleAutopilotPolicy(policyId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cockpit-autopilot-policies'] })
+      qc.invalidateQueries({ queryKey: ['cockpit-audit'] })
+    },
+  })
+}
+
+export function useEvaluateAutopilot() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (mode: 'dry_run' | 'execute') => evaluateAutopilot(mode),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cockpit-autopilot-policies'] })
+      qc.invalidateQueries({ queryKey: ['cockpit-autopilot-history'] })
+      qc.invalidateQueries({ queryKey: ['cockpit-audit'] })
+      qc.invalidateQueries({ queryKey: ['cockpit-agents'] })
+    },
+  })
+}
+
+export function useAutopilotHistory(params?: AutopilotHistoryParams) {
+  return useQuery({
+    queryKey: ['cockpit-autopilot-history', params],
+    queryFn: () => getAutopilotHistory(params),
+    refetchInterval: 30_000,
   })
 }

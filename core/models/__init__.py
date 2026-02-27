@@ -175,6 +175,9 @@ from ..models_cockpit_audit import CockpitAuditLog
 # Import cockpit agent state (Session P12 - Agent Fleet Management)
 from ..models_cockpit_agent_state import CockpitAgentState
 
+# Import cockpit autopilot (Session P14 - Autopilot)
+from ..models_cockpit_autopilot import CockpitAutopilotPolicy, CockpitAutopilotEvent
+
 # Import learning journey models (Session 773 - Learning Journeys)
 from ..models_learning_journey import (
     LearningJourneyTemplate,
@@ -400,4 +403,8 @@ __all__ = [
 
     # Cockpit Agent State (P12)
     'CockpitAgentState',
+
+    # Cockpit Autopilot (P14)
+    'CockpitAutopilotPolicy',
+    'CockpitAutopilotEvent',
 ]
