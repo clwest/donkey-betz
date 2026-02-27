@@ -504,7 +504,8 @@ def create_scoring_worker(consumer_name: str = "scoring_worker_1") -> EventConsu
     return EventConsumerWorker(
         consumer_group="scoring_workers",
         consumer_name=consumer_name,
-        streams=[EventStream.SPIDER_DATA, EventStream.OPPORTUNITY_CREATED]
+        streams=[EventStream.SPIDER_DATA, EventStream.OPPORTUNITY_CREATED],
+        block_ms=0,  # Session 1075: non-blocking — Celery Beat handles scheduling
     )
 
 
@@ -513,7 +514,8 @@ def create_validation_worker(consumer_name: str = "validation_worker_1") -> Even
     return EventConsumerWorker(
         consumer_group="validation_workers",
         consumer_name=consumer_name,
-        streams=[EventStream.OPPORTUNITY_SCORED, EventStream.VALIDATION_REQUIRED]
+        streams=[EventStream.OPPORTUNITY_SCORED, EventStream.VALIDATION_REQUIRED],
+        block_ms=0,  # Session 1075: non-blocking — Celery Beat handles scheduling
     )
 
 
@@ -526,5 +528,6 @@ def create_analytics_worker(consumer_name: str = "analytics_worker_1") -> EventC
             EventStream.VALIDATION_DECIDED,
             EventStream.OUTCOME_RECORDED,
             EventStream.MODEL_TRAINED
-        ]
+        ],
+        block_ms=0,  # Session 1075: non-blocking — Celery Beat handles scheduling
     )

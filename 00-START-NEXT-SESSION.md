@@ -111,6 +111,16 @@
 - `max_iterations` in `_run_agentic_loop` raised from 5 to 8
 - Enables PA to handle batch operations (e.g., ignoring 15+ boardroom items) in a single conversation turn
 
+### Celery Heartbeat/Health Tasks Throttled (5min→10min)
+- `run_heartbeat` (81s avg), `check_celery_health` (81s avg), `broadcast_evolution_status` (34s avg) — all reduced from every 5 min to every 10 min
+- Saves ~8 hours of Celery compute per day
+- Added `ignore_result=True` to heartbeat, celery health, broadcast evolution, check_circulation
+
+### Smoke Suite Status: 20/20 Checks, 18/20 Passing
+- 2 failures (`deliverables_stats`, `opportunities_stats`) are stale assertions on old celery-pa deploy
+- Local code already fixed — awaiting Railway celery-pa redeploy to propagate assertion fix
+- `cockpit_health` suite: 18/18 passing
+
 ---
 
 ## Session 1074 — What Happened
