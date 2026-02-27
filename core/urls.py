@@ -1453,6 +1453,10 @@ from core.views_diagnostics import (
     cockpit_agent_resume,  # Focus Cockpit: resume agent
     cockpit_queues_overview,  # Focus Cockpit: queue/worker/task load
     cockpit_cost_overview,  # Focus Cockpit: cost/token/provider usage
+    cockpit_autopilot_policies,  # Focus Cockpit: autopilot policies
+    cockpit_autopilot_toggle,  # Focus Cockpit: toggle autopilot policy
+    cockpit_autopilot_evaluate,  # Focus Cockpit: evaluate autopilot policies
+    cockpit_autopilot_history,  # Focus Cockpit: autopilot event history
     # Session 871: Removed unused import: diagnostic_dashboard
 )
 
@@ -1651,6 +1655,11 @@ urlpatterns = [
     # P13: Queues + Cost
     path('api/cockpit/queues/', cockpit_queues_overview, name='cockpit-queues-overview'),
     path('api/cockpit/cost/', cockpit_cost_overview, name='cockpit-cost-overview'),
+    # P14: Autopilot
+    path('api/cockpit/autopilot/policies/', cockpit_autopilot_policies, name='cockpit-autopilot-policies'),
+    path('api/cockpit/autopilot/policies/<str:policy_id>/toggle/', cockpit_autopilot_toggle, name='cockpit-autopilot-toggle'),
+    path('api/cockpit/autopilot/evaluate/', cockpit_autopilot_evaluate, name='cockpit-autopilot-evaluate'),
+    path('api/cockpit/autopilot/history/', cockpit_autopilot_history, name='cockpit-autopilot-history'),
     path('diagnostics/websockets/', WebSocketDiagnosticsView.as_view(), name='websocket-diagnostics'),
     path("api/llm/chat/", llm_chat),
     # AI Building Products page (moved up to ensure it's matched first)
