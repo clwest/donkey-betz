@@ -212,6 +212,9 @@ class ToolDispatcher:
         self.register("platform_config_tool", self._handle_platform_config)
         self.register("db_health_tool", self._handle_db_health)
 
+        # HTTP smoke test for endpoint verification
+        self.register("http_smoke_test", self._handle_http_smoke_test)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):
@@ -8390,6 +8393,17 @@ RESEARCH DATA:
             return result
 
         return {'error': f'Unknown db_health action: {action}'}
+
+    def _handle_http_smoke_test(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """Run HTTP smoke tests against cockpit API endpoints."""
+        from core.tools.http_smoke_test import run_smoke_test
+        return run_smoke_test(payload)
 
 
 # Singleton instance
