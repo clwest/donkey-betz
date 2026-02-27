@@ -1743,6 +1743,55 @@ PA_TOOL_SCHEMAS = [
             },
         },
     },
+
+    # ── HTTP Smoke Test ─────────────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "http_smoke_test",
+        "description": (
+            "Run HTTP smoke tests against cockpit API endpoints. "
+            "Verifies endpoints return correct status codes and response shapes. "
+            "Supports multi-step flows with variable capture (e.g., create incident then verify). "
+            "Use when asked to verify endpoints, check if deploys succeeded, "
+            "or run health checks. Built-in suites: 'cockpit_health', 'cockpit_incidents_crud'."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "suite": {
+                    "type": "string",
+                    "enum": ["cockpit_health", "cockpit_incidents_crud"],
+                    "description": "Run a built-in test suite instead of custom steps",
+                },
+                "environment": {
+                    "type": "string",
+                    "enum": ["railway_prod", "local"],
+                    "description": "Target environment (default: railway_prod)",
+                },
+                "steps": {
+                    "type": "array",
+                    "description": (
+                        "Custom test steps (ignored if suite is set). Each step: "
+                        "{name, method, path, body?, assert?: [{check, expected, key?, path?, operator?}], "
+                        "capture?: [{json_path, as}]}"
+                    ),
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string"},
+                            "method": {"type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"]},
+                            "path": {"type": "string"},
+                            "body": {"type": "object"},
+                        },
+                    },
+                },
+                "fail_fast": {
+                    "type": "boolean",
+                    "description": "Stop on first failure (default true)",
+                },
+            },
+        },
+    },
 ]
 
 
@@ -1814,6 +1863,7 @@ TOOL_ENRICHMENT_MAP = {
     'strategic_review': ['domain_context', 'strategic_memory'],
     'create_brand_video': ['intelligence_enricher'],
     'create_project_from_research': ['domain_context', 'spider_trends'],
+    'http_smoke_test': [],
 }
 
 # Reverse map: tool name -> canonical intent name for enrichment pipeline
@@ -1881,4 +1931,5 @@ TOOL_TO_INTENT_MAP = {
     'strategic_review': 'agent_execution',
     'create_brand_video': 'agent_execution',
     'create_project_from_research': 'agent_execution',
+    'http_smoke_test': 'verification',
 }
