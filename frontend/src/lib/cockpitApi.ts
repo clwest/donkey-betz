@@ -8,6 +8,7 @@ import type {
   MediaItem,
   DeliverableItem,
   PaginatedResponse,
+  AlertsResponse,
   ApprovalsResponse,
   ApprovalActionResponse,
   PlatformConfigResponse,
@@ -50,6 +51,17 @@ export interface InboxParams {
 
 export async function getInbox(params?: InboxParams) {
   const { data } = await api.get<InboxResponse>('/cockpit/inbox/', { params })
+  return data
+}
+
+// --- Alerts ---
+
+export interface AlertsParams {
+  hours?: number
+}
+
+export async function getAlerts(params?: AlertsParams) {
+  const { data } = await api.get<AlertsResponse>('/cockpit/alerts/', { params })
   return data
 }
 

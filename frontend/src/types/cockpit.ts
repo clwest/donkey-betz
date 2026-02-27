@@ -87,6 +87,26 @@ export interface InboxResponse {
   items: InboxItem[]
 }
 
+// --- Alerts ---
+
+export type AlertKind = 'error_spike' | 'agent_failure' | 'health' | 'approvals'
+export type AlertSeverity = 'critical' | 'high' | 'medium' | 'low'
+
+export interface AlertItem {
+  id: string
+  kind: AlertKind
+  severity: AlertSeverity
+  title: string
+  detail: string
+  created_at: ISODateString | null
+}
+
+export interface AlertsResponse {
+  hours: number
+  total: number
+  items: AlertItem[]
+}
+
 // --- Approvals ---
 
 export type ApprovalKind = 'decision' | 'gate'

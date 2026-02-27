@@ -8,6 +8,7 @@ import {
   getMedia,
   getDeliverables,
   getOpsOverview,
+  getAlerts,
   getApprovals,
   decideApproval,
   type RunsParams,
@@ -15,6 +16,7 @@ import {
   type MediaParams,
   type DeliverableParams,
   type OpsParams,
+  type AlertsParams,
   type ApprovalsParams,
 } from '@/lib/cockpitApi'
 
@@ -83,6 +85,14 @@ export function useOpsOverview(params?: OpsParams) {
   return useQuery({
     queryKey: ['cockpit-ops', params],
     queryFn: () => getOpsOverview(params),
+    refetchInterval: 30_000,
+  })
+}
+
+export function useAlerts(params?: AlertsParams) {
+  return useQuery({
+    queryKey: ['cockpit-alerts', params],
+    queryFn: () => getAlerts(params),
     refetchInterval: 30_000,
   })
 }
