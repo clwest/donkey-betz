@@ -3,10 +3,13 @@ import {
   getRuns,
   getRunDetail,
   getErrorSummary,
+  getInbox,
+  getJobStatus,
   getMedia,
   getDeliverables,
   getHealthOverview,
   type RunsParams,
+  type InboxParams,
   type MediaParams,
   type DeliverableParams,
 } from '@/lib/cockpitApi'
@@ -32,6 +35,27 @@ export function useErrorSummary(hours = 24) {
     queryKey: ['cockpit-errors', hours],
     queryFn: () => getErrorSummary(hours),
     refetchInterval: 30_000,
+  })
+}
+
+export function useInbox(params?: InboxParams) {
+  return useQuery({
+    queryKey: ['cockpit-inbox', params],
+    queryFn: () => getInbox(params),
+    refetchInterval: 20_000,
+  })
+}
+
+export function useJobStatus(jobId: string | undefined) {
+  return useQuery({
+    queryKey: ['cockpit-job-status', jobId],
+    queryFn: () => getJobStatus(jobId!),
+    enabled: !!jobId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status
+      if (status === 'completed' || status === 'failed' || status === 'cancelled') return false
+      return 3_000
+    },
   })
 }
 

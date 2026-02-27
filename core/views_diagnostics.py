@@ -787,6 +787,168 @@ def cockpit_error_summary(request):
 
 
 @require_http_methods(["GET"])
+def cockpit_inbox(request):
+    """
+    Focus Cockpit inbox — read-only aggregation of items needing attention.
+    Merges: pending decisions, blocked gates, error signatures, failed runs.
+    Query params: hours (default 24), limit (default 50)
+    """
+    if not (request.user and request.user.is_authenticated):
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    from django.utils import timezone
+    from datetime import timedelta
+
+    hours = int(request.GET.get('hours', 24))
+    limit = min(int(request.GET.get('limit', 50)), 200)
+    cutoff = timezone.now() - timedelta(hours=hours)
+
+    items = []
+    counts = {'total': 0, 'decisions': 0, 'gates': 0, 'errors': 0, 'failed_runs': 0}
+
+    SEVERITY_RANK = {'critical': 4, 'high': 3, 'medium': 2, 'low': 1}
+    TYPE_RANK = {'decision': 4, 'gate': 3, 'failed_run': 2, 'error_signature': 1}
+
+    # 1. Pending decisions (HumanAttentionItem)
+    try:
+        from core.models_human_interface import HumanAttentionItem
+        pending = HumanAttentionItem.objects.filter(
+            user=request.user,
+            status__in=['pending', 'viewed'],
+            created_at__gte=cutoff,
+        ).order_by('-priority_score', '-created_at')[:limit]
+
+        for item in pending:
+            severity = item.urgency if item.urgency in SEVERITY_RANK else 'medium'
+            items.append({
+                'id': f'inbox:decision:{item.id}',
+                'type': 'decision',
+                'severity': severity,
+                'title': item.title,
+                'subtitle': item.source_agent or item.source_type,
+                'timestamp': item.created_at.isoformat(),
+                'badges': [item.item_type, item.status],
+                'cta': {'label': 'Open decision', 'route': f'/boardroom'},
+                'source': {'system': 'human_decisions', 'id': str(item.id), 'status': item.status},
+                'preview': {'text': item.summary[:200] if item.summary else None},
+            })
+            counts['decisions'] += 1
+    except Exception as e:
+        logger.debug("Inbox decisions error: %s", e)
+
+    # 2. Blocked/ready gates (PilotReadinessGate)
+    try:
+        from core.models_pilot_readiness import PilotReadinessGate
+        gates = PilotReadinessGate.objects.filter(
+            status__in=['blocked', 'ready', 'in_progress'],
+        ).select_related('decision')[:limit]
+
+        for gate in gates:
+            severity = 'critical' if gate.status == 'blocked' else 'high'
+            decision_title = str(gate.decision) if gate.decision else 'Unknown decision'
+            items.append({
+                'id': f'inbox:gate:{gate.id}',
+                'type': 'gate',
+                'severity': severity,
+                'title': f'Gate: {decision_title}'[:200],
+                'subtitle': f'{gate.get_status_display()} — {gate.risk_level} risk',
+                'timestamp': gate.created_at.isoformat() if hasattr(gate, 'created_at') else timezone.now().isoformat(),
+                'badges': [gate.status, gate.risk_level],
+                'cta': {'label': 'Open gate', 'route': '/governance'},
+                'source': {'system': 'gates', 'id': str(gate.id), 'status': gate.status},
+                'preview': {'text': gate.summary[:200] if gate.summary else None},
+            })
+            counts['gates'] += 1
+    except Exception as e:
+        logger.debug("Inbox gates error: %s", e)
+
+    # 3. Error signatures (top N from existing cockpit errors logic)
+    try:
+        from core.models_diagnostic_pipeline import FailureSignature
+        sigs = list(
+            FailureSignature.objects.filter(
+                status='active', last_seen_at__gte=cutoff,
+            ).order_by('-occurrence_count')[:10]
+            .values('signature', 'occurrence_count', 'last_seen_at', 'description')
+        )
+        for s in sigs:
+            count = s['occurrence_count'] or 0
+            if count >= 20:
+                severity = 'critical'
+            elif count >= 10:
+                severity = 'high'
+            elif count >= 3:
+                severity = 'medium'
+            else:
+                severity = 'low'
+            items.append({
+                'id': f'inbox:error_signature:{s["signature"][:60]}',
+                'type': 'error_signature',
+                'severity': severity,
+                'title': s['signature'][:200],
+                'subtitle': f'{count} occurrences',
+                'timestamp': s['last_seen_at'].isoformat() if s.get('last_seen_at') else timezone.now().isoformat(),
+                'badges': ['agent', f'{count}x'],
+                'cta': {'label': 'View errors', 'route': '/cockpit/errors'},
+                'source': {'system': 'errors', 'id': s['signature'][:100]},
+                'preview': {'text': s.get('description', '')[:200] or None},
+            })
+            counts['errors'] += 1
+    except Exception as e:
+        logger.debug("Inbox error signatures error: %s", e)
+
+    # 4. Failed runs
+    try:
+        from core.models_unified_system import AgentExecution
+        failed = AgentExecution.objects.filter(
+            status='failed', created_at__gte=cutoff,
+        ).select_related('agent').order_by('-created_at')[:15]
+
+        for run in failed:
+            items.append({
+                'id': f'inbox:failed_run:{run.id}',
+                'type': 'failed_run',
+                'severity': 'high' if run.agent.name in (
+                    'TalkingCharacterAgent', 'resolve_agent', 'PublishingAgent',
+                ) else 'medium',
+                'title': run.task[:200] if run.task else 'Failed execution',
+                'subtitle': run.agent.name,
+                'timestamp': run.created_at.isoformat(),
+                'badges': ['failed', run.agent.name],
+                'cta': {'label': 'View run', 'route': f'/cockpit/runs/{run.id}'},
+                'source': {'system': 'runs', 'id': str(run.id), 'status': 'failed'},
+                'preview': {'text': run.error_message[:200] if run.error_message else None},
+            })
+            counts['failed_runs'] += 1
+    except Exception as e:
+        logger.debug("Inbox failed runs error: %s", e)
+
+    # Sort: severity desc → type rank desc → timestamp desc (ISO strings sort lexicographically)
+    items.sort(key=lambda x: (
+        -SEVERITY_RANK.get(x['severity'], 0),
+        -TYPE_RANK.get(x['type'], 0),
+        x['timestamp'],
+    ), reverse=False)
+    # Reverse so newest timestamps come first within same severity+type
+    # (negative severity/type already handled, but timestamp needs descending)
+    items.sort(key=lambda x: (
+        -SEVERITY_RANK.get(x['severity'], 0),
+        -TYPE_RANK.get(x['type'], 0),
+    ))
+
+    items = items[:limit]
+    counts['total'] = len(items)
+
+    return JsonResponse({
+        'hours': hours,
+        'limit': limit,
+        'generated_at': timezone.now().isoformat(),
+        'counts': counts,
+        'items': items,
+    })
+
+
+@require_http_methods(["GET"])
 def cockpit_runs_list(request):
     """
     Recent agent execution runs for Focus Cockpit.
@@ -839,3 +1001,163 @@ def cockpit_runs_list(request):
     except Exception as e:
         logger.exception("cockpit_runs_list error")
         return JsonResponse({'error': str(e)}, status=500)
+
+
+# ── Focus Cockpit Create endpoints ───────────────────────────────────────────
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def cockpit_create_blog(request):
+    """
+    Create a blog post via the content writer agent (deliberation pipeline).
+    Dispatches to Celery and returns immediately with a run_id.
+    """
+    if not (request.user and request.user.is_authenticated):
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    try:
+        body = json.loads(request.body or b'{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    topic = body.get('topic', '').strip()
+    if not topic:
+        return JsonResponse({'error': 'topic is required'}, status=400)
+
+    style = body.get('style', 'engaging')
+    length = body.get('length', 'medium')
+    citations = body.get('citations', True)
+
+    from django.utils import timezone
+    from core.tasks import execute_agent_task
+
+    task_text = f'Write a {length} blog post about: {topic}'
+    context = {
+        'topic': topic,
+        'style': style,
+        'length': length,
+        'citations': citations,
+        'content_type': 'blog_post',
+        'user_id': str(request.user.id),
+    }
+
+    celery_task = execute_agent_task.apply_async(
+        args=['ContentWriterAgent', task_text, context],
+        queue='content',
+    )
+
+    return JsonResponse({
+        'ok': True,
+        'run_id': str(celery_task.id),
+        'status': 'queued',
+        'created_at': timezone.now().isoformat(),
+        'next': {
+            'route': f'/cockpit/runs/{celery_task.id}',
+            'poll_run_detail': True,
+        },
+    })
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def cockpit_create_talking_video(request):
+    """
+    Create a talking character video via TalkingCharacterAgent.
+    Dispatches to Celery and returns immediately with a job_id.
+    """
+    if not (request.user and request.user.is_authenticated):
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    try:
+        body = json.loads(request.body or b'{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    script = body.get('script', '').strip()
+    if not script:
+        return JsonResponse({'error': 'script is required'}, status=400)
+
+    from django.utils import timezone
+    from core.tasks import execute_agent_task
+
+    task_text = f'Generate talking character video: {script}'
+    context = {
+        'script': script,
+        'voice': body.get('voice', 'alloy'),
+        'mode': body.get('mode', 'loop'),
+        'sync_mode': body.get('sync_mode', 'cut_off'),
+        'lipsync_model': body.get('lipsync_model', 'latentsync'),
+        'image_url': body.get('image_url', ''),
+        'color_grade': body.get('color_grade'),
+        'user_id': str(request.user.id),
+    }
+
+    celery_task = execute_agent_task.apply_async(
+        args=['TalkingCharacterAgent', task_text, context],
+        queue='agents',
+    )
+
+    return JsonResponse({
+        'ok': True,
+        'job_id': str(celery_task.id),
+        'status': 'queued',
+        'created_at': timezone.now().isoformat(),
+        'next': {
+            'route': f'/cockpit/runs/{celery_task.id}',
+            'poll_run_detail': True,
+        },
+    })
+
+
+@require_http_methods(["GET"])
+def cockpit_job_status(request, job_id):
+    """
+    Poll status of a cockpit-created job (Celery task).
+    """
+    if not (request.user and request.user.is_authenticated):
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    result = {
+        'job_id': job_id,
+        'status': 'unknown',
+        'progress': None,
+        'error': None,
+    }
+
+    # Check CeleryTaskEvent first
+    try:
+        from core.models_celery_telemetry import CeleryTaskEvent
+        event = CeleryTaskEvent.objects.filter(task_id=job_id).first()
+        if event:
+            status_map = {'STARTED': 'processing', 'SUCCESS': 'completed', 'FAILURE': 'failed', 'REVOKED': 'cancelled'}
+            result['status'] = status_map.get(event.status, event.status.lower())
+            result['progress'] = 1.0 if event.status == 'SUCCESS' else (0.5 if event.status == 'STARTED' else 0.0)
+            if event.error_message:
+                result['error'] = event.error_message[:500]
+            return JsonResponse(result)
+    except Exception:
+        pass
+
+    # Check Celery AsyncResult
+    try:
+        from celery.result import AsyncResult
+        async_result = AsyncResult(job_id)
+        if async_result.state == 'PENDING':
+            result['status'] = 'queued'
+            result['progress'] = 0.0
+        elif async_result.state == 'STARTED':
+            result['status'] = 'processing'
+            result['progress'] = 0.5
+        elif async_result.state == 'SUCCESS':
+            result['status'] = 'completed'
+            result['progress'] = 1.0
+        elif async_result.state == 'FAILURE':
+            result['status'] = 'failed'
+            result['progress'] = 0.0
+            result['error'] = str(async_result.result)[:500] if async_result.result else None
+        else:
+            result['status'] = async_result.state.lower()
+    except Exception:
+        pass
+
+    return JsonResponse(result)
