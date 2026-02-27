@@ -114,7 +114,7 @@ With `previous_response_id`, follow-up turns hit the 90% cached input discount (
 
 ## Key Tool Actions
 
-**boardroom_tool:** stats, list_attention, list_decisions, approve/ignore/promote/reject
+**boardroom_tool:** stats, list_attention, list_decisions, approve/ignore/promote/reject, list_unclassified, classify_suggest, classify_apply, classify_apply_batch
 **content_review_tool:** list, read, publish, archive, revise, triage, batch_publish, batch_archive
 **agent_introspection_tool:** stats (aggregates + disjoint taxonomy), list (top-50 preview), details, capabilities
 **initiative_tool:** list, stats, detail, audit, create, update_status, advance, complete_action_item, assign_owner
