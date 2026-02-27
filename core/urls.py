@@ -1446,6 +1446,11 @@ from core.views_diagnostics import (
     cockpit_retry_run,  # Focus Cockpit: retry failed run
     cockpit_create_incident_note,  # Focus Cockpit: create incident note
     cockpit_audit_list,  # Focus Cockpit: audit log list
+    cockpit_agent_fleet,  # Focus Cockpit: agent fleet list
+    cockpit_agent_detail,  # Focus Cockpit: agent detail
+    cockpit_agent_run_now,  # Focus Cockpit: run agent now
+    cockpit_agent_pause,  # Focus Cockpit: pause agent
+    cockpit_agent_resume,  # Focus Cockpit: resume agent
     # Session 871: Removed unused import: diagnostic_dashboard
 )
 
@@ -1635,6 +1640,12 @@ urlpatterns = [
     path('api/cockpit/remediate/retry-run/<str:run_id>/', cockpit_retry_run, name='cockpit-retry-run'),
     path('api/cockpit/remediate/incident-note/', cockpit_create_incident_note, name='cockpit-incident-note'),
     path('api/cockpit/audit/', cockpit_audit_list, name='cockpit-audit-list'),
+    # P12: Agent Fleet Management
+    path('api/cockpit/agents/', cockpit_agent_fleet, name='cockpit-agent-fleet'),
+    path('api/cockpit/agents/<str:agent_name>/', cockpit_agent_detail, name='cockpit-agent-detail'),
+    path('api/cockpit/agents/<str:agent_name>/run-now/', cockpit_agent_run_now, name='cockpit-agent-run-now'),
+    path('api/cockpit/agents/<str:agent_name>/pause/', cockpit_agent_pause, name='cockpit-agent-pause'),
+    path('api/cockpit/agents/<str:agent_name>/resume/', cockpit_agent_resume, name='cockpit-agent-resume'),
     path('diagnostics/websockets/', WebSocketDiagnosticsView.as_view(), name='websocket-diagnostics'),
     path("api/llm/chat/", llm_chat),
     # AI Building Products page (moved up to ensure it's matched first)

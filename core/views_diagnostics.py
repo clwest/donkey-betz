@@ -1893,3 +1893,230 @@ def cockpit_audit_list(request):
         'limit': limit,
         'items': entries,
     })
+
+
+# ---------------------------------------------------------------------------
+# P12: Agent Fleet Management
+# ---------------------------------------------------------------------------
+
+@csrf_exempt
+@require_http_methods(['GET'])
+def cockpit_agent_fleet(request):
+    """List all agents with execution stats and cockpit state."""
+    from core.models_unified_system import Agent, AgentExecution
+    from core.models_cockpit_agent_state import CockpitAgentState
+    from django.utils.timezone import now
+    from datetime import timedelta
+    from django.db.models import Count, Q, Max
+
+    hours = int(request.GET.get('hours', 24))
+    q = request.GET.get('q', '').strip()
+    limit = min(int(request.GET.get('limit', 100)), 200)
+
+    cutoff = now() - timedelta(hours=hours)
+
+    agents_qs = Agent.objects.filter(is_active=True)
+    if q:
+        agents_qs = agents_qs.filter(
+            Q(name__icontains=q) | Q(agent_type__icontains=q) | Q(specialization__icontains=q)
+        )
+
+    agents_qs = agents_qs.annotate(
+        recent_total=Count('agentexecution', filter=Q(agentexecution__created_at__gte=cutoff)),
+        recent_failed=Count('agentexecution', filter=Q(agentexecution__created_at__gte=cutoff, agentexecution__status='failed')),
+        recent_completed=Count('agentexecution', filter=Q(agentexecution__created_at__gte=cutoff, agentexecution__status='completed')),
+        last_run_at=Max('agentexecution__created_at'),
+    ).order_by('-recent_total', 'name')[:limit]
+
+    # Fetch cockpit state overrides
+    state_map = {
+        s.agent_name: s
+        for s in CockpitAgentState.objects.all()
+    }
+
+    items = []
+    for a in agents_qs:
+        state = state_map.get(a.name)
+        items.append({
+            'id': str(a.id),
+            'name': a.name,
+            'agent_type': a.agent_type,
+            'specialization': a.specialization,
+            'category': a.category.name if a.category_id else '',
+            'effectiveness_score': a.effectiveness_score,
+            'recent_total': a.recent_total,
+            'recent_completed': a.recent_completed,
+            'recent_failed': a.recent_failed,
+            'last_run_at': a.last_run_at.isoformat() if a.last_run_at else None,
+            'cockpit_enabled': state.enabled if state else True,
+            'paused_reason': state.paused_reason if state and not state.enabled else '',
+            'paused_at': state.paused_at.isoformat() if state and state.paused_at else None,
+        })
+
+    return JsonResponse({
+        'hours': hours,
+        'total': len(items),
+        'items': items,
+    })
+
+
+@csrf_exempt
+@require_http_methods(['GET'])
+def cockpit_agent_detail(request, agent_name):
+    """Get detailed info for a single agent."""
+    from core.models_unified_system import Agent, AgentExecution
+    from core.models_cockpit_agent_state import CockpitAgentState
+    from django.utils.timezone import now
+    from datetime import timedelta
+
+    try:
+        agent = Agent.objects.get(name=agent_name, is_active=True)
+    except Agent.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Agent not found'}, status=404)
+
+    cutoff = now() - timedelta(hours=168)  # 7d of runs
+    recent_runs = list(
+        AgentExecution.objects.filter(agent=agent, created_at__gte=cutoff)
+        .order_by('-created_at')[:20]
+        .values('id', 'task', 'status', 'execution_time_ms', 'tokens_used', 'error_message', 'created_at', 'completed_at')
+    )
+    for r in recent_runs:
+        r['id'] = str(r['id'])
+        r['created_at'] = r['created_at'].isoformat() if r['created_at'] else None
+        r['completed_at'] = r['completed_at'].isoformat() if r['completed_at'] else None
+
+    state = CockpitAgentState.objects.filter(agent_name=agent_name).first()
+
+    return JsonResponse({
+        'ok': True,
+        'agent': {
+            'id': str(agent.id),
+            'name': agent.name,
+            'agent_type': agent.agent_type,
+            'specialization': agent.specialization,
+            'description': agent.description,
+            'category': agent.category.name if agent.category_id else '',
+            'effectiveness_score': agent.effectiveness_score,
+            'total_executions': agent.total_executions,
+            'successful_executions': agent.successful_executions,
+            'cockpit_enabled': state.enabled if state else True,
+            'paused_reason': state.paused_reason if state and not state.enabled else '',
+            'paused_at': state.paused_at.isoformat() if state and state.paused_at else None,
+        },
+        'recent_runs': recent_runs,
+    })
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def cockpit_agent_run_now(request, agent_name):
+    """Queue an immediate run for an agent."""
+    from core.models_unified_system import Agent
+    from core.models_cockpit_agent_state import CockpitAgentState
+    from core.tasks import execute_agent_task
+
+    try:
+        agent = Agent.objects.get(name=agent_name, is_active=True)
+    except Agent.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Agent not found'}, status=404)
+
+    # Check cockpit state
+    state = CockpitAgentState.objects.filter(agent_name=agent_name).first()
+    if state and not state.enabled:
+        return JsonResponse({'ok': False, 'error': f'Agent is paused: {state.paused_reason}'}, status=409)
+
+    try:
+        body = json.loads(request.body or b'{}')
+    except json.JSONDecodeError:
+        body = {}
+
+    task_str = body.get('task', f'Manual cockpit run for {agent_name}')
+
+    result = execute_agent_task.apply_async(
+        args=[agent_name, task_str],
+        kwargs={'context': {'source': 'cockpit-run-now'}},
+    )
+
+    resp = {
+        'ok': True,
+        'agent_name': agent_name,
+        'task_id': result.id,
+        'status': 'queued',
+    }
+    _audit_log(request, 'agent.run_now', 'Agent', agent_name, body, resp)
+    return JsonResponse(resp)
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def cockpit_agent_pause(request, agent_name):
+    """Pause an agent (prevents scheduled execution)."""
+    from core.models_unified_system import Agent
+    from core.models_cockpit_agent_state import CockpitAgentState
+    from django.utils.timezone import now as tz_now
+
+    try:
+        Agent.objects.get(name=agent_name, is_active=True)
+    except Agent.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Agent not found'}, status=404)
+
+    try:
+        body = json.loads(request.body or b'{}')
+    except json.JSONDecodeError:
+        body = {}
+
+    reason = body.get('reason', '')
+    user = request.user if hasattr(request, 'user') and request.user.is_authenticated else None
+
+    state, _ = CockpitAgentState.objects.update_or_create(
+        agent_name=agent_name,
+        defaults={
+            'enabled': False,
+            'paused_reason': reason,
+            'paused_at': tz_now(),
+            'updated_by': user,
+        },
+    )
+
+    resp = {
+        'ok': True,
+        'agent_name': agent_name,
+        'enabled': False,
+        'paused_at': state.paused_at.isoformat() if state.paused_at else None,
+        'paused_reason': reason,
+    }
+    _audit_log(request, 'agent.pause', 'Agent', agent_name, body, resp)
+    return JsonResponse(resp)
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def cockpit_agent_resume(request, agent_name):
+    """Resume a paused agent."""
+    from core.models_unified_system import Agent
+    from core.models_cockpit_agent_state import CockpitAgentState
+
+    try:
+        Agent.objects.get(name=agent_name, is_active=True)
+    except Agent.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Agent not found'}, status=404)
+
+    user = request.user if hasattr(request, 'user') and request.user.is_authenticated else None
+
+    state, _ = CockpitAgentState.objects.update_or_create(
+        agent_name=agent_name,
+        defaults={
+            'enabled': True,
+            'paused_reason': '',
+            'paused_at': None,
+            'updated_by': user,
+        },
+    )
+
+    resp = {
+        'ok': True,
+        'agent_name': agent_name,
+        'enabled': True,
+    }
+    _audit_log(request, 'agent.resume', 'Agent', agent_name, {}, resp)
+    return JsonResponse(resp)

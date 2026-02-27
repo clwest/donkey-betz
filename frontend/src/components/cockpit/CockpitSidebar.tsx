@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
   Home, Inbox, PlusCircle, Play, FolderOpen, AlertTriangle,
-  Wrench, Settings, Zap, ArrowLeft, PanelLeft, PanelLeftClose, ShieldCheck, Bell, ScrollText,
+  Wrench, Settings, Zap, ArrowLeft, PanelLeft, PanelLeftClose, ShieldCheck, Bell, ScrollText, Bot,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -20,6 +20,7 @@ const primaryNav = [
   { path: '/cockpit/errors', label: 'Errors', icon: AlertTriangle },
   { path: '/cockpit/approvals', label: 'Approvals', icon: ShieldCheck },
   { path: '/cockpit/alerts', label: 'Alerts', icon: Bell },
+  { path: '/cockpit/agents', label: 'Agents', icon: Bot },
 ]
 
 const secondaryNav = [
