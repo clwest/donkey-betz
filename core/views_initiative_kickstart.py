@@ -1091,7 +1091,7 @@ def pipeline_health(request):
     from django.db.models.functions import Now
     from datetime import timedelta
 
-    stale_hours = int(request.GET.get('stale_hours', 48))
+    stale_hours = int(request.GET.get('stale_hours', 168))
     transition_limit = int(request.GET.get('transition_limit', 50))
 
     now = timezone.now()
@@ -1265,11 +1265,18 @@ def pipeline_health(request):
             result['health_status'] = 'stalled'
             result['health_message'] = 'Pipeline appears stalled: no transitions in 24h'
 
-        # Add stale warning
+        # Add stale warning — only critical if stale AND blocked or zero week activity
         stale_pct = (len(stale_initiatives) / active_count * 100) if active_count > 0 else 0
-        if stale_pct > 50:
+        blocked_count = result['summary'].get('blocked_count', 0)
+        week_transitions = StageTransitionLog.objects.filter(
+            timestamp__gte=now - timedelta(days=7)
+        ).count()
+        if stale_pct > 50 and (blocked_count > 0 or week_transitions == 0):
             result['health_status'] = 'critical'
-            result['health_message'] = f'CRITICAL: {len(stale_initiatives)} initiatives ({stale_pct:.0f}%) have no activity in {stale_hours}+ hours'
+            result['health_message'] = f'CRITICAL: {len(stale_initiatives)} initiatives ({stale_pct:.0f}%) stale, {blocked_count} blocked, {week_transitions} transitions in 7d'
+        elif stale_pct > 50:
+            result['health_status'] = 'attention'
+            result['health_message'] = f'{len(stale_initiatives)} initiatives ({stale_pct:.0f}%) have no activity in {stale_hours}+ hours'
 
     except Exception as e:
         result['error'] = str(e)
