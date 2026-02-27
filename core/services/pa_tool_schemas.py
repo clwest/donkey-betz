@@ -1749,18 +1749,20 @@ PA_TOOL_SCHEMAS = [
         "type": "function",
         "name": "http_smoke_test",
         "description": (
-            "Run HTTP smoke tests against cockpit API endpoints. "
+            "Run HTTP smoke tests against platform API endpoints. "
             "Verifies endpoints return correct status codes and response shapes. "
             "Supports multi-step flows with variable capture (e.g., create incident then verify). "
             "Use when asked to verify endpoints, check if deploys succeeded, "
-            "or run health checks. Built-in suites: 'cockpit_health', 'cockpit_incidents_crud'."
+            "or run health checks. Built-in suites: 'cockpit_health' (18 cockpit GETs), "
+            "'cockpit_incidents_crud' (8-step CRUD lifecycle), "
+            "'pa_tools_smoke' (14 checks across boardroom, initiatives, celery, spiders, manifest)."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "suite": {
                     "type": "string",
-                    "enum": ["cockpit_health", "cockpit_incidents_crud"],
+                    "enum": ["cockpit_health", "cockpit_incidents_crud", "pa_tools_smoke"],
                     "description": "Run a built-in test suite instead of custom steps",
                 },
                 "environment": {

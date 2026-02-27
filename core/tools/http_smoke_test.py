@@ -430,6 +430,154 @@ BUILTIN_SUITES: dict[str, list[dict]] = {
             ],
         },
     ],
+
+    'pa_tools_smoke': [
+        # 1. System health check
+        {
+            'name': 'system_health',
+            'method': 'GET',
+            'path': '/api/system-health/',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+                {'check': 'has_key', 'key': 'status'},
+            ],
+        },
+        # 2. Body vitals
+        {
+            'name': 'body_vitals',
+            'method': 'GET',
+            'path': '/api/body/vitals/',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+            ],
+        },
+        # 3. Boardroom attention stats
+        {
+            'name': 'attention_stats',
+            'method': 'GET',
+            'path': '/api/human/attention/stats/',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+                {'check': 'has_key', 'key': 'success'},
+                {'check': 'has_key', 'key': 'stats'},
+            ],
+        },
+        # 4. Boardroom attention list
+        {
+            'name': 'attention_list',
+            'method': 'GET',
+            'path': '/api/human/attention/?limit=3',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+                {'check': 'has_key', 'key': 'items'},
+                {'check': 'has_key', 'key': 'count'},
+            ],
+        },
+        # 5. Boardroom decisions list
+        {
+            'name': 'decisions_list',
+            'method': 'GET',
+            'path': '/api/boardroom/decisions/?limit=3',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+                {'check': 'has_key', 'key': 'decisions'},
+                {'check': 'has_key', 'key': 'count'},
+            ],
+        },
+        # 6. Initiatives list
+        {
+            'name': 'initiatives_list',
+            'method': 'GET',
+            'path': '/api/initiatives/?limit=3&status=ACTIVE',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+                {'check': 'has_key', 'key': 'initiatives'},
+                {'check': 'has_key', 'key': 'count'},
+            ],
+            'capture': [
+                {'json_path': '$.initiatives[0].id', 'as': 'initiative_id'},
+            ],
+        },
+        # 7. Initiative detail (depends on captured ID)
+        {
+            'name': 'initiative_detail',
+            'depends_on': ['initiatives_list'],
+            'method': 'GET',
+            'path': '/api/initiatives/{{initiative_id}}/',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+                {'check': 'has_key', 'key': 'name'},
+            ],
+        },
+        # 8. Initiative pipeline health
+        {
+            'name': 'pipeline_health',
+            'method': 'GET',
+            'path': '/api/initiatives/pipeline-health/',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+            ],
+        },
+        # 9. Agent dreams list
+        {
+            'name': 'dreams_list',
+            'method': 'GET',
+            'path': '/api/agent-dreams/?limit=3',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+            ],
+        },
+        # 10. Celery task breakdown
+        {
+            'name': 'celery_breakdown',
+            'method': 'GET',
+            'path': '/api/celery/breakdown/',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+                {'check': 'has_key', 'key': 'totals'},
+                {'check': 'has_key', 'key': 'by_task'},
+            ],
+        },
+        # 11. Agent list
+        {
+            'name': 'agents_list',
+            'method': 'GET',
+            'path': '/api/agents/',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+            ],
+        },
+        # 12. Spider data summary
+        {
+            'name': 'spider_summary',
+            'method': 'GET',
+            'path': '/api/spider-data/summary/',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+            ],
+        },
+        # 13. Learning patterns
+        {
+            'name': 'learning_patterns',
+            'method': 'GET',
+            'path': '/api/learning/patterns/',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+            ],
+        },
+        # 14. App manifest (verifies API deps deployment)
+        {
+            'name': 'app_manifest',
+            'method': 'GET',
+            'path': '/api/app/manifest/',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+                {'check': 'has_key', 'key': 'routes'},
+                {'check': 'has_key', 'key': 'api_dependencies'},
+                {'check': 'json_path', 'path': '$.route_count', 'operator': 'gte', 'expected': 25},
+            ],
+        },
+    ],
 }
 
 

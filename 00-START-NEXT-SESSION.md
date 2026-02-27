@@ -6,6 +6,21 @@
 
 ---
 
+## Session 1074 — What Happened
+
+### API Dependencies Deployed to Railway
+- `frontend/dist/__manifest.json` was gitignored — Railway backend always used the empty fallback
+- Fixed: un-ignored `__manifest.json` and committed it to git (30 routes, 235 endpoints)
+- PA now sees all API dependencies on Railway (verified via `platform_awareness_tool`)
+
+### PA Tools Smoke Test Suite Added
+- New built-in suite `pa_tools_smoke` (14 checks) added to `http_smoke_test.py`
+- Covers: system health, body vitals, boardroom (stats + list + decisions), initiatives (list + detail chain + pipeline health), dreams, celery breakdown, agents, spiders, learning patterns, app manifest
+- PA tool schema updated to include `pa_tools_smoke` in enum
+- PA can now run `http_smoke_test(suite='pa_tools_smoke')` to verify platform health after deploys
+
+---
+
 ## Session 1073 — What Happened
 
 ### Docs vs Reality Reconciliation
@@ -98,8 +113,9 @@ Still need verification: `content_review_tool`, `opportunity_manager_tool`, `pil
 - RBAC filtering: non-admin users only see deps for routes they can access
 - Only `/how-it-works` is empty (static page, no API calls)
 
-**Platform Awareness (Session 1071):**
-- `__manifest.json` is generated at frontend build time — if not rebuilt, backend uses hardcoded fallback
+**Platform Awareness (Session 1071, updated 1074):**
+- `__manifest.json` is now tracked in git (`frontend/dist/__manifest.json`) — Railway gets it on deploy
+- Regenerate after manifest changes: `cd frontend && node scripts/generate-manifest.mjs`
 - `deploy_verify` calls the platform's OWN endpoints via `requests` — the server must be fully up
 - `setup_pa_service_account` runs in Procfile release — check Railway logs for token
 
