@@ -14,6 +14,11 @@ import {
   getApprovals,
   decideApproval,
   getAuditLog,
+  getAgentFleet,
+  getAgentDetail,
+  agentRunNow,
+  agentPause,
+  agentResume,
   type RunsParams,
   type InboxParams,
   type MediaParams,
@@ -22,6 +27,7 @@ import {
   type AlertsParams,
   type ApprovalsParams,
   type AuditLogParams,
+  type AgentFleetParams,
 } from '@/lib/cockpitApi'
 
 export function useRuns(params?: RunsParams) {
@@ -147,6 +153,62 @@ export function useDecideApproval() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['cockpit-approvals'] })
       qc.invalidateQueries({ queryKey: ['cockpit-inbox'] })
+    },
+  })
+}
+
+// --- Agent Fleet ---
+
+export function useAgentFleet(params?: AgentFleetParams) {
+  return useQuery({
+    queryKey: ['cockpit-agents', params],
+    queryFn: () => getAgentFleet(params),
+    refetchInterval: 30_000,
+  })
+}
+
+export function useAgentDetail(agentName: string | undefined) {
+  return useQuery({
+    queryKey: ['cockpit-agent-detail', agentName],
+    queryFn: () => getAgentDetail(agentName!),
+    enabled: !!agentName,
+  })
+}
+
+export function useAgentRunNow() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { agentName: string; task?: string }) =>
+      agentRunNow(vars.agentName, vars.task ? { task: vars.task } : undefined),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cockpit-agents'] })
+      qc.invalidateQueries({ queryKey: ['cockpit-runs'] })
+      qc.invalidateQueries({ queryKey: ['cockpit-audit'] })
+    },
+  })
+}
+
+export function useAgentPause() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { agentName: string; reason?: string }) =>
+      agentPause(vars.agentName, vars.reason ? { reason: vars.reason } : undefined),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cockpit-agents'] })
+      qc.invalidateQueries({ queryKey: ['cockpit-agent-detail'] })
+      qc.invalidateQueries({ queryKey: ['cockpit-audit'] })
+    },
+  })
+}
+
+export function useAgentResume() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (agentName: string) => agentResume(agentName),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cockpit-agents'] })
+      qc.invalidateQueries({ queryKey: ['cockpit-agent-detail'] })
+      qc.invalidateQueries({ queryKey: ['cockpit-audit'] })
     },
   })
 }
