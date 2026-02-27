@@ -9,6 +9,8 @@ import {
   getDeliverables,
   getOpsOverview,
   getAlerts,
+  retryRun,
+  createIncidentNote,
   getApprovals,
   decideApproval,
   type RunsParams,
@@ -94,6 +96,28 @@ export function useAlerts(params?: AlertsParams) {
     queryKey: ['cockpit-alerts', params],
     queryFn: () => getAlerts(params),
     refetchInterval: 30_000,
+  })
+}
+
+export function useRetryRun() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (runId: string) => retryRun(runId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cockpit-runs'] })
+      qc.invalidateQueries({ queryKey: ['cockpit-alerts'] })
+    },
+  })
+}
+
+export function useCreateIncidentNote() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: { title: string; detail?: string; source_type?: string; source_id?: string }) =>
+      createIncidentNote(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cockpit-deliverables'] })
+    },
   })
 }
 

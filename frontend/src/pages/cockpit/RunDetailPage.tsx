@@ -1,16 +1,18 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useRunDetail } from '@/hooks/cockpitQueries'
+import { useRunDetail, useRetryRun, useCreateIncidentNote } from '@/hooks/cockpitQueries'
 import StatusPill from '@/components/cockpit/shared/StatusPill'
 import SkeletonRows from '@/components/cockpit/shared/SkeletonRows'
 import { RUN_STATUS_LABEL, RUN_STATUS_TONE } from '@/components/cockpit/runs/runStatus'
 import { formatDateTime, formatDurationMs } from '@/lib/time'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, RotateCcw, FileText } from 'lucide-react'
 import type { RunStatus } from '@/types/cockpit'
 
 export default function CockpitRunDetailPage() {
   const { runId } = useParams<{ runId: string }>()
   const navigate = useNavigate()
   const { data: run, isLoading, error } = useRunDetail(runId)
+  const retryMutation = useRetryRun()
+  const incidentMutation = useCreateIncidentNote()
 
   return (
     <div className="space-y-6">
@@ -38,11 +40,49 @@ export default function CockpitRunDetailPage() {
               <h1 className="text-xl font-bold text-white truncate">{run.task}</h1>
               <p className="text-sm text-gray-400 mt-1">{run.agent_name}</p>
             </div>
-            <StatusPill
-              label={RUN_STATUS_LABEL[run.status as RunStatus] ?? run.status}
-              tone={RUN_STATUS_TONE[run.status as RunStatus] ?? 'gray'}
-            />
+            <div className="flex items-center gap-2">
+              <StatusPill
+                label={RUN_STATUS_LABEL[run.status as RunStatus] ?? run.status}
+                tone={RUN_STATUS_TONE[run.status as RunStatus] ?? 'gray'}
+              />
+            </div>
           </div>
+
+          {/* Action bar for failed runs */}
+          {run.status === 'failed' && (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => retryMutation.mutate(run.id)}
+                disabled={retryMutation.isPending}
+                className="btn btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5"
+              >
+                <RotateCcw size={14} />
+                {retryMutation.isPending ? 'Retrying…' : 'Retry Run'}
+              </button>
+              <button
+                onClick={() => incidentMutation.mutate({
+                  title: `Failed run: ${run.agent_name} — ${run.task?.slice(0, 80)}`,
+                  detail: run.error_message || '',
+                  source_type: 'run',
+                  source_id: run.id,
+                })}
+                disabled={incidentMutation.isPending}
+                className="btn text-xs px-3 py-1.5 flex items-center gap-1.5 border border-dark-border text-gray-400 hover:text-gray-200"
+              >
+                <FileText size={14} />
+                {incidentMutation.isPending ? 'Creating…' : 'Incident Note'}
+              </button>
+              {retryMutation.isSuccess && (
+                <span className="text-xs text-green-400">Retry queued (task: {retryMutation.data.new_task_id.slice(0, 8)}…)</span>
+              )}
+              {retryMutation.isError && (
+                <span className="text-xs text-red-400">Retry failed: {(retryMutation.error as Error).message}</span>
+              )}
+              {incidentMutation.isSuccess && (
+                <span className="text-xs text-green-400">Incident note created</span>
+              )}
+            </div>
+          )}
 
           {/* Metrics */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
