@@ -140,6 +140,13 @@
 - PA gave users blank links because it had no actual URL to share
 - Fixed: added `url` field using `obj.get_full_url()` which resolves to Cloudinary CDN URL
 
+### AsyncJobTracker Media URLs
+- `cockpit_job_status` endpoint now returns media URLs (`image_url`, `video_url`, etc.) when jobs complete
+- Looks up `AgentExecution.output_data.metadata` by matching `celery_task_id` in `input_data`
+- Handles both scalar URL fields and ImageAgent's `images` list format
+- `AsyncJobTracker.tsx` shows clickable "View" link to generated media when job completes
+- Added `TalkingCharacterAgent`, `VideoAgent`, `AudioAgent`, `ResolveAgent` to agent labels
+
 ### Cockpit Config Tab Fixed (previous sub-session)
 - `LLMProvider` and `LLMModel` DB tables empty — never seeded
 - Added fallback to `LLMProviderRegistry` service (6 providers configured)
@@ -196,6 +203,12 @@
 ### Remaining Untested PA Tools
 Still need verification: `legal_doc_drafter_agent` (creates deliverables — test with care)
 Verified this session: `content_review_tool`, `opportunity_manager_tool`, `pilots_tool`, `reasoning_engine_tool`, `legislation_tool`, `media_tool`, `davinci_tool`
+
+### Deliverables User Scoping Fixed
+- `deliverables_tool` and `content_review_tool` filtered by `user_id` — excluded agent-created deliverables (user=NULL)
+- Root cause: `_save_to_deliverable()` in BaseAgent defaulted `user=None` instead of using `self.user`
+- Fix 1: `_save_to_deliverable` now falls back to `self.user` — new deliverables get the real user
+- Fix 2: Both tool queries now use `Q(user_id=id) | Q(user__isnull=True)` — existing NULL-user deliverables still visible
 
 ### Other Open Items
 - API dependency routes: 30/31 populated (235 endpoints) — only `/how-it-works` empty (static page)

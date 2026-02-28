@@ -3813,6 +3813,10 @@ Consider this current data when formulating your response."""
             if len(content or '') > 500:
                 preview += '...'
 
+            # Session 1075: Fall back to self.user so agent-created deliverables
+            # are owned by the real user (not NULL / system_autonomous).
+            resolved_user = user or getattr(self, 'user', None)
+
             deliverable = Deliverable.objects.create(
                 title=resolved_title,
                 slug=unique_slug,
@@ -3825,7 +3829,7 @@ Consider this current data when formulating your response."""
                 content_format=content_format,
                 preview_content=preview,
                 metadata=metadata or {},
-                user=user,
+                user=resolved_user,
                 trace_id=uuid.UUID(trace_id) if trace_id else None,
                 quality_score=quality_score,
                 confidence_score=confidence_score,

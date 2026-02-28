@@ -1138,6 +1138,35 @@ def cockpit_create_talking_video(request):
     })
 
 
+def _attach_media_urls(result: dict, task_id: str) -> None:
+    """Session 1075: Attach media URLs from AgentExecution output_data to job status."""
+    try:
+        from core.models import AgentExecution
+        exec_qs = AgentExecution.objects.filter(
+            input_data__contains={'celery_task_id': task_id}
+        ).order_by('-created_at')[:1]
+        if not exec_qs.exists():
+            # Also try matching by task_id stored in context
+            exec_qs = AgentExecution.objects.filter(
+                input_data__contains={'task_id': task_id}
+            ).order_by('-created_at')[:1]
+        if exec_qs.exists():
+            output = exec_qs[0].output_data or {}
+            metadata = output.get('metadata', {})
+            # Surface common media URLs (scalar keys)
+            for key in ('image_url', 'video_url', 'final_video_url', 'audio_url', 'file_url'):
+                val = metadata.get(key)
+                if val:
+                    result[key] = val
+            # ImageAgent stores images as a list — extract first URL
+            if 'image_url' not in result:
+                images = metadata.get('images', [])
+                if images and isinstance(images, list) and images[0].get('url'):
+                    result['image_url'] = images[0]['url']
+    except Exception:
+        pass
+
+
 @require_http_methods(["GET"])
 def cockpit_job_status(request, job_id):
     """
@@ -1163,6 +1192,9 @@ def cockpit_job_status(request, job_id):
             result['progress'] = 1.0 if event.status == 'SUCCESS' else (0.5 if event.status == 'STARTED' else 0.0)
             if event.error_message:
                 result['error'] = event.error_message[:500]
+            # Session 1075: Surface media URLs from completed agent executions
+            if event.status == 'SUCCESS':
+                _attach_media_urls(result, job_id)
             return JsonResponse(result)
     except Exception:
         pass
@@ -1180,6 +1212,8 @@ def cockpit_job_status(request, job_id):
         elif async_result.state == 'SUCCESS':
             result['status'] = 'completed'
             result['progress'] = 1.0
+            # Session 1075: Surface media URLs from completed agent executions
+            _attach_media_urls(result, job_id)
         elif async_result.state == 'FAILURE':
             result['status'] = 'failed'
             result['progress'] = 0.0

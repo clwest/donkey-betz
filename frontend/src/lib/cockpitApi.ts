@@ -223,6 +223,12 @@ export interface JobStatusResponse {
   status: 'queued' | 'processing' | 'completed' | 'failed' | 'cancelled' | 'unknown'
   progress: number | null
   error: string | null
+  // Session 1075: Media URLs from completed agent executions
+  image_url?: string
+  video_url?: string
+  final_video_url?: string
+  audio_url?: string
+  file_url?: string
 }
 
 export async function createBlog(payload: CreateBlogPayload) {
