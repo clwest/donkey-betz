@@ -1799,7 +1799,7 @@ def create_talking_video_task(
         img_data = getattr(img_result, 'data', {}) or {}
         image_url = None
         if isinstance(img_data.get('images'), list) and img_data['images']:
-            image_url = img_data['images'][0].get('url')
+            image_url = img_data['images'][0].get('image_url') or img_data['images'][0].get('url')
         if not image_url:
             # Fallback: check other common locations
             image_url = img_data.get('image_url') or img_data.get('url')
