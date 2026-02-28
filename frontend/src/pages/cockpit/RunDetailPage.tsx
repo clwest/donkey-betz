@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useRunDetail, useRetryRun, useCreateIncidentNote } from '@/hooks/cockpitQueries'
 import StatusPill from '@/components/cockpit/shared/StatusPill'
+import SmartOutputRenderer from '@/components/SmartOutputRenderer'
 import SkeletonRows from '@/components/cockpit/shared/SkeletonRows'
 import { RUN_STATUS_LABEL, RUN_STATUS_TONE } from '@/components/cockpit/runs/runStatus'
 import { formatDateTime, formatDurationMs } from '@/lib/time'
@@ -131,9 +132,12 @@ export default function CockpitRunDetailPage() {
             <div className="card p-4">
               <p className="text-xs font-medium text-gray-500 mb-2">Output</p>
               {run.output_data && Object.keys(run.output_data).length > 0 ? (
-                <pre className="text-xs text-gray-400 whitespace-pre-wrap break-words font-mono max-h-64 overflow-auto">
-                  {JSON.stringify(run.output_data, null, 2)}
-                </pre>
+                <SmartOutputRenderer
+                  data={run.output_data}
+                  agentName={run.agent_name}
+                  maxHeight="max-h-96"
+                  showRawToggle={true}
+                />
               ) : (
                 <p className="text-sm text-gray-600">No output data</p>
               )}

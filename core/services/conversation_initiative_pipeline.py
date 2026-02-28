@@ -41,6 +41,7 @@ Usage:
 """
 
 import logging
+import re
 import uuid
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
@@ -177,6 +178,14 @@ class PipelineResult:
             'task_ids': self.task_ids,
             'errors': self.errors,
         }
+
+
+_BRACKET_PREFIX_RE = re.compile(r'^(\[(?:Conversation|HiveMind|Learned|Synthesis)\]\s*)+')
+
+
+def strip_bracket_prefixes(text: str) -> str:
+    """Strip accumulated bracket prefixes like [Conversation] [Conversation]."""
+    return _BRACKET_PREFIX_RE.sub('', text).strip()
 
 
 def is_valid_topic(topic: str) -> bool:
@@ -484,11 +493,11 @@ class ConversationInitiativePipeline:
 
                 initiative = Initiative.objects.create(
                     name=initiative_name,
-                    description=f"Auto-created from conversation about: {topic}",
+                    description=f"Auto-created from conversation about: {strip_bracket_prefixes(topic)}",
                     status='TRIAGE',  # Session 994: Auto-created → TRIAGE, not ACTIVE
                     current_stage=1,
                     created_by='ConversationInitiativePipeline',
-                    parent_topic=topic[:200] if topic else '',
+                    parent_topic=strip_bracket_prefixes(topic)[:200] if topic else '',
                     target_workspace=workspace,  # Session 908: Link to workspace
                 )
 
@@ -641,7 +650,7 @@ class ConversationInitiativePipeline:
         for task_config in tasks:
             agent_name = task_config['agent']
             task_template = task_config['task_template']
-            task_description = task_template.format(topic=topic)
+            task_description = task_template.format(topic=strip_bracket_prefixes(topic))
 
             try:
                 # Queue the task with initiative context
@@ -870,7 +879,7 @@ def _dispatch_next_stage_tasks(initiative, stage_num: int):
     for task_config in stage_info.get('tasks', []):
         agent_name = task_config['agent']
         task_template = task_config['task_template']
-        task_description = task_template.format(topic=topic)
+        task_description = task_template.format(topic=strip_bracket_prefixes(topic))
 
         try:
             execute_initiative_stage_task.delay(

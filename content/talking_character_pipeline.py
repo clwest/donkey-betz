@@ -690,15 +690,17 @@ class TalkingCharacterPipeline:
                 start_time=start_time,
             )
             if not video_url:
-                result.status = PipelineStatus.FAILED
-                result.failed_stage = "multi_clip_video"
-                result.error_message = error
-                return result
+                logger.warning(
+                    f"[PIPELINE] multi_clip failed ({error}), falling back to loop mode"
+                )
+                mode = "loop"
+                # Fall through to loop path below
+            else:
+                result.base_video_url = video_url
+                # Force cut_off — concatenated video already matches audio length
+                sync_mode = "cut_off"
 
-            result.base_video_url = video_url
-            # Force cut_off — concatenated video already matches audio length
-            sync_mode = "cut_off"
-        else:
+        if mode != "multi_clip":
             # ── Single-clip (loop) path ──────────────────────────────
             # Start async pipeline (TTS + Video task creation)
             result = self.generate_talking_video_async(
