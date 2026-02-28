@@ -1836,7 +1836,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list_candidates", "list_approved", "approve", "reject", "stats"],
+                    "enum": ["list_candidates", "list_approved", "list_expired", "approve", "reject", "stats"],
                     "description": "Action to perform on tool insights",
                 },
                 "id": {"type": "string", "description": "UUID of insight to approve/reject"},
