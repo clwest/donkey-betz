@@ -737,103 +737,135 @@ class TalkingCharacterPipeline:
             result.base_video_url = video_url
 
         # ── Lip sync (shared by both paths) ──────────────────────────
-        # Start lip sync with model selection
-        lipsync_result = self.continue_pipeline_after_video(
-            audio_url=result.audio_url,
-            video_url=result.base_video_url,
-            sync_mode=sync_mode,
-            temperature=temperature,
-            lipsync_model=lipsync_model,
-        )
+        # Session 1075: Try primary model, fallback to alternate if it fails
+        _FALLBACK_MODEL = {'latentsync': 'sync_labs', 'sync_labs': 'latentsync'}
+        models_to_try = [lipsync_model]
+        fallback = _FALLBACK_MODEL.get(lipsync_model)
+        if fallback:
+            models_to_try.append(fallback)
 
-        if not lipsync_result.success:
-            return lipsync_result
+        lipsync_succeeded = False
+        last_lipsync_error = ""
 
-        # Wait for lip sync
-        logger.info(f"⏳ [PIPELINE] Waiting for lip sync...")
+        for attempt_model in models_to_try:
+            # Start lip sync with model selection
+            lipsync_result = self.continue_pipeline_after_video(
+                audio_url=result.audio_url,
+                video_url=result.base_video_url,
+                sync_mode=sync_mode,
+                temperature=temperature,
+                lipsync_model=attempt_model,
+            )
 
-        while time.time() - start_time < timeout:
-            lipsync_status = self.check_lipsync_status(lipsync_result.lipsync_task_id)
+            if not lipsync_result.success:
+                last_lipsync_error = lipsync_result.error_message
+                if attempt_model != models_to_try[-1]:
+                    logger.warning(
+                        f"[PIPELINE] {attempt_model} submission failed, trying fallback: "
+                        f"{last_lipsync_error[:100]}"
+                    )
+                    continue
+                # No more fallbacks
+                return lipsync_result
 
-            if lipsync_status.get('status') == 'succeeded':
-                result.final_video_url = lipsync_status.get('video_url', '')
-                result.success = True
-                result.status = PipelineStatus.COMPLETED
-                result.progress_percent = 100
-                result.progress_message = "✅ Talking character video complete!"
-                result.duration_seconds = duration
+            # Wait for lip sync
+            logger.info(f"⏳ [PIPELINE] Waiting for lip sync ({attempt_model})...")
 
-                # Update VideoHistory with final lip-synced video URL
-                if self.user and result.video_task_id:
-                    try:
-                        from content.models import VideoHistory
-                        vh = VideoHistory.objects.filter(
-                            video_id=result.video_task_id
-                        ).first()
-                        if vh:
-                            vh.video_url = result.final_video_url
-                            vh.status = 'completed'
-                            vh.duration = duration
-                            vh.parameters['final_video_url'] = result.final_video_url
-                            vh.parameters['base_video_url'] = result.base_video_url
-                            vh.parameters['audio_url'] = result.audio_url
-                            vh.parameters['pipeline_stage'] = 'completed'
-                            vh.parameters['actual_cost'] = result.actual_cost
-                            vh.save()
-                            logger.info(f"✅ [PIPELINE] Updated VideoHistory {vh.id} with final video")
-                    except Exception as e:
-                        logger.warning(f"⚠️ Failed to update VideoHistory: {e}")
+            while time.time() - start_time < timeout:
+                lipsync_status = self.check_lipsync_status(lipsync_result.lipsync_task_id)
 
-                # Optional DaVinci Resolve color grade post-processing
-                if color_grade:
-                    try:
-                        from core.agents.resolve_agent import ResolveNodeClient
-                        client = ResolveNodeClient()
-                        health = client.health_check()
-                        if health.get('status') == 'ok':
-                            logger.info(f"🎨 [PIPELINE] Sending to DaVinci for color grade: {color_grade}")
-                            render = client.start_render(
-                                clip_paths=[result.final_video_url],
-                                template='default_mp4',
-                            )
-                            if render.get('job_id'):
-                                job_id = render['job_id']
-                                while time.time() - start_time < timeout:
-                                    status = client.get_status(job_id)
-                                    if status.get('status') == 'done':
-                                        result_url = client.get_result_url(job_id)
-                                        if result_url:
-                                            result.final_video_url = result_url
-                                            logger.info(f"✅ [PIPELINE] DaVinci render complete: {result_url[:60]}...")
-                                        break
-                                    elif status.get('status') == 'error':
-                                        logger.warning("DaVinci render failed, using lip-synced video")
-                                        break
-                                    time.sleep(5)
-                        else:
-                            logger.warning("DaVinci Resolve not available, skipping color grade")
-                    except Exception as e:
-                        logger.warning(f"DaVinci post-processing failed: {e}")
+                if lipsync_status.get('status') == 'succeeded':
+                    lipsync_succeeded = True
+                    break
+                elif lipsync_status.get('status') == 'failed':
+                    last_lipsync_error = lipsync_status.get('error', 'Lip sync failed')
+                    logger.warning(
+                        f"[PIPELINE] {attempt_model} failed: {last_lipsync_error[:100]}"
+                    )
+                    break
 
-                logger.info(f"🎉 [PIPELINE] COMPLETE! Final video: {result.final_video_url[:60]}...")
-                return result
+                time.sleep(5)  # Poll every 5 seconds
+            else:
+                # Timed out waiting for this model
+                last_lipsync_error = f"{attempt_model} lip sync timed out"
+                logger.warning(f"[PIPELINE] {last_lipsync_error}")
 
-            elif lipsync_status.get('status') == 'failed':
-                result.success = False
-                result.status = PipelineStatus.FAILED
-                result.failed_stage = "lip_sync"
-                result.error_message = lipsync_status.get('error', 'Lip sync failed')
-                self._mark_video_history_failed(result.video_task_id, result.error_message)
-                return result
+            if lipsync_succeeded:
+                break
 
-            time.sleep(5)  # Poll every 5 seconds
+            # Try fallback model if available
+            if attempt_model != models_to_try[-1]:
+                logger.info(f"[PIPELINE] Retrying lip sync with fallback model...")
 
-        # Timeout
-        result.success = False
-        result.status = PipelineStatus.FAILED
-        result.failed_stage = "lip_sync"
-        result.error_message = "Lip sync timed out"
-        self._mark_video_history_failed(result.video_task_id, "Lip sync timed out")
+        if not lipsync_succeeded:
+            result.success = False
+            result.status = PipelineStatus.FAILED
+            result.failed_stage = "lip_sync"
+            result.error_message = f"Lip sync failed (tried {', '.join(models_to_try)}): {last_lipsync_error}"
+            self._mark_video_history_failed(result.video_task_id, result.error_message)
+            return result
+
+        # Lip sync succeeded
+        result.final_video_url = lipsync_status.get('video_url', '')
+        result.success = True
+        result.status = PipelineStatus.COMPLETED
+        result.progress_percent = 100
+        result.progress_message = "✅ Talking character video complete!"
+        result.duration_seconds = duration
+
+        # Update VideoHistory with final lip-synced video URL
+        if self.user and result.video_task_id:
+            try:
+                from content.models import VideoHistory
+                vh = VideoHistory.objects.filter(
+                    video_id=result.video_task_id
+                ).first()
+                if vh:
+                    vh.video_url = result.final_video_url
+                    vh.status = 'completed'
+                    vh.duration = duration
+                    vh.parameters['final_video_url'] = result.final_video_url
+                    vh.parameters['base_video_url'] = result.base_video_url
+                    vh.parameters['audio_url'] = result.audio_url
+                    vh.parameters['pipeline_stage'] = 'completed'
+                    vh.parameters['actual_cost'] = result.actual_cost
+                    vh.save()
+                    logger.info(f"✅ [PIPELINE] Updated VideoHistory {vh.id} with final video")
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to update VideoHistory: {e}")
+
+        # Optional DaVinci Resolve color grade post-processing
+        if color_grade:
+            try:
+                from core.agents.resolve_agent import ResolveNodeClient
+                client = ResolveNodeClient()
+                health = client.health_check()
+                if health.get('status') == 'ok':
+                    logger.info(f"🎨 [PIPELINE] Sending to DaVinci for color grade: {color_grade}")
+                    render = client.start_render(
+                        clip_paths=[result.final_video_url],
+                        template='default_mp4',
+                    )
+                    if render.get('job_id'):
+                        job_id = render['job_id']
+                        while time.time() - start_time < timeout:
+                            status = client.get_status(job_id)
+                            if status.get('status') == 'done':
+                                result_url = client.get_result_url(job_id)
+                                if result_url:
+                                    result.final_video_url = result_url
+                                    logger.info(f"✅ [PIPELINE] DaVinci render complete: {result_url[:60]}...")
+                                break
+                            elif status.get('status') == 'error':
+                                logger.warning("DaVinci render failed, using lip-synced video")
+                                break
+                            time.sleep(5)
+                else:
+                    logger.warning("DaVinci Resolve not available, skipping color grade")
+            except Exception as e:
+                logger.warning(f"DaVinci post-processing failed: {e}")
+
+        logger.info(f"🎉 [PIPELINE] COMPLETE! Final video: {result.final_video_url[:60]}...")
         return result
 
 
