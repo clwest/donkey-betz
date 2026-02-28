@@ -595,6 +595,48 @@ and only important ones should be promoted. Don't treat this as a crisis."""
         'theodds', 'polygon_finance', 'newsapi', 'etherscan_api', 'coingecko',
     })
 
+    @staticmethod
+    def _classify_severity(item) -> str:
+        """
+        Re-classify item severity for escalation purposes.
+
+        The SystemStateAggregator marks most items as 'info'. SIA applies
+        its own rules to decide which deserve warning/critical status.
+        """
+        title_lower = item.title.lower() if item.title else ''
+        category_lower = item.category.lower() if item.category else ''
+
+        # Stale spiders → warning (key spiders → critical)
+        if 'stale' in category_lower and 'spider' in title_lower:
+            return 'critical' if any(
+                s in title_lower for s in (
+                    'theodds', 'polygon_finance', 'newsapi',
+                    'etherscan_api', 'coingecko',
+                )
+            ) else 'warning'
+
+        # Stale signal clusters (large count) → warning
+        if 'stale' in category_lower and 'signal' in title_lower:
+            # Extract count from title like "Stale Signal Clusters: 80"
+            import re
+            m = re.search(r'(\d+)', item.title or '')
+            count = int(m.group(1)) if m else 0
+            if count >= 50:
+                return 'critical'
+            if count >= 10:
+                return 'warning'
+
+        # Smoke suite failures → warning (multiple → critical)
+        if 'smoke' in title_lower and ('fail' in title_lower or 'failing' in title_lower):
+            return 'warning'
+
+        # Deploy drift → critical
+        if 'deploy' in title_lower and 'drift' in title_lower:
+            return 'critical'
+
+        # Keep original severity
+        return item.severity
+
     def _escalate_to_attention_items(self, items) -> Dict[str, Any]:
         """
         Upsert HumanAttentionItems for warning/critical findings.
@@ -618,17 +660,18 @@ and only important ones should be promoted. Don't treat this as a crisis."""
             item_ids_seen = []
 
             for item in items:
-                if item.severity not in ('critical', 'warning'):
+                effective_severity = self._classify_severity(item)
+                if effective_severity not in ('critical', 'warning'):
                     continue
 
                 source_id = f"sia:{item.id}"
                 item_ids_seen.append(source_id)
 
-                urgency = 'critical' if item.severity == 'critical' else 'medium'
+                urgency = 'critical' if effective_severity == 'critical' else 'medium'
                 # Promote key-spider staleness to high
-                if 'stale' in item.category.lower():
+                if 'stale' in (item.category or '').lower():
                     for spider in self._KEY_SPIDERS:
-                        if spider in item.title.lower():
+                        if spider in (item.title or '').lower():
                             urgency = 'high'
                             break
 
