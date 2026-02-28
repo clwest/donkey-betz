@@ -546,6 +546,7 @@ export default function BoardroomPage() {
   const [selectedItem, setSelectedItem] = useState<AttentionItem | null>(null)
   const [selectedAttention, setSelectedAttention] = useState<Set<string>>(new Set())
   const [selectedDecisions, setSelectedDecisions] = useState<Set<string>>(new Set())
+  const [showAuditPanel, setShowAuditPanel] = useState(false)
   const visitMarked = useRef(false)
 
   // Fetch attention items
@@ -779,6 +780,7 @@ export default function BoardroomPage() {
   const decidedToday = statsData?.decided_today ?? 0
   const unclassifiedCount = unclassifiedData?.total_unclassified ?? unclassifiedData?.count ?? 0
   const avgResponseTime = statsData?.avg_response_time_hours ?? null
+  const siaEscalation = (statsData as any)?.stats?.sia_escalation ?? null
   const unclassifiedArtifacts: UnclassifiedArtifact[] = unclassifiedData?.artifacts ?? []
 
   return (
@@ -1160,6 +1162,82 @@ export default function BoardroomPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* SIA Escalation Audit Panel */}
+            {siaEscalation && siaEscalation.total > 0 && (
+              <div className="mt-6 border border-dark-border rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setShowAuditPanel(!showAuditPanel)}
+                  className="w-full flex items-center gap-2 px-4 py-3 bg-dark-card hover:bg-dark-border/50 transition-colors text-sm font-medium text-gray-300"
+                >
+                  <BarChart3 size={16} className="text-primary-400" />
+                  SIA Escalation Audit
+                  <span className="text-xs text-gray-500 ml-1">({siaEscalation.total} total)</span>
+                  <div className="ml-auto">
+                    {showAuditPanel ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                  </div>
+                </button>
+                {showAuditPanel && (
+                  <div className="p-4 space-y-4 border-t border-dark-border bg-dark-bg/50">
+                    {/* Status breakdown */}
+                    <div className="grid grid-cols-4 gap-3">
+                      <div className="p-3 bg-dark-card rounded-lg border border-dark-border text-center">
+                        <div className="text-xs text-gray-500 mb-1">Pending</div>
+                        <div className="text-lg font-bold text-white">{siaEscalation.pending}</div>
+                      </div>
+                      <div className="p-3 bg-dark-card rounded-lg border border-dark-border text-center">
+                        <div className="text-xs text-gray-500 mb-1">Deferred</div>
+                        <div className={cn("text-lg font-bold", siaEscalation.deferred > 0 ? "text-orange-400" : "text-gray-400")}>{siaEscalation.deferred}</div>
+                      </div>
+                      <div className="p-3 bg-dark-card rounded-lg border border-dark-border text-center">
+                        <div className="text-xs text-gray-500 mb-1">Resolved</div>
+                        <div className="text-lg font-bold text-green-400">{siaEscalation.resolved}</div>
+                      </div>
+                      <div className="p-3 bg-dark-card rounded-lg border border-dark-border text-center">
+                        <div className="text-xs text-gray-500 mb-1">Total</div>
+                        <div className="text-lg font-bold text-primary-400">{siaEscalation.total}</div>
+                      </div>
+                    </div>
+
+                    {/* Critical items needing attention */}
+                    {siaEscalation.critical_needing_attention?.length > 0 && (
+                      <div>
+                        <h4 className="text-xs font-medium text-gray-500 uppercase mb-2">Open Critical Items</h4>
+                        <div className="space-y-1">
+                          {siaEscalation.critical_needing_attention.map((item: any) => (
+                            <div key={item.id} className="flex items-center gap-2 px-3 py-2 bg-dark-card rounded border border-dark-border text-sm">
+                              <span className="px-1.5 py-0.5 text-[10px] rounded bg-red-500/20 text-red-400 border border-red-500/30">
+                                {item.status}
+                              </span>
+                              <span className="flex-1 truncate text-gray-300">{item.title}</span>
+                              <span className="text-xs text-gray-500 shrink-0">
+                                {item.age_hours < 24 ? `${item.age_hours.toFixed(0)}h` : `${(item.age_hours / 24).toFixed(1)}d`} old
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Recurring escalations */}
+                    {siaEscalation.recurring?.length > 0 && (
+                      <div>
+                        <h4 className="text-xs font-medium text-gray-500 uppercase mb-2">Most Recurring Escalations</h4>
+                        <div className="space-y-1">
+                          {siaEscalation.recurring.map((item: any, idx: number) => (
+                            <div key={idx} className="flex items-center gap-2 px-3 py-2 bg-dark-card rounded border border-dark-border text-sm">
+                              <span className="text-xs text-primary-400 font-mono shrink-0">{item.count}x</span>
+                              <span className="flex-1 truncate text-gray-300">{item.title}</span>
+                              <span className="text-xs text-gray-500 truncate max-w-[140px]">{item.source_id}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

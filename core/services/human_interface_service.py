@@ -223,6 +223,40 @@ class HumanInterfaceService:
         for action in recent_actions:
             action['created_at'] = action['created_at'].isoformat()
 
+        # SIA escalation audit stats
+        sia_items = items.filter(source_type='system_intelligence')
+        sia_total = sia_items.count()
+        sia_pending = sia_items.filter(status='pending').count()
+        sia_deferred = sia_items.filter(status='deferred').count()
+        sia_resolved = sia_items.filter(status='acted').count()
+
+        # Recurring SIA source_ids (most-escalated issues)
+        sia_recurring = list(
+            sia_items.values('source_id', 'title')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:5]
+            .values('source_id', 'title', 'count')
+        )
+
+        # Age of oldest open/deferred critical items
+        oldest_critical = (
+            items.filter(
+                urgency='critical',
+                status__in=['pending', 'deferred'],
+            )
+            .order_by('created_at')
+            .values('id', 'title', 'status', 'created_at', 'urgency')[:5]
+        )
+        critical_needing_attention = []
+        for c in oldest_critical:
+            age_hours = (timezone.now() - c['created_at']).total_seconds() / 3600
+            critical_needing_attention.append({
+                'id': str(c['id']),
+                'title': c['title'],
+                'status': c['status'],
+                'age_hours': round(age_hours, 1),
+            })
+
         return {
             'pending_count': pending_count,
             'by_urgency': by_urgency,
@@ -243,6 +277,15 @@ class HumanInterfaceService:
             'fed_to_ml_count': fed_to_ml_count,
             'recent_actions': recent_actions,
             'total_items': items.count(),
+            # SIA escalation audit
+            'sia_escalation': {
+                'total': sia_total,
+                'pending': sia_pending,
+                'deferred': sia_deferred,
+                'resolved': sia_resolved,
+                'recurring': sia_recurring,
+                'critical_needing_attention': critical_needing_attention,
+            },
         }
 
     # =========================================================================
