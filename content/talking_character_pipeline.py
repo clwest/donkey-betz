@@ -556,13 +556,24 @@ class TalkingCharacterPipeline:
                     stderr = proc.stderr.decode(errors='replace')[:500]
                     return None, f"ffmpeg concat failed: {stderr}"
 
-            # Upload concatenated video
-            with open(output_path, 'rb') as f:
-                content = f.read()
-
-            filename = f"videos/multi_clip/multi_clip_{int(time.time())}.mp4"
-            saved_path = default_storage.save(filename, ContentFile(content))
-            video_url = default_storage.url(saved_path)
+            # Upload concatenated video via Cloudinary video upload
+            # (default_storage is MediaCloudinaryStorage which rejects non-image files)
+            try:
+                import cloudinary.uploader
+                upload_result = cloudinary.uploader.upload(
+                    output_path,
+                    resource_type="video",
+                    folder="videos/multi_clip",
+                    public_id=f"multi_clip_{int(time.time())}",
+                )
+                video_url = upload_result.get('secure_url', upload_result.get('url', ''))
+            except Exception:
+                # Fallback: try default_storage (works if local or non-Cloudinary)
+                with open(output_path, 'rb') as f:
+                    content = f.read()
+                filename = f"videos/multi_clip/multi_clip_{int(time.time())}.mp4"
+                saved_path = default_storage.save(filename, ContentFile(content))
+                video_url = default_storage.url(saved_path)
 
             logger.info(
                 f"✅ [MULTI_CLIP] Concatenated {num_clips} clips → {video_url[:60]}..."
