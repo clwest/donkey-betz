@@ -826,6 +826,28 @@ class TalkingCharacterPipeline:
         result.progress_message = "✅ Talking character video complete!"
         result.duration_seconds = duration
 
+        # Persist final video to Cloudinary (ephemeral URLs expire)
+        persistent_url = result.final_video_url
+        try:
+            import urllib.request
+            import cloudinary.uploader
+            with urllib.request.urlopen(result.final_video_url, timeout=60) as resp:
+                video_bytes = resp.read()
+            if len(video_bytes) > 1000:  # sanity check
+                upload_result = cloudinary.uploader.upload(
+                    video_bytes,
+                    resource_type="video",
+                    folder="videos/talking_character",
+                    public_id=f"talk_{int(time.time())}",
+                )
+                persistent_url = upload_result.get('secure_url', upload_result.get('url', ''))
+                result.final_video_url = persistent_url
+                logger.info(f"✅ [PIPELINE] Persisted video to Cloudinary: {persistent_url[:80]}")
+            else:
+                logger.warning(f"[PIPELINE] Downloaded video too small ({len(video_bytes)}b), keeping ephemeral URL")
+        except Exception as e:
+            logger.warning(f"⚠️ [PIPELINE] Could not persist video to Cloudinary: {e} — keeping ephemeral URL")
+
         # Update VideoHistory with final lip-synced video URL
         if self.user and result.video_task_id:
             try:
@@ -834,10 +856,10 @@ class TalkingCharacterPipeline:
                     video_id=result.video_task_id
                 ).first()
                 if vh:
-                    vh.video_url = result.final_video_url
+                    vh.video_url = persistent_url
                     vh.status = 'completed'
                     vh.duration = duration
-                    vh.parameters['final_video_url'] = result.final_video_url
+                    vh.parameters['final_video_url'] = persistent_url
                     vh.parameters['base_video_url'] = result.base_video_url
                     vh.parameters['audio_url'] = result.audio_url
                     vh.parameters['pipeline_stage'] = 'completed'
