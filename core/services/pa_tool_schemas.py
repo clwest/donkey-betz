@@ -1219,14 +1219,15 @@ PA_TOOL_SCHEMAS = [
                     "type": "string",
                     "enum": [
                         "generate_image", "generate_video", "generate_audio",
-                        "generate_talking_video",
+                        "generate_talking_video", "create_talking_video",
                         "job_status", "list_jobs",
                     ],
                     "description": (
                         "generate_image: create an AI image from prompt. "
                         "generate_video: create a video from prompt/image. "
                         "generate_audio: text-to-speech audio. "
-                        "generate_talking_video: create a talking-head video from character image + script (TTS + animation + lip sync). "
+                        "generate_talking_video: create a talking-head video from character image + script — requires existing image_url. "
+                        "create_talking_video: generate a character image from prompt AND create talking video in one step — use when user has NO existing image. Provide 'prompt' for image description and 'script' for dialogue. "
                         "job_status: check status of a generation job. "
                         "list_jobs: recent generation history."
                     ),
