@@ -32,6 +32,7 @@ import {
   Timer,
   Target,
   BarChart3,
+  ShieldAlert,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { humanApi, decisionsApi, classificationApi } from '@/lib/api'
@@ -64,6 +65,7 @@ interface AttentionItem {
   urgency: 'critical' | 'high' | 'medium' | 'low'
   status: string
   created_at: string
+  decision_feedback?: string
   ml_recommendation?: string
   ml_confidence?: number
   ml_prediction?: MLPrediction
@@ -385,6 +387,15 @@ function ItemDrawer({
           <span>{timeAgo(item.created_at)}</span>
         </div>
 
+        {item.status === 'deferred' && item.decision_feedback && (
+          <div className="p-3 bg-orange-500/10 rounded-lg border border-orange-500/20">
+            <div className="flex items-center gap-2 text-xs font-medium text-orange-400 mb-1">
+              <ShieldAlert size={13} /> Deferred for Review
+            </div>
+            <p className="text-sm text-orange-300/80">{item.decision_feedback}</p>
+          </div>
+        )}
+
         {showSummary && cleanSummary && (
           <div className="p-3 bg-dark-bg rounded-lg border border-dark-border">
             <p className="text-sm text-gray-300 whitespace-pre-wrap">{stripMarkdown(cleanSummary)}</p>
@@ -433,27 +444,52 @@ function ItemDrawer({
 
       {/* Actions footer */}
       <div className="p-4 border-t border-dark-border flex items-center gap-3">
-        <button
-          onClick={() => onDecide(item.id, 'approved')}
-          disabled={isPending}
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors font-medium disabled:opacity-50"
-        >
-          <ThumbsUp size={16} /> Approve
-        </button>
-        <button
-          onClick={() => onDecide(item.id, 'ignored')}
-          disabled={isPending}
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-500/20 text-gray-400 rounded-lg hover:bg-gray-500/30 transition-colors font-medium disabled:opacity-50"
-        >
-          <ThumbsDown size={16} /> Ignore
-        </button>
-        <button
-          onClick={() => onDecide(item.id, 'deferred')}
-          disabled={isPending}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-dark-border text-gray-400 rounded-lg hover:bg-gray-700 transition-colors font-medium disabled:opacity-50"
-        >
-          <Clock size={16} /> Defer
-        </button>
+        {item.status === 'deferred' ? (
+          <>
+            <div className="flex items-center gap-2 text-xs text-orange-400 mr-auto">
+              <ShieldAlert size={14} />
+              <span>Deferred — awaiting human confirmation</span>
+            </div>
+            <button
+              onClick={() => onDecide(item.id, 'approved')}
+              disabled={isPending}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors font-medium disabled:opacity-50"
+            >
+              <CheckCircle size={16} /> Confirm Close
+            </button>
+            <button
+              onClick={() => onDecide(item.id, 'reopen')}
+              disabled={isPending}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500/20 text-orange-400 rounded-lg hover:bg-orange-500/30 transition-colors font-medium disabled:opacity-50"
+            >
+              <AlertTriangle size={16} /> Keep Open
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={() => onDecide(item.id, 'approved')}
+              disabled={isPending}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors font-medium disabled:opacity-50"
+            >
+              <ThumbsUp size={16} /> Approve
+            </button>
+            <button
+              onClick={() => onDecide(item.id, 'ignored')}
+              disabled={isPending}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-500/20 text-gray-400 rounded-lg hover:bg-gray-500/30 transition-colors font-medium disabled:opacity-50"
+            >
+              <ThumbsDown size={16} /> Ignore
+            </button>
+            <button
+              onClick={() => onDecide(item.id, 'deferred')}
+              disabled={isPending}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-dark-border text-gray-400 rounded-lg hover:bg-gray-700 transition-colors font-medium disabled:opacity-50"
+            >
+              <Clock size={16} /> Defer
+            </button>
+          </>
+        )}
       </div>
     </div>
   )
@@ -521,6 +557,20 @@ export default function BoardroomPage() {
     queryKey: ['boardroom-attention'],
     queryFn: async () => {
       const res = await humanApi.attention({ limit: 100, status: ['pending'] })
+      return res.data
+    },
+    refetchInterval: 30000,
+  })
+
+  // Fetch deferred items (critical items needing human sign-off)
+  const {
+    data: deferredData,
+    isLoading: loadingDeferred,
+    refetch: refetchDeferred,
+  } = useQuery({
+    queryKey: ['boardroom-deferred'],
+    queryFn: async () => {
+      const res = await humanApi.attention({ limit: 50, status: ['deferred'] })
       return res.data
     },
     refetchInterval: 30000,
@@ -601,6 +651,7 @@ export default function BoardroomPage() {
       humanApi.decide(itemId, decision),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['boardroom-attention'] })
+      queryClient.invalidateQueries({ queryKey: ['boardroom-deferred'] })
       queryClient.invalidateQueries({ queryKey: ['boardroom-attention-stats'] })
       setSelectedItem(null)
     },
@@ -611,6 +662,7 @@ export default function BoardroomPage() {
       humanApi.bulkDecide(decision, itemIds),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['boardroom-attention'] })
+      queryClient.invalidateQueries({ queryKey: ['boardroom-deferred'] })
       queryClient.invalidateQueries({ queryKey: ['boardroom-attention-stats'] })
       setSelectedAttention(new Set())
     },
@@ -657,6 +709,7 @@ export default function BoardroomPage() {
   }, [])
 
   const attentionItems: AttentionItem[] = attentionData?.items || []
+  const deferredItems: AttentionItem[] = deferredData?.items || []
   const decisions: Decision[] = (decisionsData?.decisions || []).filter(
     (d: Decision) => d.status === 'draft'
   )
@@ -722,6 +775,7 @@ export default function BoardroomPage() {
 
   // Stats
   const pendingCount = statsData?.pending_count ?? attentionItems.length
+  const deferredCount = deferredItems.length
   const decidedToday = statsData?.decided_today ?? 0
   const unclassifiedCount = unclassifiedData?.total_unclassified ?? unclassifiedData?.count ?? 0
   const avgResponseTime = statsData?.avg_response_time_hours ?? null
@@ -740,7 +794,7 @@ export default function BoardroomPage() {
             </div>
           </div>
           <button
-            onClick={() => { refetchAttention(); refetchDecisions(); refetchUnclassified() }}
+            onClick={() => { refetchAttention(); refetchDeferred(); refetchDecisions(); refetchUnclassified() }}
             className="flex items-center gap-2 px-3 py-2 bg-dark-border rounded-lg hover:bg-gray-700 transition-colors text-sm"
           >
             <RefreshCw size={14} className={loadingAttention || loadingDecisions ? 'animate-spin' : ''} />
@@ -751,12 +805,23 @@ export default function BoardroomPage() {
 
       {/* Summary Cards */}
       <div className="px-6 py-4 border-b border-dark-border">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="p-4 bg-dark-card border border-dark-border rounded-lg">
             <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
               <Eye size={14} /> Pending
             </div>
             <div className="text-2xl font-bold text-white">{pendingCount}</div>
+          </div>
+          <div className={cn(
+            "p-4 bg-dark-card border rounded-lg cursor-pointer transition-colors",
+            deferredCount > 0 ? "border-orange-500/30 hover:border-orange-500/50" : "border-dark-border"
+          )} onClick={() => setActiveTab('inbox')}>
+            <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+              <ShieldAlert size={14} /> Needs Review
+            </div>
+            <div className={cn("text-2xl font-bold", deferredCount > 0 ? "text-orange-400" : "text-green-400")}>
+              {deferredCount}
+            </div>
           </div>
           <div className="p-4 bg-dark-card border border-dark-border rounded-lg">
             <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
@@ -833,6 +898,59 @@ export default function BoardroomPage() {
       <div className="flex-1 overflow-y-auto">
         {activeTab === 'inbox' ? (
           <div className="p-6 space-y-4">
+            {/* Deferred Items — Needs Review Banner */}
+            {deferredItems.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-orange-400">
+                  <ShieldAlert size={16} />
+                  Needs Review — {deferredItems.length} deferred item{deferredItems.length !== 1 ? 's' : ''} awaiting confirmation
+                </div>
+                {deferredItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg bg-orange-500/5 border border-orange-500/20 hover:border-orange-500/40 cursor-pointer transition-colors"
+                    onClick={() => setSelectedItem(item)}
+                  >
+                    <span className={cn("px-2 py-0.5 text-xs rounded border shrink-0 capitalize", getUrgencyStyle(item.urgency))}>
+                      {item.urgency}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-sm truncate">{item.title}</h4>
+                      <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500">
+                        <span className="flex items-center gap-1">
+                          {getTypeIcon(item.item_type)} {item.item_type}
+                        </span>
+                        {item.source_agent && <span>{item.source_agent}</span>}
+                        <span>{timeAgo(item.created_at)}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={() => decideMutation.mutate({ itemId: item.id, decision: 'approved' })}
+                        disabled={decideMutation.isPending}
+                        className="flex items-center gap-1 px-2 py-1.5 rounded text-xs bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors"
+                        title="Confirm close — issue resolved"
+                      >
+                        <CheckCircle size={13} /> Close
+                      </button>
+                      <button
+                        onClick={() => {
+                          // Re-open as pending for continued monitoring
+                          decideMutation.mutate({ itemId: item.id, decision: 'reopen' })
+                        }}
+                        disabled={decideMutation.isPending}
+                        className="flex items-center gap-1 px-2 py-1.5 rounded text-xs bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 transition-colors"
+                        title="Keep open — still needs attention"
+                      >
+                        <AlertTriangle size={13} /> Keep Open
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <div className="border-b border-dark-border" />
+              </div>
+            )}
+
             {/* Filter Bar */}
             <div className="flex items-center gap-3 flex-wrap">
               {/* Urgency chips */}
