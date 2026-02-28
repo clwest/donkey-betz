@@ -1052,7 +1052,8 @@ PA_TOOL_SCHEMAS = [
             "render or color-grade videos via DaVinci Resolve, generate audio, "
             "create 3D models, train characters, do competitor analysis, customer "
             "research, brand strategy, content strategy, marketing strategy, "
-            "content writing, or workflow orchestration."
+            "content writing, workflow orchestration, or system intelligence "
+            "(platform health reports, attention items, anomaly detection)."
         ),
         "parameters": {
             "type": "object",
@@ -1069,13 +1070,15 @@ PA_TOOL_SCHEMAS = [
                         "brand_strategy_agent", "content_strategy_agent",
                         "marketing_strategy_agent", "content_writer_agent",
                         "workflow_orchestration_agent", "coleadership_agent",
+                        "system_intelligence_agent",
                         "strategic_review",
                         "create_brand_video", "create_project_from_research",
                     ],
                     "description": (
                         "Which agent to run. resolve_agent = DaVinci Resolve rendering & color grading. "
                         "video_editing_agent = ffmpeg trim/effects/speed/concat. "
-                        "video_generation_agent = Runway ML text/image-to-video."
+                        "video_generation_agent = Runway ML text/image-to-video. "
+                        "system_intelligence_agent = platform health reports, attention items, anomaly detection, system status."
                     ),
                 },
                 "task": {"type": "string", "description": "Task description for the agent"},

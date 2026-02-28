@@ -410,6 +410,7 @@ class ToolDispatcher:
             'strategic_review': 'ContentStrategyAgent',  # Session 1068: StrategyAgent doesn't exist
             'coleadership_agent': 'CoLeadershipAgent',
             'legal_doc_drafter_agent': 'LegalDocDrafterAgent',
+            'system_intelligence_agent': 'SystemIntelligenceAgent',
         }
         return mappings.get(tool_name, tool_name.replace('_agent', '').title() + 'Agent')
 
