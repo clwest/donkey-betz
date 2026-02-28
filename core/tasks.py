@@ -1699,6 +1699,230 @@ def execute_agent_task(
         }
 
 
+# ==================== CREATE TALKING VIDEO PIPELINE ====================
+
+
+@shared_task(bind=True, max_retries=1, default_retry_delay=60, soft_time_limit=3600, time_limit=3900)
+def create_talking_video_task(
+    self,
+    image_prompt: str,
+    script: str,
+    context: Dict[str, Any] = None
+) -> Dict[str, Any]:
+    """
+    Pipeline task: generate a character image then create a talking video from it.
+    Chains ImageAgent → TalkingCharacterAgent in a single Celery task so the PA
+    doesn't need to poll across conversation turns.
+
+    Args:
+        image_prompt: Description of the character image to generate
+        script: Text script for the character to speak
+        context: Additional context (voice, mode, duration, color_grade, etc.)
+    """
+    from core.agent_router import AgentRouter
+    from core.models_unified_system import Agent, AgentExecution
+    import json as _json
+
+    context = context if isinstance(context, dict) else {}
+    execution_start = time.time()
+
+    # Resolve user for media ownership
+    _route_user = None
+    _route_user_id = context.get('user_id')
+    if _route_user_id:
+        try:
+            from django.contrib.auth import get_user_model
+            _route_user = get_user_model().objects.filter(id=_route_user_id).first()
+        except Exception:
+            pass
+
+    # Create execution record
+    agent_obj = Agent.objects.filter(name='TalkingCharacterAgent').first()
+    execution_record = None
+    if agent_obj:
+        _raw_input = {
+            'task': f'Pipeline: image "{image_prompt[:100]}" → talking video',
+            'image_prompt': image_prompt,
+            'script': script[:500],
+            'context': context,
+            'source': 'create_talking_video_pipeline',
+            'celery_task_id': str(self.request.id),
+        }
+        try:
+            input_data = _json.loads(_json.dumps(_raw_input, default=str))
+        except (TypeError, ValueError):
+            input_data = {'task': 'create_talking_video_pipeline',
+                          'celery_task_id': str(self.request.id)}
+
+        execution_record = AgentExecution.objects.create(
+            agent=agent_obj,
+            task=f'Pipeline: image → talking video: {script[:200]}',
+            status='in_progress',
+            input_data=input_data,
+        )
+
+    try:
+        # ── Step 1: Generate character image ──
+        logger.info(
+            f"[create_talking_video] Step 1/2: Generating image — "
+            f"'{image_prompt[:60]}...' (celery_id={self.request.id})"
+        )
+        router = AgentRouter(user=_route_user)
+        img_task_text = f'Generate image: {image_prompt}'
+        img_result = router.route(
+            agent_name='ImageAgent',
+            task=img_task_text,
+            context={
+                'source': 'create_talking_video_pipeline',
+                **context,
+            }
+        )
+
+        if not img_result.success:
+            error_msg = img_result.error or img_result.message or 'ImageAgent returned failure'
+            logger.error(f"[create_talking_video] Image generation failed: {error_msg}")
+            if execution_record:
+                execution_record.status = 'failed'
+                execution_record.error_message = f'Image generation failed: {error_msg}'[:2000]
+                execution_record.execution_time_ms = int((time.time() - execution_start) * 1000)
+                execution_record.completed_at = timezone.now()
+                execution_record.save()
+            return {
+                'success': False,
+                'agent_name': 'ImageAgent → TalkingCharacterAgent',
+                'stage': 'image_generation',
+                'error': error_msg,
+                'execution_time_ms': int((time.time() - execution_start) * 1000),
+            }
+
+        # Extract image URL from result
+        img_data = getattr(img_result, 'data', {}) or {}
+        image_url = None
+        if isinstance(img_data.get('images'), list) and img_data['images']:
+            image_url = img_data['images'][0].get('url')
+        if not image_url:
+            # Fallback: check other common locations
+            image_url = img_data.get('image_url') or img_data.get('url')
+        if not image_url:
+            logger.error(f"[create_talking_video] No image URL in result: {list(img_data.keys())}")
+            if execution_record:
+                execution_record.status = 'failed'
+                execution_record.error_message = 'Image generated but no URL found in result'
+                execution_record.execution_time_ms = int((time.time() - execution_start) * 1000)
+                execution_record.completed_at = timezone.now()
+                execution_record.save()
+            return {
+                'success': False,
+                'agent_name': 'ImageAgent → TalkingCharacterAgent',
+                'stage': 'image_generation',
+                'error': 'Image generated but no URL found in result',
+                'image_data_keys': list(img_data.keys()),
+                'execution_time_ms': int((time.time() - execution_start) * 1000),
+            }
+
+        logger.info(f"[create_talking_video] Step 1 complete — image_url: {image_url[:80]}...")
+
+        # ── Step 2: Generate talking video ──
+        logger.info(
+            f"[create_talking_video] Step 2/2: Generating talking video — "
+            f"script='{script[:60]}...' (celery_id={self.request.id})"
+        )
+        video_context = {
+            **context,
+            'image_url': image_url,
+            'script': script,
+            'source': 'create_talking_video_pipeline',
+        }
+        vid_result = router.route(
+            agent_name='TalkingCharacterAgent',
+            task=f'Generate talking character video: {script}',
+            context=video_context,
+        )
+
+        execution_time_ms = int((time.time() - execution_start) * 1000)
+        vid_data = getattr(vid_result, 'data', {}) or {}
+
+        if execution_record:
+            execution_record.status = 'completed' if vid_result.success else 'failed'
+            execution_record.execution_time_ms = execution_time_ms
+            execution_record.output_data = {
+                'content': vid_result.content[:5000] if vid_result.content else None,
+                'metadata': vid_data,
+                'image_url': image_url,
+                'pipeline': 'ImageAgent → TalkingCharacterAgent',
+            }
+            if not vid_result.success:
+                execution_record.error_message = (
+                    vid_result.error or vid_result.message or 'TalkingCharacterAgent returned failure'
+                )[:2000]
+            execution_record.completed_at = timezone.now()
+            execution_record.save()
+
+        # Push notification
+        if vid_result.success and _route_user_id:
+            try:
+                from core.services.expo_push import send_push_to_user
+                send_push_to_user(
+                    user_id=_route_user_id,
+                    title='Your talking video is ready!',
+                    body=(script[:80] + '...') if len(script) > 80 else script,
+                    route='/media',
+                    object_type='media_complete',
+                    object_id=str(execution_record.id) if execution_record else None,
+                )
+            except Exception as e:
+                logger.warning('[create_talking_video] Push failed: %s', e)
+
+        logger.info(
+            f"[create_talking_video] Completed: success={vid_result.success}, "
+            f"time={execution_time_ms}ms"
+        )
+
+        return {
+            'success': vid_result.success,
+            'agent_name': 'ImageAgent → TalkingCharacterAgent',
+            'content': vid_result.content[:1000] if vid_result.content else None,
+            'image_url': image_url,
+            'final_video_url': vid_data.get('final_video_url'),
+            'execution_time_ms': execution_time_ms,
+            'execution_id': str(execution_record.id) if execution_record else None,
+        }
+
+    except SoftTimeLimitExceeded:
+        execution_time_ms = int((time.time() - execution_start) * 1000)
+        logger.error(f"[create_talking_video] KILLED by soft_time_limit after {execution_time_ms}ms")
+        if execution_record:
+            execution_record.status = 'failed'
+            execution_record.error_message = 'Celery soft_time_limit exceeded (60 min)'
+            execution_record.execution_time_ms = execution_time_ms
+            execution_record.completed_at = timezone.now()
+            execution_record.save()
+        return {
+            'success': False,
+            'agent_name': 'ImageAgent → TalkingCharacterAgent',
+            'error': 'Celery soft_time_limit exceeded (60 min)',
+            'execution_time_ms': execution_time_ms,
+        }
+
+    except Exception as e:
+        execution_time_ms = int((time.time() - execution_start) * 1000)
+        logger.error(f"[create_talking_video] Failed: {e}")
+        if execution_record:
+            execution_record.status = 'failed'
+            execution_record.error_message = str(e) or f'{type(e).__name__}: (no message)'
+            execution_record.execution_time_ms = execution_time_ms
+            execution_record.completed_at = timezone.now()
+            execution_record.save()
+        if self.request.retries < self.max_retries:
+            raise self.retry(exc=e)
+        return {
+            'success': False,
+            'agent_name': 'ImageAgent → TalkingCharacterAgent',
+            'error': str(e),
+            'execution_time_ms': execution_time_ms,
+        }
+
+
 # ==================== SESSION 884: INITIATIVE STAGE EXECUTION ====================
 
 

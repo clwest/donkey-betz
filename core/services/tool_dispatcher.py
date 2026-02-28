@@ -7990,6 +7990,39 @@ RESEARCH DATA:
                 'message': f'Talking character video dispatched (task {celery_task.id}). Use job_status to check progress.',
             }
 
+        if action == 'create_talking_video':
+            # Pipeline: generate character image → talking video in one task
+            from core.tasks import create_talking_video_task
+            image_prompt = payload.get('prompt', '')
+            script = payload.get('script', '')
+            if not image_prompt:
+                return {'error': 'prompt is required (image description for the character)'}
+            if not script:
+                return {'error': 'script is required (what the character should say)'}
+            context = {
+                'voice': payload.get('voice', 'Rachel'),
+                'duration': payload.get('duration', 5),
+                'lipsync_model': payload.get('lipsync_model', 'auto'),
+                'mode': payload.get('mode', 'loop'),
+                'sync_mode': payload.get('sync_mode', 'loop'),
+                'color_grade': payload.get('color_grade'),
+            }
+            if user_id:
+                context['user_id'] = str(user_id)
+            celery_task = create_talking_video_task.apply_async(
+                args=[image_prompt, script, context], queue='agents',
+            )
+            return {
+                'task_id': str(celery_task.id),
+                'mode': 'async',
+                'agent': 'ImageAgent → TalkingCharacterAgent',
+                'message': (
+                    f'Talking video pipeline dispatched (task {celery_task.id}). '
+                    f'Will generate character image then create talking video. '
+                    f'Use job_status to check progress.'
+                ),
+            }
+
         if action == 'generate_audio':
             # Session 1088: Dispatch to Celery async (matches video/image pattern)
             from core.tasks import execute_agent_task

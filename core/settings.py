@@ -1179,6 +1179,7 @@ CELERY_TASK_ROUTES = {
     # Session 1043: Route heavy unrouted tasks off celery-worker (200MB) to prevent OOM
     # execute_agent_task loads AgentRouter (all 92 agents, ~300-500MB)
     'core.tasks.execute_agent_task': {'queue': 'long_running'},
+    'core.tasks.create_talking_video_task': {'queue': 'agents'},
     # Spider tasks instantiate SpiderRegistry + fetch/scrape
     'core.tasks.run_spider_by_category': {'queue': 'long_running'},
     'core.tasks.execute_single_spider': {'queue': 'long_running'},
