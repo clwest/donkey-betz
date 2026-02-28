@@ -315,6 +315,7 @@ BUILTIN_SUITES: dict[str, list[dict]] = {
         {'name': 'config_flags', 'method': 'GET', 'path': '/api/cockpit/config/flags/', 'assert': [{'check': 'status', 'expected': 200}]},
         {'name': 'config_changes', 'method': 'GET', 'path': '/api/cockpit/config/changes/', 'assert': [{'check': 'status', 'expected': 200}]},
         {'name': 'incidents', 'method': 'GET', 'path': '/api/cockpit/incidents/', 'assert': [{'check': 'status', 'expected': 200}]},
+        {'name': 'resolve_node_health', 'method': 'GET', 'path': '/api/cockpit/resolve-node/health/', 'assert': [{'check': 'status', 'expected': 200}, {'check': 'has_key', 'key': 'status'}]},
     ],
 
     'cockpit_incidents_crud': [
