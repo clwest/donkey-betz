@@ -11,6 +11,9 @@ appended directly to the function-calling system prompt.
 
 import logging
 
+from django.db.models import Q
+from django.utils import timezone
+
 logger = logging.getLogger(__name__)
 
 
@@ -20,9 +23,12 @@ class PAToolLearningEnricher:
     def enrich(self, context: dict) -> str:
         from core.models_tool_calls import PAToolInsight
 
+        now = timezone.now()
         insights = (
             PAToolInsight.objects
             .filter(safety_class='approved')
+            .filter(Q(expires_at__isnull=True) | Q(expires_at__gt=now))
+            .exclude(insight_type='consistency_check')
             .order_by('-confidence', '-evidence_count')[:20]
         )
 

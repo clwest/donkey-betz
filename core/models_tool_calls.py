@@ -290,6 +290,7 @@ class PAToolInsight(models.Model):
         ('error_pattern', 'Error Pattern'),
         ('success_pattern', 'Success Pattern'),
         ('follow_up', 'Follow-up Pattern'),
+        ('consistency_check', 'Consistency Check'),
     ]
     SAFETY_CLASSES = [
         ('candidate', 'Candidate'),
@@ -305,6 +306,10 @@ class PAToolInsight(models.Model):
     prompt_snippet = models.TextField(help_text="Ready-to-inject text for PA system prompt")
     evidence_count = models.PositiveIntegerField(default=1)
     confidence = models.FloatField(default=0.0, help_text="0.0–1.0")
+    expires_at = models.DateTimeField(
+        null=True, blank=True, db_index=True,
+        help_text="TTL expiry — insight demoted to candidate after this time"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

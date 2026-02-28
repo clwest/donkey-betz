@@ -1335,6 +1335,7 @@ CELERY_TASK_ROUTES = {
     'core.tasks.check_kpi_alerts': {'queue': 'broadcast'},
     'core.tasks.get_event_bus_stats': {'queue': 'broadcast'},
     'core.tasks.analyze_pa_tool_patterns': {'queue': 'default'},
+    'core.tasks.cleanup_expired_pa_insights': {'queue': 'default'},
 }
 
 # Celery Worker Settings
