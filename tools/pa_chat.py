@@ -10,6 +10,7 @@ Usage:
     python tools/pa_chat.py --tools "Check system health"
     python tools/pa_chat.py --raw "Show me video history"
     python tools/pa_chat.py --conversation-id pa-xxxxx "Follow up message"
+    python tools/pa_chat.py --listen pa-xxxxx          # Watch for user replies from browser
 
 Environment:
     PA_API_TOKEN: Auth token (falls back to .env TEST_AUTH_TOKEN, then Railway lookup)
@@ -177,6 +178,55 @@ def chat(message, conversation_id=None, context=None):
     }
 
 
+# ── Listen mode ────────────────────────────────────────────────────────────
+
+
+def listen(conversation_id, timeout=600, poll_interval=5):
+    """
+    Watch a conversation for new user messages from the browser.
+
+    Polls the conversation endpoint and yields new user messages that
+    arrive with source='web' (i.e. typed in the frontend PA chat).
+    This lets Claude Code pick up replies without the user switching
+    to the terminal.
+
+    Returns: generator of {'content': str, 'timestamp': str, 'source': str}
+    """
+    token = _get_token()
+    base = _get_base_url()
+    url = f"{base}/api/pa/conversations/{conversation_id}/"
+
+    # Get initial message count
+    data, status = _http_request(url, "GET", token=token)
+    if status != 200:
+        yield {"error": f"Failed to load conversation: HTTP {status}"}
+        return
+
+    seen_ids = {m["id"] for m in data.get("messages", [])}
+    start = time.time()
+
+    while time.time() - start < timeout:
+        time.sleep(poll_interval)
+        data, status = _http_request(url, "GET", token=token)
+        if status != 200:
+            continue
+
+        for msg in data.get("messages", []):
+            if msg["id"] in seen_ids:
+                continue
+            seen_ids.add(msg["id"])
+            # Surface user messages from browser and PA replies to them
+            role = msg.get("role", "")
+            source = msg.get("source", "")
+            if role == "user" and source in ("web", "api"):
+                yield msg
+            elif role == "assistant" and source == "pa":
+                # Include PA replies so Claude Code sees the full thread
+                yield msg
+
+    yield {"error": "Listen timed out"}
+
+
 # ── CLI ─────────────────────────────────────────────────────────────────────
 
 
@@ -236,8 +286,37 @@ def main():
     parser.add_argument(
         "--conversation-id", "-c", help="Continue existing conversation"
     )
+    parser.add_argument(
+        "--listen", "-l", metavar="CONV_ID",
+        help="Watch conversation for new user messages from browser (e.g. --listen pa-xxxxx)"
+    )
+    parser.add_argument(
+        "--listen-timeout", type=int, default=600,
+        help="Listen timeout in seconds (default: 600)"
+    )
 
     args = parser.parse_args()
+
+    # ── Listen mode ──
+    if args.listen:
+        sys.stderr.write(f"Listening for browser replies on {args.listen}...\n")
+        sys.stderr.write("(Type a message in the PA chat window — it will appear here)\n\n")
+        for msg in listen(args.listen, timeout=args.listen_timeout):
+            if "error" in msg:
+                sys.stderr.write(f"{msg['error']}\n")
+                break
+            role = msg.get("role", "user")
+            ts = msg.get("timestamp", "")
+            content = msg.get("content", "")
+            if role == "user":
+                print(f"\n[USER @ {ts}]\n{content}")
+            else:
+                # Truncate long PA responses
+                if len(content) > 2000:
+                    content = content[:2000] + "\n... (truncated)"
+                print(f"\n[PA @ {ts}]\n{content}")
+            sys.stdout.flush()
+        sys.exit(0)
 
     if not args.message:
         # Read from stdin if no argument
