@@ -1821,6 +1821,31 @@ PA_TOOL_SCHEMAS = [
             },
         },
     },
+
+    # ── Learning Loop ───────────────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "learning_tool",
+        "description": (
+            "Manage the PA's learned tool-usage insights. Use when the user "
+            "asks about what the PA has learned, wants to review pending "
+            "insights, or wants to approve/reject learned patterns."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list_candidates", "list_approved", "approve", "reject", "stats"],
+                    "description": "Action to perform on tool insights",
+                },
+                "id": {"type": "string", "description": "UUID of insight to approve/reject"},
+                "tool_name": {"type": "string", "description": "Filter by tool name"},
+                "limit": {"type": "integer", "description": "Max items to return (default 10)"},
+            },
+            "required": ["action"],
+        },
+    },
 ]
 
 
@@ -1893,6 +1918,7 @@ TOOL_ENRICHMENT_MAP = {
     'create_brand_video': ['intelligence_enricher'],
     'create_project_from_research': ['domain_context', 'spider_trends'],
     'http_smoke_test': [],
+    'learning_tool': [],
 }
 
 # Reverse map: tool name -> canonical intent name for enrichment pipeline
@@ -1961,4 +1987,5 @@ TOOL_TO_INTENT_MAP = {
     'create_brand_video': 'agent_execution',
     'create_project_from_research': 'agent_execution',
     'http_smoke_test': 'verification',
+    'learning_tool': 'system_health',
 }
