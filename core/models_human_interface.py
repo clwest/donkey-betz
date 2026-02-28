@@ -192,6 +192,11 @@ class HumanAttentionItem(models.Model):
         if decision == self.DECISION_WATCH:
             self.status = self.STATUS_WATCHING
             self.verification_outcome = self.VERIFY_PENDING
+        elif decision == 'reopen':
+            # Re-open deferred items back to pending for continued monitoring
+            self.status = self.STATUS_PENDING
+            self.decision = None
+            self.decided_at = None
         else:
             self.status = self.STATUS_ACTED
 
