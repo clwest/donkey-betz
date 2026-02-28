@@ -239,6 +239,13 @@ class TalkingCharacterAgent(BaseAgent):
                         'voice': voice,
                         'lipsync_model': lipsync_model,
                         'pipeline_status': result.status.value,
+                        'pipeline_steps': {
+                            'tts': {'status': 'ok', 'url': result.audio_url},
+                            'base_video': {'status': 'ok', 'url': result.base_video_url},
+                            'lipsync': {'status': 'ok', 'url': result.final_video_url},
+                            'mode': mode,
+                            'execution_time_ms': execution_time,
+                        },
                     }
 
                     agent_result = AgentResult(
@@ -276,6 +283,16 @@ class TalkingCharacterAgent(BaseAgent):
                     return AgentResult(
                         success=False,
                         error=f"Pipeline failed at {result.failed_stage}: {result.error_message}",
+                        data={
+                            'pipeline_steps': {
+                                'failed_stage': result.failed_stage,
+                                'error': result.error_message,
+                                'tts': {'status': 'ok' if result.audio_url else 'skipped', 'url': result.audio_url},
+                                'base_video': {'status': 'ok' if result.base_video_url else 'skipped', 'url': result.base_video_url},
+                                'mode': mode,
+                                'execution_time_ms': execution_time,
+                            },
+                        },
                         agent_name=self.name,
                         execution_time_ms=execution_time,
                     )
