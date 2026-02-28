@@ -74,6 +74,10 @@ class HeartMonitorService:
             'name': 'Celery (Task Workers)',
             'description': 'Background task execution - 150+ scheduled tasks',
         },
+        'resolve_node': {
+            'name': 'Resolve Node (DaVinci)',
+            'description': 'DaVinci Resolve render server for video processing',
+        },
     }
 
     def __init__(self):
@@ -137,6 +141,7 @@ class HeartMonitorService:
             'skin': self.check_skin,
             'memory': self.check_memory,
             'celery': self.check_celery,
+            'resolve_node': self.check_resolve_node,
         }
 
         for component_id, check_method in check_methods.items():
@@ -505,6 +510,51 @@ class HeartMonitorService:
                 'response_time_ms': int((time.time() - start) * 1000),
                 'error': str(e),
                 'details': {},
+            }
+
+    def check_resolve_node(self) -> Dict:
+        """Check DaVinci Resolve render node health."""
+        start = time.time()
+        try:
+            import json as _json
+            import urllib.request
+
+            resolve_url = os.environ.get('RESOLVE_NODE_URL', 'http://localhost:5001')
+            req = urllib.request.Request(f'{resolve_url}/health', method='GET')
+            req.add_header('Accept', 'application/json')
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                body = _json.loads(resp.read())
+
+            queue_size = body.get('queue_size', 0)
+            active_jobs = body.get('active_jobs', 0)
+            demo_mode = body.get('demo_mode', False)
+            response_time_ms = int((time.time() - start) * 1000)
+
+            return {
+                'name': self.COMPONENTS['resolve_node']['name'],
+                'status': 'healthy',
+                'is_healthy': True,
+                'response_time_ms': response_time_ms,
+                'details': {
+                    'queue_size': queue_size,
+                    'active_jobs': active_jobs,
+                    'demo_mode': demo_mode,
+                    'url': resolve_url,
+                },
+            }
+        except Exception as e:
+            response_time_ms = int((time.time() - start) * 1000)
+            # Resolve node being unreachable is degraded, not critical —
+            # the platform functions without it, just can't render videos
+            return {
+                'name': self.COMPONENTS['resolve_node']['name'],
+                'status': 'degraded',
+                'is_healthy': False,
+                'response_time_ms': response_time_ms,
+                'error': str(e)[:200],
+                'details': {
+                    'url': os.environ.get('RESOLVE_NODE_URL', 'http://localhost:5001'),
+                },
             }
 
     def _update_component_status(self, component_id: str, result: Dict):

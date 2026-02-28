@@ -1312,6 +1312,28 @@ def cockpit_ops_overview(request):
     except Exception:
         pass
 
+    # Resolve Node
+    try:
+        import urllib.request
+        resolve_url = os.environ.get('RESOLVE_NODE_URL', 'http://localhost:5001')
+        req = urllib.request.Request(f'{resolve_url}/health', method='GET')
+        req.add_header('Accept', 'application/json')
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            import json as _json
+            body = _json.loads(resp.read())
+            demo = body.get('demo_mode', False)
+            detail = 'Demo mode' if demo else f'Queue: {body.get("queue_size", 0)}'
+            checks.append({
+                'key': 'resolve_node', 'label': 'Resolve Node',
+                'tone': 'green', 'status': 'ok', 'detail': detail,
+            })
+    except Exception as e:
+        err_detail = str(e)[:80]
+        checks.append({
+            'key': 'resolve_node', 'label': 'Resolve Node',
+            'tone': 'amber', 'status': 'unreachable', 'detail': err_detail,
+        })
+
     # Derive overall tone
     tones = [c['tone'] for c in checks]
     if 'red' in tones:
@@ -1390,6 +1412,51 @@ def cockpit_ops_overview(request):
         logger.debug("Ops recent_failed_runs error: %s", e)
 
     return JsonResponse(result)
+
+
+@csrf_exempt
+@require_http_methods(['GET'])
+def cockpit_resolve_node_health(request):
+    """
+    GET /api/cockpit/resolve-node/health/
+    Proxy health check for the DaVinci Resolve render node.
+    Returns the node's health response with timing and last-checked metadata.
+    """
+    if not (request.user and request.user.is_authenticated):
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    import time
+    import urllib.request
+
+    resolve_url = os.environ.get('RESOLVE_NODE_URL', 'http://localhost:5001')
+    start = time.time()
+
+    try:
+        req = urllib.request.Request(f'{resolve_url}/health', method='GET')
+        req.add_header('Accept', 'application/json')
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            body = json.loads(resp.read())
+
+        response_time_ms = int((time.time() - start) * 1000)
+        return JsonResponse({
+            'status': 'ok',
+            'node_status': body.get('status', 'unknown'),
+            'queue_size': body.get('queue_size', 0),
+            'active_jobs': body.get('active_jobs', 0),
+            'demo_mode': body.get('demo_mode', False),
+            'response_time_ms': response_time_ms,
+            'resolve_url': resolve_url,
+            'checked_at': datetime.now().isoformat(),
+        })
+    except Exception as e:
+        response_time_ms = int((time.time() - start) * 1000)
+        return JsonResponse({
+            'status': 'unreachable',
+            'error': str(e)[:200],
+            'response_time_ms': response_time_ms,
+            'resolve_url': resolve_url,
+            'checked_at': datetime.now().isoformat(),
+        })
 
 
 # ─── Focus Cockpit: Library ────────────────────────────────────────────────────
