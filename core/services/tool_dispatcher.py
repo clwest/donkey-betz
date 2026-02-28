@@ -1476,6 +1476,7 @@ class ToolDispatcher:
                         'image_type': obj.image_type,
                         'prompt': (obj.prompt or '')[:200],
                         'file_path': obj.file_path,
+                        'url': obj.get_full_url(),
                         'created_at': obj.created_at.isoformat() if obj.created_at else None,
                     })
 
@@ -1523,7 +1524,8 @@ class ToolDispatcher:
             for model, mtype, extra_fields in [
                 (ImageHistory, 'image', lambda o: {
                     'filename': o.filename, 'image_type': o.image_type,
-                    'file_path': o.file_path, 'model_used': o.model_used,
+                    'file_path': o.file_path, 'url': o.get_full_url(),
+                    'model_used': o.model_used,
                     'style': o.style, 'prompt': o.prompt or '',
                 }),
                 (VideoHistory, 'video', lambda o: {
@@ -1535,7 +1537,9 @@ class ToolDispatcher:
                 }),
                 (AudioHistory, 'audio', lambda o: {
                     'filename': o.filename, 'audio_type': o.audio_type,
-                    'file_path': o.file_path, 'voice_id': o.voice_id,
+                    'file_path': o.file_path,
+                    'url': o.get_full_url() if hasattr(o, 'get_full_url') else o.file_path,
+                    'voice_id': o.voice_id,
                     'voice_name': o.voice_name or '', 'prompt': o.prompt or '',
                 }),
             ]:
