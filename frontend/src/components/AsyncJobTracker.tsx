@@ -1,10 +1,11 @@
 /**
  * Session 1075: Inline async job tracker for PA chat.
  * Polls Celery task status and shows progress for image generation, etc.
+ * When complete, shows clickable link to the generated media.
  */
 
 import { useState, useEffect, useRef } from 'react'
-import { Loader2, CheckCircle, XCircle } from 'lucide-react'
+import { Loader2, CheckCircle, XCircle, ExternalLink } from 'lucide-react'
 import { getJobStatus } from '@/lib/cockpitApi'
 
 interface AsyncJob {
@@ -12,6 +13,7 @@ interface AsyncJob {
   agent: string
   status: 'pending' | 'started' | 'success' | 'failed'
   duration_ms?: number
+  image_url?: string
 }
 
 interface Props {
@@ -23,6 +25,10 @@ const AGENT_LABELS: Record<string, string> = {
   ContentWriterAgent: 'Writing content',
   ResearchAgent: 'Researching',
   LegalDocDrafterAgent: 'Drafting document',
+  TalkingCharacterAgent: 'Creating talking video',
+  VideoAgent: 'Generating video',
+  AudioAgent: 'Generating audio',
+  ResolveAgent: 'Color grading video',
 }
 
 export default function AsyncJobTracker({ jobs }: Props) {
@@ -40,9 +46,16 @@ export default function AsyncJobTracker({ jobs }: Props) {
               : data.status === 'processing' ? 'started'
               : 'pending'
 
+            // Extract media URL from completed job
+            const mediaUrl = data.image_url || data.video_url || data.final_video_url || data.audio_url || data.file_url
+
             setTrackedJobs((prev) =>
               prev.map((j) =>
-                j.task_id !== job.task_id ? j : { ...j, status: newStatus }
+                j.task_id !== job.task_id ? j : {
+                  ...j,
+                  status: newStatus,
+                  ...(mediaUrl ? { image_url: mediaUrl } : {}),
+                }
               )
             )
 
@@ -95,7 +108,18 @@ export default function AsyncJobTracker({ jobs }: Props) {
             <ElapsedTimer />
           )}
 
-          {job.status === 'success' && (
+          {job.status === 'success' && job.image_url && (
+            <a
+              href={job.image_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-xs text-green-400 ml-auto hover:text-green-300 transition-colors"
+            >
+              View <ExternalLink size={12} />
+            </a>
+          )}
+
+          {job.status === 'success' && !job.image_url && (
             <span className="text-xs text-green-400 ml-auto">Done</span>
           )}
           {job.status === 'failed' && (

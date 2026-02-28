@@ -1056,9 +1056,14 @@ class ToolDispatcher:
         offset = max(payload.get('offset', 0), 0)
 
         # Build base queryset scoped to user
+        # Session 1075: Include user-owned AND unowned (user=NULL) deliverables.
+        # Agents in Celery create deliverables with user=NULL (or the real user
+        # after the _save_to_deliverable fix). Include both so PA can always
+        # find agent-created content.
+        from django.db.models import Q
         base_qs = Deliverable.objects.all()
         if user_id:
-            base_qs = base_qs.filter(user_id=user_id)
+            base_qs = base_qs.filter(Q(user_id=user_id) | Q(user__isnull=True))
 
         def _apply_common_filters(qs):
             """Apply category/agent/type/saved filters."""
@@ -3026,9 +3031,11 @@ class ToolDispatcher:
             return self._handle_blog_query(action, limit, category, payload, user_id)
 
         # Build base queryset - filter by user if available
+        # Session 1075: Include unowned deliverables (same fix as deliverables_tool)
+        from django.db.models import Q as _Qcr
         base_qs = Deliverable.objects.all()
         if user_id:
-            base_qs = base_qs.filter(user_id=user_id)
+            base_qs = base_qs.filter(_Qcr(user_id=user_id) | _Qcr(user__isnull=True))
 
         if action == 'list':
             # List content in 'ready' status awaiting review
