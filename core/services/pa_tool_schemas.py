@@ -1240,7 +1240,18 @@ PA_TOOL_SCHEMAS = [
                 "ratio": {"type": "string", "enum": ["1920:1080", "1080:1920", "1280:720", "720:1280"], "description": "Video aspect ratio"},
                 "image_url": {"type": "string", "description": "URL of character image to animate (for generate_talking_video)"},
                 "script": {"type": "string", "description": "Text script for the character to speak (for generate_talking_video)"},
-                "voice": {"type": "string", "description": "Voice name for TTS"},
+                "voice": {
+                    "type": "string",
+                    "enum": [
+                        "Rachel", "Drew", "Clyde", "Paul", "Aria", "Domi",
+                        "Dave", "Antoni", "Sarah", "Josh", "Bella", "Charlotte",
+                    ],
+                    "description": (
+                        "ElevenLabs voice for TTS. "
+                        "Female: Rachel (warm), Aria (professional), Domi (energetic), Sarah (soft), Bella (storyteller), Charlotte (clear). "
+                        "Male: Drew (clear), Clyde (deep/authoritative), Paul (friendly), Dave (casual), Antoni (narrator), Josh (upbeat)."
+                    ),
+                },
                 "mode": {"type": "string", "enum": ["loop", "multi_clip"], "description": "Video mode for generate_talking_video: loop (fast/cheap, visible seams) or multi_clip (unique clips, no loops, 3-6x cost)"},
                 "sync_mode": {"type": "string", "enum": ["loop", "cut_off", "bounce"], "description": "Lip sync mode for generate_talking_video"},
                 "lipsync_model": {"type": "string", "enum": ["auto", "latentsync", "sync_labs"], "description": "Lip sync model for generate_talking_video"},
