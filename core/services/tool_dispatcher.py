@@ -5283,9 +5283,59 @@ class ToolDispatcher:
                 'hours_back': hours,
             }
 
+        elif action == 'detail':
+            exec_id = payload.get('id')
+            if not exec_id:
+                # No ID — return the most recent execution (optionally filtered by agent)
+                qs = AgentExecution.objects.all()
+                if agent_name:
+                    qs = qs.filter(agent__name__icontains=agent_name)
+                execution = qs.order_by('-created_at').first()
+                if not execution:
+                    return {'action': 'detail', 'error': 'No executions found'}
+            else:
+                execution = AgentExecution.objects.filter(id=exec_id).first()
+                if not execution:
+                    return {'action': 'detail', 'error': f'Execution {exec_id} not found'}
+
+            output = execution.output_data or {}
+            # Truncate very large output to avoid token explosion
+            import json
+            output_str = json.dumps(output, default=str)
+            if len(output_str) > 8000:
+                # Keep message/error/summary and truncate data
+                truncated = {
+                    'message': output.get('message', '')[:3000],
+                    'error': output.get('error'),
+                    'data': {k: v for k, v in (output.get('data') or {}).items()
+                             if k in ('info_count', 'warning_count', 'critical_count',
+                                      'items_count', 'execution_time', 'pipeline_steps',
+                                      'final_video_url', 'type', 'summary')},
+                    'result_preview': output.get('result_preview', '')[:2000],
+                    'tool_calls': output.get('tool_calls', [])[:5],
+                    '_truncated': True,
+                    '_full_size_bytes': len(output_str),
+                }
+            else:
+                truncated = output
+
+            return {
+                'action': 'detail',
+                'id': str(execution.id),
+                'agent_name': execution.agent.name if execution.agent else None,
+                'task': execution.task,
+                'status': execution.status,
+                'error_message': execution.error_message,
+                'execution_time_ms': execution.execution_time_ms,
+                'created_at': execution.created_at,
+                'completed_at': getattr(execution, 'completed_at', None),
+                'output_data': truncated,
+                'input_data_keys': list((execution.input_data or {}).keys()),
+            }
+
         else:
             raise ValueError(
-                f"Unknown action: {action}. Valid actions: recent, by_agent, stats, failures"
+                f"Unknown action: {action}. Valid actions: recent, by_agent, stats, failures, detail"
             )
 
     def _handle_learning_patterns(

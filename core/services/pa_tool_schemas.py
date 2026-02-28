@@ -567,19 +567,21 @@ PA_TOOL_SCHEMAS = [
         "name": "execution_history_tool",
         "description": (
             "View agent execution history: recent runs, success/failure rates, "
-            "execution details. Use when the user asks about what agents have done, "
-            "execution logs, agent activity, or run history."
+            "execution details, and full output data. Use when the user asks about "
+            "what agents have done, execution logs, agent activity, run history, "
+            "or wants to see the full output/report/result from a specific agent run. "
+            "Use action=detail with id or agent_name to get full output_data."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["recent", "by_agent", "stats", "failures"],
-                    "description": "Execution history action: recent (latest runs), by_agent (filter by agent), stats (aggregates), failures (recent errors)",
+                    "enum": ["recent", "by_agent", "stats", "failures", "detail"],
+                    "description": "Execution history action: recent (latest runs), by_agent (filter by agent), stats (aggregates), failures (recent errors), detail (full output_data for a specific execution by id)",
                 },
                 "agent_name": {"type": "string", "description": "Filter by agent name"},
-                "id": {"type": "string", "description": "UUID of execution for details"},
+                "id": {"type": "string", "description": "UUID of execution for detail action"},
                 "status": {"type": "string", "description": "Filter by status (completed, failed)"},
                 "limit": {"type": "integer", "description": "Max items (default 10)"},
             },
