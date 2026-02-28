@@ -11,12 +11,23 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { assistantApi } from '@/lib/api'
 
+interface AsyncJob {
+  task_id: string
+  agent: string
+  status: 'pending' | 'started' | 'success' | 'failed'
+  started_at?: string
+  finished_at?: string
+  duration_ms?: number
+  image_url?: string
+}
+
 interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
   timestamp: string // ISO string for persistence
   tools_used?: string[]
+  async_jobs?: AsyncJob[]
   feedback?: 'positive' | 'negative'
   source?: string
 }

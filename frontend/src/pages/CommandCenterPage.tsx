@@ -18,6 +18,7 @@ import { useUnifiedStore } from '@/stores/unifiedStore'
 import { usePAStore } from '@/stores/paStore'
 import PAConversationSidebar from '@/components/PAConversationSidebar'
 import { ChatMarkdown } from '@/components/ChatMarkdown'
+import AsyncJobTracker from '@/components/AsyncJobTracker'
 import {
   Send, Mic, MicOff, Loader2, Bot, User, Copy, RefreshCw, Activity,
   ThumbsUp, ThumbsDown, Trash2, Sparkles, AlertCircle,
@@ -42,12 +43,23 @@ interface VoiceSettings {
   autoPlayTTS: boolean
 }
 
+interface AsyncJob {
+  task_id: string
+  agent: string
+  status: 'pending' | 'started' | 'success' | 'failed'
+  started_at?: string
+  finished_at?: string
+  duration_ms?: number
+  image_url?: string
+}
+
 interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
   timestamp: Date
   tools_used?: string[]
+  async_jobs?: AsyncJob[]
   feedback?: 'positive' | 'negative'
   source?: string
 }
@@ -814,8 +826,23 @@ export default function CommandCenterPage() {
             setIsPolling(false)
 
             const content = status.data.content || 'No response'
-            const toolNames = (status.data.tool_runs || []).map((r) => r.tool)
-            addPAMessage({ role: 'assistant', content, tools_used: toolNames, source: 'pa' })
+            const toolRuns = status.data.tool_runs || []
+            const toolNames = toolRuns.map((r: Record<string, unknown>) => r.tool as string)
+            // Extract async jobs from tool results (image generation, etc.)
+            const asyncJobs: AsyncJob[] = toolRuns
+              .filter((r: Record<string, unknown>) => {
+                const result = r.result as Record<string, unknown> | undefined
+                return result?.mode === 'async' && result?.task_id
+              })
+              .map((r: Record<string, unknown>) => {
+                const result = r.result as Record<string, unknown>
+                return {
+                  task_id: result.task_id as string,
+                  agent: (result.agent as string) || 'unknown',
+                  status: 'pending' as const,
+                }
+              })
+            addPAMessage({ role: 'assistant', content, tools_used: toolNames, async_jobs: asyncJobs.length > 0 ? asyncJobs : undefined, source: 'pa' })
 
             if (status.data.conversation_id && !activeConversationId) {
               setActiveConversationId(status.data.conversation_id)
@@ -1434,6 +1461,9 @@ export default function CommandCenterPage() {
                             </span>
                           ))}
                         </div>
+                      )}
+                      {message.async_jobs && message.async_jobs.length > 0 && (
+                        <AsyncJobTracker jobs={message.async_jobs} />
                       )}
                     </div>
 
