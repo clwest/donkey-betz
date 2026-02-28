@@ -357,6 +357,11 @@ and only important ones should be promoted. Don't treat this as a crisis."""
                     },
                 )
 
+                # Escalate warning/critical items to HumanAttentionItem queue
+                escalation_stats = self._escalate_to_attention_items(items)
+                if escalation_stats:
+                    result.data['escalation'] = escalation_stats
+
                 # === Session 663: Learning Infrastructure Integration ===
                 # Record learning outcome for XP and pattern detection
                 self._record_learning_outcome(
@@ -584,3 +589,105 @@ and only important ones should be promoted. Don't treat this as a crisis."""
         except Exception as e:
             logger.error(f"Error in get_item_details: {e}")
             return {'success': False, 'error': str(e)}
+
+    # ── Key spiders whose staleness warrants escalation ──────────────────
+    _KEY_SPIDERS = frozenset({
+        'theodds', 'polygon_finance', 'newsapi', 'etherscan_api', 'coingecko',
+    })
+
+    def _escalate_to_attention_items(self, items) -> Dict[str, Any]:
+        """
+        Upsert HumanAttentionItems for warning/critical findings.
+
+        Uses deterministic source_id (sia:<item.id>) so repeated SIA runs
+        update existing items instead of creating duplicates.  Items that
+        were previously escalated but are no longer in the findings list
+        get auto-resolved.
+        """
+        try:
+            from core.services.human_interface_service import get_human_interface_service
+
+            user = self.user
+            if not user:
+                logger.debug("SIA escalation skipped — no user on agent")
+                return {}
+
+            service = get_human_interface_service(user)
+
+            created, updated, resolved = 0, 0, 0
+            item_ids_seen = []
+
+            for item in items:
+                if item.severity not in ('critical', 'warning'):
+                    continue
+
+                source_id = f"sia:{item.id}"
+                item_ids_seen.append(source_id)
+
+                urgency = 'critical' if item.severity == 'critical' else 'medium'
+                # Promote key-spider staleness to high
+                if 'stale' in item.category.lower():
+                    for spider in self._KEY_SPIDERS:
+                        if spider in item.title.lower():
+                            urgency = 'high'
+                            break
+
+                result = service.create_attention_item(
+                    source_type='system_intelligence',
+                    source_id=source_id,
+                    source_agent=self.name,
+                    item_type='alert',
+                    title=f"[SIA] {item.title[:180]}",
+                    summary=item.summary or item.explanation or item.title,
+                    urgency=urgency,
+                    payload={
+                        'sia_category': item.category,
+                        'sia_section': item.section,
+                        'sia_priority': item.priority,
+                        'recommended_action': item.recommended_action,
+                        'action_url': item.action_url,
+                        'location': item.location,
+                    },
+                    deduplicate=True,
+                )
+
+                if result.get('deduplicated'):
+                    updated += 1
+                else:
+                    created += 1
+
+            # Auto-resolve previously escalated items that are no longer flagged
+            from core.models_human_interface import HumanAttentionItem
+
+            stale_items = HumanAttentionItem.objects.filter(
+                user=user,
+                source_type='system_intelligence',
+                source_agent=self.name,
+                status__in=['pending', 'viewed'],
+            ).exclude(
+                source_id__in=item_ids_seen,
+            )
+
+            for stale in stale_items:
+                stale.status = 'acted'
+                stale.decision = 'approve'
+                stale.decision_feedback = 'Auto-resolved: issue no longer detected by SIA'
+                stale.save(update_fields=['status', 'decision', 'decision_feedback'])
+                resolved += 1
+
+            if created or updated or resolved:
+                logger.info(
+                    f"[SIA] Escalation: {created} created, {updated} deduped, "
+                    f"{resolved} auto-resolved"
+                )
+
+            return {
+                'created': created,
+                'updated': updated,
+                'resolved': resolved,
+                'total_escalated': created + updated,
+            }
+
+        except Exception as e:
+            logger.warning(f"[SIA] Escalation failed: {e}")
+            return {'error': str(e)}
