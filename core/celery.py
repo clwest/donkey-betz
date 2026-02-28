@@ -2457,6 +2457,13 @@ app.conf.beat_schedule = {
             'expires': 21600,
         },
     },
+    'cleanup-expired-pa-insights': {
+        'task': 'core.tasks.cleanup_expired_pa_insights',
+        'schedule': crontab(hour=3, minute=0),  # Daily at 3 AM
+        'options': {
+            'expires': 86400,
+        },
+    },
 }
 
 # Task routing configuration

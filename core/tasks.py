@@ -36026,11 +36026,51 @@ def analyze_pa_tool_patterns():
             created += c
             updated += u
 
+    # --- 5. consistency_check: same tool+params → contradictory outcomes ---
+    tool_param_all = (
+        records.values('tool_name', 'parameters')
+        .annotate(
+            total=Count('id'),
+            successes=Count('id', filter=Q(success=True)),
+            failures=Count('id', filter=Q(success=False)),
+        )
+        .filter(total__gte=3)
+    )
+    for tpa in tool_param_all:
+        s, f = tpa['successes'], tpa['failures']
+        if s > 0 and f > 0:
+            rate = s / tpa['total']
+            if 0.30 <= rate <= 0.70:
+                params = tpa['parameters']
+                if not params:
+                    continue
+                pattern = {'params': params, 'success_rate': round(rate, 2)}
+                snippet = (
+                    f"Inconsistent results ({rate:.0%} success over {tpa['total']} calls) "
+                    f"with params: {_summarize_params(params)}. Needs investigation."
+                )
+                c, u = _upsert_insight(
+                    tpa['tool_name'], 'consistency_check', pattern, snippet, confidence=rate,
+                )
+                created += c
+                updated += u
+
     logger.info(
         f"[PA-LEARNING] Analyzed {total} records: "
         f"{created} new insights, {updated} updated"
     )
     return {'status': 'ok', 'records': total, 'created': created, 'updated': updated}
+
+
+def _ttl_days(insight_type):
+    """Return TTL in days by insight type."""
+    return {
+        'error_pattern': 14,
+        'param_correction': 30,
+        'success_pattern': 60,
+        'follow_up': 90,
+        'consistency_check': 7,
+    }.get(insight_type, 30)
 
 
 def _upsert_insight(tool_name, insight_type, pattern, snippet, confidence=None):
@@ -36045,14 +36085,18 @@ def _upsert_insight(tool_name, insight_type, pattern, snippet, confidence=None):
         pattern=pattern,
     ).first()
 
+    ttl = timedelta(days=_ttl_days(insight_type))
+
     if existing:
         existing.evidence_count = F('evidence_count') + 1
-        update_fields = ['evidence_count', 'updated_at']
+        existing.expires_at = timezone.now() + ttl  # refresh TTL on evidence bump
+        update_fields = ['evidence_count', 'expires_at', 'updated_at']
         if confidence is not None:
             existing.confidence = confidence
             update_fields.append('confidence')
         # Auto-promote: evidence >= 5 and confidence >= 0.8
-        if confidence and confidence >= 0.8:
+        # Block auto-promotion for consistency_check (human review only)
+        if confidence and confidence >= 0.8 and insight_type != 'consistency_check':
             existing.refresh_from_db()
             if existing.evidence_count >= 4 and existing.safety_class == 'candidate':
                 existing.safety_class = 'approved'
@@ -36068,6 +36112,7 @@ def _upsert_insight(tool_name, insight_type, pattern, snippet, confidence=None):
             prompt_snippet=snippet,
             evidence_count=1,
             confidence=confidence or 0.0,
+            expires_at=timezone.now() + ttl,
         )
         return (1, 0)
 
@@ -36090,3 +36135,20 @@ def _summarize_diff(bad: dict, good: dict) -> str:
         if bv != gv:
             changes.append(f"{k}: '{gv}' (not '{bv}')")
     return "; ".join(changes[:3]) if changes else "different parameters"
+
+
+@shared_task(ignore_result=True)
+def cleanup_expired_pa_insights():
+    """Demote expired approved insights back to candidate (daily 3 AM)."""
+    from core.models_tool_calls import PAToolInsight
+
+    now = timezone.now()
+    demoted = PAToolInsight.objects.filter(
+        safety_class='approved',
+        expires_at__isnull=False,
+        expires_at__lte=now,
+    ).update(safety_class='candidate')
+
+    if demoted:
+        logger.info(f"[PA-LEARNING] Demoted {demoted} expired insights → candidate")
+    return {'demoted': demoted}

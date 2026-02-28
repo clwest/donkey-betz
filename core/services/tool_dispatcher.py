@@ -8567,25 +8567,33 @@ RESEARCH DATA:
         limit = min(payload.get('limit', 10), 50)
         filter_tool = payload.get('tool_name')
 
+        _fields = (
+            'id', 'tool_name', 'insight_type', 'prompt_snippet',
+            'evidence_count', 'confidence', 'expires_at', 'created_at',
+        )
+
         if action == 'list_candidates':
             qs = PAToolInsight.objects.filter(safety_class='candidate')
             if filter_tool:
                 qs = qs.filter(tool_name=filter_tool)
-            items = list(qs.order_by('-evidence_count', '-confidence')[:limit].values(
-                'id', 'tool_name', 'insight_type', 'prompt_snippet',
-                'evidence_count', 'confidence', 'created_at',
-            ))
+            items = list(qs.order_by('-evidence_count', '-confidence')[:limit].values(*_fields))
             return {'candidates': items, 'count': len(items)}
 
         elif action == 'list_approved':
             qs = PAToolInsight.objects.filter(safety_class='approved')
             if filter_tool:
                 qs = qs.filter(tool_name=filter_tool)
-            items = list(qs.order_by('-confidence', '-evidence_count')[:limit].values(
-                'id', 'tool_name', 'insight_type', 'prompt_snippet',
-                'evidence_count', 'confidence', 'created_at',
-            ))
+            items = list(qs.order_by('-confidence', '-evidence_count')[:limit].values(*_fields))
             return {'approved': items, 'count': len(items)}
+
+        elif action == 'list_expired':
+            from django.utils import timezone as _tz
+            now = _tz.now()
+            qs = PAToolInsight.objects.filter(expires_at__isnull=False, expires_at__lte=now)
+            if filter_tool:
+                qs = qs.filter(tool_name=filter_tool)
+            items = list(qs.order_by('-expires_at')[:limit].values(*_fields, 'safety_class'))
+            return {'expired': items, 'count': len(items)}
 
         elif action == 'approve':
             insight_id = payload.get('id')
