@@ -24,6 +24,7 @@ WORKDIR /app
 
 # Install system dependencies
 # Session 918: Added WeasyPrint dependencies (cairo, pango, gdk-pixbuf)
+# Session 1075: Added ffmpeg for multi-clip video concatenation
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
@@ -32,6 +33,7 @@ RUN apt-get update && apt-get install -y \
     redis-tools \
     git \
     vim \
+    ffmpeg \
     # WeasyPrint dependencies
     libcairo2 \
     libpango-1.0-0 \
@@ -139,12 +141,14 @@ FROM python:3.11-slim as production
 # Install only runtime dependencies
 # Session 798: Added git for workspace cloning feature
 # Session 918: Added WeasyPrint dependencies for PDF export
+# Session 1075: Added ffmpeg for multi-clip video concatenation
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     postgresql-client \
     redis-tools \
     curl \
     git \
+    ffmpeg \
     # WeasyPrint runtime dependencies
     libcairo2 \
     libpango-1.0-0 \

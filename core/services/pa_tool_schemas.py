@@ -1255,7 +1255,20 @@ PA_TOOL_SCHEMAS = [
                 "mode": {"type": "string", "enum": ["loop", "multi_clip"], "description": "Video mode for generate_talking_video: loop (fast/cheap, visible seams) or multi_clip (unique clips, no loops, 3-6x cost)"},
                 "sync_mode": {"type": "string", "enum": ["loop", "cut_off", "bounce"], "description": "Lip sync mode for generate_talking_video"},
                 "lipsync_model": {"type": "string", "enum": ["auto", "latentsync", "sync_labs"], "description": "Lip sync model for generate_talking_video"},
-                "color_grade": {"type": "string", "enum": ["cinematic_warm", "cinematic_cool", "cyberpunk_neon", "vintage_film", "moody_dark", "natural_vibrant", "sunset_golden", "nordic_cool", "pastel_soft"], "description": "DaVinci Resolve color grade preset (optional post-processing)"},
+                "color_grade": {
+                    "type": "string",
+                    "enum": [
+                        "cinematic_warm", "cinematic_cool", "cyberpunk_neon",
+                        "vintage_film", "moody_dark", "natural_vibrant",
+                        "sunset_golden", "nordic_cool", "pastel_soft",
+                    ],
+                    "description": (
+                        "DaVinci Resolve color grade applied after lip sync. "
+                        "Suggest to the user when generating talking videos — adds professional polish. "
+                        "cinematic_warm/cool for professional, cyberpunk_neon for tech/futuristic, "
+                        "vintage_film for retro, moody_dark for dramatic."
+                    ),
+                },
                 "job_id": {"type": "string", "description": "Job/task ID for status check"},
                 "limit": {"type": "integer", "description": "Max items for list_jobs (default 10)"},
             },
