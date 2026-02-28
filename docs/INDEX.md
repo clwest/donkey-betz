@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-02-27 22:31
+**Generated:** 2026-02-27 22:56
 **Current Session:** 1075
 **Total Documentation:** 1802 files | 619,064 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,205 |
+| Total cross-references | 2,204 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -211,7 +211,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 355 | 2026-02-27 21:41 |
+| INDEX.md | docs | 355 | 2026-02-27 22:34 |
 | personal-assistant.md | topics | 132 | 2026-02-27 15:55 |
 | ADR-0002-moderate-dangerous-action-policy.md | decisions | 63 | 2026-02-25 13:27 |
 | ADR-0001-execution-per-run-ephemeral-containers.md | decisions | 44 | 2026-02-25 13:27 |
