@@ -1768,6 +1768,14 @@ def create_talking_video_task(
             f"'{image_prompt[:60]}...' (celery_id={self.request.id})"
         )
         router = AgentRouter(user=_route_user)
+        # Enhance image prompt for talking-video suitability (front-facing portrait for lip sync)
+        _lp = image_prompt.lower()
+        if not any(kw in _lp for kw in ('portrait', 'front-facing', 'front facing', 'headshot', 'face closeup')):
+            image_prompt = (
+                image_prompt.rstrip('. ')
+                + ', front-facing portrait, centered composition, clear visible mouth and face,'
+                ' studio lighting, suitable for animation and lip sync'
+            )
         img_task_text = f'Generate image: {image_prompt}'
         img_result = router.route(
             agent_name='ImageAgent',

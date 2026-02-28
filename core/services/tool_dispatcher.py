@@ -7972,10 +7972,10 @@ RESEARCH DATA:
                 'image_url': payload.get('image_url', ''),
                 'script': raw_script,
                 'voice': payload.get('voice', 'Rachel'),
-                'duration': payload.get('duration', 5),
+                'duration': payload.get('duration', 10),
                 'lipsync_model': payload.get('lipsync_model', 'auto'),
-                'mode': payload.get('mode', 'loop'),
-                'sync_mode': payload.get('sync_mode', 'loop'),
+                'mode': payload.get('mode', 'multi_clip'),
+                'sync_mode': payload.get('sync_mode', 'cut_off'),
                 'color_grade': payload.get('color_grade'),
             }
             if user_id:
@@ -8001,10 +8001,10 @@ RESEARCH DATA:
                 return {'error': 'script is required (what the character should say)'}
             context = {
                 'voice': payload.get('voice', 'Rachel'),
-                'duration': payload.get('duration', 5),
+                'duration': payload.get('duration', 10),
                 'lipsync_model': payload.get('lipsync_model', 'auto'),
-                'mode': payload.get('mode', 'loop'),
-                'sync_mode': payload.get('sync_mode', 'loop'),
+                'mode': payload.get('mode', 'multi_clip'),
+                'sync_mode': payload.get('sync_mode', 'cut_off'),
                 'color_grade': payload.get('color_grade'),
             }
             if user_id:
