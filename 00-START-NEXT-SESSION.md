@@ -134,6 +134,12 @@
 - All fields showed as undefined/blank when clicking a run in the Runs tab
 - Fixed: `getRunDetail` now unwraps `data.data.execution` to flat `RunDetail`
 
+### Media Tool URL Fix
+- `media_tool` list and detail actions returned raw `file_path` (e.g., `media/generated_images/...`)
+- On Railway, images are stored in Cloudinary — `file_path` is NOT a viewable URL
+- PA gave users blank links because it had no actual URL to share
+- Fixed: added `url` field using `obj.get_full_url()` which resolves to Cloudinary CDN URL
+
 ### Cockpit Config Tab Fixed (previous sub-session)
 - `LLMProvider` and `LLMModel` DB tables empty — never seeded
 - Added fallback to `LLMProviderRegistry` service (6 providers configured)
