@@ -5310,7 +5310,8 @@ class ToolDispatcher:
                     'data': {k: v for k, v in (output.get('data') or {}).items()
                              if k in ('info_count', 'warning_count', 'critical_count',
                                       'items_count', 'execution_time', 'pipeline_steps',
-                                      'final_video_url', 'type', 'summary')},
+                                      'final_video_url', 'type', 'summary',
+                                      'result_preview')},
                     'result_preview': output.get('result_preview', '')[:2000],
                     'tool_calls': output.get('tool_calls', [])[:5],
                     '_truncated': True,

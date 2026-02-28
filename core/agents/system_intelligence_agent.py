@@ -331,12 +331,30 @@ and only important ones should be promoted. Don't treat this as a crisis."""
                         'critical_count': critical_count,
                         'warning_count': warning_count,
                         'info_count': info_count,
-                        'execution_time': execution_time_ms / 1000
+                        'execution_time': execution_time_ms / 1000,
+                        'result_preview': result_text[:2000],
                     },
                     agent_name=self.name,
                     execution_time_ms=execution_time_ms,
                     decisions_made=self._tt_decision_count,
                     tool_calls=tool_calls_made  # Session 761: Track tool usage
+                )
+
+                # Save report to Deliverables (DB-based, works on Railway)
+                # This replaces filesystem workspace writes which fail on Railway
+                self._save_to_deliverable(
+                    title=f"System Intelligence Report: {task[:80]}",
+                    content=result_text,
+                    deliverable_type='document',
+                    category='System Reports',
+                    tags=['system_intelligence', 'health_report', 'automated'],
+                    metadata={
+                        'critical_count': critical_count,
+                        'warning_count': warning_count,
+                        'info_count': info_count,
+                        'items_count': len(items),
+                        'task': task,
+                    },
                 )
 
                 # === Session 663: Learning Infrastructure Integration ===
