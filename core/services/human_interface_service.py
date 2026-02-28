@@ -575,15 +575,37 @@ class HumanInterfaceService:
             existing_item = query.first()
 
             if existing_item:
-                logger.debug(
-                    f"Skipping duplicate attention item: {title} "
-                    f"(existing item: {existing_item.id})"
+                # Update mutable fields so repeated runs refresh severity/payload
+                update_fields = []
+                if summary and existing_item.summary != summary:
+                    existing_item.summary = summary
+                    update_fields.append('summary')
+                if urgency and existing_item.urgency != urgency:
+                    existing_item.urgency = urgency
+                    update_fields.append('urgency')
+                if payload and existing_item.payload != payload:
+                    existing_item.payload = payload
+                    update_fields.append('payload')
+                new_score = self._calculate_priority_score(
+                    urgency=urgency or existing_item.urgency,
+                    ml_confidence=ml_confidence,
+                    source_type=source_type,
                 )
+                if existing_item.priority_score != new_score:
+                    existing_item.priority_score = new_score
+                    update_fields.append('priority_score')
+                if update_fields:
+                    existing_item.save(update_fields=update_fields)
+                    logger.debug(
+                        f"Updated duplicate attention item {existing_item.id}: "
+                        f"{', '.join(update_fields)}"
+                    )
                 return {
                     'success': True,
                     'item_id': str(existing_item.id),
                     'priority_score': existing_item.priority_score,
                     'deduplicated': True,
+                    'fields_updated': update_fields,
                     'message': 'Similar item already exists',
                 }
 
