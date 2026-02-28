@@ -271,3 +271,49 @@ class ToolCallAggregate(models.Model):
         if self.total_calls == 0:
             return 0.0
         return (self.success_calls / self.total_calls) * 100
+
+
+class PAToolInsight(models.Model):
+    """
+    Learned insights from PA tool usage patterns.
+
+    Mined from ToolCallRecord data by the analyze_pa_tool_patterns Celery task.
+    Approved insights are injected into the PA system prompt to improve
+    tool usage over time without manual schema fixes.
+
+    Safety gating: insights start as 'candidate' and must reach 'approved'
+    (either manually or via auto-promotion) before they affect PA behavior.
+    """
+
+    INSIGHT_TYPES = [
+        ('param_correction', 'Parameter Correction'),
+        ('error_pattern', 'Error Pattern'),
+        ('success_pattern', 'Success Pattern'),
+        ('follow_up', 'Follow-up Pattern'),
+    ]
+    SAFETY_CLASSES = [
+        ('candidate', 'Candidate'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tool_name = models.CharField(max_length=100, db_index=True)
+    insight_type = models.CharField(max_length=30, choices=INSIGHT_TYPES)
+    safety_class = models.CharField(max_length=20, choices=SAFETY_CLASSES, default='candidate')
+    pattern = models.JSONField(help_text="Structured pattern data (used for dedup via unique_together)")
+    prompt_snippet = models.TextField(help_text="Ready-to-inject text for PA system prompt")
+    evidence_count = models.PositiveIntegerField(default=1)
+    confidence = models.FloatField(default=0.0, help_text="0.0–1.0")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        db_table = 'core_pa_tool_insight'
+        indexes = [
+            models.Index(fields=['safety_class', 'tool_name']),
+        ]
+
+    def __str__(self):
+        return f"[{self.safety_class}] {self.tool_name}/{self.insight_type} (n={self.evidence_count}, conf={self.confidence:.2f})"

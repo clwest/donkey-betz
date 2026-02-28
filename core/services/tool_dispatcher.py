@@ -215,6 +215,9 @@ class ToolDispatcher:
         # HTTP smoke test for endpoint verification
         self.register("http_smoke_test", self._handle_http_smoke_test)
 
+        # PA Learning Loop — insight management
+        self.register("learning_tool", self._handle_learning)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):
@@ -8555,6 +8558,68 @@ RESEARCH DATA:
         """Run HTTP smoke tests against cockpit API endpoints."""
         from core.tools.http_smoke_test import run_smoke_test
         return run_smoke_test(payload)
+
+    def _handle_learning(self, tool_name, payload, user_id, trace_id):
+        """Manage PA tool-usage insights (learning loop)."""
+        from core.models_tool_calls import PAToolInsight
+
+        action = payload.get('action', 'stats')
+        limit = min(payload.get('limit', 10), 50)
+        filter_tool = payload.get('tool_name')
+
+        if action == 'list_candidates':
+            qs = PAToolInsight.objects.filter(safety_class='candidate')
+            if filter_tool:
+                qs = qs.filter(tool_name=filter_tool)
+            items = list(qs.order_by('-evidence_count', '-confidence')[:limit].values(
+                'id', 'tool_name', 'insight_type', 'prompt_snippet',
+                'evidence_count', 'confidence', 'created_at',
+            ))
+            return {'candidates': items, 'count': len(items)}
+
+        elif action == 'list_approved':
+            qs = PAToolInsight.objects.filter(safety_class='approved')
+            if filter_tool:
+                qs = qs.filter(tool_name=filter_tool)
+            items = list(qs.order_by('-confidence', '-evidence_count')[:limit].values(
+                'id', 'tool_name', 'insight_type', 'prompt_snippet',
+                'evidence_count', 'confidence', 'created_at',
+            ))
+            return {'approved': items, 'count': len(items)}
+
+        elif action == 'approve':
+            insight_id = payload.get('id')
+            if not insight_id:
+                return {'error': 'id is required for approve action'}
+            updated = PAToolInsight.objects.filter(
+                id=insight_id, safety_class='candidate'
+            ).update(safety_class='approved')
+            return {'approved': bool(updated), 'id': insight_id}
+
+        elif action == 'reject':
+            insight_id = payload.get('id')
+            if not insight_id:
+                return {'error': 'id is required for reject action'}
+            updated = PAToolInsight.objects.filter(
+                id=insight_id, safety_class='candidate'
+            ).update(safety_class='rejected')
+            return {'rejected': bool(updated), 'id': insight_id}
+
+        elif action == 'stats':
+            from django.db.models import Count
+            stats = list(
+                PAToolInsight.objects.values('safety_class', 'insight_type')
+                .annotate(count=Count('id'))
+                .order_by('safety_class', 'insight_type')
+            )
+            totals = {
+                'candidate': 0, 'approved': 0, 'rejected': 0,
+            }
+            for s in stats:
+                totals[s['safety_class']] = totals.get(s['safety_class'], 0) + s['count']
+            return {'stats': stats, 'totals': totals}
+
+        return {'error': f'Unknown action: {action}'}
 
 
 # Singleton instance

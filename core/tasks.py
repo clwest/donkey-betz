@@ -35884,3 +35884,209 @@ def rescan_active_workspaces(stale_days: int = 7):
         f"{errors} errors, {active_workspaces.count()} total active"
     )
     return {'rescanned': rescanned, 'errors': errors}
+
+
+# --------------------------------------------------------------------------- #
+# PA Tool Learning Loop                                                        #
+# Mines ToolCallRecord for patterns and creates PAToolInsight candidates.       #
+# --------------------------------------------------------------------------- #
+
+@shared_task(ignore_result=True)
+def analyze_pa_tool_patterns():
+    """
+    Mine last 24h of ToolCallRecord for PA tool-call patterns.
+
+    Detects 4 pattern types:
+    - param_correction: same tool retried in same conversation with different
+      params after a failure → first failed, second succeeded
+    - error_pattern: same tool + param combo fails >3 times across conversations
+    - success_pattern: specific param combos with >80% success rate and >5 uses
+    - follow_up: tool B consistently called within 60s after tool A succeeds
+    """
+    from core.models_tool_calls import ToolCallRecord, PAToolInsight
+    from django.db.models import Count, Q, Avg
+    import hashlib as _hl
+
+    cutoff = timezone.now() - timedelta(hours=24)
+    records = ToolCallRecord.objects.filter(
+        created_at__gte=cutoff,
+        agent_name='PersonalAssistant',
+    )
+    total = records.count()
+    if total < 5:
+        logger.info("[PA-LEARNING] <5 PA tool calls in last 24h, skipping")
+        return {'status': 'skipped', 'reason': 'insufficient_data', 'records': total}
+
+    created = 0
+    updated = 0
+
+    # --- 1. param_correction: retry-in-conversation pattern ---
+    conv_ids = (
+        records.filter(conversation_id__isnull=False)
+        .values_list('conversation_id', flat=True)
+        .distinct()
+    )
+    for conv_id in conv_ids:
+        conv_calls = list(
+            records.filter(conversation_id=conv_id)
+            .order_by('created_at')
+            .values('tool_name', 'parameters', 'success', 'error_message')
+        )
+        # Look for fail → success pairs on same tool
+        failed = {}
+        for call in conv_calls:
+            tn = call['tool_name']
+            if not call['success']:
+                failed[tn] = call
+            elif tn in failed and call['success']:
+                fail_params = failed.pop(tn)
+                if call['parameters'] != fail_params['parameters']:
+                    pattern_key = json.dumps(
+                        {'tool': tn, 'bad': fail_params['parameters'], 'good': call['parameters']},
+                        sort_keys=True, default=str,
+                    )
+                    pattern_hash = _hl.md5(pattern_key.encode()).hexdigest()
+                    pattern = {
+                        'hash': pattern_hash,
+                        'bad_params': fail_params['parameters'],
+                        'good_params': call['parameters'],
+                        'error': fail_params.get('error_message', ''),
+                    }
+                    snippet = (
+                        f"When using {tn}, prefer {_summarize_diff(fail_params['parameters'], call['parameters'])}. "
+                        f"Previous error: {fail_params.get('error_message', 'unknown')[:120]}"
+                    )
+                    c, u = _upsert_insight(tn, 'param_correction', pattern, snippet)
+                    created += c
+                    updated += u
+
+    # --- 2. error_pattern: repeated failures ---
+    error_groups = (
+        records.filter(success=False)
+        .values('tool_name', 'error_message')
+        .annotate(cnt=Count('id'))
+        .filter(cnt__gt=3)
+    )
+    for eg in error_groups:
+        pattern = {'error': eg['error_message'][:500]}
+        snippet = (
+            f"Known error: {eg['error_message'][:200]}. "
+            f"Occurred {eg['cnt']} times in 24h — double-check parameters."
+        )
+        c, u = _upsert_insight(eg['tool_name'], 'error_pattern', pattern, snippet)
+        created += c
+        updated += u
+
+    # --- 3. success_pattern: high-success param combos ---
+    tool_param_groups = (
+        records.values('tool_name', 'parameters')
+        .annotate(
+            total=Count('id'),
+            successes=Count('id', filter=Q(success=True)),
+        )
+        .filter(total__gt=5)
+    )
+    for tpg in tool_param_groups:
+        rate = tpg['successes'] / tpg['total']
+        if rate >= 0.8:
+            params = tpg['parameters']
+            if not params:
+                continue
+            pattern = {'params': params}
+            snippet = (
+                f"Reliable combo ({rate:.0%} success over {tpg['total']} calls): "
+                f"{_summarize_params(params)}"
+            )
+            c, u = _upsert_insight(tpg['tool_name'], 'success_pattern', pattern, snippet, confidence=rate)
+            created += c
+            updated += u
+
+    # --- 4. follow_up: tool B after tool A ---
+    conv_ids_list = list(conv_ids[:100])  # cap to avoid huge loops
+    pair_counts: dict = {}
+    for conv_id in conv_ids_list:
+        calls = list(
+            records.filter(conversation_id=conv_id, success=True)
+            .order_by('created_at')
+            .values('tool_name', 'created_at')
+        )
+        for i in range(len(calls) - 1):
+            a, b = calls[i], calls[i + 1]
+            delta = (b['created_at'] - a['created_at']).total_seconds()
+            if delta <= 60 and a['tool_name'] != b['tool_name']:
+                key = (a['tool_name'], b['tool_name'])
+                pair_counts[key] = pair_counts.get(key, 0) + 1
+
+    for (tool_a, tool_b), count in pair_counts.items():
+        if count >= 3:
+            pattern = {'after': tool_a, 'then': tool_b}
+            snippet = f"Users often call {tool_b} right after {tool_a} — consider suggesting it."
+            conf = min(count / 10, 1.0)
+            c, u = _upsert_insight(tool_a, 'follow_up', pattern, snippet, confidence=conf)
+            created += c
+            updated += u
+
+    logger.info(
+        f"[PA-LEARNING] Analyzed {total} records: "
+        f"{created} new insights, {updated} updated"
+    )
+    return {'status': 'ok', 'records': total, 'created': created, 'updated': updated}
+
+
+def _upsert_insight(tool_name, insight_type, pattern, snippet, confidence=None):
+    """Create or update a PAToolInsight. Returns (created_count, updated_count)."""
+    from core.models_tool_calls import PAToolInsight
+
+    pattern_json = json.dumps(pattern, sort_keys=True, default=str)
+
+    existing = PAToolInsight.objects.filter(
+        tool_name=tool_name,
+        insight_type=insight_type,
+        pattern=pattern,
+    ).first()
+
+    if existing:
+        existing.evidence_count = F('evidence_count') + 1
+        update_fields = ['evidence_count', 'updated_at']
+        if confidence is not None:
+            existing.confidence = confidence
+            update_fields.append('confidence')
+        # Auto-promote: evidence >= 5 and confidence >= 0.8
+        if confidence and confidence >= 0.8:
+            existing.refresh_from_db()
+            if existing.evidence_count >= 4 and existing.safety_class == 'candidate':
+                existing.safety_class = 'approved'
+                update_fields.append('safety_class')
+                logger.info(f"[PA-LEARNING] Auto-promoted: {tool_name}/{insight_type}")
+        existing.save(update_fields=update_fields)
+        return (0, 1)
+    else:
+        PAToolInsight.objects.create(
+            tool_name=tool_name,
+            insight_type=insight_type,
+            pattern=pattern,
+            prompt_snippet=snippet,
+            evidence_count=1,
+            confidence=confidence or 0.0,
+        )
+        return (1, 0)
+
+
+def _summarize_params(params: dict) -> str:
+    """Compact param summary for prompt snippets."""
+    parts = []
+    for k, v in list(params.items())[:4]:
+        val = str(v)[:40]
+        parts.append(f"{k}={val}")
+    suffix = f" (+{len(params) - 4} more)" if len(params) > 4 else ""
+    return ", ".join(parts) + suffix
+
+
+def _summarize_diff(bad: dict, good: dict) -> str:
+    """Summarize what changed between bad and good params."""
+    changes = []
+    for k in set(list(bad.keys()) + list(good.keys())):
+        bv, gv = bad.get(k), good.get(k)
+        if bv != gv:
+            changes.append(f"{k}: '{gv}' (not '{bv}')")
+    return "; ".join(changes[:3]) if changes else "different parameters"

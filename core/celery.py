@@ -2449,6 +2449,14 @@ app.conf.beat_schedule = {
             'expires': 3600,
         },
     },
+    # PA Tool Learning Loop — mine ToolCallRecord for patterns
+    'analyze-pa-tool-patterns': {
+        'task': 'core.tasks.analyze_pa_tool_patterns',
+        'schedule': crontab(hour='*/6', minute=15),  # Every 6 hours at :15
+        'options': {
+            'expires': 21600,
+        },
+    },
 }
 
 # Task routing configuration

@@ -1341,6 +1341,16 @@ class UnifiedPAEntrypoint:
                 prompt_parts.append("")
                 prompt_parts.append(f"CODEBASE: {' | '.join(parts)}")
 
+        # Append learned tool insights (approved PAToolInsights)
+        try:
+            from core.services.pa_tool_learning_enricher import PAToolLearningEnricher
+            tool_insights = PAToolLearningEnricher().enrich({})
+            if tool_insights:
+                prompt_parts.append("")
+                prompt_parts.append(tool_insights)
+        except Exception as e:
+            logger.debug(f"[PA] Tool learning enricher skipped: {e}")
+
         return "\n".join(prompt_parts)
 
     def _infer_intent_from_tools(self, tool_names: List[str]) -> Optional[str]:

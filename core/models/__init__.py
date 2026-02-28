@@ -86,6 +86,7 @@ from ..models_audit_tracking import (
 from ..models_tool_calls import (
     ToolCallRecord,
     ToolCallAggregate,
+    PAToolInsight,
 )
 
 # Import learning data backup models (Session 861 - Learning Data Persistence)
@@ -324,6 +325,7 @@ __all__ = [
     # Tool Call Recording (Session 861)
     'ToolCallRecord',
     'ToolCallAggregate',
+    'PAToolInsight',
 
     # Learning Data Backup (Session 861)
     'AgentInteractionRecord',
