@@ -605,11 +605,13 @@ and only important ones should be promoted. Don't treat this as a crisis."""
         """
         title_lower = item.title.lower() if item.title else ''
         category_lower = item.category.lower() if item.category else ''
+        # Spider names appear in summary, not title (e.g. "No data in 24h: coingecko")
+        searchable = f"{title_lower} {(item.summary or '').lower()}"
 
         # Stale spiders → warning (key spiders → critical)
         if 'stale' in category_lower and 'spider' in title_lower:
             return 'critical' if any(
-                s in title_lower for s in (
+                s in searchable for s in (
                     'theodds', 'polygon_finance', 'newsapi',
                     'etherscan_api', 'coingecko',
                 )
@@ -668,10 +670,11 @@ and only important ones should be promoted. Don't treat this as a crisis."""
                 item_ids_seen.append(source_id)
 
                 urgency = 'critical' if effective_severity == 'critical' else 'medium'
-                # Promote key-spider staleness to high
-                if 'stale' in (item.category or '').lower():
+                # Promote key-spider staleness (only elevate, never downgrade)
+                if urgency != 'critical' and 'stale' in (item.category or '').lower():
+                    searchable = f"{(item.title or '').lower()} {(item.summary or '').lower()}"
                     for spider in self._KEY_SPIDERS:
-                        if spider in (item.title or '').lower():
+                        if spider in searchable:
                             urgency = 'high'
                             break
 
