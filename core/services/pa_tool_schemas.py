@@ -1237,7 +1237,7 @@ PA_TOOL_SCHEMAS = [
                 "model": {"type": "string", "description": "Specific model to use (e.g. dall-e-3, stability-ai)"},
                 "width": {"type": "integer", "description": "Image width in pixels"},
                 "height": {"type": "integer", "description": "Image height in pixels"},
-                "duration": {"type": "integer", "enum": [4, 5, 6, 8, 10], "description": "Video duration in seconds"},
+                "duration": {"type": "integer", "enum": [4, 5, 6, 8, 10], "description": "Video duration in seconds (default: 10 for talking videos)"},
                 "ratio": {"type": "string", "enum": ["1920:1080", "1080:1920", "1280:720", "720:1280"], "description": "Video aspect ratio"},
                 "image_url": {"type": "string", "description": "URL of character image to animate (for generate_talking_video)"},
                 "script": {"type": "string", "description": "Text script for the character to speak (for generate_talking_video)"},
@@ -1253,8 +1253,8 @@ PA_TOOL_SCHEMAS = [
                         "Male: Drew (clear), Clyde (deep/authoritative), Paul (friendly), Dave (casual), Antoni (narrator), Josh (upbeat)."
                     ),
                 },
-                "mode": {"type": "string", "enum": ["loop", "multi_clip"], "description": "Video mode for generate_talking_video: loop (fast/cheap, visible seams) or multi_clip (unique clips, no loops, 3-6x cost)"},
-                "sync_mode": {"type": "string", "enum": ["loop", "cut_off", "bounce"], "description": "Lip sync mode for generate_talking_video"},
+                "mode": {"type": "string", "enum": ["loop", "multi_clip"], "description": "Video mode for generate_talking_video (default: multi_clip). loop = fast/cheap but visible seams; multi_clip = unique clips, no loops, 3-6x cost"},
+                "sync_mode": {"type": "string", "enum": ["loop", "cut_off", "bounce"], "description": "Lip sync mode for generate_talking_video (default: cut_off)"},
                 "lipsync_model": {"type": "string", "enum": ["auto", "latentsync", "sync_labs"], "description": "Lip sync model for generate_talking_video"},
                 "color_grade": {
                     "type": "string",
