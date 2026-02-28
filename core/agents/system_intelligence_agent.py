@@ -313,10 +313,11 @@ and only important ones should be promoted. Don't treat this as a crisis."""
                     result_text = strip_simulated_tool_json(assistant_message.content)
                 execution_time_ms = int((time.time() - start_time) * 1000)
 
-                # Count by severity for metadata
-                critical_count = len([i for i in items if i.severity == 'critical'])
-                warning_count = len([i for i in items if i.severity == 'warning'])
-                info_count = len([i for i in items if i.severity == 'info'])
+                # Count by SIA-reclassified severity (not raw aggregator severity)
+                sia_severities = [self._classify_severity(i) for i in items]
+                critical_count = sia_severities.count('critical')
+                warning_count = sia_severities.count('warning')
+                info_count = sia_severities.count('info')
 
                 self.mark_decision_outcome(
                     success=True,
@@ -382,6 +383,10 @@ and only important ones should be promoted. Don't treat this as a crisis."""
 
                 # Share knowledge if there are critical issues (valuable insight)
                 if critical_count > 0:
+                    critical_titles = [
+                        i.title for i, s in zip(items, sia_severities)
+                        if s == 'critical'
+                    ][:5]
                     self._share_knowledge(
                         knowledge_type='observation',
                         title=f"System Alert: {critical_count} critical items",
@@ -389,7 +394,7 @@ and only important ones should be promoted. Don't treat this as a crisis."""
                             'query': task,
                             'critical_count': critical_count,
                             'warning_count': warning_count,
-                            'critical_items': [i.title for i in items if i.severity == 'critical'][:5],
+                            'critical_items': critical_titles,
                             'timestamp': time.time()
                         },
                         confidence=0.9
@@ -703,6 +708,8 @@ and only important ones should be promoted. Don't treat this as a crisis."""
                     created += 1
 
             # Auto-resolve previously escalated items that are no longer flagged
+            # Policy: warning items auto-resolve; critical items get deferred
+            # for human sign-off (too important to silently dismiss)
             from core.models_human_interface import HumanAttentionItem
 
             stale_items = HumanAttentionItem.objects.filter(
@@ -714,23 +721,36 @@ and only important ones should be promoted. Don't treat this as a crisis."""
                 source_id__in=item_ids_seen,
             )
 
+            deferred = 0
             for stale in stale_items:
-                stale.status = 'acted'
-                stale.decision = 'approve'
-                stale.decision_feedback = 'Auto-resolved: issue no longer detected by SIA'
-                stale.save(update_fields=['status', 'decision', 'decision_feedback'])
-                resolved += 1
+                if stale.urgency == 'critical':
+                    # Critical items need human confirmation before closing
+                    stale.status = 'deferred'
+                    stale.decision_feedback = (
+                        'SIA: issue no longer detected — pending human confirmation '
+                        'to close (critical items require sign-off)'
+                    )
+                    stale.save(update_fields=['status', 'decision_feedback'])
+                    deferred += 1
+                else:
+                    # Warning/medium/low items auto-resolve
+                    stale.status = 'acted'
+                    stale.decision = 'approve'
+                    stale.decision_feedback = 'Auto-resolved: issue no longer detected by SIA'
+                    stale.save(update_fields=['status', 'decision', 'decision_feedback'])
+                    resolved += 1
 
-            if created or updated or resolved:
+            if created or updated or resolved or deferred:
                 logger.info(
                     f"[SIA] Escalation: {created} created, {updated} deduped, "
-                    f"{resolved} auto-resolved"
+                    f"{resolved} auto-resolved, {deferred} deferred-for-review"
                 )
 
             return {
                 'created': created,
                 'updated': updated,
                 'resolved': resolved,
+                'deferred_for_review': deferred,
                 'total_escalated': created + updated,
             }
 
