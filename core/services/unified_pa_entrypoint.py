@@ -720,7 +720,16 @@ class UnifiedPAEntrypoint:
             )
 
             if not result.get('success'):
-                logger.error(f"[{trace_id}] FC LLM call failed: {result.get('error')}")
+                error_msg = result.get('error', '')
+                logger.error(f"[{trace_id}] FC LLM call failed at iteration {iteration+1}: {error_msg}")
+                # Session 1079: Retry once on first iteration — transient API
+                # errors or input validation failures may succeed on a second try
+                # with a fresh request (no previous_response_id chain).
+                if iteration == 0 and not result.get('blocked_by_lungs'):
+                    logger.info(f"[{trace_id}] LLM call failed on first iteration — retrying fresh")
+                    messages = self._build_messages_array(message, context)
+                    response_id = None
+                    continue
                 return (result.get('response', 'I encountered an error.'), tool_runs, fc_metadata, response_id)
 
             response_id = result.get('response_id')
@@ -728,10 +737,17 @@ class UnifiedPAEntrypoint:
 
             # If no tool calls, LLM responded with text — done
             if not tool_calls:
+                # Session 1079: Empty response on first iteration — retry fresh
+                text_content = result.get('response', '')
+                if not text_content.strip() and iteration == 0 and not tool_runs:
+                    logger.warning(f"[{trace_id}] Empty LLM response on first iteration — retrying fresh")
+                    messages = self._build_messages_array(message, context)
+                    response_id = None
+                    continue
+
                 # Session 1056: Also check text-only responses for degeneracy.
                 # Model may get stuck generating filler like "Ok.Ok.Let's call.Ok."
                 # instead of emitting actual function calls.
-                text_content = result.get('response', '')
                 if text_content and self._is_degenerate_content(text_content):
                     logger.warning(
                         f"[{trace_id}] Degenerate text-only response at iteration {iteration+1}, "
@@ -765,6 +781,18 @@ class UnifiedPAEntrypoint:
                             agent_name='PersonalAssistant',
                         )
                         return (final_result.get('response', ''), tool_runs, fc_metadata, final_result.get('response_id'))
+
+                    # Session 1079: Retry once with a fresh call before giving up.
+                    # The LLM may have degenerated due to an overly long/complex
+                    # user message overwhelming the first attempt. A fresh call
+                    # without previous_response_id and with tools gives it another
+                    # chance to respond properly.
+                    if iteration == 0:
+                        logger.info(f"[{trace_id}] Degenerate on first iteration with no tool runs — retrying fresh")
+                        messages = self._build_messages_array(message, context)
+                        response_id = None
+                        continue
+
                     return (
                         "I ran into an issue processing that request. Could you try again or rephrase?",
                         tool_runs, fc_metadata, response_id,
