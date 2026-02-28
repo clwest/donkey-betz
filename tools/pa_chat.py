@@ -27,7 +27,7 @@ import urllib.error
 
 DEFAULT_BASE_URL = "https://donkey-betz-platform-production.up.railway.app"
 POLL_INTERVAL = 3  # seconds
-POLL_TIMEOUT = 180  # 3 minutes max
+POLL_TIMEOUT = 300  # 5 minutes — matches Celery PA task hard limit
 MAX_CONTENT_LENGTH = 5000  # truncate long responses
 
 

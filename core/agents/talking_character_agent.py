@@ -190,6 +190,16 @@ class TalkingCharacterAgent(BaseAgent):
                         execution_time_ms=int((time.time() - start_time) * 1000),
                     )
 
+                # Session 1075: Resolve file_path to actual URL if not already HTTP
+                # PA media_tool may pass Cloudinary storage keys instead of URLs
+                if not image_url.startswith('http'):
+                    try:
+                        from django.core.files.storage import default_storage
+                        image_url = default_storage.url(image_url)
+                        logger.info(f"Resolved image file_path to URL: {image_url[:80]}")
+                    except Exception as e:
+                        logger.warning(f"Could not resolve image_url via storage: {e}")
+
                 self.record_decision(
                     decision_type="pipeline_start",
                     action="Starting talking character pipeline",
