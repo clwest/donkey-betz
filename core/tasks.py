@@ -36625,138 +36625,121 @@ def enforce_data_retention():
 # SESSION G1: COMPETITOR COMPARISON GENERATION TASK
 # =============================================================================
 
-@shared_task(bind=True, soft_time_limit=300, time_limit=360)
-def generate_competitor_comparison_task(self, comparison_id, source_document_id=None,
-                                        competitor_name='', focus_areas=None):
+def _run_comparison_generation(comparison, source_document_id=None,
+                                competitor_name='', focus_areas=None):
     """
-    Generate a structured competitor comparison from RAG evidence + LLM.
+    Core comparison generation logic — called by the Celery task wrapper
+    and by the source_pack_workflow.
 
-    Steps:
-    1. Run ~8 targeted semantic searches against the source document
-    2. Collect + dedupe evidence chunks, scrub PII/secrets
-    3. Build structured prompt with evidence_refs, send to GPT-4.1
-    4. Parse JSON, compute quality rubric, build executive summary
-    5. Save enriched artifact with sources[], evidence_refs[], rubric
+    Returns dict with comparison result or raises on failure.
     """
     import traceback
     from django.utils import timezone as tz
-    from core.models_competitor_comparison import CompetitorComparison
     from core.services.data_scrubber import scrub
+    from content.embeddings import rag_system
 
-    try:
-        comparison = CompetitorComparison.objects.get(id=comparison_id)
-    except CompetitorComparison.DoesNotExist:
-        logger.error(f"[COMPETITOR] Comparison {comparison_id} not found")
-        return {'error': 'comparison not found'}
-
-    comparison.status = 'in_progress'
-    comparison.save(update_fields=['status', 'updated_at'])
     start_time = time.time()
 
-    try:
-        # --- 1. Gather RAG evidence ---
-        from content.embeddings import rag_system
+    queries = [
+        f"what is {competitor_name} what did they build",
+        "workflow steps process pipeline",
+        "security architecture protection",
+        "cost tokens caching model pricing",
+        "logging monitoring observability",
+        "scheduling automation cron jobs",
+        "integrations tools stack CRM email",
+        "knowledge base search memory RAG",
+    ]
+    if focus_areas:
+        queries.extend(focus_areas if isinstance(focus_areas, list) else [focus_areas])
 
-        queries = [
-            f"what is {competitor_name} what did they build",
-            "workflow steps process pipeline",
-            "security architecture protection",
-            "cost tokens caching model pricing",
-            "logging monitoring observability",
-            "scheduling automation cron jobs",
-            "integrations tools stack CRM email",
-            "knowledge base search memory RAG",
-        ]
-        if focus_areas:
-            queries.extend(focus_areas if isinstance(focus_areas, list) else [focus_areas])
-
-        all_chunks = []
-        seen_keys = set()
-        source_docs = {}  # document_id -> {title, source_type}
-        for q in queries:
-            results = rag_system.semantic_search_sync(
-                query=q,
-                limit=8,
-                similarity_threshold=0.25,
-            )
-            for r in results:
-                # Filter to source document if specified
-                if source_document_id and r.document_id != str(source_document_id):
-                    continue
-                key = (r.document_id, r.chunk_index)
-                if key not in seen_keys:
-                    seen_keys.add(key)
-                    # Scrub evidence text before storing
-                    chunk_text = scrub(r.chunk_text[:1500])
-                    chunk_id = f"E{len(all_chunks) + 1}"
-                    all_chunks.append({
-                        'chunk_id': chunk_id,
+    all_chunks = []
+    seen_keys = set()
+    source_docs = {}  # document_id -> {title, source_type}
+    for q in queries:
+        results = rag_system.semantic_search_sync(
+            query=q,
+            limit=8,
+            similarity_threshold=0.25,
+        )
+        for r in results:
+            # Filter to source document if specified
+            if source_document_id and r.document_id != str(source_document_id):
+                continue
+            key = (r.document_id, r.chunk_index)
+            if key not in seen_keys:
+                seen_keys.add(key)
+                # Scrub evidence text before storing
+                chunk_text = scrub(r.chunk_text[:1500])
+                chunk_id = f"E{len(all_chunks) + 1}"
+                all_chunks.append({
+                    'chunk_id': chunk_id,
+                    'document_id': r.document_id,
+                    'document_title': r.document_title,
+                    'chunk_index': r.chunk_index,
+                    'chunk_text': chunk_text,
+                    'similarity_score': round(r.similarity_score, 4),
+                })
+                # Track unique source documents
+                if r.document_id not in source_docs:
+                    source_docs[r.document_id] = {
                         'document_id': r.document_id,
-                        'document_title': r.document_title,
-                        'chunk_index': r.chunk_index,
-                        'chunk_text': chunk_text,
-                        'similarity_score': round(r.similarity_score, 4),
-                    })
-                    # Track unique source documents
-                    if r.document_id not in source_docs:
-                        source_docs[r.document_id] = {
-                            'document_id': r.document_id,
-                            'title': r.document_title,
-                            'source_type': getattr(r, 'document_type', 'unknown'),
-                        }
+                        'title': r.document_title,
+                        'source_type': getattr(r, 'document_type', 'unknown'),
+                    }
 
-        logger.info(f"[COMPETITOR] Collected {len(all_chunks)} chunks from {len(source_docs)} sources for '{competitor_name}'")
+    logger.info(f"[COMPETITOR] Collected {len(all_chunks)} chunks from {len(source_docs)} sources for '{competitor_name}'")
 
-        # --- Insufficient evidence check ---
-        if not all_chunks:
-            comparison.status = 'needs_sources'
-            comparison.error_message = 'No evidence chunks found — ingest a document about this competitor first.'
-            comparison.metadata = {
-                'recommended_queries': [
-                    f"{competitor_name} overview features",
-                    f"{competitor_name} architecture tech stack",
-                    f"{competitor_name} pricing plans",
-                ],
-            }
-            comparison.save(update_fields=['status', 'error_message', 'metadata', 'updated_at'])
-            return {'status': 'needs_sources', 'message': comparison.error_message}
+    # --- Insufficient evidence check ---
+    if not all_chunks:
+        comparison.status = 'needs_sources'
+        comparison.error_message = 'No evidence chunks found — ingest a document about this competitor first.'
+        comparison.metadata = {
+            'recommended_queries': [
+                f"{competitor_name} overview features",
+                f"{competitor_name} architecture tech stack",
+                f"{competitor_name} pricing plans",
+            ],
+        }
+        comparison.save(update_fields=['status', 'error_message', 'metadata', 'updated_at'])
+        return {'status': 'needs_sources', 'message': comparison.error_message}
 
-        if len(all_chunks) < 5:
-            comparison.status = 'needs_sources'
-            comparison.error_message = (
-                f'Only {len(all_chunks)} evidence chunks found — need at least 5 for a quality comparison. '
-                f'Ingest more documents about {competitor_name}.'
-            )
-            comparison.metadata = {
-                'evidence_found': len(all_chunks),
-                'recommended_queries': [
-                    f"{competitor_name} detailed review",
-                    f"{competitor_name} vs alternatives",
-                    f"{competitor_name} security architecture",
-                ],
-            }
-            comparison.save(update_fields=['status', 'error_message', 'metadata', 'updated_at'])
-            return {'status': 'needs_sources', 'message': comparison.error_message}
-
-        # --- 2. Build prompt + call LLM ---
-        # Build chunk reference table for evidence_refs
-        chunk_ref_table = "\n".join(
-            f"[{c['chunk_id']}] (sim={c['similarity_score']}) {c['chunk_text'][:120]}..."
-            for c in sorted(all_chunks, key=lambda x: -x['similarity_score'])[:40]
+    if len(all_chunks) < 5:
+        comparison.status = 'needs_sources'
+        comparison.error_message = (
+            f'Only {len(all_chunks)} evidence chunks found — need at least 5 for a quality comparison. '
+            f'Ingest more documents about {competitor_name}.'
         )
-        evidence_text = "\n\n".join(
-            f"[{c['chunk_id']} | {c['document_title']} | sim={c['similarity_score']}]\n{c['chunk_text']}"
-            for c in sorted(all_chunks, key=lambda x: -x['similarity_score'])[:40]
-        )
+        comparison.metadata = {
+            'evidence_found': len(all_chunks),
+            'recommended_queries': [
+                f"{competitor_name} detailed review",
+                f"{competitor_name} vs alternatives",
+                f"{competitor_name} security architecture",
+            ],
+        }
+        comparison.save(update_fields=['status', 'error_message', 'metadata', 'updated_at'])
+        return {'status': 'needs_sources', 'message': comparison.error_message}
 
-        system_prompt = (
-            "You are a competitive intelligence analyst. Given evidence chunks from documents "
-            "about a competitor, produce a structured JSON comparison between the competitor's "
-            "platform and our platform (Donkey Betz / AI Studio). Be specific, evidence-based, "
-            "and cite chunk IDs (e.g. E1, E5) to support every claim."
-        )
+    # --- 2. Build prompt + call LLM ---
+    # Build chunk reference table for evidence_refs
+    chunk_ref_table = "\n".join(
+        f"[{c['chunk_id']}] (sim={c['similarity_score']}) {c['chunk_text'][:120]}..."
+        for c in sorted(all_chunks, key=lambda x: -x['similarity_score'])[:40]
+    )
+    evidence_text = "\n\n".join(
+        f"[{c['chunk_id']} | {c['document_title']} | sim={c['similarity_score']}]\n{c['chunk_text']}"
+        for c in sorted(all_chunks, key=lambda x: -x['similarity_score'])[:40]
+    )
 
-        user_prompt = f"""Analyze the following evidence about **{competitor_name}** and produce a JSON object with exactly these 7 keys:
+    system_prompt = (
+        "You are a competitive intelligence analyst. Given evidence chunks from documents "
+        "about a competitor, produce a structured JSON comparison between the competitor's "
+        "platform and our platform (Donkey Betz / AI Studio). Be specific, evidence-based, "
+        "and cite chunk IDs (e.g. E1, E5) to support every claim."
+    )
+
+    user_prompt = f"""Analyze the following evidence about **{competitor_name}** and produce a JSON object with exactly these 7 keys:
 
 1. "review" — object with:
    - "features": list of objects with "name", "description", "evidence_quote", "evidence_refs" (list of chunk IDs like ["E1", "E5"])
@@ -36790,142 +36773,169 @@ FULL EVIDENCE CHUNKS:
 
 Respond ONLY with valid JSON, no markdown fences."""
 
-        import openai as openai_mod
-        from django.conf import settings as django_settings
+    import openai as openai_mod
+    from django.conf import settings as django_settings
 
-        client = openai_mod.OpenAI(api_key=django_settings.AI_PROVIDERS.get('OPENAI_API_KEY'))
-        llm_response = client.chat.completions.create(
-            model='gpt-4.1',
-            messages=[
-                {'role': 'system', 'content': system_prompt},
-                {'role': 'user', 'content': user_prompt},
-            ],
-            max_tokens=6000,
-            temperature=0.3,
+    client = openai_mod.OpenAI(api_key=django_settings.AI_PROVIDERS.get('OPENAI_API_KEY'))
+    llm_response = client.chat.completions.create(
+        model='gpt-4.1',
+        messages=[
+            {'role': 'system', 'content': system_prompt},
+            {'role': 'user', 'content': user_prompt},
+        ],
+        max_tokens=6000,
+        temperature=0.3,
+    )
+
+    raw_text = llm_response.choices[0].message.content.strip()
+    tokens_used = {
+        'prompt_tokens': llm_response.usage.prompt_tokens if llm_response.usage else 0,
+        'completion_tokens': llm_response.usage.completion_tokens if llm_response.usage else 0,
+    }
+
+    # --- 3. Parse JSON ---
+    if raw_text.startswith('```'):
+        raw_text = raw_text.split('\n', 1)[1] if '\n' in raw_text else raw_text[3:]
+        if raw_text.endswith('```'):
+            raw_text = raw_text[:-3]
+
+    parsed = json.loads(raw_text)
+
+    # --- 4. Compute quality rubric ---
+    comparison_table = parsed.get('comparison_table', [])
+    gap_backlog = parsed.get('gap_backlog', [])
+    review = parsed.get('review', {})
+
+    # Evidence coverage: % of comparison_table rows with evidence_refs
+    rows_with_refs = sum(1 for row in comparison_table if row.get('evidence_refs'))
+    total_rows = len(comparison_table) if comparison_table else 1
+    evidence_coverage = round(rows_with_refs / total_rows, 3)
+
+    # Source diversity: how many unique source documents contributed
+    unique_sources = len(source_docs)
+    source_diversity = min(1.0, unique_sources / 5.0)  # 5+ sources = perfect
+
+    # Uncited penalty: features without evidence_refs
+    features = review.get('features', [])
+    features_with_refs = sum(1 for f in features if f.get('evidence_refs'))
+    uncited_penalty = 1.0 - (features_with_refs / max(len(features), 1))
+
+    # Composite quality score
+    quality_score = round(min(1.0, (
+        evidence_coverage * 0.5 +
+        source_diversity * 0.2 +
+        (1.0 - uncited_penalty) * 0.3
+    )), 3)
+
+    quality_rubric = {
+        'evidence_coverage': evidence_coverage,
+        'source_diversity': round(source_diversity, 3),
+        'uncited_penalty': round(uncited_penalty, 3),
+        'unique_sources': unique_sources,
+        'total_evidence_chunks': len(all_chunks),
+        'rows_with_refs': rows_with_refs,
+        'total_rows': total_rows,
+        'features_cited': features_with_refs,
+        'features_total': len(features),
+    }
+
+    # --- 5. Build executive summary ---
+    verdict = parsed.get('verdict', 'parity')
+    quick_wins = parsed.get('quick_wins', [])
+
+    # Count verdicts
+    verdict_counts = {}
+    for row in comparison_table:
+        v = row.get('verdict', 'even')
+        verdict_counts[v] = verdict_counts.get(v, 0) + 1
+
+    top_advantages = [
+        row['category'] for row in comparison_table
+        if row.get('verdict') == 'ahead'
+    ][:3]
+    top_gaps = [
+        row['category'] for row in comparison_table
+        if row.get('verdict') in ('behind', 'gap')
+    ][:3]
+
+    executive_summary = {
+        'verdict': verdict,
+        'verdict_counts': verdict_counts,
+        'top_advantages': top_advantages,
+        'top_gaps': top_gaps,
+        'quick_wins': quick_wins[:3],
+        'gap_count': len(gap_backlog),
+        'p0_gaps': sum(1 for g in gap_backlog if g.get('priority') == 'P0'),
+        'p1_gaps': sum(1 for g in gap_backlog if g.get('priority') == 'P1'),
+        'p2_gaps': sum(1 for g in gap_backlog if g.get('priority') == 'P2'),
+        'confidence': 'high' if quality_score >= 0.7 else 'medium' if quality_score >= 0.4 else 'low',
+    }
+
+    # --- 6. Save enriched artifact ---
+    elapsed = round(time.time() - start_time, 2)
+    comparison.review_json = review
+    comparison.comparison_table_json = comparison_table
+    comparison.gap_backlog_json = gap_backlog
+    comparison.tools_stack_json = parsed.get('tools_stack', {})
+    comparison.evidence_json = all_chunks
+    comparison.sources_json = list(source_docs.values())
+    comparison.executive_summary_json = executive_summary
+    comparison.quality_rubric_json = quality_rubric
+    comparison.summary = parsed.get('summary', '')
+    comparison.quality_score = quality_score
+    comparison.status = 'complete'
+    comparison.completed_at = tz.now()
+    comparison.metadata = {
+        'tokens': tokens_used,
+        'evidence_chunks': len(all_chunks),
+        'elapsed_seconds': elapsed,
+        'queries_run': len(queries),
+        'evidence_coverage_pct': round(evidence_coverage * 100, 1),
+        'uncited_claims': total_rows - rows_with_refs,
+        'source_count': unique_sources,
+        'model': 'gpt-4.1',
+    }
+    comparison.save()
+
+    logger.info(
+        f"[COMPETITOR] Comparison '{competitor_name}' complete in {elapsed}s "
+        f"| quality={quality_score} | {len(all_chunks)} chunks from {unique_sources} sources"
+    )
+    return {
+        'comparison_id': str(comparison.id),
+        'status': 'complete',
+        'quality_score': quality_score,
+        'verdict': verdict,
+        'summary': comparison.summary[:200],
+    }
+
+
+@shared_task(bind=True, soft_time_limit=300, time_limit=360)
+def generate_competitor_comparison_task(self, comparison_id, source_document_id=None,
+                                        competitor_name='', focus_areas=None):
+    """
+    Generate a structured competitor comparison from RAG evidence + LLM.
+    Thin wrapper around _run_comparison_generation().
+    """
+    import traceback
+    from core.models_competitor_comparison import CompetitorComparison
+
+    try:
+        comparison = CompetitorComparison.objects.get(id=comparison_id)
+    except CompetitorComparison.DoesNotExist:
+        logger.error(f"[COMPETITOR] Comparison {comparison_id} not found")
+        return {'error': 'comparison not found'}
+
+    comparison.status = 'in_progress'
+    comparison.save(update_fields=['status', 'updated_at'])
+
+    try:
+        return _run_comparison_generation(
+            comparison,
+            source_document_id=source_document_id,
+            competitor_name=competitor_name,
+            focus_areas=focus_areas,
         )
-
-        raw_text = llm_response.choices[0].message.content.strip()
-        tokens_used = {
-            'prompt_tokens': llm_response.usage.prompt_tokens if llm_response.usage else 0,
-            'completion_tokens': llm_response.usage.completion_tokens if llm_response.usage else 0,
-        }
-
-        # --- 3. Parse JSON ---
-        if raw_text.startswith('```'):
-            raw_text = raw_text.split('\n', 1)[1] if '\n' in raw_text else raw_text[3:]
-            if raw_text.endswith('```'):
-                raw_text = raw_text[:-3]
-
-        parsed = json.loads(raw_text)
-
-        # --- 4. Compute quality rubric ---
-        comparison_table = parsed.get('comparison_table', [])
-        gap_backlog = parsed.get('gap_backlog', [])
-        review = parsed.get('review', {})
-
-        # Evidence coverage: % of comparison_table rows with evidence_refs
-        rows_with_refs = sum(1 for row in comparison_table if row.get('evidence_refs'))
-        total_rows = len(comparison_table) if comparison_table else 1
-        evidence_coverage = round(rows_with_refs / total_rows, 3)
-
-        # Source diversity: how many unique source documents contributed
-        unique_sources = len(source_docs)
-        source_diversity = min(1.0, unique_sources / 5.0)  # 5+ sources = perfect
-
-        # Uncited penalty: features without evidence_refs
-        features = review.get('features', [])
-        features_with_refs = sum(1 for f in features if f.get('evidence_refs'))
-        uncited_penalty = 1.0 - (features_with_refs / max(len(features), 1))
-
-        # Composite quality score
-        quality_score = round(min(1.0, (
-            evidence_coverage * 0.5 +
-            source_diversity * 0.2 +
-            (1.0 - uncited_penalty) * 0.3
-        )), 3)
-
-        quality_rubric = {
-            'evidence_coverage': evidence_coverage,
-            'source_diversity': round(source_diversity, 3),
-            'uncited_penalty': round(uncited_penalty, 3),
-            'unique_sources': unique_sources,
-            'total_evidence_chunks': len(all_chunks),
-            'rows_with_refs': rows_with_refs,
-            'total_rows': total_rows,
-            'features_cited': features_with_refs,
-            'features_total': len(features),
-        }
-
-        # --- 5. Build executive summary ---
-        verdict = parsed.get('verdict', 'parity')
-        quick_wins = parsed.get('quick_wins', [])
-
-        # Count verdicts
-        verdict_counts = {}
-        for row in comparison_table:
-            v = row.get('verdict', 'even')
-            verdict_counts[v] = verdict_counts.get(v, 0) + 1
-
-        top_advantages = [
-            row['category'] for row in comparison_table
-            if row.get('verdict') == 'ahead'
-        ][:3]
-        top_gaps = [
-            row['category'] for row in comparison_table
-            if row.get('verdict') in ('behind', 'gap')
-        ][:3]
-
-        executive_summary = {
-            'verdict': verdict,
-            'verdict_counts': verdict_counts,
-            'top_advantages': top_advantages,
-            'top_gaps': top_gaps,
-            'quick_wins': quick_wins[:3],
-            'gap_count': len(gap_backlog),
-            'p0_gaps': sum(1 for g in gap_backlog if g.get('priority') == 'P0'),
-            'p1_gaps': sum(1 for g in gap_backlog if g.get('priority') == 'P1'),
-            'p2_gaps': sum(1 for g in gap_backlog if g.get('priority') == 'P2'),
-            'confidence': 'high' if quality_score >= 0.7 else 'medium' if quality_score >= 0.4 else 'low',
-        }
-
-        # --- 6. Save enriched artifact ---
-        elapsed = round(time.time() - start_time, 2)
-        comparison.review_json = review
-        comparison.comparison_table_json = comparison_table
-        comparison.gap_backlog_json = gap_backlog
-        comparison.tools_stack_json = parsed.get('tools_stack', {})
-        comparison.evidence_json = all_chunks
-        comparison.sources_json = list(source_docs.values())
-        comparison.executive_summary_json = executive_summary
-        comparison.quality_rubric_json = quality_rubric
-        comparison.summary = parsed.get('summary', '')
-        comparison.quality_score = quality_score
-        comparison.status = 'complete'
-        comparison.completed_at = tz.now()
-        comparison.metadata = {
-            'tokens': tokens_used,
-            'evidence_chunks': len(all_chunks),
-            'elapsed_seconds': elapsed,
-            'queries_run': len(queries),
-            'evidence_coverage_pct': round(evidence_coverage * 100, 1),
-            'uncited_claims': total_rows - rows_with_refs,
-            'source_count': unique_sources,
-            'model': 'gpt-4.1',
-        }
-        comparison.save()
-
-        logger.info(
-            f"[COMPETITOR] Comparison '{competitor_name}' complete in {elapsed}s "
-            f"| quality={quality_score} | {len(all_chunks)} chunks from {unique_sources} sources"
-        )
-        return {
-            'comparison_id': str(comparison.id),
-            'status': 'complete',
-            'quality_score': quality_score,
-            'verdict': verdict,
-            'summary': comparison.summary[:200],
-        }
-
     except SoftTimeLimitExceeded:
         comparison.status = 'failed'
         comparison.error_message = 'Task exceeded time limit (300s)'
@@ -36937,3 +36947,278 @@ Respond ONLY with valid JSON, no markdown fences."""
         comparison.error_message = str(e)[:2000]
         comparison.save(update_fields=['status', 'error_message', 'updated_at'])
         return {'error': str(e)}
+
+
+# =============================================================================
+# WORKFLOW RUN: SOURCE PACK COMPARISON
+# =============================================================================
+
+@shared_task(bind=True, soft_time_limit=900, time_limit=1080, ignore_result=True)
+def run_source_pack_workflow(self, run_id):
+    """
+    Multi-step workflow: collect sources → ingest → embed → compare → export.
+
+    Stages:
+        collecting (5-15%)  — WebSearch + SpiderData keyword search
+        ingesting  (20-40%) — process_url per new URL
+        embedding  (45-60%) — RAG embed per document
+        generating (65-85%) — _run_comparison_generation()
+        exporting  (90-95%) — export markdown as Deliverable
+        complete   (100%)   — final output_json
+    """
+    import traceback
+    import hashlib
+    from django.utils import timezone as tz
+    from core.models_workflow_run import WorkflowRun
+
+    try:
+        run = WorkflowRun.objects.get(id=run_id)
+    except WorkflowRun.DoesNotExist:
+        logger.error(f"[WORKFLOW] Run {run_id} not found")
+        return
+
+    run.mark_started(celery_task_id=self.request.id)
+    run.save(update_fields=['status', 'stage', 'started_at', 'celery_task_id', 'events_json', 'updated_at'])
+
+    input_data = run.input_json or {}
+    competitor_name = input_data.get('competitor_name', '')
+    queries = input_data.get('queries', [])
+    target_count = input_data.get('target_count', 8)
+    comparison_id = input_data.get('comparison_id')
+
+    if not queries:
+        queries = [
+            f"{competitor_name} platform features review",
+            f"{competitor_name} architecture technology stack",
+            f"{competitor_name} pricing plans comparison",
+            f"{competitor_name} security integrations API",
+        ]
+
+    output = {}
+
+    try:
+        # ── Stage 1: COLLECTING ──────────────────────────────────────
+        run.advance_stage('collecting', 5, f'Searching for {competitor_name} sources')
+        run.save(update_fields=['status', 'stage', 'percent', 'stage_detail', 'events_json', 'updated_at'])
+
+        collected_urls = {}  # url -> {title, source}
+        from core.tools.web_search import WebSearchTool
+        web = WebSearchTool()
+
+        for i, q in enumerate(queries):
+            try:
+                result = web.execute(query=q, max_results=5)
+                results_list = result.get('results', []) if isinstance(result, dict) else []
+                for r in results_list:
+                    url = r.get('url', r.get('link', ''))
+                    if url and url not in collected_urls:
+                        collected_urls[url] = {
+                            'title': r.get('title', url[:80]),
+                            'source': 'web_search',
+                            'query': q,
+                        }
+            except Exception as e:
+                run.log_event(f'Web search failed for query "{q}": {e}')
+
+            pct = 5 + int((i + 1) / len(queries) * 5)
+            run.percent = pct
+            run.save(update_fields=['percent', 'events_json', 'updated_at'])
+
+        # Spider data search
+        run.advance_stage('collecting', 12, 'Searching spider data')
+        run.save(update_fields=['stage_detail', 'percent', 'events_json', 'updated_at'])
+
+        try:
+            from core.models_unified_system import SpiderData
+            spider_hits = SpiderData.objects.filter(
+                embedding_text__icontains=competitor_name
+            ).order_by('-created_at')[:20]
+            for sd in spider_hits:
+                url = sd.source_url
+                if url and url not in collected_urls:
+                    collected_urls[url] = {
+                        'title': sd.spider_name or url[:80],
+                        'source': 'spider_data',
+                    }
+        except Exception as e:
+            run.log_event(f'Spider search error: {e}')
+
+        run.advance_stage('collecting', 15, f'Found {len(collected_urls)} unique URLs')
+        output['urls_found'] = len(collected_urls)
+        run.output_json = output
+        run.save(update_fields=['status', 'stage', 'percent', 'stage_detail', 'output_json', 'events_json', 'updated_at'])
+
+        # ── Stage 2: INGESTING ────────────────────────────────────────
+        run.advance_stage('ingesting', 20, 'Ingesting documents')
+        run.save(update_fields=['status', 'stage', 'percent', 'stage_detail', 'events_json', 'updated_at'])
+
+        from content.processors import DocumentProcessingPipeline
+        from content.models import Document, ContentStatus, ContentSource
+        from core.services.data_scrubber import scrub
+        from django.contrib.auth import get_user_model
+
+        pipeline = DocumentProcessingPipeline()
+        doc_ids = []
+        seen_hashes = set()
+        urls_to_process = list(collected_urls.items())[:target_count]
+
+        for i, (url, meta) in enumerate(urls_to_process):
+            try:
+                # Content hash dedup — check if we already have this URL
+                existing = Document.objects.filter(source_url=url).first()
+                if existing:
+                    doc_ids.append(str(existing.id))
+                    run.log_event(f'Skipped (exists): {url[:80]}')
+                else:
+                    result = pipeline.process_url(url)
+                    if result.success:
+                        content_hash = hashlib.sha256(
+                            (result.processed_content or '')[:5000].encode()
+                        ).hexdigest()[:16]
+                        if content_hash not in seen_hashes:
+                            seen_hashes.add(content_hash)
+                            User = get_user_model()
+                            owner = run.user or User.objects.first()
+                            doc = Document.objects.create(
+                                title=meta.get('title', url[:100]),
+                                processed_content=result.processed_content,
+                                raw_content=result.raw_content,
+                                word_count=result.word_count,
+                                language=result.language,
+                                key_phrases=result.key_phrases or [],
+                                entities=result.entities or [],
+                                extracted_metadata=result.metadata or {},
+                                source_url=url,
+                                status=ContentStatus.PROCESSED,
+                                source=ContentSource.API,
+                                owner=owner,
+                            )
+                            doc_ids.append(str(doc.id))
+                            run.log_event(f'Ingested: {meta.get("title", url)[:60]}')
+                        else:
+                            run.log_event(f'Skipped (duplicate content): {url[:80]}')
+                    else:
+                        run.log_event(f'Failed to ingest: {url[:80]}')
+            except Exception as e:
+                run.log_event(f'Ingest error for {url[:60]}: {e}')
+
+            pct = 20 + int((i + 1) / len(urls_to_process) * 20)
+            run.percent = pct
+            run.save(update_fields=['percent', 'events_json', 'updated_at'])
+
+        output['document_ids'] = doc_ids
+        run.output_json = output
+        run.advance_stage('ingesting', 40, f'Ingested {len(doc_ids)} documents')
+        run.save(update_fields=['status', 'stage', 'percent', 'stage_detail', 'output_json', 'events_json', 'updated_at'])
+
+        # ── Stage 3: EMBEDDING ────────────────────────────────────────
+        run.advance_stage('embedding', 45, 'Generating embeddings')
+        run.save(update_fields=['status', 'stage', 'percent', 'stage_detail', 'events_json', 'updated_at'])
+
+        from content.embeddings import rag_system
+
+        embedded_count = 0
+        for i, doc_id in enumerate(doc_ids):
+            try:
+                doc = Document.objects.get(id=doc_id)
+                # Skip if already embedded
+                if hasattr(rag_system, 'has_embeddings') and rag_system.has_embeddings(doc_id):
+                    run.log_event(f'Already embedded: {doc_id[:8]}')
+                else:
+                    rag_system.process_document_for_rag_sync(doc)
+                    embedded_count += 1
+                    run.log_event(f'Embedded: {doc_id[:8]}')
+            except Exception as e:
+                run.log_event(f'Embedding error for {doc_id[:8]}: {e}')
+
+            pct = 45 + int((i + 1) / max(len(doc_ids), 1) * 15)
+            run.percent = pct
+            run.save(update_fields=['percent', 'events_json', 'updated_at'])
+
+        output['embedded_count'] = embedded_count
+        run.output_json = output
+        run.advance_stage('embedding', 60, f'Embedded {embedded_count} documents')
+        run.save(update_fields=['status', 'stage', 'percent', 'stage_detail', 'output_json', 'events_json', 'updated_at'])
+
+        # ── Stage 4: GENERATING ───────────────────────────────────────
+        run.advance_stage('generating', 65, 'Running comparison generation')
+        run.save(update_fields=['status', 'stage', 'percent', 'stage_detail', 'events_json', 'updated_at'])
+
+        from core.models_competitor_comparison import CompetitorComparison
+
+        if comparison_id:
+            try:
+                comparison = CompetitorComparison.objects.get(id=comparison_id)
+            except CompetitorComparison.DoesNotExist:
+                comparison = CompetitorComparison.objects.create(
+                    competitor_name=competitor_name,
+                    generated_by='PA',
+                    user=run.user,
+                )
+        else:
+            comparison = CompetitorComparison.objects.create(
+                competitor_name=competitor_name,
+                generated_by='PA',
+                user=run.user,
+            )
+
+        comparison.status = 'in_progress'
+        comparison.save(update_fields=['status', 'updated_at'])
+
+        gen_result = _run_comparison_generation(
+            comparison,
+            competitor_name=competitor_name,
+            focus_areas=input_data.get('focus_areas'),
+        )
+
+        output['comparison_id'] = str(comparison.id)
+        output['comparison_status'] = gen_result.get('status', comparison.status)
+        output['quality_score'] = gen_result.get('quality_score', 0)
+        run.output_json = output
+        run.advance_stage('generating', 85, f'Comparison generated: quality={gen_result.get("quality_score", 0)}')
+        run.save(update_fields=['status', 'stage', 'percent', 'stage_detail', 'output_json', 'events_json', 'updated_at'])
+
+        # ── Stage 5: EXPORTING ────────────────────────────────────────
+        run.advance_stage('exporting', 90, 'Creating deliverable')
+        run.save(update_fields=['status', 'stage', 'percent', 'stage_detail', 'events_json', 'updated_at'])
+
+        deliverable_id = None
+        if comparison.status == 'complete':
+            try:
+                from core.services.tool_dispatcher import get_tool_dispatcher
+                dispatcher = get_tool_dispatcher()
+                export_result = dispatcher._handle_competitor_comparison(
+                    'competitor_comparison_tool',
+                    {'action': 'export_markdown', 'comparison_id': str(comparison.id), 'save': True},
+                    run.user_id,
+                    f'workflow-{run_id}',
+                )
+                deliverable_id = export_result.get('deliverable_id')
+                if deliverable_id:
+                    output['deliverable_id'] = str(deliverable_id)
+                    run.log_event(f'Deliverable created: {deliverable_id}')
+            except Exception as e:
+                run.log_event(f'Export error: {e}')
+
+        run.output_json = output
+        run.advance_stage('exporting', 95, 'Export complete')
+        run.save(update_fields=['status', 'stage', 'percent', 'stage_detail', 'output_json', 'events_json', 'updated_at'])
+
+        # ── Stage 6: COMPLETE ─────────────────────────────────────────
+        run.mark_complete(output)
+        run.save()
+
+        logger.info(
+            f"[WORKFLOW] Source pack comparison complete: run={run_id} "
+            f"docs={len(doc_ids)} comparison={output.get('comparison_id', 'none')}"
+        )
+
+    except SoftTimeLimitExceeded:
+        output['partial'] = True
+        run.mark_failed('Workflow exceeded time limit (900s)', partial_output=output)
+        run.save()
+        raise
+    except Exception as e:
+        logger.error(f"[WORKFLOW] Failed run={run_id}: {e}\n{traceback.format_exc()}")
+        run.mark_failed(str(e), partial_output=output)
+        run.save()

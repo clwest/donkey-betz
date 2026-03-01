@@ -1407,6 +1407,7 @@ from core import views_autonomous_reasoning
 # Session 550: Research Demo API
 from core import views_research_demo
 from core import views_competitor_comparison  # Session G1
+from core import views_workflow_run  # WorkflowRun API
 from core import views_initiative_kickstart  # Session 884
 
 # Import enhanced learning workflow API
@@ -3066,6 +3067,10 @@ urlpatterns = [
     path('api/v1/competitor/compare/generate/', views_competitor_comparison.generate_comparison_api, name='competitor-compare-generate'),
     path('api/v1/competitor/compare/<uuid:comparison_id>/', views_competitor_comparison.comparison_detail_api, name='competitor-compare-detail'),
     path('api/v1/competitor/compare/', views_competitor_comparison.comparison_list_api, name='competitor-compare-list'),
+
+    # WorkflowRun API
+    path('api/v1/workflows/runs/', views_workflow_run.workflow_run_list, name='workflow-run-list'),
+    path('api/v1/workflows/runs/<uuid:run_id>/', views_workflow_run.workflow_run_detail, name='workflow-run-detail'),
 
     # Session 588: System Insights API
     path('api/v1/research/system-insights/', views_research_demo.system_insights_api, name='research-system-insights'),

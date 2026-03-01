@@ -185,6 +185,9 @@ from ..models_cockpit_incidents import CockpitIncident, CockpitIncidentEvent
 # Import competitor comparison (Session G1)
 from ..models_competitor_comparison import CompetitorComparison
 
+# Import workflow run model
+from ..models_workflow_run import WorkflowRun
+
 # Import learning journey models (Session 773 - Learning Journeys)
 from ..models_learning_journey import (
     LearningJourneyTemplate,
@@ -422,4 +425,7 @@ __all__ = [
 
     # Competitor Comparison (G1)
     'CompetitorComparison',
+
+    # Workflow Run
+    'WorkflowRun',
 ]
