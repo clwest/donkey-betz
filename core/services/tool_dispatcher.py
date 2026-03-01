@@ -3200,7 +3200,11 @@ class ToolDispatcher:
 
             deliverable = base_qs.filter(id=deliverable_id).first()
             if not deliverable:
-                raise ValueError(f"Deliverable {deliverable_id} not found")
+                return {
+                    'action': 'details',
+                    'error': f'Deliverable {deliverable_id} not found — it may have been deleted',
+                    'status': 'gone',
+                }
 
             return {
                 'action': 'details',
@@ -5916,12 +5920,30 @@ class ToolDispatcher:
             reasons.append(f"Celery success rate low ({celery_rate}%)")
 
         comp_data = health.get('components', {})
-        if comp_data.get('unhealthy', 0) > 0:
-            if comp_data['unhealthy'] >= comp_data.get('total', 1) / 2:
+        # Non-critical components don't affect overall assessment
+        _NON_CRITICAL = {'resolve_node'}
+        critical_unhealthy = comp_data.get('unhealthy', 0)
+        if health.get('components', {}).get('details'):
+            critical_unhealthy = sum(
+                1 for c in health['components']['details']
+                if not c.get('is_healthy') and c.get('component') not in _NON_CRITICAL
+            )
+        elif comp_data.get('unhealthy', 0) > 0:
+            # Fallback: if we don't have details, subtract known non-critical count
+            from core.models_heart import ComponentStatus as _CS
+            non_crit_unhealthy = _CS.objects.filter(
+                component__in=_NON_CRITICAL, is_healthy=False
+            ).count()
+            critical_unhealthy = comp_data['unhealthy'] - non_crit_unhealthy
+
+        if critical_unhealthy > 0:
+            if critical_unhealthy >= comp_data.get('total', 1) / 2:
                 assessment = 'critical'
             elif assessment == 'healthy':
                 assessment = 'degraded'
-            reasons.append(f"{comp_data['unhealthy']} unhealthy components")
+            reasons.append(f"{critical_unhealthy} unhealthy critical components")
+        elif comp_data.get('unhealthy', 0) > 0:
+            reasons.append(f"{comp_data['unhealthy']} unhealthy non-critical components (resolve_node)")
 
         qd = health.get('queue_depths', {})
         total_pending = qd.get('total_pending', 0)
