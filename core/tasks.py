@@ -36699,14 +36699,40 @@ Respond ONLY with valid JSON, no markdown fences."""
 
         parsed = json.loads(raw_text)
 
-        # --- 4. Save to model ---
+        # --- 4. Compute evidence coverage ---
+        comparison_table = parsed.get('comparison_table', [])
+        evidence_quotes = set()
+        review = parsed.get('review', {})
+        for feat in review.get('features', []):
+            quote = feat.get('evidence_quote', '')
+            if quote:
+                evidence_quotes.add(quote[:80])
+
+        cited_rows = 0
+        for row in comparison_table:
+            competitor_text = str(row.get('competitor', ''))
+            # Row is "cited" if its competitor field matches any evidence quote fragment
+            if any(q[:30] in competitor_text for q in evidence_quotes if len(q) >= 10):
+                cited_rows += 1
+            elif competitor_text and len(competitor_text) > 20:
+                # Also count rows with substantive competitor descriptions
+                cited_rows += 1
+
+        total_rows = len(comparison_table) if comparison_table else 1
+        evidence_coverage_pct = round(cited_rows / total_rows * 100, 1)
+        uncited_claims = total_rows - cited_rows
+
+        quality_score = min(1.0, evidence_coverage_pct / 100.0)
+
+        # --- 5. Save to model ---
         elapsed = round(time.time() - start_time, 2)
-        comparison.review_json = parsed.get('review', {})
-        comparison.comparison_table_json = parsed.get('comparison_table', [])
+        comparison.review_json = review
+        comparison.comparison_table_json = comparison_table
         comparison.gap_backlog_json = parsed.get('gap_backlog', [])
         comparison.tools_stack_json = parsed.get('tools_stack', {})
         comparison.evidence_json = all_chunks
         comparison.summary = parsed.get('summary', '')
+        comparison.quality_score = quality_score
         comparison.status = 'complete'
         comparison.completed_at = tz.now()
         comparison.metadata = {
@@ -36714,6 +36740,8 @@ Respond ONLY with valid JSON, no markdown fences."""
             'evidence_chunks': len(all_chunks),
             'elapsed_seconds': elapsed,
             'queries_run': len(queries),
+            'evidence_coverage_pct': evidence_coverage_pct,
+            'uncited_claims': uncited_claims,
         }
         comparison.save()
 

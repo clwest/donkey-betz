@@ -7956,6 +7956,11 @@ RESEARCH DATA:
                     result[rp] = {'endpoint_count': len(filtered), 'endpoints': filtered}
                 return {'route_count': len(result), 'routes': result}
 
+        if action == 'tool_registry':
+            from core.views_app_manifest import _summarize_tool_schemas
+            tools = _summarize_tool_schemas()
+            return {'action': 'tool_registry', 'tools': tools, 'count': len(tools)}
+
         return {'error': f'Unknown action: {action}'}
 
     # ── Session 1071: Studio Tool ────────────────────────────────────────────
@@ -8587,6 +8592,55 @@ RESEARCH DATA:
                 }
             except Exception as e:
                 return {'action': 'tables', 'error': str(e)}
+
+        elif action == 'verify_table':
+            table_name = payload.get('table_name', '')
+            if not table_name:
+                return {'error': 'table_name is required'}
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT table_name FROM information_schema.tables "
+                        "WHERE table_schema = 'public' AND table_name = %s",
+                        [table_name]
+                    )
+                    exists = cursor.fetchone() is not None
+                    result = {'action': 'verify_table', 'table_name': table_name, 'exists': exists}
+                    if exists:
+                        cursor.execute(
+                            "SELECT reltuples::bigint FROM pg_class WHERE relname = %s",
+                            [table_name]
+                        )
+                        row = cursor.fetchone()
+                        result['row_count'] = row[0] if row else 0
+                        cursor.execute(
+                            "SELECT column_name, data_type FROM information_schema.columns "
+                            "WHERE table_schema = 'public' AND table_name = %s "
+                            "ORDER BY ordinal_position",
+                            [table_name]
+                        )
+                        result['columns'] = [
+                            {'name': r[0], 'type': r[1]} for r in cursor.fetchall()
+                        ]
+                    return result
+            except Exception as e:
+                return {'action': 'verify_table', 'error': str(e)}
+
+        elif action == 'search_tables':
+            prefix = payload.get('prefix', 'core_')
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT c.relname, c.reltuples::bigint "
+                        "FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+                        "WHERE n.nspname = 'public' AND c.relkind = 'r' "
+                        "AND c.relname LIKE %s ORDER BY c.relname",
+                        [prefix + '%']
+                    )
+                    tables = [{'name': r[0], 'estimated_rows': r[1]} for r in cursor.fetchall()]
+                    return {'action': 'search_tables', 'prefix': prefix, 'tables': tables, 'count': len(tables)}
+            except Exception as e:
+                return {'action': 'search_tables', 'error': str(e)}
 
         elif action == 'pgvector':
             result = {'action': 'pgvector'}
