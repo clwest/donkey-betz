@@ -218,6 +218,9 @@ class ToolDispatcher:
         # PA Learning Loop — insight management
         self.register("learning_tool", self._handle_learning)
 
+        # RAG query — semantic search + stats
+        self.register("rag_query_tool", self._handle_rag_query)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):
@@ -8711,6 +8714,72 @@ RESEARCH DATA:
             for s in stats:
                 totals[s['safety_class']] = totals.get(s['safety_class'], 0) + s['count']
             return {'stats': stats, 'totals': totals}
+
+        return {'error': f'Unknown action: {action}'}
+
+    def _handle_rag_query(self, tool_name, payload, user_id, trace_id):
+        """Search RAG knowledge base and get embedding stats."""
+        action = payload.get('action', 'search')
+
+        if action == 'search':
+            query = payload.get('query', '').strip()
+            if not query:
+                return {'error': 'query is required for search action'}
+
+            top_k = min(payload.get('top_k', 5), 20)
+            threshold = payload.get('similarity_threshold', 0.3)
+            doc_filter = payload.get('document_id')
+
+            from content.embeddings import rag_system
+            results = rag_system.semantic_search_sync(
+                query=query,
+                limit=top_k,
+                similarity_threshold=threshold,
+            )
+
+            items = []
+            for r in results:
+                if doc_filter and r.document_id != doc_filter:
+                    continue
+                items.append({
+                    'document_id': r.document_id,
+                    'document_title': r.document_title,
+                    'document_type': r.document_type,
+                    'chunk_index': r.chunk_index,
+                    'chunk_text': r.chunk_text[:1000],
+                    'similarity_score': round(r.similarity_score, 4),
+                })
+
+            return {
+                'action': 'search',
+                'query': query,
+                'count': len(items),
+                'results': items,
+            }
+
+        elif action == 'stats':
+            from content.models import Document, DocumentEmbedding
+            from django.db.models import Count
+
+            total_embeddings = DocumentEmbedding.objects.count()
+            total_docs = Document.objects.filter(status='processed').count()
+
+            recent = list(
+                Document.objects.filter(status='processed')
+                .annotate(chunk_count=Count('embeddings'))
+                .order_by('-created_at')[:5]
+                .values('id', 'title', 'document_type', 'chunk_count', 'created_at')
+            )
+            for doc in recent:
+                doc['id'] = str(doc['id'])
+                doc['created_at'] = str(doc['created_at'])
+
+            return {
+                'action': 'stats',
+                'total_documents': total_docs,
+                'total_embeddings': total_embeddings,
+                'recent_documents': recent,
+            }
 
         return {'error': f'Unknown action: {action}'}
 
