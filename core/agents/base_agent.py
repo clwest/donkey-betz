@@ -3731,6 +3731,8 @@ Consider this current data when formulating your response."""
         trace_id: str = None,
         quality_score: float = 0.7,
         confidence_score: float = 0.7,
+        origin: str = '',
+        provenance: Dict[str, Any] = None,
     ) -> Optional[Any]:
         """
         Session 861: Save agent output to Deliverable model for persistence.
@@ -3770,10 +3772,21 @@ Consider this current data when formulating your response."""
         """
         try:
             from core.models_deliverables import Deliverable
+            from core.services.data_scrubber import guard_persistence
             from django.utils.text import slugify
             from django.utils import timezone as tz
             from datetime import timedelta
             import uuid
+
+            # Phase 3: Run content through persistence guard (scrub + provenance)
+            guard_result = guard_persistence(
+                content=content,
+                origin=origin,
+                provenance=provenance,
+                metadata=metadata,
+            )
+            content = guard_result['scrubbed_content']
+            metadata = guard_result['metadata']
 
             resolved_title = title or f"{self.name} Output"
 
