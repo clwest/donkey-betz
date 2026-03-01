@@ -304,6 +304,14 @@ class ToolDispatcher:
 
             latency_ms = int((time.time() - start_time) * 1000)
 
+            # Session 1085: Scrub PII/secrets from tool results
+            if isinstance(result, dict):
+                from core.services.data_scrubber import scrub_dict
+                try:
+                    result = scrub_dict(result, max_depth=5)
+                except Exception:
+                    pass  # scrub failure must never break tool dispatch
+
             logger.info(f"[{trace_id}] Tool {tool_name} completed in {latency_ms}ms")
 
             return ToolResult(

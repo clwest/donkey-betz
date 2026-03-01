@@ -68,6 +68,9 @@ def chat_with_assistant(request):
         if not message:
             return Response({'error': 'Message is required'}, status=400)
 
+        if len(message) > 8000:
+            message = message[:8000]
+
         # Session 932: Route through UnifiedPA unless legacy mode requested
         if not use_legacy:
             try:
@@ -206,6 +209,9 @@ def unified_pa_chat(request):
 
         if not message:
             return Response({'error': 'Message is required'}, status=400)
+
+        if len(message) > 8000:
+            message = message[:8000]
 
         from core.tasks import process_pa_chat_task
 

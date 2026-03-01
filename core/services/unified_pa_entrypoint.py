@@ -423,6 +423,23 @@ class UnifiedPAEntrypoint:
 
         logger.info(f"[{trace_id}] Processing message: {message[:100]}...")
 
+        # Session 1085: Prompt injection defense
+        from core.services.pa_security import scan_for_injection
+        _inj = scan_for_injection(message, source='user_input')
+        if _inj.severity == 'block':
+            latency_ms = int((time.time() - start_time) * 1000)
+            return PAResponse(
+                content="I can't process that request. Please rephrase.",
+                trace_id=trace_id,
+                tool_runs=[],
+                audio_url=None,
+                intent='blocked',
+                routed_to=None,
+                profile_completeness=None,
+                latency_ms=latency_ms,
+                error=f"injection_blocked:{_inj.pattern_name}",
+            )
+
         try:
             # Session 940: Check for triage mode first
             if self._triage_mode:
@@ -517,6 +534,10 @@ class UnifiedPAEntrypoint:
                         )
                     except asyncio.TimeoutError:
                         enrichment_sections = {}
+                    # Session 1085: Scrub enrichment context (PII + injection scan)
+                    if enrichment_sections:
+                        from core.services.pa_security import scrub_enrichment_context
+                        enrichment_sections = scrub_enrichment_context(enrichment_sections)
                     logger.info(f"[{trace_id}] FC enrichment: {int((time.time()-t2)*1000)}ms sections={list(enrichment_sections.keys())}")
             else:
                 # ── Existing path: keyword routing (unchanged) ──────────────
@@ -564,6 +585,10 @@ class UnifiedPAEntrypoint:
                         except asyncio.TimeoutError:
                             logger.warning(f"[{trace_id}] Enrichment timed out after 15s, proceeding without")
                             enrichment_sections = {}
+                        # Session 1085: Scrub enrichment context (PII + injection scan)
+                        if enrichment_sections:
+                            from core.services.pa_security import scrub_enrichment_context
+                            enrichment_sections = scrub_enrichment_context(enrichment_sections)
                         logger.info(f"[{trace_id}] Step 3b enrichment: {int((time.time()-t2)*1000)}ms sections={list(enrichment_sections.keys())}")
 
                         # Generate response from tool result + enrichment
@@ -594,6 +619,11 @@ class UnifiedPAEntrypoint:
             # (e.g. "to=functions.content_review_tool", raw JSON tool call syntax)
             if getattr(settings, 'PA_USE_FUNCTION_CALLING', False):
                 content = self._sanitize_fc_response(content, trace_id)
+
+            # Session 1085: Scrub PII/secrets from final response
+            if content:
+                from core.services.data_scrubber import scrub
+                content = scrub(content)
 
             # 4. Generate audio if requested
             audio_url = None
@@ -1231,6 +1261,7 @@ class UnifiedPAEntrypoint:
 
         ToolCallRecord.objects.create(
             trace_id=None,  # PA trace_id is "pa-N-hex" not UUID; store in task_summary
+            conversation_id=self.conversation_id,  # Session 1085: link PA tool records to conversation
             agent_name='PersonalAssistant',
             tool_name=tool_name,
             parameters=arguments,
