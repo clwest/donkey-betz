@@ -69,18 +69,23 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "stats", "details", "action_items", "stage_document", "promote", "start_action_item", "complete_action_item"],
-                    "description": "Initiative action to perform. Use 'stage_document' to read the full content of a stage document. Use 'promote' to move a TRIAGE or ON_HOLD initiative to ACTIVE. Use 'start_action_item' or 'complete_action_item' with an item id.",
+                    "enum": ["list", "stats", "details", "action_items", "stage_document", "promote", "start_action_item", "complete_action_item", "create"],
+                    "description": "Initiative action to perform. Use 'create' to create a new initiative. Use 'stage_document' to read the full content of a stage document. Use 'promote' to move a TRIAGE or ON_HOLD initiative to ACTIVE. Use 'start_action_item' or 'complete_action_item' with an item id.",
                 },
                 "id": {"type": "string", "description": "Initiative identifier: human ID (e.g., INIT-000012), seq number (e.g., 12), or UUID"},
-                "name": {"type": "string", "description": "Search initiative by name (partial match)"},
+                "name": {"type": "string", "description": "Initiative name. For 'create': required title. For list: partial match search."},
+                "description": {"type": "string", "description": "Description of the initiative (for create action)"},
                 "document_id": {"type": "string", "description": "UUID of document (for stage_document action)"},
                 "status": {"type": "string", "description": "Filter by status (ACTIVE, PAUSED, COMPLETED, ARCHIVED, all)"},
                 "stage": {"type": "string", "description": "Filter by pipeline stage (1-5). For stage_document: which stage to fetch."},
-                "purpose": {"type": "string", "description": "Filter by purpose"},
-                "program": {"type": "string", "description": "Filter by program"},
+                "purpose": {"type": "string", "enum": ["revenue", "stability", "learning", "expansion", "maintenance"], "description": "Strategic purpose (for create or filter)"},
+                "program": {"type": "string", "enum": ["growth_intelligence", "platform_health", "monetization", "content_pipeline", "ai_capabilities", "user_experience", "infrastructure", "research", "experiments", "uncategorized"], "description": "Portfolio program (for create or filter)"},
                 "owner": {"type": "string", "description": "Filter by owner ('me', 'unowned', or agent name)"},
                 "limit": {"type": "integer", "description": "Max items to return (default 50)"},
+                "impact_score": {"type": "number", "description": "Expected impact 0-1 (for create, default 0.5)"},
+                "urgency": {"type": "number", "description": "Time-sensitivity 0-1 (for create, default 0.5)"},
+                "revenue_potential": {"type": "number", "description": "Revenue potential 0-1 (for create, default 0.0)"},
+                "execution_speed": {"type": "string", "enum": ["fast", "balanced", "thorough"], "description": "Execution speed (for create, default balanced)"},
             },
             "required": ["action"],
         },
@@ -2015,6 +2020,15 @@ PA_TOOL_SCHEMAS = [
         },
     },
 ]
+
+# ── Startup validation: every tool must have name, description, parameters ──
+for _i, _tool in enumerate(PA_TOOL_SCHEMAS):
+    for _field in ('name', 'description', 'parameters'):
+        assert _field in _tool, (
+            f"PA_TOOL_SCHEMAS[{_i}] missing '{_field}'. "
+            f"Keys present: {list(_tool.keys())}. "
+            f"Did you use Chat Completions format (nested 'function') instead of Responses API (flat)?"
+        )
 
 
 # ── Tool-to-Enrichment Mapping ──────────────────────────────────────────────
