@@ -1051,8 +1051,52 @@ class ToolDispatcher:
                 } if active else None,
             }
 
+        elif action == 'create':
+            from core.models_skin_layer import ProjectWorkspace
+            import os
+
+            name = payload.get('name', '').strip()
+            if not name:
+                raise ValueError("'name' is required for create action")
+
+            description = payload.get('description', '')
+
+            # Check for duplicate name
+            existing = ProjectWorkspace.objects.filter(user_id=user_id, name=name).first()
+            if existing:
+                return {
+                    'action': 'create',
+                    'created': False,
+                    'id': str(existing.id),
+                    'name': existing.name,
+                    'message': f"Workspace '{name}' already exists",
+                }
+
+            # Create sandbox workspace (no filesystem path required)
+            base_dir = os.environ.get('WORKSPACE_BASE_DIR', '/app/workspaces')
+            root_path = os.path.join(base_dir, name.lower().replace(' ', '-'))
+
+            workspace = ProjectWorkspace.objects.create(
+                user_id=user_id,
+                name=name,
+                description=description,
+                workspace_type='sandbox',
+                root_path=root_path,
+                is_active=True,
+            )
+
+            return {
+                'action': 'create',
+                'created': True,
+                'id': str(workspace.id),
+                'name': workspace.name,
+                'description': workspace.description,
+                'workspace_type': workspace.workspace_type,
+                'message': f"Created workspace '{name}'",
+            }
+
         else:
-            raise ValueError(f"Unknown action: {action}")
+            raise ValueError(f"Unknown action: {action}. Valid actions: list, status, create")
 
     def _handle_deliverables(
         self,
