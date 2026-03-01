@@ -36910,9 +36910,179 @@ Respond ONLY with valid JSON, no markdown fences."""
     }
 
 
+_AUTO_RESEARCH_SKIP_DOMAINS = {
+    'youtube.com', 'youtu.be', 'twitter.com', 'x.com',
+    'facebook.com', 'linkedin.com', 'instagram.com', 'tiktok.com',
+}
+
+
+def _auto_research_competitor(competitor_name, user_id=None, time_budget=120):
+    """
+    Discover, ingest, and embed competitor sources before LLM comparison.
+
+    Runs 4 web searches, filters/deduplicates URLs, ingests via
+    DocumentProcessingPipeline, and embeds via rag_system.
+
+    Returns dict with counts: urls_found, docs_ingested, docs_embedded,
+    skipped_existing, skipped_timeout, errors, elapsed_seconds.
+    """
+    import time
+    import hashlib
+    from urllib.parse import urlparse
+    from django.contrib.auth import get_user_model
+
+    from content.models import Document, ContentStatus, ContentSource
+    from content.embeddings import rag_system, DocumentEmbedding
+    from content.processors import DocumentProcessingPipeline
+    from core.tools.web_search import WebSearchTool
+
+    t0 = time.time()
+    stats = {
+        'urls_found': 0, 'docs_ingested': 0, 'docs_embedded': 0,
+        'skipped_existing': 0, 'skipped_timeout': 0, 'errors': 0,
+        'elapsed_seconds': 0,
+    }
+
+    # ── Search phase (budget: 30% of time_budget) ────────────────────
+    search_budget = time_budget * 0.3
+    queries = [
+        f'"{competitor_name}" site:github.com README',
+        f'"{competitor_name}" official documentation features',
+        f'"{competitor_name}" review comparison analysis',
+        f'"{competitor_name}" architecture tech stack blog',
+    ]
+
+    collected_urls = {}  # url -> {title, priority}
+    web = WebSearchTool()
+
+    def _domain_priority(url):
+        host = urlparse(url).netloc.lower()
+        if 'github.com' in host:
+            return 0
+        if any(d in host for d in ('docs.', 'documentation.', '.readthedocs.')):
+            return 1
+        if any(d in host for d in ('blog.', 'medium.com', 'dev.to', 'hashnode.')):
+            return 2
+        return 3
+
+    for q in queries:
+        if time.time() - t0 > search_budget:
+            break
+        try:
+            result = web.execute(query=q, max_results=5)
+            results_list = result.get('results', []) if isinstance(result, dict) else []
+            for r in results_list:
+                url = r.get('url', r.get('link', ''))
+                if not url or url in collected_urls:
+                    continue
+                host = urlparse(url).netloc.lower()
+                if any(d in host for d in _AUTO_RESEARCH_SKIP_DOMAINS):
+                    continue
+                collected_urls[url] = {
+                    'title': r.get('title', url[:80]),
+                    'priority': _domain_priority(url),
+                    'query': q,
+                }
+        except Exception as e:
+            logger.warning(f"[AUTO-RESEARCH] Search failed for '{q}': {e}")
+
+    stats['urls_found'] = len(collected_urls)
+    if not collected_urls:
+        stats['elapsed_seconds'] = round(time.time() - t0, 1)
+        return stats
+
+    # Sort by priority (github → docs → blogs → other), take top 8
+    sorted_urls = sorted(collected_urls.items(), key=lambda kv: kv[1]['priority'])[:8]
+
+    # ── Ingest + embed phase ─────────────────────────────────────────
+    pipeline = DocumentProcessingPipeline()
+    seen_hashes = set()
+    User = get_user_model()
+    owner = None
+    if user_id:
+        owner = User.objects.filter(id=user_id).first()
+    if not owner:
+        owner = User.objects.first()
+
+    target_ingested = 6
+    ingested = 0
+
+    for url, meta in sorted_urls:
+        if time.time() - t0 > time_budget:
+            stats['skipped_timeout'] += 1
+            continue
+        if ingested >= target_ingested:
+            break
+
+        try:
+            existing = Document.objects.filter(source_url=url).first()
+            if existing:
+                # Ensure it's embedded
+                if not DocumentEmbedding.objects.filter(document_id=existing.id).exists():
+                    rag_system.process_document_for_rag_sync(existing)
+                    stats['docs_embedded'] += 1
+                stats['skipped_existing'] += 1
+                continue
+
+            result = pipeline.process_url(url)
+            if not result.success:
+                stats['errors'] += 1
+                continue
+
+            content_hash = hashlib.sha256(
+                (result.processed_content or '')[:5000].encode()
+            ).hexdigest()[:16]
+            if content_hash in seen_hashes:
+                continue
+            seen_hashes.add(content_hash)
+
+            doc = Document.objects.create(
+                title=meta.get('title', url[:100]),
+                processed_content=result.processed_content,
+                raw_content=result.raw_content,
+                word_count=result.word_count,
+                language=result.language,
+                key_phrases=result.key_phrases or [],
+                entities=result.entities or [],
+                extracted_metadata={
+                    **(result.metadata or {}),
+                    'source_category': ['github', 'docs', 'blog', 'other'][meta['priority']],
+                    'auto_research': True,
+                    'competitor_name': competitor_name,
+                },
+                source_url=url,
+                status=ContentStatus.PROCESSED,
+                source=ContentSource.API,
+                owner=owner,
+            )
+            stats['docs_ingested'] += 1
+            ingested += 1
+
+            # Embed immediately
+            if time.time() - t0 < time_budget:
+                try:
+                    rag_system.process_document_for_rag_sync(doc)
+                    stats['docs_embedded'] += 1
+                except Exception as emb_err:
+                    logger.warning(f"[AUTO-RESEARCH] Embed failed for {url[:60]}: {emb_err}")
+
+        except Exception as e:
+            logger.warning(f"[AUTO-RESEARCH] Ingest error for {url[:60]}: {e}")
+            stats['errors'] += 1
+
+    stats['elapsed_seconds'] = round(time.time() - t0, 1)
+    logger.info(
+        f"[AUTO-RESEARCH] '{competitor_name}' done in {stats['elapsed_seconds']}s — "
+        f"found={stats['urls_found']} ingested={stats['docs_ingested']} "
+        f"embedded={stats['docs_embedded']} errors={stats['errors']}"
+    )
+    return stats
+
+
 @shared_task(bind=True, soft_time_limit=300, time_limit=360)
 def generate_competitor_comparison_task(self, comparison_id, source_document_id=None,
-                                        competitor_name='', focus_areas=None):
+                                        competitor_name='', focus_areas=None,
+                                        auto_research=True):
     """
     Generate a structured competitor comparison from RAG evidence + LLM.
     Thin wrapper around _run_comparison_generation().
@@ -36929,13 +37099,47 @@ def generate_competitor_comparison_task(self, comparison_id, source_document_id=
     comparison.status = 'in_progress'
     comparison.save(update_fields=['status', 'updated_at'])
 
+    # ── Auto-research: discover + ingest competitor sources ──────────
+    research_meta = {}
+    if auto_research and not source_document_id and competitor_name:
+        try:
+            from content.embeddings import rag_system
+            existing_results = rag_system.semantic_search_sync(
+                query=f"what is {competitor_name}",
+                limit=20,
+                similarity_threshold=0.25,
+            )
+            existing_source_ids = set(r.document_id for r in existing_results)
+            if len(existing_source_ids) < 3:
+                research_meta = _auto_research_competitor(
+                    competitor_name=competitor_name,
+                    user_id=getattr(comparison, 'user_id', None),
+                    time_budget=120,
+                )
+                logger.info(f"[COMPETITOR] Auto-research for '{competitor_name}': {research_meta}")
+            else:
+                logger.info(
+                    f"[COMPETITOR] Skipping auto-research for '{competitor_name}' — "
+                    f"already {len(existing_source_ids)} sources in RAG"
+                )
+        except Exception as e:
+            logger.warning(f"[COMPETITOR] Auto-research failed for '{competitor_name}': {e}")
+            research_meta = {'error': str(e)}
+
     try:
-        return _run_comparison_generation(
+        result = _run_comparison_generation(
             comparison,
             source_document_id=source_document_id,
             competitor_name=competitor_name,
             focus_areas=focus_areas,
         )
+        # Attach auto-research metadata
+        if research_meta:
+            meta = comparison.metadata or {}
+            meta['auto_research'] = research_meta
+            comparison.metadata = meta
+            comparison.save(update_fields=['metadata', 'updated_at'])
+        return result
     except SoftTimeLimitExceeded:
         comparison.status = 'failed'
         comparison.error_message = 'Task exceeded time limit (300s)'

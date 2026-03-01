@@ -83,8 +83,8 @@ PA_TOOL_SCHEMAS = [
                 "document_id": {"type": "string", "description": "UUID of document (for stage_document action)"},
                 "status": {"type": "string", "description": "Filter by status (ACTIVE, PAUSED, COMPLETED, ARCHIVED, all)"},
                 "stage": {"type": "string", "description": "Filter by pipeline stage (1-5). For stage_document: which stage to fetch."},
-                "purpose": {"type": "string", "enum": ["revenue", "stability", "learning", "expansion", "maintenance"], "description": "Strategic purpose (for create or filter)"},
-                "program": {"type": "string", "enum": ["growth_intelligence", "platform_health", "monetization", "content_pipeline", "ai_capabilities", "user_experience", "infrastructure", "research", "experiments", "uncategorized"], "description": "Portfolio program (for create or filter)"},
+                "purpose": {"type": "string", "enum": ["revenue", "stability", "learning", "expansion", "maintenance"], "description": "ONLY set when user explicitly asks to filter by purpose or when creating. Do NOT set for general list queries."},
+                "program": {"type": "string", "enum": ["growth_intelligence", "platform_health", "monetization", "content_pipeline", "ai_capabilities", "user_experience", "infrastructure", "research", "experiments", "uncategorized"], "description": "ONLY set when user explicitly asks to filter by program or when creating. Do NOT set for general list queries."},
                 "owner": {"type": "string", "description": "Filter by owner ('me', 'unowned', or agent name)"},
                 "limit": {"type": "integer", "description": "Max items to return (default 50)"},
                 "impact_score": {"type": "number", "description": "Expected impact 0-1 (for create, default 0.5)"},
@@ -2010,6 +2010,10 @@ PA_TOOL_SCHEMAS = [
                 "save": {
                     "type": "boolean",
                     "description": "Whether to save the markdown export as a Deliverable (default true, for export_markdown)",
+                },
+                "auto_research": {
+                    "type": "boolean",
+                    "description": "Auto-discover and ingest competitor sources before comparing (default true, skipped if source_document_id provided)",
                 },
                 "limit": {
                     "type": "integer",

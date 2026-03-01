@@ -4447,15 +4447,15 @@ class ToolDispatcher:
             if stage_filter:
                 qs = qs.filter(current_stage=int(stage_filter))
 
-            # Filter by purpose
-            purpose_filter = payload.get('purpose')
-            if purpose_filter:
-                qs = qs.filter(purpose=purpose_filter.lower())
+            # Filter by purpose (only when explicitly requested)
+            purpose_filter = payload.get('purpose', '').strip().lower()
+            if purpose_filter and purpose_filter not in ('all', ''):
+                qs = qs.filter(purpose=purpose_filter)
 
-            # Filter by program
-            program_filter = payload.get('program')
-            if program_filter:
-                qs = qs.filter(program=program_filter.lower())
+            # Filter by program (only when explicitly requested; ignore 'uncategorized' catch-all)
+            program_filter = payload.get('program', '').strip().lower()
+            if program_filter and program_filter not in ('all', '', 'uncategorized'):
+                qs = qs.filter(program=program_filter)
 
             # Session 996: Filter by owner
             owner_filter = payload.get('owner')
@@ -9401,6 +9401,7 @@ RESEARCH DATA:
 
             source_document_id = payload.get('source_document_id')
             focus_areas = payload.get('focus_areas')
+            auto_research = payload.get('auto_research', True)
 
             comparison = CompetitorComparison.objects.create(
                 competitor_name=competitor_name,
@@ -9414,6 +9415,7 @@ RESEARCH DATA:
                 source_document_id=str(source_document_id) if source_document_id else None,
                 competitor_name=competitor_name,
                 focus_areas=focus_areas,
+                auto_research=auto_research,
             )
 
             return {
