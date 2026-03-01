@@ -8909,6 +8909,7 @@ RESEARCH DATA:
                 'comparison_id': str(c.id),
                 'competitor_name': c.competitor_name,
                 'status': c.status,
+                'quality_score': c.quality_score,
             }
             if c.status == 'complete':
                 result['summary'] = c.summary[:500]
@@ -8931,6 +8932,8 @@ RESEARCH DATA:
                         'id': str(c.id),
                         'competitor_name': c.competitor_name,
                         'status': c.status,
+                        'quality_score': c.quality_score,
+                        'evidence_count': len(c.evidence_json) if isinstance(c.evidence_json, list) else 0,
                         'summary': (c.summary[:200] if c.summary else ''),
                         'created_at': c.created_at.isoformat(),
                     }
@@ -8955,6 +8958,7 @@ RESEARCH DATA:
                     'id': str(c.id),
                     'competitor_name': c.competitor_name,
                     'status': c.status,
+                    'quality_score': c.quality_score,
                     'review': c.review_json,
                     'comparison_table': c.comparison_table_json,
                     'gap_backlog': c.gap_backlog_json,
@@ -8965,6 +8969,57 @@ RESEARCH DATA:
                     'completed_at': c.completed_at.isoformat() if c.completed_at else None,
                     'metadata': c.metadata,
                 },
+            }
+
+        elif action == 'delete':
+            comparison_id = payload.get('comparison_id')
+            if not comparison_id:
+                return {'error': 'comparison_id is required for delete action'}
+
+            from core.models_competitor_comparison import CompetitorComparison
+            try:
+                c = CompetitorComparison.objects.get(id=comparison_id)
+            except CompetitorComparison.DoesNotExist:
+                return {'error': f'Comparison {comparison_id} not found'}
+
+            name = c.competitor_name
+            c.delete()
+            return {
+                'action': 'delete',
+                'deleted': True,
+                'competitor_name': name,
+                'message': f'Comparison for "{name}" deleted',
+            }
+
+        elif action == 'regenerate':
+            comparison_id = payload.get('comparison_id')
+            if not comparison_id:
+                return {'error': 'comparison_id is required for regenerate action'}
+
+            from core.models_competitor_comparison import CompetitorComparison
+            from core.tasks import generate_competitor_comparison_task
+
+            try:
+                c = CompetitorComparison.objects.get(id=comparison_id)
+            except CompetitorComparison.DoesNotExist:
+                return {'error': f'Comparison {comparison_id} not found'}
+
+            # Reset and re-dispatch
+            c.status = 'pending'
+            c.error_message = ''
+            c.save(update_fields=['status', 'error_message', 'updated_at'])
+
+            task = generate_competitor_comparison_task.delay(
+                comparison_id=str(c.id),
+                source_document_id=str(c.source_document_id) if c.source_document_id else None,
+                competitor_name=c.competitor_name,
+            )
+
+            return {
+                'action': 'regenerate',
+                'comparison_id': str(c.id),
+                'task_id': str(task.id),
+                'message': f'Regenerating comparison for "{c.competitor_name}"',
             }
 
         return {'error': f'Unknown action: {action}'}
