@@ -36746,21 +36746,33 @@ def _run_comparison_generation(comparison, source_document_id=None,
         return {'status': 'needs_sources', 'message': comparison.error_message}
 
     # --- 2. Build prompt + call LLM ---
+    # Prefer competitor-specific chunks; drop internal docs if we have enough external evidence
+    competitor_chunks = [c for c in all_chunks if c.get('is_competitor_source')]
+    if len(competitor_chunks) >= 15:
+        # Enough external evidence — use only competitor sources
+        evidence_chunks = competitor_chunks[:40]
+        logger.info(f"[COMPETITOR] Using {len(evidence_chunks)} competitor-only chunks (dropped internal docs)")
+    else:
+        # Mix: competitor first, then fill with internal
+        evidence_chunks = all_chunks[:40]
+
     # Build chunk reference table for evidence_refs
     chunk_ref_table = "\n".join(
         f"[{c['chunk_id']}] (sim={c['similarity_score']}) {c['chunk_text'][:120]}..."
-        for c in sorted(all_chunks, key=lambda x: -x['similarity_score'])[:40]
+        for c in evidence_chunks
     )
     evidence_text = "\n\n".join(
         f"[{c['chunk_id']} | {c['document_title']} | sim={c['similarity_score']}]\n{c['chunk_text']}"
-        for c in sorted(all_chunks, key=lambda x: -x['similarity_score'])[:40]
+        for c in evidence_chunks
     )
 
     system_prompt = (
         "You are a competitive intelligence analyst. Given evidence chunks from documents "
         "about a competitor, produce a structured JSON comparison between the competitor's "
         "platform and our platform (Donkey Betz / AI Studio). Be specific, evidence-based, "
-        "and cite chunk IDs (e.g. E1, E5) to support every claim."
+        "and cite chunk IDs (e.g. E1, E5) to support every claim. "
+        "IMPORTANT: Focus on chunks that describe the COMPETITOR's features and architecture. "
+        "Ignore any chunks that only describe Donkey Betz / AI Studio internal sessions or pipelines."
     )
 
     user_prompt = f"""Analyze the following evidence about **{competitor_name}** and produce a JSON object with exactly these 7 keys:
