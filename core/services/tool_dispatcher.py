@@ -4449,12 +4449,16 @@ class ToolDispatcher:
 
             # Filter by purpose/program — enums removed from schema to stop GPT
             # auto-filling defaults. Apply only when value looks intentional.
+            _IGNORED_PURPOSE = ('all', '', 'maintenance')
+            _IGNORED_PROGRAM = ('all', '', 'uncategorized')
             purpose_filter = payload.get('purpose', '').strip().lower()
-            if purpose_filter and purpose_filter not in ('all', '', 'maintenance'):
+            purpose_applied = purpose_filter not in _IGNORED_PURPOSE
+            if purpose_applied:
                 qs = qs.filter(purpose=purpose_filter)
 
             program_filter = payload.get('program', '').strip().lower()
-            if program_filter and program_filter not in ('all', '', 'uncategorized'):
+            program_applied = program_filter not in _IGNORED_PROGRAM
+            if program_applied:
                 qs = qs.filter(program=program_filter)
 
             # Session 996: Filter by owner
@@ -4524,10 +4528,10 @@ class ToolDispatcher:
                 'items': items,
                 'filters_applied': {
                     'status': status_filter,
-                    'stage': stage_filter,
-                    'purpose': purpose_filter,
-                    'program': program_filter,
-                    'owner': owner_filter,
+                    'stage': stage_filter or '',
+                    'purpose': purpose_filter if purpose_applied else '',
+                    'program': program_filter if program_applied else '',
+                    'owner': owner_filter or '',
                 }
             }
 
