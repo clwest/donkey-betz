@@ -736,7 +736,7 @@ class Opportunity(models.Model):
     source = models.CharField(max_length=100)
 
     # Financial
-    potential_revenue = models.DecimalField(max_digits=12, decimal_places=2)
+    potential_revenue = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     hourly_rate = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
 
     # Status

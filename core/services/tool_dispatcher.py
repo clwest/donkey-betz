@@ -7070,7 +7070,7 @@ class ToolDispatcher:
             wager_kwargs = {
                 'notes': description,
                 'stake': stake,
-                'odds': float(odds),
+                'odds': int(odds),  # PlacedWager.odds is IntegerField
                 'potential_payout': potential_payout,
                 'status': 'pending',
             }
