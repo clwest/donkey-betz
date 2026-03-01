@@ -195,13 +195,17 @@ class JobQueue:
             # Update job with results
             job.output_file = str(output_file)
             job.status = JobStatus.DONE
+            job.progress = 1.0
             job.completed_at = datetime.now()
 
             # Add metadata
             duration = (job.completed_at - job.started_at).total_seconds()
+            file_size_bytes = output_path.stat().st_size if output_path.exists() else 0
             job.metadata.update({
                 "file_size_mb": get_file_size_mb(output_path),
+                "file_size_bytes": file_size_bytes,
                 "render_duration": format_duration(duration),
+                "render_duration_ms": int(duration * 1000),
                 "output_path": str(output_file)
             })
 

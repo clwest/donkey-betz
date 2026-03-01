@@ -1437,6 +1437,10 @@ from core.views_diagnostics import (
     cockpit_job_status,     # Focus Cockpit: poll job status
     cockpit_ops_overview,   # Focus Cockpit: ops health overview
     cockpit_resolve_node_health,  # Resolve node health proxy
+    cockpit_resolve_node_render_start,  # Resolve node render start proxy
+    cockpit_resolve_node_render_status,  # Resolve node render status proxy
+    cockpit_resolve_node_render_result,  # Resolve node render result proxy
+    cockpit_resolve_node_jobs,  # Resolve node jobs list proxy
     cockpit_library_deliverables,  # Focus Cockpit: library deliverables
     cockpit_library_media,  # Focus Cockpit: library media
     cockpit_approvals_list,  # Focus Cockpit: actionable approvals
@@ -1649,6 +1653,10 @@ urlpatterns = [
     path('api/cockpit/create/status/<str:job_id>/', cockpit_job_status, name='cockpit-job-status'),
     path('api/cockpit/ops/overview/', cockpit_ops_overview, name='cockpit-ops-overview'),
     path('api/cockpit/resolve-node/health/', cockpit_resolve_node_health, name='cockpit-resolve-node-health'),
+    path('api/cockpit/resolve-node/render/start/', cockpit_resolve_node_render_start, name='cockpit-resolve-node-render-start'),
+    path('api/cockpit/resolve-node/render/status/<str:job_id>/', cockpit_resolve_node_render_status, name='cockpit-resolve-node-render-status'),
+    path('api/cockpit/resolve-node/render/result/<str:job_id>/', cockpit_resolve_node_render_result, name='cockpit-resolve-node-render-result'),
+    path('api/cockpit/resolve-node/jobs/', cockpit_resolve_node_jobs, name='cockpit-resolve-node-jobs'),
     path('api/cockpit/library/deliverables/', cockpit_library_deliverables, name='cockpit-library-deliverables'),
     path('api/cockpit/library/media/', cockpit_library_media, name='cockpit-library-media'),
     path('api/cockpit/approvals/', cockpit_approvals_list, name='cockpit-approvals-list'),

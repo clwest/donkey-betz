@@ -1459,6 +1459,158 @@ def cockpit_resolve_node_health(request):
         })
 
 
+# ─── Resolve Node: Render Proxy ────────────────────────────────────────────────
+
+def _resolve_node_request(method, path, body=None, timeout=30):
+    """Make an authenticated request to the resolve-node and return (status, data)."""
+    import time
+    import urllib.request
+    import urllib.error
+
+    resolve_url = os.environ.get('RESOLVE_NODE_URL', 'http://localhost:5001')
+    token = os.environ.get('RENDER_NODE_TOKEN', 'dev-token-change-in-production')
+    url = f'{resolve_url}{path}'
+
+    req = urllib.request.Request(url, method=method)
+    req.add_header('X-Render-Token', token)
+    req.add_header('Accept', 'application/json')
+
+    if body is not None:
+        req.add_header('Content-Type', 'application/json')
+        req.data = json.dumps(body).encode('utf-8')
+
+    start = time.time()
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read())
+            return resp.status, data, int((time.time() - start) * 1000)
+    except urllib.error.HTTPError as e:
+        try:
+            data = json.loads(e.read())
+        except Exception:
+            data = {'error': str(e)}
+        return e.code, data, int((time.time() - start) * 1000)
+    except Exception as e:
+        return 0, {'error': str(e)[:200]}, int((time.time() - start) * 1000)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def cockpit_resolve_node_render_start(request):
+    """
+    POST /api/cockpit/resolve-node/render/start/
+    Proxy render start to resolve-node. Body: {clip_paths, template?, timeline_name?}
+    """
+    if not (request.user and request.user.is_authenticated):
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    try:
+        body = json.loads(request.body) if request.body else {}
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    if not body.get('clip_paths'):
+        return JsonResponse({'error': 'clip_paths required'}, status=400)
+
+    status_code, data, latency = _resolve_node_request('POST', '/render/start', body)
+
+    if status_code == 0:
+        return JsonResponse({'error': 'Resolve node unreachable', 'detail': data.get('error', '')}, status=502)
+
+    return JsonResponse({**data, 'latency_ms': latency}, status=status_code)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def cockpit_resolve_node_render_status(request, job_id):
+    """
+    GET /api/cockpit/resolve-node/render/status/<job_id>/
+    Proxy render status check. Returns job status, progress, timestamps, metadata.
+    """
+    if not (request.user and request.user.is_authenticated):
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    status_code, data, latency = _resolve_node_request('GET', f'/render/status/{job_id}')
+
+    if status_code == 0:
+        return JsonResponse({'error': 'Resolve node unreachable', 'detail': data.get('error', '')}, status=502)
+
+    # Strip internal output_file path — clients should use the result proxy endpoint
+    if 'output_file' in data:
+        data['has_output'] = bool(data['output_file'])
+        del data['output_file']
+
+    return JsonResponse({**data, 'latency_ms': latency}, status=status_code)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def cockpit_resolve_node_render_result(request, job_id):
+    """
+    GET /api/cockpit/resolve-node/render/result/<job_id>/
+    Proxy render result download. Streams the video file from resolve-node.
+    """
+    import urllib.request
+    import urllib.error
+
+    if not (request.user and request.user.is_authenticated):
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    resolve_url = os.environ.get('RESOLVE_NODE_URL', 'http://localhost:5001')
+    token = os.environ.get('RENDER_NODE_TOKEN', 'dev-token-change-in-production')
+    url = f'{resolve_url}/render/result/{job_id}'
+
+    req = urllib.request.Request(url, method='GET')
+    req.add_header('X-Render-Token', token)
+
+    try:
+        resp = urllib.request.urlopen(req, timeout=60)
+        from django.http import StreamingHttpResponse
+
+        def _stream():
+            while True:
+                chunk = resp.read(65536)
+                if not chunk:
+                    break
+                yield chunk
+            resp.close()
+
+        content_type = resp.headers.get('Content-Type', 'video/mp4')
+        filename = resp.headers.get('Content-Disposition', '')
+        response = StreamingHttpResponse(_stream(), content_type=content_type)
+        if filename:
+            response['Content-Disposition'] = filename
+        else:
+            response['Content-Disposition'] = f'attachment; filename="render_{job_id}.mp4"'
+        return response
+    except urllib.error.HTTPError as e:
+        try:
+            data = json.loads(e.read())
+        except Exception:
+            data = {'error': str(e)}
+        return JsonResponse(data, status=e.code)
+    except Exception as e:
+        return JsonResponse({'error': 'Resolve node unreachable', 'detail': str(e)[:200]}, status=502)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def cockpit_resolve_node_jobs(request):
+    """
+    GET /api/cockpit/resolve-node/jobs/
+    Proxy job list from resolve-node.
+    """
+    if not (request.user and request.user.is_authenticated):
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    status_code, data, latency = _resolve_node_request('GET', '/jobs')
+
+    if status_code == 0:
+        return JsonResponse({'error': 'Resolve node unreachable', 'detail': data.get('error', '')}, status=502)
+
+    return JsonResponse({**data, 'latency_ms': latency}, status=status_code)
+
+
 # ─── Focus Cockpit: Library ────────────────────────────────────────────────────
 
 @csrf_exempt
