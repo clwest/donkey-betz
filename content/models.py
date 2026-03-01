@@ -597,6 +597,25 @@ class Document(UnifiedBaseModel):
         help_text="Multiplier for retrieval score (1.0 = normal, 2.0 = double priority)"
     )
 
+    # Session G2: Data sensitivity classification
+    DATA_SENSITIVITY_CHOICES = [
+        ('public', 'Public'),
+        ('internal', 'Internal'),
+        ('confidential', 'Confidential'),
+        ('restricted', 'Restricted'),
+    ]
+    data_sensitivity = models.CharField(
+        max_length=20,
+        choices=DATA_SENSITIVITY_CHOICES,
+        default='internal',
+        db_index=True,
+        help_text="Data sensitivity level for retention and redaction policies"
+    )
+    is_pinned = models.BooleanField(
+        default=False,
+        help_text="Pinned documents override retention policies (never auto-deleted)"
+    )
+
     class Meta:
         verbose_name = "Document"
         verbose_name_plural = "Documents"
@@ -612,6 +631,8 @@ class Document(UnifiedBaseModel):
             models.Index(fields=['is_critical', 'risk_level']),
             models.Index(fields=['document_class']),
             models.Index(fields=['document_class', 'risk_level']),
+            # Session G2: Retention query indexes
+            models.Index(fields=['data_sensitivity', '-created_at']),
         ]
     
     def __str__(self):
@@ -623,7 +644,19 @@ class Document(UnifiedBaseModel):
             self.content_hash = hashlib.sha256(
                 self.processed_content.encode('utf-8')
             ).hexdigest()
-        
+
+        # Session G2: Auto-classify data sensitivity on first save only
+        # Never overwrite explicit manual changes (update_fields targeting data_sensitivity)
+        update_fields = kwargs.get('update_fields')
+        is_new = self._state.adding
+        if is_new and self.data_sensitivity == 'internal':
+            source = getattr(self, 'source', '')
+            doc_type = getattr(self, 'document_type', '')
+            if doc_type == 'youtube' or source == 'scraped':
+                self.data_sensitivity = 'public'
+            elif source in ('api', 'imported') or doc_type in ('email', 'crm'):
+                self.data_sensitivity = 'confidential'
+
         super().save(*args, **kwargs)
     
     def get_content(self):

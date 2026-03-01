@@ -36564,6 +36564,64 @@ def cleanup_expired_pa_insights():
 
 
 # =============================================================================
+# SESSION G2: DATA RETENTION JOB
+# =============================================================================
+
+# Retention rules: days before archive/delete by sensitivity level
+_RETENTION_DAYS = {
+    'restricted': 7,
+    'confidential': 30,
+    'internal': 90,
+    'public': 365,
+}
+
+
+@shared_task(ignore_result=True)
+def enforce_data_retention():
+    """Nightly job: archive/delete artifacts by data_sensitivity + age.
+
+    - Pinned items (is_pinned=True) are always skipped.
+    - Deliverables: status → 'archived'
+    - Documents: status → 'archived'
+    """
+    from core.models_deliverables import Deliverable
+    from content.models import Document
+
+    now = timezone.now()
+    stats = {'deliverables_archived': 0, 'documents_archived': 0}
+
+    for sensitivity, max_days in _RETENTION_DAYS.items():
+        cutoff = now - timezone.timedelta(days=max_days)
+
+        # Archive old deliverables (skip pinned)
+        d_count = Deliverable.objects.filter(
+            data_sensitivity=sensitivity,
+            is_pinned=False,
+            created_at__lt=cutoff,
+            status__in=['draft', 'ready', 'published'],
+        ).update(status='archived')
+        stats['deliverables_archived'] += d_count
+
+        # Archive old documents (skip pinned)
+        doc_count = Document.objects.filter(
+            data_sensitivity=sensitivity,
+            is_pinned=False,
+            created_at__lt=cutoff,
+        ).exclude(
+            status__in=['archived', 'deleted'],
+        ).update(status='archived')
+        stats['documents_archived'] += doc_count
+
+    total = stats['deliverables_archived'] + stats['documents_archived']
+    if total:
+        logger.info(
+            f"[RETENTION] Archived {stats['deliverables_archived']} deliverables, "
+            f"{stats['documents_archived']} documents"
+        )
+    return stats
+
+
+# =============================================================================
 # SESSION G1: COMPETITOR COMPARISON GENERATION TASK
 # =============================================================================
 
