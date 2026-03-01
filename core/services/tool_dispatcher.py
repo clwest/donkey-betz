@@ -4447,12 +4447,12 @@ class ToolDispatcher:
             if stage_filter:
                 qs = qs.filter(current_stage=int(stage_filter))
 
-            # Filter by purpose (only when explicitly requested)
+            # Filter by purpose/program — enums removed from schema to stop GPT
+            # auto-filling defaults. Apply only when value looks intentional.
             purpose_filter = payload.get('purpose', '').strip().lower()
-            if purpose_filter and purpose_filter not in ('all', ''):
+            if purpose_filter and purpose_filter not in ('all', '', 'maintenance'):
                 qs = qs.filter(purpose=purpose_filter)
 
-            # Filter by program (only when explicitly requested; ignore 'uncategorized' catch-all)
             program_filter = payload.get('program', '').strip().lower()
             if program_filter and program_filter not in ('all', '', 'uncategorized'):
                 qs = qs.filter(program=program_filter)
