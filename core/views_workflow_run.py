@@ -115,18 +115,18 @@ def workflow_run_dispatch(request, run_id):
 
         task = run_source_pack_workflow.apply_async(
             kwargs={'run_id': str(run.id)},
-            queue='long_running',
+            queue='workflow',
         )
         run.celery_task_id = str(task.id)
         run.save(update_fields=['celery_task_id', 'updated_at'])
 
-        logger.info(f"[WORKFLOW] Dispatched task={task.id} queue=long_running run={run.id}")
+        logger.info(f"[WORKFLOW] Dispatched task={task.id} queue=workflow run={run.id}")
 
         return JsonResponse({
             'success': True,
             'run_id': str(run.id),
             'task_id': str(task.id),
-            'message': f'Dispatched to long_running queue',
+            'message': 'Dispatched to workflow queue',
         })
 
     except Exception as e:
@@ -145,7 +145,7 @@ def workflow_queue_diagnostic(request):
         broker_url = django_settings.CELERY_BROKER_URL
         r = redis_lib.from_url(broker_url, socket_connect_timeout=5)
 
-        queues = ['long_running', 'ml', 'default', 'content', 'broadcast', 'pa', 'celery']
+        queues = ['workflow', 'long_running', 'ml', 'default', 'content', 'broadcast', 'pa', 'celery']
         queue_lengths = {}
         for q in queues:
             queue_lengths[q] = r.llen(q)
