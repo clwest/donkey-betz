@@ -616,6 +616,20 @@ class Document(UnifiedBaseModel):
         help_text="Pinned documents override retention policies (never auto-deleted)"
     )
 
+    # Promotion gate — external-origin docs start as 'staged', must be promoted before embedding/retrieval
+    PROMOTION_STATUS_CHOICES = [
+        ('promoted', 'Promoted'),
+        ('staged', 'Staged'),
+        ('blocked', 'Blocked'),
+    ]
+    promotion_status = models.CharField(
+        max_length=10,
+        choices=PROMOTION_STATUS_CHOICES,
+        default='promoted',
+        db_index=True,
+        help_text="Promotion gate: staged docs are not embedded or retrievable until promoted"
+    )
+
     class Meta:
         verbose_name = "Document"
         verbose_name_plural = "Documents"
@@ -656,6 +670,12 @@ class Document(UnifiedBaseModel):
                 self.data_sensitivity = 'public'
             elif source in ('api', 'imported') or doc_type in ('email', 'crm'):
                 self.data_sensitivity = 'confidential'
+
+        # Auto-stage external-origin documents on first save
+        if is_new and self.promotion_status == 'promoted':
+            meta = self.extracted_metadata or {}
+            if meta.get('auto_research') or source == 'scraped':
+                self.promotion_status = 'staged'
 
         super().save(*args, **kwargs)
     
@@ -770,6 +790,38 @@ class DocumentEmbedding(UnifiedBaseModel):
         help_text="Cost to generate this embedding"
     )
 
+    # Provenance tracking — where did this chunk originate?
+    SOURCE_TYPE_CHOICES = [
+        ('internal', 'Internal'),
+        ('web', 'Web'),
+        ('spider', 'Spider'),
+        ('user_upload', 'User Upload'),
+        ('api', 'API'),
+        ('unknown', 'Unknown'),
+    ]
+    source_type = models.CharField(
+        max_length=20,
+        choices=SOURCE_TYPE_CHOICES,
+        default='unknown',
+        db_index=True,
+        help_text="Origin of the source document (internal/web/spider/user_upload/api/unknown)"
+    )
+
+    INGESTED_VIA_CHOICES = [
+        ('auto_research', 'Auto Research'),
+        ('manual', 'Manual Upload'),
+        ('spider_pipeline', 'Spider Pipeline'),
+        ('sync_docs', 'Docs Index Sync'),
+        ('backfill', 'Backfill'),
+        ('unknown', 'Unknown'),
+    ]
+    ingested_via = models.CharField(
+        max_length=20,
+        choices=INGESTED_VIA_CHOICES,
+        default='unknown',
+        help_text="Pipeline that created this embedding"
+    )
+
     class Meta:
         verbose_name = "Document Embedding"
         verbose_name_plural = "Document Embeddings"
@@ -777,6 +829,7 @@ class DocumentEmbedding(UnifiedBaseModel):
         indexes = [
             models.Index(fields=['document', 'chunk_index']),
             models.Index(fields=['embedding_model']),
+            models.Index(fields=['source_type']),
         ] + ([
             HnswIndex(name='docembed_vector_hnsw_idx', fields=['embedding_vector'],
                       m=16, ef_construction=64, opclasses=['vector_cosine_ops']),
