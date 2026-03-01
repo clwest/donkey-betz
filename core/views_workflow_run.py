@@ -175,6 +175,12 @@ def workflow_queue_diagnostic(request):
         for worker, task_list in registered.items():
             has_workflow[worker] = 'core.tasks.run_source_pack_workflow' in (task_list or [])
 
+        # Check active queues per worker
+        active_queues_info = {}
+        active_queues = inspect.active_queues() or {}
+        for worker, qs in active_queues.items():
+            active_queues_info[worker] = [q.get('name', '?') for q in (qs or [])]
+
         return JsonResponse({
             'success': True,
             'broker_url': broker_url.split('@')[-1] if '@' in broker_url else broker_url,
@@ -182,6 +188,7 @@ def workflow_queue_diagnostic(request):
             'active_tasks': active_summary,
             'reserved_tasks': reserved_summary,
             'workflow_registered': has_workflow,
+            'worker_queues': active_queues_info,
         })
 
     except Exception as e:
