@@ -1380,6 +1380,10 @@ class ToolDispatcher:
             if disambiguation:
                 return disambiguation
 
+            # Session 1086: Return full content so the PA can read
+            # deliverables completely. Cap at 8000 chars to stay within
+            # reasonable tool-result size for the LLM context window.
+            full_content = obj.content or ''
             return {
                 'action': 'detail',
                 'id': str(obj.id),
@@ -1388,7 +1392,9 @@ class ToolDispatcher:
                 'category': obj.category,
                 'agent_name': obj.agent_name,
                 'content_format': obj.content_format,
-                'content_preview': (obj.content or '')[:500],
+                'content': full_content[:8000],
+                'content_truncated': len(full_content) > 8000,
+                'content_preview': full_content[:500],
                 'quality_score': obj.quality_score,
                 'is_saved': obj.is_saved,
                 'is_template': obj.is_template,
@@ -9935,26 +9941,39 @@ RESEARCH DATA:
             if not cid:
                 return {'error': 'conversation_id required for get action'}
 
+            # Session 1086: Support pagination via offset so the PA can
+            # reach later turns in long conversations.
+            offset = max(payload.get('offset', 0), 0)
+            page_size = min(limit, 30)  # max 30 turns per page
+            # Content cap per turn — 1000 chars gives more context than 500
+            content_cap = 1000
+
+            total = ChatConversation.objects.filter(conversation_id=cid).count()
+            if total == 0:
+                return {'action': 'get', 'conversation_id': cid, 'turns': [], 'message': 'No conversation found'}
+
             turns = list(
                 ChatConversation.objects.filter(conversation_id=cid)
                 .order_by('created_at')
                 .values('user_message', 'assistant_response', 'created_at', 'source', 'session_title')
+                [offset:offset + page_size]
             )
-            if not turns:
-                return {'action': 'get', 'conversation_id': cid, 'turns': [], 'message': 'No conversation found'}
 
             return {
                 'action': 'get',
                 'conversation_id': cid,
-                'session_title': turns[0].get('session_title', ''),
-                'turn_count': len(turns),
+                'session_title': turns[0].get('session_title', '') if turns else '',
+                'turn_count': total,
+                'offset': offset,
+                'page_size': page_size,
+                'has_more': (offset + page_size) < total,
                 'turns': [
                     {
-                        'role_user': t['user_message'][:500],
-                        'role_assistant': t['assistant_response'][:500],
+                        'role_user': t['user_message'][:content_cap],
+                        'role_assistant': t['assistant_response'][:content_cap],
                         'timestamp': t['created_at'].isoformat() if t['created_at'] else None,
                     }
-                    for t in turns[:50]  # cap at 50 turns
+                    for t in turns
                 ],
             }
 
