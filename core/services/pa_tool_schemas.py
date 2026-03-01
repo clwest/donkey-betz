@@ -1914,7 +1914,7 @@ PA_TOOL_SCHEMAS = [
         "type": "function",
         "name": "competitor_comparison_tool",
         "description": (
-            "Generate, check status, list, or view competitor comparisons. "
+            "Generate, check status, list, view, delete, or regenerate competitor comparisons. "
             "Produces a structured side-by-side analysis between a competitor "
             "and Donkey Betz using RAG evidence from ingested documents. "
             "Use when the user asks to compare competitors, do competitive "
@@ -1925,7 +1925,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["generate", "status", "list", "detail"],
+                    "enum": ["generate", "status", "list", "detail", "delete", "regenerate"],
                     "description": "Action to perform",
                 },
                 "competitor_name": {
@@ -1938,7 +1938,7 @@ PA_TOOL_SCHEMAS = [
                 },
                 "comparison_id": {
                     "type": "string",
-                    "description": "UUID of an existing comparison (for status/detail)",
+                    "description": "UUID of an existing comparison (for status/detail/delete/regenerate)",
                 },
                 "focus_areas": {
                     "type": "array",
