@@ -919,18 +919,21 @@ PA_TOOL_SCHEMAS = [
         "type": "function",
         "name": "workspace_tool",
         "description": (
-            "List development workspaces and check status. "
-            "Use when the user asks about their active workspace or project worktrees."
+            "Manage development workspaces: list, check status, or create new ones. "
+            "Use when the user asks about their workspaces, project worktrees, "
+            "or wants to create a new workspace to organize work."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "status"],
-                    "description": "Workspace action",
+                    "enum": ["list", "status", "create"],
+                    "description": "Workspace action. Use 'create' to create a new workspace.",
                 },
                 "id": {"type": "string", "description": "UUID of workspace to act on"},
+                "name": {"type": "string", "description": "Name for new workspace (for create action)"},
+                "description": {"type": "string", "description": "Description/notes for the workspace (for create action)"},
                 "limit": {"type": "integer", "description": "Max items (default 10)"},
             },
             "required": ["action"],
