@@ -36640,18 +36640,31 @@ def _run_comparison_generation(comparison, source_document_id=None,
 
     start_time = time.time()
 
+    # All queries prefixed with competitor name to avoid pulling in our own
+    # platform docs (generic queries like "security architecture" match both)
     queries = [
         f"what is {competitor_name} what did they build",
-        "workflow steps process pipeline",
-        "security architecture protection",
-        "cost tokens caching model pricing",
-        "logging monitoring observability",
-        "scheduling automation cron jobs",
-        "integrations tools stack CRM email",
-        "knowledge base search memory RAG",
+        f"{competitor_name} workflow steps process pipeline",
+        f"{competitor_name} security architecture protection",
+        f"{competitor_name} cost tokens caching model pricing",
+        f"{competitor_name} logging monitoring observability",
+        f"{competitor_name} scheduling automation cron jobs",
+        f"{competitor_name} integrations tools stack CRM email",
+        f"{competitor_name} knowledge base search memory RAG",
     ]
     if focus_areas:
-        queries.extend(focus_areas if isinstance(focus_areas, list) else [focus_areas])
+        for fa in (focus_areas if isinstance(focus_areas, list) else [focus_areas]):
+            queries.append(f"{competitor_name} {fa}")
+
+    # Build set of auto-researched doc IDs for this competitor (prefer these)
+    from content.models import Document
+    auto_researched_ids = set(
+        str(d_id) for d_id in
+        Document.objects.filter(
+            extracted_metadata__auto_research=True,
+            extracted_metadata__competitor_name=competitor_name,
+        ).values_list('id', flat=True)
+    )
 
     all_chunks = []
     seen_keys = set()
@@ -36659,7 +36672,7 @@ def _run_comparison_generation(comparison, source_document_id=None,
     for q in queries:
         results = rag_system.semantic_search_sync(
             query=q,
-            limit=8,
+            limit=12,
             similarity_threshold=0.25,
         )
         for r in results:
@@ -36672,6 +36685,7 @@ def _run_comparison_generation(comparison, source_document_id=None,
                 # Scrub evidence text before storing
                 chunk_text = scrub(r.chunk_text[:1500])
                 chunk_id = f"E{len(all_chunks) + 1}"
+                is_competitor_source = r.document_id in auto_researched_ids
                 all_chunks.append({
                     'chunk_id': chunk_id,
                     'document_id': r.document_id,
@@ -36679,6 +36693,7 @@ def _run_comparison_generation(comparison, source_document_id=None,
                     'chunk_index': r.chunk_index,
                     'chunk_text': chunk_text,
                     'similarity_score': round(r.similarity_score, 4),
+                    'is_competitor_source': is_competitor_source,
                 })
                 # Track unique source documents
                 if r.document_id not in source_docs:
@@ -36686,9 +36701,18 @@ def _run_comparison_generation(comparison, source_document_id=None,
                         'document_id': r.document_id,
                         'title': r.document_title,
                         'source_type': getattr(r, 'document_type', 'unknown'),
+                        'is_competitor_source': is_competitor_source,
                     }
 
-    logger.info(f"[COMPETITOR] Collected {len(all_chunks)} chunks from {len(source_docs)} sources for '{competitor_name}'")
+    # Prioritize competitor-specific sources: sort so auto-researched chunks
+    # come first, then by similarity score
+    all_chunks.sort(key=lambda c: (not c.get('is_competitor_source', False), -c['similarity_score']))
+
+    logger.info(
+        f"[COMPETITOR] Collected {len(all_chunks)} chunks from {len(source_docs)} sources "
+        f"({sum(1 for s in source_docs.values() if s.get('is_competitor_source'))} competitor-specific) "
+        f"for '{competitor_name}'"
+    )
 
     # --- Insufficient evidence check ---
     if not all_chunks:
