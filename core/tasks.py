@@ -36561,3 +36561,177 @@ def cleanup_expired_pa_insights():
     if demoted:
         logger.info(f"[PA-LEARNING] Demoted {demoted} expired insights → candidate")
     return {'demoted': demoted}
+
+
+# =============================================================================
+# SESSION G1: COMPETITOR COMPARISON GENERATION TASK
+# =============================================================================
+
+@shared_task(bind=True, soft_time_limit=300, time_limit=360)
+def generate_competitor_comparison_task(self, comparison_id, source_document_id=None,
+                                        competitor_name='', focus_areas=None):
+    """
+    Generate a structured competitor comparison from RAG evidence + LLM.
+
+    Steps:
+    1. Run ~8 targeted semantic searches against the source document
+    2. Collect + dedupe evidence chunks
+    3. Build structured prompt, send to GPT-5.2 via OpenAI Responses API
+    4. Parse JSON response into 5 sections and save to model
+    """
+    import traceback
+    from django.utils import timezone as tz
+    from core.models_competitor_comparison import CompetitorComparison
+
+    try:
+        comparison = CompetitorComparison.objects.get(id=comparison_id)
+    except CompetitorComparison.DoesNotExist:
+        logger.error(f"[COMPETITOR] Comparison {comparison_id} not found")
+        return {'error': 'comparison not found'}
+
+    comparison.status = 'in_progress'
+    comparison.save(update_fields=['status', 'updated_at'])
+    start_time = time.time()
+
+    try:
+        # --- 1. Gather RAG evidence ---
+        from content.embeddings import rag_system
+
+        queries = [
+            f"what is {competitor_name} what did they build",
+            "workflow steps process pipeline",
+            "security architecture protection",
+            "cost tokens caching model pricing",
+            "logging monitoring observability",
+            "scheduling automation cron jobs",
+            "integrations tools stack CRM email",
+            "knowledge base search memory RAG",
+        ]
+        if focus_areas:
+            queries.extend(focus_areas if isinstance(focus_areas, list) else [focus_areas])
+
+        all_chunks = []
+        seen_keys = set()
+        for q in queries:
+            results = rag_system.semantic_search_sync(
+                query=q,
+                limit=8,
+                similarity_threshold=0.25,
+            )
+            for r in results:
+                # Filter to source document if specified
+                if source_document_id and r.document_id != str(source_document_id):
+                    continue
+                key = (r.document_id, r.chunk_index)
+                if key not in seen_keys:
+                    seen_keys.add(key)
+                    all_chunks.append({
+                        'document_id': r.document_id,
+                        'document_title': r.document_title,
+                        'chunk_index': r.chunk_index,
+                        'chunk_text': r.chunk_text[:1500],
+                        'similarity_score': round(r.similarity_score, 4),
+                    })
+
+        logger.info(f"[COMPETITOR] Collected {len(all_chunks)} unique evidence chunks for '{competitor_name}'")
+
+        if not all_chunks:
+            comparison.status = 'failed'
+            comparison.error_message = 'No evidence chunks found — ensure the source document is embedded.'
+            comparison.save(update_fields=['status', 'error_message', 'updated_at'])
+            return {'error': comparison.error_message}
+
+        # --- 2. Build prompt + call LLM ---
+        evidence_text = "\n\n".join(
+            f"[Chunk {c['chunk_index']} | {c['document_title']} | sim={c['similarity_score']}]\n{c['chunk_text']}"
+            for c in sorted(all_chunks, key=lambda x: -x['similarity_score'])[:40]
+        )
+
+        system_prompt = (
+            "You are a competitive intelligence analyst. Given evidence chunks from a document "
+            "about a competitor, produce a structured JSON comparison between the competitor's "
+            "platform and our platform (Donkey Betz / AI Studio). Be specific and evidence-based."
+        )
+
+        user_prompt = f"""Analyze the following evidence about **{competitor_name}** and produce a JSON object with exactly these 5 keys:
+
+1. "review" — object describing what they built, key features, architecture. Include "features" (list of objects with "name", "description", "evidence_quote") and "architecture_summary" (string).
+
+2. "comparison_table" — list of objects, each with "category", "competitor" (what they have), "donkey_betz" (what we have), "verdict" ("ahead" / "behind" / "even" / "gap").
+
+3. "gap_backlog" — list of objects, each with "gap" (string), "priority" ("P0"/"P1"/"P2"), "acceptance_test" (string describing how we'd know the gap is closed).
+
+4. "tools_stack" — object with "languages" (list), "frameworks" (list), "services" (list), "apis" (list) — extracted from the evidence.
+
+5. "summary" — 2-3 sentence executive summary of the comparison.
+
+EVIDENCE CHUNKS:
+{evidence_text}
+
+Respond ONLY with valid JSON, no markdown fences."""
+
+        import openai as openai_mod
+        from django.conf import settings as django_settings
+
+        client = openai_mod.OpenAI(api_key=django_settings.AI_PROVIDERS.get('OPENAI_API_KEY'))
+        llm_response = client.chat.completions.create(
+            model='gpt-4.1',
+            messages=[
+                {'role': 'system', 'content': system_prompt},
+                {'role': 'user', 'content': user_prompt},
+            ],
+            max_tokens=4000,
+            temperature=0.3,
+        )
+
+        raw_text = llm_response.choices[0].message.content.strip()
+        tokens_used = {
+            'prompt_tokens': llm_response.usage.prompt_tokens if llm_response.usage else 0,
+            'completion_tokens': llm_response.usage.completion_tokens if llm_response.usage else 0,
+        }
+
+        # --- 3. Parse JSON ---
+        # Strip markdown fences if present
+        if raw_text.startswith('```'):
+            raw_text = raw_text.split('\n', 1)[1] if '\n' in raw_text else raw_text[3:]
+            if raw_text.endswith('```'):
+                raw_text = raw_text[:-3]
+
+        parsed = json.loads(raw_text)
+
+        # --- 4. Save to model ---
+        elapsed = round(time.time() - start_time, 2)
+        comparison.review_json = parsed.get('review', {})
+        comparison.comparison_table_json = parsed.get('comparison_table', [])
+        comparison.gap_backlog_json = parsed.get('gap_backlog', [])
+        comparison.tools_stack_json = parsed.get('tools_stack', {})
+        comparison.evidence_json = all_chunks
+        comparison.summary = parsed.get('summary', '')
+        comparison.status = 'complete'
+        comparison.completed_at = tz.now()
+        comparison.metadata = {
+            'tokens': tokens_used,
+            'evidence_chunks': len(all_chunks),
+            'elapsed_seconds': elapsed,
+            'queries_run': len(queries),
+        }
+        comparison.save()
+
+        logger.info(f"[COMPETITOR] Comparison '{competitor_name}' complete in {elapsed}s")
+        return {
+            'comparison_id': str(comparison.id),
+            'status': 'complete',
+            'summary': comparison.summary[:200],
+        }
+
+    except SoftTimeLimitExceeded:
+        comparison.status = 'failed'
+        comparison.error_message = 'Task exceeded time limit (300s)'
+        comparison.save(update_fields=['status', 'error_message', 'updated_at'])
+        raise
+    except Exception as e:
+        logger.error(f"[COMPETITOR] Failed for '{competitor_name}': {e}\n{traceback.format_exc()}")
+        comparison.status = 'failed'
+        comparison.error_message = str(e)[:2000]
+        comparison.save(update_fields=['status', 'error_message', 'updated_at'])
+        return {'error': str(e)}

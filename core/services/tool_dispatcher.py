@@ -221,6 +221,9 @@ class ToolDispatcher:
         # RAG query — semantic search + stats
         self.register("rag_query_tool", self._handle_rag_query)
 
+        # Session G1: Competitor comparison — generate, status, list, detail
+        self.register("competitor_comparison_tool", self._handle_competitor_comparison)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):
@@ -8779,6 +8782,120 @@ RESEARCH DATA:
                 'total_documents': total_docs,
                 'total_embeddings': total_embeddings,
                 'recent_documents': recent,
+            }
+
+        return {'error': f'Unknown action: {action}'}
+
+    # ── Session G1: Competitor Comparison ────────────────────────────────────
+
+    def _handle_competitor_comparison(self, tool_name, payload, user_id, trace_id):
+        """Generate, check status, list, or view competitor comparisons."""
+        action = payload.get('action', 'list')
+
+        if action == 'generate':
+            competitor_name = payload.get('competitor_name', '').strip()
+            if not competitor_name:
+                return {'error': 'competitor_name is required for generate action'}
+
+            from core.models_competitor_comparison import CompetitorComparison
+            from core.tasks import generate_competitor_comparison_task
+
+            source_document_id = payload.get('source_document_id')
+            focus_areas = payload.get('focus_areas')
+
+            comparison = CompetitorComparison.objects.create(
+                competitor_name=competitor_name,
+                source_document_id=source_document_id,
+                generated_by='PA',
+                user_id=user_id,
+            )
+
+            task = generate_competitor_comparison_task.delay(
+                comparison_id=str(comparison.id),
+                source_document_id=str(source_document_id) if source_document_id else None,
+                competitor_name=competitor_name,
+                focus_areas=focus_areas,
+            )
+
+            return {
+                'action': 'generate',
+                'comparison_id': str(comparison.id),
+                'task_id': str(task.id),
+                'message': f'Competitor comparison for "{competitor_name}" started',
+            }
+
+        elif action == 'status':
+            comparison_id = payload.get('comparison_id')
+            if not comparison_id:
+                return {'error': 'comparison_id is required for status action'}
+
+            from core.models_competitor_comparison import CompetitorComparison
+            try:
+                c = CompetitorComparison.objects.get(id=comparison_id)
+            except CompetitorComparison.DoesNotExist:
+                return {'error': f'Comparison {comparison_id} not found'}
+
+            result = {
+                'action': 'status',
+                'comparison_id': str(c.id),
+                'competitor_name': c.competitor_name,
+                'status': c.status,
+            }
+            if c.status == 'complete':
+                result['summary'] = c.summary[:500]
+                result['completed_at'] = c.completed_at.isoformat() if c.completed_at else None
+            elif c.status == 'failed':
+                result['error_message'] = c.error_message[:500]
+            return result
+
+        elif action == 'list':
+            from core.models_competitor_comparison import CompetitorComparison
+
+            limit = min(int(payload.get('limit', 10)), 50)
+            qs = CompetitorComparison.objects.order_by('-created_at')[:limit]
+
+            return {
+                'action': 'list',
+                'count': len(qs),
+                'comparisons': [
+                    {
+                        'id': str(c.id),
+                        'competitor_name': c.competitor_name,
+                        'status': c.status,
+                        'summary': (c.summary[:200] if c.summary else ''),
+                        'created_at': c.created_at.isoformat(),
+                    }
+                    for c in qs
+                ],
+            }
+
+        elif action == 'detail':
+            comparison_id = payload.get('comparison_id')
+            if not comparison_id:
+                return {'error': 'comparison_id is required for detail action'}
+
+            from core.models_competitor_comparison import CompetitorComparison
+            try:
+                c = CompetitorComparison.objects.get(id=comparison_id)
+            except CompetitorComparison.DoesNotExist:
+                return {'error': f'Comparison {comparison_id} not found'}
+
+            return {
+                'action': 'detail',
+                'comparison': {
+                    'id': str(c.id),
+                    'competitor_name': c.competitor_name,
+                    'status': c.status,
+                    'review': c.review_json,
+                    'comparison_table': c.comparison_table_json,
+                    'gap_backlog': c.gap_backlog_json,
+                    'tools_stack': c.tools_stack_json,
+                    'evidence_count': len(c.evidence_json) if isinstance(c.evidence_json, list) else 0,
+                    'summary': c.summary,
+                    'created_at': c.created_at.isoformat(),
+                    'completed_at': c.completed_at.isoformat() if c.completed_at else None,
+                    'metadata': c.metadata,
+                },
             }
 
         return {'error': f'Unknown action: {action}'}

@@ -1892,6 +1892,50 @@ PA_TOOL_SCHEMAS = [
             "required": ["action"],
         },
     },
+    # ── Competitor Comparison (Session G1) ─────────────────────────────────────
+    {
+        "type": "function",
+        "name": "competitor_comparison_tool",
+        "description": (
+            "Generate, check status, list, or view competitor comparisons. "
+            "Produces a structured side-by-side analysis between a competitor "
+            "and Donkey Betz using RAG evidence from ingested documents. "
+            "Use when the user asks to compare competitors, do competitive "
+            "analysis, or review a competitor's platform."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["generate", "status", "list", "detail"],
+                    "description": "Action to perform",
+                },
+                "competitor_name": {
+                    "type": "string",
+                    "description": "Name of the competitor to compare against (required for generate)",
+                },
+                "source_document_id": {
+                    "type": "string",
+                    "description": "UUID of the source document to extract evidence from",
+                },
+                "comparison_id": {
+                    "type": "string",
+                    "description": "UUID of an existing comparison (for status/detail)",
+                },
+                "focus_areas": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Additional search queries to focus the comparison",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max results for list action (default 10)",
+                },
+            },
+            "required": ["action"],
+        },
+    },
 ]
 
 
@@ -1966,6 +2010,7 @@ TOOL_ENRICHMENT_MAP = {
     'http_smoke_test': [],
     'learning_tool': [],
     'rag_query_tool': [],
+    'competitor_comparison_tool': [],
 }
 
 # Reverse map: tool name -> canonical intent name for enrichment pipeline
@@ -2036,4 +2081,5 @@ TOOL_TO_INTENT_MAP = {
     'http_smoke_test': 'verification',
     'learning_tool': 'system_health',
     'rag_query_tool': 'rag',
+    'competitor_comparison_tool': 'rag',
 }
