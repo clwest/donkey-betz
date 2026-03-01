@@ -97,6 +97,38 @@ class TestIngestUrlFailurePath:
         assert response.status_code == 400
         assert "required" in response.data["error"].lower()
 
+    def test_correlation_id_present_on_failure(self):
+        """All failure responses include a correlation_id for log tracing."""
+        from core.views_rag_embeddings import ingest_url
+
+        user = _get_user()
+        request = _make_request(user, {})
+
+        response = ingest_url(request)
+
+        assert response.status_code == 400
+        assert "correlation_id" in response.data
+        assert len(response.data["correlation_id"]) == 36  # UUID format
+
+    def test_non_json_content_type_returns_415(self):
+        """Non-JSON content type returns 415 Unsupported Media Type."""
+        from core.views_rag_embeddings import ingest_url
+
+        factory = APIRequestFactory()
+        user = _get_user()
+        request = factory.post(
+            "/api/documents/ingest-url/",
+            data=b"somefile",
+            content_type="multipart/form-data",
+        )
+        force_authenticate(request, user=user)
+
+        response = ingest_url(request)
+
+        assert response.status_code == 415
+        assert response.data["success"] is False
+        assert "correlation_id" in response.data
+
     def test_processing_result_error_alias_works(self):
         """ProcessingResult.error property returns error_message."""
         result = ProcessingResult(
