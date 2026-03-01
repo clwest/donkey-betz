@@ -132,3 +132,58 @@ def workflow_run_dispatch(request, run_id):
     except Exception as e:
         logger.error(f"[WORKFLOW] Error dispatching run: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def workflow_queue_diagnostic(request):
+    """Diagnostic: check Redis queue lengths and Celery worker status."""
+    try:
+        import redis as redis_lib
+        from django.conf import settings as django_settings
+        from core.celery import app as celery_app
+
+        broker_url = django_settings.CELERY_BROKER_URL
+        r = redis_lib.from_url(broker_url, socket_connect_timeout=5)
+
+        queues = ['long_running', 'ml', 'default', 'content', 'broadcast', 'pa', 'celery']
+        queue_lengths = {}
+        for q in queues:
+            queue_lengths[q] = r.llen(q)
+
+        # Check active/reserved tasks via inspect
+        inspect = celery_app.control.inspect(timeout=5)
+        active = inspect.active() or {}
+        reserved = inspect.reserved() or {}
+        registered = inspect.registered() or {}
+
+        active_summary = {}
+        for worker, tasks in active.items():
+            active_summary[worker] = [
+                {'name': t.get('name', '?'), 'id': t.get('id', '?')[:12]}
+                for t in (tasks or [])
+            ]
+
+        reserved_summary = {}
+        for worker, tasks in reserved.items():
+            reserved_summary[worker] = [
+                {'name': t.get('name', '?'), 'id': t.get('id', '?')[:12]}
+                for t in (tasks or [])
+            ]
+
+        # Check if run_source_pack_workflow is registered
+        has_workflow = {}
+        for worker, task_list in registered.items():
+            has_workflow[worker] = 'core.tasks.run_source_pack_workflow' in (task_list or [])
+
+        return JsonResponse({
+            'success': True,
+            'broker_url': broker_url.split('@')[-1] if '@' in broker_url else broker_url,
+            'queue_lengths': queue_lengths,
+            'active_tasks': active_summary,
+            'reserved_tasks': reserved_summary,
+            'workflow_registered': has_workflow,
+        })
+
+    except Exception as e:
+        logger.error(f"[WORKFLOW] Queue diagnostic error: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
