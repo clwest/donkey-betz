@@ -2464,6 +2464,15 @@ app.conf.beat_schedule = {
             'expires': 86400,
         },
     },
+    # Session G2: Data retention — archive old artifacts by sensitivity level
+    'enforce-data-retention': {
+        'task': 'core.tasks.enforce_data_retention',
+        'schedule': crontab(hour=4, minute=0),  # Daily at 4 AM
+        'options': {
+            'expires': 86400,
+            'queue': 'default',
+        },
+    },
 }
 
 # Task routing configuration

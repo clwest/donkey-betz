@@ -1386,3 +1386,11 @@ USE_CLEAN_AGENT_ARCHITECTURE = os.environ.get('USE_CLEAN_AGENT_ARCHITECTURE', 'T
 # When True, PA uses GPT-5.2 function calling to route messages instead of
 # the 506-line _detect_intent_and_route() keyword matching chain.
 PA_USE_FUNCTION_CALLING = os.environ.get('PA_USE_FUNCTION_CALLING', 'false').lower() == 'true'
+
+# Session G2: Recording Mode — controls artifact persistence and log verbosity
+# off: don't auto-save intermediate outputs; minimize payload logging
+# on: reproducible; saves all artifacts and intermediate outputs
+# public_safe: on + stricter redaction + no sensitive payload storage
+RECORDING_MODE = os.environ.get('RECORDING_MODE', 'off').lower()
+if RECORDING_MODE not in ('off', 'on', 'public_safe'):
+    RECORDING_MODE = 'off'

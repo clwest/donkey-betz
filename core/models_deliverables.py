@@ -263,6 +263,25 @@ class Deliverable(models.Model):
         help_text="Additional metadata (file paths, URLs, etc.)"
     )
 
+    # Session G2: Data sensitivity + retention
+    DATA_SENSITIVITY_CHOICES = [
+        ('public', 'Public'),
+        ('internal', 'Internal'),
+        ('confidential', 'Confidential'),
+        ('restricted', 'Restricted'),
+    ]
+    data_sensitivity = models.CharField(
+        max_length=20,
+        choices=DATA_SENSITIVITY_CHOICES,
+        default='internal',
+        db_index=True,
+        help_text="Data sensitivity level for retention and redaction policies"
+    )
+    is_pinned = models.BooleanField(
+        default=False,
+        help_text="Pinned deliverables override retention policies (never auto-deleted)"
+    )
+
     # Status
     STATUS_CHOICES = [
         ('draft', 'Draft'),
@@ -297,6 +316,8 @@ class Deliverable(models.Model):
             # Session 862: Content Flow indexes
             models.Index(fields=['initiative', '-created_at']),
             models.Index(fields=['dream', '-created_at']),
+            # Session G2: Retention query index
+            models.Index(fields=['data_sensitivity', '-created_at']),
         ]
 
     def __str__(self):
