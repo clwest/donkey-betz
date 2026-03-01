@@ -1852,6 +1852,46 @@ PA_TOOL_SCHEMAS = [
             "required": ["action"],
         },
     },
+
+    # ── RAG Query ────────────────────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "rag_query_tool",
+        "description": (
+            "Search the RAG knowledge base and document embeddings. Use 'search' "
+            "to perform semantic search across all ingested documents. Use 'stats' "
+            "to get embedding statistics and recent ingestion activity. Use when "
+            "the user asks to search documents, find information in the knowledge "
+            "base, query embeddings, or check RAG status."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["search", "stats"],
+                    "description": "search=semantic search across documents, stats=embedding statistics and recent activity",
+                },
+                "query": {
+                    "type": "string",
+                    "description": "Search query text (required for search action)",
+                },
+                "top_k": {
+                    "type": "integer",
+                    "description": "Max results to return (default 5, max 20)",
+                },
+                "similarity_threshold": {
+                    "type": "number",
+                    "description": "Minimum similarity score 0.0-1.0 (default 0.3)",
+                },
+                "document_id": {
+                    "type": "string",
+                    "description": "Filter results to a specific document UUID",
+                },
+            },
+            "required": ["action"],
+        },
+    },
 ]
 
 
@@ -1925,6 +1965,7 @@ TOOL_ENRICHMENT_MAP = {
     'create_project_from_research': ['domain_context', 'spider_trends'],
     'http_smoke_test': [],
     'learning_tool': [],
+    'rag_query_tool': [],
 }
 
 # Reverse map: tool name -> canonical intent name for enrichment pipeline
@@ -1994,4 +2035,5 @@ TOOL_TO_INTENT_MAP = {
     'create_project_from_research': 'agent_execution',
     'http_smoke_test': 'verification',
     'learning_tool': 'system_health',
+    'rag_query_tool': 'rag',
 }
