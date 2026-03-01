@@ -100,7 +100,6 @@ def workflow_run_dispatch(request, run_id):
     try:
         from core.models_workflow_run import WorkflowRun
         from core.tasks import run_source_pack_workflow
-        from core.celery import app as celery_app
 
         try:
             run = WorkflowRun.objects.get(id=run_id)

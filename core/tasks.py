@@ -37215,10 +37215,24 @@ def run_source_pack_workflow(self, run_id):
 
     except SoftTimeLimitExceeded:
         output['partial'] = True
+        output['failure'] = {
+            'exception_type': 'SoftTimeLimitExceeded',
+            'message': 'Workflow exceeded time limit (900s)',
+            'stage': run.stage,
+            'celery_task_id': run.celery_task_id,
+        }
         run.mark_failed('Workflow exceeded time limit (900s)', partial_output=output)
         run.save()
         raise
     except Exception as e:
-        logger.error(f"[WORKFLOW] Failed run={run_id}: {e}\n{traceback.format_exc()}")
+        tb = traceback.format_exc()
+        logger.error(f"[WORKFLOW] Failed run={run_id}: {e}\n{tb}")
+        output['failure'] = {
+            'exception_type': type(e).__name__,
+            'message': str(e)[:500],
+            'stage': run.stage,
+            'celery_task_id': run.celery_task_id,
+            'traceback_tail': tb[-500:] if tb else '',
+        }
         run.mark_failed(str(e), partial_output=output)
         run.save()

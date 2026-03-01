@@ -4902,11 +4902,68 @@ class ToolDispatcher:
                 'total_cleaned': len(archived_stalled) + len(archived_noise) + len(archived_dupes),
             }
 
+        elif action == 'create':
+            from core.services.initiative_integration_service import (
+                InitiativeIntegrationService,
+                InitiativeCreationBlocked,
+            )
+
+            name = payload.get('name', '').strip()
+            if not name:
+                raise ValueError("'name' is required for create action")
+
+            description = payload.get('description', '')
+            purpose = payload.get('purpose', 'learning')
+            program = payload.get('program', 'uncategorized')
+
+            try:
+                svc = InitiativeIntegrationService()
+                initiative, created = svc.get_or_create_initiative(
+                    topic=name,
+                    description=description,
+                    created_by='human_pa',
+                )
+            except InitiativeCreationBlocked as e:
+                return {'action': 'create', 'error': str(e), 'blocked': True}
+
+            # Apply extra fields from payload
+            update_fields = []
+            for field, default in [
+                ('purpose', 'learning'), ('program', 'uncategorized'),
+                ('impact_score', 0.5), ('urgency', 0.5),
+                ('revenue_potential', 0.0), ('execution_speed', 'balanced'),
+            ]:
+                val = payload.get(field)
+                if val is not None:
+                    if field in ('impact_score', 'urgency', 'revenue_potential'):
+                        val = max(0.0, min(1.0, float(val)))
+                    setattr(initiative, field, val)
+                    update_fields.append(field)
+            if update_fields:
+                initiative.save(update_fields=update_fields)
+
+            return {
+                'action': 'create',
+                'created': created,
+                'id': str(initiative.id),
+                'human_id': initiative.human_id,
+                'name': initiative.name,
+                'status': initiative.status,
+                'purpose': initiative.purpose,
+                'program': initiative.program,
+                'current_stage': initiative.current_stage,
+                'message': (
+                    f"Created initiative '{initiative.name}' ({initiative.human_id})"
+                    if created else
+                    f"Found existing initiative '{initiative.name}' ({initiative.human_id}) — no duplicate created"
+                ),
+            }
+
         else:
             raise ValueError(
                 f"Unknown action: {action}. Valid actions: list, stats, details, "
                 f"action_items, flow_metrics, update_status, advance, start_action_item, "
-                f"complete_action_item, assign_owner, bulk_auto_assign, bulk_cleanup"
+                f"complete_action_item, assign_owner, bulk_auto_assign, bulk_cleanup, create"
             )
 
     # =========================================================================
