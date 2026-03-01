@@ -9293,7 +9293,10 @@ RESEARCH DATA:
                 },
             )
 
-            task = run_source_pack_workflow.delay(run_id=str(run.id))
+            task = run_source_pack_workflow.apply_async(
+                kwargs={'run_id': str(run.id)},
+                queue='long_running',
+            )
             run.celery_task_id = str(task.id)
             run.save(update_fields=['celery_task_id', 'updated_at'])
 
