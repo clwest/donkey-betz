@@ -318,6 +318,64 @@ BUILTIN_SUITES: dict[str, list[dict]] = {
         {'name': 'resolve_node_health', 'method': 'GET', 'path': '/api/cockpit/resolve-node/health/', 'assert': [{'check': 'status', 'expected': 200}, {'check': 'has_key', 'key': 'status'}]},
     ],
 
+    'resolve_node_render': [
+        # 1. Health check — verify resolve-node is reachable before submitting
+        {
+            'name': 'health_gate',
+            'method': 'GET',
+            'path': '/api/cockpit/resolve-node/health/',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+                {'check': 'json_path', 'path': '$.status', 'operator': 'eq', 'expected': 'ok'},
+            ],
+        },
+        # 2. Submit a tiny render job using the demo test clip
+        {
+            'name': 'submit_render',
+            'depends_on': ['health_gate'],
+            'method': 'POST',
+            'path': '/api/cockpit/resolve-node/render/start/',
+            'body': {
+                'clip_paths': ['demo_assets/demo_test_clip.mp4'],
+                'template': 'default_mp4',
+                'timeline_name': 'smoke_test_{{test_run_id}}',
+            },
+            'assert': [
+                {'check': 'status', 'expected': 200},
+                {'check': 'has_key', 'key': 'job_id'},
+                {'check': 'has_key', 'key': 'status'},
+            ],
+            'capture': [
+                {'json_path': '$.job_id', 'as': 'render_job_id'},
+            ],
+        },
+        # 3. Check render status (mock mode completes fast; real mode may be queued/rendering)
+        {
+            'name': 'check_status',
+            'depends_on': ['submit_render'],
+            'method': 'GET',
+            'path': '/api/cockpit/resolve-node/render/status/{{render_job_id}}/',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+                {'check': 'has_key', 'key': 'job_id'},
+                {'check': 'has_key', 'key': 'status'},
+                {'check': 'has_key', 'key': 'progress'},
+            ],
+        },
+        # 4. List all jobs — verify the submitted job appears
+        {
+            'name': 'list_jobs',
+            'depends_on': ['submit_render'],
+            'method': 'GET',
+            'path': '/api/cockpit/resolve-node/jobs/',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+                {'check': 'has_key', 'key': 'jobs'},
+                {'check': 'json_path', 'path': '$.total', 'operator': 'gte', 'expected': 1},
+            ],
+        },
+    ],
+
     'cockpit_incidents_crud': [
         # 1. Create a smoke-test incident (tagged with test_run_id)
         {
