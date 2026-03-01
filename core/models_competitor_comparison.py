@@ -21,6 +21,7 @@ class CompetitorComparison(models.Model):
         ('in_progress', 'In Progress'),
         ('complete', 'Complete'),
         ('failed', 'Failed'),
+        ('needs_sources', 'Needs More Sources'),
     ]
 
     GENERATED_BY_CHOICES = [
@@ -48,6 +49,9 @@ class CompetitorComparison(models.Model):
     gap_backlog_json = models.JSONField(default=dict, blank=True, help_text='Gaps + acceptance tests')
     tools_stack_json = models.JSONField(default=dict, blank=True, help_text='Extracted tools/stack')
     evidence_json = models.JSONField(default=list, blank=True, help_text='All evidence chunks used')
+    sources_json = models.JSONField(default=list, blank=True, help_text='Source provenance: [{title, source_type, document_id}]')
+    executive_summary_json = models.JSONField(default=dict, blank=True, help_text='Verdict, top advantages/gaps/quick wins')
+    quality_rubric_json = models.JSONField(default=dict, blank=True, help_text='Score breakdown: coverage, diversity, recency')
     summary = models.TextField(blank=True, default='')
 
     user = models.ForeignKey(

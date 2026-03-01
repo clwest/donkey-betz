@@ -8914,6 +8914,10 @@ RESEARCH DATA:
             if c.status == 'complete':
                 result['summary'] = c.summary[:500]
                 result['completed_at'] = c.completed_at.isoformat() if c.completed_at else None
+                result['executive_summary'] = c.executive_summary_json
+            elif c.status == 'needs_sources':
+                result['error_message'] = c.error_message[:500]
+                result['recommended_queries'] = (c.metadata or {}).get('recommended_queries', [])
             elif c.status == 'failed':
                 result['error_message'] = c.error_message[:500]
             return result
@@ -8959,6 +8963,9 @@ RESEARCH DATA:
                     'competitor_name': c.competitor_name,
                     'status': c.status,
                     'quality_score': c.quality_score,
+                    'executive_summary': c.executive_summary_json,
+                    'quality_rubric': c.quality_rubric_json,
+                    'sources': c.sources_json,
                     'review': c.review_json,
                     'comparison_table': c.comparison_table_json,
                     'gap_backlog': c.gap_backlog_json,
@@ -9020,6 +9027,219 @@ RESEARCH DATA:
                 'comparison_id': str(c.id),
                 'task_id': str(task.id),
                 'message': f'Regenerating comparison for "{c.competitor_name}"',
+            }
+
+        elif action == 'create_initiative_from_gap':
+            comparison_id = payload.get('comparison_id')
+            gap_index = payload.get('gap_index', 0)
+            if not comparison_id:
+                return {'error': 'comparison_id is required for create_initiative_from_gap action'}
+
+            from core.models_competitor_comparison import CompetitorComparison
+            from core.models_document_registry import Initiative
+
+            try:
+                c = CompetitorComparison.objects.get(id=comparison_id)
+            except CompetitorComparison.DoesNotExist:
+                return {'error': f'Comparison {comparison_id} not found'}
+
+            if c.status != 'complete':
+                return {'error': f'Comparison must be complete (current: {c.status})'}
+
+            gaps = c.gap_backlog_json if isinstance(c.gap_backlog_json, list) else c.gap_backlog_json.get('gaps', [])
+            if not gaps:
+                return {'error': 'No gaps found in this comparison'}
+            if gap_index >= len(gaps):
+                return {'error': f'gap_index {gap_index} out of range (0-{len(gaps)-1})'}
+
+            gap = gaps[gap_index]
+            gap_title = gap.get('gap', gap.get('title', f'Gap #{gap_index + 1}'))
+            effort = gap.get('effort', 'M')
+            impact = gap.get('impact', 'medium')
+            acceptance = gap.get('acceptance_test', gap.get('acceptance_criteria', ''))
+            evidence_refs = gap.get('evidence_refs', [])
+
+            # Map effort to purpose
+            purpose = 'expansion' if impact == 'high' else 'learning'
+            urgency_score = {'high': 0.8, 'medium': 0.5, 'low': 0.3}.get(impact, 0.5)
+
+            name = f"[Competitive] {gap_title}"
+            if Initiative.objects.filter(name=name).exists():
+                return {
+                    'error': f'Initiative "{name}" already exists',
+                    'action': 'create_initiative_from_gap',
+                }
+
+            description_parts = [
+                f"**Source:** Competitor comparison vs {c.competitor_name}",
+                f"**Gap:** {gap_title}",
+                f"**Effort:** {effort} | **Impact:** {impact}",
+            ]
+            if acceptance:
+                description_parts.append(f"**Acceptance Criteria:** {acceptance}")
+            if evidence_refs:
+                description_parts.append(f"**Evidence:** {', '.join(evidence_refs)}")
+
+            initiative = Initiative.objects.create(
+                name=name,
+                description='\n'.join(description_parts),
+                status='ACTIVE',
+                purpose=purpose,
+                program='growth_intelligence',
+                urgency=urgency_score,
+                impact_score=urgency_score,
+                confidence=c.quality_score,
+                created_by='competitor_comparison',
+                parent_topic=c.competitor_name,
+            )
+
+            return {
+                'action': 'create_initiative_from_gap',
+                'initiative_id': str(initiative.id),
+                'initiative_name': initiative.name,
+                'gap_title': gap_title,
+                'message': f'Initiative created from gap: "{gap_title}"',
+            }
+
+        elif action == 'export_markdown':
+            comparison_id = payload.get('comparison_id')
+            if not comparison_id:
+                return {'error': 'comparison_id is required for export_markdown action'}
+
+            from core.models_competitor_comparison import CompetitorComparison
+
+            try:
+                c = CompetitorComparison.objects.get(id=comparison_id)
+            except CompetitorComparison.DoesNotExist:
+                return {'error': f'Comparison {comparison_id} not found'}
+
+            if c.status != 'complete':
+                return {'error': f'Comparison must be complete (current: {c.status})'}
+
+            lines = [f"# Competitor Analysis: {c.competitor_name}", ""]
+
+            # Executive summary
+            exec_sum = c.executive_summary_json or {}
+            if exec_sum.get('verdict'):
+                lines += [f"## Executive Summary", "", exec_sum['verdict'], ""]
+                if exec_sum.get('top_advantages'):
+                    lines += ["### Top Advantages"]
+                    for adv in exec_sum['top_advantages']:
+                        lines.append(f"- {adv}")
+                    lines.append("")
+                if exec_sum.get('top_gaps'):
+                    lines += ["### Top Gaps"]
+                    for gap in exec_sum['top_gaps']:
+                        lines.append(f"- {gap}")
+                    lines.append("")
+
+            # Comparison table
+            table_data = c.comparison_table_json
+            rows = table_data if isinstance(table_data, list) else table_data.get('rows', [])
+            if rows:
+                lines += ["## Side-by-Side Comparison", ""]
+                lines.append("| Feature | Competitor | Donkey Betz | Evidence |")
+                lines.append("|---------|-----------|-------------|----------|")
+                for row in rows:
+                    feature = row.get('feature', row.get('area', ''))
+                    comp = row.get('competitor', row.get('them', ''))
+                    us = row.get('donkey_betz', row.get('us', ''))
+                    refs = ', '.join(row.get('evidence_refs', []))
+                    lines.append(f"| {feature} | {comp} | {us} | {refs} |")
+                lines.append("")
+
+            # Gap backlog
+            gaps = c.gap_backlog_json if isinstance(c.gap_backlog_json, list) else c.gap_backlog_json.get('gaps', [])
+            if gaps:
+                lines += ["## Gap Backlog", ""]
+                for i, gap in enumerate(gaps):
+                    title = gap.get('gap', gap.get('title', f'Gap #{i+1}'))
+                    effort = gap.get('effort', '?')
+                    impact = gap.get('impact', '?')
+                    acceptance = gap.get('acceptance_test', gap.get('acceptance_criteria', ''))
+                    refs = ', '.join(gap.get('evidence_refs', []))
+                    lines.append(f"### {i+1}. {title}")
+                    lines.append(f"- **Effort:** {effort} | **Impact:** {impact}")
+                    if acceptance:
+                        lines.append(f"- **Acceptance:** {acceptance}")
+                    if refs:
+                        lines.append(f"- **Evidence:** {refs}")
+                    lines.append("")
+
+            # Tools/Stack
+            tools = c.tools_stack_json
+            tools_list = tools if isinstance(tools, list) else tools.get('tools', [])
+            if tools_list:
+                lines += ["## Tools & Stack", ""]
+                for t in tools_list:
+                    if isinstance(t, str):
+                        lines.append(f"- {t}")
+                    else:
+                        lines.append(f"- **{t.get('name', t.get('tool', ''))}**: {t.get('category', t.get('purpose', ''))}")
+                lines.append("")
+
+            # Sources
+            sources = c.sources_json or []
+            if sources:
+                lines += ["## Sources", ""]
+                for s in sources:
+                    if isinstance(s, dict):
+                        lines.append(f"- {s.get('title', 'Unknown')} ({s.get('source_type', '')})")
+                    else:
+                        lines.append(f"- {s}")
+                lines.append("")
+
+            # Quality rubric
+            rubric = c.quality_rubric_json or {}
+            if rubric:
+                lines += ["## Quality Rubric", ""]
+                lines.append(f"- **Overall Score:** {c.quality_score:.2f}")
+                for key, val in rubric.items():
+                    if key != 'composite_score':
+                        lines.append(f"- **{key.replace('_', ' ').title()}:** {val}")
+                lines.append("")
+
+            lines.append(f"---\n*Generated {c.created_at.strftime('%Y-%m-%d %H:%M')} UTC*")
+
+            markdown_content = '\n'.join(lines)
+
+            # Save as Deliverable
+            save_as_deliverable = payload.get('save', True)
+            deliverable_id = None
+            if save_as_deliverable:
+                from core.models_deliverables import Deliverable
+                from django.utils.text import slugify
+                slug_base = slugify(f"competitor-{c.competitor_name}")[:250]
+                slug = slug_base
+                counter = 1
+                while Deliverable.objects.filter(slug=slug).exists():
+                    slug = f"{slug_base}-{counter}"
+                    counter += 1
+
+                d = Deliverable.objects.create(
+                    title=f"Competitor Analysis: {c.competitor_name}",
+                    slug=slug,
+                    deliverable_type='document',
+                    category='Competitive Intelligence',
+                    tags=['competitor', 'analysis', c.competitor_name.lower()],
+                    agent_name='competitor_comparison_tool',
+                    agent_task=f'Export comparison {c.id}',
+                    content=markdown_content,
+                    content_format='markdown',
+                    preview_content=markdown_content[:500],
+                    quality_score=c.quality_score,
+                    confidence_score=c.quality_score,
+                    user_id=user_id,
+                )
+                deliverable_id = str(d.id)
+
+            return {
+                'action': 'export_markdown',
+                'comparison_id': str(c.id),
+                'competitor_name': c.competitor_name,
+                'markdown': markdown_content,
+                'deliverable_id': deliverable_id,
+                'message': f'Exported comparison for "{c.competitor_name}" as Markdown' + (' (saved as Deliverable)' if deliverable_id else ''),
             }
 
         return {'error': f'Unknown action: {action}'}

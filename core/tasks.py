@@ -36633,13 +36633,15 @@ def generate_competitor_comparison_task(self, comparison_id, source_document_id=
 
     Steps:
     1. Run ~8 targeted semantic searches against the source document
-    2. Collect + dedupe evidence chunks
-    3. Build structured prompt, send to GPT-5.2 via OpenAI Responses API
-    4. Parse JSON response into 5 sections and save to model
+    2. Collect + dedupe evidence chunks, scrub PII/secrets
+    3. Build structured prompt with evidence_refs, send to GPT-4.1
+    4. Parse JSON, compute quality rubric, build executive summary
+    5. Save enriched artifact with sources[], evidence_refs[], rubric
     """
     import traceback
     from django.utils import timezone as tz
     from core.models_competitor_comparison import CompetitorComparison
+    from core.services.data_scrubber import scrub
 
     try:
         comparison = CompetitorComparison.objects.get(id=comparison_id)
@@ -36670,6 +36672,7 @@ def generate_competitor_comparison_task(self, comparison_id, source_document_id=
 
         all_chunks = []
         seen_keys = set()
+        source_docs = {}  # document_id -> {title, source_type}
         for q in queries:
             results = rag_system.semantic_search_sync(
                 query=q,
@@ -36683,47 +36686,106 @@ def generate_competitor_comparison_task(self, comparison_id, source_document_id=
                 key = (r.document_id, r.chunk_index)
                 if key not in seen_keys:
                     seen_keys.add(key)
+                    # Scrub evidence text before storing
+                    chunk_text = scrub(r.chunk_text[:1500])
+                    chunk_id = f"E{len(all_chunks) + 1}"
                     all_chunks.append({
+                        'chunk_id': chunk_id,
                         'document_id': r.document_id,
                         'document_title': r.document_title,
                         'chunk_index': r.chunk_index,
-                        'chunk_text': r.chunk_text[:1500],
+                        'chunk_text': chunk_text,
                         'similarity_score': round(r.similarity_score, 4),
                     })
+                    # Track unique source documents
+                    if r.document_id not in source_docs:
+                        source_docs[r.document_id] = {
+                            'document_id': r.document_id,
+                            'title': r.document_title,
+                            'source_type': getattr(r, 'document_type', 'unknown'),
+                        }
 
-        logger.info(f"[COMPETITOR] Collected {len(all_chunks)} unique evidence chunks for '{competitor_name}'")
+        logger.info(f"[COMPETITOR] Collected {len(all_chunks)} chunks from {len(source_docs)} sources for '{competitor_name}'")
 
+        # --- Insufficient evidence check ---
         if not all_chunks:
-            comparison.status = 'failed'
-            comparison.error_message = 'No evidence chunks found — ensure the source document is embedded.'
-            comparison.save(update_fields=['status', 'error_message', 'updated_at'])
-            return {'error': comparison.error_message}
+            comparison.status = 'needs_sources'
+            comparison.error_message = 'No evidence chunks found — ingest a document about this competitor first.'
+            comparison.metadata = {
+                'recommended_queries': [
+                    f"{competitor_name} overview features",
+                    f"{competitor_name} architecture tech stack",
+                    f"{competitor_name} pricing plans",
+                ],
+            }
+            comparison.save(update_fields=['status', 'error_message', 'metadata', 'updated_at'])
+            return {'status': 'needs_sources', 'message': comparison.error_message}
+
+        if len(all_chunks) < 5:
+            comparison.status = 'needs_sources'
+            comparison.error_message = (
+                f'Only {len(all_chunks)} evidence chunks found — need at least 5 for a quality comparison. '
+                f'Ingest more documents about {competitor_name}.'
+            )
+            comparison.metadata = {
+                'evidence_found': len(all_chunks),
+                'recommended_queries': [
+                    f"{competitor_name} detailed review",
+                    f"{competitor_name} vs alternatives",
+                    f"{competitor_name} security architecture",
+                ],
+            }
+            comparison.save(update_fields=['status', 'error_message', 'metadata', 'updated_at'])
+            return {'status': 'needs_sources', 'message': comparison.error_message}
 
         # --- 2. Build prompt + call LLM ---
+        # Build chunk reference table for evidence_refs
+        chunk_ref_table = "\n".join(
+            f"[{c['chunk_id']}] (sim={c['similarity_score']}) {c['chunk_text'][:120]}..."
+            for c in sorted(all_chunks, key=lambda x: -x['similarity_score'])[:40]
+        )
         evidence_text = "\n\n".join(
-            f"[Chunk {c['chunk_index']} | {c['document_title']} | sim={c['similarity_score']}]\n{c['chunk_text']}"
+            f"[{c['chunk_id']} | {c['document_title']} | sim={c['similarity_score']}]\n{c['chunk_text']}"
             for c in sorted(all_chunks, key=lambda x: -x['similarity_score'])[:40]
         )
 
         system_prompt = (
-            "You are a competitive intelligence analyst. Given evidence chunks from a document "
+            "You are a competitive intelligence analyst. Given evidence chunks from documents "
             "about a competitor, produce a structured JSON comparison between the competitor's "
-            "platform and our platform (Donkey Betz / AI Studio). Be specific and evidence-based."
+            "platform and our platform (Donkey Betz / AI Studio). Be specific, evidence-based, "
+            "and cite chunk IDs (e.g. E1, E5) to support every claim."
         )
 
-        user_prompt = f"""Analyze the following evidence about **{competitor_name}** and produce a JSON object with exactly these 5 keys:
+        user_prompt = f"""Analyze the following evidence about **{competitor_name}** and produce a JSON object with exactly these 7 keys:
 
-1. "review" — object describing what they built, key features, architecture. Include "features" (list of objects with "name", "description", "evidence_quote") and "architecture_summary" (string).
+1. "review" — object with:
+   - "features": list of objects with "name", "description", "evidence_quote", "evidence_refs" (list of chunk IDs like ["E1", "E5"])
+   - "architecture_summary": string
 
-2. "comparison_table" — list of objects, each with "category", "competitor" (what they have), "donkey_betz" (what we have), "verdict" ("ahead" / "behind" / "even" / "gap").
+2. "comparison_table" — list of objects with:
+   - "category", "competitor" (what they have), "donkey_betz" (what we have)
+   - "verdict": "ahead" / "behind" / "even" / "gap"
+   - "evidence_refs": list of chunk IDs supporting this row
 
-3. "gap_backlog" — list of objects, each with "gap" (string), "priority" ("P0"/"P1"/"P2"), "acceptance_test" (string describing how we'd know the gap is closed).
+3. "gap_backlog" — list of objects with:
+   - "gap" (string), "priority" ("P0"/"P1"/"P2")
+   - "acceptance_test" (string — how we'd know the gap is closed)
+   - "effort": "S" / "M" / "L"
+   - "impact": "high" / "medium" / "low"
+   - "evidence_refs": list of chunk IDs
 
-4. "tools_stack" — object with "languages" (list), "frameworks" (list), "services" (list), "apis" (list) — extracted from the evidence.
+4. "tools_stack" — object with "languages" (list), "frameworks" (list), "services" (list), "apis" (list)
 
-5. "summary" — 2-3 sentence executive summary of the comparison.
+5. "summary" — 2-3 sentence executive summary
 
-EVIDENCE CHUNKS:
+6. "verdict" — overall: "ahead" / "behind" / "parity"
+
+7. "quick_wins" — list of 3 gaps that could be closed in 1-2 weeks (subset of gap_backlog, effort="S")
+
+AVAILABLE CHUNK IDs:
+{chunk_ref_table}
+
+FULL EVIDENCE CHUNKS:
 {evidence_text}
 
 Respond ONLY with valid JSON, no markdown fences."""
@@ -36738,7 +36800,7 @@ Respond ONLY with valid JSON, no markdown fences."""
                 {'role': 'system', 'content': system_prompt},
                 {'role': 'user', 'content': user_prompt},
             ],
-            max_tokens=4000,
+            max_tokens=6000,
             temperature=0.3,
         )
 
@@ -36749,7 +36811,6 @@ Respond ONLY with valid JSON, no markdown fences."""
         }
 
         # --- 3. Parse JSON ---
-        # Strip markdown fences if present
         if raw_text.startswith('```'):
             raw_text = raw_text.split('\n', 1)[1] if '\n' in raw_text else raw_text[3:]
             if raw_text.endswith('```'):
@@ -36757,38 +36818,86 @@ Respond ONLY with valid JSON, no markdown fences."""
 
         parsed = json.loads(raw_text)
 
-        # --- 4. Compute evidence coverage ---
+        # --- 4. Compute quality rubric ---
         comparison_table = parsed.get('comparison_table', [])
-        evidence_quotes = set()
+        gap_backlog = parsed.get('gap_backlog', [])
         review = parsed.get('review', {})
-        for feat in review.get('features', []):
-            quote = feat.get('evidence_quote', '')
-            if quote:
-                evidence_quotes.add(quote[:80])
 
-        cited_rows = 0
-        for row in comparison_table:
-            competitor_text = str(row.get('competitor', ''))
-            # Row is "cited" if its competitor field matches any evidence quote fragment
-            if any(q[:30] in competitor_text for q in evidence_quotes if len(q) >= 10):
-                cited_rows += 1
-            elif competitor_text and len(competitor_text) > 20:
-                # Also count rows with substantive competitor descriptions
-                cited_rows += 1
-
+        # Evidence coverage: % of comparison_table rows with evidence_refs
+        rows_with_refs = sum(1 for row in comparison_table if row.get('evidence_refs'))
         total_rows = len(comparison_table) if comparison_table else 1
-        evidence_coverage_pct = round(cited_rows / total_rows * 100, 1)
-        uncited_claims = total_rows - cited_rows
+        evidence_coverage = round(rows_with_refs / total_rows, 3)
 
-        quality_score = min(1.0, evidence_coverage_pct / 100.0)
+        # Source diversity: how many unique source documents contributed
+        unique_sources = len(source_docs)
+        source_diversity = min(1.0, unique_sources / 5.0)  # 5+ sources = perfect
 
-        # --- 5. Save to model ---
+        # Uncited penalty: features without evidence_refs
+        features = review.get('features', [])
+        features_with_refs = sum(1 for f in features if f.get('evidence_refs'))
+        uncited_penalty = 1.0 - (features_with_refs / max(len(features), 1))
+
+        # Composite quality score
+        quality_score = round(min(1.0, (
+            evidence_coverage * 0.5 +
+            source_diversity * 0.2 +
+            (1.0 - uncited_penalty) * 0.3
+        )), 3)
+
+        quality_rubric = {
+            'evidence_coverage': evidence_coverage,
+            'source_diversity': round(source_diversity, 3),
+            'uncited_penalty': round(uncited_penalty, 3),
+            'unique_sources': unique_sources,
+            'total_evidence_chunks': len(all_chunks),
+            'rows_with_refs': rows_with_refs,
+            'total_rows': total_rows,
+            'features_cited': features_with_refs,
+            'features_total': len(features),
+        }
+
+        # --- 5. Build executive summary ---
+        verdict = parsed.get('verdict', 'parity')
+        quick_wins = parsed.get('quick_wins', [])
+
+        # Count verdicts
+        verdict_counts = {}
+        for row in comparison_table:
+            v = row.get('verdict', 'even')
+            verdict_counts[v] = verdict_counts.get(v, 0) + 1
+
+        top_advantages = [
+            row['category'] for row in comparison_table
+            if row.get('verdict') == 'ahead'
+        ][:3]
+        top_gaps = [
+            row['category'] for row in comparison_table
+            if row.get('verdict') in ('behind', 'gap')
+        ][:3]
+
+        executive_summary = {
+            'verdict': verdict,
+            'verdict_counts': verdict_counts,
+            'top_advantages': top_advantages,
+            'top_gaps': top_gaps,
+            'quick_wins': quick_wins[:3],
+            'gap_count': len(gap_backlog),
+            'p0_gaps': sum(1 for g in gap_backlog if g.get('priority') == 'P0'),
+            'p1_gaps': sum(1 for g in gap_backlog if g.get('priority') == 'P1'),
+            'p2_gaps': sum(1 for g in gap_backlog if g.get('priority') == 'P2'),
+            'confidence': 'high' if quality_score >= 0.7 else 'medium' if quality_score >= 0.4 else 'low',
+        }
+
+        # --- 6. Save enriched artifact ---
         elapsed = round(time.time() - start_time, 2)
         comparison.review_json = review
         comparison.comparison_table_json = comparison_table
-        comparison.gap_backlog_json = parsed.get('gap_backlog', [])
+        comparison.gap_backlog_json = gap_backlog
         comparison.tools_stack_json = parsed.get('tools_stack', {})
         comparison.evidence_json = all_chunks
+        comparison.sources_json = list(source_docs.values())
+        comparison.executive_summary_json = executive_summary
+        comparison.quality_rubric_json = quality_rubric
         comparison.summary = parsed.get('summary', '')
         comparison.quality_score = quality_score
         comparison.status = 'complete'
@@ -36798,15 +36907,22 @@ Respond ONLY with valid JSON, no markdown fences."""
             'evidence_chunks': len(all_chunks),
             'elapsed_seconds': elapsed,
             'queries_run': len(queries),
-            'evidence_coverage_pct': evidence_coverage_pct,
-            'uncited_claims': uncited_claims,
+            'evidence_coverage_pct': round(evidence_coverage * 100, 1),
+            'uncited_claims': total_rows - rows_with_refs,
+            'source_count': unique_sources,
+            'model': 'gpt-4.1',
         }
         comparison.save()
 
-        logger.info(f"[COMPETITOR] Comparison '{competitor_name}' complete in {elapsed}s")
+        logger.info(
+            f"[COMPETITOR] Comparison '{competitor_name}' complete in {elapsed}s "
+            f"| quality={quality_score} | {len(all_chunks)} chunks from {unique_sources} sources"
+        )
         return {
             'comparison_id': str(comparison.id),
             'status': 'complete',
+            'quality_score': quality_score,
+            'verdict': verdict,
             'summary': comparison.summary[:200],
         }
 
