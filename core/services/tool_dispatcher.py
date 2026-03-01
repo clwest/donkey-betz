@@ -661,7 +661,9 @@ class ToolDispatcher:
             return {'action': 'list', 'count': len(opportunities), 'opportunities': opportunities}
 
         elif action == 'get':
-            opp_id = payload.get('opportunity_id')
+            opp_id = payload.get('opportunity_id') or payload.get('id')
+            if not opp_id:
+                raise ValueError("opportunity_id is required for get action")
             opp = base_qs.filter(id=opp_id).first()
             if not opp:
                 raise ValueError(f"Opportunity {opp_id} not found")
@@ -821,12 +823,14 @@ class ToolDispatcher:
             if not opp:
                 # Create a standalone opportunity to satisfy the required FK
                 from core.models_unified_system import Opportunity
+                from decimal import Decimal as _TDecimal
                 opp = Opportunity.objects.create(
                     user_id=user_id,
                     title=title,
                     description=payload.get('description', ''),
                     opportunity_type='task',
                     source='pa',
+                    potential_revenue=_TDecimal('0'),
                     status='active',
                 )
 
