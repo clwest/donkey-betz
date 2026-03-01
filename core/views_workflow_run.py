@@ -144,11 +144,26 @@ def workflow_run_dispatch(request, run_id):
 
 @require_http_methods(["GET"])
 def workflow_queue_diagnostic(request):
-    """Diagnostic: check Redis queue lengths and Celery worker status."""
+    """Diagnostic: check Redis queue lengths and Celery worker status.
+
+    ?action=add_consumer  — also add 'workflow' queue consumer to all workers
+    """
     try:
         import redis as redis_lib
         from django.conf import settings as django_settings
         from core.celery import app as celery_app
+
+        # Optionally add workflow queue consumer
+        add_consumer_result = None
+        if request.GET.get('action') == 'add_consumer':
+            try:
+                add_consumer_result = celery_app.control.add_consumer(
+                    'workflow', reply=True, timeout=10,
+                )
+                logger.info(f"[WORKFLOW] add_consumer result: {add_consumer_result}")
+            except Exception as ce:
+                add_consumer_result = {'error': str(ce)}
+                logger.warning(f"[WORKFLOW] add_consumer failed: {ce}")
 
         broker_url = django_settings.CELERY_BROKER_URL
         r = redis_lib.from_url(broker_url, socket_connect_timeout=5)
@@ -189,7 +204,7 @@ def workflow_queue_diagnostic(request):
         for worker, qs in active_queues.items():
             active_queues_info[worker] = [q.get('name', '?') for q in (qs or [])]
 
-        return JsonResponse({
+        result = {
             'success': True,
             'broker_url': broker_url.split('@')[-1] if '@' in broker_url else broker_url,
             'queue_lengths': queue_lengths,
@@ -197,7 +212,10 @@ def workflow_queue_diagnostic(request):
             'reserved_tasks': reserved_summary,
             'workflow_registered': has_workflow,
             'worker_queues': active_queues_info,
-        })
+        }
+        if add_consumer_result is not None:
+            result['add_consumer_result'] = add_consumer_result
+        return JsonResponse(result)
 
     except Exception as e:
         logger.error(f"[WORKFLOW] Queue diagnostic error: {e}")
