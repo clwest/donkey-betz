@@ -226,6 +226,7 @@ class ToolDispatcher:
 
         # Session G1: Competitor comparison — generate, status, list, detail
         self.register("competitor_comparison_tool", self._handle_competitor_comparison)
+        self.register("workflow_run_tool", self._handle_workflow_run)
 
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
@@ -9262,6 +9263,163 @@ RESEARCH DATA:
                 'markdown': markdown_content,
                 'deliverable_id': deliverable_id,
                 'message': f'Exported comparison for "{c.competitor_name}" as Markdown' + (' (saved as Deliverable)' if deliverable_id else ''),
+            }
+
+        return {'error': f'Unknown action: {action}'}
+
+    # ── Workflow Run Tool ────────────────────────────────────────────────
+    def _handle_workflow_run(self, tool_name, payload, user_id, trace_id):
+        """Start, poll, list, detail, or cancel multi-step workflow runs."""
+        action = payload.get('action', 'list')
+
+        if action == 'start':
+            workflow_key = payload.get('workflow_key', 'source_pack_comparison')
+            competitor_name = payload.get('competitor_name', '').strip()
+            if not competitor_name:
+                return {'error': 'competitor_name is required to start a workflow'}
+
+            from core.models_workflow_run import WorkflowRun
+            from core.tasks import run_source_pack_workflow
+
+            run = WorkflowRun.objects.create(
+                workflow_key=workflow_key,
+                user_id=user_id,
+                input_json={
+                    'competitor_name': competitor_name,
+                    'queries': payload.get('queries', []),
+                    'target_count': payload.get('target_count', 8),
+                    'comparison_id': payload.get('comparison_id'),
+                    'focus_areas': payload.get('focus_areas'),
+                },
+            )
+
+            task = run_source_pack_workflow.delay(run_id=str(run.id))
+            run.celery_task_id = str(task.id)
+            run.save(update_fields=['celery_task_id', 'updated_at'])
+
+            return {
+                'action': 'start',
+                'run_id': str(run.id),
+                'task_id': str(task.id),
+                'workflow_key': workflow_key,
+                'message': f'Source pack workflow started for "{competitor_name}"',
+            }
+
+        elif action == 'status':
+            run_id = payload.get('run_id')
+            if not run_id:
+                return {'error': 'run_id is required for status action'}
+
+            from core.models_workflow_run import WorkflowRun
+            try:
+                run = WorkflowRun.objects.get(id=run_id)
+            except WorkflowRun.DoesNotExist:
+                return {'error': f'Workflow run {run_id} not found'}
+
+            result = {
+                'action': 'status',
+                'run_id': str(run.id),
+                'workflow_key': run.workflow_key,
+                'status': run.status,
+                'stage': run.stage,
+                'percent': run.percent,
+                'stage_detail': run.stage_detail,
+            }
+            if run.status == 'complete':
+                result['output'] = run.output_json
+                result['completed_at'] = run.completed_at.isoformat() if run.completed_at else None
+            elif run.status == 'failed':
+                result['error_message'] = run.error_message[:500]
+                result['output'] = run.output_json
+            # Include recent events
+            events = run.events_json if isinstance(run.events_json, list) else []
+            result['recent_events'] = events[-5:]
+            return result
+
+        elif action == 'list':
+            from core.models_workflow_run import WorkflowRun
+
+            limit = min(int(payload.get('limit', 10)), 50)
+            qs = WorkflowRun.objects.all()
+            if user_id:
+                qs = qs.filter(user_id=user_id)
+            qs = qs.order_by('-created_at')[:limit]
+
+            return {
+                'action': 'list',
+                'count': len(qs),
+                'runs': [
+                    {
+                        'id': str(r.id),
+                        'workflow_key': r.workflow_key,
+                        'status': r.status,
+                        'stage': r.stage,
+                        'percent': r.percent,
+                        'created_at': r.created_at.isoformat(),
+                        'competitor_name': (r.input_json or {}).get('competitor_name', ''),
+                    }
+                    for r in qs
+                ],
+            }
+
+        elif action == 'detail':
+            run_id = payload.get('run_id')
+            if not run_id:
+                return {'error': 'run_id is required for detail action'}
+
+            from core.models_workflow_run import WorkflowRun
+            try:
+                run = WorkflowRun.objects.get(id=run_id)
+            except WorkflowRun.DoesNotExist:
+                return {'error': f'Workflow run {run_id} not found'}
+
+            return {
+                'action': 'detail',
+                'run': {
+                    'id': str(run.id),
+                    'workflow_key': run.workflow_key,
+                    'status': run.status,
+                    'stage': run.stage,
+                    'percent': run.percent,
+                    'stage_detail': run.stage_detail,
+                    'input': run.input_json,
+                    'output': run.output_json,
+                    'events': run.events_json,
+                    'error_message': run.error_message,
+                    'celery_task_id': run.celery_task_id,
+                    'created_at': run.created_at.isoformat(),
+                    'started_at': run.started_at.isoformat() if run.started_at else None,
+                    'completed_at': run.completed_at.isoformat() if run.completed_at else None,
+                    'metadata': run.metadata,
+                },
+            }
+
+        elif action == 'cancel':
+            run_id = payload.get('run_id')
+            if not run_id:
+                return {'error': 'run_id is required for cancel action'}
+
+            from core.models_workflow_run import WorkflowRun
+            try:
+                run = WorkflowRun.objects.get(id=run_id)
+            except WorkflowRun.DoesNotExist:
+                return {'error': f'Workflow run {run_id} not found'}
+
+            if run.status in ('complete', 'failed', 'cancelled'):
+                return {'error': f'Cannot cancel a workflow in {run.status} state'}
+
+            # Revoke celery task
+            if run.celery_task_id:
+                from core.celery import app as celery_app
+                celery_app.control.revoke(run.celery_task_id, terminate=True)
+
+            run.mark_cancelled()
+            run.save()
+
+            return {
+                'action': 'cancel',
+                'run_id': str(run.id),
+                'message': 'Workflow cancelled',
             }
 
         return {'error': f'Unknown action: {action}'}
