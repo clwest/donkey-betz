@@ -899,7 +899,90 @@ class RAGSystem:
             logger.error(f"Error in semantic search: {str(e)}")
             return []
     
-    def get_context_for_generation(self, search_results: List[SearchResult], 
+    def semantic_search_sync(self, query: str,
+                             knowledge_base: KnowledgeBase = None,
+                             embedding_model: EmbeddingModel = EmbeddingModel.OPENAI_SMALL,
+                             limit: int = 10,
+                             similarity_threshold: float = 0.7) -> List[SearchResult]:
+        """
+        Synchronous semantic search — avoids Django async context errors.
+        Generates query embedding via OpenAI sync client, then does ORM queries.
+        """
+        try:
+            # Generate query embedding synchronously
+            provider = self.embedding_manager.get_provider(embedding_model)
+            if not provider:
+                logger.error(f"semantic_search_sync: no provider for {embedding_model}")
+                return []
+
+            import openai as openai_mod
+            client = openai_mod.OpenAI(api_key=settings.AI_PROVIDERS.get('OPENAI_API_KEY'))
+            response = client.embeddings.create(
+                model=provider.model_name,
+                input=query,
+            )
+            query_embedding = response.data[0].embedding
+            logger.info(
+                f"semantic_search_sync: query embedding generated, "
+                f"dim={len(query_embedding)}"
+            )
+
+            # Get relevant document embeddings
+            embeddings_query = DocumentEmbedding.objects.filter(
+                embedding_model=embedding_model
+            )
+
+            if knowledge_base:
+                kb_documents = knowledge_base.get_documents()
+                embeddings_query = embeddings_query.filter(document__in=kb_documents)
+
+            embeddings = list(embeddings_query.select_related('document')[:1000])
+            logger.info(f"semantic_search_sync: evaluating {len(embeddings)} embeddings")
+
+            # Calculate similarities
+            results = []
+            similarity_errors = 0
+            for embedding in embeddings:
+                try:
+                    similarity = provider.calculate_similarity(
+                        query_embedding, embedding.embedding_vector
+                    )
+
+                    if similarity >= similarity_threshold:
+                        results.append(SearchResult(
+                            document_id=str(embedding.document.id),
+                            chunk_index=embedding.chunk_index,
+                            chunk_text=embedding.chunk_text,
+                            similarity_score=similarity,
+                            document_title=embedding.document.title,
+                            document_type=embedding.document.document_type,
+                            metadata=embedding.metadata,
+                            context_before=embedding.context_before,
+                            context_after=embedding.context_after
+                        ))
+
+                except Exception as e:
+                    similarity_errors += 1
+                    if similarity_errors <= 3:
+                        vec = embedding.embedding_vector
+                        logger.exception(
+                            f"calculate_similarity failed: embedding={embedding.id} "
+                            f"vec_type={type(vec).__name__} "
+                            f"vec_len={len(vec) if vec and hasattr(vec, '__len__') else 'N/A'}"
+                        )
+                    continue
+
+            if similarity_errors:
+                logger.error(f"semantic_search_sync: {similarity_errors}/{len(embeddings)} failed")
+
+            results.sort(key=lambda x: x.similarity_score, reverse=True)
+            return results[:limit]
+
+        except Exception as e:
+            logger.error(f"Error in semantic_search_sync: {e}", exc_info=True)
+            return []
+
+    def get_context_for_generation(self, search_results: List[SearchResult],
                                  max_context_length: int = 4000) -> str:
         """Extract context text from search results for content generation"""
         if not search_results:
