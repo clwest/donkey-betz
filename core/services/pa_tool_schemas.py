@@ -1932,8 +1932,8 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["search", "stats", "list_documents", "ingest"],
-                    "description": "search=semantic search, stats=embedding statistics, list_documents=browse documents, ingest=ingest URL into RAG",
+                    "enum": ["search", "stats", "list_documents", "ingest", "promote", "staged"],
+                    "description": "search=semantic search, stats=embedding statistics, list_documents=browse documents, ingest=ingest URL into RAG, promote=promote a staged document for retrieval, staged=list staged (pending review) documents",
                 },
                 "query": {
                     "type": "string",
