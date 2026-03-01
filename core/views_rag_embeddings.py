@@ -164,15 +164,13 @@ def semantic_search(request):
             except KnowledgeBase.DoesNotExist:
                 pass
 
-        # Perform REAL semantic search
-        results = run_async(
-            rag_system.semantic_search(
-                query=query,
-                knowledge_base=knowledge_base,
-                embedding_model=embedding_model,
-                limit=max_results,
-                similarity_threshold=similarity_threshold
-            )
+        # Perform semantic search (sync to avoid Django async context errors)
+        results = rag_system.semantic_search_sync(
+            query=query,
+            knowledge_base=knowledge_base,
+            embedding_model=embedding_model,
+            limit=max_results,
+            similarity_threshold=similarity_threshold
         )
 
         search_time_ms = (time.time() - start_time) * 1000
@@ -575,27 +573,23 @@ def advanced_rag_query(request):
             for kb_id in collection_ids:
                 try:
                     kb = KnowledgeBase.objects.get(id=kb_id, user=user)
-                    results = run_async(
-                        rag_system.semantic_search(
-                            query=query,
-                            knowledge_base=kb,
-                            embedding_model=embedding_model,
-                            limit=max_context_chunks,
-                            similarity_threshold=0.6
-                        )
+                    results = rag_system.semantic_search_sync(
+                        query=query,
+                        knowledge_base=kb,
+                        embedding_model=embedding_model,
+                        limit=max_context_chunks,
+                        similarity_threshold=0.6
                     )
                     all_results.extend(results)
                 except KnowledgeBase.DoesNotExist:
                     continue
         else:
             # Search all user documents
-            results = run_async(
-                rag_system.semantic_search(
-                    query=query,
-                    embedding_model=embedding_model,
-                    limit=max_context_chunks,
-                    similarity_threshold=0.6
-                )
+            results = rag_system.semantic_search_sync(
+                query=query,
+                embedding_model=embedding_model,
+                limit=max_context_chunks,
+                similarity_threshold=0.6
             )
             all_results = results
 
