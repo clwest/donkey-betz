@@ -1004,7 +1004,7 @@ CELERY_TASK_ROUTES = {
     # These run ALL agents in a category (~20-74 agents) and caused OOM on content worker (512MB).
     # .delay() calls in views_platform_command.py and views_workspace_triggers.py route via
     # CELERY_TASK_ROUTES, so they must point to long_running (not content).
-    'core.tasks.run_source_pack_workflow': {'queue': 'long_running'},
+    'core.tasks.run_source_pack_workflow': {'queue': 'workflow'},
     'core.tasks.agent_daily_summary': {'queue': 'long_running'},
     'core.tasks.agent_workspace_status_report': {'queue': 'long_running'},
     'core.tasks.agent_research_to_workspace': {'queue': 'long_running'},
