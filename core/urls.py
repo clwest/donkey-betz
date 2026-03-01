@@ -3025,6 +3025,13 @@ urlpatterns = [
     path('api/llm-routing/cost-analytics/', llm_cost_analytics, name='llm-routing-cost-analytics'),
     path('api/llm-routing/agent-configs/<str:agent_name>/', update_agent_llm_config, name='llm-routing-update-agent-config'),
 
+    # WorkflowRun API (must be before workflows.urls include to avoid 404)
+    path('api/v1/workflows/runs/', views_workflow_run.workflow_run_list, name='workflow-run-list'),
+    path('api/v1/workflows/runs/<uuid:run_id>/', views_workflow_run.workflow_run_detail, name='workflow-run-detail'),
+    path('api/v1/workflows/runs/<uuid:run_id>/dispatch/', views_workflow_run.workflow_run_dispatch, name='workflow-run-dispatch'),
+    path('api/v1/workflows/queue-diagnostic/', views_workflow_run.workflow_queue_diagnostic, name='workflow-queue-diagnostic'),
+    path('api/v1/workflows/add-consumer/', views_workflow_run.workflow_add_consumer, name='workflow-add-consumer'),
+
     # App-specific APIs - See docs/API_PATH_POLICY.md for conventions
     # Note: Some modules use /api/v1/ to avoid path conflicts with core/urls.py endpoints
     path('api/v1/workflows/', include('workflows.urls')),  # REAL workflows - conflicts with /api/workflows/
@@ -3067,13 +3074,6 @@ urlpatterns = [
     path('api/v1/competitor/compare/generate/', views_competitor_comparison.generate_comparison_api, name='competitor-compare-generate'),
     path('api/v1/competitor/compare/<uuid:comparison_id>/', views_competitor_comparison.comparison_detail_api, name='competitor-compare-detail'),
     path('api/v1/competitor/compare/', views_competitor_comparison.comparison_list_api, name='competitor-compare-list'),
-
-    # WorkflowRun API
-    path('api/v1/workflows/runs/', views_workflow_run.workflow_run_list, name='workflow-run-list'),
-    path('api/v1/workflows/runs/<uuid:run_id>/', views_workflow_run.workflow_run_detail, name='workflow-run-detail'),
-    path('api/v1/workflows/runs/<uuid:run_id>/dispatch/', views_workflow_run.workflow_run_dispatch, name='workflow-run-dispatch'),
-    path('api/v1/workflows/queue-diagnostic/', views_workflow_run.workflow_queue_diagnostic, name='workflow-queue-diagnostic'),
-    path('api/v1/workflows/add-consumer/', views_workflow_run.workflow_add_consumer, name='workflow-add-consumer'),
 
     # Session 588: System Insights API
     path('api/v1/research/system-insights/', views_research_demo.system_insights_api, name='research-system-insights'),

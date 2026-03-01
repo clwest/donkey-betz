@@ -100,6 +100,7 @@ def workflow_run_dispatch(request, run_id):
     try:
         from core.models_workflow_run import WorkflowRun
         from core.tasks import run_source_pack_workflow
+        from core.celery import app as celery_app
 
         try:
             run = WorkflowRun.objects.get(id=run_id)
@@ -108,6 +109,13 @@ def workflow_run_dispatch(request, run_id):
 
         if run.status not in ('pending', 'failed'):
             return JsonResponse({'success': False, 'error': f'Run is {run.status}, not dispatchable'})
+
+        # Ensure workers consume from 'workflow' queue
+        try:
+            celery_app.control.add_consumer('workflow', reply=True, timeout=5)
+            logger.info("[WORKFLOW] Added 'workflow' queue consumer to workers")
+        except Exception as ce:
+            logger.warning(f"[WORKFLOW] add_consumer failed (non-fatal): {ce}")
 
         run.status = 'pending'
         run.error_message = ''
@@ -126,7 +134,7 @@ def workflow_run_dispatch(request, run_id):
             'success': True,
             'run_id': str(run.id),
             'task_id': str(task.id),
-            'message': 'Dispatched to workflow queue',
+            'message': 'Dispatched to workflow queue (consumer added)',
         })
 
     except Exception as e:
