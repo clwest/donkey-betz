@@ -490,6 +490,84 @@ class TextSplitter:
         return overlap
 
 
+class VideoTranscriptSplitter:
+    """Split Whisper verbose_json segments into chunks with timestamp metadata."""
+
+    def __init__(self, chunk_size: int = 1000, chunk_overlap: int = 200):
+        self.chunk_size = chunk_size
+        self.chunk_overlap = chunk_overlap
+
+    def split_segments(
+        self, segments: List[Dict[str, Any]], metadata: Dict[str, Any] = None
+    ) -> List[Dict[str, Any]]:
+        """Split Whisper segments into chunks preserving start/end timestamps.
+
+        Each segment dict is expected to have 'text', 'start', and 'end' keys
+        (standard Whisper verbose_json output).
+
+        Returns list of dicts with keys: text, index, size, metadata.
+        metadata includes start_ms and end_ms (integer milliseconds).
+        """
+        if not segments:
+            return []
+
+        chunks: List[Dict[str, Any]] = []
+        current_text = ""
+        current_start: float = segments[0].get("start", 0)
+        current_end: float = 0
+        chunk_index = 0
+        base_meta = metadata or {}
+
+        for seg in segments:
+            seg_text = seg.get("text", "").strip()
+            if not seg_text:
+                continue
+
+            seg_start = seg.get("start", 0)
+            seg_end = seg.get("end", seg_start)
+
+            candidate = (current_text + " " + seg_text).strip() if current_text else seg_text
+
+            if len(candidate) > self.chunk_size and current_text:
+                # Flush current chunk
+                chunk_meta = {
+                    **base_meta,
+                    "start_ms": int(current_start * 1000),
+                    "end_ms": int(current_end * 1000),
+                }
+                chunks.append({
+                    "text": current_text.strip(),
+                    "index": chunk_index,
+                    "size": len(current_text),
+                    "metadata": chunk_meta,
+                })
+                chunk_index += 1
+
+                # Start new chunk (overlap: carry last segment text)
+                current_text = seg_text
+                current_start = seg_start
+            else:
+                current_text = candidate
+
+            current_end = seg_end
+
+        # Flush remaining
+        if current_text.strip():
+            chunk_meta = {
+                **base_meta,
+                "start_ms": int(current_start * 1000),
+                "end_ms": int(current_end * 1000),
+            }
+            chunks.append({
+                "text": current_text.strip(),
+                "index": chunk_index,
+                "size": len(current_text),
+                "metadata": chunk_meta,
+            })
+
+        return chunks
+
+
 class RAGSystem:
     """Retrieval-Augmented Generation system"""
     
