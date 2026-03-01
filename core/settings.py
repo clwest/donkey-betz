@@ -993,6 +993,7 @@ CELERY_TASK_ROUTES = {
     'core.tasks.generate_self_blog_task': {'queue': 'content'},
     'core.tasks.generate_self_blog_deliberation_task': {'queue': 'content'},
     'core.tasks.generate_blog_with_topic_task': {'queue': 'content'},  # Session 1057
+    'core.tasks.summarize_conversation_task': {'queue': 'content'},
     'core.tasks.execute_initiative_stage_task': {'queue': 'long_running'},  # Session 1040: Heavy LLM pipeline execution
     'core.tasks.advance_initiative_pipeline': {'queue': 'content'},
     'core.tasks.auto_kickstart_stuck_initiatives': {'queue': 'content'},

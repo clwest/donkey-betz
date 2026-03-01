@@ -37236,3 +37236,95 @@ def run_source_pack_workflow(self, run_id):
         }
         run.mark_failed(str(e), partial_output=output)
         run.save()
+
+
+# ── Conversation Summarization ───────────────────────────────────────────────
+
+@shared_task(bind=True, ignore_result=True)
+def summarize_conversation_task(self, conversation_id, user_id=None):
+    """
+    Summarize a PA conversation thread via LLM and save as pinned Deliverable.
+
+    Dispatched by conversation_tool summary action. Runs on content queue.
+    """
+    from core.models import ChatConversation
+    from core.models_deliverables import Deliverable
+
+    logger.info(f"[CONVERSATION] Summarizing conversation {conversation_id}")
+
+    turns = list(
+        ChatConversation.objects.filter(conversation_id=conversation_id)
+        .order_by('created_at')
+        .values('user_message', 'assistant_response', 'created_at', 'session_title')
+    )
+    if not turns:
+        logger.warning(f"[CONVERSATION] No turns found for {conversation_id}")
+        return
+
+    session_title = turns[0].get('session_title', '') or conversation_id
+
+    # Build conversation text for LLM
+    convo_text = []
+    for t in turns[:100]:  # cap at 100 turns
+        convo_text.append(f"User: {t['user_message'][:1000]}")
+        convo_text.append(f"Assistant: {t['assistant_response'][:1000]}")
+    full_text = "\n\n".join(convo_text)
+
+    # LLM summarization
+    from core.llm_enforcer import LLMEnforcer
+    enforcer = LLMEnforcer()
+    result = enforcer.enforce_real_ai(
+        prompt=(
+            "Summarize this PA conversation. Extract:\n"
+            "1. Key decisions made\n"
+            "2. Action items identified\n"
+            "3. Important facts or preferences learned\n"
+            "4. Topics discussed\n\n"
+            "Be concise but thorough. Use markdown formatting.\n\n"
+            f"Conversation ({len(turns)} turns):\n\n{full_text}"
+        ),
+        agent_name='PersonalAssistant',
+        task_type='conversation_summary',
+        max_tokens=2000,
+        temperature=0.3,
+    )
+
+    summary = result.get('response', 'Summary generation failed.')
+
+    # Save as pinned Deliverable
+    d = Deliverable.objects.create(
+        title=f"Conversation Summary: {session_title[:150]}",
+        content=summary,
+        category='Memory',
+        deliverable_type='document',
+        is_pinned=True,
+        is_saved=True,
+        agent_name='PersonalAssistant',
+        content_format='markdown',
+        tags=['conversation-summary', 'pa-memory'],
+        metadata={
+            'conversation_id': conversation_id,
+            'turn_count': len(turns),
+            'source': 'summarize_conversation_task',
+        },
+        user_id=user_id,
+    )
+
+    # Embed summary for future semantic search
+    try:
+        from core.services.embedding_service import EmbeddingService
+        from core.models import ConversationMemory
+        emb_svc = EmbeddingService()
+        emb_result = emb_svc.create_embedding(summary, agent_name='conversation_tool')
+        if user_id:
+            ConversationMemory.objects.create(
+                user_id=user_id,
+                message=f"[SUMMARY] {session_title}",
+                response=summary,
+                intent='conversation_summary',
+                embedding=emb_result.embedding,
+            )
+    except Exception as e:
+        logger.warning(f"[CONVERSATION] Embedding for summary failed: {e}")
+
+    logger.info(f"[CONVERSATION] Summary saved as Deliverable {d.id} for {conversation_id}")
