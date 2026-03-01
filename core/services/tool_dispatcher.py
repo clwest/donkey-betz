@@ -5214,10 +5214,14 @@ class ToolDispatcher:
 
             try:
                 svc = InitiativeIntegrationService()
+                # Bypass circuit breaker for explicit human-initiated creation via PA.
+                # The breaker exists to prevent autonomous/auto-spawned initiatives from
+                # piling up, but when a human explicitly asks the PA to create one, honour it.
                 initiative, created = svc.get_or_create_initiative(
                     topic=name,
                     description=description,
                     created_by='human_pa',
+                    bypass_circuit_breaker=True,
                 )
             except InitiativeCreationBlocked as e:
                 return {'action': 'create', 'error': str(e), 'blocked': True}
@@ -7040,8 +7044,9 @@ class ToolDispatcher:
             else:
                 potential_payout = stake  # even money fallback
 
+            # PlacedWager has no 'description' field — use 'notes' instead
             wager_kwargs = {
-                'description': description,
+                'notes': description,
                 'stake': stake,
                 'odds': float(odds),
                 'potential_payout': potential_payout,
@@ -7050,10 +7055,10 @@ class ToolDispatcher:
             if user_id:
                 wager_kwargs['user_id'] = user_id
 
-            notes = payload.get('notes', '').strip()
+            extra_notes = payload.get('notes', '').strip()
+            if extra_notes:
+                wager_kwargs['notes'] = f"{description} | {extra_notes}"
             wager_type = payload.get('wager_type', '').strip()
-            if hasattr(PlacedWager, 'notes') and notes:
-                wager_kwargs['notes'] = notes
             if hasattr(PlacedWager, 'wager_type') and wager_type:
                 wager_kwargs['wager_type'] = wager_type
 
@@ -7061,7 +7066,7 @@ class ToolDispatcher:
             return {
                 'action': 'record_wager',
                 'id': str(wager.id),
-                'description': wager.description,
+                'description': wager.notes,
                 'stake': str(wager.stake),
                 'odds': float(odds),
                 'potential_payout': str(wager.potential_payout),
