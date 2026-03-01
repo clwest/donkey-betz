@@ -1406,6 +1406,7 @@ from core import views_autonomous_reasoning
 
 # Session 550: Research Demo API
 from core import views_research_demo
+from core import views_competitor_comparison  # Session G1
 from core import views_initiative_kickstart  # Session 884
 
 # Import enhanced learning workflow API
@@ -3060,6 +3061,12 @@ urlpatterns = [
     # Phase 4: v2 deliberation pipeline
     path('api/v1/research/self-blog/generate-v2/', views_research_demo.generate_v2_blog_api, name='generate-v2-blog'),
     path('api/v1/research/self-blog/task/<str:task_id>/', views_research_demo.self_blog_task_status_api, name='research-self-blog-task'),
+
+    # Session G1: Competitor Comparison API
+    path('api/v1/competitor/compare/generate/', views_competitor_comparison.generate_comparison_api, name='competitor-compare-generate'),
+    path('api/v1/competitor/compare/<uuid:comparison_id>/', views_competitor_comparison.comparison_detail_api, name='competitor-compare-detail'),
+    path('api/v1/competitor/compare/', views_competitor_comparison.comparison_list_api, name='competitor-compare-list'),
+
     # Session 588: System Insights API
     path('api/v1/research/system-insights/', views_research_demo.system_insights_api, name='research-system-insights'),
     # Session 622: Deliverables API

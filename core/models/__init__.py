@@ -182,6 +182,9 @@ from ..models_cockpit_autopilot import CockpitAutopilotPolicy, CockpitAutopilotE
 # Import cockpit incidents (Session P17 - Incident Commander)
 from ..models_cockpit_incidents import CockpitIncident, CockpitIncidentEvent
 
+# Import competitor comparison (Session G1)
+from ..models_competitor_comparison import CompetitorComparison
+
 # Import learning journey models (Session 773 - Learning Journeys)
 from ..models_learning_journey import (
     LearningJourneyTemplate,
@@ -416,4 +419,7 @@ __all__ = [
     # Cockpit Incidents (P17)
     'CockpitIncident',
     'CockpitIncidentEvent',
+
+    # Competitor Comparison (G1)
+    'CompetitorComparison',
 ]
