@@ -14411,6 +14411,183 @@ def generate_document_embeddings(self, document_id: str, embedding_model: str = 
         self.retry(exc=e, countdown=60 * (self.request.retries + 1))
 
 
+# ============================================================
+# Video RAG Ingest Pipeline
+# ============================================================
+
+@shared_task(bind=True, max_retries=1, soft_time_limit=1800, time_limit=1860, ignore_result=False)
+def ingest_video_task(self, document_id, tmp_video_path, original_filename, user_id, language='en'):
+    """
+    Ingest a video file for RAG: upload to Cloudinary, extract audio,
+    transcribe with Whisper, store transcript, then dispatch embedding.
+
+    Pipeline: video → Cloudinary → ffmpeg audio → Whisper → Document → embeddings
+    """
+    import os
+    import subprocess
+    import tempfile
+    from django.conf import settings as django_settings
+    from content.models import Document
+
+    document = None
+    audio_path = None
+
+    try:
+        document = Document.objects.get(id=document_id)
+        document.status = 'processing'
+        document.save(update_fields=['status'])
+        document.add_processing_log('video_ingest', 'started', {'filename': original_filename})
+
+        # --- Stage 1: Upload video to Cloudinary ---
+        cloudinary_url = None
+        try:
+            import cloudinary.uploader
+            upload_result = cloudinary.uploader.upload(
+                tmp_video_path,
+                resource_type="video",
+                folder="videos/rag_ingest",
+                public_id=f"rag_{document_id}",
+            )
+            cloudinary_url = upload_result.get('secure_url', upload_result.get('url'))
+            document.file_path = cloudinary_url or ''
+            document.save(update_fields=['file_path'])
+            document.add_processing_log('cloudinary_upload', 'success', {'url': cloudinary_url})
+        except Exception as e:
+            document.add_processing_log('cloudinary_upload', 'skipped', {'error': str(e)})
+            logger.warning(f"🎥 Cloudinary upload skipped for {document_id}: {e}")
+
+        # --- Stage 2: Extract audio via ffmpeg ---
+        audio_fd, audio_path = tempfile.mkstemp(suffix='.mp3')
+        os.close(audio_fd)
+
+        extract_cmd = [
+            'ffmpeg', '-y',
+            '-i', tmp_video_path,
+            '-vn',
+            '-acodec', 'libmp3lame',
+            '-ar', '16000',
+            '-ac', '1',
+            '-b:a', '64k',
+            audio_path,
+        ]
+
+        logger.info(f"🎥 Extracting audio for document {document_id}")
+        extract_result = subprocess.run(extract_cmd, capture_output=True, text=True, timeout=600)
+
+        if extract_result.returncode != 0:
+            raise RuntimeError(f"ffmpeg failed: {extract_result.stderr[:500]}")
+
+        audio_size_mb = os.path.getsize(audio_path) / (1024 * 1024)
+        document.add_processing_log('audio_extraction', 'success', {'audio_size_mb': round(audio_size_mb, 1)})
+        logger.info(f"🎥 Audio extracted: {audio_size_mb:.1f}MB for document {document_id}")
+
+        # --- Stage 3: Transcribe with Whisper ---
+        from openai import OpenAI
+        client = OpenAI(api_key=django_settings.OPENAI_API_KEY)
+
+        with open(audio_path, 'rb') as audio_file:
+            transcript = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file,
+                language=language,
+                response_format="verbose_json",
+                timestamp_granularities=["segment"],
+            )
+
+        segments = transcript.segments or []
+        full_text = transcript.text or ''
+
+        document.add_processing_log('whisper_transcription', 'success', {
+            'segment_count': len(segments),
+            'text_length': len(full_text),
+            'language': language,
+        })
+
+        # --- Stage 4: Store transcript in Document ---
+        # Build timestamped text with [MM:SS] prefixes
+        lines = []
+        for seg in segments:
+            start_sec = seg.get('start', 0) if isinstance(seg, dict) else getattr(seg, 'start', 0)
+            text = seg.get('text', '').strip() if isinstance(seg, dict) else getattr(seg, 'text', '').strip()
+            minutes = int(start_sec // 60)
+            seconds = int(start_sec % 60)
+            lines.append(f"[{minutes:02d}:{seconds:02d}] {text}")
+
+        processed_content = '\n'.join(lines)
+
+        # Serialize segments for extracted_metadata
+        raw_segments = []
+        for seg in segments:
+            if isinstance(seg, dict):
+                raw_segments.append(seg)
+            else:
+                raw_segments.append({
+                    'start': getattr(seg, 'start', 0),
+                    'end': getattr(seg, 'end', 0),
+                    'text': getattr(seg, 'text', ''),
+                })
+
+        duration_seconds = raw_segments[-1].get('end', 0) if raw_segments else 0
+
+        document.raw_content = full_text[:100000]
+        document.processed_content = processed_content[:100000]
+        document.extracted_metadata = {
+            'segments': raw_segments,
+            'segment_count': len(raw_segments),
+            'duration_seconds': round(duration_seconds, 1),
+            'audio_size_mb': round(audio_size_mb, 1),
+            'language': language,
+            'cloudinary_url': cloudinary_url,
+        }
+        document.word_count = len(full_text.split())
+        document.language = language
+        document.status = 'processed'
+        document.save(update_fields=[
+            'raw_content', 'processed_content', 'extracted_metadata',
+            'word_count', 'language', 'status',
+        ])
+
+        document.add_processing_log('transcript_stored', 'success', {
+            'word_count': document.word_count,
+            'duration_seconds': round(duration_seconds, 1),
+        })
+
+        # --- Stage 5: Dispatch embedding generation ---
+        generate_document_embeddings.delay(str(document.id))
+        document.add_processing_log('embedding_dispatched', 'success')
+
+        logger.info(f"🎥 Video ingest complete for {document_id}: {len(segments)} segments, {document.word_count} words")
+
+        return {
+            'status': 'success',
+            'document_id': str(document_id),
+            'segment_count': len(segments),
+            'word_count': document.word_count,
+            'duration_seconds': round(duration_seconds, 1),
+        }
+
+    except Document.DoesNotExist:
+        logger.error(f"🎥 Document not found: {document_id}")
+        return {'status': 'error', 'error': f'Document {document_id} not found'}
+
+    except Exception as exc:
+        logger.error(f"🎥 Video ingest failed for {document_id}: {exc}")
+        if document:
+            document.status = 'failed'
+            document.error_message = str(exc)[:1000]
+            document.save(update_fields=['status', 'error_message'])
+            document.add_processing_log('video_ingest', 'failed', {'error': str(exc)[:500]})
+        self.retry(exc=exc, countdown=120)
+
+    finally:
+        # Cleanup temp files
+        for path in [tmp_video_path, audio_path]:
+            if path and os.path.exists(path):
+                try:
+                    os.unlink(path)
+                except OSError:
+                    pass
+
 
 # ============================================================
 # SESSION 420: Training Data Collection from HuggingFace

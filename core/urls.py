@@ -1343,7 +1343,9 @@ from core.views_rag_embeddings import (
     upload_document_for_rag, semantic_search, rag_generate, embeddings_stats,
     create_knowledge_collection, list_knowledge_collections, advanced_rag_query, optimize_embeddings,
     # Session 402: Document ingestion APIs
-    list_documents, ingest_url, ingest_file, get_document, delete_document
+    list_documents, ingest_url, ingest_file, get_document, delete_document,
+    # Video RAG ingest
+    ingest_video, ingest_video_status,
 )
 # Session 403: Legal Case Files APIs
 # Session 407: Added export_legal_section for document downloads
@@ -2990,6 +2992,10 @@ urlpatterns = [
     path('api/documents/ingest-file/', ingest_file, name='documents-ingest-file'),
     path('api/documents/<uuid:document_id>/', get_document, name='documents-get'),
     path('api/documents/<uuid:document_id>/delete/', delete_document, name='documents-delete'),
+
+    # Video RAG ingest
+    path('api/documents/ingest-video/', ingest_video, name='documents-ingest-video'),
+    path('api/documents/ingest-status/<str:job_id>/', ingest_video_status, name='documents-ingest-status'),
 
     # Session 403: Legal Case Files APIs
     path('api/legal/case-files/', list_legal_case_files, name='legal-case-files-list'),

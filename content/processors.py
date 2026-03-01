@@ -95,6 +95,11 @@ class ProcessingResult:
     error_message: str = ""
     processing_steps: List[Dict[str, Any]] = None
     
+    @property
+    def error(self) -> str:
+        """Alias for error_message to prevent AttributeError misuse."""
+        return self.error_message
+
     def __post_init__(self):
         if self.metadata is None:
             self.metadata = {}
