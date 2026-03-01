@@ -9310,6 +9310,7 @@ RESEARCH DATA:
                     'chunk_index': r.chunk_index,
                     'chunk_text': r.chunk_text[:1000],
                     'similarity_score': round(r.similarity_score, 4),
+                    'source_type': getattr(r, 'source_type', 'unknown'),
                 })
 
             return {
@@ -9387,7 +9388,47 @@ RESEARCH DATA:
                 'success': True,
             }
 
-        return {'error': f'Unknown action: {action}. Valid: search, stats, list_documents, ingest'}
+        elif action == 'promote':
+            document_id = payload.get('document_id', '').strip()
+            if not document_id:
+                return {'error': 'document_id is required for promote action'}
+
+            from content.models import Document
+            try:
+                doc = Document.objects.get(id=document_id)
+            except Document.DoesNotExist:
+                return {'error': f'Document {document_id} not found'}
+
+            old_status = doc.promotion_status
+            doc.promotion_status = 'promoted'
+            doc.save(update_fields=['promotion_status', 'updated_at'])
+            return {
+                'action': 'promote',
+                'document_id': str(doc.id),
+                'title': doc.title,
+                'old_status': old_status,
+                'new_status': 'promoted',
+                'message': f'Document "{doc.title}" promoted — now retrievable via RAG.',
+            }
+
+        elif action == 'staged':
+            from content.models import Document
+            limit = min(payload.get('limit', 20), 50)
+            docs = list(
+                Document.objects.filter(promotion_status='staged')
+                .order_by('-created_at')[:limit]
+                .values('id', 'title', 'document_type', 'source', 'created_at')
+            )
+            for d in docs:
+                d['id'] = str(d['id'])
+                d['created_at'] = str(d['created_at'])
+            return {
+                'action': 'staged',
+                'count': len(docs),
+                'documents': docs,
+            }
+
+        return {'error': f'Unknown action: {action}. Valid: search, stats, list_documents, ingest, promote, staged'}
 
     # ── Session G1: Competitor Comparison ────────────────────────────────────
 
