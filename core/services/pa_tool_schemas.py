@@ -2099,7 +2099,8 @@ PA_TOOL_SCHEMAS = [
                 "conversation_id": {"type": "string", "description": "Conversation ID (e.g. 'pa-33e4d55d31b6')"},
                 "query": {"type": "string", "description": "Search query for finding past conversations"},
                 "days_back": {"type": "integer", "description": "Limit search to last N days"},
-                "limit": {"type": "integer", "description": "Max results to return (default 10)"},
+                "limit": {"type": "integer", "description": "Max results/turns to return (default 10)"},
+                "offset": {"type": "integer", "description": "Skip first N turns (for pagination with get action)"},
                 "pin_title": {"type": "string", "description": "Title for the pinned memory"},
                 "pin_content": {"type": "string", "description": "Content to pin as durable memory"},
                 "pin_tags": {
