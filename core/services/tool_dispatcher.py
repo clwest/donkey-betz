@@ -1494,13 +1494,30 @@ class ToolDispatcher:
             if 'title' in payload:
                 obj.title = payload['title'].strip()[:255]
                 update_fields.append('title')
-            if 'content' in payload:
+
+            # Support prepend/append without requiring full content
+            prepend_text = payload.get('prepend', '').strip()
+            append_text = payload.get('append', '').strip()
+            if prepend_text or append_text:
+                current = obj.content or ''
+                if prepend_text:
+                    current = prepend_text + '\n\n' + current
+                if append_text:
+                    current = current + '\n\n' + append_text
+                obj.content = current
+                preview = current[:500]
+                if len(current) > 500:
+                    preview += '...'
+                obj.preview_content = preview
+                update_fields.extend(['content', 'preview_content'])
+            elif 'content' in payload:
                 obj.content = payload['content']
                 preview = payload['content'][:500]
                 if len(payload['content']) > 500:
                     preview += '...'
                 obj.preview_content = preview
                 update_fields.extend(['content', 'preview_content'])
+
             if 'type' in payload:
                 obj.deliverable_type = payload['type']
                 update_fields.append('deliverable_type')
@@ -1512,7 +1529,7 @@ class ToolDispatcher:
                 update_fields.append('tags')
 
             if not update_fields:
-                raise ValueError("update requires at least one of: title, content, type, content_format, tags")
+                raise ValueError("update requires at least one of: title, content, prepend, append, type, content_format, tags")
 
             obj.save(update_fields=update_fields)
             return {

@@ -39,9 +39,9 @@ def _load_manifest() -> dict:
         except Exception as exc:
             logger.warning('Failed to load manifest: %s', exc)
 
-    # Fallback: hardcoded minimal manifest
-    _MANIFEST_CACHE = _fallback_manifest()
-    return _MANIFEST_CACHE
+    # Fallback: hardcoded minimal manifest — NOT cached so SHA stays fresh
+    # (backend_sha is read from env each request in get_manifest_data)
+    return _fallback_manifest()
 
 
 def _fallback_manifest() -> dict:

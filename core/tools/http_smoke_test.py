@@ -695,6 +695,57 @@ BUILTIN_SUITES: dict[str, list[dict]] = {
             ],
         },
     ],
+
+    'deploy_verify': [
+        # 1. Health endpoint
+        {
+            'name': 'health',
+            'method': 'GET',
+            'path': '/api/v1/health/',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+            ],
+        },
+        # 2. App manifest — verify SHA is present
+        {
+            'name': 'manifest_sha',
+            'method': 'GET',
+            'path': '/api/app/manifest/',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+                {'check': 'has_key', 'key': 'backend_sha'},
+                {'check': 'has_key', 'key': 'latest_migration'},
+            ],
+        },
+        # 3. PA chat endpoint reachable
+        {
+            'name': 'pa_chat',
+            'method': 'GET',
+            'path': '/api/assistant/context/',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+            ],
+        },
+        # 4. Docs index API
+        {
+            'name': 'docs_index',
+            'method': 'GET',
+            'path': '/api/docs/index/?limit=1',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+                {'check': 'has_key', 'key': 'total_count'},
+            ],
+        },
+        # 5. Governance stats
+        {
+            'name': 'governance',
+            'method': 'GET',
+            'path': '/api/boardroom/governance-stats/',
+            'assert': [
+                {'check': 'status', 'expected': 200},
+            ],
+        },
+    ],
 }
 
 
