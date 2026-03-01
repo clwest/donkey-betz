@@ -1964,56 +1964,54 @@ PA_TOOL_SCHEMAS = [
     # ── Workflow Run Tool (multi-step orchestration) ────────────────────
     {
         "type": "function",
-        "function": {
-            "name": "workflow_run_tool",
-            "description": (
-                "Start, poll, list, detail, or cancel multi-step workflow runs. "
-                "Currently supports 'source_pack_comparison': auto-collect competitor "
-                "sources from web search + spiders, ingest as Documents, embed, "
-                "generate RAG-powered comparison, and export as Deliverable. "
-                "Use when the user asks for a full source-pack comparison workflow."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "action": {
-                        "type": "string",
-                        "enum": ["start", "status", "list", "detail", "cancel"],
-                        "description": "Action to perform",
-                    },
-                    "workflow_key": {
-                        "type": "string",
-                        "enum": ["source_pack_comparison"],
-                        "description": "Workflow type (default: source_pack_comparison)",
-                    },
-                    "competitor_name": {
-                        "type": "string",
-                        "description": "Competitor name (required for start)",
-                    },
-                    "queries": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Custom search queries (auto-generated if omitted)",
-                    },
-                    "target_count": {
-                        "type": "integer",
-                        "description": "Max URLs to ingest (default 8)",
-                    },
-                    "comparison_id": {
-                        "type": "string",
-                        "description": "Existing comparison UUID to reuse",
-                    },
-                    "run_id": {
-                        "type": "string",
-                        "description": "UUID of a workflow run (for status/detail/cancel)",
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "description": "Max results for list action (default 10)",
-                    },
+        "name": "workflow_run_tool",
+        "description": (
+            "Start, poll, list, detail, or cancel multi-step workflow runs. "
+            "Currently supports 'source_pack_comparison': auto-collect competitor "
+            "sources from web search + spiders, ingest as Documents, embed, "
+            "generate RAG-powered comparison, and export as Deliverable. "
+            "Use when the user asks for a full source-pack comparison workflow."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["start", "status", "list", "detail", "cancel"],
+                    "description": "Action to perform",
                 },
-                "required": ["action"],
+                "workflow_key": {
+                    "type": "string",
+                    "enum": ["source_pack_comparison"],
+                    "description": "Workflow type (default: source_pack_comparison)",
+                },
+                "competitor_name": {
+                    "type": "string",
+                    "description": "Competitor name (required for start)",
+                },
+                "queries": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Custom search queries (auto-generated if omitted)",
+                },
+                "target_count": {
+                    "type": "integer",
+                    "description": "Max URLs to ingest (default 8)",
+                },
+                "comparison_id": {
+                    "type": "string",
+                    "description": "Existing comparison UUID to reuse",
+                },
+                "run_id": {
+                    "type": "string",
+                    "description": "UUID of a workflow run (for status/detail/cancel)",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max results for list action (default 10)",
+                },
             },
+            "required": ["action"],
         },
     },
 ]
