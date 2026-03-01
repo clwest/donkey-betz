@@ -1026,7 +1026,7 @@ def ingest_url(request):
             if not result.success:
                 return Response({
                     'success': False,
-                    'error': result.error or 'Failed to process URL'
+                    'error': result.error_message or 'Failed to process URL'
                 }, status=400)
 
             # Determine document type
@@ -1085,7 +1085,7 @@ def ingest_url(request):
             return Response(response_data)
 
     except Exception as e:
-        logger.error(f"Error ingesting URL: {e}")
+        logger.exception(f"Error ingesting URL '{url}': {e}")
         return Response({
             'success': False,
             'error': str(e)
