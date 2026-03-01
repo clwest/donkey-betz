@@ -1925,7 +1925,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["generate", "status", "list", "detail", "delete", "regenerate"],
+                    "enum": ["generate", "status", "list", "detail", "delete", "regenerate", "create_initiative_from_gap", "export_markdown"],
                     "description": "Action to perform",
                 },
                 "competitor_name": {
@@ -1938,12 +1938,20 @@ PA_TOOL_SCHEMAS = [
                 },
                 "comparison_id": {
                     "type": "string",
-                    "description": "UUID of an existing comparison (for status/detail/delete/regenerate)",
+                    "description": "UUID of an existing comparison (for status/detail/delete/regenerate/create_initiative_from_gap/export_markdown)",
                 },
                 "focus_areas": {
                     "type": "array",
                     "items": {"type": "string"},
                     "description": "Additional search queries to focus the comparison",
+                },
+                "gap_index": {
+                    "type": "integer",
+                    "description": "Index of the gap to create an initiative from (0-based, for create_initiative_from_gap)",
+                },
+                "save": {
+                    "type": "boolean",
+                    "description": "Whether to save the markdown export as a Deliverable (default true, for export_markdown)",
                 },
                 "limit": {
                     "type": "integer",
