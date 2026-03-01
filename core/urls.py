@@ -3073,6 +3073,7 @@ urlpatterns = [
     path('api/v1/workflows/runs/<uuid:run_id>/', views_workflow_run.workflow_run_detail, name='workflow-run-detail'),
     path('api/v1/workflows/runs/<uuid:run_id>/dispatch/', views_workflow_run.workflow_run_dispatch, name='workflow-run-dispatch'),
     path('api/v1/workflows/queue-diagnostic/', views_workflow_run.workflow_queue_diagnostic, name='workflow-queue-diagnostic'),
+    path('api/v1/workflows/add-consumer/', views_workflow_run.workflow_add_consumer, name='workflow-add-consumer'),
 
     # Session 588: System Insights API
     path('api/v1/research/system-insights/', views_research_demo.system_insights_api, name='research-system-insights'),

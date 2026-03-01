@@ -194,3 +194,27 @@ def workflow_queue_diagnostic(request):
     except Exception as e:
         logger.error(f"[WORKFLOW] Queue diagnostic error: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+def workflow_add_consumer(request):
+    """Add 'workflow' queue consumer to all workers that have the task registered."""
+    try:
+        from core.celery import app as celery_app
+
+        result = celery_app.control.add_consumer(
+            'workflow',
+            reply=True,
+            timeout=10,
+        )
+        logger.info(f"[WORKFLOW] add_consumer result: {result}")
+
+        return JsonResponse({
+            'success': True,
+            'result': result,
+            'message': 'Added workflow queue consumer to all workers',
+        })
+
+    except Exception as e:
+        logger.error(f"[WORKFLOW] Error adding consumer: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
