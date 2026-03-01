@@ -867,17 +867,23 @@ PA_TOOL_SCHEMAS = [
         "description": (
             "View scheduled Celery tasks: cron schedules, beat entries, "
             "next run times. Use when the user asks about scheduled tasks, "
-            "cron jobs, what runs automatically, or Celery beat."
+            "cron jobs, what runs automatically, or Celery beat. "
+            "Supports search by name/task and pagination."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "details"],
+                    "enum": ["list", "details", "search"],
                     "description": "Scheduled tasks action",
                 },
-                "limit": {"type": "integer", "description": "Max items (default 20)"},
+                "search": {
+                    "type": "string",
+                    "description": "Filter tasks by name or task path (case-insensitive substring match)",
+                },
+                "limit": {"type": "integer", "description": "Max items per page (default 50, max 100)"},
+                "offset": {"type": "integer", "description": "Skip N items for pagination (default 0)"},
             },
             "required": ["action"],
         },

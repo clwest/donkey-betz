@@ -162,6 +162,9 @@ class ToolDispatcher:
         self.register("strategic_review", self._handle_agent_tool)
         self.register("coleadership_agent", self._handle_agent_tool)
 
+        # Intelligence agents — dispatch via Celery
+        self.register("system_intelligence_agent", self._handle_agent_tool)
+
         # Legal tools — Session 1035: dedicated handler via AgentRouter (not registry stub)
         self.register("legal_doc_drafter_agent", self._handle_legal_agent)
 
@@ -6974,15 +6977,25 @@ class ToolDispatcher:
         Shows what tasks are scheduled, their intervals, and last run times.
         """
         from django_celery_beat.models import PeriodicTask
+        from django.db.models import Q
 
-        filter_keyword = payload.get('filter', '')
+        filter_keyword = payload.get('filter', '') or payload.get('search', '')
+        limit = min(payload.get('limit', 50), 100)
+        offset = payload.get('offset', 0)
+
         tasks = PeriodicTask.objects.filter(enabled=True).order_by('name')
+        total_enabled = tasks.count()
 
         if filter_keyword:
-            tasks = tasks.filter(name__icontains=filter_keyword)
+            tasks = tasks.filter(
+                Q(name__icontains=filter_keyword) | Q(task__icontains=filter_keyword)
+            )
+
+        filtered_count = tasks.count()
+        page = tasks[offset:offset + limit]
 
         results = []
-        for task in tasks[:50]:
+        for task in page:
             schedule_info = ''
             if task.crontab:
                 c = task.crontab
@@ -7001,8 +7014,10 @@ class ToolDispatcher:
             })
 
         return {
-            'total_enabled': PeriodicTask.objects.filter(enabled=True).count(),
+            'total_enabled': total_enabled,
+            'filtered': filtered_count,
             'showing': len(results),
+            'offset': offset,
             'filter': filter_keyword or 'all',
             'tasks': results,
         }
