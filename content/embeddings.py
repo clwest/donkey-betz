@@ -42,6 +42,27 @@ except ImportError:
     HAS_COHERE = False
 
 
+def _derive_source_type(document) -> str:
+    """Derive source_type for embedding provenance from a Document's metadata."""
+    meta = getattr(document, 'extracted_metadata', None) or {}
+    source = getattr(document, 'source', '') or ''
+    doc_type = getattr(document, 'document_type', '') or ''
+
+    if meta.get('auto_research'):
+        return 'web'
+    if meta.get('spider_name') or source == 'scraped':
+        return 'spider'
+    if doc_type == 'youtube':
+        return 'web'
+    if source in ('api', 'imported'):
+        return 'api'
+    if source in ('upload', 'user_upload'):
+        return 'user_upload'
+    if doc_type == 'markdown' or source in ('', 'internal', 'system'):
+        return 'internal'
+    return 'unknown'
+
+
 @dataclass
 class SearchResult:
     """Result from semantic search"""
@@ -54,6 +75,7 @@ class SearchResult:
     metadata: Dict[str, Any] = None
     context_before: str = ""
     context_after: str = ""
+    source_type: str = "unknown"
 
 
 @dataclass
@@ -575,10 +597,11 @@ class RAGSystem:
         self.embedding_manager = EmbeddingManager()
         self.text_splitter = TextSplitter()
     
-    async def process_document_for_rag(self, document: Document, 
+    async def process_document_for_rag(self, document: Document,
                                      embedding_model: EmbeddingModel = EmbeddingModel.OPENAI_SMALL,
                                      chunk_size: int = 1000,
-                                     chunk_overlap: int = 200) -> bool:
+                                     chunk_overlap: int = 200,
+                                     ingested_via: str = 'unknown') -> bool:
         """Process document and create embeddings for RAG"""
         try:
             # Get document content
@@ -627,7 +650,9 @@ class RAGSystem:
                             embedding_dimension=result.dimension,
                             processing_time_ms=result.processing_time_ms,
                             embedding_cost=result.cost,
-                            metadata=chunk_data['metadata']
+                            metadata=chunk_data['metadata'],
+                            source_type=_derive_source_type(document),
+                            ingested_via=ingested_via or 'unknown',
                         )
                         
                         total_cost += result.cost
@@ -673,7 +698,8 @@ class RAGSystem:
     def process_document_for_rag_sync(self, document: Document,
                                       embedding_model: EmbeddingModel = EmbeddingModel.OPENAI_SMALL,
                                       chunk_size: int = 1000,
-                                      chunk_overlap: int = 200) -> bool:
+                                      chunk_overlap: int = 200,
+                                      ingested_via: str = 'unknown') -> bool:
         """
         Synchronous version of process_document_for_rag for use in Celery tasks.
         Session 733: Added to avoid nested async/sync recursion issues.
@@ -723,7 +749,9 @@ class RAGSystem:
                             embedding_dimension=result.dimension,
                             processing_time_ms=result.processing_time_ms,
                             embedding_cost=result.cost,
-                            metadata=chunk_data['metadata']
+                            metadata=chunk_data['metadata'],
+                            source_type=_derive_source_type(document),
+                            ingested_via=ingested_via or 'unknown',
                         )
 
                         total_cost += result.cost
@@ -872,7 +900,8 @@ class RAGSystem:
                             document_type=embedding.document.document_type,
                             metadata=embedding.metadata,
                             context_before=embedding.context_before,
-                            context_after=embedding.context_after
+                            context_after=embedding.context_after,
+                            source_type=getattr(embedding, 'source_type', 'unknown') or 'unknown',
                         ))
 
                 except Exception as e:
@@ -903,10 +932,15 @@ class RAGSystem:
                              knowledge_base: KnowledgeBase = None,
                              embedding_model: EmbeddingModel = EmbeddingModel.OPENAI_SMALL,
                              limit: int = 10,
-                             similarity_threshold: float = 0.7) -> List[SearchResult]:
+                             similarity_threshold: float = 0.7,
+                             source_filter: str = 'all') -> List[SearchResult]:
         """
         Synchronous semantic search — avoids Django async context errors.
         Generates query embedding via OpenAI sync client, then does ORM queries.
+
+        source_filter: 'all' (default), 'internal_only', 'external_only'
+            - internal_only: only internal + user_upload sources
+            - external_only: only web + spider + api sources
         """
         try:
             # Generate query embedding synchronously
@@ -932,12 +966,23 @@ class RAGSystem:
                 embedding_model=embedding_model
             )
 
+            # Source provenance filter
+            if source_filter == 'internal_only':
+                embeddings_query = embeddings_query.filter(source_type__in=['internal', 'user_upload'])
+            elif source_filter == 'external_only':
+                embeddings_query = embeddings_query.filter(source_type__in=['web', 'spider', 'api'])
+
+            # Exclude non-promoted documents (belt-and-suspenders with embedding scheduler)
+            embeddings_query = embeddings_query.filter(
+                document__promotion_status='promoted'
+            )
+
             if knowledge_base:
                 kb_documents = knowledge_base.get_documents()
                 embeddings_query = embeddings_query.filter(document__in=kb_documents)
 
             embeddings = list(embeddings_query.select_related('document')[:1000])
-            logger.info(f"semantic_search_sync: evaluating {len(embeddings)} embeddings")
+            logger.info(f"semantic_search_sync: evaluating {len(embeddings)} embeddings (source_filter={source_filter})")
 
             # Calculate similarities
             results = []
@@ -958,7 +1003,8 @@ class RAGSystem:
                             document_type=embedding.document.document_type,
                             metadata=embedding.metadata,
                             context_before=embedding.context_before,
-                            context_after=embedding.context_after
+                            context_after=embedding.context_after,
+                            source_type=getattr(embedding, 'source_type', 'unknown') or 'unknown',
                         ))
 
                 except Exception as e:

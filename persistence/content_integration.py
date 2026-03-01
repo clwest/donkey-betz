@@ -144,6 +144,7 @@ class DocumentPersistenceIntegration:
                 existing.save()
             else:
                 # Create new
+                from content.embeddings import _derive_source_type
                 DocumentEmbedding.objects.create(
                     document=document,
                     embedding_model=unified_embedding.embedding_model,
@@ -155,6 +156,8 @@ class DocumentPersistenceIntegration:
                     embedding_dimension=unified_embedding.embedding_dimension,
                     processing_time_ms=unified_embedding.generation_time_ms,
                     embedding_cost=unified_embedding.generation_cost,
+                    source_type=_derive_source_type(document),
+                    ingested_via='unknown',
                 )
 
         except Exception as e:

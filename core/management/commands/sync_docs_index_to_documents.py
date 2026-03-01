@@ -260,14 +260,17 @@ class Command(BaseCommand):
                         )
 
                         if embedding and embedding.embedding:
+                            from content.embeddings import _derive_source_type
                             DocumentEmbedding.objects.create(
                                 document=doc,
                                 chunk_text=chunk,
                                 chunk_size=len(chunk),
                                 chunk_index=chunk_idx,
-                                embedding_vector=embedding.embedding,  # Extract vector from EmbeddingResult
-                                embedding_dimension=len(embedding.embedding),  # 1536 for text-embedding-3-small
+                                embedding_vector=embedding.embedding,
+                                embedding_dimension=len(embedding.embedding),
                                 embedding_model=EmbeddingModel.OPENAI_SMALL,
+                                source_type=_derive_source_type(doc),
+                                ingested_via='sync_docs',
                             )
 
                     if (idx + 1) % 10 == 0:

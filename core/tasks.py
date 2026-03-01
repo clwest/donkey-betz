@@ -7410,7 +7410,9 @@ def embed_agent_activity(hours: int = 2):
                             'agent': dream.agent.name if dream.agent else None,
                             'dream_type': dream.dream_type,
                             'date': dream.dreamed_at.isoformat()
-                        }
+                        },
+                        source_type='internal',
+                        ingested_via='backfill',
                     )
                 next_index += 1
                 stats['dreams_embedded'] += 1
@@ -7474,8 +7476,10 @@ def embed_agent_activity(hours: int = 2):
                             'id': str(session.id),
                             'mode': session.session_mode,
                             'participants': participant_names,
-                            'date': session.created_at.isoformat()
-                        }
+                            'date': session.created_at.isoformat(),
+                        },
+                        source_type='internal',
+                        ingested_via='backfill',
                     )
                 next_index += 1
                 stats['hive_minds_embedded'] += 1
@@ -7534,7 +7538,9 @@ def embed_agent_activity(hours: int = 2):
                             'agent': knowledge.agent.name if knowledge.agent else None,
                             'knowledge_type': knowledge.knowledge_type,
                             'date': knowledge.first_discovered_at.isoformat()
-                        }
+                        },
+                        source_type='internal',
+                        ingested_via='backfill',
                     )
                 next_index += 1
                 stats['knowledge_embedded'] += 1
