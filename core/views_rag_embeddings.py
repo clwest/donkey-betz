@@ -17,6 +17,7 @@ from datetime import datetime
 import json
 import logging
 import asyncio
+import uuid
 
 from content.models import Document, DocumentEmbedding, KnowledgeBase, EmbeddingModel, DocumentType
 from content.embeddings import rag_system, EmbeddingManager
@@ -924,6 +925,15 @@ def ingest_url(request):
     - max_depth: Maximum link depth (default: 2, max: 3)
     - url_pattern: Regex pattern to filter URLs (e.g., '/tutorial/')
     """
+    # Content-type guard: reject non-JSON requests early
+    content_type = request.content_type or ''
+    if content_type and 'json' not in content_type and 'x-www-form-urlencoded' not in content_type:
+        return Response({
+            'success': False,
+            'error': 'Content-Type must be application/json',
+            'correlation_id': str(uuid.uuid4()),
+        }, status=415)
+
     user = request.user
     data = request.data if hasattr(request, 'data') else json.loads(request.body or b"{}")
 
@@ -940,7 +950,8 @@ def ingest_url(request):
     if not url:
         return Response({
             'success': False,
-            'error': 'URL is required'
+            'error': 'URL is required',
+            'correlation_id': str(uuid.uuid4()),
         }, status=400)
 
     # YouTube URLs don't support crawling
@@ -948,7 +959,8 @@ def ingest_url(request):
     if is_youtube and crawl_site:
         return Response({
             'success': False,
-            'error': 'Multi-page crawling is not supported for YouTube videos'
+            'error': 'Multi-page crawling is not supported for YouTube videos',
+            'correlation_id': str(uuid.uuid4()),
         }, status=400)
 
     try:
@@ -966,9 +978,12 @@ def ingest_url(request):
             )
 
             if not crawl_result.success:
+                cid = str(uuid.uuid4())
+                logger.warning(f"Crawl failed for '{url}' [correlation_id={cid}]: {crawl_result.error_message}")
                 return Response({
                     'success': False,
-                    'error': crawl_result.error_message or 'Failed to crawl site'
+                    'error': crawl_result.error_message or 'Failed to crawl site',
+                    'correlation_id': cid,
                 }, status=400)
 
             # Create a single document with combined content
@@ -1024,9 +1039,12 @@ def ingest_url(request):
             result = pipeline.process_url(url)
 
             if not result.success:
+                cid = str(uuid.uuid4())
+                logger.warning(f"URL processing failed for '{url}' [correlation_id={cid}]: {result.error_message}")
                 return Response({
                     'success': False,
-                    'error': result.error_message or 'Failed to process URL'
+                    'error': result.error_message or 'Failed to process URL',
+                    'correlation_id': cid,
                 }, status=400)
 
             # Determine document type
@@ -1085,10 +1103,12 @@ def ingest_url(request):
             return Response(response_data)
 
     except Exception as e:
-        logger.exception(f"Error ingesting URL '{url}': {e}")
+        cid = str(uuid.uuid4())
+        logger.exception(f"Error ingesting URL '{url}' [correlation_id={cid}]: {e}")
         return Response({
             'success': False,
-            'error': str(e)
+            'error': str(e),
+            'correlation_id': cid,
         }, status=500)
 
 
