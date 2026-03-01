@@ -730,6 +730,44 @@ class UnifiedPAEntrypoint:
                     messages = self._build_messages_array(message, context)
                     response_id = None
                     continue
+                # Session 1086: If tools already ran successfully but the
+                # continuation/summary LLM call failed (e.g. OpenAI 400
+                # "invalid_prompt" from accumulated context), attempt a
+                # fresh summarization call with truncated tool results
+                # instead of returning the raw error to the user.
+                successful_runs = [r for r in tool_runs if r.get('ok')]
+                if successful_runs:
+                    logger.info(
+                        f"[{trace_id}] LLM failed at iteration {iteration+1} with "
+                        f"{len(successful_runs)} successful tool runs — attempting fresh summary"
+                    )
+                    fresh_messages = self._build_messages_array(message, context)
+                    tool_summary = json.dumps(
+                        [{'tool': r.get('tool', ''), 'ok': r.get('ok'),
+                          'result': str(r.get('result', ''))[:500]}
+                         for r in tool_runs],
+                        default=str
+                    )[:4000]
+                    fresh_messages.append({
+                        "role": "user",
+                        "content": (
+                            "Here are the tool results I gathered. "
+                            "Please summarize them for the user:\n" + tool_summary
+                        ),
+                    })
+                    summary_result = await asyncio.to_thread(
+                        self.llm_enforcer.enforce_real_ai,
+                        prompt=message,
+                        input_messages=fresh_messages,
+                        tools=None,
+                        previous_response_id=None,
+                        task_type='conversation',
+                        max_tokens=2000,
+                        agent_name='PersonalAssistant',
+                    )
+                    if summary_result.get('success'):
+                        return (summary_result.get('response', ''), tool_runs, fc_metadata,
+                                summary_result.get('response_id'))
                 return (result.get('response', 'I encountered an error.'), tool_runs, fc_metadata, response_id)
 
             response_id = result.get('response_id')
