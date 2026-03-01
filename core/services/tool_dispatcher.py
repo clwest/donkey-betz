@@ -709,9 +709,42 @@ class ToolDispatcher:
                 'success': True,
             }
 
+        elif action == 'create':
+            title = payload.get('title', '').strip()
+            if not title:
+                raise ValueError("'title' is required for create action")
+            if not user_id:
+                raise ValueError("User context required to create an opportunity")
+
+            from decimal import Decimal, InvalidOperation
+            pot_rev = payload.get('potential_revenue', 0)
+            try:
+                potential_revenue = Decimal(str(pot_rev))
+            except (InvalidOperation, TypeError):
+                potential_revenue = Decimal('0')
+
+            opp = Opportunity.objects.create(
+                user_id=user_id,
+                title=title,
+                description=payload.get('description', ''),
+                opportunity_type=payload.get('opportunity_type', 'general'),
+                source=payload.get('source', 'pa'),
+                potential_revenue=potential_revenue,
+                status='active',
+            )
+            return {
+                'action': 'create',
+                'id': str(opp.id),
+                'title': opp.title,
+                'opportunity_type': opp.opportunity_type,
+                'potential_revenue': str(opp.potential_revenue),
+                'status': opp.status,
+                'success': True,
+            }
+
         else:
             raise ValueError(
-                f"Unknown action: {action}. Valid actions: list, get, stats, update_status"
+                f"Unknown action: {action}. Valid actions: list, get, stats, update_status, create"
             )
 
     def _handle_task_manager(
@@ -888,8 +921,40 @@ class ToolDispatcher:
 
             return {'action': 'list', 'count': len(revenues), 'revenues': revenues}
 
+        elif action == 'create':
+            if not user_id:
+                raise ValueError("User context required to create revenue record")
+
+            from decimal import Decimal, InvalidOperation
+            try:
+                amount = Decimal(str(payload.get('amount', 0)))
+            except (InvalidOperation, TypeError):
+                raise ValueError("'amount' must be a valid number")
+            if amount <= 0:
+                raise ValueError("'amount' must be positive")
+
+            source_type = payload.get('source', payload.get('source_type', 'other')).strip()
+            description = payload.get('description', '').strip()
+            status = payload.get('status', 'confirmed')
+
+            rev = Revenue.objects.create(
+                user_id=user_id,
+                amount=amount,
+                source_type=source_type,
+                description=description,
+                status=status,
+            )
+            return {
+                'action': 'create',
+                'id': str(rev.id),
+                'amount': str(rev.amount),
+                'source_type': rev.source_type,
+                'status': rev.status,
+                'success': True,
+            }
+
         else:
-            raise ValueError(f"Unknown action: {action}")
+            raise ValueError(f"Unknown action: {action}. Valid actions: stats, list, create")
 
     def _handle_ml_analysis(
         self,
@@ -6760,6 +6825,63 @@ class ToolDispatcher:
                 })
             return {'action': 'wagers', 'items': items, 'total': total}
 
+        elif action == 'record_wager':
+            from core.models_betting import PlacedWager
+            from decimal import Decimal, InvalidOperation
+
+            description = payload.get('description', '').strip()
+            if not description:
+                raise ValueError("'description' is required for record_wager")
+
+            try:
+                stake = Decimal(str(payload.get('stake', 0)))
+            except (InvalidOperation, TypeError):
+                raise ValueError("'stake' must be a valid number")
+            if stake <= 0:
+                raise ValueError("'stake' must be positive")
+
+            try:
+                odds = Decimal(str(payload.get('odds', 0)))
+            except (InvalidOperation, TypeError):
+                raise ValueError("'odds' must be a valid number")
+
+            # Compute potential payout (American odds)
+            if odds > 0:
+                potential_payout = stake * (odds / Decimal('100'))
+            elif odds < 0:
+                potential_payout = stake * (Decimal('100') / abs(odds))
+            else:
+                potential_payout = stake  # even money fallback
+
+            wager_kwargs = {
+                'description': description,
+                'stake': stake,
+                'odds': float(odds),
+                'potential_payout': potential_payout,
+                'status': 'pending',
+            }
+            if user_id:
+                wager_kwargs['user_id'] = user_id
+
+            notes = payload.get('notes', '').strip()
+            wager_type = payload.get('wager_type', '').strip()
+            if hasattr(PlacedWager, 'notes') and notes:
+                wager_kwargs['notes'] = notes
+            if hasattr(PlacedWager, 'wager_type') and wager_type:
+                wager_kwargs['wager_type'] = wager_type
+
+            wager = PlacedWager.objects.create(**wager_kwargs)
+            return {
+                'action': 'record_wager',
+                'id': str(wager.id),
+                'description': wager.description,
+                'stake': str(wager.stake),
+                'odds': float(odds),
+                'potential_payout': str(wager.potential_payout),
+                'status': wager.status,
+                'success': True,
+            }
+
         elif action in ('brief', 'live_odds'):
             # Session 1088: Dispatch to Celery async — generate_brief() is slow
             # and was causing 30s TOOL_TIMEOUT in the PA.
@@ -7595,6 +7717,36 @@ class ToolDispatcher:
                 'action': 'dismiss',
                 'id': str(dream.id),
                 'title': dream.title,
+                'success': True,
+            }
+
+        elif action == 'create':
+            title = payload.get('title', '').strip()
+            content = payload.get('content', '').strip()
+            dream_type = payload.get('dream_type', 'user_request')
+            if not title:
+                raise ValueError("'title' is required for create action")
+
+            # Resolve PA agent as the dreaming agent
+            from core.models_unified_system import Agent
+            pa_agent = Agent.objects.filter(name__icontains='personal assistant').first()
+            if not pa_agent:
+                pa_agent = Agent.objects.filter(is_active=True).first()
+            if not pa_agent:
+                raise ValueError("No active agent found to attribute dream to")
+
+            dream = AgentDream.objects.create(
+                agent=pa_agent,
+                title=title,
+                content=content or title,
+                dream_type=dream_type,
+                shown_to_user=True,
+            )
+            return {
+                'action': 'create',
+                'id': str(dream.id),
+                'title': dream.title,
+                'dream_type': dream.dream_type,
                 'success': True,
             }
 
