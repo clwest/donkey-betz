@@ -92,3 +92,43 @@ def workflow_run_detail(request, run_id):
     except Exception as e:
         logger.error(f"[WORKFLOW] Error fetching run detail: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+def workflow_run_dispatch(request, run_id):
+    """Re-dispatch a pending workflow run to Celery (diagnostic endpoint)."""
+    try:
+        from core.models_workflow_run import WorkflowRun
+        from core.tasks import run_source_pack_workflow
+
+        try:
+            run = WorkflowRun.objects.get(id=run_id)
+        except WorkflowRun.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Not found'}, status=404)
+
+        if run.status not in ('pending', 'failed'):
+            return JsonResponse({'success': False, 'error': f'Run is {run.status}, not dispatchable'})
+
+        run.status = 'pending'
+        run.error_message = ''
+        run.save(update_fields=['status', 'error_message', 'updated_at'])
+
+        task = run_source_pack_workflow.apply_async(
+            kwargs={'run_id': str(run.id)},
+            queue='long_running',
+        )
+        run.celery_task_id = str(task.id)
+        run.save(update_fields=['celery_task_id', 'updated_at'])
+
+        logger.info(f"[WORKFLOW] Dispatched task={task.id} queue=long_running run={run.id}")
+
+        return JsonResponse({
+            'success': True,
+            'run_id': str(run.id),
+            'task_id': str(task.id),
+            'message': f'Dispatched to long_running queue',
+        })
+
+    except Exception as e:
+        logger.error(f"[WORKFLOW] Error dispatching run: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

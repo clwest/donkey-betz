@@ -9293,10 +9293,12 @@ RESEARCH DATA:
                 },
             )
 
+            logger.info(f"[WORKFLOW] Dispatching run_source_pack_workflow for run={run.id}")
             task = run_source_pack_workflow.apply_async(
                 kwargs={'run_id': str(run.id)},
                 queue='long_running',
             )
+            logger.info(f"[WORKFLOW] Dispatched task_id={task.id} to queue=long_running for run={run.id}")
             run.celery_task_id = str(task.id)
             run.save(update_fields=['celery_task_id', 'updated_at'])
 
