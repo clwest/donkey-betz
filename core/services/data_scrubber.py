@@ -124,6 +124,66 @@ def guard_external_message(obj, message: str) -> str:
     return f"[{obj_type} id={obj_id}] — content redacted (sensitivity: {getattr(obj, 'data_sensitivity', 'unknown')})"
 
 
+# ── Persistence guard (Phase 3: external data leakage prevention) ──────────
+
+# Origins that indicate external data
+_EXTERNAL_ORIGINS = frozenset([
+    'tool:web_search', 'tool:web_fetch', 'tool:spider_data',
+    'tool:competitor_research', 'tool:auto_research',
+])
+
+
+def is_external_origin(origin: str) -> bool:
+    """Check if an origin string indicates external data."""
+    if not origin:
+        return False
+    origin_lower = origin.lower()
+    if origin_lower in _EXTERNAL_ORIGINS:
+        return True
+    return origin_lower.startswith(('spider:', 'tool:web', 'api:', 'external:'))
+
+
+def guard_persistence(
+    content: str,
+    origin: str = '',
+    provenance: dict = None,
+    metadata: dict = None,
+) -> dict:
+    """
+    Gate for persisting content. Scrubs PII/secrets, attaches provenance,
+    and recommends promotion_status based on origin.
+
+    Args:
+        content: The text to persist.
+        origin: Where the data came from (e.g., 'tool:web_search', 'spider:reddit', 'internal').
+        provenance: Optional dict with source_url, spider_name, retrieved_at, etc.
+        metadata: Existing metadata dict to merge provenance into.
+
+    Returns:
+        dict with:
+            scrubbed_content: cleaned text
+            metadata: merged metadata with provenance attached
+            promotion_status: 'promoted' (internal) or 'staged' (external)
+            is_external: bool
+    """
+    scrubbed = scrub(content) if content else ''
+    external = is_external_origin(origin)
+
+    merged_meta = dict(metadata or {})
+    if origin:
+        merged_meta['_origin'] = origin
+    if external:
+        merged_meta['_external'] = True
+        merged_meta['_provenance'] = provenance or {}
+
+    return {
+        'scrubbed_content': scrubbed,
+        'metadata': merged_meta,
+        'promotion_status': 'staged' if external else 'promoted',
+        'is_external': external,
+    }
+
+
 def should_persist_payload() -> bool:
     """Check if tool call payloads should be persisted based on RECORDING_MODE."""
     from django.conf import settings
