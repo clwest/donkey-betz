@@ -986,7 +986,7 @@ PA_TOOL_SCHEMAS = [
             "Full CRUD access to the Deliverables Library. "
             "Supported actions: list, search, detail, save, unsave, stats, create, update, delete, cleanup. "
             "Use 'create' to save new content (scripts, plans, notes, etc.). "
-            "Use 'update' to change a deliverable's title, content, type, format, or tags. "
+            "Use 'update' to change a deliverable's title, content, type, format, or tags. Use 'prepend' or 'append' params on update to add text without sending full content. "
             "Use 'delete' to permanently remove a single deliverable. "
             "Use 'cleanup' to bulk-remove duplicates or orphans (use dry_run=true first to preview). "
             "Use 'list'/'search' to browse (supports offset for pagination), 'detail' to read full content, "
@@ -1007,6 +1007,8 @@ PA_TOOL_SCHEMAS = [
                 "agent": {"type": "string", "description": "Filter by agent_name (e.g. 'StockAnalystAgent', 'ResearchAgent')"},
                 "title": {"type": "string", "description": "Title for create or update"},
                 "content": {"type": "string", "description": "Full content for create or update"},
+                "prepend": {"type": "string", "description": "Text to prepend to existing content (update action only, avoids sending full content)"},
+                "append": {"type": "string", "description": "Text to append to existing content (update action only, avoids sending full content)"},
                 "content_format": {"type": "string", "enum": ["markdown", "text", "html", "json"], "description": "Content format (default: markdown)"},
                 "tags": {"type": "string", "description": "Comma-separated tags for update (e.g. 'finance, report, q1')"},
                 "saved": {"type": "boolean", "description": "Filter to saved items only"},
