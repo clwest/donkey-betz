@@ -110,31 +110,27 @@ def workflow_run_dispatch(request, run_id):
         if run.status not in ('pending', 'failed'):
             return JsonResponse({'success': False, 'error': f'Run is {run.status}, not dispatchable'})
 
-        # Ensure workers consume from 'workflow' queue
-        try:
-            celery_app.control.add_consumer('workflow', reply=True, timeout=5)
-            logger.info("[WORKFLOW] Added 'workflow' queue consumer to workers")
-        except Exception as ce:
-            logger.warning(f"[WORKFLOW] add_consumer failed (non-fatal): {ce}")
-
         run.status = 'pending'
         run.error_message = ''
         run.save(update_fields=['status', 'error_message', 'updated_at'])
 
+        # Route to content queue — workflow queue has no consumer (Railway dashboard override)
+        queue = request.GET.get('queue', 'content')
         task = run_source_pack_workflow.apply_async(
             kwargs={'run_id': str(run.id)},
-            queue='workflow',
+            queue=queue,
         )
         run.celery_task_id = str(task.id)
         run.save(update_fields=['celery_task_id', 'updated_at'])
 
-        logger.info(f"[WORKFLOW] Dispatched task={task.id} queue=workflow run={run.id}")
+        logger.info(f"[WORKFLOW] Dispatched task={task.id} queue={queue} run={run.id}")
 
         return JsonResponse({
             'success': True,
             'run_id': str(run.id),
             'task_id': str(task.id),
-            'message': 'Dispatched to workflow queue (consumer added)',
+            'queue': queue,
+            'message': f'Dispatched to {queue} queue',
         })
 
     except Exception as e:
