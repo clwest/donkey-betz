@@ -103,7 +103,8 @@ class InitiativeIntegrationService:
         topic: str,
         description: str = "",
         source_decision_id: str = None,
-        created_by: str = "ThinkingAgent"
+        created_by: str = "ThinkingAgent",
+        bypass_circuit_breaker: bool = False,
     ) -> Tuple['Initiative', bool]:
         """
         Get or create an Initiative for a given topic.
@@ -112,12 +113,14 @@ class InitiativeIntegrationService:
         has an associated Initiative to track its lifecycle.
 
         Session 994: Circuit breaker enforced at this layer so no caller can bypass it.
+        Exception: bypass_circuit_breaker=True for explicit human-initiated creation via PA.
 
         Args:
             topic: The topic/name for the initiative
             description: Optional description
             source_decision_id: Optional ID of the decision that triggered this
             created_by: Who/what created this initiative
+            bypass_circuit_breaker: If True, skip circuit breaker (for human PA requests)
 
         Returns:
             Tuple of (Initiative, created_bool)
@@ -148,9 +151,9 @@ class InitiativeIntegrationService:
                 return similar, False
 
             # Session 994: Circuit breaker at the lowest creation layer.
-            # No caller can bypass this — if the breaker is tripped, we block.
+            # bypass_circuit_breaker=True for explicit human-initiated PA creation.
             from core.services.initiative_circuit_breaker import can_create_initiative
-            if not can_create_initiative():
+            if not can_create_initiative(bypass_check=bypass_circuit_breaker):
                 self.logger.warning(
                     f"[Session 994] Circuit breaker BLOCKED initiative creation: "
                     f"'{normalized_topic[:60]}' (source: {created_by})"
