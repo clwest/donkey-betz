@@ -1290,3 +1290,215 @@ def ingest_file(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# ============================================================
+# Video RAG Ingest
+# ============================================================
+
+class VideoIngestThrottle(ScopedRateThrottle):
+    scope = 'video_ingest'
+
+
+ALLOWED_VIDEO_EXTENSIONS = {'.mp4', '.mov', '.avi', '.mkv', '.webm'}
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@throttle_classes([VideoIngestThrottle])
+def ingest_video(request):
+    """
+    Upload a video file for RAG ingestion.
+
+    Accepts multipart/form-data with:
+    - file (required): video file (.mp4, .mov, .avi, .mkv, .webm)
+    - title: optional custom title
+    - language: Whisper language code (default: 'en')
+
+    Returns 202 with job_id for async polling via ingest_video_status.
+    """
+    import os
+    import tempfile
+    from django.conf import settings as django_settings
+
+    correlation_id = str(uuid.uuid4())
+
+    if 'file' not in request.FILES:
+        return Response({
+            'success': False,
+            'error': 'No video file provided. Use multipart/form-data with a "file" field.',
+            'correlation_id': correlation_id,
+        }, status=400)
+
+    uploaded_file = request.FILES['file']
+    filename = uploaded_file.name or ''
+    ext = os.path.splitext(filename.lower())[1]
+
+    if ext not in ALLOWED_VIDEO_EXTENSIONS:
+        return Response({
+            'success': False,
+            'error': f'Unsupported video format "{ext}". Supported: {", ".join(sorted(ALLOWED_VIDEO_EXTENSIONS))}',
+            'correlation_id': correlation_id,
+        }, status=400)
+
+    max_size = getattr(django_settings, 'VIDEO_INGEST_MAX_SIZE', 104857600)
+    if uploaded_file.size and uploaded_file.size > max_size:
+        return Response({
+            'success': False,
+            'error': f'File too large ({uploaded_file.size / 1048576:.1f}MB). Maximum: {max_size / 1048576:.0f}MB.',
+            'correlation_id': correlation_id,
+        }, status=400)
+
+    title = request.POST.get('title', '').strip() or filename
+    language = request.POST.get('language', 'en').strip() or 'en'
+
+    # Write upload to temp file
+    tmp_fd, tmp_path = tempfile.mkstemp(suffix=ext)
+    try:
+        with os.fdopen(tmp_fd, 'wb') as tmp_file:
+            for chunk in uploaded_file.chunks():
+                tmp_file.write(chunk)
+
+        file_size = os.path.getsize(tmp_path)
+
+        # Create Document record
+        document = Document.objects.create(
+            owner=request.user,
+            title=title,
+            document_type=DocumentType.VIDEO,
+            original_filename=filename,
+            file_size=file_size,
+            mime_type=uploaded_file.content_type or '',
+            status='pending',
+            source='upload',
+        )
+
+        # Dispatch Celery task
+        from core.tasks import ingest_video_task
+        try:
+            task = ingest_video_task.delay(
+                str(document.id), tmp_path, filename, str(request.user.id), language
+            )
+        except Exception as dispatch_err:
+            logger.error(f"🎥 Celery dispatch failed: {dispatch_err} [{correlation_id}]")
+            document.delete()
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+            return Response({
+                'success': False,
+                'error': 'Task queue unavailable. Please try again later.',
+                'correlation_id': correlation_id,
+            }, status=503)
+
+        logger.info(f"🎥 Video ingest queued: doc={document.id} job={task.id} [{correlation_id}]")
+
+        return Response({
+            'success': True,
+            'document_id': str(document.id),
+            'job_id': task.id,
+            'status': 'queued',
+            'correlation_id': correlation_id,
+        }, status=202)
+
+    except Exception as e:
+        # Clean up temp file on outer error
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+        logger.error(f"🎥 Video ingest error: {e} [{correlation_id}]")
+        return Response({
+            'success': False,
+            'error': str(e),
+            'correlation_id': correlation_id,
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def ingest_video_status(request, job_id):
+    """
+    Poll the status of a video ingest task.
+
+    Returns job status, progress info, and document details when complete.
+    """
+    from celery.result import AsyncResult
+
+    # Try CeleryTaskEvent first (survives Redis TTL)
+    try:
+        from core.models_celery_telemetry import CeleryTaskEvent
+        event = CeleryTaskEvent.objects.filter(task_id=job_id).order_by('-started_at').first()
+        if event:
+            result_data = {
+                'job_id': job_id,
+                'status': event.status,
+                'progress': _video_progress_from_status(event.status),
+            }
+
+            if event.status == 'SUCCESS':
+                result_data['document'] = _video_document_details(event)
+            elif event.status == 'FAILURE':
+                result_data['error'] = event.error_message or 'Task failed'
+
+            return Response(result_data)
+    except Exception:
+        pass
+
+    # Fallback: AsyncResult
+    result = AsyncResult(job_id)
+
+    status = result.status or 'UNKNOWN'
+    response_data = {
+        'job_id': job_id,
+        'status': status,
+        'progress': _video_progress_from_status(status),
+    }
+
+    if status == 'SUCCESS' and isinstance(result.result, dict):
+        response_data['document'] = {
+            'id': result.result.get('document_id'),
+            'segment_count': result.result.get('segment_count'),
+            'word_count': result.result.get('word_count'),
+            'duration_seconds': result.result.get('duration_seconds'),
+        }
+    elif status == 'FAILURE':
+        response_data['error'] = str(result.result) if result.result else 'Task failed'
+
+    return Response(response_data)
+
+
+def _video_progress_from_status(status):
+    """Map task status to a human-readable progress string."""
+    return {
+        'PENDING': 'Queued',
+        'STARTED': 'Processing video...',
+        'SUCCESS': 'Complete',
+        'FAILURE': 'Failed',
+        'RETRY': 'Retrying...',
+    }.get(status, 'Unknown')
+
+
+def _video_document_details(event):
+    """Extract document details from a completed CeleryTaskEvent."""
+    try:
+        # The task result is stored in CeleryTaskEvent only if result backend wrote it
+        # Try fetching the document directly
+        task_name = event.task_name or ''
+        if 'ingest_video' in task_name:
+            from celery.result import AsyncResult as AR
+            result = AR(event.task_id)
+            if isinstance(result.result, dict):
+                doc_id = result.result.get('document_id')
+                if doc_id:
+                    doc = Document.objects.filter(id=doc_id).first()
+                    if doc:
+                        meta = doc.extracted_metadata or {}
+                        return {
+                            'id': str(doc.id),
+                            'title': doc.title,
+                            'status': doc.status,
+                            'segment_count': meta.get('segment_count'),
+                            'duration_seconds': meta.get('duration_seconds'),
+                            'word_count': doc.word_count,
+                        }
+    except Exception:
+        pass
+    return None
