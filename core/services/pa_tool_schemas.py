@@ -134,10 +134,13 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list_top", "details", "approve", "dismiss", "stats"],
-                    "description": "Dream action to perform",
+                    "enum": ["list_top", "details", "approve", "dismiss", "stats", "create"],
+                    "description": "Dream action. Use 'create' to add a new dream/idea manually.",
                 },
                 "id": {"type": "string", "description": "UUID of dream"},
+                "title": {"type": "string", "description": "Title for new dream (for create action)"},
+                "content": {"type": "string", "description": "Dream content/description (for create action)"},
+                "dream_type": {"type": "string", "enum": ["creative_idea", "what_if", "mashup", "prediction", "improvement", "observation", "wild_thought"], "description": "Type of dream (for create, default creative_idea)"},
                 "feedback": {"type": "string", "description": "Optional feedback when approving/dismissing"},
                 "limit": {"type": "integer", "description": "Max dreams to return (default 10)"},
             },
@@ -268,7 +271,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["overview", "predictions", "accuracy", "arbs", "sharp_action", "line_movements", "wagers", "live_odds", "brief"],
+                    "enum": ["overview", "predictions", "accuracy", "arbs", "sharp_action", "line_movements", "wagers", "live_odds", "brief", "record_wager"],
                     "description": (
                         "overview: dashboard summary (wager counts, arb opps, recent odds). "
                         "predictions: ML game predictions with confidence. "
@@ -282,6 +285,11 @@ PA_TOOL_SCHEMAS = [
                     ),
                 },
                 "sport": {"type": "string", "description": "Sport type filter (nba, nfl, mlb, nhl)"},
+                "stake": {"type": "number", "description": "Wager amount in dollars (for record_wager)"},
+                "odds": {"type": "integer", "description": "American odds e.g. -110, +250 (for record_wager)"},
+                "description": {"type": "string", "description": "Description of the bet (for record_wager)"},
+                "notes": {"type": "string", "description": "Additional notes (for record_wager)"},
+                "wager_type": {"type": "string", "enum": ["single", "parlay"], "description": "Wager type (for record_wager, default single)"},
                 "limit": {"type": "integer", "description": "Max items (default 10)"},
                 "days": {"type": "integer", "description": "Lookback period in days (default 30, used by accuracy action)"},
             },
@@ -294,7 +302,7 @@ PA_TOOL_SCHEMAS = [
         "type": "function",
         "name": "opportunity_manager_tool",
         "description": (
-            "Manage opportunities: list, view details, get stats, or update status. "
+            "Manage opportunities: list, view details, get stats, create, or update status. "
             "Use when the user asks about opportunities, job listings, income "
             "opportunities, or wants to track/update an opportunity."
         ),
@@ -303,10 +311,15 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "get", "stats", "update_status"],
-                    "description": "Opportunity action",
+                    "enum": ["list", "get", "stats", "update_status", "create"],
+                    "description": "Opportunity action. Use 'create' to add a new opportunity.",
                 },
                 "id": {"type": "string", "description": "UUID of opportunity"},
+                "title": {"type": "string", "description": "Title for new opportunity (for create)"},
+                "description": {"type": "string", "description": "Description (for create)"},
+                "opportunity_type": {"type": "string", "description": "Type: freelance, consulting, job, gig, etc. (for create)"},
+                "source": {"type": "string", "description": "Where found: web_search, spider, manual, referral (for create)"},
+                "potential_revenue": {"type": "number", "description": "Estimated revenue in dollars (for create)"},
                 "status": {"type": "string", "description": "Filter by or set status (active, pending, applied, accepted, rejected, expired)"},
                 "limit": {"type": "integer", "description": "Max items (default 20)"},
             },
@@ -365,17 +378,22 @@ PA_TOOL_SCHEMAS = [
         "type": "function",
         "name": "revenue_tracker_tool",
         "description": (
-            "Track revenue metrics and income progress. Use when the user asks "
-            "about revenue, earnings, income, or financial progress."
+            "Track revenue metrics, income progress, and record new revenue. "
+            "Use when the user asks about revenue, earnings, income, financial "
+            "progress, or wants to record a new revenue event."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["stats", "list"],
-                    "description": "Revenue action: stats (totals by source/status), list (recent revenue records)",
+                    "enum": ["stats", "list", "create"],
+                    "description": "Revenue action: stats (totals by source/status), list (recent records), create (record new revenue)",
                 },
+                "amount": {"type": "number", "description": "Revenue amount in dollars (for create)"},
+                "source": {"type": "string", "enum": ["quick_apply", "freelance", "consulting", "ai_project", "content", "trading", "sports_betting", "affiliate", "other"], "description": "Revenue source (for create, default 'other')"},
+                "description": {"type": "string", "description": "Description of revenue (for create)"},
+                "status": {"type": "string", "enum": ["potential", "pending", "received", "cancelled"], "description": "Revenue status (for create, default 'potential')"},
                 "limit": {"type": "integer", "description": "Max items for list action (default 20)"},
             },
             "required": ["action"],
