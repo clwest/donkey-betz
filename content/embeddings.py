@@ -830,7 +830,12 @@ class RAGSystem:
                 return []
             
             query_embedding = query_result.embedding
-            
+            logger.info(
+                f"semantic_search: query embedding generated, "
+                f"type={type(query_embedding).__name__}, "
+                f"len={len(query_embedding) if query_embedding else 'None'}"
+            )
+
             # Get relevant document embeddings
             embeddings_query = DocumentEmbedding.objects.filter(
                 embedding_model=embedding_model
@@ -850,12 +855,13 @@ class RAGSystem:
             if not provider:
                 return []
             
+            similarity_errors = 0
             for embedding in embeddings:
                 try:
                     similarity = provider.calculate_similarity(
                         query_embedding, embedding.embedding_vector
                     )
-                    
+
                     if similarity >= similarity_threshold:
                         results.append(SearchResult(
                             document_id=str(embedding.document.id),
@@ -868,10 +874,22 @@ class RAGSystem:
                             context_before=embedding.context_before,
                             context_after=embedding.context_after
                         ))
-                
+
                 except Exception as e:
-                    logger.error(f"Error calculating similarity for embedding {embedding.id}: {str(e)}")
+                    similarity_errors += 1
+                    if similarity_errors <= 3:
+                        vec = embedding.embedding_vector
+                        logger.exception(
+                            f"calculate_similarity failed for embedding {embedding.id}: "
+                            f"query_type={type(query_embedding).__name__} "
+                            f"query_len={len(query_embedding) if query_embedding else 'None'} "
+                            f"vec_type={type(vec).__name__} "
+                            f"vec_len={len(vec) if vec and hasattr(vec, '__len__') else 'N/A'}"
+                        )
                     continue
+
+            if similarity_errors:
+                logger.error(f"semantic_search: {similarity_errors}/{len(list(embeddings_query[:1000]))} embeddings failed similarity calc")
             
             # Sort by similarity score and return top results
             results.sort(key=lambda x: x.similarity_score, reverse=True)
