@@ -446,6 +446,7 @@ REST_FRAMEWORK = {
         'anon': '100000/hour',
         'user': '500000/hour',
         'rag_ingest': '20/hour',
+        'video_ingest': '5/hour',
     }
 }
 
@@ -844,9 +845,10 @@ ACCOUNT_LOCKOUT_DURATION = env_int('ACCOUNT_LOCKOUT_DURATION', 1800)  # 30 minut
 PASSWORD_RESET_TIMEOUT = env_int('PASSWORD_RESET_TIMEOUT', 3600)  # 1 hour
 
 # File Upload Security
-FILE_UPLOAD_MAX_MEMORY_SIZE = env_int('FILE_UPLOAD_MAX_MEMORY_SIZE', 5242880)  # 5MB
-DATA_UPLOAD_MAX_MEMORY_SIZE = env_int('DATA_UPLOAD_MAX_MEMORY_SIZE', 5242880)  # 5MB
-MAX_UPLOAD_SIZE = env_int('MAX_UPLOAD_SIZE', 10485760)  # 10MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = env_int('FILE_UPLOAD_MAX_MEMORY_SIZE', 104857600)  # 100MB (video support)
+DATA_UPLOAD_MAX_MEMORY_SIZE = env_int('DATA_UPLOAD_MAX_MEMORY_SIZE', 104857600)  # 100MB (video support)
+MAX_UPLOAD_SIZE = env_int('MAX_UPLOAD_SIZE', 104857600)  # 100MB
+VIDEO_INGEST_MAX_SIZE = env_int('VIDEO_INGEST_MAX_SIZE', 104857600)  # 100MB
 
 # Allowed file extensions for uploads
 ALLOWED_UPLOAD_EXTENSIONS = env_list(
@@ -1234,6 +1236,7 @@ CELERY_TASK_ROUTES = {
     'core.tasks.embed_agent_activity': {'queue': 'ml'},
     'core.tasks.embed_daily_agent_learning': {'queue': 'ml'},
     'core.tasks.generate_document_embeddings': {'queue': 'ml'},
+    'core.tasks.ingest_video_task': {'queue': 'long_running'},
     'core.tasks.generate_memory_embedding': {'queue': 'ml'},
     'core.tasks.collect_training_data': {'queue': 'ml'},
 
