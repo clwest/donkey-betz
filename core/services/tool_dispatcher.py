@@ -800,8 +800,108 @@ class ToolDispatcher:
                 'by_priority': by_priority,
             }
 
+        elif action == 'create':
+            if not user_id:
+                raise ValueError("User context required to create a task")
+            title = payload.get('title', '').strip()
+            if not title:
+                raise ValueError("'title' is required for create action")
+
+            opp_id = payload.get('opportunity_id')
+            opp = None
+            if opp_id:
+                from core.models_unified_system import Opportunity
+                opp = Opportunity.objects.filter(id=opp_id).first()
+                if not opp:
+                    raise ValueError(f"Opportunity {opp_id} not found")
+
+            if not opp:
+                # Create a standalone opportunity to satisfy the required FK
+                from core.models_unified_system import Opportunity
+                opp = Opportunity.objects.create(
+                    user_id=user_id,
+                    title=title,
+                    description=payload.get('description', ''),
+                    opportunity_type='task',
+                    source='pa',
+                    status='active',
+                )
+
+            task = OpportunityTask.objects.create(
+                user_id=user_id,
+                opportunity=opp,
+                title=title,
+                description=payload.get('description', ''),
+                priority=payload.get('priority', 'medium'),
+                status='pending',
+            )
+            return {
+                'action': 'create',
+                'id': str(task.id),
+                'title': task.title,
+                'priority': task.priority,
+                'opportunity_id': str(opp.id),
+                'success': True,
+            }
+
+        elif action == 'update':
+            task_id = payload.get('id')
+            if not task_id:
+                raise ValueError("'id' is required for update action")
+            task = base_qs.filter(id=task_id).first()
+            if not task:
+                raise ValueError(f"Task {task_id} not found")
+
+            update_fields = []
+            if payload.get('status'):
+                task.status = payload['status']
+                update_fields.append('status')
+            if payload.get('priority'):
+                task.priority = payload['priority']
+                update_fields.append('priority')
+            if payload.get('title'):
+                task.title = payload['title']
+                update_fields.append('title')
+            if payload.get('description') is not None:
+                task.description = payload['description']
+                update_fields.append('description')
+
+            if update_fields:
+                task.save(update_fields=update_fields)
+
+            return {
+                'action': 'update',
+                'id': str(task.id),
+                'title': task.title,
+                'status': task.status,
+                'priority': task.priority,
+                'updated_fields': update_fields,
+                'success': True,
+            }
+
+        elif action == 'complete':
+            task_id = payload.get('id')
+            if not task_id:
+                raise ValueError("'id' is required for complete action")
+            task = base_qs.filter(id=task_id).first()
+            if not task:
+                raise ValueError(f"Task {task_id} not found")
+
+            old_status = task.status
+            task.status = 'won'
+            task.save(update_fields=['status'])
+
+            return {
+                'action': 'complete',
+                'id': str(task.id),
+                'title': task.title,
+                'old_status': old_status,
+                'new_status': 'won',
+                'success': True,
+            }
+
         else:
-            raise ValueError(f"Unknown action: {action}")
+            raise ValueError(f"Unknown action: {action}. Valid: list, stats, create, update, complete")
 
     def _handle_pipeline_orchestrator(
         self,
@@ -2256,8 +2356,39 @@ class ToolDispatcher:
                 'success': True,
             }
 
+        elif action == 'create':
+            if not user_id:
+                raise ValueError("User context required to create a decision request")
+
+            title = payload.get('title', '').strip()
+            if not title:
+                raise ValueError("'title' is required for create action")
+
+            summary = payload.get('summary', '').strip() or title
+            item_type = payload.get('item_type', 'decision')
+            urgency = payload.get('urgency', 'medium')
+
+            item = HumanAttentionItem.objects.create(
+                user_id=user_id,
+                title=title[:200],
+                summary=summary,
+                item_type=item_type,
+                urgency=urgency,
+                source_type='pa',
+                source_agent='PersonalAssistant',
+                status='pending',
+            )
+            return {
+                'action': 'create',
+                'id': str(item.id),
+                'title': item.title,
+                'item_type': item.item_type,
+                'urgency': item.urgency,
+                'success': True,
+            }
+
         else:
-            raise ValueError(f"Unknown action: {action}")
+            raise ValueError(f"Unknown action: {action}. Valid: list, stats, decide, create")
 
     def _handle_reasoning_engine(
         self,
@@ -2956,8 +3087,39 @@ class ToolDispatcher:
                 'success': True,
             }
 
+        elif action == 'create_attention':
+            if not user_id:
+                raise ValueError("User context required to create attention item")
+
+            title = payload.get('title', '').strip()
+            if not title:
+                raise ValueError("'title' is required for create_attention")
+
+            summary = payload.get('summary', '').strip() or title
+            item_type = payload.get('item_type', 'decision')
+            urgency = payload.get('urgency', 'medium')
+
+            item = HumanAttentionItem.objects.create(
+                user_id=user_id,
+                title=title[:200],
+                summary=summary,
+                item_type=item_type,
+                urgency=urgency,
+                source_type='pa',
+                source_agent='PersonalAssistant',
+                status='pending',
+            )
+            return {
+                'action': 'create_attention',
+                'id': str(item.id),
+                'title': item.title,
+                'item_type': item.item_type,
+                'urgency': item.urgency,
+                'success': True,
+            }
+
         else:
-            raise ValueError(f"Unknown action: {action}. Valid actions: stats, lookup, list_attention, list_decisions, approve_attention, ignore_attention, promote_decision, reject_decision, get_triage_batch, list_unclassified, classify_suggest, classify_apply, classify_apply_batch")
+            raise ValueError(f"Unknown action: {action}. Valid actions: stats, lookup, list_attention, list_decisions, approve_attention, ignore_attention, promote_decision, reject_decision, get_triage_batch, list_unclassified, classify_suggest, classify_apply, classify_apply_batch, create_attention")
 
     def _handle_brainstorm(
         self,
@@ -3062,9 +3224,31 @@ class ToolDispatcher:
             result = brainstorm_search_service.get_stats(days=days)
             return {'action': 'stats', **result}
 
+        elif action == 'create':
+            topic = payload.get('topic', payload.get('query', '')).strip()
+            if not topic:
+                raise ValueError("'topic' is required for create action")
+
+            # Dispatch brainstorm via ConversationOrchestrator as a Celery task
+            from core.tasks import execute_agent_task
+            task = execute_agent_task.apply_async(
+                args=['ThinkingAgent', f'Brainstorm and discuss: {topic}',
+                      {'user_id': str(user_id) if user_id else None, 'topic': topic}],
+                queue='agents',
+            )
+
+            return {
+                'action': 'create',
+                'topic': topic,
+                'task_id': str(task.id),
+                'mode': 'async',
+                'message': f'Brainstorm discussion on "{topic}" dispatched. Use job_status to check progress.',
+                'success': True,
+            }
+
         else:
             raise ValueError(
-                f"Unknown action: {action}. Valid actions: list, search, recent, details, by_category, stats"
+                f"Unknown action: {action}. Valid actions: list, search, recent, details, by_category, stats, create"
             )
 
     def _record_content_feedback(self, agent_name, action, details, user_id=None):
@@ -9129,7 +9313,51 @@ RESEARCH DATA:
                 'recent_documents': recent,
             }
 
-        return {'error': f'Unknown action: {action}'}
+        elif action == 'list_documents':
+            from content.models import Document
+            from django.db.models import Count
+
+            limit = min(payload.get('limit', 20), 50)
+            doc_type = payload.get('document_type')
+
+            qs = Document.objects.filter(status='processed')
+            if doc_type:
+                qs = qs.filter(document_type__icontains=doc_type)
+
+            docs = list(
+                qs.annotate(chunk_count=Count('embeddings'))
+                .order_by('-created_at')[:limit]
+                .values('id', 'title', 'document_type', 'chunk_count', 'created_at', 'source_url')
+            )
+            for doc in docs:
+                doc['id'] = str(doc['id'])
+                doc['created_at'] = str(doc['created_at'])
+
+            return {
+                'action': 'list_documents',
+                'count': len(docs),
+                'documents': docs,
+            }
+
+        elif action == 'ingest':
+            url = payload.get('url', '').strip()
+            if not url:
+                raise ValueError("'url' is required for ingest action")
+
+            # Dispatch URL ingestion as async task
+            from core.tasks import process_url_async
+            task = process_url_async.delay(url=url, generate_embeddings=True)
+
+            return {
+                'action': 'ingest',
+                'url': url,
+                'task_id': str(task.id),
+                'mode': 'async',
+                'message': f'URL "{url}" queued for RAG ingestion. Use job_status to check progress.',
+                'success': True,
+            }
+
+        return {'error': f'Unknown action: {action}. Valid: search, stats, list_documents, ingest'}
 
     # ── Session G1: Competitor Comparison ────────────────────────────────────
 
