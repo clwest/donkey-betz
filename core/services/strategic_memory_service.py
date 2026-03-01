@@ -37,6 +37,7 @@ SOURCE_WEIGHTS = {
     'decision_summary': 0.75,
     'deliberation_session': 0.65,
     'contract_record': 0.55,
+    'conversation': 0.70,
     'deliberation_turn': 0.45,
 }
 
@@ -225,6 +226,34 @@ class StrategicMemoryService:
                 logger.warning(f"[Phase 2] ContractRecord search failed: {e}")
                 stats['searched']['contract_record'] = f'error: {e}'
             stats['timings_ms']['contract_record'] = round((time.time() - t0) * 1000)
+
+        # --- 8) Recent PA Conversations ---
+        if not allowed_types or 'conversation' in allowed_types:
+            t0 = time.time()
+            try:
+                from core.models import ChatConversation
+                convos = ChatConversation.objects.filter(
+                    Q(user_message__icontains=query) | Q(assistant_response__icontains=query)
+                ).order_by('-created_at')[:5]
+                for c in convos:
+                    text = f"{c.user_message[:200]} → {c.assistant_response[:200]}"
+                    score = (
+                        _text_relevance(tokens, text) * 0.6
+                        + _recency_bonus(c.created_at) * 0.4
+                    )
+                    if score > 0.1:
+                        results.append({
+                            'source': 'conversation',
+                            'text': text,
+                            'score': score * SOURCE_WEIGHTS['conversation'],
+                            'created_at': c.created_at,
+                            'metadata': {'conversation_id': c.conversation_id},
+                        })
+                stats['searched']['conversation'] = True
+            except Exception as e:
+                logger.warning(f"[MEMORY] Conversation search failed: {e}")
+                stats['searched']['conversation'] = f'error: {e}'
+            stats['timings_ms']['conversation'] = round((time.time() - t0) * 1000)
 
         # Sort by final_score descending
         results.sort(key=lambda r: r['score'], reverse=True)

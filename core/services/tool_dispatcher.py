@@ -228,6 +228,9 @@ class ToolDispatcher:
         self.register("competitor_comparison_tool", self._handle_competitor_comparison)
         self.register("workflow_run_tool", self._handle_workflow_run)
 
+        # Conversation memory — cross-thread PA recall
+        self.register("conversation_tool", self._handle_conversation)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):
@@ -9906,6 +9909,190 @@ RESEARCH DATA:
                 'action': 'cancel',
                 'run_id': str(run.id),
                 'message': 'Workflow cancelled',
+            }
+
+        return {'error': f'Unknown action: {action}'}
+
+    # ── Conversation Memory ──────────────────────────────────────────────────
+
+    def _handle_conversation(self, tool_name, payload, user_id, trace_id):
+        """Handle conversation memory tool — cross-thread PA recall."""
+        from core.models import ChatConversation, ConversationMemory
+        from django.db.models import Q
+        from datetime import timedelta
+        from django.utils import timezone
+
+        action = payload.get('action', 'search')
+        limit = min(payload.get('limit', 10), 50)
+
+        if action == 'get':
+            cid = payload.get('conversation_id')
+            if not cid:
+                return {'error': 'conversation_id required for get action'}
+
+            turns = list(
+                ChatConversation.objects.filter(conversation_id=cid)
+                .order_by('created_at')
+                .values('user_message', 'assistant_response', 'created_at', 'source', 'session_title')
+            )
+            if not turns:
+                return {'action': 'get', 'conversation_id': cid, 'turns': [], 'message': 'No conversation found'}
+
+            return {
+                'action': 'get',
+                'conversation_id': cid,
+                'session_title': turns[0].get('session_title', ''),
+                'turn_count': len(turns),
+                'turns': [
+                    {
+                        'role_user': t['user_message'][:500],
+                        'role_assistant': t['assistant_response'][:500],
+                        'timestamp': t['created_at'].isoformat() if t['created_at'] else None,
+                    }
+                    for t in turns[:50]  # cap at 50 turns
+                ],
+            }
+
+        elif action == 'search':
+            query = payload.get('query', '')
+            days_back = payload.get('days_back')
+            if not query:
+                return {'error': 'query required for search action'}
+
+            results = []
+
+            # Primary: pgvector semantic search on ConversationMemory
+            try:
+                from pgvector.django import CosineDistance
+                from core.services.embedding_service import EmbeddingService
+                emb_svc = EmbeddingService()
+                emb_result = emb_svc.create_embedding(query, agent_name='conversation_tool')
+                vector = emb_result.embedding
+
+                cm_qs = ConversationMemory.objects.exclude(embedding__isnull=True)
+                if user_id:
+                    cm_qs = cm_qs.filter(user_id=user_id)
+                if days_back:
+                    cm_qs = cm_qs.filter(created_at__gte=timezone.now() - timedelta(days=days_back))
+
+                semantic_hits = list(
+                    cm_qs.annotate(distance=CosineDistance('embedding', vector))
+                    .order_by('distance')[:limit]
+                    .values('id', 'message', 'response', 'created_at', 'distance')
+                )
+                for hit in semantic_hits:
+                    results.append({
+                        'source': 'semantic',
+                        'score': round(1.0 - (hit['distance'] or 1.0), 3),
+                        'user_message': hit['message'][:300],
+                        'assistant_response': hit['response'][:300],
+                        'timestamp': hit['created_at'].isoformat() if hit['created_at'] else None,
+                    })
+            except Exception as e:
+                logger.warning(f"[CONVERSATION] Semantic search failed: {e}")
+
+            # Fallback/supplement: keyword search on ChatConversation
+            kw_qs = ChatConversation.objects.filter(
+                Q(user_message__icontains=query) | Q(assistant_response__icontains=query)
+            )
+            if user_id:
+                kw_qs = kw_qs.filter(user_id=user_id)
+            if days_back:
+                kw_qs = kw_qs.filter(created_at__gte=timezone.now() - timedelta(days=days_back))
+
+            kw_hits = list(
+                kw_qs.order_by('-created_at')[:limit]
+                .values('conversation_id', 'user_message', 'assistant_response', 'created_at', 'session_title')
+            )
+
+            # Dedupe: skip keyword hits already covered by semantic
+            seen_snippets = {r['user_message'][:100] for r in results}
+            for hit in kw_hits:
+                snippet = hit['user_message'][:100]
+                if snippet not in seen_snippets:
+                    seen_snippets.add(snippet)
+                    results.append({
+                        'source': 'keyword',
+                        'score': 0.5,
+                        'conversation_id': hit['conversation_id'],
+                        'session_title': hit.get('session_title', ''),
+                        'user_message': hit['user_message'][:300],
+                        'assistant_response': hit['assistant_response'][:300],
+                        'timestamp': hit['created_at'].isoformat() if hit['created_at'] else None,
+                    })
+
+            # Sort by score desc
+            results.sort(key=lambda r: r['score'], reverse=True)
+            results = results[:limit]
+
+            return {
+                'action': 'search',
+                'query': query,
+                'count': len(results),
+                'results': results,
+            }
+
+        elif action == 'summary':
+            cid = payload.get('conversation_id')
+            if not cid:
+                return {'error': 'conversation_id required for summary action'}
+
+            from core.tasks import summarize_conversation_task
+            task = summarize_conversation_task.delay(
+                conversation_id=cid,
+                user_id=user_id,
+            )
+            return {
+                'action': 'summary',
+                'mode': 'async',
+                'task_id': str(task.id),
+                'message': f'Summarizing conversation {cid}...',
+            }
+
+        elif action == 'pin_memory':
+            pin_title = payload.get('pin_title', '').strip()
+            pin_content = payload.get('pin_content', '').strip()
+            if not pin_title or not pin_content:
+                return {'error': 'pin_title and pin_content required for pin_memory action'}
+
+            pin_tags = payload.get('pin_tags') or ['pa-memory']
+
+            from core.models_deliverables import Deliverable
+            d = Deliverable.objects.create(
+                title=pin_title,
+                content=pin_content,
+                category='Memory',
+                deliverable_type='document',
+                is_pinned=True,
+                is_saved=True,
+                agent_name='PersonalAssistant',
+                content_format='markdown',
+                tags=pin_tags,
+                metadata={'source': 'conversation_tool', 'pinned_by': 'pa'},
+                user_id=user_id,
+            )
+
+            # Also embed for future semantic search
+            try:
+                from core.services.embedding_service import EmbeddingService
+                emb_svc = EmbeddingService()
+                emb_result = emb_svc.create_embedding(pin_content, agent_name='conversation_tool')
+                if user_id:
+                    ConversationMemory.objects.create(
+                        user_id=user_id,
+                        message=f"[PINNED] {pin_title}",
+                        response=pin_content,
+                        intent='pin_memory',
+                        embedding=emb_result.embedding,
+                    )
+            except Exception as e:
+                logger.warning(f"[CONVERSATION] Embedding for pinned memory failed: {e}")
+
+            return {
+                'action': 'pin_memory',
+                'deliverable_id': str(d.id),
+                'title': pin_title,
+                'message': f'Pinned memory: "{pin_title}"',
             }
 
         return {'error': f'Unknown action: {action}'}

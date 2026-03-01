@@ -2072,6 +2072,45 @@ PA_TOOL_SCHEMAS = [
             "required": ["action"],
         },
     },
+
+    # ── Conversation Memory ──────────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "conversation_tool",
+        "description": (
+            "Search and retrieve past PA conversations. Use to recall previous "
+            "discussions, find decisions made, or summarize conversation threads. "
+            "Use when the user asks 'what did we discuss', 'do you remember', "
+            "'what did I say about', or references a past conversation."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["get", "search", "summary", "pin_memory"],
+                    "description": (
+                        "get: retrieve full conversation by conversation_id. "
+                        "search: semantic + keyword search across all conversations. "
+                        "summary: dispatch async LLM summarization of a conversation. "
+                        "pin_memory: save a decision/fact as durable memory."
+                    ),
+                },
+                "conversation_id": {"type": "string", "description": "Conversation ID (e.g. 'pa-33e4d55d31b6')"},
+                "query": {"type": "string", "description": "Search query for finding past conversations"},
+                "days_back": {"type": "integer", "description": "Limit search to last N days"},
+                "limit": {"type": "integer", "description": "Max results to return (default 10)"},
+                "pin_title": {"type": "string", "description": "Title for the pinned memory"},
+                "pin_content": {"type": "string", "description": "Content to pin as durable memory"},
+                "pin_tags": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Tags for the pinned memory",
+                },
+            },
+            "required": ["action"],
+        },
+    },
 ]
 
 # ── Startup validation: every tool must have name, description, parameters ──
@@ -2157,6 +2196,7 @@ TOOL_ENRICHMENT_MAP = {
     'rag_query_tool': [],
     'competitor_comparison_tool': [],
     'workflow_run_tool': [],
+    'conversation_tool': ['strategic_memory'],
 }
 
 # Reverse map: tool name -> canonical intent name for enrichment pipeline
@@ -2229,4 +2269,5 @@ TOOL_TO_INTENT_MAP = {
     'rag_query_tool': 'rag',
     'competitor_comparison_tool': 'rag',
     'workflow_run_tool': 'rag',
+    'conversation_tool': 'memory_recall',
 }
