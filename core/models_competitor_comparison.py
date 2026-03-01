@@ -62,6 +62,7 @@ class CompetitorComparison(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+    quality_score = models.FloatField(default=0.0, help_text='Evidence coverage quality score (0-1)')
     metadata = models.JSONField(default=dict, blank=True, help_text='Token costs, timing, etc.')
 
     class Meta:

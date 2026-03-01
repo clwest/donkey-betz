@@ -4497,12 +4497,13 @@ urlpatterns += [
 # =========================================================================
 # Session 1071: Platform Awareness + Deploy Verification
 # =========================================================================
-from core.views_app_manifest import app_manifest
+from core.views_app_manifest import app_manifest, pa_tool_registry
 from core.views_deploy_verify import deploy_verify
 
 urlpatterns += [
     path('api/app/manifest/', app_manifest, name='app-manifest'),
     path('api/deploy/verify/', deploy_verify, name='deploy-verify'),
+    path('api/v1/pa/tools/', pa_tool_registry, name='pa-tool-registry'),
 ]
 
 # =========================================================================

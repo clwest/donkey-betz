@@ -1174,7 +1174,7 @@ PA_TOOL_SCHEMAS = [
                     "enum": [
                         "get_manifest", "list_routes", "check_route",
                         "system_overview", "verify_deploy",
-                        "list_api_dependencies",
+                        "list_api_dependencies", "tool_registry",
                     ],
                     "description": (
                         "get_manifest: full manifest (routes, studios, capabilities). "
@@ -1182,7 +1182,8 @@ PA_TOOL_SCHEMAS = [
                         "check_route: verify a specific route exists. "
                         "system_overview: summary counts. "
                         "verify_deploy: run deploy health checks (admin only). "
-                        "list_api_dependencies: list API endpoints a route depends on."
+                        "list_api_dependencies: list API endpoints a route depends on. "
+                        "tool_registry: list all PA tools with names, descriptions, and actions."
                     ),
                 },
                 "category": {
@@ -1765,13 +1766,23 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["overview", "migrations", "tables", "pgvector"],
+                    "enum": ["overview", "migrations", "tables", "pgvector", "verify_table", "search_tables"],
                     "description": (
                         "overview=connection + migration summary (default), "
                         "migrations=list unapplied migrations, "
                         "tables=row counts for key tables, "
-                        "pgvector=vector extension status and embedding counts"
+                        "pgvector=vector extension status and embedding counts, "
+                        "verify_table=check if a specific table exists with columns and row count, "
+                        "search_tables=find tables by prefix (default core_)"
                     ),
+                },
+                "table_name": {
+                    "type": "string",
+                    "description": "Table name to verify (for verify_table action)",
+                },
+                "prefix": {
+                    "type": "string",
+                    "description": "Table name prefix to search (for search_tables, default 'core_')",
                 },
             },
         },

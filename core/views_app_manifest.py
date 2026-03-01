@@ -147,8 +147,35 @@ def get_manifest_data(user) -> dict:
         if k in visible_paths
     }
 
+    # Backend deploy identity from Railway env vars
+    backend_sha = os.getenv('RAILWAY_GIT_COMMIT_SHA', '')
+    deployment_id = os.getenv('RAILWAY_DEPLOYMENT_ID', '')
+    service_name = os.getenv('RAILWAY_SERVICE_NAME', '')
+
+    build_sha = manifest.get('build_sha', 'unknown')
+    if build_sha == 'unknown' and backend_sha:
+        build_sha = backend_sha
+
+    # Latest applied migration
+    latest_migration = None
+    try:
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT app, name FROM django_migrations ORDER BY id DESC LIMIT 1"
+            )
+            row = cursor.fetchone()
+            if row:
+                latest_migration = f"{row[0]}.{row[1]}"
+    except Exception:
+        pass
+
     return {
-        'build_sha': manifest.get('build_sha', 'unknown'),
+        'build_sha': build_sha,
+        'backend_sha': backend_sha or None,
+        'deployment_id': deployment_id or None,
+        'service_name': service_name or None,
+        'latest_migration': latest_migration,
         'build_timestamp': manifest.get('build_timestamp'),
         'env': manifest.get('env', 'unknown'),
         'route_count': len(routes),
@@ -167,3 +194,29 @@ def get_manifest_data(user) -> dict:
 @permission_classes([IsAuthenticated])
 def app_manifest(request):
     return Response(get_manifest_data(request.user))
+
+
+def _summarize_tool_schemas():
+    """Summarize PA_TOOL_SCHEMAS into a lightweight registry list."""
+    from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
+
+    tools = []
+    for schema in PA_TOOL_SCHEMAS:
+        params = schema.get('parameters', {})
+        props = params.get('properties', {})
+        action_enum = props.get('action', {}).get('enum', [])
+        tools.append({
+            'name': schema.get('name', ''),
+            'description': schema.get('description', '')[:200],
+            'actions': action_enum if action_enum else None,
+            'param_count': len(props),
+        })
+    return tools
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def pa_tool_registry(request):
+    """Return a summary of all PA tool schemas."""
+    tools = _summarize_tool_schemas()
+    return Response({'tools': tools, 'count': len(tools)})
