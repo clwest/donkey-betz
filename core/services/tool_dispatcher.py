@@ -2220,6 +2220,9 @@ class ToolDispatcher:
         from core.models_pilot_readiness import PilotReadinessGate
 
         action = payload.get('action', 'list')
+        # Session G3: Alias 'details' -> 'detail'
+        ACTION_ALIASES = {'details': 'detail'}
+        action = ACTION_ALIASES.get(action, action)
         limit = payload.get('limit', 10)  # Session 1057: Reduced from 20 to match schema
 
         if action == 'list':
@@ -2239,6 +2242,25 @@ class ToolDispatcher:
                 if gate.get('summary') and len(gate['summary']) > 200:
                     gate['summary'] = gate['summary'][:200] + '...'
             return {'action': 'list', 'count': len(gates), 'gates': gates}
+
+        elif action == 'detail':
+            gate_id = payload.get('id', '')
+            if not gate_id:
+                raise ValueError("id is required for detail action")
+            gate = PilotReadinessGate.objects.select_related('decision').filter(id=gate_id).first()
+            if not gate:
+                return {'action': 'detail', 'found': False, 'id': gate_id}
+            return {
+                'action': 'detail', 'found': True,
+                'gate': {
+                    'id': str(gate.id),
+                    'summary': gate.summary,
+                    'status': gate.status,
+                    'risk_level': gate.risk_level,
+                    'created_at': gate.created_at.isoformat() if gate.created_at else None,
+                    'topic': gate.decision.topic if gate.decision else '',
+                },
+            }
 
         elif action == 'stats':
             from django.db.models import Count
@@ -2265,9 +2287,30 @@ class ToolDispatcher:
         from core.models_pilot_readiness import PilotExecution
 
         action = payload.get('action', 'list')
+        # Session G3: Alias 'details' -> 'detail'
+        ACTION_ALIASES = {'details': 'detail'}
+        action = ACTION_ALIASES.get(action, action)
         limit = payload.get('limit', 10)  # Session 1057: Reduced from 20 to match schema
 
-        if action == 'list':
+        if action == 'detail':
+            pilot_id = payload.get('id', '')
+            if not pilot_id:
+                raise ValueError("id is required for detail action")
+            pilot = PilotExecution.objects.filter(id=pilot_id).first()
+            if not pilot:
+                return {'action': 'detail', 'found': False, 'id': pilot_id}
+            return {
+                'action': 'detail', 'found': True,
+                'pilot': {
+                    'id': str(pilot.id),
+                    'name': pilot.name,
+                    'status': pilot.status,
+                    'outcome': pilot.outcome,
+                    'created_at': pilot.created_at.isoformat() if pilot.created_at else None,
+                },
+            }
+
+        elif action == 'list':
             pilots = list(
                 PilotExecution.objects.order_by('-created_at')[:limit].values(
                     'id', 'name', 'status', 'outcome', 'created_at'
@@ -7297,6 +7340,9 @@ class ToolDispatcher:
         from datetime import timedelta
 
         action = payload.get('action', 'inspect')
+        # Session G3: Normalize aliases
+        ACTION_ALIASES = {'detail': 'details', 'inspect': 'details'}
+        action = ACTION_ALIASES.get(action, action)
         agent_query = payload.get('agent_name', '').strip().lower()
 
         # Session 1036+: Support list/stats actions without requiring agent_name

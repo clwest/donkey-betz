@@ -428,8 +428,8 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["summary", "model_performance", "feature_importance"],
-                    "description": "ML analysis action",
+                    "enum": ["status", "decision_pattern", "detect_opportunity"],
+                    "description": "ML analysis action: status = system health, decision_pattern = analyze user decisions, detect_opportunity = cross-domain opportunities",
                 },
                 "model_type": {"type": "string", "description": "Specific model to analyze"},
             },
@@ -456,7 +456,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "stats", "details"],
+                    "enum": ["list", "stats", "detail"],
                     "description": "Gates action",
                 },
                 "id": {"type": "string", "description": "UUID of gate"},
@@ -480,7 +480,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "stats", "details"],
+                    "enum": ["list", "stats", "detail"],
                     "description": "Pilots action",
                 },
                 "id": {"type": "string", "description": "UUID of pilot"},
@@ -916,11 +916,6 @@ PA_TOOL_SCHEMAS = [
         "parameters": {
             "type": "object",
             "properties": {
-                "action": {
-                    "type": "string",
-                    "enum": ["list", "details", "search"],
-                    "description": "Scheduled tasks action",
-                },
                 "search": {
                     "type": "string",
                     "description": "Filter tasks by name or task path (case-insensitive substring match)",
@@ -928,7 +923,7 @@ PA_TOOL_SCHEMAS = [
                 "limit": {"type": "integer", "description": "Max items per page (default 50, max 100)"},
                 "offset": {"type": "integer", "description": "Skip N items for pagination (default 0)"},
             },
-            "required": ["action"],
+            "required": [],
         },
     },
 

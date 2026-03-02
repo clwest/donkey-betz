@@ -37574,3 +37574,106 @@ def summarize_conversation_task(self, conversation_id, user_id=None):
         logger.warning(f"[CONVERSATION] Embedding for summary failed: {e}")
 
     logger.info(f"[CONVERSATION] Summary saved as Deliverable {d.id} for {conversation_id}")
+
+
+# ── Session G3: Ops Control Loop — daily self-verification ─────────────────
+@shared_task(
+    name='core.tasks.ops_control_loop',
+    ignore_result=True,
+    soft_time_limit=120,
+    time_limit=180,
+    queue='default',
+)
+def ops_control_loop():
+    """Daily ops self-verification: smoke tests + health checks.
+
+    Runs deploy_verify, pa_tools_smoke, system health, and error summary.
+    Creates a boardroom attention item on any failure so the human sees it.
+    """
+    from core.tools.http_smoke_test import run_smoke_test
+
+    results = {}
+    failures = []
+
+    # 1. deploy_verify smoke suite
+    try:
+        dv = run_smoke_test({'suite': 'deploy_verify', 'environment': 'railway_prod'})
+        results['deploy_verify'] = {
+            'ok': dv.get('ok', False),
+            'passed': dv.get('passed', 0),
+            'failed': dv.get('failed', 0),
+        }
+        if not dv.get('ok'):
+            failures.append(f"deploy_verify: {dv.get('failed', '?')} checks failed")
+    except Exception as e:
+        results['deploy_verify'] = {'ok': False, 'error': str(e)[:200]}
+        failures.append(f"deploy_verify: {e}")
+
+    # 2. pa_tools_smoke suite
+    try:
+        pts = run_smoke_test({'suite': 'pa_tools_smoke', 'environment': 'railway_prod'})
+        results['pa_tools_smoke'] = {
+            'ok': pts.get('ok', False),
+            'passed': pts.get('passed', 0),
+            'failed': pts.get('failed', 0),
+        }
+        if not pts.get('ok'):
+            failures.append(f"pa_tools_smoke: {pts.get('failed', '?')} checks failed")
+    except Exception as e:
+        results['pa_tools_smoke'] = {'ok': False, 'error': str(e)[:200]}
+        failures.append(f"pa_tools_smoke: {e}")
+
+    # 3. DB health (quick overview)
+    try:
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        results['db_health'] = {'ok': True}
+    except Exception as e:
+        results['db_health'] = {'ok': False, 'error': str(e)[:200]}
+        failures.append(f"db_health: {e}")
+
+    # 4. Error summary (recent 24h)
+    try:
+        from core.models_celery_telemetry import CeleryTaskEvent
+        cutoff = timezone.now() - timedelta(hours=24)
+        error_count = CeleryTaskEvent.objects.filter(
+            status='FAILURE', started_at__gte=cutoff,
+        ).count()
+        results['error_summary'] = {'ok': error_count < 50, 'errors_24h': error_count}
+        if error_count >= 50:
+            failures.append(f"error_summary: {error_count} task failures in 24h")
+    except Exception as e:
+        results['error_summary'] = {'ok': False, 'error': str(e)[:200]}
+        failures.append(f"error_summary: {e}")
+
+    all_ok = len(failures) == 0
+    logger.info(
+        f"[OPS-CONTROL] Daily verification: {'PASS' if all_ok else 'FAIL'} "
+        f"({len(failures)} failures)"
+    )
+
+    # Create boardroom attention item on failure
+    if failures:
+        try:
+            from django.contrib.auth import get_user_model
+            from core.models_human_interface import HumanAttentionItem
+
+            User = get_user_model()
+            admin_user = User.objects.filter(is_superuser=True).first()
+            if admin_user:
+                HumanAttentionItem.objects.create(
+                    user=admin_user,
+                    source_type='ops_control_loop',
+                    source_agent='ops_control_loop',
+                    item_type='alert',
+                    urgency='high' if len(failures) >= 3 else 'medium',
+                    title=f"Ops Control Loop: {len(failures)} check(s) failed",
+                    summary='\n'.join(failures),
+                    payload=results,
+                )
+                logger.info("[OPS-CONTROL] Boardroom attention item created")
+        except Exception as e:
+            logger.error(f"[OPS-CONTROL] Failed to create attention item: {e}")
+
+    return {'ok': all_ok, 'results': results, 'failures': failures}
