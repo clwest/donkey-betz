@@ -242,6 +242,9 @@ class ToolDispatcher:
         # Session 1078: Work tool — gateway for initiatives + action items
         self.register("work_tool", self._handle_work)
 
+        # Session 1079: Content tool — gateway for content_review + blog generation + deliverables
+        self.register("content_tool", self._handle_content)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):
@@ -10816,6 +10819,73 @@ RESEARCH DATA:
             result['action'] = action
 
         return result
+
+    # ── Session 1079: Content Tool (gateway) ─────────────────────────────────────
+    def _handle_content(self, tool_name: str, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:
+        """
+        Session 1079: Content gateway — thin dispatcher over content_review_tool,
+        generate_blog_tool, and deliverables_tool.
+
+        Consolidates 3 content tools into one surface:
+        - content_* actions → content_review_tool
+        - generate_blog → generate_blog_tool
+        - deliverable_* actions → deliverables_tool
+        """
+        action = payload.get('action', 'content_stats')
+
+        # ── content_review_tool actions ──
+        CONTENT_REVIEW_MAP = {
+            'content_stats': 'stats',
+            'content_list': 'list',
+            'content_detail': 'details',
+            'content_search': 'search',
+            'content_recent': 'recent',
+            'content_approve': 'approve',
+            'content_reject': 'reject',
+        }
+
+        if action in CONTENT_REVIEW_MAP:
+            review_payload = dict(payload)
+            review_payload['action'] = CONTENT_REVIEW_MAP[action]
+            result = self._handle_content_review('content_review_tool', review_payload, user_id, trace_id)
+            if isinstance(result, dict):
+                result['gateway'] = 'content_tool'
+                result['action'] = action
+            return result
+
+        # ── generate_blog_tool ──
+        if action == 'generate_blog':
+            blog_payload = dict(payload)
+            # generate_blog_tool expects 'topic' and optional 'tone'
+            result = self._handle_generate_blog('generate_blog_tool', blog_payload, user_id, trace_id)
+            if isinstance(result, dict):
+                result['gateway'] = 'content_tool'
+                result['action'] = action
+            return result
+
+        # ── deliverables_tool actions ──
+        DELIVERABLE_MAP = {
+            'deliverable_list': 'list',
+            'deliverable_detail': 'detail',
+            'deliverable_search': 'search',
+            'deliverable_save': 'save',
+            'deliverable_create': 'create',
+            'deliverable_stats': 'stats',
+        }
+
+        if action in DELIVERABLE_MAP:
+            del_payload = dict(payload)
+            del_payload['action'] = DELIVERABLE_MAP[action]
+            result = self._handle_deliverables('deliverables_tool', del_payload, user_id, trace_id)
+            if isinstance(result, dict):
+                result['gateway'] = 'content_tool'
+                result['action'] = action
+            return result
+
+        all_actions = sorted(
+            list(CONTENT_REVIEW_MAP) + ['generate_blog'] + list(DELIVERABLE_MAP)
+        )
+        return {'error': f'Unknown content_tool action: {action}. Valid: {", ".join(all_actions)}'}
 
     # ── Session 1078: Ops Tool ─────────────────────────────────────────────────
     def _handle_ops(self, tool_name: str, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:

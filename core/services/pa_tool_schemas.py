@@ -2385,6 +2385,68 @@ PA_TOOL_SCHEMAS = [
             "required": ["action"],
         },
     },
+
+    # ── Session 1079: Content Gateway ─────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "content_tool",
+        "description": (
+            "Unified content gateway — blogs, deliverables, publishing, and editorial. "
+            "Replaces content_review_tool, generate_blog_tool, and deliverables_tool. "
+            "Use content_stats for a full content pipeline overview. "
+            "Use content_list/content_search/content_detail to browse blogs and deliverables. "
+            "Use content_approve/content_reject to publish or archive content. "
+            "Use generate_blog to create a new blog via the deliberation pipeline. "
+            "Use deliverable_* actions for the deliverables library (documents, scripts, plans)."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "content_stats", "content_list", "content_detail",
+                        "content_search", "content_recent",
+                        "content_approve", "content_reject",
+                        "generate_blog",
+                        "deliverable_list", "deliverable_detail",
+                        "deliverable_search", "deliverable_save",
+                        "deliverable_create", "deliverable_stats",
+                    ],
+                    "description": (
+                        "content_stats: pipeline overview (blogs + deliverables counts). "
+                        "content_list: list content awaiting review. "
+                        "content_detail: full details of a deliverable/blog by id. "
+                        "content_search: search by title keyword across blogs + deliverables. "
+                        "content_recent: recently created content (any status). "
+                        "content_approve: publish a ready deliverable. "
+                        "content_reject: archive a deliverable with feedback. "
+                        "generate_blog: create a new blog post via deliberation pipeline. "
+                        "deliverable_list: browse deliverables library. "
+                        "deliverable_detail: full content of a deliverable. "
+                        "deliverable_search: search deliverables by title. "
+                        "deliverable_save: bookmark a deliverable. "
+                        "deliverable_create: create a new deliverable. "
+                        "deliverable_stats: aggregate counts by type/category/agent."
+                    ),
+                },
+                "id": {"type": "string", "description": "UUID of deliverable or blog"},
+                "query": {"type": "string", "description": "Title search term for search actions"},
+                "type": {"type": "string", "description": "Content type filter. Use 'blog' for blog posts."},
+                "category": {"type": "string", "description": "Category filter (e.g. 'Finance', 'Research')"},
+                "status": {"type": "string", "description": "Filter by status (draft, pending_review, approved, published)"},
+                "topic": {"type": "string", "description": "Blog topic for generate_blog action"},
+                "tone": {"type": "string", "description": "Tone for generate_blog action (default: enthusiastic)"},
+                "title": {"type": "string", "description": "Title for deliverable_create"},
+                "content": {"type": "string", "description": "Content for deliverable_create"},
+                "feedback": {"type": "string", "description": "Feedback when rejecting content"},
+                "days": {"type": "integer", "description": "Lookback days for content_recent (default 30)"},
+                "limit": {"type": "integer", "description": "Max items (default 10)"},
+                "offset": {"type": "integer", "description": "Pagination offset (default 0)"},
+            },
+            "required": ["action"],
+        },
+    },
 ]
 
 # ── Startup validation: every tool must have name, description, parameters ──
@@ -2474,6 +2536,7 @@ TOOL_ENRICHMENT_MAP = {
     'remember_tool': [],
     'ops_tool': ['intelligence_enricher', 'platform_briefing'],
     'work_tool': ['intelligence_enricher', 'strategic_memory'],
+    'content_tool': ['blog_performance', 'domain_context', 'spider_trends', 'strategic_memory', 'proactive_intelligence'],
 }
 
 # Reverse map: tool name -> canonical intent name for enrichment pipeline
@@ -2550,4 +2613,5 @@ TOOL_TO_INTENT_MAP = {
     'remember_tool': 'memory',
     'ops_tool': 'system_overview',
     'work_tool': 'initiatives',
+    'content_tool': 'content_review',
 }
