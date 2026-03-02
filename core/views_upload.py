@@ -219,15 +219,32 @@ def upload_video(request):
     ext = Path(uploaded_file.name).suffix.lower()
     new_filename = f"{uuid.uuid4()}{ext}"
 
-    # Save file
+    # Save file — use Cloudinary video resource_type if on cloud storage
     upload_path = f"uploads/videos/{timezone.now().strftime('%Y/%m')}/{new_filename}"
-    saved_path = default_storage.save(upload_path, uploaded_file)
-    try:
-        full_path = default_storage.path(saved_path)
-    except NotImplementedError:
-        full_path = None
+    video_url = ''
+    saved_path = ''
+    full_path = None
 
-    # Extract video metadata using ffprobe
+    try:
+        import cloudinary.uploader
+        upload_result = cloudinary.uploader.upload(
+            uploaded_file,
+            public_id=upload_path.rsplit('.', 1)[0],
+            resource_type="video",
+            folder="",
+        )
+        video_url = upload_result.get('secure_url', upload_result.get('url', ''))
+        saved_path = upload_result.get('public_id', upload_path)
+    except Exception:
+        # Fallback: local filesystem storage
+        saved_path = default_storage.save(upload_path, uploaded_file)
+        video_url = default_storage.url(saved_path)
+        try:
+            full_path = default_storage.path(saved_path)
+        except NotImplementedError:
+            full_path = None
+
+    # Extract video metadata using ffprobe (local only)
     metadata = {}
     if full_path:
         metadata = _extract_video_metadata(full_path)
@@ -240,7 +257,7 @@ def upload_video(request):
         source_type=MediaSourceType.UPLOADED,
         video_file=saved_path,
         original_filename=uploaded_file.name,
-        video_url=default_storage.url(saved_path),
+        video_url=video_url,
         file_size_bytes=uploaded_file.size,
         mime_type=mime_type,
         video_type='uploaded',
