@@ -1093,6 +1093,43 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
+    # ── OBS Recording Control ──────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "obs_tool",
+        "description": (
+            "Control OBS Studio recording via the local bridge. "
+            "Actions: health (check bridge), status (recording state + timecode), "
+            "start (begin recording), stop (stop recording), "
+            "last (newest recording file info), upload_last (upload latest recording to platform). "
+            "For upload_last, set stopIfRecording=true to auto-stop before uploading."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["health", "status", "start", "stop", "last", "upload_last"],
+                    "description": "health=check bridge, status=recording state, start/stop=control recording, last=newest file, upload_last=upload to platform.",
+                },
+                "stopIfRecording": {
+                    "type": "boolean",
+                    "description": "For upload_last: stop recording first if active (default false).",
+                },
+                "title": {
+                    "type": "string",
+                    "description": "Optional title for the uploaded video.",
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional tags for the uploaded video.",
+                },
+            },
+            "required": ["action"],
+        },
+    },
+
     # ── Agent Delegation (generic) ──────────────────────────────────────────
     {
         "type": "function",

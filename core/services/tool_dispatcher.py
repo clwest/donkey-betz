@@ -123,6 +123,7 @@ class ToolDispatcher:
         self.register("deliverables_tool", self._handle_deliverables)
         self.register("media_tool", self._handle_media)
         self.register("davinci_tool", self._handle_davinci)
+        self.register("obs_tool", self._handle_obs)
 
         # Body system tools
         self.register("get_body_vitals", self._handle_body_vitals)
@@ -1917,6 +1918,63 @@ class ToolDispatcher:
 
         else:
             raise ValueError(f"Unknown action: {action}")
+
+    def _handle_obs(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """Handle OBS recording control tool via platform proxy endpoints."""
+        from core.views_obs import _obs_enabled, _obs_bridge_request
+
+        action = payload.get('action', 'health')
+
+        if not _obs_enabled():
+            return {'ok': False, 'action': action, 'error': {'code': 'OBS_DISABLED', 'message': 'OBS integration is not enabled'}}
+
+        action_map = {
+            'health':      ('GET',  '/health', None, 5),
+            'status':      ('GET',  '/v1/recording/status', None, 15),
+            'start':       ('POST', '/v1/recording/start', None, 15),
+            'stop':        ('POST', '/v1/recording/stop', None, 15),
+            'last':        ('GET',  '/v1/recording/last', None, 15),
+        }
+
+        if action == 'upload_last':
+            body = {}
+            if payload.get('stopIfRecording'):
+                body['stopIfRecording'] = True
+            if payload.get('title'):
+                body['title'] = payload['title']
+            if payload.get('tags'):
+                body['tags'] = payload['tags']
+            status_code, data, latency = _obs_bridge_request(
+                'POST', '/v1/recording/upload_last',
+                body=body if body else None,
+                timeout=60,
+            )
+        elif action in action_map:
+            method, path, body, timeout = action_map[action]
+            status_code, data, latency = _obs_bridge_request(method, path, body, timeout)
+        else:
+            raise ValueError(f"Unknown obs_tool action: {action}")
+
+        if status_code == 0:
+            return {'ok': False, 'action': action, 'bridgeReachable': False,
+                    'error': {'code': 'BRIDGE_UNREACHABLE', 'message': data.get('error', 'Bridge unreachable')}}
+        if status_code == 401:
+            return {'ok': False, 'action': action, 'bridgeReachable': True,
+                    'error': {'code': 'BRIDGE_AUTH_FAILED', 'message': 'Bridge rejected token'}}
+
+        return {
+            'ok': data.get('ok', True),
+            'action': action,
+            'bridgeReachable': True,
+            'latency_ms': latency,
+            'result': data,
+        }
 
     def _handle_body_vitals(
         self,
