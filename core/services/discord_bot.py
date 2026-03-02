@@ -512,6 +512,7 @@ class DonkeyBetzBot(commands.Bot):
         await self.add_cog(MLScoringCommands(self))  # Session 497: ML Scoring Status
         await self.add_cog(ReviewCommands(self))  # Session 556: Chief of Staff Review Documents
         await self.add_cog(HumanInterfaceCommands(self))  # Session 686: Human Interface Layer
+        await self.add_cog(OBSCommands(self))  # OBS Bridge recording control
 
         # Sync slash commands with Discord
         try:
@@ -14450,6 +14451,140 @@ class HumanInterfaceCommands(commands.Cog):
 
 # Bot instance (created when module loads)
 _bot_instance: Optional[DonkeyBetzBot] = None
+
+
+class OBSCommands(commands.Cog):
+    """OBS Studio recording control — 3 commands (status, record, upload).
+
+    Trimmed from 6 to 3 per PA recommendation to conserve command slots (94/100).
+    Full controls available at /cockpit/obs.
+    """
+
+    COCKPIT_URL = "https://donkey-betz-platform-production.up.railway.app/cockpit/obs"
+
+    def __init__(self, bot: DonkeyBetzBot):
+        self.bot = bot
+
+    async def _call_bridge(self, method: str, path: str, body=None, timeout=15):
+        """Call the platform OBS proxy endpoints via sync_to_async."""
+        @sync_to_async
+        def _call():
+            from core.views_obs import _obs_enabled, _obs_bridge_request
+            if not _obs_enabled():
+                return {'ok': False, 'error': {'code': 'OBS_DISABLED', 'message': 'OBS integration is not enabled'}}
+            status_code, data, latency = _obs_bridge_request(method, path, body, timeout)
+            if status_code == 0:
+                return {'ok': False, 'bridgeReachable': False, 'error': {'code': 'BRIDGE_UNREACHABLE', 'message': data.get('error', 'Unreachable')}, 'latency_ms': latency}
+            if status_code == 401:
+                return {'ok': False, 'bridgeReachable': True, 'error': {'code': 'BRIDGE_AUTH_FAILED', 'message': 'Bridge rejected token'}, 'latency_ms': latency}
+            return {'ok': data.get('ok', True), 'bridgeReachable': True, 'result': data, 'latency_ms': latency}
+        return await _call()
+
+    def _error_embed(self, data: dict) -> discord.Embed:
+        err = data.get('error', {})
+        return discord.Embed(
+            title="OBS Error",
+            description=f"**{err.get('code', 'ERROR')}**: {err.get('message', 'Unknown error')}",
+            color=discord.Color.red(),
+            timestamp=datetime.now(),
+        ).add_field(name="Cockpit", value=f"[Open OBS Control]({self.COCKPIT_URL})", inline=False)
+
+    @app_commands.command(name="obs-status", description="Check OBS bridge + recording status")
+    async def obs_status(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        data = await self._call_bridge('GET', '/v1/recording/status')
+        if not data.get('ok'):
+            return await interaction.followup.send(embed=self._error_embed(data), ephemeral=True)
+
+        result = data.get('result', {})
+        is_rec = result.get('isRecording', False)
+        bridge_ok = data.get('bridgeReachable', False)
+        embed = discord.Embed(
+            title="OBS Status",
+            color=discord.Color.red() if is_rec else discord.Color.green() if bridge_ok else discord.Color.greyple(),
+            timestamp=datetime.now(),
+        )
+        embed.add_field(name="Bridge", value="Connected" if bridge_ok else "Disconnected", inline=True)
+        embed.add_field(name="Recording", value="Yes" if is_rec else "No", inline=True)
+        if result.get('recordingTimecode'):
+            embed.add_field(name="Timecode", value=result['recordingTimecode'], inline=True)
+        if result.get('obsVersion'):
+            embed.add_field(name="OBS", value=f"{result['obsVersion']} / WS {result.get('websocketVersion', '?')}", inline=True)
+        embed.add_field(name="Latency", value=f"{data.get('latency_ms', '?')}ms", inline=True)
+        embed.add_field(name="Cockpit", value=f"[Open OBS Control]({self.COCKPIT_URL})", inline=False)
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
+    @app_commands.command(name="obs-record", description="Start, stop, or toggle OBS recording")
+    @app_commands.describe(action="Recording action (default: toggle)")
+    @app_commands.choices(action=[
+        app_commands.Choice(name="toggle", value="toggle"),
+        app_commands.Choice(name="start", value="start"),
+        app_commands.Choice(name="stop", value="stop"),
+    ])
+    async def obs_record(self, interaction: discord.Interaction, action: str = "toggle"):
+        await interaction.response.defer(ephemeral=True)
+
+        if action == "toggle":
+            status_data = await self._call_bridge('GET', '/v1/recording/status')
+            if not status_data.get('ok'):
+                return await interaction.followup.send(embed=self._error_embed(status_data), ephemeral=True)
+            is_rec = status_data.get('result', {}).get('isRecording', False)
+            action = "stop" if is_rec else "start"
+
+        data = await self._call_bridge('POST', f'/v1/recording/{action}')
+        if not data.get('ok'):
+            return await interaction.followup.send(embed=self._error_embed(data), ephemeral=True)
+
+        started = action == "start"
+        embed = discord.Embed(
+            title=f"Recording {'Started' if started else 'Stopped'}",
+            color=discord.Color.red() if started else discord.Color.green(),
+            timestamp=datetime.now(),
+        )
+        embed.add_field(name="Cockpit", value=f"[Open OBS Control]({self.COCKPIT_URL})", inline=False)
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
+    @app_commands.command(name="obs-upload", description="Upload the latest OBS recording to platform")
+    @app_commands.describe(
+        title="Optional title for the video",
+        tags="Comma-separated tags (e.g. obs,devlog)",
+        stop_if_recording="Stop recording first if active (default: true)",
+    )
+    async def obs_upload(
+        self,
+        interaction: discord.Interaction,
+        title: str = "",
+        tags: str = "",
+        stop_if_recording: bool = True,
+    ):
+        await interaction.response.defer(ephemeral=True)
+
+        body: dict = {}
+        if title.strip():
+            body['title'] = title.strip()
+        if tags.strip():
+            body['tags'] = [t.strip() for t in tags.split(',') if t.strip()]
+        if stop_if_recording:
+            body['stopIfRecording'] = True
+
+        data = await self._call_bridge('POST', '/v1/recording/upload_last', body=body or None, timeout=60)
+        if not data.get('ok'):
+            embed = self._error_embed(data)
+            err_code = data.get('error', {}).get('code', '')
+            if err_code == 'UPLOAD_TOO_LARGE' or 'too large' in data.get('error', {}).get('message', '').lower():
+                embed.add_field(name="Tip", value="Record shorter clips (<50 MB) or use [Cockpit]({}) for full options.".format(self.COCKPIT_URL), inline=False)
+            return await interaction.followup.send(embed=embed, ephemeral=True)
+
+        result = data.get('result', {})
+        video = result.get('video', result.get('media', {}))
+        vid_id = video.get('id', 'unknown') if isinstance(video, dict) else 'unknown'
+
+        embed = discord.Embed(title="Upload Successful", color=discord.Color.green(), timestamp=datetime.now())
+        embed.add_field(name="Video ID", value=str(vid_id), inline=True)
+        if isinstance(video, dict) and video.get('url'):
+            embed.add_field(name="URL", value=str(video['url']), inline=True)
+        embed.add_field(name="Cockpit", value=f"[Open OBS Control]({self.COCKPIT_URL})", inline=False)
+        await interaction.followup.send(embed=embed, ephemeral=True)
 
 
 def get_bot() -> DonkeyBetzBot:
