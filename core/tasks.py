@@ -1623,10 +1623,18 @@ def execute_agent_task(
         if execution_record:
             execution_record.status = 'completed' if result.success else 'failed'
             execution_record.execution_time_ms = execution_time_ms
-            execution_record.output_data = {
+            # Session 1076: Sanitize output_data — agent results may contain
+            # UUID/datetime objects that aren't JSON-serializable. Force through
+            # json.dumps(default=str) round-trip to coerce everything to strings.
+            import json as _json
+            _raw_output = {
                 'content': result.content[:5000] if result.content else None,
                 'metadata': getattr(result, 'data', {}) or {},
             }
+            try:
+                execution_record.output_data = _json.loads(_json.dumps(_raw_output, default=str))
+            except (TypeError, ValueError):
+                execution_record.output_data = {'content': str(result.content)[:5000] if result.content else None}
             if not result.success:
                 # Session 1068: Ensure error_message is never blank — fall back through
                 # error, message, then generic label
