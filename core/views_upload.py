@@ -222,7 +222,10 @@ def upload_video(request):
     # Save file
     upload_path = f"uploads/videos/{timezone.now().strftime('%Y/%m')}/{new_filename}"
     saved_path = default_storage.save(upload_path, uploaded_file)
-    full_path = default_storage.path(saved_path) if hasattr(default_storage, 'path') else None
+    try:
+        full_path = default_storage.path(saved_path)
+    except NotImplementedError:
+        full_path = None
 
     # Extract video metadata using ffprobe
     metadata = {}
