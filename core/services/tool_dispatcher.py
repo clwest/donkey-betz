@@ -5232,6 +5232,16 @@ class ToolDispatcher:
             initiative.status = new_status
             initiative.save(update_fields=['status'])
 
+            # Session 1076: Auto-cancel orphaned action items when initiative is completed
+            cancelled_items = 0
+            if new_status in ('COMPLETED', 'ARCHIVED') and old_status not in ('COMPLETED', 'ARCHIVED'):
+                cancelled_items = InitiativeActionItem.objects.filter(
+                    initiative=initiative,
+                    status='pending',
+                ).update(status='cancelled')
+                if cancelled_items:
+                    logger.info(f"Auto-cancelled {cancelled_items} pending action items for {new_status} initiative {initiative.name}")
+
             return {
                 'action': 'update_status',
                 'id': str(initiative.id),
@@ -5239,6 +5249,7 @@ class ToolDispatcher:
                 'old_status': old_status,
                 'new_status': new_status,
                 'success': True,
+                'auto_cancelled_action_items': cancelled_items,
             }
 
         elif action == 'advance':
