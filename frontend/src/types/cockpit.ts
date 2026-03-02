@@ -689,6 +689,46 @@ export interface IncidentAddEventResponse {
   created_at: ISODateString
 }
 
+// --- Ops Runs ---
+
+export type OpsRunType = 'ops_loop' | 'smoke_test' | 'deploy_verify' | 'manual'
+export type OpsRunStatus = 'running' | 'passed' | 'failed' | 'partial'
+export type OpsRunTrigger = 'beat' | 'pa_tool' | 'management_cmd' | 'manual'
+export type OpsRunEventType = 'step_start' | 'step_pass' | 'step_fail' | 'info' | 'heartbeat'
+
+export interface OpsRunSummary {
+  id: UUID
+  title: string
+  run_type: OpsRunType
+  status: OpsRunStatus
+  triggered_by: OpsRunTrigger
+  started_at: ISODateString
+  finished_at: ISODateString | null
+  event_count: number
+  fail_count: number
+  summary: Record<string, unknown>
+}
+
+export interface OpsRunListResponse {
+  hours: number
+  total: number
+  items: OpsRunSummary[]
+}
+
+export interface OpsRunEvent {
+  id: UUID
+  event_type: OpsRunEventType
+  label: string
+  detail: Record<string, unknown>
+  created_at: ISODateString
+}
+
+export interface OpsRunDetailResponse {
+  ok: boolean
+  run: OpsRunSummary
+  events: OpsRunEvent[]
+}
+
 // --- Ops ---
 
 export interface PlatformConfigResponse {

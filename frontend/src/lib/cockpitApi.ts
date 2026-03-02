@@ -36,6 +36,8 @@ import type {
   IncidentCreateResponse,
   IncidentUpdateResponse,
   IncidentAddEventResponse,
+  OpsRunListResponse,
+  OpsRunDetailResponse,
 } from '@/types/cockpit'
 
 // --- Runs ---
@@ -382,6 +384,25 @@ export async function updateIncident(incidentId: string, payload: { status?: str
 
 export async function addIncidentEvent(incidentId: string, payload: { event_type: 'note' | 'link'; text?: string; link_type?: string; link_id?: string; label?: string }) {
   const { data } = await api.post<IncidentAddEventResponse>(`/cockpit/incidents/${incidentId}/events/`, payload)
+  return data
+}
+
+// --- Ops Runs ---
+
+export interface OpsRunsParams {
+  run_type?: string
+  status?: string
+  hours?: number
+  limit?: number
+}
+
+export async function getOpsRuns(params?: OpsRunsParams) {
+  const { data } = await api.get<OpsRunListResponse>('/cockpit/ops-runs/', { params })
+  return data
+}
+
+export async function getOpsRunDetail(runId: string) {
+  const { data } = await api.get<OpsRunDetailResponse>(`/cockpit/ops-runs/${runId}/`)
   return data
 }
 

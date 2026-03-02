@@ -49,6 +49,9 @@ import {
   type CostParams,
   type AutopilotHistoryParams,
   type ConfigChangesParams,
+  getOpsRuns,
+  getOpsRunDetail,
+  type OpsRunsParams,
   type IncidentsParams,
 } from '@/lib/cockpitApi'
 
@@ -358,6 +361,29 @@ export function useAutopilotHistory(params?: AutopilotHistoryParams) {
     queryKey: ['cockpit-autopilot-history', params],
     queryFn: () => getAutopilotHistory(params),
     refetchInterval: 30_000,
+  })
+}
+
+// --- Ops Runs ---
+
+export function useOpsRuns(params?: OpsRunsParams) {
+  return useQuery({
+    queryKey: ['cockpit-ops-runs', params],
+    queryFn: () => getOpsRuns(params),
+    refetchInterval: 15_000,
+  })
+}
+
+export function useOpsRunDetail(runId: string | undefined) {
+  return useQuery({
+    queryKey: ['cockpit-ops-run', runId],
+    queryFn: () => getOpsRunDetail(runId!),
+    enabled: !!runId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.run?.status
+      if (status === 'passed' || status === 'failed' || status === 'partial') return false
+      return 5_000
+    },
   })
 }
 
