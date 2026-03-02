@@ -1130,6 +1130,53 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
+    # ── Video History ────────────────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "video_history_tool",
+        "description": (
+            "Search and browse the user's video upload and generation history (VideoHistory model). "
+            "Actions: list (recent videos, filterable by type/status), "
+            "search (find videos by title/filename substring), "
+            "detail (get full metadata for one video by UUID or sequential number)."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list", "search", "detail"],
+                    "description": "list=recent videos, search=find by title/filename, detail=full metadata for one video.",
+                },
+                "query": {
+                    "type": "string",
+                    "description": "Search term matching video title (prompt) or original filename. Required for search.",
+                },
+                "id": {
+                    "type": "string",
+                    "description": "Video UUID (for detail action).",
+                },
+                "sequential_number": {
+                    "type": "integer",
+                    "description": "Video sequential number (for detail action, alternative to id).",
+                },
+                "video_type": {
+                    "type": "string",
+                    "description": "Filter by type: uploaded, text_to_video, image_to_video, etc.",
+                },
+                "status": {
+                    "type": "string",
+                    "description": "Filter by status (default: completed).",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max items to return (default 10, max 50).",
+                },
+            },
+            "required": ["action"],
+        },
+    },
+
     # ── Agent Delegation (generic) ──────────────────────────────────────────
     {
         "type": "function",

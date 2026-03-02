@@ -124,6 +124,7 @@ class ToolDispatcher:
         self.register("media_tool", self._handle_media)
         self.register("davinci_tool", self._handle_davinci)
         self.register("obs_tool", self._handle_obs)
+        self.register("video_history_tool", self._handle_video_history)
 
         # Body system tools
         self.register("get_body_vitals", self._handle_body_vitals)
@@ -1975,6 +1976,98 @@ class ToolDispatcher:
             'latency_ms': latency,
             'result': data,
         }
+
+    def _handle_video_history(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """Handle video history tool — list, search, detail."""
+        from content.models import VideoHistory
+        from django.db.models import Q
+
+        action = payload.get('action', 'list')
+        limit = min(payload.get('limit', 10), 50)
+
+        def _qs():
+            qs = VideoHistory.objects.all()
+            if user_id:
+                qs = qs.filter(user_id=user_id)
+            return qs
+
+        def _serialize(v):
+            return {
+                'id': str(v.id),
+                'sequential_number': v.get_sequential_number(),
+                'title': (v.prompt or '')[:200],
+                'original_filename': v.original_filename or '',
+                'video_url': v.video_url or '',
+                'thumbnail_url': v.thumbnail_url or '',
+                'video_type': v.video_type or '',
+                'source_type': getattr(v, 'source_type', ''),
+                'status': v.status or '',
+                'duration': v.duration,
+                'resolution': f"{v.video_width}x{v.video_height}" if v.video_width else None,
+                'file_size_bytes': v.file_size_bytes,
+                'created_at': v.created_at.isoformat() if v.created_at else None,
+            }
+
+        if action == 'list':
+            qs = _qs()
+            if payload.get('video_type'):
+                qs = qs.filter(video_type=payload['video_type'])
+            if payload.get('status'):
+                qs = qs.filter(status=payload['status'])
+            else:
+                qs = qs.filter(status='completed')
+            videos = [_serialize(v) for v in qs.order_by('-created_at')[:limit]]
+            return {'action': 'list', 'count': len(videos), 'videos': videos}
+
+        elif action == 'search':
+            query = payload.get('query', '')
+            if not query:
+                raise ValueError("query parameter required for search action")
+            qs = _qs().filter(
+                Q(prompt__icontains=query) | Q(original_filename__icontains=query)
+            ).filter(status='completed')
+            videos = [_serialize(v) for v in qs.order_by('-created_at')[:limit]]
+            return {'action': 'search', 'query': query, 'count': len(videos), 'videos': videos}
+
+        elif action == 'detail':
+            vid = payload.get('id')
+            seq = payload.get('sequential_number')
+            if not vid and not seq:
+                raise ValueError("id or sequential_number required for detail action")
+            if vid:
+                v = _qs().filter(id=vid).first()
+            else:
+                # sequential_number is computed, not a DB field — get all user videos ordered by created_at and index
+                all_videos = list(_qs().order_by('created_at').values_list('id', flat=True))
+                if seq and 1 <= seq <= len(all_videos):
+                    v = _qs().filter(id=all_videos[seq - 1]).first()
+                else:
+                    v = None
+            if not v:
+                raise ValueError("Video not found")
+            detail = _serialize(v)
+            detail.update({
+                'model_used': v.model_used or '',
+                'tags': v.tags,
+                'user_notes': v.user_notes or '',
+                'is_favorite': v.is_favorite,
+                'view_count': v.view_count,
+                'download_count': v.download_count,
+                'fps': v.fps,
+                'codec': v.codec,
+                'ratio': v.ratio,
+                'view_url': '/video-studio',
+            })
+            return {'action': 'detail', 'video': detail}
+
+        else:
+            raise ValueError(f"Unknown video_history_tool action: {action}")
 
     def _handle_body_vitals(
         self,
