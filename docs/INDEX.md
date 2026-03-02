@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-03-01 16:34
+**Generated:** 2026-03-01 17:01
 **Current Session:** 1075
 **Total Documentation:** 1805 files | 619,562 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/architecture/README.md` | 60 | Architecture Documentation |
+| `docs/archive/SYSTEM_CAPABILITIES-original/09_Self_Awareness/README.md` | 60 | 🔮 SELF-AWARENESS SYSTEMS - The AI That Knows Itsel |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -213,7 +213,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 357 | 2026-03-01 16:27 |
+| INDEX.md | docs | 357 | 2026-03-01 16:35 |
 | pa-tool-routing-guide.md | tools | 100 | 2026-03-01 15:50 |
 | pa-tool-manifest.md | tools | 307 | 2026-03-01 15:50 |
 | pa-claude-code-collaboration.md | operations | 89 | 2026-03-01 15:21 |

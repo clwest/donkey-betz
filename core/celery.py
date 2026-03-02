@@ -2473,6 +2473,14 @@ app.conf.beat_schedule = {
             'queue': 'default',
         },
     },
+    # Session G3: Ops Control Loop — daily self-verification (smoke + health + errors)
+    'ops-control-loop': {
+        'task': 'core.tasks.ops_control_loop',
+        'schedule': crontab(hour=7, minute=0),  # Daily at 7:00 UTC
+        'options': {
+            'expires': 3600,
+        },
+    },
 }
 
 # Task routing configuration
