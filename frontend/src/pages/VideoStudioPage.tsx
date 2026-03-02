@@ -13,15 +13,19 @@ import { cn } from '@/lib/cn'
 
 interface GalleryVideo {
   id: string
-  url: string
+  url?: string
+  video_url?: string
   thumbnail_url?: string
   prompt?: string
   model?: string
+  model_used?: string
   duration?: number
   aspect_ratio?: string
+  ratio?: string
   style?: string
   is_favorite?: boolean
   generation_type?: string
+  video_type?: string
   view_count?: number
   download_count?: number
   created_at: string
@@ -40,6 +44,9 @@ interface ActionResult {
 }
 
 type StudioMode = 'generate' | 'edit' | 'chain'
+
+/** Get playable URL — API returns video_url, some paths use url */
+const getVideoUrl = (v: GalleryVideo) => v.video_url || v.url || ''
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -179,7 +186,7 @@ export default function VideoStudioPage() {
   })
 
   const videos: GalleryVideo[] = galleryData?.data?.videos || galleryData?.data?.results || []
-  const totalCount: number = galleryData?.data?.total || galleryData?.data?.count || videos.length
+  const totalCount: number = galleryData?.data?.total_count || galleryData?.data?.total || galleryData?.data?.count || videos.length
 
   // Image history for gallery picker
   const { data: imageHistoryData } = useQuery({
@@ -395,7 +402,7 @@ export default function VideoStudioPage() {
       refetchGallery()
       showFeedback('success', 'Voiceover added!')
       if (res.data?.video_url && selectedVideo) {
-        setSelectedVideo({ ...selectedVideo, url: res.data.video_url })
+        setSelectedVideo({ ...selectedVideo, video_url: res.data.video_url })
       }
       setEditVideoId(null)
       setVoiceText('')
@@ -412,7 +419,7 @@ export default function VideoStudioPage() {
       refetchGallery()
       showFeedback('success', 'Sound effect added!')
       if (res.data?.video_url && selectedVideo) {
-        setSelectedVideo({ ...selectedVideo, url: res.data.video_url })
+        setSelectedVideo({ ...selectedVideo, video_url: res.data.video_url })
       }
       setEditVideoId(null)
       setSfxDescription('')
@@ -422,7 +429,7 @@ export default function VideoStudioPage() {
 
   const chainMutation = useMutation({
     mutationFn: () => {
-      const urls = chainVideos.map(v => v.url)
+      const urls = chainVideos.map(v => getVideoUrl(v))
       return contentApi.chainVideos(urls, { add_transitions: chainTransitions })
     },
     onSuccess: () => {
@@ -446,8 +453,8 @@ export default function VideoStudioPage() {
   }
 
   const handleExtend = (video: GalleryVideo) => {
-    if (!video.url) return
-    contentApi.extendVideo(video.url, { prompt: video.prompt })
+    if (!getVideoUrl(video)) return
+    contentApi.extendVideo(getVideoUrl(video), { prompt: video.prompt })
       .then(res => {
         const taskId = res.data?.task_id || res.data?.id
         if (taskId) {
@@ -459,8 +466,8 @@ export default function VideoStudioPage() {
   }
 
   const handleUpscale = (video: GalleryVideo) => {
-    if (!video.url) return
-    contentApi.upscaleVideo(video.url, video.prompt || '')
+    if (!getVideoUrl(video)) return
+    contentApi.upscaleVideo(getVideoUrl(video), video.prompt || '')
       .then(res => {
         const taskId = res.data?.task_id || res.data?.id
         if (taskId) {
@@ -473,7 +480,7 @@ export default function VideoStudioPage() {
 
   const handleDownload = (video: GalleryVideo) => {
     contentApi.incrementVideoDownload(video.id).catch(() => {})
-    window.open(video.url, '_blank')
+    window.open(getVideoUrl(video), '_blank')
   }
 
   const handleVideoClick = (video: GalleryVideo) => {
@@ -1403,9 +1410,9 @@ export default function VideoStudioPage() {
                           )}
                         </div>
                         {/* Model badge */}
-                        {video.model && (
+                        {(video.model_used || video.model) && (
                           <span className="absolute top-1.5 right-1.5 text-[9px] bg-black/70 text-gray-400 px-1.5 py-0.5 rounded">
-                            {video.model}
+                            {video.model_used || video.model}
                           </span>
                         )}
                       </button>
@@ -1518,7 +1525,7 @@ export default function VideoStudioPage() {
               {/* Video player */}
               <div className="lg:flex-1 flex items-center justify-center bg-black rounded-lg overflow-hidden">
                 <video
-                  src={selectedVideo.url}
+                  src={getVideoUrl(selectedVideo)}
                   controls
                   autoPlay
                   loop
