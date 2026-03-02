@@ -2444,6 +2444,57 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
+    # ── Session 1079: Intelligence Gateway ────────────────────────────────────
+    {
+        "type": "function",
+        "name": "intelligence_tool",
+        "description": (
+            "Unified intelligence desk — stocks, sports betting, legislation, search, and KB. "
+            "Replaces stock_intelligence_tool, sports_betting_tool, legislation_tool, "
+            "rag_query_tool, spider_data_tool, and web_search for intelligence queries. "
+            "Use 'overview' for a combined dashboard across all desks. "
+            "Use 'briefs' with desk param for desk-specific briefings. "
+            "Use 'search' with source=kb/spider/web for unified search."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "overview", "briefs", "search",
+                        "stocks_alerts", "stocks_predictions", "stocks_sec_filings",
+                        "sports_predictions", "sports_arbs", "sports_wagers", "sports_record_wager",
+                        "legislation_search", "legislation_summary",
+                        "kb_ingest",
+                    ],
+                    "description": (
+                        "overview: combined dashboard from all 3 desks. "
+                        "briefs: desk-specific briefings (use desk param). "
+                        "search: unified search (use source param: kb/spider/web). "
+                        "stocks_*: stock alerts, predictions, SEC filings. "
+                        "sports_*: predictions, arbs, wagers, record_wager. "
+                        "legislation_*: search bills, get summaries. "
+                        "kb_ingest: ingest a URL into the knowledge base."
+                    ),
+                },
+                "desk": {"type": "string", "enum": ["stocks", "sports", "legislation", "all"], "description": "Desk for briefs action (default: all)"},
+                "source": {"type": "string", "enum": ["kb", "spider", "web"], "description": "Search source for search action (default: kb)"},
+                "query": {"type": "string", "description": "Search query for search/legislation_search/legislation_summary"},
+                "ticker": {"type": "string", "description": "Stock ticker symbol for stocks_* actions"},
+                "sport": {"type": "string", "description": "Sport filter for sports_* actions"},
+                "bill_number": {"type": "string", "description": "Bill number for legislation_summary"},
+                "url": {"type": "string", "description": "URL for kb_ingest"},
+                "stake": {"type": "number", "description": "Stake amount for sports_record_wager"},
+                "odds": {"type": "number", "description": "Odds for sports_record_wager"},
+                "description": {"type": "string", "description": "Description for sports_record_wager"},
+                "wager_type": {"type": "string", "description": "Type for sports_record_wager"},
+                "limit": {"type": "integer", "description": "Max items (default 10)"},
+            },
+            "required": ["action"],
+        },
+    },
+
     # ── Session 1079: Content Gateway ─────────────────────────────────────────
     {
         "type": "function",
@@ -2596,6 +2647,7 @@ TOOL_ENRICHMENT_MAP = {
     'work_tool': ['intelligence_enricher', 'strategic_memory'],
     'content_tool': ['blog_performance', 'domain_context', 'spider_trends', 'strategic_memory', 'proactive_intelligence'],
     'governance_tool': ['intelligence_enricher', 'strategic_memory'],
+    'intelligence_tool': ['domain_context', 'spider_trends', 'proactive_intelligence'],
 }
 
 # Reverse map: tool name -> canonical intent name for enrichment pipeline
@@ -2674,4 +2726,5 @@ TOOL_TO_INTENT_MAP = {
     'work_tool': 'initiatives',
     'content_tool': 'content_review',
     'governance_tool': 'boardroom',
+    'intelligence_tool': 'stock_intelligence',
 }

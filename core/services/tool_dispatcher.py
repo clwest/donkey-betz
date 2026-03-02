@@ -248,6 +248,9 @@ class ToolDispatcher:
         # Session 1079: Governance tool — gateway for boardroom + human decisions
         self.register("governance_tool", self._handle_governance)
 
+        # Session 1079: Intelligence tool — gateway for stocks, sports, legislation, search, KB
+        self.register("intelligence_tool", self._handle_intelligence)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):
@@ -10822,6 +10825,120 @@ RESEARCH DATA:
             result['action'] = action
 
         return result
+
+    # ── Session 1079: Intelligence Tool (gateway) ────────────────────────────────
+    def _handle_intelligence(self, tool_name: str, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:
+        """
+        Session 1079: Intelligence gateway — unified desk for stocks, sports,
+        legislation, search (KB/spider/web), and ML analytics.
+        Wraps stock_intelligence_tool, sports_betting_tool, legislation_tool,
+        rag_query_tool, spider_data_tool, web_search.
+        """
+        action = payload.get('action', 'overview')
+
+        def _tag(result):
+            if isinstance(result, dict):
+                result['gateway'] = 'intelligence_tool'
+                result['action'] = action
+            return result
+
+        # ── Composite: overview (merge 3 desk overviews) ──
+        if action == 'overview':
+            combined = {'desks': {}}
+            for desk, tool, handler in [
+                ('stocks', 'stock_intelligence_tool', self._handle_stock_intelligence),
+                ('sports', 'sports_betting_tool', self._handle_sports_betting),
+                ('legislation', 'legislation_tool', self._handle_legislation),
+            ]:
+                try:
+                    desk_result = handler(tool, {'action': 'overview'}, user_id, trace_id)
+                    combined['desks'][desk] = desk_result
+                except Exception as e:
+                    combined['desks'][desk] = {'error': str(e)}
+            return _tag(combined)
+
+        # ── Composite: briefs (desk param selects source) ──
+        if action == 'briefs':
+            desk = payload.get('desk', 'all')
+            limit = payload.get('limit', 5)
+            briefs_result = {'briefs': {}}
+            desk_map = {
+                'stocks': ('stock_intelligence_tool', self._handle_stock_intelligence, 'briefs'),
+                'sports': ('sports_betting_tool', self._handle_sports_betting, 'brief'),
+                'legislation': ('legislation_tool', self._handle_legislation, 'trending'),
+            }
+            desks_to_query = desk_map.keys() if desk == 'all' else [desk] if desk in desk_map else []
+            for d in desks_to_query:
+                tool_name_inner, handler, inner_action = desk_map[d]
+                try:
+                    r = handler(tool_name_inner, {'action': inner_action, 'limit': limit}, user_id, trace_id)
+                    briefs_result['briefs'][d] = r
+                except Exception as e:
+                    briefs_result['briefs'][d] = {'error': str(e)}
+            if not desks_to_query:
+                briefs_result['error'] = f'Unknown desk: {desk}. Valid: stocks, sports, legislation, all'
+            return _tag(briefs_result)
+
+        # ── Composite: search (source param selects backend) ──
+        if action == 'search':
+            source = payload.get('source', 'kb')
+            query = payload.get('query', '')
+            limit = payload.get('limit', 10)
+            if source == 'kb':
+                result = self._handle_rag_query('rag_query_tool', {'action': 'search', 'query': query, 'limit': limit}, user_id, trace_id)
+            elif source == 'spider':
+                result = self._handle_spider_data('spider_data_tool', {'action': 'search', 'query': query, 'limit': limit}, user_id, trace_id)
+            elif source == 'web':
+                result = self._handle_web_search('web_search', {'query': query}, user_id, trace_id)
+            else:
+                result = {'error': f'Unknown source: {source}. Valid: kb, spider, web'}
+            return _tag(result)
+
+        # ── Stocks desk ──
+        STOCKS_MAP = {
+            'stocks_alerts': 'alerts',
+            'stocks_predictions': 'predictions',
+            'stocks_sec_filings': 'sec_filings',
+        }
+        if action in STOCKS_MAP:
+            sp = dict(payload)
+            sp['action'] = STOCKS_MAP[action]
+            return _tag(self._handle_stock_intelligence('stock_intelligence_tool', sp, user_id, trace_id))
+
+        # ── Sports desk ──
+        SPORTS_MAP = {
+            'sports_predictions': 'predictions',
+            'sports_arbs': 'arbs',
+            'sports_wagers': 'wagers',
+            'sports_record_wager': 'record_wager',
+        }
+        if action in SPORTS_MAP:
+            sp = dict(payload)
+            sp['action'] = SPORTS_MAP[action]
+            return _tag(self._handle_sports_betting('sports_betting_tool', sp, user_id, trace_id))
+
+        # ── Legislation desk ──
+        LEGISLATION_MAP = {
+            'legislation_search': 'search',
+            'legislation_summary': 'summary',
+        }
+        if action in LEGISLATION_MAP:
+            lp = dict(payload)
+            lp['action'] = LEGISLATION_MAP[action]
+            return _tag(self._handle_legislation('legislation_tool', lp, user_id, trace_id))
+
+        # ── KB ──
+        if action == 'kb_ingest':
+            return _tag(self._handle_rag_query('rag_query_tool', {'action': 'ingest', 'url': payload.get('url', '')}, user_id, trace_id))
+
+        all_actions = [
+            'overview', 'briefs', 'search',
+            'stocks_alerts', 'stocks_predictions', 'stocks_sec_filings',
+            'sports_predictions', 'sports_arbs', 'sports_wagers', 'sports_record_wager',
+            'legislation_search', 'legislation_summary',
+            'kb_ingest',
+        ]
+        return {'error': f'Unknown intelligence_tool action: {action}. Valid: {", ".join(all_actions)}'}
 
     # ── Session 1079: Governance Tool (gateway) ──────────────────────────────────
     def _handle_governance(self, tool_name: str, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:
