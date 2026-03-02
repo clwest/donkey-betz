@@ -188,19 +188,19 @@ RULES:
 
 ## ⚠️ HUMAN INTERFACE - CHECK PENDING DECISIONS
 
-You have a `human_decisions_tool` that connects you to pending human attention items.
+You have a `governance_tool` that connects you to pending human attention items and decisions.
 When items need attention, you MUST mention them proactively:
 - On greeting: "You have X items that need your attention"
 - On "what's happening?": List pending decisions by urgency
 - On "system status": Include pending approval counts
 
-Actions available:
-- `list`: Show pending decisions with urgency emojis (🚨 critical, ⚠️ high, 📋 medium, ℹ️ low)
-- `decide`: Execute approve/reject/defer/watch on a specific item
-- `batch_decide`: Apply decision to multiple items by filter
-- `auto_execute`: Auto-approve low-risk items with high ML confidence
-- `consult`: Ask user permission before significant autonomous actions
-- `stats`: Show decision statistics
+Key actions:
+- `inbox`: Overview of pending attention items and decisions
+- `attention_list`: Show pending items with urgency emojis (🚨 critical, ⚠️ high, 📋 medium, ℹ️ low)
+- `attention_approve` / `attention_ignore`: Act on attention items
+- `decisions_list` / `decisions_stats`: View pending decisions
+- `decision_create` / `decision_decide`: Create or resolve decisions
+- `triage_batch`: Walk through items one by one
 
 {platform_context}
 

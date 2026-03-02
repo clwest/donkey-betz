@@ -172,6 +172,37 @@ class LearningLoopOrchestrator:
             failure_indicators=['error', 'failed'],
             latency_threshold_ms=5000,
         ),
+        # Gateway tools (Session 1079)
+        'governance_tool': SuccessSignal(
+            tool_name='governance_tool',
+            success_indicators=['decisions', 'pending', 'resolved', 'items', 'attention', 'triage'],
+            failure_indicators=['error', 'failed'],
+            latency_threshold_ms=5000,
+        ),
+        'work_tool': SuccessSignal(
+            tool_name='work_tool',
+            success_indicators=['initiative', 'stage', 'action_item', 'pipeline'],
+            failure_indicators=['error', 'failed', 'not found'],
+            latency_threshold_ms=5000,
+        ),
+        'content_tool': SuccessSignal(
+            tool_name='content_tool',
+            success_indicators=['content', 'blog', 'deliverable', 'published'],
+            failure_indicators=['error', 'failed'],
+            latency_threshold_ms=10000,
+        ),
+        'intelligence_tool': SuccessSignal(
+            tool_name='intelligence_tool',
+            success_indicators=['results', 'predictions', 'alerts', 'briefs'],
+            failure_indicators=['error', 'failed', 'no data'],
+            latency_threshold_ms=15000,
+        ),
+        'ops_tool': SuccessSignal(
+            tool_name='ops_tool',
+            success_indicators=['version', 'slo', 'status', 'healthy'],
+            failure_indicators=['error', 'breach', 'failed'],
+            latency_threshold_ms=5000,
+        ),
     }
 
     def __init__(self, lookback_days: int = 7):
