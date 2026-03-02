@@ -7359,7 +7359,7 @@ class ToolDispatcher:
 
         elif action == 'wagers':
             from core.models_betting import PlacedWager
-            qs = PlacedWager.objects.all().order_by('-created_at')
+            qs = PlacedWager.objects.all().order_by('-placed_at')
             if user_id:
                 qs = qs.filter(user_id=user_id)
             total = qs.count()
@@ -7371,7 +7371,7 @@ class ToolDispatcher:
                     'status': w.status,
                     'stake': float(w.stake) if hasattr(w, 'stake') and w.stake else 0,
                     'potential_payout': float(w.potential_payout) if hasattr(w, 'potential_payout') and w.potential_payout else 0,
-                    'created_at': w.created_at.isoformat() if hasattr(w, 'created_at') and w.created_at else None,  # type: ignore[attr-defined]
+                    'placed_at': w.placed_at.isoformat() if w.placed_at else None,
                 })
             return {'action': 'wagers', 'items': items, 'total': total}
 

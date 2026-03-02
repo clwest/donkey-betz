@@ -6157,7 +6157,7 @@ Actions:
                 }
 
             elif action == 'history':
-                wagers = Wager.objects.filter(bankroll=bankroll).order_by('-created_at')[:limit]
+                wagers = Wager.objects.filter(bankroll=bankroll).order_by('-placed_at')[:limit]
 
                 summary_lines = ["**Recent Wagers:**\n"]
                 wager_data = []
@@ -6190,7 +6190,7 @@ Actions:
                 }
 
             elif action == 'pending':
-                pending = Wager.objects.filter(bankroll=bankroll, status='pending').order_by('-created_at')
+                pending = Wager.objects.filter(bankroll=bankroll, status='pending').order_by('-placed_at')
 
                 summary_lines = ["**Pending Wagers:**\n"]
                 pending_data = []
