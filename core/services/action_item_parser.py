@@ -150,7 +150,7 @@ class ActionItemParser:
             task = match.group(2).strip()
             timeline = match.group(3) or ''
 
-            if task and len(task) > 5:  # Filter out very short items
+            if task and len(task) > 5 and not self._is_junk_title(task):
                 items.append(self._create_item_dict(task, agent, timeline, match.group(0)))
 
         # Try numbered lists
@@ -159,7 +159,7 @@ class ActionItemParser:
             task = match.group(2).strip()
             timeline = match.group(3) or ''
 
-            if task and len(task) > 5:
+            if task and len(task) > 5 and not self._is_junk_title(task):
                 items.append(self._create_item_dict(task, agent, timeline, match.group(0)))
 
         # Also look for inline agent mentions
@@ -182,10 +182,34 @@ class ActionItemParser:
             if agent_action_match:
                 agent = agent_action_match.group(1)
                 task = agent_action_match.group(2).strip()
-                if task and len(task) > 5:
+                if task and len(task) > 5 and not self._is_junk_title(task):
                     items.append(self._create_item_dict(task, agent, '', line))
 
         return items
+
+    # Session 1076: Junk patterns that produce noise action items
+    _JUNK_TITLE_RE = re.compile(
+        r'^(?:'
+        r'.{0,15}:\s*$'       # Short titles ending with colon ("Nightly:", "Fields:")
+        r'|[A-Z][a-z\- ]{0,12}:$'  # Single-word labels ending with colon
+        r')',
+        re.MULTILINE,
+    )
+
+    @staticmethod
+    def _is_junk_title(title: str) -> bool:
+        """Return True if title is a section heading / label, not a real action item."""
+        t = title.strip()
+        if not t:
+            return True
+        # Ends with colon (heading/label, not actionable)
+        if t.endswith(':'):
+            return True
+        # Extremely short (< 10 chars after stripping bullets)
+        stripped = re.sub(r'^[\-\*•\d.)\s]+', '', t)
+        if len(stripped) < 10:
+            return True
+        return False
 
     def _create_item_dict(self, title: str, agent: str, timeline: str, source_text: str) -> Dict:
         """Create a standardized action item dictionary."""
