@@ -245,6 +245,9 @@ class ToolDispatcher:
         # Session 1079: Content tool — gateway for content_review + blog generation + deliverables
         self.register("content_tool", self._handle_content)
 
+        # Session 1079: Governance tool — gateway for boardroom + human decisions
+        self.register("governance_tool", self._handle_governance)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):
@@ -10819,6 +10822,60 @@ RESEARCH DATA:
             result['action'] = action
 
         return result
+
+    # ── Session 1079: Governance Tool (gateway) ──────────────────────────────────
+    def _handle_governance(self, tool_name: str, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:
+        """
+        Session 1079: Governance gateway — unified human-in-the-loop inbox.
+        Wraps boardroom_tool and human_decisions_tool into one surface.
+        """
+        action = payload.get('action', 'inbox')
+
+        # ── boardroom_tool actions ──
+        BOARDROOM_MAP = {
+            'inbox': 'stats',
+            'attention_list': 'list_attention',
+            'attention_approve': 'approve_attention',
+            'attention_ignore': 'ignore_attention',
+            'attention_lookup': 'lookup',
+            'decision_list': 'list_decisions',
+            'decision_promote': 'promote_decision',
+            'decision_reject': 'reject_decision',
+            'triage_batch': 'get_triage_batch',
+        }
+
+        if action in BOARDROOM_MAP:
+            br_payload = dict(payload)
+            br_payload['action'] = BOARDROOM_MAP[action]
+            result = self._handle_boardroom('boardroom_tool', br_payload, user_id, trace_id)
+            if isinstance(result, dict):
+                result['gateway'] = 'governance_tool'
+                result['action'] = action
+            return result
+
+        # ── human_decisions_tool actions ──
+        DECISIONS_MAP = {
+            'decisions_list': 'list',
+            'decisions_stats': 'stats',
+            'decision_create': 'create',
+            'decision_decide': 'decide',
+        }
+
+        if action in DECISIONS_MAP:
+            hd_payload = dict(payload)
+            hd_payload['action'] = DECISIONS_MAP[action]
+            # Translate param: id → item_id for decide action
+            if action == 'decision_decide':
+                if 'id' in hd_payload and 'item_id' not in hd_payload:
+                    hd_payload['item_id'] = hd_payload.get('id')
+            result = self._handle_human_decisions('human_decisions_tool', hd_payload, user_id, trace_id)
+            if isinstance(result, dict):
+                result['gateway'] = 'governance_tool'
+                result['action'] = action
+            return result
+
+        all_actions = sorted(list(BOARDROOM_MAP) + list(DECISIONS_MAP))
+        return {'error': f'Unknown governance_tool action: {action}. Valid: {", ".join(all_actions)}'}
 
     # ── Session 1079: Content Tool (gateway) ─────────────────────────────────────
     def _handle_content(self, tool_name: str, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:

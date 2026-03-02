@@ -2386,6 +2386,64 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
+    # ── Session 1079: Governance Gateway ──────────────────────────────────────
+    {
+        "type": "function",
+        "name": "governance_tool",
+        "description": (
+            "Unified governance inbox — attention items, decisions, and triage. "
+            "Replaces boardroom_tool and human_decisions_tool. "
+            "Use 'inbox' for a combined overview of pending attention items and draft decisions. "
+            "Use attention_* actions to list/approve/ignore items. "
+            "Use decision_* actions to list/create/decide/promote/reject decisions. "
+            "Use triage_batch to get items for batch processing."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "inbox",
+                        "attention_list", "attention_approve", "attention_ignore", "attention_lookup",
+                        "decision_list", "decision_promote", "decision_reject",
+                        "decisions_list", "decisions_stats", "decision_create", "decision_decide",
+                        "triage_batch",
+                    ],
+                    "description": (
+                        "inbox: combined overview with counts + top items. "
+                        "attention_list: list pending attention items. "
+                        "attention_approve: approve an attention item by id. "
+                        "attention_ignore: ignore an attention item by id. "
+                        "attention_lookup: find an item by title. "
+                        "decision_list: list draft decision summaries. "
+                        "decision_promote: promote a draft decision to canonical. "
+                        "decision_reject: reject a draft decision. "
+                        "decisions_list: list pending human decisions. "
+                        "decisions_stats: decision statistics. "
+                        "decision_create: create a new decision request. "
+                        "decision_decide: make a decision (approve/reject/defer/watch). "
+                        "triage_batch: get items for batch triage."
+                    ),
+                },
+                "id": {"type": "string", "description": "UUID of attention item or decision"},
+                "title": {"type": "string", "description": "Title for new decision or lookup query"},
+                "title_query": {"type": "string", "description": "Title search for attention_lookup"},
+                "summary": {"type": "string", "description": "Summary for decision_create"},
+                "decision": {"type": "string", "description": "Decision value for decision_decide (approve/reject/defer/watch)"},
+                "feedback": {"type": "string", "description": "Feedback for approve/ignore/reject actions"},
+                "reason": {"type": "string", "description": "Reason for decision_reject"},
+                "urgency": {"type": "string", "enum": ["critical", "high", "medium", "low"], "description": "Urgency filter or value"},
+                "item_type": {"type": "string", "description": "Filter by item type"},
+                "decision_type": {"type": "string", "description": "Filter by decision type"},
+                "triage_type": {"type": "string", "enum": ["attention", "decisions"], "description": "Type for triage_batch"},
+                "batch_size": {"type": "integer", "description": "Number of items in triage batch (default 5)"},
+                "limit": {"type": "integer", "description": "Max items (default 10)"},
+            },
+            "required": ["action"],
+        },
+    },
+
     # ── Session 1079: Content Gateway ─────────────────────────────────────────
     {
         "type": "function",
@@ -2537,6 +2595,7 @@ TOOL_ENRICHMENT_MAP = {
     'ops_tool': ['intelligence_enricher', 'platform_briefing'],
     'work_tool': ['intelligence_enricher', 'strategic_memory'],
     'content_tool': ['blog_performance', 'domain_context', 'spider_trends', 'strategic_memory', 'proactive_intelligence'],
+    'governance_tool': ['intelligence_enricher', 'strategic_memory'],
 }
 
 # Reverse map: tool name -> canonical intent name for enrichment pipeline
@@ -2614,4 +2673,5 @@ TOOL_TO_INTENT_MAP = {
     'ops_tool': 'system_overview',
     'work_tool': 'initiatives',
     'content_tool': 'content_review',
+    'governance_tool': 'boardroom',
 }
