@@ -8966,7 +8966,7 @@ RESEARCH DATA:
                 'key_prefix': anthropic_key[:8] + '...' if anthropic_key else 'not set',
             }
             # Together AI
-            together_key = os.environ.get('TOGETHER_API_KEY', '')
+            together_key = os.environ.get('TOGETHER_AI_API_KEY', '') or os.environ.get('TOGETHER_API_KEY', '')
             providers['together_ai'] = {
                 'configured': bool(together_key),
                 'key_prefix': together_key[:8] + '...' if together_key else 'not set',
