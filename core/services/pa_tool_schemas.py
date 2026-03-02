@@ -2360,18 +2360,19 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["version", "slo_status", "failure_signatures"],
+                    "enum": ["version", "slo_status", "failure_signatures", "tool_migration_report"],
                     "description": (
                         "version: build/deploy metadata (git SHA, branch, Railway deployment, uptime). "
                         "slo_status: compute 8 SLOs with breach detection (task success, agent timeouts, "
                         "deliberation failures, publish conversion, PA tool success, HTTP errors). "
-                        "failure_signatures: top error signatures by frequency with samples."
+                        "failure_signatures: top error signatures by frequency with samples. "
+                        "tool_migration_report: legacy vs gateway tool usage, deprecation readiness."
                     ),
                 },
                 "window": {
                     "type": "string",
-                    "enum": ["6h", "24h", "7d"],
-                    "description": "Time window for SLO and failure signature computation (default 24h).",
+                    "enum": ["6h", "24h", "7d", "30d"],
+                    "description": "Time window for SLO, failure signature, and migration report computation (default 24h).",
                 },
                 "include_breakdowns": {
                     "type": "boolean",

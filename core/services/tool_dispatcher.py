@@ -83,6 +83,36 @@ class ToolDispatcher:
     # Default timeout for tool execution (seconds)
     DEFAULT_TIMEOUT = 30
 
+    # Session 1079 Phase 2: Legacy tool → gateway migration map.
+    # Used for telemetry tagging and the tool_migration_report ops action.
+    LEGACY_TO_GATEWAY = {
+        # work_tool absorbs initiative_tool
+        'initiative_tool': ('work_tool', 'initiative_list'),
+        # content_tool absorbs content_review_tool, generate_blog_tool, deliverables_tool
+        'content_review_tool': ('content_tool', 'content_list'),
+        'generate_blog_tool': ('content_tool', 'generate_blog'),
+        'deliverables_tool': ('content_tool', 'deliverable_list'),
+        # governance_tool absorbs boardroom_tool, human_decisions_tool
+        'boardroom_tool': ('governance_tool', 'inbox'),
+        'human_decisions_tool': ('governance_tool', 'decisions_list'),
+        # intelligence_tool absorbs stock/sports/legislation/search tools
+        'stock_intelligence_tool': ('intelligence_tool', 'stocks_alerts'),
+        'sports_betting_tool': ('intelligence_tool', 'sports_predictions'),
+        'legislation_tool': ('intelligence_tool', 'legislation_search'),
+        'rag_query_tool': ('intelligence_tool', 'search'),
+        'spider_data_tool': ('intelligence_tool', 'search'),
+        'web_search': ('intelligence_tool', 'search'),
+        # ops_tool absorbs system health tools
+        'system_health_tool': ('ops_tool', 'slo_status'),
+        'error_summary_tool': ('ops_tool', 'failure_signatures'),
+    }
+
+    # The 6 gateway tool names (+ 3 standalone primitives)
+    GATEWAY_TOOLS = frozenset([
+        'ops_tool', 'work_tool', 'content_tool',
+        'governance_tool', 'intelligence_tool', 'studio_tool',
+    ])
+
     def __init__(self):
         self._tool_handlers: Dict[str, Callable] = {}
         self._execution_count = 0
@@ -333,6 +363,19 @@ class ToolDispatcher:
                     pass  # scrub failure must never break tool dispatch
 
             logger.info(f"[{trace_id}] Tool {tool_name} completed in {latency_ms}ms")
+
+            # Session 1079 Phase 2: Tag legacy tool calls for migration telemetry
+            gateway_hint = self.LEGACY_TO_GATEWAY.get(tool_name)
+            if gateway_hint and isinstance(result, dict):
+                result['_gateway_hint'] = {
+                    'suggested_gateway': gateway_hint[0],
+                    'suggested_action': gateway_hint[1],
+                    'legacy_tool': tool_name,
+                }
+                logger.info(
+                    f"[{trace_id}] LEGACY_TOOL_USED: {tool_name} → "
+                    f"suggest {gateway_hint[0]}.{gateway_hint[1]}"
+                )
 
             return ToolResult(
                 ok=True,
@@ -11079,6 +11122,9 @@ RESEARCH DATA:
             window = payload.get('window', '24h')
             limit = min(int(payload.get('limit', 10)), 25)
             return self._ops_failure_signatures(window, limit, trace_id)
+        elif action == 'tool_migration_report':
+            window = payload.get('window', '7d')
+            return self._ops_tool_migration_report(window, trace_id)
         else:
             return {'error': f'Unknown ops_tool action: {action}'}
 
@@ -11438,6 +11484,107 @@ RESEARCH DATA:
             'celery_task_failures': celery_failures,
             'total_signatures': len(signatures),
         }
+
+
+    def _ops_tool_migration_report(self, window: str, trace_id: str) -> Dict[str, Any]:
+        """
+        Session 1079 Phase 2: Gateway migration telemetry report.
+
+        Queries ToolCallRecord to show:
+        - Legacy vs gateway tool call counts
+        - Top legacy tools still being used
+        - Deprecation readiness per legacy tool
+        """
+        from django.utils import timezone
+        from datetime import timedelta
+        from django.db.models import Count, Max
+
+        window_hours = {'6h': 6, '24h': 24, '7d': 168, '30d': 720}.get(window, 168)
+        cutoff = timezone.now() - timedelta(hours=window_hours)
+
+        try:
+            from core.models_tool_calls import ToolCallRecord
+
+            legacy_names = set(self.LEGACY_TO_GATEWAY.keys())
+            gateway_names = self.GATEWAY_TOOLS
+
+            # Total tool calls in window
+            all_calls = ToolCallRecord.objects.filter(created_at__gte=cutoff)
+            total = all_calls.count()
+
+            # Count by tool name
+            tool_counts = dict(
+                all_calls.values('tool_name')
+                .annotate(count=Count('id'), last_used=Max('created_at'))
+                .order_by('-count')
+                .values_list('tool_name', 'count')
+            )
+
+            # Classify
+            legacy_calls = []
+            gateway_calls = []
+            other_calls = []
+
+            for tool_name, count in sorted(tool_counts.items(), key=lambda x: -x[1]):
+                entry = {'tool': tool_name, 'count': count}
+                if tool_name in legacy_names:
+                    gw, suggested_action = self.LEGACY_TO_GATEWAY[tool_name]
+                    entry['suggested_gateway'] = gw
+                    entry['suggested_action'] = suggested_action
+                    legacy_calls.append(entry)
+                elif tool_name in gateway_names:
+                    gateway_calls.append(entry)
+                else:
+                    other_calls.append(entry)
+
+            legacy_total = sum(e['count'] for e in legacy_calls)
+            gateway_total = sum(e['count'] for e in gateway_calls)
+
+            # Deprecation readiness: legacy tools with 0 calls are safe to remove
+            safe_to_deprecate = [
+                tool_name for tool_name in legacy_names
+                if tool_counts.get(tool_name, 0) == 0
+            ]
+
+            # Failure comparison: legacy vs gateway success rates
+            legacy_failures = all_calls.filter(
+                tool_name__in=legacy_names, success=False
+            ).count()
+            gateway_failures = all_calls.filter(
+                tool_name__in=gateway_names, success=False
+            ).count()
+
+            return {
+                'action': 'tool_migration_report',
+                'window': window,
+                'generated_at': timezone.now().isoformat(),
+                'summary': {
+                    'total_tool_calls': total,
+                    'legacy_calls': legacy_total,
+                    'gateway_calls': gateway_total,
+                    'other_calls': total - legacy_total - gateway_total,
+                    'migration_pct': round(gateway_total / max(gateway_total + legacy_total, 1) * 100, 1),
+                },
+                'legacy_tools_still_used': legacy_calls[:15],
+                'gateway_tools': gateway_calls,
+                'safe_to_deprecate': sorted(safe_to_deprecate),
+                'failure_comparison': {
+                    'legacy_failures': legacy_failures,
+                    'legacy_failure_rate': round(legacy_failures / max(legacy_total, 1) * 100, 2),
+                    'gateway_failures': gateway_failures,
+                    'gateway_failure_rate': round(gateway_failures / max(gateway_total, 1) * 100, 2),
+                },
+                'recommendation': (
+                    f'{len(safe_to_deprecate)} legacy tools had zero calls in {window} — '
+                    f'safe to remove from PA schema. '
+                    f'{len(legacy_calls)} legacy tools still active.'
+                    if safe_to_deprecate else
+                    f'All {len(legacy_calls)} legacy tools still active in {window}. '
+                    f'Gateway adoption at {round(gateway_total / max(gateway_total + legacy_total, 1) * 100, 1)}%.'
+                ),
+            }
+        except Exception as e:
+            return {'action': 'tool_migration_report', 'error': str(e)}
 
 
 def _redact_secrets(text: str) -> str:
