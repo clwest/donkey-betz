@@ -1226,6 +1226,47 @@ def cockpit_job_status(request, job_id):
     return JsonResponse(result)
 
 
+# ── Session 1078: Version / Build Info endpoint ──────────────────────────────
+
+@require_http_methods(["GET"])
+def system_version(request):
+    """
+    Session 1078: Return build/deploy metadata for the running web process.
+    No auth required — version info is non-sensitive.
+    """
+    import time
+    import django
+    from django.utils import timezone
+
+    now = timezone.now()
+    # Process uptime approximation
+    _boot_key = '_system_version_boot'
+    boot_ts = cache.get(_boot_key)
+    if not boot_ts:
+        boot_ts = time.time()
+        cache.set(_boot_key, boot_ts, 86400 * 7)
+    uptime_seconds = time.time() - boot_ts
+
+    return JsonResponse({
+        'service': os.environ.get('RAILWAY_SERVICE_NAME', 'web'),
+        'environment': os.environ.get('RAILWAY_ENVIRONMENT', 'local'),
+        'git': {
+            'sha': os.environ.get('RAILWAY_GIT_COMMIT_SHA', 'dev'),
+            'branch': os.environ.get('RAILWAY_GIT_BRANCH', 'unknown'),
+        },
+        'railway': {
+            'deployment_id': os.environ.get('RAILWAY_DEPLOYMENT_ID', 'local'),
+        },
+        'runtime': {
+            'started_at': (now - timedelta(seconds=uptime_seconds)).isoformat(),
+            'uptime_seconds': round(uptime_seconds),
+        },
+        'app': {
+            'django_version': django.get_version(),
+        },
+    })
+
+
 # ── Focus Cockpit Ops endpoint ───────────────────────────────────────────────
 
 @require_http_methods(["GET"])

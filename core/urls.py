@@ -1492,6 +1492,7 @@ from core.views_diagnostics import (
     cockpit_incident_add_event,  # Focus Cockpit: add incident event
     cockpit_ops_runs_list,  # Focus Cockpit: ops runs list
     cockpit_ops_run_detail,  # Focus Cockpit: ops run detail + events
+    system_version,  # Session 1078: Build/deploy version info
     # Session 871: Removed unused import: diagnostic_dashboard
 )
 
@@ -2106,6 +2107,7 @@ urlpatterns = [
 
     # Session 1009: Removed agent-analytics endpoints (orphan cleanup)
     path('api/system-health/', system_health_check, name='system-health'),
+    path('api/system/version/', system_version, name='system-version'),  # Session 1078
     path('api/celery/status/', celery_status, name='celery-status'),  # Session 642: Celery monitoring
 
     # Session 417: Detail endpoints for conversations, decisions, dreams, hivemind
