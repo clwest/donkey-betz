@@ -14,6 +14,7 @@ recent memories while not forgetting older important ones.
 
 import logging
 import math
+import os
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 from django.contrib.auth import get_user_model
@@ -54,6 +55,10 @@ class MemoryContextService:
             user: User for personalized operations
         """
         self.user = user
+        # Env-var overrides for context limits
+        env_max_tokens = os.environ.get('MEMORY_MAX_TOKENS', '')
+        self.max_context_chars = int(env_max_tokens) * 4 if env_max_tokens else self.MAX_CONTEXT_CHARS
+        self.max_items = int(os.environ.get('MEMORY_MAX_ITEMS', '200'))
 
     def calculate_decay_weight(self, created_at: datetime) -> float:
         """
@@ -133,8 +138,8 @@ class MemoryContextService:
 
         # Combine and truncate
         context = "\n\n".join(context_parts)
-        if len(context) > self.MAX_CONTEXT_CHARS:
-            context = context[:self.MAX_CONTEXT_CHARS] + "..."
+        if len(context) > self.max_context_chars:
+            context = context[:self.max_context_chars] + "..."
 
         # Cache result
         cache.set(cache_key, context, self.CACHE_TTL)

@@ -46,6 +46,25 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
+# Deterministic memory intent detection patterns (Task D)
+_MEMORY_PATTERNS = [
+    re.compile(r'(?:please\s+)?remember\s+(?:that\s+)?(.{10,200})', re.IGNORECASE),
+    re.compile(r'(?:please\s+)?(?:always|never)\s+(.{5,200})', re.IGNORECASE),
+    re.compile(r'(?:save|note|pin)\s+(?:that|this)[\s:]+(.{10,200})', re.IGNORECASE),
+    re.compile(r'keep\s+in\s+mind\s+(?:that\s+)?(.{10,200})', re.IGNORECASE),
+    re.compile(r'(?:from now on|going forward)[,\s]+(.{10,200})', re.IGNORECASE),
+    re.compile(r'i\s+prefer\s+(.{5,200})', re.IGNORECASE),
+]
+
+
+def _detect_memory_intent(message: str) -> str | None:
+    """Return captured memory content if message contains an explicit memory intent."""
+    for pattern in _MEMORY_PATTERNS:
+        m = pattern.search(message)
+        if m:
+            return m.group(1).strip().rstrip('.')
+    return None
+
 
 @dataclass
 class PAResponse:
@@ -512,6 +531,30 @@ class UnifiedPAEntrypoint:
                 # The LLM sometimes constructs URLs from prompt text instead of
                 # copying the real URL from tool results.
                 content = self._fix_hallucinated_urls(content, tool_runs_raw, trace_id)
+
+                # Deterministic fallback: if user said "remember X" but LLM didn't call remember_tool
+                if not any(r.get('tool') == 'remember_tool' for r in tool_runs_raw):
+                    memory_match = _detect_memory_intent(message)
+                    if memory_match:
+                        try:
+                            from core.services.tool_dispatcher import _redact_secrets
+                            from core.models import UserMemoryContext, EnhancedUserProfile
+                            fallback_content = _redact_secrets(memory_match)
+                            profile, _ = EnhancedUserProfile.objects.get_or_create(user=self.user)
+                            UserMemoryContext.objects.create(
+                                user=self.user,
+                                profile=profile,
+                                memory_type='instruction',
+                                content=fallback_content[:500],
+                                importance=7,
+                                source='auto_detect',
+                                context_metadata={'trigger': 'deterministic_fallback'},
+                            )
+                            from core.services.memory_context_service import get_memory_context_service
+                            get_memory_context_service().clear_cache(self.user)
+                            logger.info(f"[{trace_id}] Deterministic memory fallback saved: {fallback_content[:80]}")
+                        except Exception as e:
+                            logger.warning(f"[PA] Deterministic memory save failed: {e}")
 
                 # Infer intent from tool names for enrichment
                 tool_names = [r.get('tool', '') for r in tool_runs_raw]
@@ -1412,6 +1455,26 @@ class UnifiedPAEntrypoint:
             "PLATFORM STATS:",
             f"- {agent_count} Agents | {spider_count} Spiders | 25 Advisors",
         ]
+
+        # Inject persistent memory context
+        try:
+            from core.services.memory_context_service import get_memory_context_service
+            memory_svc = get_memory_context_service()
+            memory_context = memory_svc.get_prompt_context(self.user)
+            if memory_context:
+                prompt_parts.append("")
+                prompt_parts.append("YOUR MEMORY (things the user asked you to remember):")
+                prompt_parts.append(memory_context)
+                # OpsRun event for memory injection
+                from core.tools.ops_run_tracker import get_active_tracker
+                tracker = get_active_tracker()
+                if tracker:
+                    tracker.info('memory_injected', {
+                        'user_id': str(self.user.id),
+                        'chars': len(memory_context),
+                    })
+        except Exception as e:
+            logger.debug(f"[PA] Memory context injection skipped: {e}")
 
         # Add docs context summary if available
         if docs_ctx.get('has_docs'):

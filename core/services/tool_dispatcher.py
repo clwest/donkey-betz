@@ -231,6 +231,9 @@ class ToolDispatcher:
         # Conversation memory — cross-thread PA recall
         self.register("conversation_tool", self._handle_conversation)
 
+        # Persistent memory — save/list/delete/search across sessions
+        self.register("remember_tool", self._handle_remember)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):
@@ -10251,6 +10254,177 @@ RESEARCH DATA:
             }
 
         return {'error': f'Unknown action: {action}'}
+
+    def _handle_remember(self, tool_name, payload, user_id, trace_id):
+        """Handle remember_tool: save/list/delete/search persistent memories."""
+        import os
+        import re
+        import hashlib
+        from django.contrib.auth import get_user_model
+        from core.models import UserMemoryContext, EnhancedUserProfile
+        from core.services.memory_context_service import get_memory_context_service
+
+        User = get_user_model()
+        action = payload.get('action', 'save')
+
+        if not user_id:
+            return {'error': 'User context required for memory operations'}
+        user = User.objects.get(id=user_id)
+
+        if action == 'save':
+            content = (payload.get('content') or '').strip()
+            if not content:
+                return {'error': 'content is required for save action'}
+
+            # Secret redaction
+            content = _redact_secrets(content)
+
+            memory_type = payload.get('memory_type', 'preference')
+            importance = min(max(payload.get('importance', 7), 1), 10)
+            tags = payload.get('tags') or []
+
+            # Env-var cap check
+            max_items = int(os.environ.get('MEMORY_MAX_ITEMS', '200'))
+            current_count = UserMemoryContext.objects.filter(user=user).count()
+            if current_count >= max_items:
+                return {
+                    'error': f'Memory limit reached ({max_items} items). Delete old memories first.',
+                    'current_count': current_count,
+                    'max_items': max_items,
+                }
+
+            # Deduplication: hash of normalized content + memory_type
+            content_hash = hashlib.sha256(
+                f"{content.lower().strip()}:{memory_type}".encode()
+            ).hexdigest()[:16]
+
+            existing = UserMemoryContext.objects.filter(
+                user=user,
+                memory_type=memory_type,
+                context_metadata__content_hash=content_hash,
+            ).first()
+            if existing:
+                # Update importance if higher, bump timestamp
+                if importance > existing.importance:
+                    existing.importance = importance
+                    existing.save(update_fields=['importance'])
+                return {
+                    'action': 'save',
+                    'status': 'duplicate_updated',
+                    'memory_id': existing.id,
+                    'message': f'Memory already exists (updated importance to {max(importance, existing.importance)})',
+                }
+
+            # Save
+            profile, _ = EnhancedUserProfile.objects.get_or_create(user=user)
+            memory = UserMemoryContext.objects.create(
+                user=user,
+                profile=profile,
+                memory_type=memory_type,
+                content=content[:500],
+                importance=importance,
+                source='remember_tool',
+                tags=tags,
+                context_metadata={
+                    'content_hash': content_hash,
+                    'trace_id': trace_id,
+                },
+            )
+
+            # Clear memory context cache
+            svc = get_memory_context_service()
+            svc.clear_cache(user)
+
+            # OpsRun event
+            from core.tools.ops_run_tracker import get_active_tracker
+            tracker = get_active_tracker()
+            if tracker:
+                tracker.info('memory_saved', {
+                    'memory_id': memory.id,
+                    'memory_type': memory_type,
+                    'importance': importance,
+                })
+
+            return {
+                'action': 'save',
+                'memory_id': memory.id,
+                'memory_type': memory_type,
+                'importance': importance,
+                'message': f'Remembered: "{content[:80]}"',
+            }
+
+        elif action == 'list':
+            memories = UserMemoryContext.objects.filter(user=user).order_by('-importance', '-created_at')[:20]
+            return {
+                'action': 'list',
+                'count': UserMemoryContext.objects.filter(user=user).count(),
+                'memories': [
+                    {
+                        'id': m.id,
+                        'type': m.memory_type,
+                        'content': m.content[:200],
+                        'importance': m.importance,
+                        'tags': m.tags,
+                        'created_at': m.created_at.isoformat(),
+                    }
+                    for m in memories
+                ],
+            }
+
+        elif action == 'delete':
+            memory_id = payload.get('memory_id')
+            if not memory_id:
+                return {'error': 'memory_id required for delete action'}
+            deleted, _ = UserMemoryContext.objects.filter(user=user, id=memory_id).delete()
+            if deleted:
+                svc = get_memory_context_service()
+                svc.clear_cache(user)
+            return {
+                'action': 'delete',
+                'deleted': deleted > 0,
+                'message': 'Memory deleted' if deleted else 'Memory not found',
+            }
+
+        elif action == 'search':
+            query = (payload.get('query') or '').strip()
+            if not query:
+                return {'error': 'query required for search action'}
+            results = UserMemoryContext.objects.filter(
+                user=user,
+                content__icontains=query,
+            ).order_by('-importance')[:10]
+            return {
+                'action': 'search',
+                'query': query,
+                'count': len(results),
+                'memories': [
+                    {
+                        'id': m.id,
+                        'type': m.memory_type,
+                        'content': m.content[:200],
+                        'importance': m.importance,
+                    }
+                    for m in results
+                ],
+            }
+
+        return {'error': f'Unknown action: {action}'}
+
+
+def _redact_secrets(text: str) -> str:
+    """Redact API keys, tokens, and secrets from memory content."""
+    import re
+    patterns = [
+        (r'(sk-[a-zA-Z0-9]{20,})', '[REDACTED_API_KEY]'),
+        (r'(ghp_[a-zA-Z0-9]{36,})', '[REDACTED_GITHUB_TOKEN]'),
+        (r'(xoxb-[a-zA-Z0-9\-]+)', '[REDACTED_SLACK_TOKEN]'),
+        (r'(eyJ[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,})', '[REDACTED_JWT]'),
+        (r'(AKIA[A-Z0-9]{16})', '[REDACTED_AWS_KEY]'),
+        (r'(key-[a-zA-Z0-9]{32,})', '[REDACTED_KEY]'),
+    ]
+    for pattern, replacement in patterns:
+        text = re.sub(pattern, replacement, text)
+    return text
 
 
 # Singleton instance

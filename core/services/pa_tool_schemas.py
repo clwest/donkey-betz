@@ -2074,6 +2074,58 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
+    # ── Persistent Memory ────────────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "remember_tool",
+        "description": (
+            "Save something to persistent memory so you remember it across sessions. "
+            "Use when the user says 'remember this', 'save this preference', 'note that I...', "
+            "'keep in mind', 'always do X', 'never do Y', 'I prefer...', or similar. "
+            "Also use proactively when the user shares important preferences, goals, constraints, "
+            "or corrections that should persist."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["save", "list", "delete", "search"],
+                },
+                "content": {
+                    "type": "string",
+                    "description": "What to remember (for save action)",
+                },
+                "memory_type": {
+                    "type": "string",
+                    "enum": [
+                        "preference", "goal", "constraint", "instruction",
+                        "decision", "context", "skill", "project",
+                    ],
+                    "description": "Category of memory (default: preference)",
+                },
+                "importance": {
+                    "type": "integer",
+                    "description": "1-10 importance level (default: 7)",
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional tags for categorization",
+                },
+                "memory_id": {
+                    "type": "integer",
+                    "description": "Memory ID for delete action",
+                },
+                "query": {
+                    "type": "string",
+                    "description": "Search query for search action",
+                },
+            },
+            "required": ["action"],
+        },
+    },
+
     # ── Conversation Memory ──────────────────────────────────────────────────
     {
         "type": "function",
@@ -2199,6 +2251,7 @@ TOOL_ENRICHMENT_MAP = {
     'competitor_comparison_tool': [],
     'workflow_run_tool': [],
     'conversation_tool': ['strategic_memory'],
+    'remember_tool': [],
 }
 
 # Reverse map: tool name -> canonical intent name for enrichment pipeline
@@ -2272,4 +2325,5 @@ TOOL_TO_INTENT_MAP = {
     'competitor_comparison_tool': 'rag',
     'workflow_run_tool': 'rag',
     'conversation_tool': 'memory_recall',
+    'remember_tool': 'memory',
 }
