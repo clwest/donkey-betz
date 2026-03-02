@@ -87,6 +87,7 @@ PA_TOOL_SCHEMAS = [
                 "program": {"type": "string", "description": "Filter by portfolio program. Valid values: growth_intelligence, platform_health, monetization, content_pipeline, ai_capabilities, user_experience, infrastructure, research, experiments. Only set when user explicitly mentions program."},
                 "owner": {"type": "string", "description": "Filter by owner ('me', 'unowned', or agent name)"},
                 "limit": {"type": "integer", "description": "Max items to return (default 50)"},
+                "offset": {"type": "integer", "description": "Skip first N items for pagination (default 0). Use with action_items."},
                 "impact_score": {"type": "number", "description": "Expected impact 0-1 (for create, default 0.5)"},
                 "urgency": {"type": "number", "description": "Time-sensitivity 0-1 (for create, default 0.5)"},
                 "revenue_potential": {"type": "number", "description": "Revenue potential 0-1 (for create, default 0.0)"},
