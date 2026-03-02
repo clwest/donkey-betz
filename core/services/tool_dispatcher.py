@@ -5096,6 +5096,7 @@ class ToolDispatcher:
 
         elif action == 'action_items':
             # List pending action items across all initiatives
+            # Session 1076: Added priority filter to schema, fixed ordering
             status_filter = payload.get('item_status', 'pending')
             priority_filter = payload.get('priority')
 
@@ -5107,8 +5108,19 @@ class ToolDispatcher:
             if priority_filter:
                 qs = qs.filter(priority=priority_filter)
 
+            # Order by priority (critical > high > medium > low), then newest
+            from django.db.models import Case, When, Value, IntegerField
+            priority_order = Case(
+                When(priority='critical', then=Value(0)),
+                When(priority='high', then=Value(1)),
+                When(priority='medium', then=Value(2)),
+                When(priority='low', then=Value(3)),
+                default=Value(4),
+                output_field=IntegerField(),
+            )
+
             items = []
-            for item in qs.order_by('-priority', '-created_at')[:limit]:
+            for item in qs.annotate(priority_rank=priority_order).order_by('priority_rank', '-created_at')[:limit]:
                 items.append({
                     'id': str(item.id),
                     'title': item.title,
@@ -5129,6 +5141,33 @@ class ToolDispatcher:
                     'status': status_filter,
                     'priority': priority_filter,
                 }
+            }
+
+        # Session 1076: Cleanup junk action items (section headings, labels)
+        elif action == 'cleanup_action_items':
+            dry_run = payload.get('dry_run', True)
+            from core.services.action_item_parser import ActionItemParser
+
+            junk_qs = InitiativeActionItem.objects.filter(status='pending')
+            junk_ids = []
+            junk_titles = []
+            for item in junk_qs.only('id', 'title'):
+                if ActionItemParser._is_junk_title(item.title):
+                    junk_ids.append(item.id)
+                    junk_titles.append(item.title)
+
+            cancelled = 0
+            if not dry_run and junk_ids:
+                cancelled = InitiativeActionItem.objects.filter(
+                    id__in=junk_ids
+                ).update(status='cancelled')
+
+            return {
+                'action': 'cleanup_action_items',
+                'dry_run': dry_run,
+                'junk_found': len(junk_ids),
+                'cancelled': cancelled,
+                'sample_titles': junk_titles[:20],
             }
 
         # Session 1040: Fetch full stage document content

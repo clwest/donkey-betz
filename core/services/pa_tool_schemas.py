@@ -74,8 +74,8 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "stats", "details", "action_items", "stage_document", "promote", "start_action_item", "complete_action_item", "create"],
-                    "description": "Initiative action to perform. Use 'create' to create a new initiative. Use 'stage_document' to read the full content of a stage document. Use 'promote' to move a TRIAGE or ON_HOLD initiative to ACTIVE. Use 'start_action_item' or 'complete_action_item' with an item id.",
+                    "enum": ["list", "stats", "details", "action_items", "cleanup_action_items", "stage_document", "promote", "start_action_item", "complete_action_item", "create"],
+                    "description": "Initiative action to perform. Use 'create' to create a new initiative. Use 'stage_document' to read the full content of a stage document. Use 'promote' to move a TRIAGE or ON_HOLD initiative to ACTIVE. Use 'start_action_item' or 'complete_action_item' with an item id. Use 'cleanup_action_items' to find/cancel junk items (dry_run=true to preview, dry_run=false to cancel).",
                 },
                 "id": {"type": "string", "description": "Initiative identifier: human ID (e.g., INIT-000012), seq number (e.g., 12), or UUID"},
                 "name": {"type": "string", "description": "Initiative name. For 'create': required title. For list: partial match search."},
@@ -91,6 +91,9 @@ PA_TOOL_SCHEMAS = [
                 "urgency": {"type": "number", "description": "Time-sensitivity 0-1 (for create, default 0.5)"},
                 "revenue_potential": {"type": "number", "description": "Revenue potential 0-1 (for create, default 0.0)"},
                 "execution_speed": {"type": "string", "enum": ["fast", "balanced", "thorough"], "description": "Execution speed (for create, default balanced)"},
+                "item_status": {"type": "string", "enum": ["pending", "in_progress", "completed", "blocked", "cancelled", "all"], "description": "Filter action items by status (default pending). Use with action_items."},
+                "priority": {"type": "string", "enum": ["critical", "high", "medium", "low"], "description": "Filter action items by priority. Use with action_items."},
+                "dry_run": {"type": "boolean", "description": "For cleanup_action_items: true to preview junk items, false to cancel them (default true)."},
             },
             "required": ["action"],
         },
