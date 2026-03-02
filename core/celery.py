@@ -2481,6 +2481,14 @@ app.conf.beat_schedule = {
             'expires': 3600,
         },
     },
+    # Session 1068: LLM cost spike detection — hourly check
+    'check-llm-cost-spike': {
+        'task': 'core.tasks.check_llm_cost_spike',
+        'schedule': 3600.0,  # Every hour
+        'options': {
+            'expires': 3600,
+        },
+    },
 }
 
 # Task routing configuration

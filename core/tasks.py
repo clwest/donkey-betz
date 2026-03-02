@@ -37688,3 +37688,59 @@ def ops_control_loop():
         'failures': failures,
         'ops_run_id': tracker.ops_run_id,
     }
+
+
+# =============================================================================
+# LLM Cost Spike Detection (Session 1068)
+# =============================================================================
+
+@shared_task(ignore_result=True)
+def check_llm_cost_spike():
+    """Hourly: check if LLM spend rate is abnormally high."""
+    from core.models_llm_routing import LLMCallLog
+    from core.models_human_interface import HumanAttentionItem
+    from django.contrib.auth import get_user_model
+    from django.db.models import Sum, Count
+    from datetime import timedelta
+
+    User = get_user_model()
+    now = timezone.now()
+
+    # Last 1 hour spend
+    hour_ago = now - timedelta(hours=1)
+    hourly = LLMCallLog.objects.filter(created_at__gte=hour_ago).aggregate(
+        total=Sum('cost'), count=Count('id')
+    )
+    hourly_cost = float(hourly['total'] or 0)
+    hourly_count = hourly['count'] or 0
+
+    # Previous 23h average hourly rate (for comparison)
+    day_ago = now - timedelta(hours=24)
+    daily = LLMCallLog.objects.filter(
+        created_at__gte=day_ago, created_at__lt=hour_ago
+    ).aggregate(total=Sum('cost'))
+    prev_23h_cost = float(daily['total'] or 0)
+    avg_hourly = prev_23h_cost / 23 if prev_23h_cost > 0 else 0
+
+    # Spike if current hour is >3x the 24h average hourly rate AND >$1
+    if hourly_cost > max(avg_hourly * 3, 1.0):
+        admin = User.objects.filter(is_staff=True).first()
+        if admin:
+            HumanAttentionItem.objects.create(
+                user=admin,
+                source_type='llm_cost_monitor',
+                item_type='alert',
+                title=f'LLM Cost Spike: ${hourly_cost:.2f}/hr ({hourly_count} calls)',
+                summary=(
+                    f'Last hour: ${hourly_cost:.2f} ({hourly_count} calls). '
+                    f'24h avg: ${avg_hourly:.2f}/hr. '
+                    f'Spike ratio: {hourly_cost / max(avg_hourly, 0.01):.1f}x'
+                ),
+                urgency='high',
+            )
+            logger.warning(
+                f"[LLM-COST] Spike detected: ${hourly_cost:.2f}/hr "
+                f"(avg ${avg_hourly:.2f}/hr, {hourly_cost / max(avg_hourly, 0.01):.1f}x)"
+            )
+
+    return {'hourly_cost': hourly_cost, 'hourly_count': hourly_count, 'avg_hourly': avg_hourly}

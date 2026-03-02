@@ -26,6 +26,15 @@ from core.services.llm_provider_registry import (
 
 logger = logging.getLogger(__name__)
 
+# Categories eligible for economy-tier LLM routing
+ECONOMY_ELIGIBLE_CATEGORIES = {
+    'content', 'research', 'analysis', 'monitoring',
+    'social_media', 'seo', 'reporting',
+}
+
+# Subset used in conservative mode
+CONSERVATIVE_ECONOMY_CATEGORIES = {'monitoring', 'reporting'}
+
 
 class AgentLLMRouter:
     """
@@ -51,6 +60,12 @@ class AgentLLMRouter:
     _instance = None
     _initialized = False
 
+    ECONOMY_MODELS = {
+        'primary': {'provider': 'together', 'model_id': 'deepseek-ai/DeepSeek-V3'},
+        'fallback_1': {'provider': 'deepseek', 'model_id': 'deepseek-chat'},
+        'fallback_2': {'provider': 'together', 'model_id': 'meta-llama/Llama-3.3-70B-Instruct-Turbo'},
+    }
+
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
@@ -61,6 +76,9 @@ class AgentLLMRouter:
             self.registry = get_llm_provider_registry()
             self._config_cache: Dict[str, Dict] = {}
             self._cache_loaded = False
+            self._routing_mode_cache: Optional[str] = None
+            self._routing_mode_ts: float = 0.0
+            self._routing_mode_ttl: float = 60.0  # seconds
             AgentLLMRouter._initialized = True
             logger.info("🧠 AgentLLMRouter initialized")
 
@@ -103,6 +121,7 @@ class AgentLLMRouter:
                     'task_overrides': config.task_overrides or {},
                     'custom_params': config.custom_params or {},
                     'use_auto_selection': config.use_auto_selection,
+                    'agent_category': getattr(config, 'agent_category', ''),
                 }
 
             self._cache_loaded = True
@@ -159,6 +178,113 @@ class AgentLLMRouter:
             'use_auto_selection': False,
         }
 
+    # ------------------------------------------------------------------
+    # Tier routing helpers
+    # ------------------------------------------------------------------
+
+    def _get_routing_mode(self) -> str:
+        """Return the current routing mode, cached for 60s."""
+        now = time.time()
+        if self._routing_mode_cache is not None and (now - self._routing_mode_ts) < self._routing_mode_ttl:
+            return self._routing_mode_cache
+
+        try:
+            from core.models import SystemConfiguration
+            config = SystemConfiguration.objects.get(key='llm_routing_mode', is_active=True)
+            mode = config.value if config.value in ('off', 'conservative', 'balanced', 'aggressive') else 'off'
+        except Exception:
+            mode = 'off'
+
+        self._routing_mode_cache = mode
+        self._routing_mode_ts = now
+        return mode
+
+    def _resolve_tier(self, agent_name: str, task_type: Optional[str] = None) -> str:
+        """Determine 'economy' or 'premium' tier for the given agent."""
+        routing_mode = self._get_routing_mode()
+        if routing_mode == 'off':
+            return 'premium'
+
+        # Look up agent category from DB config or AGENT_CATEGORY_MAP
+        category = self._get_agent_category(agent_name)
+
+        if routing_mode == 'conservative':
+            if category in CONSERVATIVE_ECONOMY_CATEGORIES:
+                return self._economy_if_healthy()
+            return 'premium'
+
+        if routing_mode == 'balanced':
+            if category in ECONOMY_ELIGIBLE_CATEGORIES:
+                return self._economy_if_healthy()
+            return 'premium'
+
+        if routing_mode == 'aggressive':
+            # Economy for everything except agents needing tool calling
+            if self._agent_requires_tools(agent_name):
+                return 'premium'
+            return self._economy_if_healthy()
+
+        return 'premium'
+
+    def _economy_if_healthy(self) -> str:
+        """Return 'economy' only if the primary economy provider is healthy."""
+        try:
+            from core.services.provider_health_tracker import get_provider_health_tracker
+            tracker = get_provider_health_tracker()
+            if tracker.is_provider_degraded('together'):
+                logger.info("Economy provider 'together' is degraded, falling back to premium")
+                return 'premium'
+        except Exception:
+            pass
+        return 'economy'
+
+    def _get_agent_category(self, agent_name: str) -> str:
+        """Get agent category from the DB config cache."""
+        self._load_config_cache()
+        config = self._config_cache.get(agent_name, {})
+        if config.get('agent_category'):
+            return config['agent_category']
+        # Fall back to AgentLLMConfig DB row
+        try:
+            from core.models_llm_routing import AgentLLMConfig
+            row = AgentLLMConfig.objects.filter(agent_name=agent_name, is_active=True).values_list('agent_category', flat=True).first()
+            return row or 'default'
+        except Exception:
+            return 'default'
+
+    def _agent_requires_tools(self, agent_name: str) -> bool:
+        """Check if the agent's configured provider requires tool calling support."""
+        config = self.get_agent_config(agent_name)
+        primary = config.get('primary', {})
+        # If the agent is configured to use tools, it needs a provider that supports them
+        if config.get('custom_params', {}).get('tools'):
+            return True
+        # Check if the provider model supports tools
+        try:
+            from core.models_llm_routing import LLMModel
+            model = LLMModel.objects.filter(
+                provider__name=primary.get('provider', ''),
+                model_id=primary.get('model_id', ''),
+            ).first()
+            return model.supports_tools if model else False
+        except Exception:
+            return False
+
+    def _check_budget_ok(self, agent_name: str) -> bool:
+        """Check LUNGS budget before allowing an LLM call."""
+        routing_mode = self._get_routing_mode()
+        if routing_mode == 'off':
+            return True
+        try:
+            from core.services.lungs import get_lungs_monitor
+            lungs = get_lungs_monitor()
+            allowed, reason = lungs.can_breathe(agent=agent_name)
+            if not allowed:
+                logger.warning(f"Budget exceeded for {agent_name}: {reason}")
+            return allowed
+        except Exception:
+            return True  # Fail open
+
     def route_completion(
         self,
         agent_name: str,
@@ -194,13 +320,47 @@ class AgentLLMRouter:
         """
         config = self.get_agent_config(agent_name)
 
-        # Check for task-specific override
-        model_config = config['primary']
+        # Budget guardrail — block if daily budget exceeded
+        if not self._check_budget_ok(agent_name):
+            return LLMResponse(
+                success=False, content='',
+                provider='none', model='none',
+                error='Daily budget exceeded',
+                tokens_input=0, tokens_output=0, tokens_total=0,
+                latency_ms=0, cost=0.0,
+            )
+
+        # Tier-aware model selection
+        tier = self._resolve_tier(agent_name, task_type)
+
+        # Check for task-specific override (overrides tier)
+        model_config = None
         if task_type and task_type in config.get('task_overrides', {}):
             override = config['task_overrides'][task_type]
             if 'provider' in override and 'model_id' in override:
                 model_config = override
                 logger.debug(f"Using task override for {agent_name}/{task_type}")
+
+        if model_config is None:
+            if tier == 'economy':
+                model_config = self.ECONOMY_MODELS['primary']
+            else:
+                model_config = config['primary']
+
+        # Build fallback chain based on tier
+        if tier == 'economy':
+            fallback_chain = [
+                self.ECONOMY_MODELS['fallback_1'],
+                self.ECONOMY_MODELS['fallback_2'],
+                config.get('fallback'),  # premium escape hatch
+            ]
+        else:
+            fallback_chain = [
+                config.get('fallback'),
+                self.ECONOMY_MODELS['primary'],  # cost-saving last resort
+            ]
+        # Remove None entries
+        fallback_chain = [fb for fb in fallback_chain if fb]
 
         # Build request
         request = LLMRequest(
@@ -233,30 +393,32 @@ class AgentLLMRouter:
             was_fallback=False,
         )
 
-        # If primary failed, try fallback
-        if not response.success and config.get('fallback'):
-            fallback_config = config['fallback']
-            logger.warning(
-                f"Primary model failed for {agent_name}, trying fallback: "
-                f"{fallback_config['provider']}:{fallback_config['model_id']}"
-            )
+        # If primary failed, walk the fallback chain
+        if not response.success and fallback_chain:
+            for fb_config in fallback_chain:
+                logger.warning(
+                    f"Model failed for {agent_name}, trying fallback: "
+                    f"{fb_config['provider']}:{fb_config['model_id']}"
+                )
 
-            response = self.registry.complete(
-                provider=fallback_config['provider'],
-                model_id=fallback_config['model_id'],
-                request=request
-            )
+                response = self.registry.complete(
+                    provider=fb_config['provider'],
+                    model_id=fb_config['model_id'],
+                    request=request
+                )
 
-            # Log fallback call
-            self._log_call(
-                agent_name=agent_name,
-                provider=fallback_config['provider'],
-                model_id=fallback_config['model_id'],
-                response=response,
-                task_type=task_type,
-                user=user,
-                was_fallback=True,
-            )
+                self._log_call(
+                    agent_name=agent_name,
+                    provider=fb_config['provider'],
+                    model_id=fb_config['model_id'],
+                    response=response,
+                    task_type=task_type,
+                    user=user,
+                    was_fallback=True,
+                )
+
+                if response.success:
+                    break
 
         return response
 
@@ -292,6 +454,22 @@ class AgentLLMRouter:
                 error_type='' if response.success else 'api_error',
                 error_message=response.error or '',
             )
+
+            # Emit OpsRunEvent if a tracker is active on this thread
+            try:
+                from core.tools.ops_run_tracker import get_active_tracker
+                tracker = get_active_tracker()
+                if tracker:
+                    tracker.info(f'LLM: {provider}:{model_id}', {
+                        'agent': agent_name,
+                        'tokens': response.tokens_total,
+                        'cost': float(response.cost),
+                        'latency_ms': response.latency_ms,
+                        'success': response.success,
+                        'was_fallback': was_fallback,
+                    })
+            except Exception:
+                pass
 
             # Update agent config stats
             try:
@@ -373,6 +551,36 @@ class AgentLLMRouter:
 
         # Default
         return {'provider': 'openai', 'model_id': 'gpt-5.1'}
+
+    def ping_providers(self) -> Dict[str, Any]:
+        """Ping each economy+premium provider with a minimal completion."""
+        results = {}
+        test_providers = [
+            ('together', 'deepseek-ai/DeepSeek-V3'),
+            ('deepseek', 'deepseek-chat'),
+            ('openai', 'gpt-5-mini'),
+            ('anthropic', 'claude-3.5-haiku'),
+        ]
+        for provider, model_id in test_providers:
+            start = time.time()
+            try:
+                resp = self.registry.complete(
+                    provider=provider,
+                    model_id=model_id,
+                    request=LLMRequest(prompt='ping', max_tokens=5),
+                )
+                results[provider] = {
+                    'ok': resp.success,
+                    'latency_ms': int((time.time() - start) * 1000),
+                    'model': model_id,
+                }
+            except Exception as e:
+                results[provider] = {
+                    'ok': False,
+                    'error': str(e)[:200],
+                    'model': model_id,
+                }
+        return results
 
     def invalidate_cache(self):
         """Invalidate the config cache to reload from database"""
