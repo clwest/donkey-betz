@@ -8,7 +8,8 @@ import {
   postObsUpload,
   type ObsResponse,
 } from '@/lib/cockpitApi'
-import { Video, Circle, Square, Upload, RefreshCw, Wifi, WifiOff, Clock, HardDrive, AlertTriangle } from 'lucide-react'
+import { Video, Circle, Square, Upload, RefreshCw, Wifi, WifiOff, Clock, HardDrive, AlertTriangle, ExternalLink, Copy, Check } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
@@ -27,6 +28,7 @@ export default function CockpitObsPage() {
   const [uploadTags, setUploadTags] = useState('')
   const [stopBeforeUpload, setStopBeforeUpload] = useState(true)
   const [uploadResult, setUploadResult] = useState<ObsResponse | null>(null)
+  const [copied, setCopied] = useState<string | null>(null)
 
   const isRecording = status?.result?.isRecording === true
   const bridgeReachable = status?.bridgeReachable ?? health?.bridgeReachable ?? false
@@ -288,17 +290,62 @@ export default function CockpitObsPage() {
           </div>
         </div>
 
-        {uploadResult?.ok && uploadResult.result && (
-          <div className="rounded-lg border border-green-500/20 bg-green-500/5 px-4 py-3 text-sm text-green-400">
-            Upload successful! {(() => {
-              const r = uploadResult.result as Record<string, unknown>
-              const video = r?.video as Record<string, unknown> | undefined
-              const media = r?.media as Record<string, unknown> | undefined
-              const id = video?.id ?? media?.id
-              return id ? `Video ID: ${String(id)}` : ''
-            })()}
-          </div>
-        )}
+        {uploadResult?.ok && uploadResult.result && (() => {
+          const r = uploadResult.result as Record<string, unknown>
+          const video = (r?.video ?? r?.media) as Record<string, unknown> | undefined
+          const videoId = video?.id ? String(video.id) : null
+          const videoUrl = video?.url ? String(video.url) : null
+          const seqNum = video?.sequential_number
+          const resolution = video?.resolution ? String(video.resolution) : null
+          const duration = video?.duration ? Number(video.duration) : null
+
+          const copyToClipboard = (text: string, label: string) => {
+            navigator.clipboard.writeText(text)
+            setCopied(label)
+            setTimeout(() => setCopied(null), 2000)
+          }
+
+          return (
+            <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-green-400">Upload successful!</span>
+                <Link
+                  to="/video-studio"
+                  className="flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-500"
+                >
+                  <ExternalLink size={12} /> View in Video Studio
+                </Link>
+              </div>
+
+              <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-gray-400">
+                {seqNum != null && <span>Video <span className="text-white font-mono">#{String(seqNum)}</span></span>}
+                {resolution && <span>{resolution}</span>}
+                {duration != null && <span>{Math.floor(duration / 60)}:{String(duration % 60).padStart(2, '0')}</span>}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {videoId && (
+                  <button
+                    onClick={() => copyToClipboard(videoId, 'id')}
+                    className="flex items-center gap-1 rounded bg-dark-border px-2 py-1 text-xs text-gray-400 hover:text-white transition-colors"
+                  >
+                    {copied === 'id' ? <Check size={10} className="text-green-400" /> : <Copy size={10} />}
+                    ID: <span className="font-mono">{videoId.slice(0, 8)}...</span>
+                  </button>
+                )}
+                {videoUrl && (
+                  <button
+                    onClick={() => copyToClipboard(videoUrl, 'url')}
+                    className="flex items-center gap-1 rounded bg-dark-border px-2 py-1 text-xs text-gray-400 hover:text-white transition-colors"
+                  >
+                    {copied === 'url' ? <Check size={10} className="text-green-400" /> : <Copy size={10} />}
+                    Copy URL
+                  </button>
+                )}
+              </div>
+            </div>
+          )
+        })()}
       </div>
     </div>
   )
