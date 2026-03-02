@@ -1141,15 +1141,16 @@ PA_TOOL_SCHEMAS = [
             "detail (full metadata for one video by UUID or sequential number), "
             "resolve (normalize any video reference to full metadata), "
             "transcribe (kick off Whisper transcription — async, returns transcript_id), "
-            "transcript_status (check transcription progress and get text when done)."
+            "transcript_status (check transcription progress and get text when done), "
+            "content_pack (generate titles/summary/chapters/YT description from transcript — async, returns task_id)."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "search", "detail", "resolve", "transcribe", "transcript_status"],
-                    "description": "list/search/detail=browse videos, resolve=normalize ref, transcribe=start Whisper, transcript_status=check progress.",
+                    "enum": ["list", "search", "detail", "resolve", "transcribe", "transcript_status", "content_pack"],
+                    "description": "list/search/detail=browse videos, resolve=normalize ref, transcribe=start Whisper, transcript_status=check progress, content_pack=generate content pack.",
                 },
                 "query": {
                     "type": "string",

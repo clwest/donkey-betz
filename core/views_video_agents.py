@@ -1,5 +1,5 @@
 """
-Video Agents API — resolve, transcribe, transcript access.
+Video Agents API — resolve, transcribe, transcript access, content packs.
 """
 
 import json
@@ -154,4 +154,46 @@ def video_transcript_detail(request, transcript_id):
             'error': t.error or None,
             'created_at': t.created_at.isoformat() if t.created_at else None,
         },
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def video_content_pack(request):
+    """POST /api/v1/video/content-pack/ — generate a content pack from video transcript."""
+    from core.video_resolver import resolve_video
+    from content.models import VideoTranscript
+    from core.tasks import generate_video_content_pack_task
+
+    try:
+        body = json.loads(request.body) if request.body else {}
+    except json.JSONDecodeError:
+        return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
+
+    language = body.pop('language', 'en')
+
+    resolved = resolve_video(body, user=request.user)
+    if not resolved:
+        return JsonResponse({'ok': False, 'error': 'Video not found'}, status=404)
+
+    # Verify a completed transcript exists
+    has_transcript = VideoTranscript.objects.filter(
+        video_id=resolved.id, status='completed'
+    ).exists()
+    if not has_transcript:
+        return JsonResponse({
+            'ok': False,
+            'error': 'No completed transcript. Transcribe the video first.',
+        }, status=400)
+
+    task = generate_video_content_pack_task.delay(
+        resolved.id, str(request.user.id), language
+    )
+
+    return JsonResponse({
+        'ok': True,
+        'task_id': str(task.id),
+        'status': 'queued',
+        'video_id': resolved.id,
+        'video_title': resolved.title,
     })

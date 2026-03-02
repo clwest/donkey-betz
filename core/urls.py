@@ -1209,6 +1209,7 @@ from core.views_content import (
 )
 from core.views_video_agents import (
     video_resolve, video_transcribe, video_transcripts_list, video_transcript_detail,
+    video_content_pack,
 )
 from core.views_video import (
     text_to_video, image_to_video, check_video_status, get_video_detail,
@@ -2723,6 +2724,7 @@ urlpatterns = [
     path('api/v1/video/transcribe/', video_transcribe, name='video-transcribe'),
     path('api/v1/video/transcripts/', video_transcripts_list, name='video-transcripts-list'),
     path('api/v1/video/transcripts/<uuid:transcript_id>/', video_transcript_detail, name='video-transcript-detail'),
+    path('api/v1/video/content-pack/', video_content_pack, name='video-content-pack'),
 
     # Video History endpoints (Session 44: Video Gallery)
     path('api/v1/video/history/', get_video_history, name='video-history'),
