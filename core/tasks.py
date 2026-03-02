@@ -26332,11 +26332,14 @@ def generate_human_attention_items():
         # Session 984: Fixed data_type filter — old values (market_alert, security_alert, etc.)
         # never matched any actual spider data. Real types from base_spider.py:
         # opportunity, market_data, news, trend_data, competitor_info, job_posting, etc.
+        # Session 1076: Exclude 'news' — raw headlines are not actionable and create
+        # boardroom noise (6+ items per cycle from Reuters/BBC/TechCrunch/etc).
+        # News data is still collected by spiders and available via spider_data_tool.
         try:
             from core.models_unified_system import SpiderData
             recent_spider_data = SpiderData.objects.filter(
                 created_at__gte=timezone.now() - timedelta(hours=4),
-                data_type__in=['opportunity', 'market_data', 'news', 'trend_data', 'competitor_info']
+                data_type__in=['opportunity', 'market_data', 'trend_data', 'competitor_info']
             ).order_by('-created_at')[:10]
 
             for data in recent_spider_data:
@@ -26408,6 +26411,9 @@ def generate_human_attention_items():
             logger.warning(f"Stock alert check failed: {e}")
 
         # 6. Session 984: Check for publish-ready blog content awaiting review
+        # Session 1076: Suppress low-quality/novelty blogs from Boardroom.
+        # Quality 1% / Novelty 1% items are noise — only surface blogs with
+        # meaningful scores (>= 0.2 on both) to preserve human attention bandwidth.
         try:
             from core.models_unified_system import SelfBlog
             ready_blogs = SelfBlog.objects.filter(
@@ -26416,15 +26422,23 @@ def generate_human_attention_items():
             ).order_by('-created_at')[:3]
 
             for blog in ready_blogs:
+                q = blog.quality_score or 0
+                n = blog.novelty_score or 0
+                if q < 0.2 and n < 0.2:
+                    logger.debug(
+                        f"Suppressed low-signal blog attention: '{blog.title}' "
+                        f"(quality={q:.0%}, novelty={n:.0%})"
+                    )
+                    continue
                 attention_bridge.create_system_alert(
                     alert_type='content_ready',
                     title=f"Blog Ready: {blog.title}"[:200] if blog.title else "New blog ready for review",
-                    summary=f"Quality: {blog.quality_score:.0f}% | Novelty: {blog.novelty_score:.0f}% | {blog.word_count} words",
+                    summary=f"Quality: {q:.0%} | Novelty: {n:.0%} | {blog.word_count} words",
                     urgency='low',
                     payload={
                         'blog_id': str(blog.id),
-                        'quality_score': blog.quality_score,
-                        'novelty_score': blog.novelty_score,
+                        'quality_score': q,
+                        'novelty_score': n,
                         'word_count': blog.word_count,
                     }
                 )
