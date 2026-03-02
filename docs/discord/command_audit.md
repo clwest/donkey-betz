@@ -285,23 +285,56 @@ No slash commands — event-driven Cog only. **Keep** as-is.
 
 ### Projected Result
 
-| Metric | Before | After |
-|--------|--------|-------|
-| Active commands | 94 | **58** |
-| Free slots | 6 | **42** |
+| Metric | Before | After (actual) |
+|--------|--------|----------------|
+| Active commands | 94 | **95** (48 standalone + 47 group subcommands) |
+| Slots used | 94 | **59** (48 standalone + 11 groups) |
+| Free slots | 6 | **41** |
 | Dead code removed | 0 | 21 (4 disabled Cogs) |
+| Commands dropped | 0 | 5 |
 
 ---
 
-## Commands Kept As-Is (no change)
+## Phase G2 Result (completed 2026-03-01)
 
-These 58 commands survive Phase G2 as either standalone or hub commands:
+**Slot usage: 59 / 100** (48 standalone + 11 Groups)
 
-**Standalone (33):** status, trending, spiders, predictions, odds, arb, bankroll, bet, resolve, futures, slip, ask, create, research, clear, sessions, link, unlink, gallery, profile, opportunities, apply, track, digest, alerts, subscribe, tier, create-content, content-status, setup, audit-contract, blockchain-status, consult, advisors, publish-gumroad, help, ml-scoring
+### Standalone commands (48)
 
-**Hub commands (12):** agents, studio, davinci, series, situation, podcast, client, review, voice, legal, workflow, code
+status, trending, spiders, predictions, odds, arb, bankroll, bet, resolve, futures, slip, ask, create, research, clear, sessions, link, unlink, gallery, profile, opportunities, apply, track, digest, alerts, subscribe, tier, create-content, content-status, setup, audit-contract, blockchain-status, consult, advisors, publish-gumroad, help, ml-scoring, obs-status, obs-record, obs-upload, agents, agent-list, agent-task, voice-ask, voice-chat, workflow-list, workflow-run, agent
 
-**OBS (3):** obs-status, obs-record, obs-upload
+### Hub commands (11 Groups = 11 slots, 47 subcommands)
+
+| Group | Subcommands |
+|-------|-------------|
+| `/studio` | create, list, status, pause, resume, performance, episode |
+| `/series` | create, status, list, view |
+| `/davinci` | render, grade, status, download, videos |
+| `/situation` | list, status, run, alerts |
+| `/podcast` | create, list, status, script |
+| `/client` | add, list, deliver, invite |
+| `/review` | show, list, pro, con, decide |
+| `/voice` | join, speak, ask |
+| `/legal` | draft, analyze, case |
+| `/code` | generate, review |
+| `/human` | (pre-existing group, unchanged) |
+
+### Dropped commands (5)
+
+| Command | Reason |
+|---------|--------|
+| `/cancel` | Redirect to web billing portal |
+| `/billing` | Redirect to web billing portal |
+| `/showroom` | Redirect to web marketplace |
+| `/gumroad-status` | Very niche, use Cockpit |
+| `/trending-grades` | Very niche, use Cockpit |
+
+### Deleted Cogs (4) — 21 dead commands removed
+
+- VoiceMarketplaceCommands (3 commands)
+- PipelineLearningCommands (4 commands)
+- NarrativeCommands (9 commands)
+- ROICommands (5 commands)
 
 ---
 
@@ -313,5 +346,4 @@ No orphan registrations detected — all commands in source are either active or
 
 ## Next Steps
 
-1. **Phase G2:** Implement consolidation merges + drops (target ≤ 70)
-2. **Phase G3:** Add startup command-count gate (warn at 85, fail at 95)
+1. **Phase G3:** Add startup command-count gate (warn at 85, fail at 95)
