@@ -492,17 +492,13 @@ class DonkeyBetzBot(commands.Bot):
         await self.add_cog(ClientCommands(self))  # Session 432: Phase 3 Client Management
         await self.add_cog(AgentAccessCommands(self))  # Session 434: Phase 5 Full Agent Access
         await self.add_cog(VoiceCommands(self))  # Session 438: Phase 8 Voice AI
-        # Session 558: Temporarily disabled to stay under 100 command limit
-        # await self.add_cog(VoiceMarketplaceCommands(self))  # Session 440: Voice Marketplace
+        # Phase G2: VoiceMarketplace, PipelineLearning, Narrative, ROI Cogs deleted
         await self.add_cog(ContentPipelineCommands(self))  # Session 440: Content Pipeline
         await self.add_cog(SeriesCommands(self))  # Session 445: AI Series Workflow
         await self.add_cog(StudioCommands(self))  # Session 466: Autonomous Content Studio
-        # await self.add_cog(PipelineLearningCommands(self))  # Session 449: Pipeline Learning Loops
         await self.add_cog(RoleManager(self))  # Session 439: Subscription role management
         await self.add_cog(HelpCommands(self))
         await self.add_cog(ReactionFeedbackCog(self))  # Session 452: Auto-feedback from reactions
-        # await self.add_cog(NarrativeCommands(self))  # Session 471: Narrative Drift Detector
-        # await self.add_cog(ROICommands(self))  # Session 472: ROI Metrics
         await self.add_cog(ResolveCommands(self))  # Session 478: DaVinci Resolve Integration
         await self.add_cog(SituationCommands(self))  # Session 480: All 19 Autonomous Situations
         await self.add_cog(GumroadCommands(self))  # Session 487: Gumroad Publishing (Golden Egg)
@@ -517,7 +513,7 @@ class DonkeyBetzBot(commands.Bot):
         # Sync slash commands with Discord
         try:
             # Donkey Betz guild ID - commands only work in this server
-            # Session 507: We have 99 commands (under 100 limit after removing 4)
+            # Phase G2: 59 slots used (Groups count as 1 each)
             guild = discord.Object(id=971148613109555212)
 
             # First, copy all global commands to the guild
@@ -3777,143 +3773,7 @@ class ContentCommands(commands.Cog):
             )
 
     # Session 439: Subscription management commands
-    @app_commands.command(name="cancel", description="Cancel your subscription")
-    async def cancel(self, interaction: discord.Interaction):
-        """Cancel the user's subscription at end of billing period."""
-        await interaction.response.defer(ephemeral=True)
-
-        try:
-            from django.contrib.auth import get_user_model
-            from core.models import EnhancedUserProfile
-            from core.services.stripe_subscription import cancel_subscription
-
-            User = get_user_model()
-
-            @sync_to_async
-            def get_user_profile(discord_id):
-                user = User.objects.filter(discord_id=str(discord_id)).first()
-                if not user:
-                    return None, None
-                profile = EnhancedUserProfile.objects.filter(user=user).first()
-                return user, profile
-
-            user, profile = await get_user_profile(interaction.user.id)
-
-            if not user:
-                await interaction.followup.send(
-                    "Please link your account first with `/link`.",
-                    ephemeral=True
-                )
-                return
-
-            if not profile or profile.subscription_tier == 'free':
-                await interaction.followup.send(
-                    "You don't have an active subscription to cancel.",
-                    ephemeral=True
-                )
-                return
-
-            # Cancel subscription
-            success = await cancel_subscription(user, at_period_end=True)
-
-            if success:
-                embed = discord.Embed(
-                    title="Subscription Cancellation Scheduled",
-                    description=(
-                        f"Your **{profile.subscription_tier.title()}** subscription "
-                        "will be canceled at the end of your current billing period.\n\n"
-                        "You'll continue to have access until then."
-                    ),
-                    color=discord.Color.orange()
-                )
-                embed.add_field(
-                    name="Changed your mind?",
-                    value="Use `/subscribe` to resubscribe anytime!",
-                    inline=False
-                )
-                await interaction.followup.send(embed=embed, ephemeral=True)
-            else:
-                await interaction.followup.send(
-                    "Failed to cancel subscription. Please try again or contact support.",
-                    ephemeral=True
-                )
-
-        except Exception as e:
-            logger.error(f"/cancel command error: {e}")
-            await interaction.followup.send(
-                f"Error: {str(e)[:200]}",
-                ephemeral=True
-            )
-
-    @app_commands.command(name="billing", description="Access your billing portal")
-    async def billing(self, interaction: discord.Interaction):
-        """Get link to Stripe Customer Portal for billing management."""
-        await interaction.response.defer(ephemeral=True)
-
-        try:
-            from django.contrib.auth import get_user_model
-            from core.models import EnhancedUserProfile
-            from core.services.stripe_subscription import stripe_subscription_service
-
-            User = get_user_model()
-
-            @sync_to_async
-            def get_user_profile(discord_id):
-                user = User.objects.filter(discord_id=str(discord_id)).first()
-                if not user:
-                    return None, None
-                profile = EnhancedUserProfile.objects.filter(user=user).first()
-                return user, profile
-
-            user, profile = await get_user_profile(interaction.user.id)
-
-            if not user:
-                await interaction.followup.send(
-                    "Please link your account first with `/link`.",
-                    ephemeral=True
-                )
-                return
-
-            if not profile or not profile.stripe_customer_id:
-                await interaction.followup.send(
-                    "No billing history found. Subscribe first with `/subscribe`.",
-                    ephemeral=True
-                )
-                return
-
-            # Get billing portal URL
-            portal_url = await stripe_subscription_service.get_billing_portal_url(
-                user,
-                return_url="https://discord.com/channels/@me"
-            )
-
-            if portal_url:
-                embed = discord.Embed(
-                    title="Billing Portal",
-                    description=(
-                        "Manage your subscription, update payment methods, "
-                        "and view invoices in the Stripe Customer Portal."
-                    ),
-                    color=discord.Color.blue()
-                )
-                embed.add_field(
-                    name="Access Portal",
-                    value=f"[Click here to open Billing Portal]({portal_url})",
-                    inline=False
-                )
-                await interaction.followup.send(embed=embed, ephemeral=True)
-            else:
-                await interaction.followup.send(
-                    "Failed to access billing portal. Please try again.",
-                    ephemeral=True
-                )
-
-        except Exception as e:
-            logger.error(f"/billing command error: {e}")
-            await interaction.followup.send(
-                f"Error: {str(e)[:200]}",
-                ephemeral=True
-            )
+    # /cancel and /billing removed in Phase G2 — use web billing portal instead
 
 
 class VoiceCommands(commands.Cog):
@@ -3923,6 +3783,8 @@ class VoiceCommands(commands.Cog):
     Enables voice channel interaction with AI assistant.
     Uses ElevenLabs for TTS and OpenAI Whisper for STT.
     """
+
+    voice_group = app_commands.Group(name="voice", description="Voice AI")
 
     def __init__(self, bot: DonkeyBetzBot):
         self.bot = bot
@@ -3935,7 +3797,7 @@ class VoiceCommands(commands.Cog):
             self.voice_service = init_voice_service(self.bot)
         return self.voice_service
 
-    @app_commands.command(name="voice", description="Voice AI: Join a voice channel for voice interaction")
+    @voice_group.command(name="join", description="Voice AI: Join a voice channel for voice interaction")
     @app_commands.describe(
         action="What to do",
         voice="Voice to use for speaking (optional)"
@@ -3945,7 +3807,7 @@ class VoiceCommands(commands.Cog):
         app_commands.Choice(name="Leave - Leave voice channel", value="leave"),
         app_commands.Choice(name="Voices - List available voices", value="voices"),
     ])
-    async def voice(
+    async def voice_join(
         self,
         interaction: discord.Interaction,
         action: str,
@@ -4069,7 +3931,7 @@ class VoiceCommands(commands.Cog):
                 ephemeral=True
             )
 
-    @app_commands.command(name="speak", description="Make the bot speak a message in voice channel")
+    @voice_group.command(name="speak", description="Make the bot speak a message in voice channel")
     @app_commands.describe(
         message="What to say",
         voice="Voice to use (optional)"
@@ -4128,7 +3990,7 @@ class VoiceCommands(commands.Cog):
 
     # Session 507: Removed /beep command to stay under Discord's 100 command limit
 
-    @app_commands.command(name="ask-voice", description="Ask AI and hear the response in voice channel")
+    @voice_group.command(name="ask", description="Ask AI and hear the response in voice channel")
     @app_commands.describe(question="Your question for the AI")
     async def ask_voice(self, interaction: discord.Interaction, question: str):
         """Ask the AI and hear the response spoken in voice channel."""
@@ -4184,1078 +4046,7 @@ class VoiceCommands(commands.Cog):
             )
 
 
-class VoiceMarketplaceCommands(commands.Cog):
-    """
-    Session 440: Voice Marketplace Commands.
-
-    Browse, clone, and sell AI voices.
-    Part of the AI Pixar creative pipeline.
-    """
-
-    def __init__(self, bot: DonkeyBetzBot):
-        self.bot = bot
-
-    @app_commands.command(name="voice-market", description="Voice Marketplace: Browse and manage AI voices")
-    @app_commands.describe(
-        action="What to do",
-        query="Search query or voice ID"
-    )
-    @app_commands.choices(action=[
-        app_commands.Choice(name="Browse - View popular voices", value="browse"),
-        app_commands.Choice(name="Search - Search for voices", value="search"),
-        app_commands.Choice(name="My Voices - View your cloned voices", value="my-voices"),
-        app_commands.Choice(name="Earnings - View your voice earnings", value="earnings"),
-        app_commands.Choice(name="Publish - Make voice public in marketplace", value="publish"),
-        app_commands.Choice(name="Unpublish - Make voice private", value="unpublish"),
-        app_commands.Choice(name="Preview - Hear a voice sample", value="preview"),
-    ])
-    async def voice_market(
-        self,
-        interaction: discord.Interaction,
-        action: str,
-        query: Optional[str] = None
-    ):
-        """Voice marketplace browsing and management."""
-        await interaction.response.defer(ephemeral=True)
-
-        try:
-            from core.models import VoiceProfile
-
-            if action == "browse":
-                # Get top rated public voices (async-safe)
-                from asgiref.sync import sync_to_async
-
-                @sync_to_async
-                def get_public_voices():
-                    voices = list(VoiceProfile.objects.filter(
-                        is_public=True, is_active=True
-                    ).order_by('-is_featured', '-average_rating')[:10])
-                    return voices
-
-                voices = await get_public_voices()
-
-                if not voices:
-                    await interaction.followup.send(
-                        "No voices in marketplace yet. Be the first to publish! Use `/voice-clone start`",
-                        ephemeral=True
-                    )
-                    return
-
-                embed = discord.Embed(
-                    title="Voice Marketplace",
-                    description="Top voices available for your creative projects",
-                    color=discord.Color.purple(),
-                    timestamp=datetime.now()
-                )
-
-                for voice in voices:
-                    stars = "★" * int(voice.average_rating) + "☆" * (5 - int(voice.average_rating))
-                    featured = " ⭐ FEATURED" if voice.is_featured else ""
-                    embed.add_field(
-                        name=f"{voice.name}{featured}",
-                        value=(
-                            f"{stars} ({voice.rating_count} reviews)\n"
-                            f"**{voice.get_price_display()}** | {voice.gender.title()} | {voice.age_range.replace('_', ' ').title()}\n"
-                            f"`/voice-market preview {str(voice.id)[:8]}`"
-                        ),
-                        inline=True
-                    )
-
-                embed.set_footer(text="Use /voice-clone start to create your own voice!")
-                await interaction.followup.send(embed=embed, ephemeral=True)
-
-            elif action == "search":
-                if not query:
-                    await interaction.followup.send(
-                        "Please provide a search query. Example: `/voice-market search british narrator`",
-                        ephemeral=True
-                    )
-                    return
-
-                from django.db.models import Q
-                from asgiref.sync import sync_to_async
-
-                @sync_to_async
-                def search_voices(search_query):
-                    voices = list(VoiceProfile.objects.filter(
-                        Q(is_public=True, is_active=True) &
-                        (Q(name__icontains=search_query) |
-                         Q(description__icontains=search_query) |
-                         Q(accent__icontains=search_query))
-                    )[:10])
-                    return voices
-
-                voices = await search_voices(query)
-
-                if not voices:
-                    await interaction.followup.send(
-                        f"No voices found matching '{query}'",
-                        ephemeral=True
-                    )
-                    return
-
-                embed = discord.Embed(
-                    title=f"Voice Search: {query}",
-                    description=f"Found {len(voices)} voices",
-                    color=discord.Color.blue(),
-                    timestamp=datetime.now()
-                )
-
-                for voice in voices:
-                    embed.add_field(
-                        name=voice.name,
-                        value=f"{voice.get_price_display()} | {voice.gender.title()} | ★{voice.average_rating:.1f}",
-                        inline=True
-                    )
-
-                await interaction.followup.send(embed=embed, ephemeral=True)
-
-            elif action == "my-voices":
-                # Get user from Discord ID (async-safe)
-                from core.models import UnifiedUser
-                from asgiref.sync import sync_to_async
-
-                @sync_to_async
-                def get_user_voices(discord_id):
-                    user = UnifiedUser.objects.filter(discord_id=str(discord_id)).first()
-                    if not user:
-                        return None, []
-                    voices = list(VoiceProfile.objects.filter(owner=user, is_active=True))
-                    return user, voices
-
-                user, voices = await get_user_voices(interaction.user.id)
-
-                if not user:
-                    await interaction.followup.send(
-                        "Please link your Discord account first using `/link`",
-                        ephemeral=True
-                    )
-                    return
-
-                if not voices:
-                    await interaction.followup.send(
-                        "You don't have any voices yet! Use `/voice-clone start` to create one.",
-                        ephemeral=True
-                    )
-                    return
-
-                embed = discord.Embed(
-                    title="Your Voices",
-                    description=f"You have {len(voices)} voice(s)",
-                    color=discord.Color.gold(),
-                    timestamp=datetime.now()
-                )
-
-                for voice in voices:
-                    status = "📢 Public" if voice.is_public else "🔒 Private"
-                    embed.add_field(
-                        name=f"{voice.name} {status}",
-                        value=(
-                            f"Revenue: **${voice.total_revenue:.2f}**\n"
-                            f"Uses: {voice.total_uses} | Rating: ★{voice.average_rating:.1f}"
-                        ),
-                        inline=True
-                    )
-
-                await interaction.followup.send(embed=embed, ephemeral=True)
-
-            elif action == "earnings":
-                from core.models import UnifiedUser
-                from asgiref.sync import sync_to_async
-                from django.db.models import Sum
-
-                @sync_to_async
-                def get_earnings(discord_id):
-                    user = UnifiedUser.objects.filter(discord_id=str(discord_id)).first()
-                    if not user:
-                        return None, 0, 0, 0
-                    voices = VoiceProfile.objects.filter(owner=user, is_active=True)
-                    total_revenue = voices.aggregate(total=Sum('total_revenue'))['total'] or 0
-                    total_uses = voices.aggregate(total=Sum('total_uses'))['total'] or 0
-                    voice_count = voices.count()
-                    return user, total_revenue, total_uses, voice_count
-
-                user, total_revenue, total_uses, voice_count = await get_earnings(interaction.user.id)
-
-                if not user:
-                    await interaction.followup.send(
-                        "Please link your Discord account first using `/link`",
-                        ephemeral=True
-                    )
-                    return
-
-                embed = discord.Embed(
-                    title="Voice Earnings Summary",
-                    color=discord.Color.green(),
-                    timestamp=datetime.now()
-                )
-                embed.add_field(name="Total Revenue", value=f"**${total_revenue:.2f}**", inline=True)
-                embed.add_field(name="Total Uses", value=f"**{total_uses}**", inline=True)
-                embed.add_field(name="Voice Count", value=f"**{voice_count}**", inline=True)
-
-                await interaction.followup.send(embed=embed, ephemeral=True)
-
-            elif action == "publish":
-                # Publish a voice to the marketplace
-                from core.models import UnifiedUser
-                from asgiref.sync import sync_to_async
-
-                if not query:
-                    await interaction.followup.send(
-                        "Please provide your voice name. Example: `/voice-market publish DonkeyKing's Voice`",
-                        ephemeral=True
-                    )
-                    return
-
-                @sync_to_async
-                def publish_voice(discord_id, voice_name):
-                    user = UnifiedUser.objects.filter(discord_id=str(discord_id)).first()
-                    if not user:
-                        return None, None, "Please link your Discord account first using `/link`"
-
-                    # Find the voice by name (case-insensitive partial match)
-                    voice = VoiceProfile.objects.filter(
-                        owner=user,
-                        name__icontains=voice_name,
-                        is_active=True
-                    ).first()
-
-                    if not voice:
-                        # List available voices
-                        user_voices = list(VoiceProfile.objects.filter(owner=user, is_active=True).values_list('name', flat=True))
-                        if user_voices:
-                            voice_list = "\n".join(f"• {v}" for v in user_voices)
-                            return None, None, f"Voice '{voice_name}' not found. Your voices:\n{voice_list}"
-                        return None, None, "You don't have any voices. Use `/voice-clone start` to create one."
-
-                    if voice.is_public:
-                        return voice, False, "already_public"
-
-                    # Publish the voice
-                    voice.is_public = True
-                    voice.save(update_fields=['is_public', 'updated_at'])
-                    return voice, True, None
-
-                voice, was_published, error = await publish_voice(interaction.user.id, query)
-
-                if error:
-                    if error == "already_public":
-                        embed = discord.Embed(
-                            title="Already Published",
-                            description=f"**{voice.name}** is already public in the marketplace!",
-                            color=discord.Color.blue()
-                        )
-                        embed.add_field(name="Price", value=voice.get_price_display(), inline=True)
-                        embed.add_field(name="Uses", value=str(voice.total_uses), inline=True)
-                        await interaction.followup.send(embed=embed, ephemeral=True)
-                    else:
-                        await interaction.followup.send(error, ephemeral=True)
-                    return
-
-                # Success! Voice is now public
-                embed = discord.Embed(
-                    title="🎉 Voice Published!",
-                    description=f"**{voice.name}** is now live in the Voice Marketplace!",
-                    color=discord.Color.green()
-                )
-                embed.add_field(name="Price", value=voice.get_price_display(), inline=True)
-                embed.add_field(name="Revenue Split", value="70% to you, 30% platform", inline=True)
-                embed.add_field(
-                    name="Next Steps",
-                    value=(
-                        "• Others can now find your voice with `/voice-market browse`\n"
-                        "• Track earnings with `/voice-market earnings`\n"
-                        "• Use `/voice-market unpublish` to make private again"
-                    ),
-                    inline=False
-                )
-                embed.set_footer(text="Congratulations on joining the Voice Marketplace!")
-
-                await interaction.followup.send(embed=embed, ephemeral=True)
-
-            elif action == "unpublish":
-                # Make a voice private again
-                from core.models import UnifiedUser
-                from asgiref.sync import sync_to_async
-
-                if not query:
-                    await interaction.followup.send(
-                        "Please provide your voice name. Example: `/voice-market unpublish DonkeyKing's Voice`",
-                        ephemeral=True
-                    )
-                    return
-
-                @sync_to_async
-                def unpublish_voice(discord_id, voice_name):
-                    user = UnifiedUser.objects.filter(discord_id=str(discord_id)).first()
-                    if not user:
-                        return None, None, "Please link your Discord account first using `/link`"
-
-                    voice = VoiceProfile.objects.filter(
-                        owner=user,
-                        name__icontains=voice_name,
-                        is_active=True
-                    ).first()
-
-                    if not voice:
-                        return None, None, f"Voice '{voice_name}' not found."
-
-                    if not voice.is_public:
-                        return voice, False, "already_private"
-
-                    voice.is_public = False
-                    voice.save(update_fields=['is_public', 'updated_at'])
-                    return voice, True, None
-
-                voice, was_unpublished, error = await unpublish_voice(interaction.user.id, query)
-
-                if error:
-                    if error == "already_private":
-                        await interaction.followup.send(
-                            f"**{voice.name}** is already private.",
-                            ephemeral=True
-                        )
-                    else:
-                        await interaction.followup.send(error, ephemeral=True)
-                    return
-
-                embed = discord.Embed(
-                    title="🔒 Voice Unpublished",
-                    description=f"**{voice.name}** has been removed from the marketplace.",
-                    color=discord.Color.orange()
-                )
-                embed.add_field(
-                    name="What This Means",
-                    value="• Your voice is no longer searchable\n• Existing purchases still work\n• Use `/voice-market publish` to re-list",
-                    inline=False
-                )
-
-                await interaction.followup.send(embed=embed, ephemeral=True)
-
-            elif action == "preview":
-                # Generate and play a voice preview
-                from asgiref.sync import sync_to_async
-                import io
-
-                if not query:
-                    await interaction.followup.send(
-                        "Please provide a voice ID or name. Example: `/voice-market preview DonkeyKing`",
-                        ephemeral=True
-                    )
-                    return
-
-                @sync_to_async
-                def find_voice(voice_query):
-                    # Try UUID first (partial match from browse)
-                    if len(voice_query) == 8:
-                        voice = VoiceProfile.objects.filter(
-                            id__startswith=voice_query,
-                            is_active=True
-                        ).first()
-                        if voice:
-                            return voice, None
-
-                    # Try name match
-                    voice = VoiceProfile.objects.filter(
-                        name__icontains=voice_query,
-                        is_active=True
-                    ).first()
-                    if voice:
-                        return voice, None
-
-                    return None, f"Voice '{voice_query}' not found."
-
-                voice, error = await find_voice(query)
-
-                if error:
-                    await interaction.followup.send(error, ephemeral=True)
-                    return
-
-                # Check if voice is public or owned by user
-                @sync_to_async
-                def check_access(voice, discord_id):
-                    from core.models import UnifiedUser
-                    if voice.is_public:
-                        return True
-                    user = UnifiedUser.objects.filter(discord_id=str(discord_id)).first()
-                    if user and voice.owner_id == user.id:
-                        return True
-                    return False
-
-                has_access = await check_access(voice, interaction.user.id)
-                if not has_access:
-                    await interaction.followup.send(
-                        "This voice is private. Only the owner can preview it.",
-                        ephemeral=True
-                    )
-                    return
-
-                # Generate preview audio
-                preview_text = voice.sample_text or "Hello! This is a preview of my voice. I can help bring your creative projects to life with natural, expressive speech."
-
-                @sync_to_async
-                def generate_preview(voice_id, text):
-                    import requests
-                    from django.conf import settings
-
-                    api_key = settings.EXTERNAL_API_KEYS.get('ELEVENLABS_API_KEY', '')
-                    if not api_key:
-                        return None, "ElevenLabs API key not configured"
-
-                    response = requests.post(
-                        f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
-                        headers={"xi-api-key": api_key, "Content-Type": "application/json"},
-                        json={"text": text, "model_id": "eleven_multilingual_v2"},
-                        timeout=60
-                    )
-
-                    if response.status_code == 200:
-                        return response.content, None
-                    return None, f"TTS failed: {response.status_code} - {response.text[:100]}"
-
-                # Show "generating" message
-                await interaction.edit_original_response(
-                    embed=discord.Embed(
-                        title=f"🎤 Generating preview for {voice.name}...",
-                        color=discord.Color.blue()
-                    )
-                )
-
-                audio_data, error = await generate_preview(voice.elevenlabs_voice_id, preview_text)
-
-                if error:
-                    await interaction.edit_original_response(
-                        embed=discord.Embed(
-                            title="❌ Preview Failed",
-                            description=error,
-                            color=discord.Color.red()
-                        )
-                    )
-                    return
-
-                # Send the audio file
-                audio_file = discord.File(io.BytesIO(audio_data), filename=f"{voice.name}_preview.mp3")
-
-                embed = discord.Embed(
-                    title=f"🎤 {voice.name} Preview",
-                    description=f"*\"{preview_text[:100]}...\"*" if len(preview_text) > 100 else f"*\"{preview_text}\"*",
-                    color=discord.Color.purple()
-                )
-                embed.add_field(name="Price", value=voice.get_price_display(), inline=True)
-                embed.add_field(name="Rating", value=f"★{voice.average_rating:.1f} ({voice.rating_count} reviews)", inline=True)
-                embed.add_field(name="Uses", value=str(voice.total_uses), inline=True)
-
-                if voice.is_public:
-                    embed.set_footer(text="This voice is available in the marketplace!")
-                else:
-                    embed.set_footer(text="🔒 Private voice")
-
-                await interaction.edit_original_response(embed=embed)
-                await interaction.followup.send(file=audio_file)
-
-                logger.info(f"Voice preview generated: {voice.name}")
-
-        except Exception as e:
-            logger.error(f"/voice-market error: {e}")
-            await interaction.followup.send(f"Error: {str(e)[:200]}", ephemeral=True)
-
-    @app_commands.command(name="voice-buy", description="Purchase voice generation credits")
-    @app_commands.describe(
-        voice_name="Voice name or ID to purchase",
-        text_length="Number of characters you want to generate (e.g., 500)",
-        content_type="What you'll use the voice for"
-    )
-    @app_commands.choices(content_type=[
-        app_commands.Choice(name="Animated Series", value="animated_series"),
-        app_commands.Choice(name="Audiobook", value="audiobook"),
-        app_commands.Choice(name="Video Narration", value="video"),
-        app_commands.Choice(name="Podcast", value="podcast"),
-        app_commands.Choice(name="Commercial", value="commercial"),
-        app_commands.Choice(name="Personal Use", value="personal"),
-    ])
-    async def voice_buy(
-        self,
-        interaction: discord.Interaction,
-        voice_name: str,
-        text_length: int,
-        content_type: str = "personal"
-    ):
-        """
-        Purchase voice generation credits via Stripe.
-
-        Session 450: Stripe voice marketplace integration.
-        """
-        await interaction.response.defer(ephemeral=True)
-
-        try:
-            from asgiref.sync import sync_to_async
-            from django.db.models import Q
-            from django.contrib.auth import get_user_model
-            from core.models import VoiceProfile
-            from core.services.stripe_voice_payments import get_stripe_voice_service
-            import os
-
-            User = get_user_model()
-
-            # Validate text length
-            if text_length < 10:
-                await interaction.followup.send(
-                    "Text length must be at least 10 characters.",
-                    ephemeral=True
-                )
-                return
-
-            if text_length > 50000:
-                await interaction.followup.send(
-                    "Text length cannot exceed 50,000 characters per purchase.",
-                    ephemeral=True
-                )
-                return
-
-            # Get linked user
-            @sync_to_async
-            def get_linked_user(discord_id):
-                return User.objects.filter(discord_id=str(discord_id)).first()
-
-            linked_user = await get_linked_user(interaction.user.id)
-
-            if not linked_user:
-                await interaction.followup.send(
-                    "Please link your Discord account first using `/link`",
-                    ephemeral=True
-                )
-                return
-
-            # Find the voice by name or partial ID
-            @sync_to_async
-            def find_voice(search_term):
-                # Try exact name match first
-                voice = VoiceProfile.objects.filter(
-                    name__iexact=search_term,
-                    is_public=True,
-                    is_active=True
-                ).first()
-
-                if not voice:
-                    # Try partial ID match
-                    voice = VoiceProfile.objects.filter(
-                        Q(id__startswith=search_term) |
-                        Q(name__icontains=search_term),
-                        is_public=True,
-                        is_active=True
-                    ).first()
-
-                return voice
-
-            voice = await find_voice(voice_name)
-
-            if not voice:
-                await interaction.followup.send(
-                    f"Voice '{voice_name}' not found in marketplace.\n"
-                    f"Use `/voice-market browse` to see available voices.",
-                    ephemeral=True
-                )
-                return
-
-            # Get price estimate
-            service = get_stripe_voice_service()
-            price_info = service.get_voice_price_estimate(
-                voice_id=str(voice.id),
-                text_length=text_length
-            )
-
-            if not price_info:
-                await interaction.followup.send(
-                    "Error calculating price. Please try again.",
-                    ephemeral=True
-                )
-                return
-
-            # Create checkout session
-            base_url = os.getenv('SITE_URL', 'http://localhost:8000')
-            result = service.create_checkout_session(
-                voice_id=str(voice.id),
-                buyer=linked_user,
-                text_length=text_length,
-                content_type=content_type,
-                success_url=f"{base_url}/voice-checkout/success/?session_id={{CHECKOUT_SESSION_ID}}",
-                cancel_url=f"{base_url}/voice-checkout/cancel/",
-                metadata={
-                    'discord_user_id': str(interaction.user.id),
-                    'discord_username': interaction.user.display_name,
-                }
-            )
-
-            if not result:
-                await interaction.followup.send(
-                    "Error creating checkout session. Please try again.",
-                    ephemeral=True
-                )
-                return
-
-            # Build response embed
-            embed = discord.Embed(
-                title="Voice Purchase",
-                description=f"Ready to purchase **{voice.name}**",
-                color=discord.Color.green(),
-                timestamp=datetime.now()
-            )
-
-            embed.add_field(
-                name="Voice",
-                value=f"{voice.name}\nby {voice.owner.username}",
-                inline=True
-            )
-
-            embed.add_field(
-                name="Characters",
-                value=f"{text_length:,}",
-                inline=True
-            )
-
-            embed.add_field(
-                name="Price",
-                value=result['price_display'],
-                inline=True
-            )
-
-            embed.add_field(
-                name="Use Case",
-                value=content_type.replace('_', ' ').title(),
-                inline=True
-            )
-
-            # Estimate duration
-            est_minutes = text_length / 150 / 60
-            embed.add_field(
-                name="Est. Audio",
-                value=f"~{result.get('duration_estimate', 0)}s",
-                inline=True
-            )
-
-            embed.add_field(
-                name="Revenue Split",
-                value="70% creator / 30% platform",
-                inline=True
-            )
-
-            if result.get('simulated'):
-                embed.add_field(
-                    name="Test Mode",
-                    value="Stripe not configured - this is a test checkout",
-                    inline=False
-                )
-
-            embed.add_field(
-                name="Complete Purchase",
-                value=f"[Click here to checkout]({result['url']})",
-                inline=False
-            )
-
-            embed.set_footer(text="You'll be redirected to Stripe secure checkout")
-
-            await interaction.followup.send(embed=embed, ephemeral=True)
-
-            logger.info(f"/voice-buy: {interaction.user.display_name} -> {voice.name} ({text_length} chars, {result['price_display']})")
-
-        except Exception as e:
-            logger.error(f"/voice-buy error: {e}")
-            await interaction.followup.send(f"Error: {str(e)[:200]}", ephemeral=True)
-
-    @app_commands.command(name="voice-clone", description="Clone your voice for the marketplace")
-    @app_commands.describe(
-        action="Clone action",
-        voice_name="Name for your cloned voice (required for stop)"
-    )
-    @app_commands.choices(action=[
-        app_commands.Choice(name="Start - Begin voice recording", value="start"),
-        app_commands.Choice(name="Stop - Stop and create clone", value="stop"),
-        app_commands.Choice(name="Status - Check recording status", value="status"),
-    ])
-    async def voice_clone(
-        self,
-        interaction: discord.Interaction,
-        action: str,
-        voice_name: Optional[str] = None
-    ):
-        """Voice cloning commands - Session 441: Full implementation."""
-        await interaction.response.defer(ephemeral=True)
-
-        try:
-            from asgiref.sync import sync_to_async
-            from core.models import VoiceCloneRequest, VoiceProfile
-            from django.contrib.auth import get_user_model
-            from core.services.discord_voice import (
-                get_voice_recorder,
-                get_voice_cloner,
-                VoiceRecordingSink,
-                VOICE_RECV_AVAILABLE
-            )
-
-            User = get_user_model()
-
-            # Get linked user by discord_id on User model (wrapped for async)
-            @sync_to_async
-            def get_linked_user(discord_id):
-                return User.objects.filter(discord_id=str(discord_id)).first()
-
-            linked_user = await get_linked_user(interaction.user.id)
-
-            if not linked_user:
-                await interaction.followup.send(
-                    "Please link your Discord account first using `/link`",
-                    ephemeral=True
-                )
-                return
-
-            recorder = get_voice_recorder()
-            cloner = get_voice_cloner()
-
-            # Define helper functions for async DB access (available to all actions)
-            @sync_to_async
-            def get_active_recording(user):
-                return VoiceCloneRequest.objects.filter(
-                    user=user,
-                    status__in=['pending', 'recording']
-                ).first()
-
-            @sync_to_async
-            def mark_failed(request, message):
-                request.mark_failed(message)
-
-            if action == "start":
-                # Check if voice receiving is available
-                if not VOICE_RECV_AVAILABLE:
-                    await interaction.followup.send(
-                        "❌ Voice recording is not available. Please contact support.",
-                        ephemeral=True
-                    )
-                    return
-
-                # Check if user has an active recording
-                active = await get_active_recording(linked_user)
-
-                if active:
-                    await interaction.followup.send(
-                        f"You already have an active recording session! Status: {active.status}\n"
-                        f"Use `/voice-clone stop` to finish it first.",
-                        ephemeral=True
-                    )
-                    return
-
-                # Check if user is in a voice channel
-                if not interaction.user.voice or not interaction.user.voice.channel:
-                    await interaction.followup.send(
-                        "❌ You must be in a voice channel to record your voice!\n"
-                        "Join a voice channel and try again.",
-                        ephemeral=True
-                    )
-                    return
-
-                voice_channel = interaction.user.voice.channel
-
-                # Create new clone request (wrapped for async)
-                @sync_to_async
-                def create_clone_request():
-                    req = VoiceCloneRequest.objects.create(
-                        user=linked_user,
-                        discord_user_id=str(interaction.user.id),
-                        discord_guild_id=str(interaction.guild.id),
-                        discord_channel_id=str(voice_channel.id),
-                        status='recording'
-                    )
-                    req.start_recording()
-                    return req
-
-                clone_request = await create_clone_request()
-
-                # Start recording the user
-                recorder.start_recording(
-                    user_id=interaction.user.id,
-                    guild_id=interaction.guild.id,
-                    channel_id=voice_channel.id
-                )
-
-                # Connect to voice channel and start listening
-                try:
-                    import discord.ext.voice_recv as voice_recv
-
-                    # Check if already connected
-                    voice_client = interaction.guild.voice_client
-
-                    # ALWAYS disconnect first if connected (force clean slate)
-                    if voice_client:
-                        logger.info("Disconnecting existing voice client for clean VoiceRecvClient connection")
-                        try:
-                            await voice_client.disconnect(force=True)
-                        except Exception:
-                            pass
-                        await asyncio.sleep(0.5)  # Brief delay for clean disconnect
-                        voice_client = None
-
-                    # Connect with voice_recv client for receiving audio
-                    logger.info(f"Connecting to {voice_channel.name} with VoiceRecvClient")
-                    voice_client = await voice_channel.connect(cls=voice_recv.VoiceRecvClient)
-
-                    # Create and set the sink for this user
-                    sink = VoiceRecordingSink(recorder, interaction.user.id)
-
-                    # Start listening to this specific user
-                    logger.info(f"Starting to listen to user {interaction.user.id}")
-                    voice_client.listen(voice_recv.BasicSink(sink.write))
-                    logger.info("Voice recording sink attached successfully!")
-
-                except Exception as ve:
-                    logger.error(f"Failed to connect to voice channel: {ve}", exc_info=True)
-                    # Still mark as recording - user can speak, we'll try to capture
-
-                embed = discord.Embed(
-                    title="🎙️ Voice Recording Started!",
-                    description=(
-                        f"**Recording in:** {voice_channel.name}\n\n"
-                        "**Instructions:**\n"
-                        "• Speak clearly and naturally for at least 60 seconds\n"
-                        "• Read varied content - try reading a story or article\n"
-                        "• Minimize background noise\n"
-                        "• When done, use `/voice-clone stop your_voice_name`\n\n"
-                        "**Sample text to read:**\n"
-                        "*\"The quick brown fox jumps over the lazy dog. "
-                        "She sells seashells by the seashore. "
-                        "How much wood would a woodchuck chuck if a woodchuck could chuck wood?\"*"
-                    ),
-                    color=discord.Color.red(),
-                    timestamp=datetime.now()
-                )
-                embed.add_field(name="Session ID", value=str(clone_request.id)[:8], inline=True)
-                embed.add_field(name="Status", value="🔴 RECORDING", inline=True)
-                embed.set_footer(text="Voice cloning powered by ElevenLabs")
-
-                await interaction.followup.send(embed=embed, ephemeral=True)
-
-            elif action == "stop":
-                # Get active recording (wrapped for async)
-                active = await get_active_recording(linked_user)
-
-                if not active:
-                    await interaction.followup.send(
-                        "No active recording session. Use `/voice-clone start` first.",
-                        ephemeral=True
-                    )
-                    return
-
-                # Stop the recording and get the file path
-                audio_path = recorder.stop_recording(interaction.user.id)
-
-                if not audio_path:
-                    await mark_failed(active, "No audio data captured. Please try again and speak while recording.")
-                    await interaction.followup.send(
-                        "❌ No audio was captured! Make sure you're speaking while in the voice channel.\n"
-                        "Try `/voice-clone start` again.",
-                        ephemeral=True
-                    )
-                    return
-
-                # Get recording duration
-                import os
-                file_size = os.path.getsize(audio_path)
-                duration_seconds = file_size / 192000  # 48kHz * 2 channels * 2 bytes
-
-                if duration_seconds < 15:
-                    await mark_failed(active, f"Recording too short ({duration_seconds:.0f}s). Need at least 15 seconds.")
-                    await interaction.followup.send(
-                        f"❌ Recording too short ({duration_seconds:.0f} seconds).\n"
-                        "Need at least 15 seconds of audio (60+ recommended for best quality).\n"
-                        "Try `/voice-clone start` again and speak for longer.",
-                        ephemeral=True
-                    )
-                    return
-
-                # Update the clone request (wrapped for async)
-                @sync_to_async
-                def update_clone_request(request, path, duration):
-                    request.stop_recording()
-                    request.audio_file_path = path
-                    request.recording_duration_seconds = int(duration)
-                    request.status = 'cloning'
-                    request.save()
-
-                await update_clone_request(active, audio_path, duration_seconds)
-
-                # Disconnect from voice channel
-                if interaction.guild.voice_client:
-                    await interaction.guild.voice_client.disconnect()
-
-                # Determine voice name
-                final_voice_name = voice_name or f"{interaction.user.display_name}'s Voice"
-
-                embed = discord.Embed(
-                    title="⏳ Processing Your Voice Clone",
-                    description=(
-                        f"**Voice Name:** {final_voice_name}\n"
-                        f"**Recording Duration:** {duration_seconds:.0f} seconds\n\n"
-                        "Sending to ElevenLabs for cloning...\n"
-                        "This may take 1-2 minutes."
-                    ),
-                    color=discord.Color.orange(),
-                    timestamp=datetime.now()
-                )
-                await interaction.followup.send(embed=embed, ephemeral=True)
-
-                # Clone the voice with ElevenLabs
-                result = await cloner.clone_voice(
-                    audio_file_path=audio_path,
-                    voice_name=final_voice_name,
-                    description=f"Voice cloned from Discord by {interaction.user.display_name}",
-                    remove_background_noise=True,
-                    labels={"source": "discord", "user": str(interaction.user.id)}
-                )
-
-                if "error" in result:
-                    await mark_failed(active, result["error"])
-                    await interaction.followup.send(
-                        f"❌ Voice cloning failed: {result['error']}\n"
-                        "Please try again or contact support.",
-                        ephemeral=True
-                    )
-                    return
-
-                # Create VoiceProfile in database (wrapped for async)
-                @sync_to_async
-                def create_voice_profile():
-                    profile = VoiceProfile.objects.create(
-                        owner=linked_user,
-                        name=final_voice_name,
-                        description=f"Voice cloned from Discord recording ({duration_seconds:.0f}s)",
-                        elevenlabs_voice_id=result["voice_id"],
-                        gender='neutral',
-                        age_range='adult',
-                        creation_method='discord_clone',
-                        is_public=False,
-                        is_active=True
-                    )
-                    return profile
-
-                voice_profile = await create_voice_profile()
-
-                # Complete the clone request (wrapped for async)
-                @sync_to_async
-                def complete_request(request, profile):
-                    request.complete(profile)
-
-                await complete_request(active, voice_profile)
-
-                # Clean up the audio file
-                try:
-                    os.unlink(audio_path)
-                except Exception:
-                    pass
-
-                embed = discord.Embed(
-                    title="✅ Voice Clone Complete!",
-                    description=(
-                        f"**Voice Name:** {final_voice_name}\n"
-                        f"**ElevenLabs ID:** `{result['voice_id'][:12]}...`\n"
-                        f"**Duration:** {duration_seconds:.0f} seconds\n\n"
-                        "Your voice is ready to use!\n\n"
-                        "**Next steps:**\n"
-                        "• Use `/voice-market my-voices` to see your voices\n"
-                        "• Set `is_public=True` to list in marketplace\n"
-                        "• Use `/speak` to test your voice"
-                    ),
-                    color=discord.Color.green(),
-                    timestamp=datetime.now()
-                )
-                embed.add_field(name="Voice ID", value=str(voice_profile.id)[:8], inline=True)
-
-                await interaction.followup.send(embed=embed, ephemeral=True)
-
-            elif action == "status":
-                # Get latest clone request (wrapped for async)
-                @sync_to_async
-                def get_latest_request(user):
-                    req = VoiceCloneRequest.objects.filter(
-                        user=user
-                    ).order_by('-created_at').first()
-                    if req:
-                        # Prefetch related voice_profile to avoid lazy loading issues
-                        return {
-                            'status': req.status,
-                            'recording_duration_seconds': req.recording_duration_seconds,
-                            'voice_profile_name': req.voice_profile.name if req.voice_profile else None,
-                            'voice_profile_id': str(req.voice_profile.id)[:8] if req.voice_profile else None,
-                            'error_message': req.error_message,
-                        }
-                    return None
-
-                request_data = await get_latest_request(linked_user)
-
-                if not request_data:
-                    await interaction.followup.send(
-                        "No voice clone requests found. Use `/voice-clone start` to begin.",
-                        ephemeral=True
-                    )
-                    return
-
-                # Check current recording duration if active
-                current_duration = None
-                if request_data['status'] == 'recording' and recorder.is_recording(interaction.user.id):
-                    current_duration = recorder.get_recording_duration(interaction.user.id)
-
-                status_colors = {
-                    'pending': discord.Color.yellow(),
-                    'recording': discord.Color.red(),
-                    'processing': discord.Color.orange(),
-                    'cloning': discord.Color.purple(),
-                    'completed': discord.Color.green(),
-                    'failed': discord.Color.dark_red(),
-                }
-
-                status_emojis = {
-                    'pending': '⏸️',
-                    'recording': '🔴',
-                    'processing': '⏳',
-                    'cloning': '🔮',
-                    'completed': '✅',
-                    'failed': '❌',
-                }
-
-                embed = discord.Embed(
-                    title=f"{status_emojis.get(request_data['status'], '❓')} Voice Clone Status",
-                    color=status_colors.get(request_data['status'], discord.Color.gray()),
-                    timestamp=datetime.now()
-                )
-                embed.add_field(name="Status", value=request_data['status'].title(), inline=True)
-
-                if current_duration:
-                    embed.add_field(name="Current Duration", value=f"{current_duration:.0f}s (recording...)", inline=True)
-                elif request_data['recording_duration_seconds']:
-                    embed.add_field(name="Duration", value=f"{request_data['recording_duration_seconds']}s", inline=True)
-
-                if request_data['voice_profile_name']:
-                    embed.add_field(
-                        name="Voice Created",
-                        value=f"{request_data['voice_profile_name']}\nID: `{request_data['voice_profile_id']}`",
-                        inline=False
-                    )
-
-                if request_data['error_message']:
-                    embed.add_field(name="Error", value=request_data['error_message'][:200], inline=False)
-
-                if request_data['status'] == 'recording':
-                    embed.set_footer(text="Use /voice-clone stop when you're done recording")
-
-                await interaction.followup.send(embed=embed, ephemeral=True)
-
-        except Exception as e:
-            logger.error(f"/voice-clone error: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
-            await interaction.followup.send(f"Error: {str(e)[:200]}", ephemeral=True)
-
-
-# =============================================================================
-# Session 440: Content Pipeline Commands - The AI Content Factory
-# =============================================================================
+# VoiceMarketplaceCommands removed in Phase G2 command consolidation
 
 class ContentPipelineCommands(commands.Cog):
     """
@@ -5477,95 +4268,7 @@ class ContentPipelineCommands(commands.Cog):
             logger.error(f"/content-status error: {e}")
             await interaction.followup.send(f"Error: {str(e)[:200]}", ephemeral=True)
 
-    @app_commands.command(name="showroom", description="Browse the content marketplace")
-    @app_commands.describe(
-        category="Filter by category",
-        tier="Filter by tier"
-    )
-    @app_commands.choices(category=[
-        app_commands.Choice(name="All Categories", value="all"),
-        app_commands.Choice(name="Restaurant & Food", value="restaurant"),
-        app_commands.Choice(name="Tech & Startups", value="tech"),
-        app_commands.Choice(name="Healthcare", value="healthcare"),
-        app_commands.Choice(name="Education", value="education"),
-        app_commands.Choice(name="Entertainment", value="entertainment"),
-    ])
-    @app_commands.choices(tier=[
-        app_commands.Choice(name="All Tiers", value="all"),
-        app_commands.Choice(name="Quick ($5-29)", value="quick"),
-        app_commands.Choice(name="Ad ($29-99)", value="ad"),
-        app_commands.Choice(name="Brand ($99-499)", value="brand"),
-        app_commands.Choice(name="Series ($499-2999)", value="series"),
-        app_commands.Choice(name="Pitch ($2999-9999)", value="pitch"),
-    ])
-    async def showroom(
-        self,
-        interaction: discord.Interaction,
-        category: str = "all",
-        tier: str = "all"
-    ):
-        """Browse ready-to-buy content packages in the marketplace."""
-        await interaction.response.defer()
-
-        try:
-            @sync_to_async
-            def get_marketplace_packages(cat, t):
-                from core.models_content_pipeline import ContentPackage, PackageStatus
-
-                queryset = ContentPackage.objects.filter(
-                    status=PackageStatus.READY,
-                    is_public=True
-                )
-
-                if cat != "all":
-                    queryset = queryset.filter(category=cat)
-                if t != "all":
-                    queryset = queryset.filter(tier=t)
-
-                return list(queryset.order_by('-is_featured', '-created_at')[:10])
-
-            packages = await get_marketplace_packages(category, tier)
-
-            if not packages:
-                embed = discord.Embed(
-                    title="Content Showroom",
-                    description="No packages available yet. Be the first to create content!",
-                    color=discord.Color.light_gray(),
-                    timestamp=datetime.now()
-                )
-                embed.add_field(
-                    name="Create Your Own",
-                    value="Use `/create-content` to generate content packages",
-                    inline=False
-                )
-            else:
-                embed = discord.Embed(
-                    title="Content Showroom",
-                    description=f"Browse {len(packages)} ready-to-buy content packages",
-                    color=discord.Color.gold(),
-                    timestamp=datetime.now()
-                )
-
-                for pkg in packages:
-                    featured = " FEATURED" if pkg.is_featured else ""
-                    preview = f"[Preview]({pkg.preview_video_url})" if pkg.preview_video_url else "No preview"
-
-                    embed.add_field(
-                        name=f"{pkg.name}{featured}",
-                        value=(
-                            f"**${pkg.final_price}** | {pkg.tier.title()} | {pkg.category.title()}\n"
-                            f"{pkg.description[:80]}...\n"
-                            f"{preview} | `{str(pkg.id)[:8]}`"
-                        ),
-                        inline=False
-                    )
-
-            embed.set_footer(text="Use /buy-content <id> to purchase")
-            await interaction.followup.send(embed=embed)
-
-        except Exception as e:
-            logger.error(f"/showroom error: {e}")
-            await interaction.followup.send(f"Error: {str(e)[:200]}", ephemeral=True)
+    # /showroom removed in Phase G2 — use web marketplace instead
 
 
 class RoleManager(commands.Cog):
@@ -5724,6 +4427,8 @@ class SeriesCommands(commands.Cog):
     def __init__(self, bot: DonkeyBetzBot):
         self.bot = bot
 
+    series = app_commands.Group(name="series", description="AI Series creation and management")
+
     async def _get_linked_user(self, discord_id: str):
         """Get the linked web user for a Discord ID."""
         @sync_to_async
@@ -5734,7 +4439,7 @@ class SeriesCommands(commands.Cog):
             return User.objects.filter(discord_id=str(discord_id)).first()
         return await get_user()
 
-    @app_commands.command(name="series-create", description="Create a multi-episode AI content series")
+    @series.command(name="create", description="Create a multi-episode AI content series")
     @app_commands.describe(
         series_type="Type of series to create",
         episodes="Number of episodes (1-5)",
@@ -5840,7 +4545,7 @@ class SeriesCommands(commands.Cog):
                 )
             )
 
-    @app_commands.command(name="series-status", description="Check status of your AI series")
+    @series.command(name="status", description="Check status of your AI series")
     @app_commands.describe(series_id="Optional series ID (shows latest if not provided)")
     async def series_status(
         self,
@@ -5933,7 +4638,7 @@ class SeriesCommands(commands.Cog):
                 )
             )
 
-    @app_commands.command(name="series-list", description="List your AI series")
+    @series.command(name="list", description="List your AI series")
     async def series_list(self, interaction: discord.Interaction):
         """List all AI series created by the user."""
         await interaction.response.defer()
@@ -6002,7 +4707,7 @@ class SeriesCommands(commands.Cog):
                 )
             )
 
-    @app_commands.command(name="series-view", description="View the content of a series episode")
+    @series.command(name="view", description="View the content of a series episode")
     @app_commands.describe(
         series_id="The series ID (first 8 chars is enough)",
         episode="Episode number to view (default: 1)"
@@ -6189,6 +4894,8 @@ class StudioCommands(commands.Cog):
     def __init__(self, client):
         self.client = client
 
+    studio = app_commands.Group(name="studio", description="Autonomous Content Studio")
+
     async def _get_linked_user(self, discord_id):
         """Get the linked Django user for this Discord ID."""
         @sync_to_async
@@ -6202,7 +4909,7 @@ class StudioCommands(commands.Cog):
 
         return await get_user()
 
-    @app_commands.command(name="studio-create", description="Create a new autonomous content channel")
+    @studio.command(name="create", description="Create a new autonomous content channel")
     @app_commands.describe(
         name="Channel name (e.g., 'AI Weekly News')",
         domain="Topic domain (e.g., 'AI/ML news and tutorials')",
@@ -6316,7 +5023,7 @@ class StudioCommands(commands.Cog):
                 )
             )
 
-    @app_commands.command(name="studio-list", description="List all your autonomous content channels")
+    @studio.command(name="list", description="List all your autonomous content channels")
     async def studio_list(self, interaction: discord.Interaction):
         """List all autonomous content channels."""
         await interaction.response.defer()
@@ -6380,7 +5087,7 @@ class StudioCommands(commands.Cog):
                 )
             )
 
-    @app_commands.command(name="studio-status", description="Check detailed status of a content channel")
+    @studio.command(name="status", description="Check detailed status of a content channel")
     @app_commands.describe(channel_id="Channel ID (first 8 characters)")
     async def studio_status(self, interaction: discord.Interaction, channel_id: str):
         """Check detailed status of a content channel."""
@@ -6502,7 +5209,7 @@ class StudioCommands(commands.Cog):
                 )
             )
 
-    @app_commands.command(name="studio-pause", description="Pause autonomous content generation for a channel")
+    @studio.command(name="pause", description="Pause autonomous content generation for a channel")
     @app_commands.describe(channel_id="Channel ID (first 8 characters)")
     async def studio_pause(self, interaction: discord.Interaction, channel_id: str):
         """Pause autonomous content generation for a channel."""
@@ -6559,7 +5266,7 @@ class StudioCommands(commands.Cog):
                 )
             )
 
-    @app_commands.command(name="studio-resume", description="Resume autonomous content generation for a channel")
+    @studio.command(name="resume", description="Resume autonomous content generation for a channel")
     @app_commands.describe(channel_id="Channel ID (first 8 characters)")
     async def studio_resume(self, interaction: discord.Interaction, channel_id: str):
         """Resume autonomous content generation for a channel."""
@@ -6616,7 +5323,7 @@ class StudioCommands(commands.Cog):
                 )
             )
 
-    @app_commands.command(name="studio-performance", description="View detailed analytics for a content channel")
+    @studio.command(name="performance", description="View detailed analytics for a content channel")
     @app_commands.describe(channel_id="Channel ID (first 8 characters)")
     async def studio_performance(self, interaction: discord.Interaction, channel_id: str):
         """View detailed analytics for a content channel."""
@@ -6733,7 +5440,7 @@ class StudioCommands(commands.Cog):
                 )
             )
 
-    @app_commands.command(name="studio-episode", description="View episode content (script, research) from a channel")
+    @studio.command(name="episode", description="View episode content (script, research) from a channel")
     @app_commands.describe(channel_id="Channel ID (first 8 characters)")
     async def studio_episode(self, interaction: discord.Interaction, channel_id: str):
         """View the latest episode content from a channel."""
@@ -6981,443 +5688,10 @@ class GumroadCommands(commands.Cog):
             )
             await interaction.followup.send(embed=embed)
 
-    @app_commands.command(name="gumroad-status", description="Check your Gumroad connection status")
-    async def gumroad_status(self, interaction: discord.Interaction):
-        """Check if Gumroad account is connected."""
-        await interaction.response.defer()
-
-        try:
-            user = await self._get_linked_user(str(interaction.user.id))
-
-            if not user:
-                embed = discord.Embed(
-                    title="Not Linked",
-                    description="Link your Discord account first with `/link <code>`.",
-                    color=discord.Color.orange()
-                )
-                await interaction.followup.send(embed=embed)
-                return
-
-            @sync_to_async
-            def check_gumroad_account(web_user):
-                from content.models import UserPlatformAccount, ContentDistribution
-
-                account = UserPlatformAccount.objects.filter(
-                    user=web_user,
-                    platform='gumroad',
-                    is_active=True
-                ).first()
-
-                if not account:
-                    return {'connected': False}
-
-                # Count distributions
-                distribution_count = ContentDistribution.objects.filter(
-                    user=web_user,
-                    platform='gumroad'
-                ).count()
-
-                return {
-                    'connected': True,
-                    'has_token': bool(account.access_token),
-                    'distribution_count': distribution_count,
-                    'connected_at': account.created_at.strftime('%Y-%m-%d') if account.created_at else 'Unknown'
-                }
-
-            result = await check_gumroad_account(user)
-
-            if result['connected']:
-                embed = discord.Embed(
-                    title="Gumroad Connected",
-                    description="Your Gumroad account is ready for publishing!",
-                    color=discord.Color.green(),
-                    timestamp=datetime.now()
-                )
-                embed.add_field(name="Access Token", value="Active" if result['has_token'] else "Missing", inline=True)
-                embed.add_field(name="Products Published", value=str(result['distribution_count']), inline=True)
-                embed.add_field(name="Connected Since", value=result['connected_at'], inline=True)
-                embed.add_field(
-                    name="Next Step",
-                    value="Use `/publish-gumroad <image_id>` to publish from your gallery!",
-                    inline=False
-                )
-            else:
-                embed = discord.Embed(
-                    title="Gumroad Not Connected",
-                    description="Connect your Gumroad account to start selling!",
-                    color=discord.Color.orange(),
-                    timestamp=datetime.now()
-                )
-                embed.add_field(
-                    name="How to Connect",
-                    value="1. Go to AI Studio (web app)\n2. Click Distribution tab\n3. Click 'Connect Gumroad'\n4. Authorize the app",
-                    inline=False
-                )
-
-            await interaction.followup.send(embed=embed)
-
-        except Exception as e:
-            logger.error(f"Gumroad status error: {e}", exc_info=True)
-            embed = discord.Embed(
-                title="Error",
-                description=f"Failed to check status: {str(e)[:200]}",
-                color=discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed)
+    # /gumroad-status removed in Phase G2 — use Cockpit instead
 
 
-class PipelineLearningCommands(commands.Cog):
-    """
-    Session 449: Pipeline Learning Commands.
-
-    Commands for interacting with the AI Content Pipeline learning loops:
-    - Rate content quality at each stage
-    - View learning statistics and insights
-    - Get style recommendations based on performance data
-    """
-
-    def __init__(self, bot: DonkeyBetzBot):
-        self.bot = bot
-
-    async def _get_linked_user(self, discord_id: str):
-        """Get the linked web user for a Discord ID."""
-        @sync_to_async
-        def get_user():
-            from django.contrib.auth import get_user_model
-            User = get_user_model()
-            return User.objects.filter(discord_id=discord_id).first()
-        return await get_user()
-
-    @app_commands.command(name="rate-series", description="Rate a series or episode to help improve AI generation")
-    @app_commands.describe(
-        series_id="The series ID (from /series-list)",
-        stage="Pipeline stage to rate",
-        rating="Your rating from 1-5 stars",
-        comment="Optional comment about the quality"
-    )
-    @app_commands.choices(stage=[
-        app_commands.Choice(name="Research quality", value="research"),
-        app_commands.Choice(name="Script/narration", value="script"),
-        app_commands.Choice(name="Image/visuals", value="image"),
-        app_commands.Choice(name="Voice/audio", value="voice"),
-        app_commands.Choice(name="Video output", value="video"),
-        app_commands.Choice(name="Overall package", value="package"),
-    ])
-    async def rate_series(
-        self,
-        interaction: discord.Interaction,
-        series_id: str,
-        stage: str,
-        rating: int,
-        comment: str = ""
-    ):
-        """Rate a series stage to provide feedback for learning."""
-        await interaction.response.defer()
-
-        try:
-            # Validate rating
-            if not 1 <= rating <= 5:
-                await interaction.followup.send(
-                    embed=discord.Embed(
-                        title="Invalid Rating",
-                        description="Rating must be between 1 and 5",
-                        color=discord.Color.red()
-                    )
-                )
-                return
-
-            # Get linked user
-            linked_user = await self._get_linked_user(str(interaction.user.id))
-            if not linked_user:
-                await interaction.followup.send(
-                    "Please link your Discord account first using `/link` command.",
-                    ephemeral=True
-                )
-                return
-
-            # Record feedback
-            @sync_to_async
-            def record():
-                from core.services.pipeline_learning import get_pipeline_learning_service
-                from core.models_ai_series import AISeries
-
-                try:
-                    series = AISeries.objects.get(id=series_id)
-                except AISeries.DoesNotExist:
-                    return None, "Series not found"
-
-                service = get_pipeline_learning_service()
-                feedback = service.record_stage_feedback(
-                    stage=stage,
-                    rating=float(rating),
-                    context={
-                        'style_preset': series.style_config.get('style_preset', ''),
-                        'target_audience': series.target_audience,
-                        'series_type': series.series_type
-                    },
-                    series_id=series_id,
-                    user_id=linked_user.id,
-                    feedback_type='user_rating',
-                    comment=comment
-                )
-                return feedback, series.name
-
-            feedback, series_name = await record()
-
-            if feedback is None:
-                await interaction.followup.send(
-                    embed=discord.Embed(
-                        title="Error",
-                        description=series_name,  # This contains error message
-                        color=discord.Color.red()
-                    )
-                )
-                return
-
-            # Success embed
-            stars = "⭐" * rating + "☆" * (5 - rating)
-            embed = discord.Embed(
-                title="Feedback Recorded",
-                description=f"Thank you for rating **{series_name}**!",
-                color=discord.Color.green()
-            )
-            embed.add_field(name="Stage", value=stage.title(), inline=True)
-            embed.add_field(name="Rating", value=stars, inline=True)
-            if comment:
-                embed.add_field(name="Comment", value=comment, inline=False)
-            embed.set_footer(text="Your feedback helps improve AI content generation!")
-
-            await interaction.followup.send(embed=embed)
-
-        except Exception as e:
-            logger.error(f"Rate series error: {e}", exc_info=True)
-            await interaction.followup.send(
-                embed=discord.Embed(
-                    title="Error",
-                    description=f"Failed to record feedback: {str(e)[:200]}",
-                    color=discord.Color.red()
-                )
-            )
-
-    @app_commands.command(name="learning-stats", description="View learning system statistics")
-    async def learning_stats(self, interaction: discord.Interaction):
-        """View pipeline learning statistics."""
-        await interaction.response.defer()
-
-        try:
-            @sync_to_async
-            def get_stats():
-                from core.services.pipeline_learning import get_pipeline_learning_service
-                service = get_pipeline_learning_service()
-                return service.get_learning_statistics()
-
-            stats = await get_stats()
-
-            embed = discord.Embed(
-                title="📊 Pipeline Learning Statistics",
-                description="Feedback data collected to improve AI content generation",
-                color=discord.Color.blue()
-            )
-
-            # Feedback stats
-            feedback = stats.get('feedback', {})
-            embed.add_field(
-                name="Feedback Collected",
-                value=f"**{feedback.get('total_count', 0)}** ratings\n"
-                      f"Avg: **{feedback.get('avg_rating', 0):.1f}**/5",
-                inline=True
-            )
-
-            # Style stats
-            styles = stats.get('styles', {})
-            embed.add_field(
-                name="Style Performance",
-                value=f"**{styles.get('tracked_count', 0)}** styles tracked\n"
-                      f"Top: **{styles.get('top_style', 'N/A')}**",
-                inline=True
-            )
-
-            # Insights
-            insights = stats.get('insights', {})
-            embed.add_field(
-                name="Active Insights",
-                value=f"**{insights.get('active_count', 0)}** insights\n"
-                      f"Applied **{insights.get('total_applied', 0)}** times",
-                inline=True
-            )
-
-            # Engagement
-            engagement = stats.get('engagement', {})
-            embed.add_field(
-                name="Content Engagement",
-                value=f"**{engagement.get('total_tracked', 0)}** tracked\n"
-                      f"**{engagement.get('viral_count', 0)}** viral content",
-                inline=True
-            )
-
-            embed.set_footer(text="Use /rate-series to contribute feedback!")
-
-            await interaction.followup.send(embed=embed)
-
-        except Exception as e:
-            logger.error(f"Learning stats error: {e}", exc_info=True)
-            await interaction.followup.send(
-                embed=discord.Embed(
-                    title="Error",
-                    description=f"Failed to get stats: {str(e)[:200]}",
-                    color=discord.Color.red()
-                )
-            )
-
-    @app_commands.command(name="style-recommend", description="Get style recommendation for your content")
-    @app_commands.describe(
-        audience="Target audience for the content",
-        series_type="Type of series"
-    )
-    @app_commands.choices(series_type=[
-        app_commands.Choice(name="Educational", value="educational"),
-        app_commands.Choice(name="Entertainment", value="entertainment"),
-        app_commands.Choice(name="Marketing", value="marketing"),
-    ])
-    async def style_recommend(
-        self,
-        interaction: discord.Interaction,
-        audience: str,
-        series_type: str = "educational"
-    ):
-        """Get a style recommendation based on learning data."""
-        await interaction.response.defer()
-
-        try:
-            @sync_to_async
-            def get_recommendation():
-                from core.services.pipeline_learning import get_pipeline_learning_service
-                service = get_pipeline_learning_service()
-                return service.get_best_style_for_context(
-                    target_audience=audience,
-                    series_type=series_type
-                )
-
-            rec = await get_recommendation()
-
-            if rec.get('source') == 'learned':
-                embed = discord.Embed(
-                    title="🎨 Style Recommendation (Learned)",
-                    description=f"Based on **{rec.get('sample_size', 0)}** data points",
-                    color=discord.Color.gold()
-                )
-                confidence = rec.get('confidence', 0) * 100
-                embed.add_field(
-                    name="Recommended Style",
-                    value=f"**{rec.get('style_preset', 'pixar').title()}**",
-                    inline=True
-                )
-                embed.add_field(
-                    name="Avg Rating",
-                    value=f"**{rec.get('avg_rating', 0):.1f}**/5",
-                    inline=True
-                )
-                embed.add_field(
-                    name="Confidence",
-                    value=f"**{confidence:.0f}%**",
-                    inline=True
-                )
-                if rec.get('approval_rate', 0) > 0:
-                    embed.add_field(
-                        name="Approval Rate",
-                        value=f"**{rec.get('approval_rate', 0):.0f}%**",
-                        inline=True
-                    )
-            else:
-                embed = discord.Embed(
-                    title="🎨 Style Recommendation (Default)",
-                    description="Not enough data yet - using sensible default",
-                    color=discord.Color.lighter_grey()
-                )
-                embed.add_field(
-                    name="Recommended Style",
-                    value=f"**{rec.get('style_preset', 'pixar').title()}**",
-                    inline=True
-                )
-
-            embed.add_field(
-                name="For",
-                value=f"**{audience}** ({series_type})",
-                inline=False
-            )
-            embed.set_footer(text="Recommendations improve with more feedback from /rate-series")
-
-            await interaction.followup.send(embed=embed)
-
-        except Exception as e:
-            logger.error(f"Style recommend error: {e}", exc_info=True)
-            await interaction.followup.send(
-                embed=discord.Embed(
-                    title="Error",
-                    description=f"Failed to get recommendation: {str(e)[:200]}",
-                    color=discord.Color.red()
-                )
-            )
-
-    @app_commands.command(name="style-leaderboard", description="View top-performing styles")
-    @app_commands.describe(limit="Number of results to show (default 5)")
-    async def style_leaderboard(self, interaction: discord.Interaction, limit: int = 5):
-        """View the style performance leaderboard."""
-        await interaction.response.defer()
-
-        try:
-            @sync_to_async
-            def get_leaderboard():
-                from core.services.pipeline_learning import get_pipeline_learning_service
-                service = get_pipeline_learning_service()
-                return service.get_style_leaderboard(limit=min(limit, 10))
-
-            leaderboard = await get_leaderboard()
-
-            if not leaderboard:
-                await interaction.followup.send(
-                    embed=discord.Embed(
-                        title="🏆 Style Leaderboard",
-                        description="No data yet! Create some series and rate them to build the leaderboard.",
-                        color=discord.Color.lighter_grey()
-                    )
-                )
-                return
-
-            embed = discord.Embed(
-                title="🏆 Style Performance Leaderboard",
-                description="Top performing visual styles based on feedback",
-                color=discord.Color.gold()
-            )
-
-            for i, entry in enumerate(leaderboard, 1):
-                medal = ["🥇", "🥈", "🥉"][i-1] if i <= 3 else f"{i}."
-                stars = "⭐" * int(entry['avg_rating']) + ("½" if entry['avg_rating'] % 1 >= 0.5 else "")
-                value = (
-                    f"Rating: {stars} ({entry['avg_rating']:.1f})\n"
-                    f"Uses: {entry['total_uses']} | "
-                    f"Viral: {entry['viral_count']}"
-                )
-                if entry['target_audience']:
-                    name = f"{medal} {entry['style_preset'].title()} ({entry['target_audience']})"
-                else:
-                    name = f"{medal} {entry['style_preset'].title()}"
-                embed.add_field(name=name, value=value, inline=False)
-
-            embed.set_footer(text="Contribute with /rate-series!")
-
-            await interaction.followup.send(embed=embed)
-
-        except Exception as e:
-            logger.error(f"Style leaderboard error: {e}", exc_info=True)
-            await interaction.followup.send(
-                embed=discord.Embed(
-                    title="Error",
-                    description=f"Failed to get leaderboard: {str(e)[:200]}",
-                    color=discord.Color.red()
-                )
-            )
-
+# PipelineLearningCommands removed in Phase G2 command consolidation
 
 class ServerSetupCommands(commands.Cog):
     """
@@ -7635,6 +5909,8 @@ class ClientCommands(commands.Cog):
     def __init__(self, bot: DonkeyBetzBot):
         self.bot = bot
 
+    client = app_commands.Group(name="client", description="Client management")
+
     async def _get_linked_user(self, discord_id: str):
         """Get the linked web user for a Discord ID."""
         @sync_to_async
@@ -7660,7 +5936,7 @@ class ClientCommands(commands.Cog):
         slug = re.sub(r'[\s_]+', '-', slug)
         return slug[:50]
 
-    @app_commands.command(name="client-add", description="Create a new client with dedicated channel")
+    @client.command(name="add", description="Create a new client with dedicated channel")
     @app_commands.describe(
         name="Client name (e.g., 'Acme Corp')",
         email="Client email for notifications (optional)"
@@ -7787,7 +6063,7 @@ class ClientCommands(commands.Cog):
                 ephemeral=True
             )
 
-    @app_commands.command(name="client-list", description="List all your clients")
+    @client.command(name="list", description="List all your clients")
     async def client_list(self, interaction: discord.Interaction):
         """List all clients for this server."""
         await interaction.response.defer(ephemeral=True)
@@ -7854,7 +6130,7 @@ class ClientCommands(commands.Cog):
                 ephemeral=True
             )
 
-    @app_commands.command(name="client-deliver", description="Send a deliverable to a client's channel")
+    @client.command(name="deliver", description="Send a deliverable to a client's channel")
     @app_commands.describe(
         client_name="Client name to deliver to",
         image_id="Image number from /gallery (e.g., 320)",
@@ -8007,7 +6283,7 @@ class ClientCommands(commands.Cog):
                 ephemeral=True
             )
 
-    @app_commands.command(name="client-invite", description="Generate an invite link for a client")
+    @client.command(name="invite", description="Generate an invite link for a client")
     @app_commands.describe(client_name="Client name to generate invite for")
     async def client_invite(self, interaction: discord.Interaction, client_name: str):
         """Generate a Discord invite link for a client's channel."""
@@ -9953,1392 +8229,9 @@ class ReactionFeedbackCog(commands.Cog):
 # Tier 1 Autonomous Situation #2 - "The system watches the world for story shifts"
 # =============================================================================
 
-class NarrativeCommands(commands.Cog):
-    """Commands for the Narrative Drift Detector system."""
+# NarrativeCommands removed in Phase G2 command consolidation
 
-    def __init__(self, bot: DonkeyBetzBot):
-        self.bot = bot
-
-    @app_commands.command(name="narratives", description="List tracked narratives")
-    @app_commands.describe(
-        domain="Filter by domain (politics, markets, tech, culture, etc.)",
-        status="Filter by status (emerging, dominant, shifting, fading)",
-        limit="Number of narratives to show (default: 10)"
-    )
-    async def narratives_command(
-        self,
-        interaction: discord.Interaction,
-        domain: str = None,
-        status: str = None,
-        limit: int = 10
-    ):
-        """List tracked narratives from the Narrative Drift Detector."""
-        await interaction.response.defer(thinking=True)
-
-        try:
-            @sync_to_async
-            def get_narratives():
-                from core.models_narrative_drift import Narrative, NarrativeDomain, NarrativeStatus
-
-                queryset = Narrative.objects.all()
-
-                if domain:
-                    valid_domains = [choice[0] for choice in NarrativeDomain.choices]
-                    if domain.lower() in valid_domains:
-                        queryset = queryset.filter(domain=domain.lower())
-
-                if status:
-                    valid_statuses = [choice[0] for choice in NarrativeStatus.choices]
-                    if status.lower() in valid_statuses:
-                        queryset = queryset.filter(status=status.lower())
-
-                return list(queryset.order_by('-mention_count')[:limit])
-
-            narratives = await get_narratives()
-
-            if not narratives:
-                await interaction.edit_original_response(
-                    embed=discord.Embed(
-                        title="📰 No Narratives Found",
-                        description="No narratives match your filters. Try running `/narrative-scan` to detect new narratives.",
-                        color=discord.Color.yellow()
-                    )
-                )
-                return
-
-            embed = discord.Embed(
-                title="📰 Tracked Narratives",
-                description=f"Showing {len(narratives)} narratives" + (f" in {domain}" if domain else ""),
-                color=discord.Color.purple(),
-                timestamp=datetime.now()
-            )
-
-            # Status emoji mapping
-            status_emoji = {
-                'emerging': '🌱',
-                'dominant': '🔥',
-                'shifting': '🔄',
-                'fading': '📉',
-                'dead': '💀'
-            }
-
-            for n in narratives:
-                emoji = status_emoji.get(n.status, '📋')
-                embed.add_field(
-                    name=f"{emoji} {n.title[:50]}",
-                    value=(
-                        f"**Domain:** {n.domain}\n"
-                        f"**Status:** {n.status}\n"
-                        f"**Mentions:** {n.mention_count}\n"
-                        f"**ID:** `{str(n.id)[:8]}`"
-                    ),
-                    inline=True
-                )
-
-            embed.set_footer(text="Session 471 | Narrative Drift Detector")
-            await interaction.edit_original_response(embed=embed)
-
-        except Exception as e:
-            logger.error(f"/narratives error: {e}")
-            await interaction.edit_original_response(
-                embed=discord.Embed(
-                    title="❌ Error",
-                    description=f"Failed to fetch narratives: {str(e)[:200]}",
-                    color=discord.Color.red()
-                )
-            )
-
-    @app_commands.command(name="narrative-shifts", description="List recent narrative shifts")
-    @app_commands.describe(
-        domain="Filter by domain",
-        limit="Number of shifts to show (default: 5)"
-    )
-    async def narrative_shifts_command(
-        self,
-        interaction: discord.Interaction,
-        domain: str = None,
-        limit: int = 5
-    ):
-        """List recent narrative shifts detected by the system."""
-        await interaction.response.defer(thinking=True)
-
-        try:
-            @sync_to_async
-            def get_shifts():
-                from core.models_narrative_drift import NarrativeShift
-
-                queryset = NarrativeShift.objects.all()
-
-                if domain:
-                    queryset = queryset.filter(domain=domain.lower())
-
-                return list(queryset.order_by('-detected_at')[:limit])
-
-            shifts = await get_shifts()
-
-            if not shifts:
-                await interaction.edit_original_response(
-                    embed=discord.Embed(
-                        title="🔄 No Shifts Detected",
-                        description="No narrative shifts have been detected yet. The system scans every 4 hours.",
-                        color=discord.Color.yellow()
-                    )
-                )
-                return
-
-            embed = discord.Embed(
-                title="🔄 Recent Narrative Shifts",
-                description=f"Showing {len(shifts)} recent shifts" + (f" in {domain}" if domain else ""),
-                color=discord.Color.orange(),
-                timestamp=datetime.now()
-            )
-
-            for shift in shifts:
-                new_title = shift.new_narrative.title[:30] if shift.new_narrative else "Unknown"
-                embed.add_field(
-                    name=f"📌 {shift.old_narrative.title[:40]}",
-                    value=(
-                        f"**→** {new_title}\n"
-                        f"**Domain:** {shift.domain}\n"
-                        f"**Confidence:** {float(shift.confidence) * 100:.0f}%\n"
-                        f"**Importance:** {float(shift.importance) * 100:.0f}%\n"
-                        f"**Detected:** {shift.detected_at.strftime('%Y-%m-%d %H:%M')}"
-                    ),
-                    inline=False
-                )
-
-            embed.set_footer(text="Session 471 | Narrative Drift Detector")
-            await interaction.edit_original_response(embed=embed)
-
-        except Exception as e:
-            logger.error(f"/narrative-shifts error: {e}")
-            await interaction.edit_original_response(
-                embed=discord.Embed(
-                    title="❌ Error",
-                    description=f"Failed to fetch shifts: {str(e)[:200]}",
-                    color=discord.Color.red()
-                )
-            )
-
-    @app_commands.command(name="narrative-scan", description="Run a narrative drift scan")
-    @app_commands.describe(
-        domain="Domain to scan (optional - scans all if not specified)"
-    )
-    async def narrative_scan_command(
-        self,
-        interaction: discord.Interaction,
-        domain: str = None
-    ):
-        """Trigger a narrative drift scan manually."""
-        await interaction.response.defer(thinking=True)
-
-        try:
-            @sync_to_async
-            def run_scan():
-                from core.agents.narrative import NarrativeDriftCoordinator
-
-                coordinator = NarrativeDriftCoordinator()
-                result = coordinator._run_full_scan({'hours_back': 24, 'domain': domain})
-                return result
-
-            result = await run_scan()
-
-            shifts_found = result.get('potential_shifts_found', 0)
-            domains_checked = len(result.get('domains_checked', []))
-
-            embed = discord.Embed(
-                title="📰 Narrative Scan Complete",
-                description=f"Scanned {domains_checked} domains for narrative shifts.",
-                color=discord.Color.green() if shifts_found > 0 else discord.Color.blue(),
-                timestamp=datetime.now()
-            )
-
-            embed.add_field(
-                name="📊 Results",
-                value=(
-                    f"**Potential Shifts:** {shifts_found}\n"
-                    f"**Domains Scanned:** {domains_checked}\n"
-                    f"**Hours Analyzed:** 24"
-                ),
-                inline=False
-            )
-
-            # Show top shifts
-            shifts = result.get('shifts_detected', [])[:3]
-            if shifts:
-                shifts_text = "\n".join([
-                    f"• {s.get('title', 'Unknown')[:40]} ({s.get('confidence', 0) * 100:.0f}%)"
-                    for s in shifts
-                ])
-                embed.add_field(
-                    name="🔥 Top Potential Shifts",
-                    value=shifts_text or "None detected",
-                    inline=False
-                )
-
-            embed.set_footer(text="Session 471 | Narrative Drift Detector")
-            await interaction.edit_original_response(embed=embed)
-
-        except Exception as e:
-            logger.error(f"/narrative-scan error: {e}")
-            await interaction.edit_original_response(
-                embed=discord.Embed(
-                    title="❌ Scan Failed",
-                    description=f"Failed to run scan: {str(e)[:200]}",
-                    color=discord.Color.red()
-                )
-            )
-
-    @app_commands.command(name="narrative-seed", description="Seed narratives for a domain")
-    @app_commands.describe(
-        domain="Domain to seed (politics, markets, tech, culture, etc.)",
-        count="Number of narratives to create (default: 5)"
-    )
-    async def narrative_seed_command(
-        self,
-        interaction: discord.Interaction,
-        domain: str,
-        count: int = 5
-    ):
-        """Seed initial narratives for a domain from spider data."""
-        await interaction.response.defer(thinking=True)
-
-        try:
-            @sync_to_async
-            def seed_narratives():
-                from core.agents.narrative import NarrativeDriftCoordinator
-
-                coordinator = NarrativeDriftCoordinator()
-                result = coordinator._seed_domain_narratives({
-                    'domain': domain.lower(),
-                    'count': count
-                })
-                return result
-
-            result = await seed_narratives()
-
-            if 'error' in result:
-                await interaction.edit_original_response(
-                    embed=discord.Embed(
-                        title="❌ Seeding Failed",
-                        description=result['error'],
-                        color=discord.Color.red()
-                    )
-                )
-                return
-
-            created = result.get('created', 0)
-            narratives = result.get('narratives', [])
-
-            embed = discord.Embed(
-                title="🌱 Narratives Seeded",
-                description=f"Created {created} narratives for **{domain}**",
-                color=discord.Color.green() if created > 0 else discord.Color.yellow(),
-                timestamp=datetime.now()
-            )
-
-            if narratives:
-                for n in narratives[:5]:
-                    embed.add_field(
-                        name=f"📰 {n.get('title', 'Unknown')[:50]}",
-                        value=f"ID: `{n.get('id', 'N/A')[:8]}`",
-                        inline=True
-                    )
-
-            embed.set_footer(text="Session 471 | Narrative Drift Detector")
-            await interaction.edit_original_response(embed=embed)
-
-        except Exception as e:
-            logger.error(f"/narrative-seed error: {e}")
-            await interaction.edit_original_response(
-                embed=discord.Embed(
-                    title="❌ Seeding Failed",
-                    description=f"Failed to seed narratives: {str(e)[:200]}",
-                    color=discord.Color.red()
-                )
-            )
-
-    @app_commands.command(name="narrative-status", description="Get Narrative Drift system status")
-    async def narrative_status_command(self, interaction: discord.Interaction):
-        """Get the current status of the Narrative Drift Detector system."""
-        await interaction.response.defer(thinking=True)
-
-        try:
-            @sync_to_async
-            def get_status():
-                from core.agents.narrative import NarrativeDriftCoordinator
-
-                coordinator = NarrativeDriftCoordinator()
-                return coordinator._get_system_status({})
-
-            status = await get_status()
-
-            embed = discord.Embed(
-                title="📰 Narrative Drift Detector Status",
-                description="Tier 1 Autonomous Situation #2",
-                color=discord.Color.purple(),
-                timestamp=datetime.now()
-            )
-
-            # Narratives
-            n_stats = status.get('narratives', {})
-            embed.add_field(
-                name="📋 Narratives",
-                value=(
-                    f"**Total:** {n_stats.get('total', 0)}\n"
-                    f"**By Status:** {', '.join(f'{k}: {v}' for k, v in n_stats.get('by_status', {}).items()) or 'None'}"
-                ),
-                inline=False
-            )
-
-            # Shifts
-            s_stats = status.get('shifts', {})
-            embed.add_field(
-                name="🔄 Shifts",
-                value=(
-                    f"**Total:** {s_stats.get('total', 0)}\n"
-                    f"**Last 24h:** {s_stats.get('last_24h', 0)}\n"
-                    f"**Last 7d:** {s_stats.get('last_7d', 0)}"
-                ),
-                inline=True
-            )
-
-            # Evidence
-            e_stats = status.get('evidence', {})
-            embed.add_field(
-                name="📝 Evidence",
-                value=(
-                    f"**Total:** {e_stats.get('total', 0)}\n"
-                    f"**Last 24h:** {e_stats.get('last_24h', 0)}"
-                ),
-                inline=True
-            )
-
-            # Alerts
-            a_stats = status.get('alerts', {})
-            embed.add_field(
-                name="🔔 Alerts",
-                value=(
-                    f"**Total:** {a_stats.get('total', 0)}\n"
-                    f"**Unread:** {a_stats.get('unread', 0)}\n"
-                    f"**Last 24h:** {a_stats.get('last_24h', 0)}"
-                ),
-                inline=True
-            )
-
-            # Domain breakdown
-            by_domain = n_stats.get('by_domain', {})
-            if by_domain:
-                domain_text = "\n".join([f"• **{k}:** {v}" for k, v in by_domain.items()])
-                embed.add_field(
-                    name="🌍 By Domain",
-                    value=domain_text,
-                    inline=False
-                )
-
-            embed.set_footer(text="Session 471 | Narrative Drift Detector | Runs every 4 hours")
-            await interaction.edit_original_response(embed=embed)
-
-        except Exception as e:
-            logger.error(f"/narrative-status error: {e}")
-            await interaction.edit_original_response(
-                embed=discord.Embed(
-                    title="❌ Error",
-                    description=f"Failed to get status: {str(e)[:200]}",
-                    color=discord.Color.red()
-                )
-            )
-
-    # =========================================================================
-    # Session 507: Additional Narrative Drift Monitoring Commands
-    # =========================================================================
-
-    @app_commands.command(name="narrative-evidence", description="View evidence for a specific narrative")
-    @app_commands.describe(
-        narrative_id="The narrative ID (first 8 characters)",
-        limit="Number of evidence items to show (default: 10)"
-    )
-    async def narrative_evidence_command(
-        self,
-        interaction: discord.Interaction,
-        narrative_id: str,
-        limit: int = 10
-    ):
-        """View evidence collected for a specific narrative."""
-        await interaction.response.defer(thinking=True)
-
-        try:
-            @sync_to_async
-            def get_evidence():
-                from core.models_narrative_drift import Narrative, NarrativeEvidence
-
-                # Find narrative by partial ID
-                narrative = Narrative.objects.filter(id__startswith=narrative_id).first()
-                if not narrative:
-                    return None, []
-
-                evidence = list(
-                    NarrativeEvidence.objects.filter(narrative=narrative)
-                    .order_by('-created_at')[:limit]
-                )
-                return narrative, evidence
-
-            narrative, evidence = await get_evidence()
-
-            if not narrative:
-                await interaction.edit_original_response(
-                    embed=discord.Embed(
-                        title="❌ Narrative Not Found",
-                        description=f"No narrative found with ID starting with `{narrative_id}`",
-                        color=discord.Color.red()
-                    )
-                )
-                return
-
-            # Sentiment emoji mapping
-            sentiment_emoji = {
-                'supports': '✅',
-                'contradicts': '❌',
-                'neutral': '➖'
-            }
-
-            embed = discord.Embed(
-                title=f"📝 Evidence for: {narrative.title[:50]}",
-                description=(
-                    f"**Domain:** {narrative.domain} | **Status:** {narrative.status}\n"
-                    f"Showing {len(evidence)} most recent evidence items"
-                ),
-                color=discord.Color.blue(),
-                timestamp=datetime.now()
-            )
-
-            if not evidence:
-                embed.add_field(
-                    name="No Evidence",
-                    value="No evidence has been collected for this narrative yet.",
-                    inline=False
-                )
-            else:
-                for e in evidence[:10]:
-                    emoji = sentiment_emoji.get(e.sentiment, '❓')
-                    source = e.source_url[:30] + "..." if len(e.source_url) > 30 else e.source_url
-                    embed.add_field(
-                        name=f"{emoji} {e.sentiment.title()} ({float(e.confidence) * 100:.0f}%)",
-                        value=(
-                            f"**Source:** {source}\n"
-                            f"**Snippet:** {e.content_snippet[:80]}...\n"
-                            f"**Date:** {e.created_at.strftime('%Y-%m-%d %H:%M')}"
-                        ),
-                        inline=False
-                    )
-
-            embed.set_footer(text="Session 507 | Narrative Drift Detector")
-            await interaction.edit_original_response(embed=embed)
-
-        except Exception as e:
-            logger.error(f"/narrative-evidence error: {e}")
-            await interaction.edit_original_response(
-                embed=discord.Embed(
-                    title="❌ Error",
-                    description=f"Failed to fetch evidence: {str(e)[:200]}",
-                    color=discord.Color.red()
-                )
-            )
-
-    @app_commands.command(name="narrative-domains", description="Overview of all narrative domains")
-    async def narrative_domains_command(self, interaction: discord.Interaction):
-        """Get an overview of narratives across all domains."""
-        await interaction.response.defer(thinking=True)
-
-        try:
-            @sync_to_async
-            def get_domain_stats():
-                from core.models_narrative_drift import Narrative, NarrativeShift, NarrativeEvidence, NarrativeDomain
-                from django.utils import timezone
-                from datetime import timedelta
-
-                now = timezone.now()
-                last_24h = now - timedelta(hours=24)
-                last_7d = now - timedelta(days=7)
-
-                # Get counts by domain
-                domain_stats = {}
-                for domain_choice in NarrativeDomain.choices:
-                    domain = domain_choice[0]
-                    narratives = Narrative.objects.filter(domain=domain)
-                    shifts_24h = NarrativeShift.objects.filter(domain=domain, detected_at__gte=last_24h).count()
-                    shifts_7d = NarrativeShift.objects.filter(domain=domain, detected_at__gte=last_7d).count()
-                    evidence_24h = NarrativeEvidence.objects.filter(
-                        narrative__domain=domain, created_at__gte=last_24h
-                    ).count()
-
-                    # Status breakdown
-                    active = narratives.filter(status__in=['emerging', 'dominant', 'shifting']).count()
-
-                    domain_stats[domain] = {
-                        'total': narratives.count(),
-                        'active': active,
-                        'shifts_24h': shifts_24h,
-                        'shifts_7d': shifts_7d,
-                        'evidence_24h': evidence_24h
-                    }
-
-                return domain_stats
-
-            stats = await get_domain_stats()
-
-            # Domain emoji mapping
-            domain_emoji = {
-                'politics': '🏛️',
-                'markets': '📈',
-                'tech': '💻',
-                'culture': '🎭',
-                'geopolitics': '🌍',
-                'crypto': '₿',
-                'climate': '🌱',
-                'health': '🏥'
-            }
-
-            embed = discord.Embed(
-                title="🌐 Narrative Domains Overview",
-                description="Status of tracked narratives across all domains",
-                color=discord.Color.purple(),
-                timestamp=datetime.now()
-            )
-
-            for domain, data in stats.items():
-                if data['total'] > 0:  # Only show domains with narratives
-                    emoji = domain_emoji.get(domain, '📋')
-                    shift_indicator = "🔥" if data['shifts_24h'] > 0 else ""
-                    embed.add_field(
-                        name=f"{emoji} {domain.title()} {shift_indicator}",
-                        value=(
-                            f"**Narratives:** {data['total']} ({data['active']} active)\n"
-                            f"**Shifts:** {data['shifts_24h']} (24h) / {data['shifts_7d']} (7d)\n"
-                            f"**Evidence:** {data['evidence_24h']} (24h)"
-                        ),
-                        inline=True
-                    )
-
-            # Add totals
-            total_narratives = sum(d['total'] for d in stats.values())
-            total_active = sum(d['active'] for d in stats.values())
-            total_shifts_24h = sum(d['shifts_24h'] for d in stats.values())
-            total_evidence_24h = sum(d['evidence_24h'] for d in stats.values())
-
-            embed.add_field(
-                name="📊 Totals",
-                value=(
-                    f"**Total Narratives:** {total_narratives}\n"
-                    f"**Active Narratives:** {total_active}\n"
-                    f"**Shifts (24h):** {total_shifts_24h}\n"
-                    f"**Evidence (24h):** {total_evidence_24h}"
-                ),
-                inline=False
-            )
-
-            embed.set_footer(text="Session 507 | Narrative Drift Detector | Use /narratives <domain> for details")
-            await interaction.edit_original_response(embed=embed)
-
-        except Exception as e:
-            logger.error(f"/narrative-domains error: {e}")
-            await interaction.edit_original_response(
-                embed=discord.Embed(
-                    title="❌ Error",
-                    description=f"Failed to fetch domain stats: {str(e)[:200]}",
-                    color=discord.Color.red()
-                )
-            )
-
-    @app_commands.command(name="narrative-watch", description="Watch a narrative for shift alerts")
-    @app_commands.describe(
-        narrative_id="The narrative ID to watch (first 8 characters)",
-        action="Watch or unwatch the narrative"
-    )
-    @app_commands.choices(action=[
-        app_commands.Choice(name="Watch", value="watch"),
-        app_commands.Choice(name="Unwatch", value="unwatch"),
-        app_commands.Choice(name="List My Watches", value="list")
-    ])
-    async def narrative_watch_command(
-        self,
-        interaction: discord.Interaction,
-        action: str = "list",
-        narrative_id: str = None
-    ):
-        """Subscribe to alerts for specific narrative shifts."""
-        await interaction.response.defer(thinking=True)
-
-        try:
-            discord_id = str(interaction.user.id)
-
-            @sync_to_async
-            def manage_watch():
-                from core.models_narrative_drift import Narrative, NarrativeAlert
-
-                if action == "list":
-                    # List user's watched narratives
-                    alerts = list(
-                        NarrativeAlert.objects.filter(
-                            user_discord_id=discord_id,
-                            is_read=False
-                        ).select_related('narrative').order_by('-created_at')[:10]
-                    )
-                    watches = list(
-                        NarrativeAlert.objects.filter(
-                            user_discord_id=discord_id
-                        ).values('narrative__title', 'narrative__id').distinct()[:10]
-                    )
-                    return {'action': 'list', 'alerts': alerts, 'watches': watches}
-
-                if not narrative_id:
-                    return {'error': 'Narrative ID is required for watch/unwatch'}
-
-                narrative = Narrative.objects.filter(id__startswith=narrative_id).first()
-                if not narrative:
-                    return {'error': f'No narrative found with ID starting with {narrative_id}'}
-
-                if action == "watch":
-                    # Create a "subscription" alert with a special type
-                    alert, created = NarrativeAlert.objects.get_or_create(
-                        narrative=narrative,
-                        user_discord_id=discord_id,
-                        alert_type='subscription',
-                        defaults={
-                            'message': f'Subscribed to watch: {narrative.title}',
-                            'is_read': True  # Mark as read since it's just a subscription marker
-                        }
-                    )
-                    return {
-                        'action': 'watch',
-                        'narrative': narrative,
-                        'created': created
-                    }
-
-                elif action == "unwatch":
-                    deleted, _ = NarrativeAlert.objects.filter(
-                        narrative=narrative,
-                        user_discord_id=discord_id,
-                        alert_type='subscription'
-                    ).delete()
-                    return {
-                        'action': 'unwatch',
-                        'narrative': narrative,
-                        'deleted': deleted > 0
-                    }
-
-            result = await manage_watch()
-
-            if 'error' in result:
-                await interaction.edit_original_response(
-                    embed=discord.Embed(
-                        title="❌ Error",
-                        description=result['error'],
-                        color=discord.Color.red()
-                    )
-                )
-                return
-
-            if result['action'] == 'list':
-                embed = discord.Embed(
-                    title="👁️ Your Narrative Watches",
-                    description="Narratives you're monitoring for shifts",
-                    color=discord.Color.blue(),
-                    timestamp=datetime.now()
-                )
-
-                watches = result.get('watches', [])
-                if watches:
-                    watch_list = "\n".join([
-                        f"• {w['narrative__title'][:40]} (`{str(w['narrative__id'])[:8]}`)"
-                        for w in watches
-                    ])
-                    embed.add_field(name="📋 Watched Narratives", value=watch_list, inline=False)
-                else:
-                    embed.add_field(
-                        name="No Watches",
-                        value="You're not watching any narratives. Use `/narrative-watch watch <id>` to start.",
-                        inline=False
-                    )
-
-                alerts = result.get('alerts', [])
-                if alerts:
-                    alert_list = "\n".join([
-                        f"• {a.narrative.title[:30]}: {a.message[:40]}"
-                        for a in alerts[:5]
-                    ])
-                    embed.add_field(name="🔔 Recent Alerts", value=alert_list, inline=False)
-
-            elif result['action'] == 'watch':
-                narrative = result['narrative']
-                if result['created']:
-                    embed = discord.Embed(
-                        title="✅ Now Watching",
-                        description=f"You'll be notified when **{narrative.title}** shifts.",
-                        color=discord.Color.green(),
-                        timestamp=datetime.now()
-                    )
-                else:
-                    embed = discord.Embed(
-                        title="ℹ️ Already Watching",
-                        description=f"You're already watching **{narrative.title}**.",
-                        color=discord.Color.blue(),
-                        timestamp=datetime.now()
-                    )
-
-            elif result['action'] == 'unwatch':
-                narrative = result['narrative']
-                if result['deleted']:
-                    embed = discord.Embed(
-                        title="✅ Unwatched",
-                        description=f"You will no longer receive alerts for **{narrative.title}**.",
-                        color=discord.Color.orange(),
-                        timestamp=datetime.now()
-                    )
-                else:
-                    embed = discord.Embed(
-                        title="ℹ️ Not Watching",
-                        description=f"You weren't watching **{narrative.title}**.",
-                        color=discord.Color.blue(),
-                        timestamp=datetime.now()
-                    )
-
-            embed.set_footer(text="Session 507 | Narrative Drift Detector")
-            await interaction.edit_original_response(embed=embed)
-
-        except Exception as e:
-            logger.error(f"/narrative-watch error: {e}")
-            await interaction.edit_original_response(
-                embed=discord.Embed(
-                    title="❌ Error",
-                    description=f"Failed to manage watch: {str(e)[:200]}",
-                    color=discord.Color.red()
-                )
-            )
-
-    @app_commands.command(name="narrative-trending", description="Show trending/shifting narratives")
-    async def narrative_trending_command(self, interaction: discord.Interaction):
-        """Show narratives that are currently shifting or have high activity."""
-        await interaction.response.defer(thinking=True)
-
-        try:
-            @sync_to_async
-            def get_trending():
-                from core.models_narrative_drift import Narrative, NarrativeShift, NarrativeEvidence
-                from django.utils import timezone
-                from datetime import timedelta
-
-                now = timezone.now()
-                last_24h = now - timedelta(hours=24)
-
-                # Get shifting narratives
-                shifting = list(Narrative.objects.filter(status='shifting').order_by('-updated_at')[:5])
-
-                # Get narratives with most recent evidence
-                evidence_counts = (
-                    NarrativeEvidence.objects.filter(created_at__gte=last_24h)
-                    .values('narrative__id', 'narrative__title', 'narrative__domain')
-                    .annotate(count=Count('id'))
-                    .order_by('-count')[:5]
-                )
-
-                # Get recent shifts
-                recent_shifts = list(
-                    NarrativeShift.objects.filter(detected_at__gte=last_24h)
-                    .select_related('old_narrative')
-                    .order_by('-confidence')[:5]
-                )
-
-                return {
-                    'shifting': shifting,
-                    'high_activity': list(evidence_counts),
-                    'recent_shifts': recent_shifts
-                }
-
-            data = await get_trending()
-
-            embed = discord.Embed(
-                title="🔥 Trending Narratives",
-                description="Narratives with high activity in the last 24 hours",
-                color=discord.Color.red(),
-                timestamp=datetime.now()
-            )
-
-            # Shifting narratives
-            shifting = data['shifting']
-            if shifting:
-                shift_text = "\n".join([
-                    f"🔄 **{n.title[:40]}** ({n.domain})"
-                    for n in shifting
-                ])
-                embed.add_field(name="Currently Shifting", value=shift_text, inline=False)
-
-            # High activity
-            high_activity = data['high_activity']
-            if high_activity:
-                activity_text = "\n".join([
-                    f"📊 **{h['narrative__title'][:35]}** - {h['count']} evidence items"
-                    for h in high_activity
-                ])
-                embed.add_field(name="High Evidence Activity (24h)", value=activity_text, inline=False)
-
-            # Recent shifts
-            recent_shifts = data['recent_shifts']
-            if recent_shifts:
-                shifts_text = "\n".join([
-                    f"⚡ **{s.old_narrative.title[:35]}** ({float(s.confidence) * 100:.0f}% confidence)"
-                    for s in recent_shifts
-                ])
-                embed.add_field(name="Recent Shift Detections", value=shifts_text, inline=False)
-
-            if not shifting and not high_activity and not recent_shifts:
-                embed.add_field(
-                    name="No Trending Activity",
-                    value="No significant narrative activity in the last 24 hours.",
-                    inline=False
-                )
-
-            embed.set_footer(text="Session 507 | Narrative Drift Detector | Use /narrative-scan to trigger detection")
-            await interaction.edit_original_response(embed=embed)
-
-        except Exception as e:
-            logger.error(f"/narrative-trending error: {e}")
-            await interaction.edit_original_response(
-                embed=discord.Embed(
-                    title="❌ Error",
-                    description=f"Failed to fetch trending: {str(e)[:200]}",
-                    color=discord.Color.red()
-                )
-            )
-
-
-# =============================================================================
-# Session 472: ROI Metrics Commands
-# Phase 6 Market Intelligence - Revenue attribution and tracking
-# =============================================================================
-
-class ROICommands(commands.Cog):
-    """Commands for ROI metrics and revenue attribution tracking."""
-
-    def __init__(self, bot: DonkeyBetzBot):
-        self.bot = bot
-
-    @app_commands.command(name="roi-summary", description="Show ROI summary metrics")
-    @app_commands.describe(
-        period="Time period (daily, weekly, monthly)",
-        dimension="Dimension to group by (overall, spider_source)"
-    )
-    async def roi_summary_command(
-        self,
-        interaction: discord.Interaction,
-        period: str = "daily",
-        dimension: str = "overall"
-    ):
-        """Show ROI summary metrics from the tracking system."""
-        await interaction.response.defer(thinking=True)
-
-        try:
-            @sync_to_async
-            def get_roi_summary():
-                from core.services.roi_tracker import get_roi_tracker
-                tracker = get_roi_tracker()
-                return tracker.get_roi_summary(
-                    period_type=period,
-                    dimension=dimension,
-                    limit=10
-                )
-
-            summary = await get_roi_summary()
-
-            embed = discord.Embed(
-                title="💰 ROI Summary",
-                description=f"**Period:** {period.title()} | **Dimension:** {dimension.title()}",
-                color=discord.Color.green(),
-                timestamp=datetime.now()
-            )
-
-            if not summary:
-                embed.add_field(
-                    name="📊 No Data",
-                    value="No ROI metrics found. Record some conversion events first!",
-                    inline=False
-                )
-            else:
-                for i, item in enumerate(summary[:5]):
-                    period_start = item.get('period_start', '')[:10]
-                    revenue = item.get('total_revenue', '0')
-                    conversions = item.get('conversions', 0)
-                    ctr = item.get('ctr', 'N/A')
-                    cr = item.get('conversion_rate', 'N/A')
-
-                    embed.add_field(
-                        name=f"📅 {period_start}",
-                        value=(
-                            f"**Revenue:** ${revenue}\n"
-                            f"**Conversions:** {conversions}\n"
-                            f"**CTR:** {ctr}\n"
-                            f"**CR:** {cr}"
-                        ),
-                        inline=True
-                    )
-
-            embed.set_footer(text="Session 472 | Market Intelligence Phase 6")
-            await interaction.edit_original_response(embed=embed)
-
-        except Exception as e:
-            logger.error(f"/roi-summary error: {e}")
-            await interaction.edit_original_response(
-                embed=discord.Embed(
-                    title="❌ Error",
-                    description=f"Failed to get ROI summary: {str(e)[:200]}",
-                    color=discord.Color.red()
-                )
-            )
-
-    @app_commands.command(name="roi-dashboard", description="Show ROI dashboard overview")
-    async def roi_dashboard_command(self, interaction: discord.Interaction):
-        """Show ROI dashboard with today, week, month, and all-time metrics."""
-        await interaction.response.defer(thinking=True)
-
-        try:
-            @sync_to_async
-            def get_dashboard():
-                from core.models_unified_system import (
-                    ConversionEvent, AttributionPath, WeeklyIntelligenceBrief
-                )
-                from django.db.models import Sum
-                from django.utils import timezone
-                from datetime import timedelta
-
-                now = timezone.now()
-                today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-                week_start = today_start - timedelta(days=today_start.weekday())
-                month_start = today_start.replace(day=1)
-
-                # Today
-                today_events = ConversionEvent.objects.filter(event_timestamp__gte=today_start)
-                today_revenue = today_events.filter(event_type='revenue').aggregate(
-                    total=Sum('value'))['total'] or 0
-                today_conversions = today_events.filter(event_type='convert').count()
-
-                # This week
-                week_events = ConversionEvent.objects.filter(event_timestamp__gte=week_start)
-                week_revenue = week_events.filter(event_type='revenue').aggregate(
-                    total=Sum('value'))['total'] or 0
-                week_conversions = week_events.filter(event_type='convert').count()
-
-                # This month
-                month_events = ConversionEvent.objects.filter(event_timestamp__gte=month_start)
-                month_revenue = month_events.filter(event_type='revenue').aggregate(
-                    total=Sum('value'))['total'] or 0
-                month_conversions = month_events.filter(event_type='convert').count()
-
-                # All time
-                total_events = ConversionEvent.objects.count()
-                total_revenue = ConversionEvent.objects.filter(
-                    event_type='revenue').aggregate(total=Sum('value'))['total'] or 0
-                total_conversions = ConversionEvent.objects.filter(
-                    event_type='convert').count()
-
-                # Latest brief
-                latest_brief = WeeklyIntelligenceBrief.objects.filter(
-                    status='complete').first()
-
-                return {
-                    'today': {'revenue': today_revenue, 'conversions': today_conversions},
-                    'week': {'revenue': week_revenue, 'conversions': week_conversions},
-                    'month': {'revenue': month_revenue, 'conversions': month_conversions},
-                    'all_time': {
-                        'events': total_events,
-                        'revenue': total_revenue,
-                        'conversions': total_conversions,
-                        'paths': AttributionPath.objects.count()
-                    },
-                    'latest_brief': latest_brief.executive_summary if latest_brief else None
-                }
-
-            dashboard = await get_dashboard()
-
-            embed = discord.Embed(
-                title="📊 ROI Dashboard",
-                description="Revenue and conversion tracking overview",
-                color=discord.Color.gold(),
-                timestamp=datetime.now()
-            )
-
-            # Today
-            today = dashboard['today']
-            embed.add_field(
-                name="📅 Today",
-                value=(
-                    f"**Revenue:** ${today['revenue']}\n"
-                    f"**Conversions:** {today['conversions']}"
-                ),
-                inline=True
-            )
-
-            # This Week
-            week = dashboard['week']
-            embed.add_field(
-                name="📆 This Week",
-                value=(
-                    f"**Revenue:** ${week['revenue']}\n"
-                    f"**Conversions:** {week['conversions']}"
-                ),
-                inline=True
-            )
-
-            # This Month
-            month = dashboard['month']
-            embed.add_field(
-                name="🗓️ This Month",
-                value=(
-                    f"**Revenue:** ${month['revenue']}\n"
-                    f"**Conversions:** {month['conversions']}"
-                ),
-                inline=True
-            )
-
-            # All Time
-            all_time = dashboard['all_time']
-            embed.add_field(
-                name="📈 All Time",
-                value=(
-                    f"**Total Events:** {all_time['events']}\n"
-                    f"**Total Revenue:** ${all_time['revenue']}\n"
-                    f"**Total Conversions:** {all_time['conversions']}\n"
-                    f"**Attribution Paths:** {all_time['paths']}"
-                ),
-                inline=False
-            )
-
-            # Latest Brief
-            if dashboard['latest_brief']:
-                embed.add_field(
-                    name="📋 Latest Brief",
-                    value=dashboard['latest_brief'][:200] + "..." if len(dashboard['latest_brief']) > 200 else dashboard['latest_brief'],
-                    inline=False
-                )
-
-            embed.set_footer(text="Session 472 | Market Intelligence Phase 6")
-            await interaction.edit_original_response(embed=embed)
-
-        except Exception as e:
-            logger.error(f"/roi-dashboard error: {e}")
-            await interaction.edit_original_response(
-                embed=discord.Embed(
-                    title="❌ Error",
-                    description=f"Failed to get dashboard: {str(e)[:200]}",
-                    color=discord.Color.red()
-                )
-            )
-
-    @app_commands.command(name="roi-brief", description="Generate or view weekly intelligence brief")
-    @app_commands.describe(
-        action="Action to take (generate, view)"
-    )
-    async def roi_brief_command(
-        self,
-        interaction: discord.Interaction,
-        action: str = "view"
-    ):
-        """Generate or view weekly intelligence brief."""
-        await interaction.response.defer(thinking=True)
-
-        try:
-            if action.lower() == "generate":
-                @sync_to_async
-                def generate_brief():
-                    from core.services.roi_tracker import get_roi_tracker
-                    tracker = get_roi_tracker()
-                    return tracker.generate_weekly_brief()
-
-                brief = await generate_brief()
-
-                embed = discord.Embed(
-                    title="📊 Weekly Intelligence Brief Generated",
-                    description=brief.get('executive_summary', 'No summary available'),
-                    color=discord.Color.blue(),
-                    timestamp=datetime.now()
-                )
-
-                embed.add_field(
-                    name="📅 Period",
-                    value=f"{brief.get('week_start', 'N/A')} to {brief.get('week_end', 'N/A')}",
-                    inline=True
-                )
-                embed.add_field(
-                    name="💰 Revenue",
-                    value=f"${brief.get('total_revenue', 0)}",
-                    inline=True
-                )
-                embed.add_field(
-                    name="🎯 Conversions",
-                    value=str(brief.get('total_conversions', 0)),
-                    inline=True
-                )
-
-                # Revenue change
-                change = brief.get('revenue_change_pct')
-                if change:
-                    direction = "📈" if float(change) > 0 else "📉"
-                    embed.add_field(
-                        name=f"{direction} vs Last Week",
-                        value=f"{change}%",
-                        inline=True
-                    )
-
-                # Key insights
-                insights = brief.get('key_insights', [])
-                if insights:
-                    embed.add_field(
-                        name="💡 Key Insights",
-                        value="\n".join([f"• {i}" for i in insights[:3]]),
-                        inline=False
-                    )
-
-                # Recommendations
-                recommendations = brief.get('recommendations', [])
-                if recommendations:
-                    embed.add_field(
-                        name="🎯 Recommendations",
-                        value="\n".join([f"• {r}" for r in recommendations[:3]]),
-                        inline=False
-                    )
-
-            else:  # view
-                @sync_to_async
-                def get_latest_brief():
-                    from core.models_unified_system import WeeklyIntelligenceBrief
-                    return WeeklyIntelligenceBrief.objects.filter(
-                        status='complete'
-                    ).order_by('-week_start').first()
-
-                brief = await get_latest_brief()
-
-                if not brief:
-                    await interaction.edit_original_response(
-                        embed=discord.Embed(
-                            title="📋 No Brief Available",
-                            description="No weekly briefs have been generated yet. Use `/roi-brief generate` to create one.",
-                            color=discord.Color.yellow()
-                        )
-                    )
-                    return
-
-                embed = discord.Embed(
-                    title="📊 Weekly Intelligence Brief",
-                    description=brief.executive_summary or "No summary available",
-                    color=discord.Color.blue(),
-                    timestamp=datetime.now()
-                )
-
-                embed.add_field(
-                    name="📅 Period",
-                    value=f"{brief.week_start} to {brief.week_end}",
-                    inline=True
-                )
-                embed.add_field(
-                    name="💰 Revenue",
-                    value=f"${brief.total_revenue}",
-                    inline=True
-                )
-                embed.add_field(
-                    name="🎯 Conversions",
-                    value=str(brief.total_conversions),
-                    inline=True
-                )
-
-                # Revenue change
-                if brief.revenue_change_pct:
-                    direction = "📈" if brief.revenue_change_pct > 0 else "📉"
-                    embed.add_field(
-                        name=f"{direction} vs Last Week",
-                        value=f"{brief.revenue_change_pct}%",
-                        inline=True
-                    )
-
-                # Key insights
-                if brief.key_insights:
-                    embed.add_field(
-                        name="💡 Key Insights",
-                        value="\n".join([f"• {i}" for i in brief.key_insights[:3]]),
-                        inline=False
-                    )
-
-                # Recommendations
-                if brief.recommendations:
-                    embed.add_field(
-                        name="🎯 Recommendations",
-                        value="\n".join([f"• {r}" for r in brief.recommendations[:3]]),
-                        inline=False
-                    )
-
-            embed.set_footer(text="Session 472 | Market Intelligence Phase 6")
-            await interaction.edit_original_response(embed=embed)
-
-        except Exception as e:
-            logger.error(f"/roi-brief error: {e}")
-            await interaction.edit_original_response(
-                embed=discord.Embed(
-                    title="❌ Error",
-                    description=f"Failed to get brief: {str(e)[:200]}",
-                    color=discord.Color.red()
-                )
-            )
-
-    @app_commands.command(name="roi-funnel", description="Show conversion funnel metrics")
-    @app_commands.describe(
-        source="Filter by attribution source (spider name)"
-    )
-    async def roi_funnel_command(
-        self,
-        interaction: discord.Interaction,
-        source: str = None
-    ):
-        """Show conversion funnel with drop-off rates."""
-        await interaction.response.defer(thinking=True)
-
-        try:
-            @sync_to_async
-            def get_funnel():
-                from core.services.roi_tracker import get_roi_tracker
-                tracker = get_roi_tracker()
-                return tracker.get_funnel_metrics(source=source)
-
-            funnel = await get_funnel()
-
-            embed = discord.Embed(
-                title="🔻 Conversion Funnel",
-                description=f"Funnel analysis" + (f" for **{source}**" if source else " (all sources)"),
-                color=discord.Color.purple(),
-                timestamp=datetime.now()
-            )
-
-            # Funnel visualization
-            stage_emojis = {
-                'view': '👁️',
-                'click': '👆',
-                'apply': '📝',
-                'submit': '📤',
-                'interview': '🗣️',
-                'offer': '📋',
-                'convert': '✅',
-                'revenue': '💰'
-            }
-
-            funnel_stages = funnel.get('funnel', [])
-            for stage in funnel_stages:
-                stage_name = stage['stage']
-                count = stage['count']
-                cr = stage.get('conversion_rate')
-                drop = stage.get('drop_off')
-
-                emoji = stage_emojis.get(stage_name, '📊')
-
-                value_parts = [f"**Count:** {count}"]
-                if cr is not None:
-                    value_parts.append(f"**CR:** {cr}%")
-                if drop is not None and drop > 0:
-                    value_parts.append(f"**Drop-off:** {drop}")
-
-                embed.add_field(
-                    name=f"{emoji} {stage_name.title()}",
-                    value="\n".join(value_parts),
-                    inline=True
-                )
-
-            # Overall stats
-            overall_cr = funnel.get('overall_conversion_rate')
-            total_events = funnel.get('total_events', 0)
-
-            embed.add_field(
-                name="📈 Overall",
-                value=(
-                    f"**Total Events:** {total_events}\n"
-                    f"**Overall CR:** {overall_cr}%" if overall_cr else "N/A"
-                ),
-                inline=False
-            )
-
-            embed.set_footer(text="Session 472 | Market Intelligence Phase 6")
-            await interaction.edit_original_response(embed=embed)
-
-        except Exception as e:
-            logger.error(f"/roi-funnel error: {e}")
-            await interaction.edit_original_response(
-                embed=discord.Embed(
-                    title="❌ Error",
-                    description=f"Failed to get funnel: {str(e)[:200]}",
-                    color=discord.Color.red()
-                )
-            )
-
-    @app_commands.command(name="roi-attribution", description="Show revenue attribution by source")
-    async def roi_attribution_command(self, interaction: discord.Interaction):
-        """Show revenue attribution grouped by source."""
-        await interaction.response.defer(thinking=True)
-
-        try:
-            @sync_to_async
-            def get_attribution():
-                from core.services.roi_tracker import get_roi_tracker
-                tracker = get_roi_tracker()
-                return tracker.get_attribution_by_source()
-
-            attribution = await get_attribution()
-
-            embed = discord.Embed(
-                title="🎯 Revenue Attribution by Source",
-                description="Top performing sources based on attributed revenue",
-                color=discord.Color.teal(),
-                timestamp=datetime.now()
-            )
-
-            if not attribution:
-                embed.add_field(
-                    name="📊 No Attribution Data",
-                    value="No attribution paths have been created yet. Record some revenue events!",
-                    inline=False
-                )
-            else:
-                for i, item in enumerate(attribution[:10]):
-                    source = item.get('source', 'Unknown')
-                    revenue = item.get('total_revenue', '0')
-                    conversions = item.get('conversions', 0)
-                    avg_path = item.get('avg_path_length', 0)
-                    avg_hours = item.get('avg_hours_to_convert', 0)
-
-                    medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else "📊"
-
-                    embed.add_field(
-                        name=f"{medal} {source}",
-                        value=(
-                            f"**Revenue:** ${revenue}\n"
-                            f"**Conversions:** {conversions}\n"
-                            f"**Avg Path:** {avg_path} steps\n"
-                            f"**Avg Time:** {avg_hours}h"
-                        ),
-                        inline=True
-                    )
-
-            embed.set_footer(text="Session 472 | Market Intelligence Phase 6")
-            await interaction.edit_original_response(embed=embed)
-
-        except Exception as e:
-            logger.error(f"/roi-attribution error: {e}")
-            await interaction.edit_original_response(
-                embed=discord.Embed(
-                    title="❌ Error",
-                    description=f"Failed to get attribution: {str(e)[:200]}",
-                    color=discord.Color.red()
-                )
-            )
-
-
-# =============================================================================
-# Resolve Commands - Session 478: DaVinci Resolve Full Utilization
-# =============================================================================
+# ROICommands removed in Phase G2 command consolidation
 
 class ResolveCommands(commands.Cog):
     """Commands for DaVinci Resolve professional rendering with trend-driven color grading."""
@@ -11346,7 +8239,9 @@ class ResolveCommands(commands.Cog):
     def __init__(self, bot: DonkeyBetzBot):
         self.bot = bot
 
-    @app_commands.command(name="resolve-render", description="Start a professional DaVinci Resolve render")
+    davinci = app_commands.Group(name="davinci", description="DaVinci Resolve rendering")
+
+    @davinci.command(name="render", description="Start a professional DaVinci Resolve render")
     @app_commands.describe(
         video_ids="Comma-separated video IDs to render",
         template="Render template (default_mp4, prores_4444, dnxhr_hq)",
@@ -11456,7 +8351,7 @@ class ResolveCommands(commands.Cog):
                 )
             )
 
-    @app_commands.command(name="color-grade", description="Apply color grading to a video")
+    @davinci.command(name="grade", description="Apply color grading to a video")
     @app_commands.describe(
         video_id="Video ID to color grade",
         grade="Color grade preset or 'trending' for auto-selection"
@@ -11564,7 +8459,7 @@ class ResolveCommands(commands.Cog):
                 )
             )
 
-    @app_commands.command(name="render-status", description="Check render job status")
+    @davinci.command(name="status", description="Check render job status")
     @app_commands.describe(
         job_id="Resolve render job ID"
     )
@@ -11662,7 +8557,7 @@ class ResolveCommands(commands.Cog):
                 )
             )
 
-    @app_commands.command(name="render-download", description="Download a completed render")
+    @davinci.command(name="download", description="Download a completed render")
     @app_commands.describe(
         job_id="Resolve render job ID"
     )
@@ -11758,105 +8653,7 @@ class ResolveCommands(commands.Cog):
                 )
             )
 
-    @app_commands.command(name="trending-grades", description="Show color grades matching current spider trends")
-    async def trending_grades_command(self, interaction: discord.Interaction):
-        """Show which color grades match current spider trends."""
-        await interaction.response.defer(thinking=True)
-
-        try:
-            @sync_to_async
-            def get_trending():
-                from resolve_node.color_grades import (
-                    get_all_presets, get_preset, match_grade_to_trends
-                )
-                from core.services.spider_intelligence import SpiderIntelligenceService
-
-                spider_service = SpiderIntelligenceService()
-                trends = spider_service.get_creative_trends(hours=48)
-
-                best_grade = match_grade_to_trends(trends)
-                best_preset = get_preset(best_grade)
-
-                # Get trending styles/colors
-                trending_styles = []
-                trending_colors = []
-
-                if 'trending_styles' in trends:
-                    for item in trends['trending_styles'][:5]:
-                        if isinstance(item, dict):
-                            trending_styles.append(item.get('style', str(item)))
-                        else:
-                            trending_styles.append(str(item))
-
-                if 'trending_colors' in trends:
-                    for item in trends['trending_colors'][:5]:
-                        if isinstance(item, dict):
-                            trending_colors.append(item.get('palette', str(item)))
-                        else:
-                            trending_colors.append(str(item))
-
-                return {
-                    'best_grade': best_grade,
-                    'description': best_preset.get('description', '') if best_preset else '',
-                    'use_case': best_preset.get('use_case', '') if best_preset else '',
-                    'trending_styles': trending_styles,
-                    'trending_colors': trending_colors,
-                    'all_grades': get_all_presets(),
-                }
-
-            result = await get_trending()
-
-            embed = discord.Embed(
-                title="🎨 Trending Color Grades",
-                description="Color grades matching current spider network trends",
-                color=discord.Color.purple(),
-                timestamp=datetime.now()
-            )
-
-            embed.add_field(
-                name="🏆 Best Match",
-                value=f"**{result['best_grade']}**\n{result['description']}",
-                inline=False
-            )
-            embed.add_field(
-                name="🎯 Use Case",
-                value=result['use_case'] or "General purpose",
-                inline=False
-            )
-
-            if result['trending_styles']:
-                embed.add_field(
-                    name="📈 Trending Styles",
-                    value=", ".join(result['trending_styles']),
-                    inline=True
-                )
-            if result['trending_colors']:
-                embed.add_field(
-                    name="🎨 Trending Colors",
-                    value=", ".join(result['trending_colors']),
-                    inline=True
-                )
-
-            embed.add_field(
-                name="📋 All Available Grades",
-                value=", ".join(result['all_grades'][:10]),
-                inline=False
-            )
-
-            embed.set_footer(text="Session 478 | DaVinci Resolve Integration")
-            await interaction.edit_original_response(embed=embed)
-
-        except Exception as e:
-            logger.error(f"/trending-grades error: {e}")
-            await interaction.edit_original_response(
-                embed=discord.Embed(
-                    title="❌ Error",
-                    description=f"Failed to get trending grades: {str(e)[:200]}",
-                    color=discord.Color.red()
-                )
-            )
-
-    @app_commands.command(name="videos-list", description="List available videos for rendering")
+    @davinci.command(name="videos", description="List available videos for rendering")
     @app_commands.describe(
         limit="Number of videos to show (default 10)"
     )
@@ -12181,7 +8978,9 @@ class SituationCommands(commands.Cog):
     def __init__(self, bot: DonkeyBetzBot):
         self.bot = bot
 
-    @app_commands.command(name="situation-list", description="List all 19 autonomous situations")
+    situation = app_commands.Group(name="situation", description="Autonomous Situations")
+
+    @situation.command(name="list", description="List all 19 autonomous situations")
     @app_commands.describe(
         domain="Filter by domain (Content, Creative, Income, Financial, Research, Legal)"
     )
@@ -12288,7 +9087,7 @@ class SituationCommands(commands.Cog):
                 )
             )
 
-    @app_commands.command(name="situation-status", description="Check detailed status of a specific situation")
+    @situation.command(name="status", description="Check detailed status of a specific situation")
     @app_commands.describe(
         situation="Situation key (e.g., 'design_trends', 'job_matching')"
     )
@@ -12488,7 +9287,7 @@ class SituationCommands(commands.Cog):
                 )
             )
 
-    @app_commands.command(name="situation-run", description="Manually trigger an autonomous situation")
+    @situation.command(name="run", description="Manually trigger an autonomous situation")
     @app_commands.describe(
         situation="Situation key to run"
     )
@@ -12613,7 +9412,7 @@ class SituationCommands(commands.Cog):
                 )
             )
 
-    @app_commands.command(name="situation-alerts", description="Configure alerts for an autonomous situation")
+    @situation.command(name="alerts", description="Configure alerts for an autonomous situation")
     @app_commands.describe(
         situation="Situation to configure",
         action="Enable, disable, or check alert status",
@@ -12750,6 +9549,8 @@ class PodcastCommands(commands.Cog):
 
     def __init__(self, client):
         self.client = client
+    podcast = app_commands.Group(name="podcast", description="AI Podcast Studio")
+
         # Podcast channel for creation commands
         self.PODCAST_CHANNEL_ID = 1451578444101058751
         # Podcast library channel for completed episodes with audio
@@ -12765,7 +9566,7 @@ class PodcastCommands(commands.Cog):
 
         return await get_user()
 
-    @app_commands.command(name="podcast-create", description="Create an AI podcast episode with agent debates")
+    @podcast.command(name="create", description="Create an AI podcast episode with agent debates")
     @app_commands.describe(
         topic="The debate topic (e.g., 'Should AI replace human jobs?')",
         format="Podcast format (debate/roundtable/interview)",
@@ -12892,7 +9693,7 @@ class PodcastCommands(commands.Cog):
                 )
             )
 
-    @app_commands.command(name="podcast-list", description="List your podcast episodes")
+    @podcast.command(name="list", description="List your podcast episodes")
     async def podcast_list(self, interaction: discord.Interaction):
         """List all podcast episodes for this user."""
         await interaction.response.defer()
@@ -12959,7 +9760,7 @@ class PodcastCommands(commands.Cog):
                 )
             )
 
-    @app_commands.command(name="podcast-status", description="Check status of a podcast episode")
+    @podcast.command(name="status", description="Check status of a podcast episode")
     @app_commands.describe(episode_id="The episode ID (first 8 characters)")
     async def podcast_status(self, interaction: discord.Interaction, episode_id: str):
         """Check the status of a podcast episode."""
@@ -13028,7 +9829,7 @@ class PodcastCommands(commands.Cog):
                 )
             )
 
-    @app_commands.command(name="podcast-script", description="View the full script of a completed podcast")
+    @podcast.command(name="script", description="View the full script of a completed podcast")
     @app_commands.describe(episode_id="The episode ID (first 8 characters)")
     async def podcast_script(self, interaction: discord.Interaction, episode_id: str):
         """View the full script of a podcast episode."""
@@ -13108,6 +9909,8 @@ class LegalCommands(commands.Cog):
     def __init__(self, client):
         self.client = client
 
+    legal = app_commands.Group(name="legal", description="Pro Se Legal Assistant")
+
     async def _get_linked_user(self, discord_id):
         """Get the linked Django user for this Discord ID."""
         @sync_to_async
@@ -13118,7 +9921,7 @@ class LegalCommands(commands.Cog):
 
         return await get_user()
 
-    @app_commands.command(name="legal-draft", description="Draft a legal document template (Colorado family law)")
+    @legal.command(name="draft", description="Draft a legal document template (Colorado family law)")
     @app_commands.describe(
         document_type="Type of document to draft",
         description="Brief description of what you need"
@@ -13201,7 +10004,7 @@ class LegalCommands(commands.Cog):
                 )
             )
 
-    @app_commands.command(name="legal-analyze", description="Analyze a denied motion and suggest fixes")
+    @legal.command(name="analyze", description="Analyze a denied motion and suggest fixes")
     @app_commands.describe(
         motion_text="Paste the text of the denied motion or order"
     )
@@ -13271,7 +10074,7 @@ class LegalCommands(commands.Cog):
                 )
             )
 
-    @app_commands.command(name="legal-case", description="Get info about your case profile")
+    @legal.command(name="case", description="Get info about your case profile")
     async def legal_case(self, interaction: discord.Interaction):
         """View case profile information."""
         await interaction.response.defer()
@@ -13343,6 +10146,8 @@ class DeveloperCommands(commands.Cog):
     def __init__(self, client):
         self.client = client
 
+    code = app_commands.Group(name="code", description="Code generation and review")
+
     async def _get_linked_user(self, discord_id):
         """Get the linked Django user for this Discord ID."""
         @sync_to_async
@@ -13353,7 +10158,7 @@ class DeveloperCommands(commands.Cog):
 
         return await get_user()
 
-    @app_commands.command(name="code-generate", description="Generate code from a specification")
+    @code.command(name="generate", description="Generate code from a specification")
     @app_commands.describe(
         specification="What should the code do?",
         language="Programming language",
@@ -13433,7 +10238,7 @@ class DeveloperCommands(commands.Cog):
                 )
             )
 
-    @app_commands.command(name="code-review", description="Review code for bugs, security, and quality")
+    @code.command(name="review", description="Review code for bugs, security, and quality")
     @app_commands.describe(
         code="The code to review (paste directly)",
         language="Programming language",
@@ -13639,7 +10444,9 @@ class ReviewCommands(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    @app_commands.command(name="review", description="Show review document for an artifact or dream")
+    review = app_commands.Group(name="review", description="Review documents and decisions")
+
+    @review.command(name="show", description="Show review document for an artifact or dream")
     @app_commands.describe(target_id="The artifact or dream ID to review")
     async def review(self, interaction: discord.Interaction, target_id: str):
         """Display review document summary."""
@@ -13733,7 +10540,7 @@ class ReviewCommands(commands.Cog):
             logger.error(f"Review command error: {e}", exc_info=True)
             await interaction.followup.send(f"❌ Error: {str(e)[:200]}")
 
-    @app_commands.command(name="review-list", description="List pending review documents")
+    @review.command(name="list", description="List pending review documents")
     async def review_list(self, interaction: discord.Interaction):
         """List all pending reviews."""
         await interaction.response.defer()
@@ -13775,7 +10582,7 @@ class ReviewCommands(commands.Cog):
             logger.error(f"Review list error: {e}", exc_info=True)
             await interaction.followup.send(f"❌ Error: {str(e)[:200]}")
 
-    @app_commands.command(name="ask-pro", description="Ask the Pro advocate a question")
+    @review.command(name="pro", description="Ask the Pro advocate a question")
     @app_commands.describe(
         review_id="The review document ID",
         question="Your question for the Pro advocate"
@@ -13817,7 +10624,7 @@ class ReviewCommands(commands.Cog):
                 logger.error(f"Ask pro error: {e}", exc_info=True)
                 await interaction.followup.send(f"❌ Error: {str(e)[:200]}")
 
-    @app_commands.command(name="ask-con", description="Ask the Con skeptic a question")
+    @review.command(name="con", description="Ask the Con skeptic a question")
     @app_commands.describe(
         review_id="The review document ID",
         question="Your question for the Con skeptic"
@@ -13859,7 +10666,7 @@ class ReviewCommands(commands.Cog):
                 logger.error(f"Ask con error: {e}", exc_info=True)
                 await interaction.followup.send(f"❌ Error: {str(e)[:200]}")
 
-    @app_commands.command(name="decide", description="Make a decision on a review")
+    @review.command(name="decide", description="Make a decision on a review")
     @app_commands.describe(
         review_id="The review document ID",
         decision="Your decision",
