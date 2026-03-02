@@ -54,8 +54,7 @@ async def lifespan(application: FastAPI):
     if not rec_dir.is_dir():
         logger.warning("Recordings directory does not exist: %s", rec_dir)
     if not settings.PLATFORM_UPLOAD_TOKEN:
-        logger.error("PLATFORM_UPLOAD_TOKEN is empty — uploads will fail with 401. Set it in .env")
-        raise SystemExit("PLATFORM_UPLOAD_TOKEN is required")
+        logger.warning("PLATFORM_UPLOAD_TOKEN is empty — upload_last will return 400")
     if not settings.PLATFORM_UPLOAD_URL:
         logger.warning("PLATFORM_UPLOAD_URL is empty — upload_last will be disabled")
     yield
@@ -149,6 +148,8 @@ async def recording_upload_last(
 
     if not settings.PLATFORM_UPLOAD_URL:
         return _error(400, "NO_UPLOAD_URL", "PLATFORM_UPLOAD_URL is not configured")
+    if not settings.PLATFORM_UPLOAD_TOKEN:
+        return _error(400, "NO_UPLOAD_TOKEN", "PLATFORM_UPLOAD_TOKEN is not configured — set it in .env")
 
     # Optionally stop recording first
     if body.stopIfRecording:
