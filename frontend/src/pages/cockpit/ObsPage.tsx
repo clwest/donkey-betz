@@ -121,8 +121,18 @@ export default function CockpitObsPage() {
         await fetchStatus()
         await fetchLast()
       }
-    } catch {
-      setError('Upload failed')
+    } catch (err: unknown) {
+      // Extract nested error from bridge response (502 with JSON body)
+      const axErr = err as { response?: { data?: ObsResponse } }
+      const nested = axErr?.response?.data
+      const bridgeErr = (nested?.result as Record<string, unknown>)?.error as Record<string, string> | undefined
+      if (bridgeErr?.message) {
+        setError(`${bridgeErr.code || 'UPLOAD_FAILED'}: ${bridgeErr.message}`)
+      } else if (nested?.error) {
+        setError(`${nested.error.code}: ${nested.error.message}`)
+      } else {
+        setError('Upload failed')
+      }
     } finally {
       setLoading(null)
     }
