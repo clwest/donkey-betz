@@ -422,3 +422,43 @@ export async function getPlatformConfig() {
   const { data } = await api.get<PlatformConfigResponse>('/internal/config-snapshot/')
   return data
 }
+
+// --- OBS Bridge ---
+
+export interface ObsResponse {
+  ok: boolean
+  bridgeReachable?: boolean
+  result?: Record<string, unknown>
+  error?: { code: string; message: string }
+  latency_ms?: number
+}
+
+export async function getObsHealth() {
+  const { data } = await api.get<ObsResponse>('/cockpit/obs/health/')
+  return data
+}
+
+export async function getObsStatus() {
+  const { data } = await api.get<ObsResponse>('/cockpit/obs/status/')
+  return data
+}
+
+export async function postObsStart() {
+  const { data } = await api.post<ObsResponse>('/cockpit/obs/start/')
+  return data
+}
+
+export async function postObsStop() {
+  const { data } = await api.post<ObsResponse>('/cockpit/obs/stop/')
+  return data
+}
+
+export async function getObsLast() {
+  const { data } = await api.get<ObsResponse>('/cockpit/obs/last/')
+  return data
+}
+
+export async function postObsUpload(body?: { title?: string; tags?: string[]; stopIfRecording?: boolean }) {
+  const { data } = await api.post<ObsResponse>('/cockpit/obs/upload/', body)
+  return data
+}
