@@ -5,7 +5,7 @@ import {
   Film, Type, Image, Loader2, Heart, Download, ChevronDown, ChevronUp,
   Maximize2, Clock, Trash2, X, Check, AlertCircle, Play, Sparkles,
   Scissors, Palette, Music, ArrowUp, ArrowDown, Link2, Upload,
-  Mic, Volume2, Grid, FileText, Package,
+  Mic, Volume2, Grid, FileText, Package, ExternalLink,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -29,6 +29,19 @@ interface GalleryVideo {
   view_count?: number
   download_count?: number
   created_at: string
+}
+
+interface TranscriptSummary {
+  id: string
+  video_id: string
+  status: 'queued' | 'running' | 'completed' | 'failed'
+  provider?: string
+  language?: string
+  text_length: number
+  segment_count: number
+  duration_seconds?: number
+  error?: string | null
+  created_at?: string
 }
 
 interface ActiveGeneration {
@@ -196,6 +209,20 @@ export default function VideoStudioPage() {
   })
   const imageHistoryItems: ImageHistoryItem[] = imageHistoryData?.data?.images || imageHistoryData?.data?.results || []
 
+  // Transcripts for selected video (polls while queued/running)
+  const { data: transcriptsData } = useQuery({
+    queryKey: ['video-transcripts', selectedVideo?.id],
+    queryFn: () => contentApi.videoTranscripts(selectedVideo!.id),
+    enabled: !!selectedVideo,
+    refetchInterval: (query) => {
+      const transcripts: TranscriptSummary[] = query.state.data?.data?.transcripts || []
+      const hasPending = transcripts.some(t => t.status === 'queued' || t.status === 'running')
+      return hasPending ? 3000 : false
+    },
+  })
+  const transcripts: TranscriptSummary[] = transcriptsData?.data?.transcripts || []
+  const latestTranscript = transcripts[0] || null
+
   // Resolve editVideo from gallery
   const editVideo = editVideoId ? videos.find(v => v.id === editVideoId) || null : null
 
@@ -332,15 +359,21 @@ export default function VideoStudioPage() {
   const transcribeMutation = useMutation({
     mutationFn: (videoId: string) => contentApi.videoTranscribe(videoId),
     onSuccess: (resp) => {
-      const msg = resp.data?.message || 'Transcription started'
+      const msg = resp.data?.status === 'queued'
+        ? `Transcription queued (ID: ${resp.data?.transcript_id?.slice(0, 8)}...)`
+        : resp.data?.message || 'Transcription started'
       showFeedback('success', msg)
+      queryClient.invalidateQueries({ queryKey: ['video-transcripts', selectedVideo?.id] })
     },
     onError: () => showFeedback('error', 'Failed to start transcription'),
   })
 
   const contentPackMutation = useMutation({
     mutationFn: (videoId: string) => contentApi.videoContentPack(videoId),
-    onSuccess: () => showFeedback('success', 'Content pack generation started'),
+    onSuccess: () => {
+      showFeedback('success', 'Content pack generation started')
+      queryClient.invalidateQueries({ queryKey: ['video-transcripts', selectedVideo?.id] })
+    },
     onError: (err: { response?: { data?: { error?: string } } }) => {
       const msg = err?.response?.data?.error || 'Failed to generate content pack'
       showFeedback('error', msg)
@@ -1582,6 +1615,47 @@ export default function VideoStudioPage() {
                   )}
                 </div>
 
+                {/* Transcript status */}
+                {latestTranscript && (
+                  <div className="rounded-lg border border-dark-border bg-dark-bg/50 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-400 flex items-center gap-1.5">
+                        <FileText size={12} /> Transcript
+                      </span>
+                      <span className={cn(
+                        'rounded-full px-2 py-0.5 text-[10px] font-medium',
+                        latestTranscript.status === 'completed' && 'bg-green-500/10 text-green-400',
+                        latestTranscript.status === 'running' && 'bg-blue-500/10 text-blue-400',
+                        latestTranscript.status === 'queued' && 'bg-yellow-500/10 text-yellow-400',
+                        latestTranscript.status === 'failed' && 'bg-red-500/10 text-red-400',
+                      )}>
+                        {latestTranscript.status === 'running' && <Loader2 size={10} className="inline animate-spin mr-1" />}
+                        {latestTranscript.status}
+                      </span>
+                    </div>
+                    {latestTranscript.status === 'completed' && (
+                      <div className="space-y-1.5">
+                        <div className="flex gap-3 text-[10px] text-gray-500">
+                          <span>{latestTranscript.text_length.toLocaleString()} chars</span>
+                          <span>{latestTranscript.segment_count} segments</span>
+                          {latestTranscript.duration_seconds && (
+                            <span>{Math.floor(latestTranscript.duration_seconds / 60)}:{String(Math.floor(latestTranscript.duration_seconds % 60)).padStart(2, '0')}</span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => window.open(`/api/v1/video/transcripts/${latestTranscript.id}/`, '_blank')}
+                          className="flex items-center gap-1 text-[11px] text-primary-400 hover:text-primary-300 transition-colors"
+                        >
+                          <ExternalLink size={10} /> View full transcript
+                        </button>
+                      </div>
+                    )}
+                    {latestTranscript.status === 'failed' && latestTranscript.error && (
+                      <p className="text-[11px] text-red-400">{latestTranscript.error}</p>
+                    )}
+                  </div>
+                )}
+
                 {/* Action buttons */}
                 <div className="space-y-1.5">
                   <span className="text-xs text-gray-500">Actions</span>
@@ -1612,16 +1686,17 @@ export default function VideoStudioPage() {
 
                   <button
                     onClick={() => transcribeMutation.mutate(selectedVideo.id)}
-                    disabled={transcribeMutation.isPending}
+                    disabled={transcribeMutation.isPending || latestTranscript?.status === 'queued' || latestTranscript?.status === 'running'}
                     className="w-full flex items-center gap-2 rounded-lg border border-dark-border px-3 py-2 text-sm text-gray-300 hover:text-white hover:border-gray-600 disabled:opacity-40 transition-colors"
                   >
-                    {transcribeMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
-                    Transcribe
+                    {transcribeMutation.isPending || latestTranscript?.status === 'running' ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
+                    {latestTranscript?.status === 'completed' ? 'Re-transcribe' : latestTranscript?.status === 'running' ? 'Transcribing...' : latestTranscript?.status === 'queued' ? 'Queued...' : 'Transcribe'}
                   </button>
 
                   <button
                     onClick={() => contentPackMutation.mutate(selectedVideo.id)}
-                    disabled={contentPackMutation.isPending}
+                    disabled={contentPackMutation.isPending || latestTranscript?.status !== 'completed'}
+                    title={latestTranscript?.status !== 'completed' ? 'Transcribe first to generate a content pack' : undefined}
                     className="w-full flex items-center gap-2 rounded-lg border border-dark-border px-3 py-2 text-sm text-gray-300 hover:text-white hover:border-gray-600 disabled:opacity-40 transition-colors"
                   >
                     {contentPackMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Package size={14} />}

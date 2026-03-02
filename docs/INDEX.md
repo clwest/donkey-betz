@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-03-01 22:38
+**Generated:** 2026-03-02 00:18
 **Current Session:** 1075
 **Total Documentation:** 1807 files | 620,410 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,199 |
+| Total cross-references | 2,201 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/experimental/super_system/README.md` | 59 | 🌐 THE SUPER SYSTEM |
+| `docs/archive/old-structure/status/README.md` | 60 | STATUS |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -154,7 +154,7 @@
 | [FRONTEND_BACKEND_DATA_FLOW_AUDIT.md](FRONTEND_BACKEND_DATA_FLOW_AUDIT.md) | 402 | 2026-02-15 |
 | [FRONTEND_INTEGRATION_NOTE.md](FRONTEND_INTEGRATION_NOTE.md) | 128 | 2026-01-21 |
 | [GOLDEN_GOOSE_STRATEGY.md](GOLDEN_GOOSE_STRATEGY.md) | 751 | 2026-01-21 |
-| [INDEX.md](INDEX.md) | 359 | 2026-03-01 |
+| [INDEX.md](INDEX.md) | 359 | 2026-03-02 |
 | [INTELLIGENCE_SYSTEMS.md](INTELLIGENCE_SYSTEMS.md) | 530 | 2026-01-21 |
 | [KNOWLEDGE_PIPELINE.md](KNOWLEDGE_PIPELINE.md) | 475 | 2026-01-21 |
 | [LEGAL_ASSISTANT.md](LEGAL_ASSISTANT.md) | 442 | 2026-01-21 |
@@ -215,7 +215,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 359 | 2026-03-01 22:30 |
+| INDEX.md | docs | 359 | 2026-03-02 00:00 |
 | command_audit.md | discord | 349 | 2026-03-01 21:56 |
 | obs-remote-control.md | context-packets | 497 | 2026-03-01 20:13 |
 | pa-tool-routing-guide.md | tools | 100 | 2026-03-01 15:50 |
