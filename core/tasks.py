@@ -21640,6 +21640,19 @@ def generate_self_blog_deliberation_task(self, tone='enthusiastic', word_count=1
             except Exception as e:
                 logger.warning(f"📝 [BLOG] Conversation topic extraction failed: {e}")
 
+        # Session 1076: Sanitize topic to prevent malformed strings from
+        # crashing the deliberation pipeline (e.g. "hivemind:," → empty turns)
+        if blog_topic:
+            import re as _re
+            blog_topic = blog_topic.strip()
+            blog_topic = _re.sub(r'[:;,.\-]+$', '', blog_topic).strip()  # strip trailing punctuation
+            blog_topic = _re.sub(r':{2,}', ':', blog_topic)  # collapse :: → :
+            blog_topic = _re.sub(r',{2,}', ',', blog_topic)  # collapse ,, → ,
+            # If after sanitization it's too short, discard it
+            if len(blog_topic) < 12:
+                logger.warning(f"[Phase 4] Topic too short after sanitization ({blog_topic!r}), using fallback")
+                blog_topic = None
+
         # Session 969: Diversified fallback when no topic was found
         if not blog_topic:
             _v2_fallback_topics = [

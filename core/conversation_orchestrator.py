@@ -1089,11 +1089,16 @@ class ConversationOrchestrator:
             )
 
             # Generate response with retry logic
-            response = self._generate_message(
-                prompt=prompt,
-                is_final_turn=is_final_turn,
-                max_retries=max_retries
-            )
+            # Session 1076: Wrap in try/except so one bad turn doesn't kill the session
+            try:
+                response = self._generate_message(
+                    prompt=prompt,
+                    is_final_turn=is_final_turn,
+                    max_retries=max_retries
+                )
+            except Exception as _gen_err:
+                logger.error(f"[Session 1076] Turn {turn + 1} generation crashed: {_gen_err}")
+                response = f"[Turn {turn + 1} failed: {_gen_err}]"
 
             # Analyze and track state
             msg_has_tension = has_tension(response)
