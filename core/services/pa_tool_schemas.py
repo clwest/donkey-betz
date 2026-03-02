@@ -2265,6 +2265,47 @@ PA_TOOL_SCHEMAS = [
             "required": ["action"],
         },
     },
+
+    # ── Session 1078: Ops Tool — version, SLO status, failure signatures ──────
+    {
+        "type": "function",
+        "name": "ops_tool",
+        "description": (
+            "Production operations surface: check deployment version/build info, "
+            "monitor SLO compliance (task success rates, timeout rates, publish conversion), "
+            "and view top failure signatures. Use when asked about SLOs, ops health, "
+            "deployment version, what's failing, or production reliability."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["version", "slo_status", "failure_signatures"],
+                    "description": (
+                        "version: build/deploy metadata (git SHA, branch, Railway deployment, uptime). "
+                        "slo_status: compute 8 SLOs with breach detection (task success, agent timeouts, "
+                        "deliberation failures, publish conversion, PA tool success, HTTP errors). "
+                        "failure_signatures: top error signatures by frequency with samples."
+                    ),
+                },
+                "window": {
+                    "type": "string",
+                    "enum": ["6h", "24h", "7d"],
+                    "description": "Time window for SLO and failure signature computation (default 24h).",
+                },
+                "include_breakdowns": {
+                    "type": "boolean",
+                    "description": "For slo_status: include per-agent/per-task breakdowns on breached SLOs (default false).",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "For failure_signatures: max signatures to return (default 10, max 25).",
+                },
+            },
+            "required": ["action"],
+        },
+    },
 ]
 
 # ── Startup validation: every tool must have name, description, parameters ──
@@ -2352,6 +2393,7 @@ TOOL_ENRICHMENT_MAP = {
     'workflow_run_tool': [],
     'conversation_tool': ['strategic_memory'],
     'remember_tool': [],
+    'ops_tool': ['intelligence_enricher', 'platform_briefing'],
 }
 
 # Reverse map: tool name -> canonical intent name for enrichment pipeline
@@ -2426,4 +2468,5 @@ TOOL_TO_INTENT_MAP = {
     'workflow_run_tool': 'rag',
     'conversation_tool': 'memory_recall',
     'remember_tool': 'memory',
+    'ops_tool': 'system_overview',
 }

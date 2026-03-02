@@ -236,6 +236,9 @@ class ToolDispatcher:
         # Persistent memory — save/list/delete/search across sessions
         self.register("remember_tool", self._handle_remember)
 
+        # Session 1078: Ops tool — version, SLO status, failure signatures
+        self.register("ops_tool", self._handle_ops)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):
@@ -7652,6 +7655,23 @@ class ToolDispatcher:
 
         snapshot['generated_at'] = now.isoformat()
 
+        # Session 1078: Lightweight ops pointer (SLO breach count + version SHA)
+        try:
+            import os
+            sha = os.environ.get('RAILWAY_GIT_COMMIT_SHA', 'dev')
+            snapshot['ops'] = {
+                'version_sha_short': sha[:8] if len(sha) > 8 else sha,
+            }
+            # Quick breach check: just celery + agent task success
+            celery_total = snapshot.get('celery_24h', {}).get('total', 0)
+            celery_failed = snapshot.get('celery_24h', {}).get('failed', 0)
+            if celery_total > 0 and (celery_total - celery_failed) / celery_total < 0.999:
+                snapshot['ops']['slo_breaches'] = 1
+            else:
+                snapshot['ops']['slo_breaches'] = 0
+        except Exception:
+            pass
+
         cache.set(cache_key, snapshot, 60)
         logger.info(f"[{trace_id}] Status snapshot generated and cached")
         return snapshot
@@ -10740,6 +10760,385 @@ RESEARCH DATA:
             }
 
         return {'error': f'Unknown action: {action}'}
+
+
+    # ── Session 1078: Ops Tool ─────────────────────────────────────────────────
+    def _handle_ops(self, tool_name: str, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:
+        """
+        Session 1078: Production ops surface — version, SLO status, failure signatures.
+        Separate from status_snapshot_tool to keep snapshot cheap and fast.
+        """
+        action = payload.get('action', 'version')
+
+        if action == 'version':
+            return self._ops_version(trace_id)
+        elif action == 'slo_status':
+            window = payload.get('window', '24h')
+            include_breakdowns = payload.get('include_breakdowns', False)
+            return self._ops_slo_status(window, include_breakdowns, trace_id)
+        elif action == 'failure_signatures':
+            window = payload.get('window', '24h')
+            limit = min(int(payload.get('limit', 10)), 25)
+            return self._ops_failure_signatures(window, limit, trace_id)
+        else:
+            return {'error': f'Unknown ops_tool action: {action}'}
+
+    def _ops_version(self, trace_id: str) -> Dict[str, Any]:
+        """Return build/deploy metadata for the running process."""
+        import os
+        import time
+        import django
+        from datetime import timedelta
+
+        _boot_time = getattr(self, '_boot_time', None)
+        if not _boot_time:
+            self._boot_time = time.time()
+            _boot_time = self._boot_time
+
+        from django.utils import timezone
+
+        now = timezone.now()
+        uptime_seconds = time.time() - _boot_time
+
+        return {
+            'action': 'version',
+            'service': os.environ.get('RAILWAY_SERVICE_NAME', 'unknown'),
+            'environment': os.environ.get('RAILWAY_ENVIRONMENT', 'local'),
+            'git': {
+                'sha': os.environ.get('RAILWAY_GIT_COMMIT_SHA', 'dev'),
+                'branch': os.environ.get('RAILWAY_GIT_BRANCH', 'unknown'),
+            },
+            'railway': {
+                'deployment_id': os.environ.get('RAILWAY_DEPLOYMENT_ID', 'local'),
+            },
+            'runtime': {
+                'started_at': (now - timedelta(seconds=uptime_seconds)).isoformat(),
+                'uptime_seconds': round(uptime_seconds),
+            },
+            'app': {
+                'django_version': django.get_version(),
+            },
+        }
+
+    def _ops_slo_status(self, window: str, include_breakdowns: bool, trace_id: str) -> Dict[str, Any]:
+        """Compute 8 SLOs for the given time window."""
+        from django.utils import timezone
+        from django.core.cache import cache
+        from django.db.models import Count
+        from datetime import timedelta
+
+        cache_key = f'pa:ops_slo:{window}:{include_breakdowns}'
+        cached = cache.get(cache_key)
+        if cached:
+            return cached
+
+        # Parse window
+        window_hours = {'6h': 6, '24h': 24, '7d': 168}.get(window, 24)
+        now = timezone.now()
+        cutoff = now - timedelta(hours=window_hours)
+
+        slos = []
+
+        # SLO 1: Celery task success rate (≥99.9%)
+        try:
+            from core.models_celery_telemetry import CeleryTaskEvent
+            total = CeleryTaskEvent.objects.filter(started_at__gte=cutoff, status__in=['SUCCESS', 'FAILURE']).count()
+            failed = CeleryTaskEvent.objects.filter(started_at__gte=cutoff, status='FAILURE').count()
+            rate = (total - failed) / total if total > 0 else 1.0
+            slo = {
+                'key': 'celery_task_success_rate',
+                'name': 'Celery task success rate',
+                'target': 0.999,
+                'current': round(rate, 6),
+                'breach': rate < 0.999,
+                'numerator': total - failed,
+                'denominator': total,
+            }
+            if include_breakdowns and failed > 0:
+                top_failing = list(
+                    CeleryTaskEvent.objects.filter(started_at__gte=cutoff, status='FAILURE')
+                    .values('task_name')
+                    .annotate(count=Count('id'))
+                    .order_by('-count')[:5]
+                )
+                slo['top_failures'] = top_failing
+            slos.append(slo)
+        except Exception as e:
+            slos.append({'key': 'celery_task_success_rate', 'error': str(e)})
+
+        # SLO 2: execute_agent_task success rate (≥99.95%)
+        try:
+            from core.models_celery_telemetry import CeleryTaskEvent
+            agent_total = CeleryTaskEvent.objects.filter(
+                started_at__gte=cutoff, task_name='core.tasks.execute_agent_task',
+                status__in=['SUCCESS', 'FAILURE']
+            ).count()
+            agent_failed = CeleryTaskEvent.objects.filter(
+                started_at__gte=cutoff, task_name='core.tasks.execute_agent_task',
+                status='FAILURE'
+            ).count()
+            agent_rate = (agent_total - agent_failed) / agent_total if agent_total > 0 else 1.0
+            slo = {
+                'key': 'agent_task_success_rate',
+                'name': 'execute_agent_task success rate',
+                'target': 0.9995,
+                'current': round(agent_rate, 6),
+                'breach': agent_rate < 0.9995,
+                'numerator': agent_total - agent_failed,
+                'denominator': agent_total,
+            }
+            if include_breakdowns and agent_failed > 0:
+                from core.models_unified_system import AgentExecution
+                top_agents = list(
+                    AgentExecution.objects.filter(
+                        created_at__gte=cutoff, status='failed'
+                    ).values('agent__name')
+                    .annotate(count=Count('id'))
+                    .order_by('-count')[:5]
+                )
+                slo['top_failing_agents'] = top_agents
+            slos.append(slo)
+        except Exception as e:
+            slos.append({'key': 'agent_task_success_rate', 'error': str(e)})
+
+        # SLO 3: Agent wall-clock timeout rate (≤0.2%)
+        try:
+            from core.models_unified_system import AgentExecution
+            total_execs = AgentExecution.objects.filter(created_at__gte=cutoff).count()
+            timeout_execs = AgentExecution.objects.filter(
+                created_at__gte=cutoff, status='failed',
+                error_message__icontains='timed out'
+            ).count()
+            timeout_rate = timeout_execs / total_execs if total_execs > 0 else 0.0
+            slo = {
+                'key': 'agent_timeout_rate',
+                'name': 'Agent wall-clock timeout rate',
+                'target_max': 0.002,
+                'current': round(timeout_rate, 6),
+                'breach': timeout_rate > 0.002,
+                'numerator': timeout_execs,
+                'denominator': total_execs,
+            }
+            if include_breakdowns and timeout_execs > 0:
+                top_timeout = list(
+                    AgentExecution.objects.filter(
+                        created_at__gte=cutoff, status='failed',
+                        error_message__icontains='timed out'
+                    ).values('agent__name')
+                    .annotate(count=Count('id'))
+                    .order_by('-count')[:5]
+                )
+                slo['top_timeout_agents'] = top_timeout
+            slos.append(slo)
+        except Exception as e:
+            slos.append({'key': 'agent_timeout_rate', 'error': str(e)})
+
+        # SLO 4: Deliberation zero-turn rate (0%)
+        try:
+            from core.models_deliberation import DeliberationSession
+            total_sessions = DeliberationSession.objects.filter(created_at__gte=cutoff).count()
+            zero_turn = DeliberationSession.objects.filter(
+                created_at__gte=cutoff, status='failed'
+            ).annotate(
+                turn_count=Count('turns')
+            ).filter(turn_count=0).count()
+            zt_rate = zero_turn / total_sessions if total_sessions > 0 else 0.0
+            slos.append({
+                'key': 'deliberation_zero_turn_rate',
+                'name': 'Deliberation zero-turn failure rate',
+                'target_max': 0.001,
+                'current': round(zt_rate, 6),
+                'breach': zt_rate > 0.001,
+                'numerator': zero_turn,
+                'denominator': total_sessions,
+            })
+        except Exception as e:
+            slos.append({'key': 'deliberation_zero_turn_rate', 'error': str(e)})
+
+        # SLO 5: Content publish conversion (≥40%)
+        try:
+            from core.models_unified_system import SelfBlog
+            blogs_created = SelfBlog.objects.filter(created_at__gte=cutoff).count()
+            blogs_published = SelfBlog.objects.filter(
+                created_at__gte=cutoff, status='approved'
+            ).count()
+            pub_rate = blogs_published / blogs_created if blogs_created > 0 else 0.0
+            slos.append({
+                'key': 'content_publish_conversion',
+                'name': 'Content publish conversion rate',
+                'target': 0.40,
+                'current': round(pub_rate, 4),
+                'breach': pub_rate < 0.40,
+                'numerator': blogs_published,
+                'denominator': blogs_created,
+            })
+        except Exception as e:
+            slos.append({'key': 'content_publish_conversion', 'error': str(e)})
+
+        # SLO 6: Publish-ready backlog age p95 (≤72h)
+        try:
+            from core.models_unified_system import SelfBlog
+            ready_blogs = SelfBlog.objects.filter(
+                publish_ready=True, status__in=['approved', 'pending_review']
+            ).order_by('created_at')
+            ages_hours = []
+            for blog in ready_blogs[:100]:
+                age = (now - blog.created_at).total_seconds() / 3600
+                ages_hours.append(age)
+            if ages_hours:
+                ages_hours.sort()
+                p95_idx = int(len(ages_hours) * 0.95)
+                p95_age = ages_hours[min(p95_idx, len(ages_hours) - 1)]
+            else:
+                p95_age = 0.0
+            slos.append({
+                'key': 'publish_ready_age_p95',
+                'name': 'Publish-ready backlog age (p95 hours)',
+                'target_max': 72.0,
+                'current': round(p95_age, 1),
+                'breach': p95_age > 72.0,
+                'backlog_count': len(ages_hours),
+            })
+        except Exception as e:
+            slos.append({'key': 'publish_ready_age_p95', 'error': str(e)})
+
+        # SLO 7: PA tool success rate (≥99.9%)
+        try:
+            from core.models import ToolCallRecord
+            pa_total = ToolCallRecord.objects.filter(created_at__gte=cutoff).count()
+            pa_failed = ToolCallRecord.objects.filter(created_at__gte=cutoff, success=False).count()
+            pa_rate = (pa_total - pa_failed) / pa_total if pa_total > 0 else 1.0
+            slo = {
+                'key': 'pa_tool_success_rate',
+                'name': 'PA tool call success rate',
+                'target': 0.999,
+                'current': round(pa_rate, 6),
+                'breach': pa_rate < 0.999,
+                'numerator': pa_total - pa_failed,
+                'denominator': pa_total,
+            }
+            if include_breakdowns and pa_failed > 0:
+                top_pa_fail = list(
+                    ToolCallRecord.objects.filter(created_at__gte=cutoff, success=False)
+                    .values('tool_name')
+                    .annotate(count=Count('id'))
+                    .order_by('-count')[:5]
+                )
+                slo['top_failing_tools'] = top_pa_fail
+            slos.append(slo)
+        except Exception as e:
+            slos.append({'key': 'pa_tool_success_rate', 'error': str(e)})
+
+        # SLO 8: External HTTP failure rate (informational, ≤5%)
+        try:
+            from core.models_diagnostic_pipeline import FailureDetection
+            http_errors = FailureDetection.objects.filter(
+                detected_at__gte=cutoff, source_type='http_request'
+            ).count()
+            # Approximate total from celery + tool calls as proxy
+            from core.models_celery_telemetry import CeleryTaskEvent
+            approx_total = CeleryTaskEvent.objects.filter(started_at__gte=cutoff).count()
+            http_rate = http_errors / approx_total if approx_total > 0 else 0.0
+            slos.append({
+                'key': 'external_http_failure_rate',
+                'name': 'External HTTP failure rate (informational)',
+                'target_max': 0.05,
+                'current': round(http_rate, 6),
+                'breach': http_rate > 0.05,
+                'numerator': http_errors,
+                'denominator': approx_total,
+                'note': 'Denominator is approx (total celery tasks as proxy)',
+            })
+        except Exception as e:
+            slos.append({'key': 'external_http_failure_rate', 'error': str(e)})
+
+        breaches = sum(1 for s in slos if s.get('breach'))
+        result = {
+            'action': 'slo_status',
+            'window': window,
+            'generated_at': now.isoformat(),
+            'total_slos': len(slos),
+            'breaches': breaches,
+            'all_clear': breaches == 0,
+            'slos': slos,
+        }
+
+        cache.set(cache_key, result, 120)  # 2-min cache
+        return result
+
+    def _ops_failure_signatures(self, window: str, limit: int, trace_id: str) -> Dict[str, Any]:
+        """Top failure signatures in the given window, deduped and actionable."""
+        from django.utils import timezone
+        from datetime import timedelta
+        from django.db.models import Count, Max
+
+        window_hours = {'6h': 6, '24h': 24, '7d': 168}.get(window, 24)
+        cutoff = timezone.now() - timedelta(hours=window_hours)
+
+        signatures = []
+
+        try:
+            from core.models_diagnostic_pipeline import FailureSignature, FailureDetection
+
+            # Get signatures with recent detections in window
+            from django.db.models import Q as _Q
+            sig_qs = FailureSignature.objects.filter(
+                status='active',
+                detections__detected_at__gte=cutoff,
+            ).annotate(
+                window_count=Count('detections', filter=_Q(detections__detected_at__gte=cutoff)),
+                last_detection=Max('detections__detected_at'),
+            ).order_by('-window_count')[:limit]
+
+            for sig in sig_qs:
+                # Get sample detections for context
+                samples = list(
+                    FailureDetection.objects.filter(
+                        signature=sig, detected_at__gte=cutoff
+                    ).order_by('-detected_at')
+                    .values('source_type', 'source_name', 'detected_at')[:3]
+                )
+                for s in samples:
+                    s['detected_at'] = s['detected_at'].isoformat()
+
+                signatures.append({
+                    'signature': sig.signature,
+                    'category': sig.category,
+                    'provider': sig.provider or '',
+                    'description': sig.description[:200] if sig.description else '',
+                    'window_count': sig.window_count,
+                    'total_count': sig.occurrence_count,
+                    'last_seen': sig.last_detection.isoformat() if sig.last_detection else '',
+                    'status': sig.status,
+                    'samples': samples,
+                })
+        except Exception as e:
+            return {'action': 'failure_signatures', 'error': str(e)}
+
+        # Also get top Celery task failures (in case not captured by diagnostic pipeline)
+        celery_failures = []
+        try:
+            from core.models_celery_telemetry import CeleryTaskEvent
+            top_celery = list(
+                CeleryTaskEvent.objects.filter(started_at__gte=cutoff, status='FAILURE')
+                .values('task_name', 'error_type')
+                .annotate(count=Count('id'), last_seen=Max('started_at'))
+                .order_by('-count')[:5]
+            )
+            for cf in top_celery:
+                cf['last_seen'] = cf['last_seen'].isoformat() if cf['last_seen'] else ''
+            celery_failures = top_celery
+        except Exception:
+            pass
+
+        return {
+            'action': 'failure_signatures',
+            'window': window,
+            'generated_at': timezone.now().isoformat(),
+            'signatures': signatures,
+            'celery_task_failures': celery_failures,
+            'total_signatures': len(signatures),
+        }
 
 
 def _redact_secrets(text: str) -> str:
