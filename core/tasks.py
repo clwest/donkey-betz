@@ -1570,6 +1570,7 @@ def execute_agent_task(
         # Media agents (AudioAgent, ImageAgent, etc.) should complete in <5min.
         # Without this, hung tasks sit for 45min until the cleanup reaper fires.
         _AGENT_TIMEOUT_SECONDS = {
+            # Media agents: fast, external API calls
             'AudioAgent': 300,        # 5 min — 60s OpenAI + 60s ElevenLabs + context
             'ImageAgent': 300,        # 5 min
             'VideoAgent': 600,        # 10 min — video generation is slower
@@ -1578,8 +1579,21 @@ def execute_agent_task(
             'VideoEditingAgent': 600,  # 10 min
             'TalkingCharacterAgent': 600,  # 10 min
             'ResolveAgent': 600,      # 10 min
+            # Research/analysis agents: LLM + web search, should complete < 10 min
+            'ResearchAgent': 600,             # 10 min
+            'SystemIntelligenceAgent': 600,   # 10 min
+            'MarketingStrategyAgent': 600,    # 10 min
+            'CustomerResearchAgent': 600,     # 10 min
+            'CharacterTrainingAgent': 600,    # 10 min
+            'ContentWriterAgent': 600,        # 10 min
+            'CompetitorAnalysisAgent': 600,   # 10 min
+            'BrandStrategyAgent': 600,        # 10 min
+            'ContentStrategyAgent': 600,      # 10 min
+            # Orchestrators: may coordinate multiple agents
+            'StockAuditCoordinator': 900,     # 15 min
+            'WorkflowOrchestrationAgent': 900,  # 15 min
         }
-        _wall_timeout = _AGENT_TIMEOUT_SECONDS.get(agent_name, 2400)  # default 40 min for research agents
+        _wall_timeout = _AGENT_TIMEOUT_SECONDS.get(agent_name, 1200)  # default 20 min (down from 40)
 
         router = AgentRouter(user=_route_user)
 
