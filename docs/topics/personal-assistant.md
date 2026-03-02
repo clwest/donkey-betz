@@ -42,10 +42,16 @@ message -> _detect_intent_and_route() [506 lines of if/elif keyword matching]
 
 `TOOL_TO_INTENT_MAP` maps tool names back to canonical intents for the enrichment pipeline.
 
-**Key tools:**
-- Action-based: `boardroom_tool` (9 actions), `content_review_tool` (10 actions), `initiative_tool` (8 actions), `brainstorm_tool` (4 actions: list/search/details/stats — `list` supports offset/limit pagination up to 200 for bulk export)
+**Key tools (6 gateways — Session 1079 consolidation):**
+- `governance_tool` — boardroom, attention items, decisions, triage (absorbs `boardroom_tool`, `human_decisions_tool`)
+- `work_tool` — initiatives, stages, action items (absorbs `initiative_tool`)
+- `content_tool` — content review, blog generation, deliverables (absorbs `content_review_tool`, `generate_blog_tool`, `deliverables_tool`)
+- `intelligence_tool` — stocks, sports, legislation, RAG/KB, spiders (absorbs `stock_intelligence_tool`, `sports_betting_tool`, `legislation_tool`, `rag_query_tool`, `spider_data_tool`)
+- `ops_tool` — SLO status, failure signatures, version, migration report (absorbs `system_health_tool`, `error_summary_tool`)
+- `studio_tool` — media management (images, video, audio)
 - Agent delegation: `run_agent` meta-tool with `agent_name` enum → routes to actual agent tool
-- Telemetry: `system_health_tool`, `agent_introspection_tool`, `status_snapshot_tool`, `check_resource_budget`, `pipeline_orchestrator_tool`, `task_breakdown_tool` (summary/drilldown with configurable time window)
+- Telemetry: `agent_introspection_tool`, `status_snapshot_tool`, `check_resource_budget`, `pipeline_orchestrator_tool`, `task_breakdown_tool` (summary/drilldown with configurable time window)
+- Other: `brainstorm_tool` (4 actions: list/search/details/stats — `list` supports offset/limit pagination up to 200 for bulk export)
 
 ## Enrichment Pipeline
 
@@ -53,13 +59,13 @@ Eight intelligence services inject context before the LLM generates analysis. Ea
 
 | Service | Source | Fires For |
 |---------|--------|-----------|
-| intelligence_enricher | PAIntelligenceEnricher | initiatives, boardroom, system_health, reasoning, pilots, gates, system_overview |
-| blog_performance | BlogPerformanceContextBuilder | content_review |
-| domain_context | DomainContentContextBuilder (9 domains) | content_review, opportunities, predictions, stock_intelligence, spider_data |
-| spider_trends | SpiderContextBuilder | content_review, opportunities, predictions, learning_patterns, stock_intelligence |
+| intelligence_enricher | PAIntelligenceEnricher | work_tool, governance_tool, ops_tool, reasoning, pilots, gates, system_overview |
+| blog_performance | BlogPerformanceContextBuilder | content_tool |
+| domain_context | DomainContentContextBuilder (9 domains) | content_tool, opportunities, predictions, intelligence_tool |
+| spider_trends | SpiderContextBuilder | content_tool, opportunities, predictions, learning_patterns, intelligence_tool |
 | advisor | AdvisorContextBuilder (25 advisors) | opportunities, reasoning |
-| strategic_memory | StrategicMemoryService | initiatives, boardroom, execution_history, reasoning |
-| proactive_intelligence | ProactiveIntelligenceService | content_review, opportunities, stock_intelligence, system_overview |
+| strategic_memory | StrategicMemoryService | work_tool, governance_tool, execution_history, reasoning |
+| proactive_intelligence | ProactiveIntelligenceService | content_tool, opportunities, intelligence_tool, system_overview |
 | platform_briefing | PlatformIntelligenceBriefingService | system_overview, execution_history |
 
 **Relevance gating:** Content-related intents skip the gate. All others require 15% keyword overlap to avoid irrelevant injection.
@@ -114,13 +120,14 @@ With `previous_response_id`, follow-up turns hit the 90% cached input discount (
 
 ## Key Tool Actions
 
-**boardroom_tool:** stats, list_attention, list_decisions, approve/ignore/promote/reject, list_unclassified, classify_suggest, classify_apply, classify_apply_batch
-**content_review_tool:** list, read, publish, archive, revise, triage, batch_publish, batch_archive
+**governance_tool:** inbox, attention_list, attention_approve, attention_ignore, attention_lookup, decisions_list, decisions_stats, decision_create, decision_decide, decision_promote, decision_reject, triage_batch
+**work_tool:** initiative_list, initiative_detail, initiative_create, initiative_promote, stage_detail, stage_approve, action_item_list, action_item_update
+**content_tool:** content_stats, content_list, content_detail, content_search, content_recent, content_approve, content_reject, generate_blog, deliverable_list, deliverable_detail, deliverable_search, deliverable_save, deliverable_create, deliverable_stats
+**intelligence_tool:** overview, briefs, search (source=kb/spider), stocks_alerts, stocks_predictions, stocks_sec_filings, sports_predictions, sports_arbs, sports_wagers, sports_record_wager, legislation_search, legislation_summary, kb_ingest
+**ops_tool:** version, slo_status, failure_signatures, tool_migration_report
+**studio_tool:** media_list, media_stats
 **agent_introspection_tool:** stats (aggregates + disjoint taxonomy), list (top-50 preview), details, capabilities
-**initiative_tool:** list, stats, detail, audit, create, update_status, advance, complete_action_item, assign_owner
 **pipeline_orchestrator_tool:** status (initiatives by stage + by_status breakdown)
-**stock_intelligence_tool:** overview, briefs, alerts, predictions, sec_filings
-**spider_data_tool:** recent, by_type, by_spider, summary, trigger
 **http_smoke_test:** Run endpoint smoke tests against Railway prod or localhost. Three built-in suites: `cockpit_health` (18 GET checks), `cockpit_incidents_crud` (8-step CRUD lifecycle with negative tests, dependency tracking, and variable capture), `pa_tools_smoke` (20 checks across boardroom, initiatives, celery, agents, spiders, learning patterns, manifest, deliverables, opportunities, pilots, Redis queues, and media — with initiative detail chaining). Runner features: `test_run_id` auto-injected per run for tracing, `depends_on` step dependencies with skip semantics, early-fail on unresolved `{{vars}}`, per-step `headers` support. Assertions: `status`, `has_key`, `json_path` (eq/gte/exists), `type`. Auth via `PA_API_TOKEN` env var on celery-pa. Safety: SSRF allowlist (*.railway.app, localhost), 50-step cap, 1MB response cap, 20s timeout. Code: `core/tools/http_smoke_test.py`.
 
 ## Agent Introspection Taxonomy (Session 1035)

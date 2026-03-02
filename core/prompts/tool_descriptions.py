@@ -1003,23 +1003,11 @@ The ThinkingAgent runs autonomously and:
 This tool connects you to what the system has been THINKING about autonomously.""",
 
 
-    "legislation_tool": """Congressional bill tracker — search bills, check status, get plain-English summaries.
+    "legislation_tool": """DEPRECATED — use intelligence_tool with legislation actions instead.
 
-Use when the user asks about:
-- Bills, legislation, laws, acts (federal or state)
-- Congress, Senate, House of Representatives
-- Sponsors, committees, votes on bills
-- What bills are being worked on about a topic
-- Whether a bill passed, failed, or is pending
-
-Actions:
-- 'search': Find bills matching a keyword (healthcare, AI, immigration, etc.)
-- 'status': Check current status of a specific bill by number (HR 1234, S 567)
-- 'summary': Get a plain-English explanation of what a bill does
-- 'trending': See the most recently active bills across all topics
-- 'overview': Dashboard of total tracked bills, top topics, status breakdown
-
-Pass bill numbers in standard format: HR 1234, S 567, HB 100, SB 200.""",
+Migrated actions: search → intelligence_tool.legislation_search, summary → intelligence_tool.legislation_summary,
+trending → intelligence_tool.briefs (legislation desk), overview → intelligence_tool.overview (legislation desk).
+Sunset date: 2026-04-01.""",
 
 }
 

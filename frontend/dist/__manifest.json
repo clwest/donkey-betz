@@ -240,19 +240,19 @@
       {
         "method": "GET",
         "path": "/api/human/attention/",
-        "toolSurface": "boardroom_tool.list_attention",
+        "toolSurface": "governance_tool.attention_list",
         "writes": false
       },
       {
         "method": "GET",
         "path": "/api/human/attention/stats/",
-        "toolSurface": "boardroom_tool.attention_stats",
+        "toolSurface": "governance_tool.attention_stats",
         "writes": false
       },
       {
         "method": "GET",
         "path": "/api/boardroom/decisions/",
-        "toolSurface": "boardroom_tool.list_decisions",
+        "toolSurface": "governance_tool.decisions_list",
         "writes": false
       },
       {
@@ -263,13 +263,13 @@
       {
         "method": "POST",
         "path": "/api/human/attention/{itemId}/decide/",
-        "toolSurface": "boardroom_tool.decide",
+        "toolSurface": "governance_tool.decision_decide",
         "writes": true
       },
       {
         "method": "POST",
         "path": "/api/human/attention/bulk-decide/",
-        "toolSurface": "boardroom_tool.bulk_decide",
+        "toolSurface": "governance_tool.bulk_decide",
         "writes": true
       },
       {
@@ -280,13 +280,13 @@
       {
         "method": "POST",
         "path": "/api/boardroom/decisions/{decisionId}/promote/",
-        "toolSurface": "boardroom_tool.promote",
+        "toolSurface": "governance_tool.decision_promote",
         "writes": true
       },
       {
         "method": "POST",
         "path": "/api/boardroom/decisions/{decisionId}/reject/",
-        "toolSurface": "boardroom_tool.reject",
+        "toolSurface": "governance_tool.decision_reject",
         "writes": true
       },
       {
@@ -324,7 +324,7 @@
       {
         "method": "GET",
         "path": "/api/boardroom/decisions/",
-        "toolSurface": "boardroom_tool.list_decisions",
+        "toolSurface": "governance_tool.decisions_list",
         "writes": false
       },
       {
@@ -358,7 +358,7 @@
       {
         "method": "GET",
         "path": "/api/human/attention/",
-        "toolSurface": "boardroom_tool.list_attention",
+        "toolSurface": "governance_tool.attention_list",
         "writes": false
       },
       {
@@ -448,7 +448,7 @@
       {
         "method": "GET",
         "path": "/api/workspaces/",
-        "toolSurface": "initiative_tool.list_workspaces",
+        "toolSurface": "work_tool.initiative_list",
         "writes": false
       },
       {
@@ -687,7 +687,7 @@
       {
         "method": "GET",
         "path": "/api/initiatives/",
-        "toolSurface": "initiative_tool.list",
+        "toolSurface": "work_tool.initiative_list",
         "writes": false
       },
       {
@@ -745,7 +745,7 @@
       {
         "method": "GET",
         "path": "/api/initiatives/",
-        "toolSurface": "initiative_tool.list",
+        "toolSurface": "work_tool.initiative_list",
         "writes": false
       },
       {
