@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-03-01 20:09
+**Generated:** 2026-03-01 20:10
 **Current Session:** 1075
 **Total Documentation:** 1806 files | 620,060 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/features/README.md` | 60 | Feature Documentation |
+| `docs/archive/SYSTEM_CAPABILITIES-original/10_Integration_APIs/README.md` | 60 | 🔌 INTEGRATION APIS - The Nervous System of AI |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -214,7 +214,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 358 | 2026-03-01 19:59 |
+| INDEX.md | docs | 358 | 2026-03-01 20:09 |
 | obs-remote-control.md | context-packets | 497 | 2026-03-01 19:58 |
 | pa-tool-routing-guide.md | tools | 100 | 2026-03-01 15:50 |
 | pa-tool-manifest.md | tools | 307 | 2026-03-01 15:50 |

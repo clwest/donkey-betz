@@ -8,9 +8,9 @@ from config import settings
 from schemas import ErrorResponse, ErrorDetail
 
 
-async def require_token(authorization: str = Header(...)) -> str:
+async def require_token(authorization: str | None = Header(default=None)) -> str:
     """Validate Bearer token from Authorization header."""
-    if not authorization.startswith("Bearer "):
+    if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(
             status_code=401,
             detail=ErrorResponse(
