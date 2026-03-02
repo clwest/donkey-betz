@@ -1426,6 +1426,15 @@ router.register(r'tool-call-records', ToolCallRecordViewSet, basename='tool-call
 router.register(r'tool-call-aggregates', ToolCallAggregateViewSet, basename='tool-call-aggregate')  # Session 1007
 router.register(r'signal-clusters', SignalClusterViewSet, basename='signal-cluster')
 
+from core.views_obs import (
+    cockpit_obs_health,
+    cockpit_obs_status,
+    cockpit_obs_start,
+    cockpit_obs_stop,
+    cockpit_obs_last,
+    cockpit_obs_upload,
+)
+
 from core.views_diagnostics import (
     diagnostic_master_endpoint,
     test_spider_network,
@@ -1704,6 +1713,14 @@ urlpatterns = [
     # Ops Runs (Context Packet #9)
     path('api/cockpit/ops-runs/', cockpit_ops_runs_list, name='cockpit-ops-runs-list'),
     path('api/cockpit/ops-runs/<uuid:run_id>/', cockpit_ops_run_detail, name='cockpit-ops-run-detail'),
+    # OBS Bridge proxy
+    path('api/cockpit/obs/health/', cockpit_obs_health, name='cockpit-obs-health'),
+    path('api/cockpit/obs/status/', cockpit_obs_status, name='cockpit-obs-status'),
+    path('api/cockpit/obs/start/', cockpit_obs_start, name='cockpit-obs-start'),
+    path('api/cockpit/obs/stop/', cockpit_obs_stop, name='cockpit-obs-stop'),
+    path('api/cockpit/obs/last/', cockpit_obs_last, name='cockpit-obs-last'),
+    path('api/cockpit/obs/upload/', cockpit_obs_upload, name='cockpit-obs-upload'),
+
     path('diagnostics/websockets/', WebSocketDiagnosticsView.as_view(), name='websocket-diagnostics'),
     path("api/llm/chat/", llm_chat),
     # AI Building Products page (moved up to ensure it's matched first)
