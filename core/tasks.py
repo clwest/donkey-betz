@@ -1565,16 +1565,57 @@ def execute_agent_task(
                 _route_user = get_user_model().objects.filter(id=_route_user_id).first()
             except Exception:
                 pass
+
+        # Session 1076: Per-agent-type wall-clock timeout.
+        # Media agents (AudioAgent, ImageAgent, etc.) should complete in <5min.
+        # Without this, hung tasks sit for 45min until the cleanup reaper fires.
+        _AGENT_TIMEOUT_SECONDS = {
+            'AudioAgent': 300,        # 5 min — 60s OpenAI + 60s ElevenLabs + context
+            'ImageAgent': 300,        # 5 min
+            'VideoAgent': 600,        # 10 min — video generation is slower
+            'ThreeDAgent': 300,       # 5 min
+            'ImageEditingAgent': 300,  # 5 min
+            'VideoEditingAgent': 600,  # 10 min
+            'TalkingCharacterAgent': 600,  # 10 min
+            'ResolveAgent': 600,      # 10 min
+        }
+        _wall_timeout = _AGENT_TIMEOUT_SECONDS.get(agent_name, 2400)  # default 40 min for research agents
+
         router = AgentRouter(user=_route_user)
-        result = router.route(
-            agent_name=agent_name,
-            task=task,
-            context={
-                'source': 'conversation_action_dispatch',
-                'conversation_id': conversation_id,
-                **context
-            }
-        )
+
+        from concurrent.futures import ThreadPoolExecutor as _TPE, TimeoutError as _FuturesTimeout
+        def _run_route():
+            from django.db import close_old_connections
+            close_old_connections()
+            try:
+                return router.route(
+                    agent_name=agent_name,
+                    task=task,
+                    context={
+                        'source': 'conversation_action_dispatch',
+                        'conversation_id': conversation_id,
+                        **context
+                    }
+                )
+            finally:
+                close_old_connections()
+
+        try:
+            with _TPE(max_workers=1) as _pool:
+                _future = _pool.submit(_run_route)
+                result = _future.result(timeout=_wall_timeout)
+        except _FuturesTimeout:
+            logger.error(
+                f"[execute_agent_task] WALL-CLOCK TIMEOUT: {agent_name} exceeded "
+                f"{_wall_timeout}s limit — killing"
+            )
+            from core.agents.base_agent import AgentResult
+            result = AgentResult(
+                success=False,
+                error=f'{agent_name} exceeded {_wall_timeout}s wall-clock timeout',
+                agent_name=agent_name,
+                execution_time_ms=int((time.time() - execution_start) * 1000),
+            )
 
         execution_time_ms = int((time.time() - execution_start) * 1000)
 
