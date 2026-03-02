@@ -4769,6 +4769,7 @@ class ToolDispatcher:
 
         action = payload.get('action', 'list')
         limit = payload.get('limit', 50)
+        offset = payload.get('offset', 0)  # Session 1076: pagination support
 
         if action == 'list':
             # Build queryset with filters
@@ -5119,8 +5120,11 @@ class ToolDispatcher:
                 output_field=IntegerField(),
             )
 
+            # Session 1076: Total count for pagination
+            total_count = qs.count()
+
             items = []
-            for item in qs.annotate(priority_rank=priority_order).order_by('priority_rank', '-created_at')[:limit]:
+            for item in qs.annotate(priority_rank=priority_order).order_by('priority_rank', '-created_at')[offset:offset + limit]:
                 items.append({
                     'id': str(item.id),
                     'title': item.title,
@@ -5136,6 +5140,9 @@ class ToolDispatcher:
             return {
                 'action': 'action_items',
                 'count': len(items),
+                'total': total_count,
+                'offset': offset,
+                'limit': limit,
                 'items': items,
                 'filters_applied': {
                     'status': status_filter,
