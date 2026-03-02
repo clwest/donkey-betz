@@ -41,7 +41,10 @@ interface VoiceSettings {
   voiceInputEnabled: boolean
   voiceOutputEnabled: boolean
   autoPlayTTS: boolean
+  voiceMode: boolean
 }
+
+type VoiceState = 'idle' | 'requesting_mic' | 'recording' | 'transcribing' | 'thinking' | 'speaking'
 
 interface AsyncJob {
   task_id: string
@@ -115,6 +118,7 @@ const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
   voiceInputEnabled: false,
   voiceOutputEnabled: false,
   autoPlayTTS: false,
+  voiceMode: false,
 }
 
 const VOICE_SETTINGS_KEY = 'assistant-voice-settings'
@@ -638,6 +642,8 @@ export default function CommandCenterPage() {
   const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>(loadVoiceSettings)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null)
+  const [voiceState, setVoiceState] = useState<VoiceState>('idle')
+  const micPermissionRef = useRef(false)
 
   // Session 974b: Async polling state
   const [isPolling, setIsPolling] = useState(false)
@@ -691,6 +697,19 @@ export default function CommandCenterPage() {
 
   const updateVoiceSetting = useCallback(<K extends keyof VoiceSettings>(key: K, value: VoiceSettings[K]) => {
     setVoiceSettings(prev => ({ ...prev, [key]: value }))
+  }, [])
+
+  const toggleVoiceMode = useCallback(() => {
+    setVoiceSettings(prev => {
+      const next = !prev.voiceMode
+      return {
+        ...prev,
+        voiceMode: next,
+        voiceInputEnabled: next,
+        voiceOutputEnabled: next,
+        autoPlayTTS: next,
+      }
+    })
   }, [])
 
   // ============================================================================
@@ -901,13 +920,17 @@ export default function CommandCenterPage() {
 
   // Voice chat (auto-send)
   const voiceChatMutation = useMutation({
-    mutationFn: (audioBlob: Blob) => assistantApi.voiceChat(audioBlob),
+    mutationFn: (audioBlob: Blob) => {
+      setVoiceState('transcribing')
+      return assistantApi.voiceChat(audioBlob)
+    },
     onSuccess: (response) => {
       const userText = response.data.user_text
       if (userText) {
         addPAMessage({ role: 'user', content: userText })
       }
 
+      setVoiceState('thinking')
       const assistantResponse = response.data.assistant_message
       if (assistantResponse) {
         const rawContent = assistantResponse.response || assistantResponse.message || 'No response'
@@ -919,12 +942,18 @@ export default function CommandCenterPage() {
         })
 
         if (voiceSettings.autoPlayTTS && voiceSettings.voiceOutputEnabled) {
+          setVoiceState('speaking')
           speakMessage(Date.now().toString(), content)
+        } else {
+          setVoiceState('idle')
         }
+      } else {
+        setVoiceState('idle')
       }
     },
     onError: () => {
       setActionResult({ type: 'error', message: 'Failed to process voice' })
+      setVoiceState('idle')
     },
   })
 
@@ -936,15 +965,23 @@ export default function CommandCenterPage() {
         const audioData = `data:${response.data.audio_format || 'audio/mpeg'};base64,${response.data.audio}`
         if (audioRef.current) {
           audioRef.current.src = audioData
+          audioRef.current.onended = () => {
+            setIsSpeaking(false)
+            setSpeakingMessageId(null)
+            setVoiceState('idle')
+          }
           audioRef.current.play()
           setIsSpeaking(true)
         }
+      } else {
+        setVoiceState('idle')
       }
     },
     onError: () => {
       setActionResult({ type: 'error', message: 'Failed to generate speech' })
       setIsSpeaking(false)
       setSpeakingMessageId(null)
+      setVoiceState('idle')
     },
   })
 
@@ -1079,9 +1116,21 @@ export default function CommandCenterPage() {
   }
 
   const startRecording = async () => {
+    if (isRecording) return // guard double-start
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mediaRecorder = new MediaRecorder(stream)
+      setVoiceState('requesting_mic')
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true }
+      })
+      micPermissionRef.current = true
+
+      // Prefer webm/opus, fall back to webm, then default
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+          ? 'audio/webm'
+          : undefined
+      const mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
       mediaRecorderRef.current = mediaRecorder
       audioChunksRef.current = []
 
@@ -1092,20 +1141,26 @@ export default function CommandCenterPage() {
       }
 
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
-        if (voiceSettings.voiceInputEnabled) {
-          voiceChatMutation.mutate(audioBlob)
-        } else {
-          transcribeMutation.mutate(audioBlob)
-        }
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' })
         stream.getTracks().forEach((track) => track.stop())
+        if (audioBlob.size > 0) {
+          if (voiceSettings.voiceInputEnabled || voiceSettings.voiceMode) {
+            voiceChatMutation.mutate(audioBlob)
+          } else {
+            transcribeMutation.mutate(audioBlob)
+          }
+        } else {
+          setVoiceState('idle')
+        }
       }
 
       mediaRecorder.start()
       setIsRecording(true)
+      setVoiceState('recording')
     } catch (error) {
       console.error('Failed to start recording:', error)
-      setActionResult({ type: 'error', message: 'Failed to access microphone' })
+      setActionResult({ type: 'error', message: 'Microphone access denied or unavailable' })
+      setVoiceState('idle')
     }
   }
 
@@ -1113,6 +1168,7 @@ export default function CommandCenterPage() {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop()
       setIsRecording(false)
+      // voiceState transitions to 'transcribing' in voiceChatMutation.mutationFn
     }
   }
 
@@ -1259,17 +1315,47 @@ export default function CommandCenterPage() {
                 <Plus size={14} />
               </button>
 
-              {/* Voice Settings */}
+              {/* Voice Mode Toggle */}
+              <button
+                className={cn(
+                  'btn btn-sm gap-1.5 transition-all',
+                  voiceSettings.voiceMode
+                    ? 'bg-accent-green/20 text-accent-green border-accent-green/40 hover:bg-accent-green/30'
+                    : 'btn-secondary'
+                )}
+                onClick={toggleVoiceMode}
+                title={voiceSettings.voiceMode ? 'Disable Voice Mode' : 'Enable Voice Mode'}
+              >
+                {voiceSettings.voiceMode ? <Volume2 size={14} /> : <VolumeX size={14} />}
+                <span className="text-xs font-medium">Voice {voiceSettings.voiceMode ? 'On' : 'Off'}</span>
+              </button>
+
+              {/* Voice State Indicator */}
+              {voiceSettings.voiceMode && voiceState !== 'idle' && (
+                <div className={cn(
+                  'flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium',
+                  voiceState === 'recording' && 'bg-accent-red/20 text-accent-red animate-pulse',
+                  voiceState === 'requesting_mic' && 'bg-accent-amber/20 text-accent-amber',
+                  voiceState === 'transcribing' && 'bg-primary-600/20 text-primary-400',
+                  voiceState === 'thinking' && 'bg-primary-600/20 text-primary-400',
+                  voiceState === 'speaking' && 'bg-accent-green/20 text-accent-green',
+                )}>
+                  {voiceState === 'recording' && <><Mic size={12} /> Recording...</>}
+                  {voiceState === 'requesting_mic' && <><Loader2 size={12} className="animate-spin" /> Mic...</>}
+                  {voiceState === 'transcribing' && <><Loader2 size={12} className="animate-spin" /> Transcribing...</>}
+                  {voiceState === 'thinking' && <><Loader2 size={12} className="animate-spin" /> Thinking...</>}
+                  {voiceState === 'speaking' && <><Volume2 size={12} /> Speaking...</>}
+                </div>
+              )}
+
+              {/* Advanced Voice Settings */}
               <div className="relative">
                 <button
-                  className={cn(
-                    'btn btn-sm',
-                    (voiceSettings.voiceInputEnabled || voiceSettings.voiceOutputEnabled)
-                      ? 'btn-primary' : 'btn-secondary'
-                  )}
+                  className="btn btn-sm btn-secondary"
                   onClick={() => setShowVoiceSettings(!showVoiceSettings)}
+                  title="Voice Settings"
                 >
-                  {voiceSettings.voiceOutputEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+                  <Sliders size={14} />
                 </button>
 
                 {showVoiceSettings && (
@@ -1549,17 +1635,25 @@ export default function CommandCenterPage() {
             <div className="flex gap-2">
               <button
                 className={cn(
-                  'btn btn-sm',
+                  'btn btn-sm select-none touch-none',
                   isRecording ? 'btn-primary animate-pulse' :
+                  voiceSettings.voiceMode ? 'btn-secondary ring-2 ring-accent-green/50' :
                   voiceSettings.voiceInputEnabled ? 'btn-secondary ring-2 ring-primary-500/50' : 'btn-secondary'
                 )}
-                onClick={isRecording ? stopRecording : startRecording}
-                disabled={transcribeMutation.isPending || voiceChatMutation.isPending}
+                // Push-to-talk in Voice Mode: hold to record, release to stop
+                onPointerDown={voiceSettings.voiceMode && !isRecording ? (e) => { e.preventDefault(); startRecording() } : undefined}
+                onPointerUp={voiceSettings.voiceMode && isRecording ? () => stopRecording() : undefined}
+                onPointerLeave={voiceSettings.voiceMode && isRecording ? () => stopRecording() : undefined}
+                onPointerCancel={voiceSettings.voiceMode && isRecording ? () => stopRecording() : undefined}
+                // Click toggle when Voice Mode is off
+                onClick={!voiceSettings.voiceMode ? (isRecording ? stopRecording : startRecording) : undefined}
+                disabled={transcribeMutation.isPending || voiceChatMutation.isPending || voiceState === 'transcribing' || voiceState === 'thinking'}
+                title={voiceSettings.voiceMode ? 'Hold to talk' : (isRecording ? 'Stop recording' : 'Start recording')}
               >
-                {(transcribeMutation.isPending || voiceChatMutation.isPending) ? (
+                {(voiceState === 'transcribing' || voiceState === 'thinking') ? (
                   <Loader2 size={16} className="animate-spin" />
                 ) : isRecording ? (
-                  <MicOff size={16} />
+                  <MicOff size={16} className="text-accent-red" />
                 ) : (
                   <Mic size={16} />
                 )}

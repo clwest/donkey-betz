@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,201 |
+| Total cross-references | 2,202 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/status/README.md` | 60 | STATUS |
+| `docs/archive/SYSTEM_CAPABILITIES-original/10_Integration_APIs/README.md` | 60 | 🔌 INTEGRATION APIS - The Nervous System of AI |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -215,7 +215,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 359 | 2026-03-02 00:00 |
+| INDEX.md | docs | 359 | 2026-03-02 00:18 |
 | command_audit.md | discord | 349 | 2026-03-01 21:56 |
 | obs-remote-control.md | context-packets | 497 | 2026-03-01 20:13 |
 | pa-tool-routing-guide.md | tools | 100 | 2026-03-01 15:50 |
