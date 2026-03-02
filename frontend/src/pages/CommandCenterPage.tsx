@@ -695,6 +695,25 @@ export default function CommandCenterPage() {
     saveVoiceSettings(voiceSettings)
   }, [voiceSettings])
 
+  // Live sync: poll server for new messages added by Claude Code or other clients
+  const setActiveConversation = usePAStore((s) => s.setActiveConversation)
+  useQuery({
+    queryKey: ['pa-conversation-sync', activeConversationId],
+    queryFn: async () => {
+      if (!activeConversationId) return null
+      const response = await assistantApi.getConversation(activeConversationId)
+      const data = response.data
+      if (data.success && data.messages.length > paMessages.length) {
+        // Server has more messages — sync them in
+        setActiveConversation(activeConversationId)
+      }
+      return data
+    },
+    enabled: !!activeConversationId && !isPolling,
+    refetchInterval: voiceSettings.voiceMode ? 2000 : 5000,
+    refetchIntervalInBackground: false,
+  })
+
   const updateVoiceSetting = useCallback(<K extends keyof VoiceSettings>(key: K, value: VoiceSettings[K]) => {
     setVoiceSettings(prev => ({ ...prev, [key]: value }))
   }, [])
