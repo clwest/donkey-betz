@@ -1,0 +1,4 @@
+{
+  "note": "All commands are guild-scoped (synced to guild 971148613109555212 in setup_hook). No global commands registered. Discord API fetch returned 403 — bot token lacks applications.commands scope for REST; commands are synced via discord.py bot.tree.sync(guild=...).",
+  "commands": []
+}

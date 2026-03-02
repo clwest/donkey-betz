@@ -1,0 +1,846 @@
+{
+  "generated": "2026-03-01",
+  "total": 115,
+  "active": 94,
+  "disabled": 21,
+  "active_cogs": [
+    "AgentAccessCommands",
+    "AgentCommands",
+    "ClientCommands",
+    "ContentCommands",
+    "ContentPipelineCommands",
+    "DeveloperCommands",
+    "GumroadCommands",
+    "HelpCommands",
+    "HumanInterfaceCommands",
+    "InteractiveCommands",
+    "LegalCommands",
+    "MLScoringCommands",
+    "OBSCommands",
+    "PodcastCommands",
+    "ReactionFeedbackCog",
+    "ResolveCommands",
+    "ReviewCommands",
+    "RoleManager",
+    "SeriesCommands",
+    "ServerSetupCommands",
+    "SituationCommands",
+    "SpiderCommands",
+    "StatusCommands",
+    "StudioCommands",
+    "VoiceCommands"
+  ],
+  "disabled_cogs": [
+    "NarrativeCommands",
+    "PipelineLearningCommands",
+    "ROICommands",
+    "VoiceMarketplaceCommands"
+  ],
+  "commands": [
+    {
+      "command": "status",
+      "description": "Check system health and status",
+      "cog": "StatusCommands",
+      "line": 555,
+      "status": "active"
+    },
+    {
+      "command": "agents",
+      "description": "List active agents with stats",
+      "cog": "AgentCommands",
+      "line": 621,
+      "status": "active"
+    },
+    {
+      "command": "agent",
+      "description": "Get details for a specific agent",
+      "cog": "AgentCommands",
+      "line": 702,
+      "status": "active"
+    },
+    {
+      "command": "trending",
+      "description": "Get trending topics from spider data",
+      "cog": "SpiderCommands",
+      "line": 795,
+      "status": "active"
+    },
+    {
+      "command": "spiders",
+      "description": "List spider network stats",
+      "cog": "SpiderCommands",
+      "line": 912,
+      "status": "active"
+    },
+    {
+      "command": "predictions",
+      "description": "View prediction market signals from Kalshi",
+      "cog": "SpiderCommands",
+      "line": 974,
+      "status": "active"
+    },
+    {
+      "command": "odds",
+      "description": "View sports betting odds and analysis",
+      "cog": "SpiderCommands",
+      "line": 1105,
+      "status": "active"
+    },
+    {
+      "command": "arb",
+      "description": "Scan for arbitrage opportunities across bookmakers",
+      "cog": "SpiderCommands",
+      "line": 1257,
+      "status": "active"
+    },
+    {
+      "command": "bankroll",
+      "description": "View your betting bankroll and stats",
+      "cog": "SpiderCommands",
+      "line": 1400,
+      "status": "active"
+    },
+    {
+      "command": "bet",
+      "description": "Log a new bet to your bankroll",
+      "cog": "SpiderCommands",
+      "line": 1526,
+      "status": "active"
+    },
+    {
+      "command": "resolve",
+      "description": "Resolve a pending bet (won/lost/pushed)",
+      "cog": "SpiderCommands",
+      "line": 1635,
+      "status": "active"
+    },
+    {
+      "command": "futures",
+      "description": "View championship futures odds",
+      "cog": "SpiderCommands",
+      "line": 1740,
+      "status": "active"
+    },
+    {
+      "command": "slip",
+      "description": "Generate a bet slip with multiple selections",
+      "cog": "SpiderCommands",
+      "line": 1844,
+      "status": "active"
+    },
+    {
+      "command": "ask",
+      "description": "Ask the Personal Assistant a question",
+      "cog": "InteractiveCommands",
+      "line": 1976,
+      "status": "active"
+    },
+    {
+      "command": "create",
+      "description": "Generate an image with AI",
+      "cog": "InteractiveCommands",
+      "line": 2110,
+      "status": "active"
+    },
+    {
+      "command": "research",
+      "description": "Search spider data for a topic",
+      "cog": "InteractiveCommands",
+      "line": 2304,
+      "status": "active"
+    },
+    {
+      "command": "clear",
+      "description": "Clear your conversation history with the assistant",
+      "cog": "InteractiveCommands",
+      "line": 2391,
+      "status": "active"
+    },
+    {
+      "command": "sessions",
+      "description": "View and manage your conversation sessions across platforms",
+      "cog": "InteractiveCommands",
+      "line": 2415,
+      "status": "active"
+    },
+    {
+      "command": "link",
+      "description": "Link your Discord account to your AI Studio web account",
+      "cog": "InteractiveCommands",
+      "line": 2570,
+      "status": "active"
+    },
+    {
+      "command": "unlink",
+      "description": "Unlink your Discord account from your AI Studio account",
+      "cog": "InteractiveCommands",
+      "line": 2636,
+      "status": "active"
+    },
+    {
+      "command": "gallery",
+      "description": "View your recent AI-generated images",
+      "cog": "ContentCommands",
+      "line": 2699,
+      "status": "active"
+    },
+    {
+      "command": "profile",
+      "description": "View your AI Studio profile and stats",
+      "cog": "ContentCommands",
+      "line": 2798,
+      "status": "active"
+    },
+    {
+      "command": "opportunities",
+      "description": "View matching income opportunities",
+      "cog": "ContentCommands",
+      "line": 2938,
+      "status": "active"
+    },
+    {
+      "command": "apply",
+      "description": "Apply to an opportunity",
+      "cog": "ContentCommands",
+      "line": 3044,
+      "status": "active"
+    },
+    {
+      "command": "track",
+      "description": "Track your job applications",
+      "cog": "ContentCommands",
+      "line": 3149,
+      "status": "active"
+    },
+    {
+      "command": "digest",
+      "description": "Get your daily/weekly activity digest",
+      "cog": "ContentCommands",
+      "line": 3288,
+      "status": "active"
+    },
+    {
+      "command": "alerts",
+      "description": "Manage your opportunity alerts",
+      "cog": "ContentCommands",
+      "line": 3471,
+      "status": "active"
+    },
+    {
+      "command": "subscribe",
+      "description": "Subscribe to Pro or Premium for more features",
+      "cog": "ContentCommands",
+      "line": 3565,
+      "status": "active"
+    },
+    {
+      "command": "tier",
+      "description": "View your subscription tier and usage",
+      "cog": "ContentCommands",
+      "line": 3646,
+      "status": "active"
+    },
+    {
+      "command": "cancel",
+      "description": "Cancel your subscription",
+      "cog": "ContentCommands",
+      "line": 3780,
+      "status": "active"
+    },
+    {
+      "command": "billing",
+      "description": "Access your billing portal",
+      "cog": "ContentCommands",
+      "line": 3848,
+      "status": "active"
+    },
+    {
+      "command": "voice",
+      "description": "Voice AI: Join a voice channel for voice interaction",
+      "cog": "VoiceCommands",
+      "line": 3938,
+      "status": "active"
+    },
+    {
+      "command": "speak",
+      "description": "Make the bot speak a message in voice channel",
+      "cog": "VoiceCommands",
+      "line": 4072,
+      "status": "active"
+    },
+    {
+      "command": "ask-voice",
+      "description": "Ask AI and hear the response in voice channel",
+      "cog": "VoiceCommands",
+      "line": 4131,
+      "status": "active"
+    },
+    {
+      "command": "voice-market",
+      "description": "Voice Marketplace: Browse and manage AI voices",
+      "cog": "VoiceMarketplaceCommands",
+      "line": 4198,
+      "status": "disabled"
+    },
+    {
+      "command": "voice-buy",
+      "description": "Purchase voice generation credits",
+      "cog": "VoiceMarketplaceCommands",
+      "line": 4662,
+      "status": "disabled"
+    },
+    {
+      "command": "voice-clone",
+      "description": "Clone your voice for the marketplace",
+      "cog": "VoiceMarketplaceCommands",
+      "line": 4865,
+      "status": "disabled"
+    },
+    {
+      "command": "create-content",
+      "description": "AI Content Factory: Create complete content packages",
+      "cog": "ContentPipelineCommands",
+      "line": 5280,
+      "status": "active"
+    },
+    {
+      "command": "content-status",
+      "description": "Check status of your content packages",
+      "cog": "ContentPipelineCommands",
+      "line": 5403,
+      "status": "active"
+    },
+    {
+      "command": "showroom",
+      "description": "Browse the content marketplace",
+      "cog": "ContentPipelineCommands",
+      "line": 5480,
+      "status": "active"
+    },
+    {
+      "command": "series-create",
+      "description": "Create a multi-episode AI content series",
+      "cog": "SeriesCommands",
+      "line": 5737,
+      "status": "active"
+    },
+    {
+      "command": "series-status",
+      "description": "Check status of your AI series",
+      "cog": "SeriesCommands",
+      "line": 5843,
+      "status": "active"
+    },
+    {
+      "command": "series-list",
+      "description": "List your AI series",
+      "cog": "SeriesCommands",
+      "line": 5936,
+      "status": "active"
+    },
+    {
+      "command": "series-view",
+      "description": "View the content of a series episode",
+      "cog": "SeriesCommands",
+      "line": 6005,
+      "status": "active"
+    },
+    {
+      "command": "studio-create",
+      "description": "Create a new autonomous content channel",
+      "cog": "StudioCommands",
+      "line": 6205,
+      "status": "active"
+    },
+    {
+      "command": "studio-list",
+      "description": "List all your autonomous content channels",
+      "cog": "StudioCommands",
+      "line": 6319,
+      "status": "active"
+    },
+    {
+      "command": "studio-status",
+      "description": "Check detailed status of a content channel",
+      "cog": "StudioCommands",
+      "line": 6383,
+      "status": "active"
+    },
+    {
+      "command": "studio-pause",
+      "description": "Pause autonomous content generation for a channel",
+      "cog": "StudioCommands",
+      "line": 6505,
+      "status": "active"
+    },
+    {
+      "command": "studio-resume",
+      "description": "Resume autonomous content generation for a channel",
+      "cog": "StudioCommands",
+      "line": 6562,
+      "status": "active"
+    },
+    {
+      "command": "studio-performance",
+      "description": "View detailed analytics for a content channel",
+      "cog": "StudioCommands",
+      "line": 6619,
+      "status": "active"
+    },
+    {
+      "command": "studio-episode",
+      "description": "View episode content (script, research) from a channel",
+      "cog": "StudioCommands",
+      "line": 6736,
+      "status": "active"
+    },
+    {
+      "command": "publish-gumroad",
+      "description": "Publish an image to Gumroad for sale",
+      "cog": "GumroadCommands",
+      "line": 6872,
+      "status": "active"
+    },
+    {
+      "command": "gumroad-status",
+      "description": "Check your Gumroad connection status",
+      "cog": "GumroadCommands",
+      "line": 6984,
+      "status": "active"
+    },
+    {
+      "command": "rate-series",
+      "description": "Rate a series or episode to help improve AI generation",
+      "cog": "PipelineLearningCommands",
+      "line": 7091,
+      "status": "disabled"
+    },
+    {
+      "command": "learning-stats",
+      "description": "View learning system statistics",
+      "cog": "PipelineLearningCommands",
+      "line": 7202,
+      "status": "disabled"
+    },
+    {
+      "command": "style-recommend",
+      "description": "Get style recommendation for your content",
+      "cog": "PipelineLearningCommands",
+      "line": 7272,
+      "status": "disabled"
+    },
+    {
+      "command": "style-leaderboard",
+      "description": "View top-performing styles",
+      "cog": "PipelineLearningCommands",
+      "line": 7362,
+      "status": "disabled"
+    },
+    {
+      "command": "setup",
+      "description": "Set up AI Studio channels in your server",
+      "cog": "ServerSetupCommands",
+      "line": 7489,
+      "status": "active"
+    },
+    {
+      "command": "client-add",
+      "description": "Create a new client with dedicated channel",
+      "cog": "ClientCommands",
+      "line": 7663,
+      "status": "active"
+    },
+    {
+      "command": "client-list",
+      "description": "List all your clients",
+      "cog": "ClientCommands",
+      "line": 7790,
+      "status": "active"
+    },
+    {
+      "command": "client-deliver",
+      "description": "Send a deliverable to a client's channel",
+      "cog": "ClientCommands",
+      "line": 7857,
+      "status": "active"
+    },
+    {
+      "command": "client-invite",
+      "description": "Generate an invite link for a client",
+      "cog": "ClientCommands",
+      "line": 8010,
+      "status": "active"
+    },
+    {
+      "command": "agent-list",
+      "description": "List all agents by category",
+      "cog": "AgentAccessCommands",
+      "line": 8114,
+      "status": "active"
+    },
+    {
+      "command": "agent-task",
+      "description": "Execute a task with a specific agent",
+      "cog": "AgentAccessCommands",
+      "line": 8206,
+      "status": "active"
+    },
+    {
+      "command": "audit-contract",
+      "description": "Audit a smart contract by its Ethereum address",
+      "cog": "AgentAccessCommands",
+      "line": 8415,
+      "status": "active"
+    },
+    {
+      "command": "blockchain-status",
+      "description": "Check blockchain monitoring status",
+      "cog": "AgentAccessCommands",
+      "line": 8574,
+      "status": "active"
+    },
+    {
+      "command": "voice-ask",
+      "description": "Ask a question and hear the AI speak the answer",
+      "cog": "AgentAccessCommands",
+      "line": 8644,
+      "status": "active"
+    },
+    {
+      "command": "voice-chat",
+      "description": "Speak to the AI and hear a spoken response",
+      "cog": "AgentAccessCommands",
+      "line": 8848,
+      "status": "active"
+    },
+    {
+      "command": "consult",
+      "description": "Consult a legendary advisor",
+      "cog": "AgentAccessCommands",
+      "line": 9186,
+      "status": "active"
+    },
+    {
+      "command": "advisors",
+      "description": "List all available advisors",
+      "cog": "AgentAccessCommands",
+      "line": 9338,
+      "status": "active"
+    },
+    {
+      "command": "workflow-list",
+      "description": "List available workflows",
+      "cog": "AgentAccessCommands",
+      "line": 9380,
+      "status": "active"
+    },
+    {
+      "command": "workflow-run",
+      "description": "Run a multi-step workflow",
+      "cog": "AgentAccessCommands",
+      "line": 9442,
+      "status": "active"
+    },
+    {
+      "command": "help",
+      "description": "Show available commands",
+      "cog": "HelpCommands",
+      "line": 9546,
+      "status": "active"
+    },
+    {
+      "command": "narratives",
+      "description": "List tracked narratives",
+      "cog": "NarrativeCommands",
+      "line": 9962,
+      "status": "disabled"
+    },
+    {
+      "command": "narrative-shifts",
+      "description": "List recent narrative shifts",
+      "cog": "NarrativeCommands",
+      "line": 10051,
+      "status": "disabled"
+    },
+    {
+      "command": "narrative-scan",
+      "description": "Run a narrative drift scan",
+      "cog": "NarrativeCommands",
+      "line": 10123,
+      "status": "disabled"
+    },
+    {
+      "command": "narrative-seed",
+      "description": "Seed narratives for a domain",
+      "cog": "NarrativeCommands",
+      "line": 10192,
+      "status": "disabled"
+    },
+    {
+      "command": "narrative-status",
+      "description": "Get Narrative Drift system status",
+      "cog": "NarrativeCommands",
+      "line": 10261,
+      "status": "disabled"
+    },
+    {
+      "command": "narrative-evidence",
+      "description": "View evidence for a specific narrative",
+      "cog": "NarrativeCommands",
+      "line": 10356,
+      "status": "disabled"
+    },
+    {
+      "command": "narrative-domains",
+      "description": "Overview of all narrative domains",
+      "cog": "NarrativeCommands",
+      "line": 10448,
+      "status": "disabled"
+    },
+    {
+      "command": "narrative-watch",
+      "description": "Watch a narrative for shift alerts",
+      "cog": "NarrativeCommands",
+      "line": 10553,
+      "status": "disabled"
+    },
+    {
+      "command": "narrative-trending",
+      "description": "Show trending/shifting narratives",
+      "cog": "NarrativeCommands",
+      "line": 10719,
+      "status": "disabled"
+    },
+    {
+      "command": "roi-summary",
+      "description": "Show ROI summary metrics",
+      "cog": "ROICommands",
+      "line": 10826,
+      "status": "disabled"
+    },
+    {
+      "command": "roi-dashboard",
+      "description": "Show ROI dashboard overview",
+      "cog": "ROICommands",
+      "line": 10898,
+      "status": "disabled"
+    },
+    {
+      "command": "roi-brief",
+      "description": "Generate or view weekly intelligence brief",
+      "cog": "ROICommands",
+      "line": 11036,
+      "status": "disabled"
+    },
+    {
+      "command": "roi-funnel",
+      "description": "Show conversion funnel metrics",
+      "cog": "ROICommands",
+      "line": 11190,
+      "status": "disabled"
+    },
+    {
+      "command": "roi-attribution",
+      "description": "Show revenue attribution by source",
+      "cog": "ROICommands",
+      "line": 11277,
+      "status": "disabled"
+    },
+    {
+      "command": "resolve-render",
+      "description": "Start a professional DaVinci Resolve render",
+      "cog": "ResolveCommands",
+      "line": 11349,
+      "status": "active"
+    },
+    {
+      "command": "color-grade",
+      "description": "Apply color grading to a video",
+      "cog": "ResolveCommands",
+      "line": 11459,
+      "status": "active"
+    },
+    {
+      "command": "render-status",
+      "description": "Check render job status",
+      "cog": "ResolveCommands",
+      "line": 11567,
+      "status": "active"
+    },
+    {
+      "command": "render-download",
+      "description": "Download a completed render",
+      "cog": "ResolveCommands",
+      "line": 11665,
+      "status": "active"
+    },
+    {
+      "command": "trending-grades",
+      "description": "Show color grades matching current spider trends",
+      "cog": "ResolveCommands",
+      "line": 11761,
+      "status": "active"
+    },
+    {
+      "command": "videos-list",
+      "description": "List available videos for rendering",
+      "cog": "ResolveCommands",
+      "line": 11859,
+      "status": "active"
+    },
+    {
+      "command": "situation-list",
+      "description": "List all 19 autonomous situations",
+      "cog": "SituationCommands",
+      "line": 12184,
+      "status": "active"
+    },
+    {
+      "command": "situation-status",
+      "description": "Check detailed status of a specific situation",
+      "cog": "SituationCommands",
+      "line": 12291,
+      "status": "active"
+    },
+    {
+      "command": "situation-run",
+      "description": "Manually trigger an autonomous situation",
+      "cog": "SituationCommands",
+      "line": 12491,
+      "status": "active"
+    },
+    {
+      "command": "situation-alerts",
+      "description": "Configure alerts for an autonomous situation",
+      "cog": "SituationCommands",
+      "line": 12616,
+      "status": "active"
+    },
+    {
+      "command": "podcast-create",
+      "description": "Create an AI podcast episode with agent debates",
+      "cog": "PodcastCommands",
+      "line": 12768,
+      "status": "active"
+    },
+    {
+      "command": "podcast-list",
+      "description": "List your podcast episodes",
+      "cog": "PodcastCommands",
+      "line": 12895,
+      "status": "active"
+    },
+    {
+      "command": "podcast-status",
+      "description": "Check status of a podcast episode",
+      "cog": "PodcastCommands",
+      "line": 12962,
+      "status": "active"
+    },
+    {
+      "command": "podcast-script",
+      "description": "View the full script of a completed podcast",
+      "cog": "PodcastCommands",
+      "line": 13031,
+      "status": "active"
+    },
+    {
+      "command": "legal-draft",
+      "description": "Draft a legal document template (Colorado family law)",
+      "cog": "LegalCommands",
+      "line": 13121,
+      "status": "active"
+    },
+    {
+      "command": "legal-analyze",
+      "description": "Analyze a denied motion and suggest fixes",
+      "cog": "LegalCommands",
+      "line": 13204,
+      "status": "active"
+    },
+    {
+      "command": "legal-case",
+      "description": "Get info about your case profile",
+      "cog": "LegalCommands",
+      "line": 13274,
+      "status": "active"
+    },
+    {
+      "command": "code-generate",
+      "description": "Generate code from a specification",
+      "cog": "DeveloperCommands",
+      "line": 13356,
+      "status": "active"
+    },
+    {
+      "command": "code-review",
+      "description": "Review code for bugs, security, and quality",
+      "cog": "DeveloperCommands",
+      "line": 13436,
+      "status": "active"
+    },
+    {
+      "command": "ml-scoring",
+      "description": "View ML opportunity scoring status",
+      "cog": "MLScoringCommands",
+      "line": 13536,
+      "status": "active"
+    },
+    {
+      "command": "review",
+      "description": "Show review document for an artifact or dream",
+      "cog": "ReviewCommands",
+      "line": 13642,
+      "status": "active"
+    },
+    {
+      "command": "review-list",
+      "description": "List pending review documents",
+      "cog": "ReviewCommands",
+      "line": 13736,
+      "status": "active"
+    },
+    {
+      "command": "ask-pro",
+      "description": "Ask the Pro advocate a question",
+      "cog": "ReviewCommands",
+      "line": 13778,
+      "status": "active"
+    },
+    {
+      "command": "ask-con",
+      "description": "Ask the Con skeptic a question",
+      "cog": "ReviewCommands",
+      "line": 13820,
+      "status": "active"
+    },
+    {
+      "command": "decide",
+      "description": "Make a decision on a review",
+      "cog": "ReviewCommands",
+      "line": 13862,
+      "status": "active"
+    },
+    {
+      "command": "obs-status",
+      "description": "Check OBS bridge + recording status",
+      "cog": "OBSCommands",
+      "line": 14492,
+      "status": "active"
+    },
+    {
+      "command": "obs-record",
+      "description": "Start, stop, or toggle OBS recording",
+      "cog": "OBSCommands",
+      "line": 14517,
+      "status": "active"
+    },
+    {
+      "command": "obs-upload",
+      "description": "Upload the latest OBS recording to platform",
+      "cog": "OBSCommands",
+      "line": 14547,
+      "status": "active"
+    }
+  ]
+}
