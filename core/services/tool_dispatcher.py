@@ -2066,6 +2066,95 @@ class ToolDispatcher:
             })
             return {'action': 'detail', 'video': detail}
 
+        elif action == 'resolve':
+            from core.video_resolver import resolve_video
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            user = User.objects.get(id=user_id) if user_id else None
+            ref = {}
+            if payload.get('id'):
+                ref['id'] = payload['id']
+            elif payload.get('sequential_number'):
+                ref['sequential_number'] = payload['sequential_number']
+            elif payload.get('query'):
+                ref['url'] = payload['query']
+            if not ref:
+                raise ValueError("Provide id, sequential_number, or query (URL) for resolve")
+            resolved = resolve_video(ref, user=user)
+            if not resolved:
+                raise ValueError("Video not found")
+            return {'action': 'resolve', 'video': resolved.to_dict()}
+
+        elif action == 'transcribe':
+            from content.models import VideoTranscript
+            from core.video_resolver import resolve_video
+            from core.tasks import transcribe_video_task
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            user = User.objects.get(id=user_id) if user_id else None
+            ref = {}
+            if payload.get('id'):
+                ref['id'] = payload['id']
+            elif payload.get('sequential_number'):
+                ref['sequential_number'] = payload['sequential_number']
+            if not ref:
+                raise ValueError("Provide id or sequential_number to transcribe")
+            resolved = resolve_video(ref, user=user)
+            if not resolved:
+                raise ValueError("Video not found")
+            video = _qs().get(id=resolved.id)
+            # Check existing
+            existing = VideoTranscript.objects.filter(
+                video=video, status__in=['queued', 'running']
+            ).first()
+            if existing:
+                return {'action': 'transcribe', 'transcript_id': str(existing.id),
+                        'status': existing.status, 'message': 'Already in progress'}
+            transcript = VideoTranscript.objects.create(
+                video=video, language=payload.get('language', 'en'), status='queued')
+            transcribe_video_task.delay(str(transcript.id))
+            return {'action': 'transcribe', 'transcript_id': str(transcript.id),
+                    'status': 'queued', 'video_title': resolved.title}
+
+        elif action == 'transcript_status':
+            from content.models import VideoTranscript
+            tid = payload.get('transcript_id')
+            if not tid:
+                # Get latest for a video
+                ref = {}
+                if payload.get('id'):
+                    ref['id'] = payload['id']
+                elif payload.get('sequential_number'):
+                    ref['sequential_number'] = payload['sequential_number']
+                if ref:
+                    from core.video_resolver import resolve_video
+                    from django.contrib.auth import get_user_model
+                    User = get_user_model()
+                    user = User.objects.get(id=user_id) if user_id else None
+                    resolved = resolve_video(ref, user=user)
+                    if resolved:
+                        t = VideoTranscript.objects.filter(video_id=resolved.id).order_by('-created_at').first()
+                        if t:
+                            tid = str(t.id)
+                if not tid:
+                    raise ValueError("Provide transcript_id, or id/sequential_number of the video")
+            t = VideoTranscript.objects.get(id=tid)
+            result = {
+                'action': 'transcript_status',
+                'transcript_id': str(t.id),
+                'status': t.status,
+                'language': t.language,
+                'error': t.error or None,
+            }
+            if t.status == 'completed':
+                result['text'] = t.text[:3000]
+                result['text_length'] = len(t.text)
+                result['segment_count'] = len(t.segments_json) if t.segments_json else 0
+                result['duration_seconds'] = t.duration_seconds
+                if len(t.text) > 3000:
+                    result['truncated'] = True
+            return result
+
         else:
             raise ValueError(f"Unknown video_history_tool action: {action}")
 

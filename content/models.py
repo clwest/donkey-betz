@@ -2477,6 +2477,75 @@ class VideoHistory(UnifiedBaseModel):
         return earlier_videos + 1
 
 
+class VideoTranscript(UnifiedBaseModel):
+    """
+    Persisted video transcription (Whisper or other provider).
+    Linked to VideoHistory; stores full text + timestamped segments.
+    """
+
+    video = models.ForeignKey(
+        VideoHistory,
+        on_delete=models.CASCADE,
+        related_name='transcripts',
+        help_text="Source video"
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('queued', 'Queued'),
+            ('running', 'Running'),
+            ('completed', 'Completed'),
+            ('failed', 'Failed'),
+        ],
+        default='queued',
+    )
+
+    provider = models.CharField(
+        max_length=50,
+        default='whisper',
+        help_text="Transcription provider (whisper, etc.)"
+    )
+
+    language = models.CharField(
+        max_length=10,
+        blank=True,
+        help_text="Detected or requested language code (e.g. en)"
+    )
+
+    text = models.TextField(
+        blank=True,
+        help_text="Full transcript text"
+    )
+
+    segments_json = models.JSONField(
+        default=list,
+        help_text="Timestamped segments: [{start, end, text}, ...]"
+    )
+
+    duration_seconds = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Audio duration processed"
+    )
+
+    error = models.TextField(
+        blank=True,
+        help_text="Error message if transcription failed"
+    )
+
+    class Meta:
+        app_label = 'content'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['video', '-created_at']),
+            models.Index(fields=['status']),
+        ]
+
+    def __str__(self):
+        return f"Transcript {self.id} ({self.status}) for video {self.video_id}"
+
+
 class AudioHistory(UnifiedBaseModel):
     """
     Track all AI-generated audio for user gallery.

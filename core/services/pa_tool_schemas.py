@@ -1135,18 +1135,21 @@ PA_TOOL_SCHEMAS = [
         "type": "function",
         "name": "video_history_tool",
         "description": (
-            "Search and browse the user's video upload and generation history (VideoHistory model). "
+            "Search, browse, and process the user's videos (VideoHistory model). "
             "Actions: list (recent videos, filterable by type/status), "
             "search (find videos by title/filename substring), "
-            "detail (get full metadata for one video by UUID or sequential number)."
+            "detail (full metadata for one video by UUID or sequential number), "
+            "resolve (normalize any video reference to full metadata), "
+            "transcribe (kick off Whisper transcription — async, returns transcript_id), "
+            "transcript_status (check transcription progress and get text when done)."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "search", "detail"],
-                    "description": "list=recent videos, search=find by title/filename, detail=full metadata for one video.",
+                    "enum": ["list", "search", "detail", "resolve", "transcribe", "transcript_status"],
+                    "description": "list/search/detail=browse videos, resolve=normalize ref, transcribe=start Whisper, transcript_status=check progress.",
                 },
                 "query": {
                     "type": "string",
@@ -1171,6 +1174,14 @@ PA_TOOL_SCHEMAS = [
                 "limit": {
                     "type": "integer",
                     "description": "Max items to return (default 10, max 50).",
+                },
+                "transcript_id": {
+                    "type": "string",
+                    "description": "Transcript UUID (for transcript_status action).",
+                },
+                "language": {
+                    "type": "string",
+                    "description": "Language code for transcription (default: en).",
                 },
             },
             "required": ["action"],
