@@ -239,6 +239,9 @@ class ToolDispatcher:
         # Session 1078: Ops tool — version, SLO status, failure signatures
         self.register("ops_tool", self._handle_ops)
 
+        # Session 1078: Work tool — gateway for initiatives + action items
+        self.register("work_tool", self._handle_work)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):
@@ -10761,6 +10764,58 @@ RESEARCH DATA:
 
         return {'error': f'Unknown action: {action}'}
 
+
+    # ── Session 1078: Work Tool (Gateway) ──────────────────────────────────────
+    def _handle_work(self, tool_name: str, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:
+        """
+        Session 1078: Work gateway — thin dispatcher over initiative_tool.
+        Translates work_tool actions to initiative_tool actions and delegates.
+        """
+        action = payload.get('action', 'initiative_list')
+
+        # Action name mapping: work_tool action → initiative_tool action + payload overrides
+        ACTION_MAP = {
+            'initiative_list': ('list', {}),
+            'initiative_detail': ('details', {}),
+            'initiative_create': ('create', {}),
+            'initiative_promote': ('promote', {}),
+            'action_item_list': ('action_items', {}),
+            'action_item_start': ('start_action_item', {}),
+            'action_item_complete': ('complete_action_item', {}),
+            'action_item_cleanup': ('cleanup_action_items', {}),
+        }
+
+        mapping = ACTION_MAP.get(action)
+        if not mapping:
+            return {'error': f'Unknown work_tool action: {action}. Valid: {", ".join(sorted(ACTION_MAP))}'}
+
+        initiative_action, overrides = mapping
+
+        # Build the initiative_tool payload
+        initiative_payload = dict(payload)
+        initiative_payload['action'] = initiative_action
+        initiative_payload.update(overrides)
+
+        # Translate work_tool param names → initiative_tool param names
+        # action_item_list: status → item_status (initiative_tool uses item_status for action items)
+        if action == 'action_item_list':
+            if 'status' in initiative_payload and 'item_status' not in initiative_payload:
+                initiative_payload['item_status'] = initiative_payload.pop('status')
+
+        # action_item_start / action_item_complete: id → item_id
+        if action in ('action_item_start', 'action_item_complete'):
+            if 'id' in initiative_payload and 'item_id' not in initiative_payload:
+                initiative_payload['item_id'] = initiative_payload.get('id')
+
+        # Delegate to existing initiative handler
+        result = self._handle_initiative('initiative_tool', initiative_payload, user_id, trace_id)
+
+        # Normalize the response action name to the work_tool action
+        if isinstance(result, dict):
+            result['gateway'] = 'work_tool'
+            result['action'] = action
+
+        return result
 
     # ── Session 1078: Ops Tool ─────────────────────────────────────────────────
     def _handle_ops(self, tool_name: str, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:

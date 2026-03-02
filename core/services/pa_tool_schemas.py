@@ -2266,6 +2266,85 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
+    # ── Session 1078: Work Tool — gateway for initiatives + action items ────────
+    {
+        "type": "function",
+        "name": "work_tool",
+        "description": (
+            "Work execution gateway: manage initiatives and action items. "
+            "List, detail, create, and promote initiatives; list, start, complete, "
+            "and clean up action items. Use this instead of initiative_tool for all "
+            "initiative and action item operations."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "initiative_list", "initiative_detail", "initiative_create",
+                        "initiative_promote",
+                        "action_item_list", "action_item_start", "action_item_complete",
+                        "action_item_cleanup"
+                    ],
+                    "description": (
+                        "initiative_list: list initiatives (filters: status, owner, stage). "
+                        "initiative_detail: full details of one initiative (by id, human_id, seq_id, or name). "
+                        "initiative_create: create a new initiative (name, description). "
+                        "initiative_promote: move TRIAGE/ON_HOLD → ACTIVE. "
+                        "action_item_list: list action items (filters: status, priority, initiative_id). "
+                        "action_item_start: mark an action item as in_progress. "
+                        "action_item_complete: mark an action item as completed. "
+                        "action_item_cleanup: find/cancel junk action items (dry_run default true)."
+                    ),
+                },
+                "id": {
+                    "type": "string",
+                    "description": "Initiative or action item ID (UUID, INIT-000001, or seq number).",
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Search by name (for initiative_detail) or initiative title (for initiative_create).",
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Description for initiative_create.",
+                },
+                "status": {
+                    "type": "string",
+                    "description": (
+                        "For initiative_list: ACTIVE/TRIAGE/ON_HOLD/COMPLETED/ARCHIVED/all. "
+                        "For action_item_list: pending/in_progress/completed/blocked/cancelled/all."
+                    ),
+                },
+                "priority": {
+                    "type": "string",
+                    "enum": ["critical", "high", "medium", "low"],
+                    "description": "Filter action items by priority.",
+                },
+                "initiative_id": {
+                    "type": "string",
+                    "description": "Filter action items by initiative ID.",
+                },
+                "owner": {
+                    "type": "string",
+                    "description": "Filter initiatives by owner (me/unowned/agent_name).",
+                },
+                "notes": {
+                    "type": "string",
+                    "description": "Completion notes for action_item_complete.",
+                },
+                "dry_run": {
+                    "type": "boolean",
+                    "description": "For action_item_cleanup: true to preview, false to execute (default true).",
+                },
+                "limit": {"type": "integer", "description": "Max results (default 50)."},
+                "offset": {"type": "integer", "description": "Skip first N results for pagination."},
+            },
+            "required": ["action"],
+        },
+    },
+
     # ── Session 1078: Ops Tool — version, SLO status, failure signatures ──────
     {
         "type": "function",
@@ -2394,6 +2473,7 @@ TOOL_ENRICHMENT_MAP = {
     'conversation_tool': ['strategic_memory'],
     'remember_tool': [],
     'ops_tool': ['intelligence_enricher', 'platform_briefing'],
+    'work_tool': ['intelligence_enricher', 'strategic_memory'],
 }
 
 # Reverse map: tool name -> canonical intent name for enrichment pipeline
@@ -2469,4 +2549,5 @@ TOOL_TO_INTENT_MAP = {
     'conversation_tool': 'memory_recall',
     'remember_tool': 'memory',
     'ops_tool': 'system_overview',
+    'work_tool': 'initiatives',
 }
