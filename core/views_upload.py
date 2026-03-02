@@ -225,6 +225,7 @@ def upload_video(request):
     saved_path = ''
     full_path = None
 
+    metadata = {}
     try:
         import cloudinary.uploader
         upload_result = cloudinary.uploader.upload(
@@ -235,19 +236,25 @@ def upload_video(request):
         )
         video_url = upload_result.get('secure_url', upload_result.get('url', ''))
         saved_path = upload_result.get('public_id', upload_path)
-    except Exception:
-        # Fallback: local filesystem storage
+        # Capture metadata from Cloudinary response
+        video_info = upload_result.get('video', {}) if isinstance(upload_result.get('video'), dict) else {}
+        metadata = {
+            'duration': upload_result.get('duration'),
+            'width': upload_result.get('width'),
+            'height': upload_result.get('height'),
+            'fps': video_info.get('frame_rate'),
+            'codec': video_info.get('codec'),
+        }
+    except ImportError:
+        # Cloudinary not installed — use local filesystem
         saved_path = default_storage.save(upload_path, uploaded_file)
         video_url = default_storage.url(saved_path)
         try:
             full_path = default_storage.path(saved_path)
         except NotImplementedError:
             full_path = None
-
-    # Extract video metadata using ffprobe (local only)
-    metadata = {}
-    if full_path:
-        metadata = _extract_video_metadata(full_path)
+        if full_path:
+            metadata = _extract_video_metadata(full_path)
 
     # Create VideoHistory record
     project_id = request.POST.get('project_id')
