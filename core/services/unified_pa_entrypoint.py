@@ -471,7 +471,7 @@ class UnifiedPAEntrypoint:
                     tool_runs=[],
                     audio_url=None,
                     intent='triage',
-                    routed_to='boardroom_tool',
+                    routed_to='governance_tool',
                     profile_completeness=None,
                     latency_ms=latency_ms,
                     error=None
@@ -504,7 +504,7 @@ class UnifiedPAEntrypoint:
                     tool_runs=[],
                     audio_url=None,
                     intent='triage',
-                    routed_to='boardroom_tool',
+                    routed_to='governance_tool',
                     profile_completeness=None,
                     latency_ms=latency_ms,
                     error=None
@@ -760,7 +760,7 @@ class UnifiedPAEntrypoint:
         Returns (content, tool_runs, fc_metadata, response_id)
         where fc_metadata captures the GPT function call info (name, arguments, call_id).
         """
-        from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
+        from core.services.pa_tool_schemas import get_active_tool_schemas
 
         # Build initial messages array
         messages = self._build_messages_array(message, context)
@@ -785,7 +785,7 @@ class UnifiedPAEntrypoint:
                 self.llm_enforcer.enforce_real_ai,
                 prompt=message,
                 input_messages=messages,
-                tools=PA_TOOL_SCHEMAS if not is_final else None,
+                tools=get_active_tool_schemas() if not is_final else None,
                 previous_response_id=response_id,
                 task_type='conversation',
                 max_tokens=self._estimate_max_tokens(message),
@@ -1708,7 +1708,7 @@ class UnifiedPAEntrypoint:
             'unowned project', 'transfer ownership', 'take ownership',
             'no owner', 'initiatives i own', 'projects i own',
         ]):
-            return ('initiatives', 'initiative_tool')
+            return ('initiatives', 'work_tool')
 
         # Session 988: Initiative/project patterns — check BEFORE boardroom
         # so "initiative" + "attention" routes to initiatives, not boardroom
@@ -1721,7 +1721,7 @@ class UnifiedPAEntrypoint:
             'my project', 'my projects', 'our project', 'our projects',
             'the project', 'the projects', 'this project',
         ]):
-            return ('initiatives', 'initiative_tool')
+            return ('initiatives', 'work_tool')
 
         # Session 1031: Dream patterns — BEFORE boardroom because "approve dream" contains "approve"
         if any(phrase in message_lower for phrase in [
@@ -1734,7 +1734,7 @@ class UnifiedPAEntrypoint:
         if 'boardroom' in message_lower or any(word in message_lower for word in [
             'draft decision', 'promote decision', 'reject decision', 'canonical'
         ]):
-            return ('boardroom', 'boardroom_tool')
+            return ('boardroom', 'governance_tool')
 
         # Session 1000C: Content-specific review patterns must check BEFORE generic
         # boardroom "review" patterns (which catch "for review", "pending review", etc.)
@@ -1744,7 +1744,7 @@ class UnifiedPAEntrypoint:
                               'pending review', 'ready for review', 'to review',
                               'ready to publish', 'review']
             if any(rp in message_lower for rp in review_phrases):
-                return ('content_review', 'content_review_tool')
+                return ('content_review', 'content_tool')
 
         # Decision/attention patterns
         # Session 997B: "review" alone is too greedy — matches "review this system" etc.
@@ -1752,12 +1752,12 @@ class UnifiedPAEntrypoint:
         if any(word in message_lower for word in [
             'decision', 'pending', 'attention', 'approve', 'reject',
         ]):
-            return ('boardroom', 'boardroom_tool')
+            return ('boardroom', 'governance_tool')
         if any(phrase in message_lower for phrase in [
             'review item', 'review decision', 'review alert', 'needs review',
             'pending review', 'review attention', 'for review', 'items to review',
         ]):
-            return ('boardroom', 'boardroom_tool')
+            return ('boardroom', 'governance_tool')
 
         # Session 969: Recent activity patterns — "what's been going on?"
         if any(phrase in message_lower for phrase in [
@@ -1775,7 +1775,7 @@ class UnifiedPAEntrypoint:
             'everything ok', 'how is the platform',
             'system status', 'current status', 'current system',
         ]):
-            return ('system_health_check', 'system_health_tool')
+            return ('system_health_check', 'ops_tool')
 
         # Session 970: Surgical moves / deliberation status patterns
         if any(phrase in message_lower for phrase in [
@@ -1789,7 +1789,7 @@ class UnifiedPAEntrypoint:
             'any errors', 'what failed', 'what broke', 'error log', 'what went wrong',
             'issues today', 'any failures', 'error summary', 'recent errors', 'any problems',
         ]):
-            return ('error_summary', 'error_summary_tool')
+            return ('error_summary', 'ops_tool')
 
         # Session 973: Broad system overview — "how is everything?", "what updates?"
         if any(phrase in message_lower for phrase in [
@@ -1810,7 +1810,7 @@ class UnifiedPAEntrypoint:
         if any(phrase in message_lower for phrase in [
             'tell me about', 'tell me more about',
         ]):
-            return ('item_lookup', 'boardroom_tool')
+            return ('item_lookup', 'governance_tool')
 
         # Session 987: Body vitals patterns — specific body-system queries only
         # Generic "health" / "status" were too broad and caught system health queries
@@ -1899,7 +1899,7 @@ class UnifiedPAEntrypoint:
             'game prediction', 'who will win', 'betting brief',
             'top plays', 'value bet', 'value bets', 'stale line',
         ]):
-            return ('sports_betting', 'sports_betting_tool')
+            return ('sports_betting', 'intelligence_tool')
 
         # Opportunity patterns
         if any(word in message_lower for word in [
@@ -1914,7 +1914,7 @@ class UnifiedPAEntrypoint:
             'saved outputs', 'unsave deliverable', 'save deliverable',
             'show deliverables', 'list deliverables', 'deliverable stats',
         ]):
-            return ('deliverables', 'deliverables_tool')
+            return ('deliverables', 'content_tool')
 
         # Session 943: Content REVIEW patterns - MUST come before content creation patterns
         # These are for viewing/reviewing existing content, not creating new
@@ -1950,7 +1950,7 @@ class UnifiedPAEntrypoint:
             'how many blogs', 'blog count', 'blog performance',
             'publish-ready', 'publish ready',
         ]):
-            return ('content_review', 'content_review_tool')
+            return ('content_review', 'content_tool')
 
         # Session 993: Deliberation blog generation
         if any(phrase in message_lower for phrase in [
@@ -1958,7 +1958,7 @@ class UnifiedPAEntrypoint:
             'deliberated blog', 'write a blog with review', 'blog with deliberation',
             'full review blog', 'v2 blog', 'generate content',
         ]):
-            return ('generate_blog', 'generate_blog_tool')
+            return ('generate_blog', 'content_tool')
 
         # Session 943: Brainstorming/Discussion/Panel search patterns
         if any(word in message_lower for word in [
@@ -2028,13 +2028,13 @@ class UnifiedPAEntrypoint:
             'compare', 'comparison', 'vs', 'versus',
             'look up', 'lookup',
         ]):
-            return ('research', 'web_search')
+            return ('research', 'intelligence_tool')
 
         # Session 943: Initiative-adjacent patterns (fallback for generic terms)
         if any(word in message_lower for word in [
             'pipeline', 'stage', 'action item', 'action items',
         ]):
-            return ('initiatives', 'initiative_tool')
+            return ('initiatives', 'work_tool')
 
         # Session 988: Crypto / price lookup — route to spider_data (coingecko spider)
         if any(phrase in message_lower for phrase in [
@@ -2042,7 +2042,7 @@ class UnifiedPAEntrypoint:
             'dogecoin', 'doge', 'xrp', 'bnb', 'cardano', 'ada ',
             'coin price', 'token price', 'crypto price', 'how much is',
         ]):
-            return ('crypto_price', 'spider_data_tool')
+            return ('crypto_price', 'intelligence_tool')
 
         # Session 995B: Sports betting — moved to line ~841 (Session 1030, before opportunities)
 
@@ -2052,7 +2052,7 @@ class UnifiedPAEntrypoint:
             'sec filings', 'edgar', 'stock intelligence', 'stock alert',
             'stock prediction', 'bull case', 'bear case', 'stock dashboard',
         ]):
-            return ('stock_intelligence', 'stock_intelligence_tool')
+            return ('stock_intelligence', 'intelligence_tool')
 
         # Session 1014: Legislation / congressional bill patterns
         # Session 1015: Added "ask a bill" / RAG question patterns
@@ -2066,14 +2066,14 @@ class UnifiedPAEntrypoint:
             'how does this bill', 'bill affect me', 'ask a bill',
             'explain the bill', 'what does the bill', 'bill impact',
         ]):
-            return ('legislation', 'legislation_tool')
+            return ('legislation', 'intelligence_tool')
 
         # Session 948: Spider data patterns — removed bare 'intelligence' (too broad)
         if any(word in message_lower for word in [
             'spider', 'spiders', 'crawl', 'crawled', 'collected data',
             'spider intelligence', 'news feed', 'what have spiders', 'spider data'
         ]):
-            return ('spider_data', 'spider_data_tool')
+            return ('spider_data', 'intelligence_tool')
 
         # Session 948/988: Execution history patterns
         if any(word in message_lower for word in [
@@ -6266,9 +6266,9 @@ Be concise, conversational, and personalized. Address the user by name."""
         """
         # Get items to triage
         result = await self.tool_dispatcher.execute(
-            tool_name='boardroom_tool',
+            tool_name='governance_tool',
             payload={
-                'action': 'get_triage_batch',
+                'action': 'triage_batch',
                 'triage_type': triage_type,
                 'batch_size': batch_size,
             },
@@ -6361,16 +6361,16 @@ Reply: **promote**, **reject**, **skip**, or **stop**"""
         if self._triage_type == 'attention':
             if response_lower in ['approve', 'yes', 'ok', 'y']:
                 result = await self.tool_dispatcher.execute(
-                    tool_name='boardroom_tool',
-                    payload={'action': 'approve_attention', 'id': item_id},
+                    tool_name='governance_tool',
+                    payload={'action': 'attention_approve', 'id': item_id},
                     user_id=self.user.id  # type: ignore[attr-defined]
                 )
                 action_taken = 'approved'
                 self._triage_stats['approved'] += 1
             elif response_lower in ['ignore', 'no', 'n', 'dismiss']:
                 result = await self.tool_dispatcher.execute(
-                    tool_name='boardroom_tool',
-                    payload={'action': 'ignore_attention', 'id': item_id},
+                    tool_name='governance_tool',
+                    payload={'action': 'attention_ignore', 'id': item_id},
                     user_id=self.user.id  # type: ignore[attr-defined]
                 )
                 action_taken = 'ignored'
@@ -6386,16 +6386,16 @@ Reply: **promote**, **reject**, **skip**, or **stop**"""
         else:  # decisions
             if response_lower in ['promote', 'yes', 'ok', 'y', 'approve']:
                 result = await self.tool_dispatcher.execute(
-                    tool_name='boardroom_tool',
-                    payload={'action': 'promote_decision', 'id': item_id},
+                    tool_name='governance_tool',
+                    payload={'action': 'decision_promote', 'id': item_id},
                     user_id=self.user.id  # type: ignore[attr-defined]
                 )
                 action_taken = 'promoted'
                 self._triage_stats['promoted'] += 1
             elif response_lower in ['reject', 'no', 'n', 'dismiss']:
                 result = await self.tool_dispatcher.execute(
-                    tool_name='boardroom_tool',
-                    payload={'action': 'reject_decision', 'id': item_id},
+                    tool_name='governance_tool',
+                    payload={'action': 'decision_reject', 'id': item_id},
                     user_id=self.user.id  # type: ignore[attr-defined]
                 )
                 action_taken = 'rejected'

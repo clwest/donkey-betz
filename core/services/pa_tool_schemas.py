@@ -2569,6 +2569,36 @@ for _i, _tool in enumerate(PA_TOOL_SCHEMAS):
         )
 
 
+# ── Session 1079 Phase 3 prep: Legacy tool deprecation flag ─────────────────
+# When TOOLS_EXPOSE_LEGACY is False, get_active_tool_schemas() strips legacy
+# tool schemas from the list sent to GPT-5.2, forcing it to use gateways.
+# Set to True for rollback if gateways break.
+
+import os as _os
+
+TOOLS_EXPOSE_LEGACY = _os.environ.get('TOOLS_EXPOSE_LEGACY', 'true').lower() in ('true', '1', 'yes')
+
+# Legacy tool names that have gateway replacements
+_LEGACY_TOOL_NAMES = frozenset([
+    'boardroom_tool', 'initiative_tool', 'content_review_tool',
+    'generate_blog_tool', 'deliverables_tool', 'human_decisions_tool',
+    'stock_intelligence_tool', 'sports_betting_tool', 'legislation_tool',
+    'rag_query_tool', 'spider_data_tool', 'system_health_tool',
+    'error_summary_tool',
+    # web_search is NOT included — it's a standalone primitive, not a legacy tool
+])
+
+
+def get_active_tool_schemas():
+    """
+    Return tool schemas filtered by the TOOLS_EXPOSE_LEGACY flag.
+    When legacy exposure is off, strips legacy tools that have gateway replacements.
+    """
+    if TOOLS_EXPOSE_LEGACY:
+        return PA_TOOL_SCHEMAS
+    return [t for t in PA_TOOL_SCHEMAS if t.get('name') not in _LEGACY_TOOL_NAMES]
+
+
 # ── Tool-to-Enrichment Mapping ──────────────────────────────────────────────
 # Maps tool names back to enrichment services for the intelligence pipeline.
 # Migrated from UnifiedPAEntrypoint.INTENT_ENRICHMENT_MAP.
