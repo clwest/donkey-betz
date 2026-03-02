@@ -984,6 +984,14 @@ export const contentApi = {
   addSfxToVideo: (videoId: string, description: string, duration?: number, volume?: number) =>
     api.post('/tool/add-sfx-to-video/', { video_id: videoId, description, duration, volume: volume ?? 0.5 }),
 
+  // Video Agents — transcribe, content packs
+  videoTranscribe: (videoId: string, language = 'en') =>
+    api.post('/v1/video/transcribe/', { id: videoId, language }),
+  videoTranscripts: (videoId: string) =>
+    api.get('/v1/video/transcripts/', { params: { video_id: videoId } }),
+  videoContentPack: (videoId: string, language = 'en') =>
+    api.post('/v1/video/content-pack/', { id: videoId, language }),
+
   // Content Creation
   create: (data: { type: string; prompt: string; options?: Record<string, unknown> }) =>
     api.post('/v1/content/create/', data),

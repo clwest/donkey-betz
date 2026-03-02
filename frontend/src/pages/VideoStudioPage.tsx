@@ -5,7 +5,7 @@ import {
   Film, Type, Image, Loader2, Heart, Download, ChevronDown, ChevronUp,
   Maximize2, Clock, Trash2, X, Check, AlertCircle, Play, Sparkles,
   Scissors, Palette, Music, ArrowUp, ArrowDown, Link2, Upload,
-  Mic, Volume2, Grid,
+  Mic, Volume2, Grid, FileText, Package,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -319,6 +319,24 @@ export default function VideoStudioPage() {
       refetchGallery()
       setSelectedVideo(null)
       showFeedback('success', 'Video deleted')
+    },
+  })
+
+  const transcribeMutation = useMutation({
+    mutationFn: (videoId: string) => contentApi.videoTranscribe(videoId),
+    onSuccess: (resp) => {
+      const msg = resp.data?.message || 'Transcription started'
+      showFeedback('success', msg)
+    },
+    onError: () => showFeedback('error', 'Failed to start transcription'),
+  })
+
+  const contentPackMutation = useMutation({
+    mutationFn: (videoId: string) => contentApi.videoContentPack(videoId),
+    onSuccess: () => showFeedback('success', 'Content pack generation started'),
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      const msg = err?.response?.data?.error || 'Failed to generate content pack'
+      showFeedback('error', msg)
     },
   })
 
@@ -1583,6 +1601,24 @@ export default function VideoStudioPage() {
                   >
                     <Download size={14} />
                     Download
+                  </button>
+
+                  <button
+                    onClick={() => transcribeMutation.mutate(selectedVideo.id)}
+                    disabled={transcribeMutation.isPending}
+                    className="w-full flex items-center gap-2 rounded-lg border border-dark-border px-3 py-2 text-sm text-gray-300 hover:text-white hover:border-gray-600 disabled:opacity-40 transition-colors"
+                  >
+                    {transcribeMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
+                    Transcribe
+                  </button>
+
+                  <button
+                    onClick={() => contentPackMutation.mutate(selectedVideo.id)}
+                    disabled={contentPackMutation.isPending}
+                    className="w-full flex items-center gap-2 rounded-lg border border-dark-border px-3 py-2 text-sm text-gray-300 hover:text-white hover:border-gray-600 disabled:opacity-40 transition-colors"
+                  >
+                    {contentPackMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Package size={14} />}
+                    Content Pack
                   </button>
 
                   <button

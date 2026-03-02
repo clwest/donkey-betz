@@ -14524,6 +14524,138 @@ def transcribe_video_task(self, transcript_id):
 
 
 # ============================================================
+# Video Content Pack Generation
+# ============================================================
+
+@shared_task(bind=True, max_retries=1, soft_time_limit=120, time_limit=150,
+             queue='long_running', ignore_result=False)
+def generate_video_content_pack_task(self, video_id, user_id, language='en'):
+    """
+    Generate a content pack for a video using its transcript.
+
+    Produces: titles (3+), summary, key points, chapters (timestamped),
+    YouTube description + tags. Saved as a Deliverable.
+    """
+    from content.models import VideoTranscript, VideoHistory
+    from core.models_deliverables import Deliverable
+    from django.contrib.auth import get_user_model
+    from openai import OpenAI
+    from django.conf import settings as django_settings
+
+    User = get_user_model()
+
+    try:
+        user = User.objects.get(id=user_id)
+        video = VideoHistory.objects.get(id=video_id, user=user)
+
+        # Find latest completed transcript
+        transcript = VideoTranscript.objects.filter(
+            video=video, status='completed'
+        ).order_by('-created_at').first()
+
+        if not transcript or not transcript.text:
+            raise ValueError(f"No completed transcript found for video {video_id}")
+
+        video_title = (video.prompt or video.original_filename or 'Untitled Video')[:200]
+        duration_str = ''
+        if transcript.duration_seconds:
+            mins = int(transcript.duration_seconds // 60)
+            secs = int(transcript.duration_seconds % 60)
+            duration_str = f" ({mins}:{secs:02d})"
+
+        # Build chapters hint from segments
+        segments = transcript.segments_json or []
+        segment_hint = ''
+        if segments:
+            # Sample ~10 evenly spaced segments for chapter hints
+            step = max(1, len(segments) // 10)
+            sampled = segments[::step][:10]
+            segment_hint = '\n'.join(
+                f"[{int(s['start']//60)}:{int(s['start']%60):02d}] {s['text']}"
+                for s in sampled
+            )
+
+        prompt = f"""Analyze this video transcript and generate a content pack.
+
+Video: {video_title}{duration_str}
+Language: {language}
+
+Transcript:
+{transcript.text[:12000]}
+
+{'Segment samples (for chapter timing):' + chr(10) + segment_hint if segment_hint else ''}
+
+Generate a JSON object with these fields:
+- "titles": array of 3-5 compelling title options
+- "summary": 1-2 paragraph summary of the content
+- "key_points": array of 5-10 key points/takeaways as bullet strings
+- "chapters": array of objects with "timestamp" (MM:SS), "title" fields — aim for 5-8 chapters based on topic shifts
+- "youtube_description": a YouTube-ready description (include a brief summary, key topics, and a call-to-action)
+- "youtube_tags": array of 10-15 relevant tags for YouTube SEO
+
+Return ONLY valid JSON, no markdown fences."""
+
+        client = OpenAI(api_key=django_settings.OPENAI_API_KEY)
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a video content strategist. Generate structured metadata for videos based on their transcripts. Always return valid JSON."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.7,
+            max_tokens=3000,
+        )
+
+        raw_text = response.choices[0].message.content or '{}'
+        # Strip markdown fences if present
+        if raw_text.startswith('```'):
+            raw_text = raw_text.split('\n', 1)[-1].rsplit('```', 1)[0]
+        content_pack = json.loads(raw_text)
+
+        # Validate expected keys
+        for key in ['titles', 'summary', 'key_points', 'chapters', 'youtube_description', 'youtube_tags']:
+            if key not in content_pack:
+                content_pack[key] = [] if key != 'summary' and key != 'youtube_description' else ''
+
+        content_pack['video_id'] = str(video_id)
+        content_pack['video_title'] = video_title
+        content_pack['transcript_id'] = str(transcript.id)
+        content_pack['duration_seconds'] = transcript.duration_seconds
+
+        # Save as Deliverable
+        deliverable = Deliverable.objects.create(
+            title=f"Content Pack: {video_title[:180]}",
+            deliverable_type='document',
+            category='Video Content',
+            tags=['video', 'content-pack', 'auto-generated'],
+            agent_name='VideoContentPackAgent',
+            agent_task=f"Generate content pack for video: {video_title}",
+            user=user,
+            content=json.dumps(content_pack, indent=2),
+            content_format='json',
+            preview_content=(content_pack.get('summary', '') or '')[:500],
+            quality_score=0.8,
+            confidence_score=0.85,
+        )
+
+        logger.info(f"Content pack generated for video {video_id}: deliverable {deliverable.id}")
+
+        return {
+            'ok': True,
+            'deliverable_id': str(deliverable.id),
+            'video_id': str(video_id),
+            'titles': content_pack.get('titles', []),
+            'summary': (content_pack.get('summary', '') or '')[:500],
+            'chapter_count': len(content_pack.get('chapters', [])),
+            'tag_count': len(content_pack.get('youtube_tags', [])),
+        }
+
+    except Exception as exc:
+        logger.error(f"Content pack generation failed for video {video_id}: {exc}")
+        raise
+
+
+# ============================================================
 # Video RAG Ingest Pipeline
 # ============================================================
 

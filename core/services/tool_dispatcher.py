@@ -2155,6 +2155,40 @@ class ToolDispatcher:
                     result['truncated'] = True
             return result
 
+        elif action == 'content_pack':
+            from content.models import VideoTranscript
+            from core.video_resolver import resolve_video
+            from core.tasks import generate_video_content_pack_task
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            user = User.objects.get(id=user_id) if user_id else None
+            ref = {}
+            if payload.get('id'):
+                ref['id'] = payload['id']
+            elif payload.get('sequential_number'):
+                ref['sequential_number'] = payload['sequential_number']
+            if not ref:
+                raise ValueError("Provide id or sequential_number for content_pack")
+            resolved = resolve_video(ref, user=user)
+            if not resolved:
+                raise ValueError("Video not found")
+            # Verify transcript exists
+            has_transcript = VideoTranscript.objects.filter(
+                video_id=resolved.id, status='completed'
+            ).exists()
+            if not has_transcript:
+                raise ValueError("No completed transcript. Transcribe the video first.")
+            task = generate_video_content_pack_task.delay(
+                resolved.id, str(user_id), payload.get('language', 'en')
+            )
+            return {
+                'action': 'content_pack',
+                'task_id': str(task.id),
+                'status': 'queued',
+                'video_title': resolved.title,
+                'message': 'Content pack generation started. Check task status for results.',
+            }
+
         else:
             raise ValueError(f"Unknown video_history_tool action: {action}")
 
