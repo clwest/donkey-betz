@@ -1207,6 +1207,9 @@ from core.views_content import (
     generate_email, generate_podcast_script,
     # Session 871: Removed unused import: ai_image_studio
 )
+from core.views_video_agents import (
+    video_resolve, video_transcribe, video_transcripts_list, video_transcript_detail,
+)
 from core.views_video import (
     text_to_video, image_to_video, check_video_status, get_video_detail,
     video_gallery, save_video_to_gallery, test_runway_connection,
@@ -2715,6 +2718,12 @@ urlpatterns = [
     path('api/v1/video/gallery/', video_gallery, name='video-gallery'),
     path('api/v1/video/save/', save_video_to_gallery, name='save-video'),
     path('api/v1/video/test-runway/', test_runway_connection, name='test-runway'),
+    # Video Agents — resolve, transcribe, transcripts
+    path('api/v1/video/resolve/', video_resolve, name='video-resolve'),
+    path('api/v1/video/transcribe/', video_transcribe, name='video-transcribe'),
+    path('api/v1/video/transcripts/', video_transcripts_list, name='video-transcripts-list'),
+    path('api/v1/video/transcripts/<uuid:transcript_id>/', video_transcript_detail, name='video-transcript-detail'),
+
     # Video History endpoints (Session 44: Video Gallery)
     path('api/v1/video/history/', get_video_history, name='video-history'),
     path('api/v1/video/history/<str:video_id>/favorite/', toggle_video_favorite, name='toggle-video-favorite'),

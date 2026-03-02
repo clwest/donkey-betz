@@ -14418,6 +14418,112 @@ def generate_document_embeddings(self, document_id: str, embedding_model: str = 
 
 
 # ============================================================
+# Video Transcription (Whisper) — VideoTranscript model
+# ============================================================
+
+@shared_task(bind=True, max_retries=1, soft_time_limit=600, time_limit=660,
+             queue='long_running', ignore_result=True)
+def transcribe_video_task(self, transcript_id):
+    """
+    Download video audio, transcribe with OpenAI Whisper, save to VideoTranscript.
+    """
+    import os
+    import subprocess
+    import tempfile
+    import requests as req_lib
+    from content.models import VideoTranscript
+    from django.conf import settings as django_settings
+
+    audio_path = None
+    video_path = None
+
+    try:
+        transcript = VideoTranscript.objects.select_related('video').get(id=transcript_id)
+        transcript.status = 'running'
+        transcript.save(update_fields=['status'])
+
+        video = transcript.video
+        video_url = video.video_url
+        if not video_url:
+            raise ValueError("Video has no URL")
+
+        # Download video to temp file
+        video_fd, video_path = tempfile.mkstemp(suffix='.mp4')
+        os.close(video_fd)
+
+        logger.info(f"Downloading video for transcript {transcript_id}: {video_url[:80]}")
+        resp = req_lib.get(video_url, timeout=120, stream=True)
+        resp.raise_for_status()
+        with open(video_path, 'wb') as f:
+            for chunk in resp.iter_content(chunk_size=8192):
+                f.write(chunk)
+
+        # Extract audio via ffmpeg
+        audio_fd, audio_path = tempfile.mkstemp(suffix='.mp3')
+        os.close(audio_fd)
+
+        extract_cmd = [
+            'ffmpeg', '-y', '-i', video_path,
+            '-vn', '-acodec', 'libmp3lame', '-ar', '16000', '-ac', '1', '-b:a', '64k',
+            audio_path,
+        ]
+        result = subprocess.run(extract_cmd, capture_output=True, text=True, timeout=300)
+        if result.returncode != 0:
+            raise RuntimeError(f"ffmpeg failed: {result.stderr[:500]}")
+
+        # Transcribe with OpenAI Whisper
+        from openai import OpenAI
+        client = OpenAI(api_key=django_settings.OPENAI_API_KEY)
+
+        with open(audio_path, 'rb') as audio_file:
+            whisper_result = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file,
+                language=transcript.language or 'en',
+                response_format="verbose_json",
+                timestamp_granularities=["segment"],
+            )
+
+        segments_raw = whisper_result.segments or []
+        segments = []
+        for seg in segments_raw:
+            s = seg if isinstance(seg, dict) else seg.__dict__
+            segments.append({
+                'start': s.get('start', 0),
+                'end': s.get('end', 0),
+                'text': s.get('text', '').strip(),
+            })
+
+        transcript.text = whisper_result.text or ''
+        transcript.segments_json = segments
+        transcript.language = getattr(whisper_result, 'language', transcript.language or 'en')
+        transcript.duration_seconds = segments[-1]['end'] if segments else None
+        transcript.status = 'completed'
+        transcript.save(update_fields=['text', 'segments_json', 'language', 'duration_seconds', 'status'])
+
+        logger.info(f"Transcript {transcript_id} completed: {len(segments)} segments, {len(transcript.text)} chars")
+
+    except Exception as exc:
+        logger.error(f"Transcript {transcript_id} failed: {exc}")
+        try:
+            transcript = VideoTranscript.objects.get(id=transcript_id)
+            transcript.status = 'failed'
+            transcript.error = str(exc)[:2000]
+            transcript.save(update_fields=['status', 'error'])
+        except Exception:
+            pass
+        raise
+
+    finally:
+        for path in [audio_path, video_path]:
+            if path and os.path.exists(path):
+                try:
+                    os.unlink(path)
+                except OSError:
+                    pass
+
+
+# ============================================================
 # Video RAG Ingest Pipeline
 # ============================================================
 
