@@ -7,11 +7,15 @@ Usage:
         tracker.info('extra context', {'key': 'value'})
 """
 import logging
+import threading
 import traceback
 
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
+
+# Thread-local storage for the active OpsRunTracker
+_active_tracker = threading.local()
 
 
 class OpsRunTracker:
@@ -33,9 +37,14 @@ class OpsRunTracker:
             triggered_by=self.triggered_by,
             status='running',
         )
+        # Set as the active tracker on this thread
+        _active_tracker.current = self
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        # Clear thread-local tracker
+        _active_tracker.current = None
+
         if self.run is None:
             return False
 
@@ -97,6 +106,11 @@ class OpsRunTracker:
             )
         except Exception as e:
             logger.warning("[OpsRunTracker] Failed to emit event: %s", e)
+
+
+def get_active_tracker():
+    """Return the OpsRunTracker active on the current thread, or None."""
+    return getattr(_active_tracker, 'current', None)
 
 
 def _safe_summary(result):

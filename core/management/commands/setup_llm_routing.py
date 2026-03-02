@@ -40,8 +40,19 @@ class Command(BaseCommand):
             action='store_true',
             help='Clear existing data before seeding',
         )
+        parser.add_argument(
+            '--mode',
+            type=str,
+            choices=['off', 'conservative', 'balanced', 'aggressive'],
+            default=None,
+            help='Set LLM routing tier mode (off|conservative|balanced|aggressive)',
+        )
 
     def handle(self, *args, **options):
+        if options['mode'] is not None:
+            self.set_routing_mode(options['mode'])
+            return
+
         if options['check']:
             self.check_status()
             return
@@ -200,6 +211,21 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR(
                     f'  Failed to create config for {config_data["agent_name"]}: {e}'
                 ))
+
+    def set_routing_mode(self, mode: str):
+        """Set the LLM routing tier mode via SystemConfiguration."""
+        from core.models import SystemConfiguration
+        obj, created = SystemConfiguration.objects.update_or_create(
+            key='llm_routing_mode',
+            defaults={
+                'value': mode,
+                'description': 'LLM routing tier mode: off|conservative|balanced|aggressive',
+                'category': 'llm',
+                'is_active': True,
+            },
+        )
+        action = 'Created' if created else 'Updated'
+        self.stdout.write(self.style.SUCCESS(f"{action} llm_routing_mode = {mode}"))
 
     def check_api_keys(self):
         """Check and report on API key status"""

@@ -15,6 +15,7 @@ class OpsRun(models.Model):
         ('smoke_test', 'Smoke Test'),
         ('deploy_verify', 'Deploy Verify'),
         ('manual', 'Manual'),
+        ('llm_routing', 'LLM Routing'),
     ]
     STATUS_CHOICES = [
         ('running', 'Running'),
