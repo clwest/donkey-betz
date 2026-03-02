@@ -365,6 +365,7 @@ class ToolDispatcher:
             logger.info(f"[{trace_id}] Tool {tool_name} completed in {latency_ms}ms")
 
             # Session 1079 Phase 2: Tag legacy tool calls for migration telemetry
+            # Session 1079 Phase 3 prep: deprecation metadata on legacy responses
             gateway_hint = self.LEGACY_TO_GATEWAY.get(tool_name)
             if gateway_hint and isinstance(result, dict):
                 result['_gateway_hint'] = {
@@ -372,6 +373,12 @@ class ToolDispatcher:
                     'suggested_action': gateway_hint[1],
                     'legacy_tool': tool_name,
                 }
+                result['_deprecated'] = True
+                result['_replacement'] = {
+                    'tool': gateway_hint[0],
+                    'action': gateway_hint[1],
+                }
+                result['_sunset_date'] = '2026-04-01'
                 logger.info(
                     f"[{trace_id}] LEGACY_TOOL_USED: {tool_name} → "
                     f"suggest {gateway_hint[0]}.{gateway_hint[1]}"
