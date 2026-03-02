@@ -3718,3 +3718,93 @@ def cockpit_incident_add_event(request, incident_id):
         'content': content,
         'created_at': event.created_at.isoformat(),
     }, status=201)
+
+
+# ──────────────────────────────────────────────────────────────
+#  Ops Runs — structured observability for multi-step operations
+# ──────────────────────────────────────────────────────────────
+
+@csrf_exempt
+@require_http_methods(['GET'])
+def cockpit_ops_runs_list(request):
+    """GET /api/cockpit/ops-runs/ — list recent OpsRuns. Admin only."""
+    if not (request.user.is_authenticated and request.user.is_staff):
+        return JsonResponse({'error': 'admin required'}, status=403)
+
+    from core.models_ops_runs import OpsRun
+    from django.utils import timezone as tz
+
+    run_type = request.GET.get('run_type')
+    status = request.GET.get('status')
+    hours = int(request.GET.get('hours', 72))
+    limit = min(int(request.GET.get('limit', 50)), 200)
+
+    cutoff = tz.now() - timedelta(hours=hours)
+    qs = OpsRun.objects.filter(started_at__gte=cutoff)
+    if run_type:
+        qs = qs.filter(run_type=run_type)
+    if status:
+        qs = qs.filter(status=status)
+
+    items = []
+    for run in qs[:limit]:
+        items.append({
+            'id': str(run.id),
+            'title': run.title,
+            'run_type': run.run_type,
+            'status': run.status,
+            'triggered_by': run.triggered_by,
+            'started_at': run.started_at.isoformat() if run.started_at else None,
+            'finished_at': run.finished_at.isoformat() if run.finished_at else None,
+            'event_count': run.event_count,
+            'fail_count': run.fail_count,
+            'summary': run.summary,
+        })
+
+    return JsonResponse({
+        'hours': hours,
+        'total': len(items),
+        'items': items,
+    })
+
+
+@csrf_exempt
+@require_http_methods(['GET'])
+def cockpit_ops_run_detail(request, run_id):
+    """GET /api/cockpit/ops-runs/<uuid>/ — OpsRun detail + events. Admin only."""
+    if not (request.user.is_authenticated and request.user.is_staff):
+        return JsonResponse({'error': 'admin required'}, status=403)
+
+    from core.models_ops_runs import OpsRun
+
+    try:
+        run = OpsRun.objects.get(id=run_id)
+    except OpsRun.DoesNotExist:
+        return JsonResponse({'error': 'not found'}, status=404)
+
+    events = []
+    for ev in run.events.all():
+        events.append({
+            'id': str(ev.id),
+            'event_type': ev.event_type,
+            'label': ev.label,
+            'detail': ev.detail,
+            'created_at': ev.created_at.isoformat() if ev.created_at else None,
+        })
+
+    return JsonResponse({
+        'ok': True,
+        'run': {
+            'id': str(run.id),
+            'title': run.title,
+            'run_type': run.run_type,
+            'status': run.status,
+            'triggered_by': run.triggered_by,
+            'started_at': run.started_at.isoformat() if run.started_at else None,
+            'finished_at': run.finished_at.isoformat() if run.finished_at else None,
+            'event_count': run.event_count,
+            'fail_count': run.fail_count,
+            'summary': run.summary,
+        },
+        'events': events,
+    })

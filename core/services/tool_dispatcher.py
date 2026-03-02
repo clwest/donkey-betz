@@ -9270,7 +9270,16 @@ RESEARCH DATA:
     ) -> Dict[str, Any]:
         """Run HTTP smoke tests against cockpit API endpoints."""
         from core.tools.http_smoke_test import run_smoke_test
-        return run_smoke_test(payload)
+        from core.tools.ops_run_tracker import OpsRunTracker
+
+        suite = payload.get('suite', 'default')
+        with OpsRunTracker(f'Smoke: {suite}', 'smoke_test', 'pa_tool') as tracker:
+            result = tracker.step(suite, lambda: run_smoke_test(payload))
+            tracker.set_summary(result if isinstance(result, dict) else {})
+
+        if isinstance(result, dict):
+            result['ops_run_id'] = tracker.ops_run_id
+        return result
 
     def _handle_learning(self, tool_name, payload, user_id, trace_id):
         """Manage PA tool-usage insights (learning loop)."""

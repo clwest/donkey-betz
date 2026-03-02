@@ -37589,65 +37589,71 @@ def ops_control_loop():
 
     Runs deploy_verify, pa_tools_smoke, system health, and error summary.
     Creates a boardroom attention item on any failure so the human sees it.
+    Wraps all steps in OpsRunTracker for structured observability.
     """
     from core.tools.http_smoke_test import run_smoke_test
+    from core.tools.ops_run_tracker import OpsRunTracker
 
     results = {}
     failures = []
 
-    # 1. deploy_verify smoke suite
-    try:
-        dv = run_smoke_test({'suite': 'deploy_verify', 'environment': 'railway_prod'})
-        results['deploy_verify'] = {
-            'ok': dv.get('ok', False),
-            'passed': dv.get('passed', 0),
-            'failed': dv.get('failed', 0),
-        }
-        if not dv.get('ok'):
-            failures.append(f"deploy_verify: {dv.get('failed', '?')} checks failed")
-    except Exception as e:
-        results['deploy_verify'] = {'ok': False, 'error': str(e)[:200]}
-        failures.append(f"deploy_verify: {e}")
+    with OpsRunTracker('Ops Control Loop', 'ops_loop', 'beat') as tracker:
 
-    # 2. pa_tools_smoke suite
-    try:
-        pts = run_smoke_test({'suite': 'pa_tools_smoke', 'environment': 'railway_prod'})
-        results['pa_tools_smoke'] = {
-            'ok': pts.get('ok', False),
-            'passed': pts.get('passed', 0),
-            'failed': pts.get('failed', 0),
-        }
-        if not pts.get('ok'):
-            failures.append(f"pa_tools_smoke: {pts.get('failed', '?')} checks failed")
-    except Exception as e:
-        results['pa_tools_smoke'] = {'ok': False, 'error': str(e)[:200]}
-        failures.append(f"pa_tools_smoke: {e}")
+        # 1. deploy_verify smoke suite
+        def _deploy_verify():
+            dv = run_smoke_test({'suite': 'deploy_verify', 'environment': 'railway_prod'})
+            results['deploy_verify'] = {
+                'ok': dv.get('ok', False),
+                'passed': dv.get('passed', 0),
+                'failed': dv.get('failed', 0),
+            }
+            if not dv.get('ok'):
+                failures.append(f"deploy_verify: {dv.get('failed', '?')} checks failed")
+            return results['deploy_verify']
 
-    # 3. DB health (quick overview)
-    try:
-        from django.db import connection
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT 1")
-        results['db_health'] = {'ok': True}
-    except Exception as e:
-        results['db_health'] = {'ok': False, 'error': str(e)[:200]}
-        failures.append(f"db_health: {e}")
+        tracker.step('deploy_verify', _deploy_verify)
 
-    # 4. Error summary (recent 24h)
-    try:
-        from core.models_celery_telemetry import CeleryTaskEvent
-        cutoff = timezone.now() - timedelta(hours=24)
-        error_count = CeleryTaskEvent.objects.filter(
-            status='FAILURE', started_at__gte=cutoff,
-        ).count()
-        results['error_summary'] = {'ok': error_count < 50, 'errors_24h': error_count}
-        if error_count >= 50:
-            failures.append(f"error_summary: {error_count} task failures in 24h")
-    except Exception as e:
-        results['error_summary'] = {'ok': False, 'error': str(e)[:200]}
-        failures.append(f"error_summary: {e}")
+        # 2. pa_tools_smoke suite
+        def _pa_tools_smoke():
+            pts = run_smoke_test({'suite': 'pa_tools_smoke', 'environment': 'railway_prod'})
+            results['pa_tools_smoke'] = {
+                'ok': pts.get('ok', False),
+                'passed': pts.get('passed', 0),
+                'failed': pts.get('failed', 0),
+            }
+            if not pts.get('ok'):
+                failures.append(f"pa_tools_smoke: {pts.get('failed', '?')} checks failed")
+            return results['pa_tools_smoke']
 
-    all_ok = len(failures) == 0
+        tracker.step('pa_tools_smoke', _pa_tools_smoke)
+
+        # 3. DB health (quick overview)
+        def _db_health():
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+            results['db_health'] = {'ok': True}
+            return results['db_health']
+
+        tracker.step('db_health', _db_health)
+
+        # 4. Error summary (recent 24h)
+        def _error_summary():
+            from core.models_celery_telemetry import CeleryTaskEvent
+            cutoff = timezone.now() - timedelta(hours=24)
+            error_count = CeleryTaskEvent.objects.filter(
+                status='FAILURE', started_at__gte=cutoff,
+            ).count()
+            results['error_summary'] = {'ok': error_count < 50, 'errors_24h': error_count}
+            if error_count >= 50:
+                failures.append(f"error_summary: {error_count} task failures in 24h")
+            return results['error_summary']
+
+        tracker.step('error_summary', _error_summary)
+
+        all_ok = len(failures) == 0
+        tracker.set_summary(results)
+
     logger.info(
         f"[OPS-CONTROL] Daily verification: {'PASS' if all_ok else 'FAIL'} "
         f"({len(failures)} failures)"
@@ -37676,4 +37682,9 @@ def ops_control_loop():
         except Exception as e:
             logger.error(f"[OPS-CONTROL] Failed to create attention item: {e}")
 
-    return {'ok': all_ok, 'results': results, 'failures': failures}
+    return {
+        'ok': all_ok,
+        'results': results,
+        'failures': failures,
+        'ops_run_id': tracker.ops_run_id,
+    }

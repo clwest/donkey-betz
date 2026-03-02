@@ -1477,6 +1477,8 @@ from core.views_diagnostics import (
     cockpit_incident_detail,  # Focus Cockpit: incident detail
     cockpit_incident_update,  # Focus Cockpit: update incident
     cockpit_incident_add_event,  # Focus Cockpit: add incident event
+    cockpit_ops_runs_list,  # Focus Cockpit: ops runs list
+    cockpit_ops_run_detail,  # Focus Cockpit: ops run detail + events
     # Session 871: Removed unused import: diagnostic_dashboard
 )
 
@@ -1699,6 +1701,9 @@ urlpatterns = [
     path('api/cockpit/incidents/<str:incident_id>/', cockpit_incident_detail, name='cockpit-incident-detail'),
     path('api/cockpit/incidents/<str:incident_id>/update/', cockpit_incident_update, name='cockpit-incident-update'),
     path('api/cockpit/incidents/<str:incident_id>/events/', cockpit_incident_add_event, name='cockpit-incident-add-event'),
+    # Ops Runs (Context Packet #9)
+    path('api/cockpit/ops-runs/', cockpit_ops_runs_list, name='cockpit-ops-runs-list'),
+    path('api/cockpit/ops-runs/<uuid:run_id>/', cockpit_ops_run_detail, name='cockpit-ops-run-detail'),
     path('diagnostics/websockets/', WebSocketDiagnosticsView.as_view(), name='websocket-diagnostics'),
     path("api/llm/chat/", llm_chat),
     # AI Building Products page (moved up to ensure it's matched first)
