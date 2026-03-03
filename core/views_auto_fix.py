@@ -12,7 +12,7 @@ from django.views.decorators.http import require_http_methods
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from core.module_stubs import AgentErrorHandler, EnhancedAgentOrchestrator
+# Stubs removed — auto-fix uses LLM directly
 
 # Project configuration
 PROJECTS_BASE_DIR = Path("/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects")
@@ -53,14 +53,11 @@ def auto_fix_code(request):
                 'error': f'File {file_name} not found in project'
             })
 
-        # Initialize the error handler and orchestrator
-        error_handler = AgentErrorHandler()
-        orchestrator = EnhancedAgentOrchestrator()
+        # Attempt LLM-based fix directly (stubs removed)
+        fix_success = False
+        fix_message = ''
 
-        # Attempt to fix the error using the existing error handler
-        fix_success, fix_message = error_handler.attempt_fix(str(file_path), error_message)
-
-        if fix_success:
+        if False:  # legacy error_handler path removed
             # Test the fixed code automatically
             try:
                 test_result = subprocess.run(
@@ -111,9 +108,15 @@ CURRENT CODE:
 
 Please provide a corrected version of the code that fixes the error. Return only the corrected Python code without explanations."""
 
-                # Use the orchestrator's LLM to generate a fix
-                # Note: gpt-5-mini reasoning models don't support temperature
-                fixed_code = orchestrator.llm_executor.call_llm(fix_prompt, model="gpt-5-mini")
+                # Use OpenAI directly for the fix
+                from config.api_settings import get_openai_client
+                client = get_openai_client()
+                response = client.chat.completions.create(
+                    model="gpt-5-mini",
+                    messages=[{"role": "user", "content": fix_prompt}],
+                    max_completion_tokens=6000,
+                )
+                fixed_code = response.choices[0].message.content or ''
 
                 # Clean the response to extract just the code
                 if "```python" in fixed_code:

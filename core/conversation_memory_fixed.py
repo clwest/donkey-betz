@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import Dict, Any, List
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -187,7 +188,7 @@ class ConversationMemoryFixed:
 
             today_conversations = ChatConversation.objects.filter(
                 user=user,
-                created_at__date=datetime.now().date()
+                created_at__date=timezone.now().date()
             ).count()
 
             # Count agent executions

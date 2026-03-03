@@ -85,7 +85,7 @@ class EncryptionService:
             try:
                 return self.cipher.decrypt(ciphertext.encode()).decode()
             except Exception as e:
-                logger.debug(f"Primary key decryption failed: {e}")
+                logger.warning(f"Primary key decryption failed: {e}")
         
         # Try backup cipher for migration
         if self.backup_cipher:
@@ -94,7 +94,7 @@ class EncryptionService:
                 logger.debug("Successfully decrypted with backup key")
                 return decrypted
             except Exception as e:
-                logger.debug(f"Backup key decryption failed: {e}")
+                logger.warning(f"Backup key decryption failed: {e}")
         
         # If both failed, log error and return empty string
         logger.error(f"Failed to decrypt data with both primary and backup keys")

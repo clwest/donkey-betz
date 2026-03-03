@@ -20926,7 +20926,7 @@ def _build_operational_context():
         )
         sections.append(section)
     except Exception as e:
-        logger.debug(f"[OpCtx] Agent executions section failed: {e}")
+        logger.warning(f"[OpCtx] Agent executions section failed: {e}")
 
     # --- Background Tasks (72h) ---
     try:
@@ -20958,7 +20958,7 @@ def _build_operational_context():
             section += "- Top failing tasks:\n" + "\n".join(fail_lines)
         sections.append(section)
     except Exception as e:
-        logger.debug(f"[OpCtx] Celery section failed: {e}")
+        logger.warning(f"[OpCtx] Celery section failed: {e}")
 
     # --- System Health ---
     try:
@@ -20974,7 +20974,7 @@ def _build_operational_context():
             )
             sections.append(section)
     except Exception as e:
-        logger.debug(f"[OpCtx] HeartBeat section failed: {e}")
+        logger.warning(f"[OpCtx] HeartBeat section failed: {e}")
 
     # --- Recent Decisions ---
     try:
@@ -21001,7 +21001,7 @@ def _build_operational_context():
             )
             sections.append(section)
     except Exception as e:
-        logger.debug(f"[OpCtx] Decisions section failed: {e}")
+        logger.warning(f"[OpCtx] Decisions section failed: {e}")
 
     if not sections:
         return ''

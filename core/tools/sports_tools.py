@@ -9,6 +9,7 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
 
 from django.db.models import Q
+from django.utils import timezone
 
 from .base import BaseTool
 from sports.data_providers import ESPNProvider, TheOddsAPIProvider
@@ -371,8 +372,8 @@ class GameDataTool(BaseTool):
                 else:
                     # Get today's and upcoming games
                     games = Game.objects.filter(
-                        scheduled_start__gte=datetime.now() - timedelta(hours=12),
-                        scheduled_start__lte=datetime.now() + timedelta(days=7),
+                        scheduled_start__gte=timezone.now() - timedelta(hours=12),
+                        scheduled_start__lte=timezone.now() + timedelta(days=7),
                         league__abbreviation__iexact=sport
                     )
                 

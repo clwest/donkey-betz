@@ -794,10 +794,11 @@ def create_project_from_research(request):
 
         # If no research_id but we have recent research, try to find it
         if not research_data and not research_articles:
+            from django.utils import timezone
             # Look for recent unlinked research that might match
             recent_research = BusinessResearchResult.objects.filter(
                 project__isnull=True,
-                created_at__gte=datetime.now() - timedelta(hours=1)
+                created_at__gte=timezone.now() - timedelta(hours=1)
             ).order_by('-created_at').first()
 
             if recent_research:
