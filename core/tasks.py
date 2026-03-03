@@ -38169,3 +38169,47 @@ def run_ops_autopilot():
     except Exception as e:
         logger.error(f"[OpsAutopilot] Cycle failed: {e}")
         return {'error': str(e)}
+
+
+@shared_task(ignore_result=True)
+def post_ops_digest():
+    """Every 30 min: generate and post an ops digest into the active PA conversation."""
+    import os
+    from core.services.tool_dispatcher import get_tool_dispatcher
+
+    try:
+        # Find the most recent PA conversation to post to
+        from core.models import ChatConversation
+        from django.db.models import Max
+
+        target_cid = os.environ.get('OPS_DIGEST_CONVERSATION_ID', '')
+
+        if not target_cid:
+            # Auto-discover: find the most recently active PA conversation
+            latest = (
+                ChatConversation.objects
+                .filter(conversation_id__startswith='pa-')
+                .values('conversation_id')
+                .annotate(last_activity=Max('created_at'))
+                .order_by('-last_activity')
+                .first()
+            )
+            if latest:
+                target_cid = latest['conversation_id']
+
+        if not target_cid:
+            logger.info("[OpsDigest] No active PA conversation found, skipping")
+            return {'skipped': True, 'reason': 'no_active_conversation'}
+
+        td = get_tool_dispatcher()
+        result = td._handle_ops_digest(
+            'ops_digest_tool',
+            {'action': 'post', 'conversation_id': target_cid, 'window': '1h'},
+            None,
+            'celery-beat-digest',
+        )
+        logger.info(f"[OpsDigest] Posted to {target_cid}")
+        return result
+    except Exception as e:
+        logger.error(f"[OpsDigest] Failed: {e}")
+        return {'error': str(e)}

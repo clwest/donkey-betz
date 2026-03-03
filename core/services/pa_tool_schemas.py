@@ -2223,6 +2223,41 @@ PA_TOOL_SCHEMAS = [
             "required": ["action"],
         },
     },
+    # ── ops_digest_tool ──────────────────────────────────────────────────
+    {
+        "type": "function",
+        "function": {
+            "name": "ops_digest_tool",
+            "description": (
+                "Generate or post an autonomous ops digest summarizing system health, "
+                "autopilot status, blocked agents, and recent activity. "
+                "Use 'generate' to build a digest, 'post' to write it into a conversation."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["generate", "post"],
+                        "description": (
+                            "generate: build an ops digest and return it. "
+                            "post: generate and write the digest into a conversation as a visible message."
+                        ),
+                    },
+                    "conversation_id": {
+                        "type": "string",
+                        "description": "Target conversation ID for 'post' action (e.g. 'pa-9eee6fe61173')",
+                    },
+                    "window": {
+                        "type": "string",
+                        "enum": ["10m", "1h", "6h", "24h"],
+                        "description": "Lookback window for activity counts (default: 1h)",
+                    },
+                },
+                "required": ["action"],
+            },
+        },
+    },
 ]
 
 # ── Startup validation: every tool must have name, description, parameters ──
@@ -2313,6 +2348,7 @@ TOOL_ENRICHMENT_MAP = {
     'ops_tool': ['intelligence_enricher', 'platform_briefing'],
     'agent_control_tool': [],
     'autopilot_tool': [],
+    'ops_digest_tool': ['platform_briefing'],
     'work_tool': ['intelligence_enricher', 'strategic_memory'],
     'content_tool': ['blog_performance', 'domain_context', 'spider_trends', 'strategic_memory', 'proactive_intelligence'],
     'governance_tool': ['intelligence_enricher', 'strategic_memory'],
@@ -2394,6 +2430,7 @@ TOOL_TO_INTENT_MAP = {
     'ops_tool': 'system_overview',
     'agent_control_tool': 'system_overview',
     'autopilot_tool': 'system_overview',
+    'ops_digest_tool': 'system_overview',
     'work_tool': 'initiatives',
     'content_tool': 'content_review',
     'governance_tool': 'boardroom',
