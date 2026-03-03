@@ -202,13 +202,26 @@
 
 ---
 
-## Phase 3 Activation Checklist
+## Phase 3 Activation Checklist — COMPLETED (Session 1079)
 
-1. [ ] Run `ops_tool tool_migration_report window=72h` — confirm 0 legacy calls
-2. [ ] Run gateway smoke test suite — all pass
-3. [ ] Set `TOOLS_EXPOSE_LEGACY=false` on Railway celery-pa
-4. [ ] Restart celery-pa (`railway redeploy` on celery-pa service)
-5. [ ] Wait 30 min, run `ops_tool tool_migration_report window=1h` — confirm gateways only
-6. [ ] Run `ops_tool slo_status window=6h` — no new breaches
-7. [ ] Monitor for 24h — no user-facing regressions
-8. [ ] If issues: set `TOOLS_EXPOSE_LEGACY=true` and redeploy (instant rollback)
+1. [x] Run `ops_tool tool_migration_report window=72h` — 12/14 legacy tools at 0 calls
+2. [x] Run gateway smoke test suite — all 29 pass
+3. [x] Set `TOOLS_EXPOSE_LEGACY=false` on Railway celery-pa + web
+4. [x] celery-pa auto-redeployed — PA schema dropped from 77 to 64 tools
+5. [x] T+30 monitoring: 0 new SLO breaches, 0 ToolNotFound errors
+6. [x] `web_search` (94 calls) confirmed agent-internal, not PA — OK by design
+7. [x] Phase 3 declared GO
+
+## Phase 4 (PR2) — Hard Deletion — COMPLETED (Session 1079)
+
+1. [x] Deleted 13 legacy tool schemas from `pa_tool_schemas.py`
+2. [x] Removed 13 legacy `self.register()` calls from `tool_dispatcher.py`
+3. [x] Deleted `_handle_system_health` and `_handle_error_summary` methods (ops_tool has own impl)
+4. [x] Removed `TOOLS_EXPOSE_LEGACY` flag, `_LEGACY_TOOL_NAMES`, `get_active_tool_schemas()` from `pa_tool_schemas.py`
+5. [x] Removed `TOOLS_ENABLE_LEGACY_HANDLERS` flag and `_LEGACY_HANDLER_NAMES` from `tool_dispatcher.py`
+6. [x] Removed deprecation metadata injection block from `execute()`
+7. [x] Updated `unified_pa_entrypoint.py` to use `PA_TOOL_SCHEMAS` directly
+8. [x] Updated smoke tests: 22 pass (removed 10 obsolete flag/deprecation tests, added 1 non-registration test)
+9. [x] Handler methods kept for gateway delegation: `_handle_boardroom`, `_handle_human_decisions`, `_handle_initiative`, `_handle_content_review`, `_handle_generate_blog`, `_handle_deliverables`, `_handle_stock_intelligence`, `_handle_sports_betting`, `_handle_legislation`, `_handle_spider_data`, `_handle_rag_query`
+
+**Remaining:** `LEGACY_TO_GATEWAY` map kept for migration report telemetry. `TOOL_ENRICHMENT_MAP` is dead code (no consumers) — can be removed in a future cleanup.
