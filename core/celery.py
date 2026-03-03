@@ -2321,14 +2321,16 @@ app.conf.beat_schedule = {
 
     # Session 925: Cleanup Stuck Agent Executions
     # Marks executions stuck in running/in_progress as failed
-    # Session 1020: Reduced from 120min/30min to 45min/15min — agents die at 30min
-    # hard limit, so 45min threshold gives 15min grace; 15min frequency catches faster
+    # Session 1080: Reduced from 45min to 25min — per-agent wall-clock timeouts
+    # (Session 1076) cap agents at 5-20 min via ThreadPoolExecutor, so 25 min
+    # gives 5 min grace past the longest default (20 min). Old 45 min threshold
+    # let duplicate/orphan tasks waste capacity for too long.
     'cleanup-stuck-agent-executions': {
         'task': 'core.tasks.cleanup_stale_agent_executions',
-        'schedule': crontab(minute='*/15'),  # Every 15 minutes (was 30)
-        'kwargs': {'minutes_threshold': 45},  # 45 min (was 120) — just past 30min hard limit
+        'schedule': crontab(minute='*/10'),  # Every 10 minutes (was 15)
+        'kwargs': {'minutes_threshold': 25},  # 25 min (was 45) — 5 min past 20 min default wall-clock
         'options': {
-            'expires': 900,  # 15 minutes
+            'expires': 600,  # 10 minutes
         }
     },
 
