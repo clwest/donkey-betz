@@ -53,7 +53,7 @@ class TestOpsToolGateway(GatewaySmokeTestBase):
         self.assertIn('action', result)
         self.assertEqual(result['action'], 'tool_migration_report')
         self.assertIn('summary', result)
-        self.assertIn('safe_to_deprecate', result)
+        self.assertIn('silent_removed_tools', result)
 
 
 class TestWorkToolGateway(GatewaySmokeTestBase):
@@ -147,9 +147,9 @@ class TestStudioToolGateway(GatewaySmokeTestBase):
 
 
 class TestLegacyToGatewayMapping(GatewaySmokeTestBase):
-    """Verify LEGACY_TO_GATEWAY map covers all expected legacy tools."""
+    """Verify REMOVED_TOOL_ALIASES map covers all expected removed tools."""
 
-    def test_all_legacy_tools_mapped(self):
+    def test_all_removed_tools_mapped(self):
         expected_legacy = {
             'initiative_tool', 'content_review_tool', 'generate_blog_tool',
             'deliverables_tool', 'boardroom_tool', 'human_decisions_tool',
@@ -157,7 +157,7 @@ class TestLegacyToGatewayMapping(GatewaySmokeTestBase):
             'rag_query_tool', 'spider_data_tool', 'web_search',
             'system_health_tool', 'error_summary_tool',
         }
-        self.assertEqual(set(self.dispatcher.LEGACY_TO_GATEWAY.keys()), expected_legacy)
+        self.assertEqual(set(self.dispatcher.REMOVED_TOOL_ALIASES.keys()), expected_legacy)
 
     def test_all_gateways_registered(self):
         for gw in self.dispatcher.GATEWAY_TOOLS:
@@ -167,12 +167,69 @@ class TestLegacyToGatewayMapping(GatewaySmokeTestBase):
     def test_legacy_tools_not_registered(self):
         """Legacy tools must NOT be registered (removed in PR2)."""
         # web_search is excluded — it's a standalone primitive kept intentionally
-        legacy_only = set(self.dispatcher.LEGACY_TO_GATEWAY.keys()) - {'web_search'}
+        legacy_only = set(self.dispatcher.REMOVED_TOOL_ALIASES.keys()) - {'web_search'}
         for legacy_name in legacy_only:
             self.assertNotIn(legacy_name, self.dispatcher._tool_handlers,
                              f"Legacy tool {legacy_name} should have been removed in PR2")
 
     def test_all_legacy_mappings_point_to_valid_gateways(self):
-        for legacy_name, (gw, action) in self.dispatcher.LEGACY_TO_GATEWAY.items():
+        for legacy_name, (gw, action) in self.dispatcher.REMOVED_TOOL_ALIASES.items():
             self.assertIn(gw, self.dispatcher.GATEWAY_TOOLS,
                           f"{legacy_name} maps to unknown gateway {gw}")
+
+
+class TestRemovedToolGuard(TestCase):
+    """CI guard: removed tools must never reappear in handlers or PA schemas.
+
+    Prevents accidental reintroduction of the 13 removed legacy tools.
+    If this test fails, someone re-registered a removed tool — use the
+    gateway equivalent instead.
+    """
+
+    REMOVED_TOOLS = frozenset([
+        'boardroom_tool', 'initiative_tool', 'content_review_tool',
+        'generate_blog_tool', 'deliverables_tool', 'human_decisions_tool',
+        'stock_intelligence_tool', 'sports_betting_tool', 'legislation_tool',
+        'rag_query_tool', 'spider_data_tool', 'system_health_tool',
+        'error_summary_tool',
+    ])
+
+    def test_removed_tools_not_in_handlers(self):
+        """No removed tool may be registered as a ToolDispatcher handler."""
+        dispatcher = ToolDispatcher()
+        for tool_name in self.REMOVED_TOOLS:
+            self.assertNotIn(
+                tool_name, dispatcher._tool_handlers,
+                f"GUARD FAILURE: {tool_name} re-registered as handler — "
+                f"use gateway equivalent instead"
+            )
+
+    def test_removed_tools_not_in_pa_schemas(self):
+        """No removed tool may appear in PA_TOOL_SCHEMAS sent to GPT."""
+        from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
+        schema_names = {t['name'] for t in PA_TOOL_SCHEMAS}
+        for tool_name in self.REMOVED_TOOLS:
+            self.assertNotIn(
+                tool_name, schema_names,
+                f"GUARD FAILURE: {tool_name} re-added to PA_TOOL_SCHEMAS — "
+                f"use gateway equivalent instead"
+            )
+
+    def test_removed_handler_methods_not_directly_callable(self):
+        """Kept handler methods (for gateway delegation) must not be accessible
+        via ToolDispatcher.execute_sync() — only gateways may invoke them."""
+        dispatcher = ToolDispatcher()
+        # These methods exist but must NOT be registered as tools
+        kept_methods = [
+            'boardroom_tool', 'human_decisions_tool', 'initiative_tool',
+            'content_review_tool', 'generate_blog_tool', 'deliverables_tool',
+            'stock_intelligence_tool', 'sports_betting_tool', 'legislation_tool',
+            'spider_data_tool', 'rag_query_tool',
+        ]
+        for tool_name in kept_methods:
+            result = dispatcher.execute_sync(tool_name, {}, user_id=1)
+            self.assertFalse(
+                result.ok,
+                f"BOUNDARY FAILURE: {tool_name} is callable via execute_sync() — "
+                f"it should only be invoked internally by gateway handlers"
+            )
