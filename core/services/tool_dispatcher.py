@@ -11327,9 +11327,18 @@ RESEARCH DATA:
 
         action = payload.get('action', 'status')
 
+        # Guard: AutopilotAction table may not exist yet on Railway
+        def _safe_autopilot_query(fn, default=None):
+            try:
+                return fn()
+            except Exception:
+                return default
+
         if action == 'status':
             # Current config + last cycle info
-            last_action = AutopilotAction.objects.first()  # ordered by -created_at
+            last_action = _safe_autopilot_query(
+                lambda: AutopilotAction.objects.first()
+            )
             last_cycle = None
             if last_action:
                 last_cycle = {
@@ -11341,12 +11350,16 @@ RESEARCH DATA:
                     'deploy_sha': last_action.deploy_sha,
                 }
 
-            total_actions = AutopilotAction.objects.count()
-            blocks_24h = AutopilotAction.objects.filter(
-                action_type='block_agent',
-                dry_run=False,
-                created_at__gte=timezone.now() - timedelta(hours=24),
-            ).count()
+            total_actions = _safe_autopilot_query(
+                lambda: AutopilotAction.objects.count(), 0
+            )
+            blocks_24h = _safe_autopilot_query(
+                lambda: AutopilotAction.objects.filter(
+                    action_type='block_agent',
+                    dry_run=False,
+                    created_at__gte=timezone.now() - timedelta(hours=24),
+                ).count(), 0
+            )
 
             return {
                 'action': 'status',
@@ -11367,11 +11380,13 @@ RESEARCH DATA:
 
         elif action == 'history':
             limit = min(int(payload.get('limit', 20)), 100)
-            actions = list(
-                AutopilotAction.objects.all()[:limit].values(
-                    'id', 'created_at', 'action_type', 'agent_name',
-                    'policy', 'dry_run', 'deploy_sha',
-                )
+            actions = _safe_autopilot_query(
+                lambda: list(
+                    AutopilotAction.objects.all()[:limit].values(
+                        'id', 'created_at', 'action_type', 'agent_name',
+                        'policy', 'dry_run', 'deploy_sha',
+                    )
+                ), []
             )
             for a in actions:
                 a['created_at'] = a['created_at'].isoformat()
@@ -11384,8 +11399,14 @@ RESEARCH DATA:
 
         elif action == 'run':
             dry_run = payload.get('dry_run', False)
-            autopilot = OpsAutopilot(dry_run=dry_run)
-            summary = autopilot.run()
+            try:
+                autopilot = OpsAutopilot(dry_run=dry_run)
+                summary = autopilot.run()
+            except Exception as e:
+                return {
+                    'action': 'run',
+                    'error': f'Autopilot run failed (table may not exist yet): {str(e)[:200]}',
+                }
             return {
                 'action': 'run',
                 'dry_run': dry_run,
