@@ -21630,7 +21630,7 @@ def generate_blog_with_topic_task(self, topic, tone='enthusiastic'):
     }
 
 
-@shared_task(bind=True, soft_time_limit=240, time_limit=300)
+@shared_task(bind=True, soft_time_limit=480, time_limit=540)
 def generate_self_blog_deliberation_task(self, tone='enthusiastic', word_count=1500, topic_category=None):
     """
     Phase 4: Generate a blog through the multi-agent deliberation pipeline.
@@ -21640,6 +21640,10 @@ def generate_self_blog_deliberation_task(self, tone='enthusiastic', word_count=1
 
     Session 1062: Added Redis lock (max_concurrency=1) to prevent OOM from
     concurrent deliberation tasks crashing celery-content every hour.
+
+    Session 1064: Increased soft_time_limit 240→480s and time_limit 300→540s
+    to prevent zero-turn failures. Full pipeline (ClaimsPack + draft + review
+    + 4 conversation turns) routinely needs 180-480s.
 
     Args:
         tone: Blog tone
@@ -28601,8 +28605,9 @@ def process_gate_progression(
 # Session 766: Content Idea Pipeline Tasks
 # =============================================================================
 
-@shared_task(name='core.tasks.process_content_ideas')
+@shared_task(bind=True, name='core.tasks.process_content_ideas', max_retries=2, default_retry_delay=60)
 def process_content_ideas(
+    self,
     dry_run: bool = False,
     limit: int = 50,
     include_dreams: bool = True,
@@ -28653,8 +28658,11 @@ def process_content_ideas(
             'stats': stats,
         }
 
+    except (ConnectionError, TimeoutError, OSError) as e:
+        logger.warning(f"[CONTENT PIPELINE] Transient error (attempt {self.request.retries + 1}/{self.max_retries + 1}): {e}")
+        raise self.retry(exc=e, countdown=60 * (2 ** self.request.retries))
     except Exception as e:
-        logger.error(f"🎬 [CONTENT PIPELINE] Failed: {e}", exc_info=True)
+        logger.error(f"[CONTENT PIPELINE] Failed: {e}", exc_info=True)
         return {'success': False, 'error': str(e)}
 
 

@@ -1576,14 +1576,16 @@ PA_TOOL_SCHEMAS = [
             "Use when asked to verify endpoints, check if deploys succeeded, "
             "or run health checks. Built-in suites: 'cockpit_health' (18 cockpit GETs), "
             "'cockpit_incidents_crud' (8-step CRUD lifecycle), "
-            "'pa_tools_smoke' (14 checks across boardroom, initiatives, celery, spiders, manifest)."
+            "'pa_tools_smoke' (14 checks across boardroom, initiatives, celery, spiders, manifest), "
+            "'auth_regression' (5 checks verifying permission classes on protected endpoints), "
+            "'deploy_verify' (5 post-deploy sanity checks)."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "suite": {
                     "type": "string",
-                    "enum": ["cockpit_health", "cockpit_incidents_crud", "pa_tools_smoke"],
+                    "enum": ["cockpit_health", "cockpit_incidents_crud", "pa_tools_smoke", "auth_regression", "deploy_verify"],
                     "description": "Run a built-in test suite instead of custom steps",
                 },
                 "environment": {

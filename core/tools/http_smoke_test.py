@@ -746,6 +746,47 @@ BUILTIN_SUITES: dict[str, list[dict]] = {
             ],
         },
     ],
+
+    # Session 1064: Auth regression suite — verify Phase 3 permission changes
+    'auth_regression': [
+        # 1. analytics_overview_v2 — should require auth
+        {
+            'name': 'analytics_v2_with_auth',
+            'method': 'GET',
+            'path': '/api/analytics/overview/v2/',
+            'assert': [{'check': 'status', 'expected': 200}],
+        },
+        {
+            'name': 'analytics_v2_no_auth',
+            'method': 'GET',
+            'path': '/api/analytics/overview/v2/',
+            'headers': {'Authorization': ''},
+            'assert': [{'check': 'status', 'expected': 401}],
+        },
+        # 2. control_unified — should require auth
+        {
+            'name': 'control_unified_no_auth',
+            'method': 'POST',
+            'path': '/api/images/control/unified/',
+            'headers': {'Authorization': ''},
+            'assert': [{'check': 'status', 'expected': 401}],
+        },
+        # 3. get_available_styles — AllowAny, should work without auth
+        {
+            'name': 'styles_no_auth',
+            'method': 'GET',
+            'path': '/api/styles/available/',
+            'headers': {'Authorization': ''},
+            'assert': [{'check': 'status', 'expected': 200}],
+        },
+        # 4. PA context — already protected, regression check
+        {
+            'name': 'pa_context_with_auth',
+            'method': 'GET',
+            'path': '/api/assistant/context/',
+            'assert': [{'check': 'status', 'expected': 200}],
+        },
+    ],
 }
 
 
