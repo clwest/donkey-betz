@@ -1,7 +1,7 @@
 // Session 1009: Deliverables Library Tab
 // Browse, search, and manage agent-produced deliverables
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -24,6 +24,8 @@ import {
   X,
   User,
   Bot,
+  Zap,
+  ListChecks,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { deliverablesApi } from '@/lib/api'
@@ -211,6 +213,21 @@ export function DeliverablesTab() {
     mutationFn: ({ id, format }: { id: string; format: string }) => deliverablesApi.export(id, format),
   })
 
+  const eventMutation = useMutation({
+    mutationFn: ({ id, eventType, metadata }: { id: string; eventType: string; metadata?: Record<string, unknown> }) =>
+      deliverablesApi.recordEvent(id, eventType, metadata),
+  })
+
+  // Fire synthesis_viewed when opening detail view
+  const viewedRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (selectedId && selectedId !== viewedRef.current) {
+      viewedRef.current = selectedId
+      eventMutation.mutate({ id: selectedId, eventType: 'synthesis_viewed' })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId])
+
   // ---- Handlers ----
   const handleSearch = () => {
     setFilters(f => ({ ...f, search: searchInput || undefined }))
@@ -347,6 +364,26 @@ export function DeliverablesTab() {
                       {fmt.toUpperCase()}
                     </button>
                   ))}
+                </div>
+
+                {/* ATR CTAs — record action events for Stage 3 pilot metrics */}
+                <div className="pt-2 border-t border-dark-border space-y-2">
+                  <button
+                    onClick={() => eventMutation.mutate({ id: detail.id, eventType: 'action_taken', metadata: { source: 'deliverables_tab' } })}
+                    disabled={eventMutation.isPending}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded text-sm bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 transition-colors"
+                  >
+                    <Zap size={14} />
+                    Mark as Acted On
+                  </button>
+                  <button
+                    onClick={() => eventMutation.mutate({ id: detail.id, eventType: 'task_created', metadata: { source: 'deliverables_tab' } })}
+                    disabled={eventMutation.isPending}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded text-sm bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 transition-colors"
+                  >
+                    <ListChecks size={14} />
+                    Create Follow-up Task
+                  </button>
                 </div>
               </div>
 
