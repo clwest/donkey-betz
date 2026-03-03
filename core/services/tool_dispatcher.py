@@ -11408,10 +11408,85 @@ RESEARCH DATA:
                 ),
             }
 
+        elif action == 'dry_run_report':
+            # Run autopilot in dry-run mode and return human-readable report
+            autopilot = OpsAutopilot(dry_run=True)
+            summary = autopilot.run()
+
+            # Also fetch current SLO status for context
+            slo_data = self._ops_slo_status(
+                window='24h', include_breakdowns=True, trace_id=trace_id,
+            )
+            breaches = [
+                s for s in slo_data.get('slos', [])
+                if s.get('breach', False)
+            ]
+
+            report_lines = ['## Autopilot Dry-Run Report\n']
+            report_lines.append(f"**Mode:** DRY RUN (no actions taken)")
+            report_lines.append(f"**Deploy SHA:** {summary.get('deploy_sha', 'unknown')}\n")
+
+            # SLO breaches section
+            if breaches:
+                report_lines.append(f"### SLO Breaches ({len(breaches)})")
+                for b in breaches:
+                    report_lines.append(
+                        f"- **{b.get('name', b.get('key'))}**: "
+                        f"current={b.get('current')} "
+                        f"(target {'<=' if 'target_max' in b else '>='} "
+                        f"{b.get('target_max', b.get('target', '?'))})"
+                    )
+            else:
+                report_lines.append('### SLO Breaches: None')
+
+            # Timeout spike section
+            ts = summary.get('timeout_spike', {})
+            agents_checked = ts.get('agents_checked', {})
+            if agents_checked:
+                report_lines.append(f"\n### Timeout Spike Analysis")
+                for agent, count in agents_checked.items():
+                    would_block = count >= AutopilotConfig.TIMEOUT_SPIKE_THRESHOLD
+                    report_lines.append(
+                        f"- {agent}: {count} timeouts "
+                        f"{'→ WOULD BLOCK' if would_block else '(below threshold)'}"
+                    )
+            else:
+                report_lines.append(f"\n### Timeout Spike Analysis: No timeouts detected")
+
+            # Blocked agent hygiene
+            hygiene = summary.get('blocked_hygiene', {})
+            stale = hygiene.get('stale_blocks', [])
+            if stale:
+                report_lines.append(f"\n### Stale Blocks ({len(stale)})")
+                for s in stale:
+                    report_lines.append(
+                        f"- {s['agent_name']}: blocked {s['blocked_hours']}h "
+                        f"({s['reason']}) — consider adding TTL or unblocking"
+                    )
+            else:
+                report_lines.append(f"\n### Stale Blocks: None")
+
+            # Actions proposed
+            proposed = summary.get('actions', [])
+            if proposed:
+                report_lines.append(f"\n### Proposed Actions ({len(proposed)})")
+                for a in proposed:
+                    report_lines.append(f"- {a.get('type', '?')}: {a.get('agent_name', '?')} — {a.get('reason', '')}")
+            else:
+                report_lines.append(f"\n### Proposed Actions: None (system healthy)")
+
+            return {
+                'action': 'dry_run_report',
+                'report': '\n'.join(report_lines),
+                'summary': summary,
+                'slo_breaches': len(breaches),
+                'proposed_actions': len(proposed),
+            }
+
         else:
             raise ValueError(
                 f"Unknown action: {action}. "
-                f"Valid: status, history, run, config"
+                f"Valid: status, history, run, config, dry_run_report"
             )
 
     def _handle_ops_digest(

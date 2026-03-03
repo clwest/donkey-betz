@@ -2027,19 +2027,23 @@ PA_TOOL_SCHEMAS = [
             "Monitor and configure the Ops Autopilot — automated incident response "
             "with governance guardrails. Use 'status' for current config and last cycle. "
             "Use 'history' for recent autopilot actions. Use 'run' to trigger an "
-            "immediate evaluation cycle. Use 'config' to view/update thresholds."
+            "immediate evaluation cycle. Use 'config' to view/update thresholds. "
+            "Use 'dry_run_report' for a human-readable report of what autopilot would do."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["status", "history", "run", "config"],
+                    "enum": ["status", "history", "run", "config", "dry_run_report"],
                     "description": (
                         "status: current config, last cycle timestamp, and pending actions. "
                         "history: recent autopilot actions (blocks, attention items, dry runs). "
                         "run: trigger an immediate autopilot evaluation cycle. "
-                        "config: view current thresholds (timeout spike, block TTL, etc.)."
+                        "config: view current thresholds (timeout spike, block TTL, etc.). "
+                        "dry_run_report: evaluate all policies in dry-run mode and return a "
+                        "human-readable report with SLO breaches, timeout spikes, stale blocks, "
+                        "and proposed actions."
                     ),
                 },
                 "dry_run": {
