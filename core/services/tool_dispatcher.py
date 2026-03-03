@@ -1420,6 +1420,18 @@ class ToolDispatcher:
             if disambiguation:
                 return disambiguation
 
+            # Emit view event for dashboard tracking
+            try:
+                from core.models_deliverables import DeliverableEvent
+                DeliverableEvent.objects.create(
+                    deliverable=obj,
+                    event_type='synthesis_viewed',
+                    source='pa_tool',
+                    metadata={'trace_id': trace_id},
+                )
+            except Exception:
+                pass  # fire-and-forget
+
             # Session 1086: Return full content so the PA can read
             # deliverables completely. Cap at 8000 chars to stay within
             # reasonable tool-result size for the LLM context window.
@@ -1449,6 +1461,14 @@ class ToolDispatcher:
                 return disambiguation
             obj.is_saved = True
             obj.save(update_fields=['is_saved'])
+            try:
+                from core.models_deliverables import DeliverableEvent
+                DeliverableEvent.objects.create(
+                    deliverable=obj, event_type='deliverable_saved',
+                    source='pa_tool', metadata={'trace_id': trace_id},
+                )
+            except Exception:
+                pass
             return {'action': 'save', 'id': str(obj.id), 'title': obj.title, 'saved': True}
 
         elif action == 'unsave':

@@ -4431,6 +4431,7 @@ from core.views_deliverables import (
     export_deliverable,
     get_deliverable_stats,
     get_deliverable_types,
+    record_deliverable_event,
 )
 
 urlpatterns += [
@@ -4443,6 +4444,7 @@ urlpatterns += [
     path('api/deliverables/<uuid:deliverable_id>/clone/', clone_deliverable, name='deliverable-clone'),
     path('api/deliverables/<uuid:deliverable_id>/templateize/', templateize_deliverable, name='deliverable-templateize'),
     path('api/deliverables/<uuid:deliverable_id>/export/', export_deliverable, name='deliverable-export'),
+    path('api/deliverables/<uuid:deliverable_id>/event/', record_deliverable_event, name='deliverable-event'),
 ]
 
 # =========================================================================
