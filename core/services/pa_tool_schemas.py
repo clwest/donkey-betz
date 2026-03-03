@@ -2256,6 +2256,108 @@ PA_TOOL_SCHEMAS = [
             "required": ["action"],
         },
     },
+
+    # ── Codebase Introspection ───────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "repo_tool",
+        "description": (
+            "Read-only codebase introspection: browse file tree, read file contents, "
+            "search/grep across code, and check git status/log. "
+            "Use this when you need to answer questions about what code exists, "
+            "how features are implemented, file structure, or recent commits. "
+            "Cannot modify files — read-only access only."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["tree", "read_file", "search", "git_info"],
+                    "description": "tree: list directory contents. read_file: read file contents. search: grep/search code. git_info: branch, recent commits, status.",
+                },
+                "path": {"type": "string", "description": "Relative path from project root (e.g. 'core/agents/', 'mobile/src/screens/')"},
+                "depth": {"type": "integer", "description": "Directory depth for tree action (default 2, max 4)"},
+                "query": {"type": "string", "description": "Search query/regex for search action"},
+                "max_lines": {"type": "integer", "description": "Max lines to return for read_file (default 200, max 500)"},
+                "file_type": {"type": "string", "description": "File extension filter for search (e.g. 'py', 'tsx', 'ts')"},
+            },
+            "required": ["action"],
+        },
+    },
+
+    # ── Analytics / Event Queries ────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "analytics_tool",
+        "description": (
+            "Query behavioral analytics: DeliverableEvent counts, ATR-24h metrics, "
+            "event breakdowns by type/role/time. Use this to check pilot metrics, "
+            "verify event instrumentation, or answer 'how many actions today?' questions. "
+            "Replaces needing to write SQL or hit the dashboard endpoint manually."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["events_summary", "atr_dashboard", "events_query"],
+                    "description": "events_summary: counts by event type + time window. atr_dashboard: full Stage 3 ATR-24h metrics. events_query: flexible event query with filters.",
+                },
+                "days": {"type": "integer", "description": "Lookback window in days (default 7)"},
+                "event_type": {"type": "string", "description": "Filter by event type (e.g. action_taken, synthesis_viewed)"},
+                "deliverable_id": {"type": "string", "description": "Filter events for a specific deliverable UUID"},
+                "role": {"type": "string", "description": "Filter by role tag (manager, recruiter, developer)"},
+                "limit": {"type": "integer", "description": "Max events to return for events_query (default 50)"},
+            },
+            "required": ["action"],
+        },
+    },
+
+    # ── Discord Bot Introspection ────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "discord_tool",
+        "description": (
+            "Inspect the Discord bot: list registered commands, check slot usage, "
+            "view cog structure, and verify bot configuration. "
+            "Use this when asked about Discord commands, limits, or integration status."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["status", "commands", "cogs"],
+                    "description": "status: bot config + slot usage summary. commands: list all registered commands with groups. cogs: list loaded cog classes.",
+                },
+            },
+            "required": ["action"],
+        },
+    },
+
+    # ── Mobile App Introspection ─────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "mobile_tool",
+        "description": (
+            "Inspect the React Native / Expo mobile app: project config, "
+            "implemented screens, API modules, dependencies. "
+            "Use this when asked about the mobile app status, what screens exist, "
+            "or what's been built vs what's still a placeholder."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["project_status", "screens", "api_modules", "dependencies"],
+                    "description": "project_status: Expo config + build info. screens: list all screens with implementation status. api_modules: list API client files. dependencies: key package versions.",
+                },
+            },
+            "required": ["action"],
+        },
+    },
 ]
 
 # ── Startup validation: every tool must have name, description, parameters ──
@@ -2433,6 +2535,10 @@ TOOL_TO_INTENT_MAP = {
     'content_tool': 'content_review',
     'governance_tool': 'boardroom',
     'intelligence_tool': 'stock_intelligence',
+    'repo_tool': 'codebase',
+    'analytics_tool': 'analytics',
+    'discord_tool': 'discord',
+    'mobile_tool': 'mobile',
 }
 
 
