@@ -76,6 +76,20 @@ class OpsAutopilot:
             'actions': self.actions_taken,
         }
 
+        # Log every cycle for observability (even no-ops)
+        AutopilotAction.objects.create(
+            action_type='dry_run' if self.dry_run or not self.actions_taken else 'deploy_watch',
+            agent_name='',
+            policy='cycle_evaluation',
+            dry_run=self.dry_run,
+            evidence={
+                'timeout_spike': timeout_results,
+                'blocked_hygiene': hygiene_results,
+            },
+            result=summary,
+            deploy_sha=self.deploy_sha,
+        )
+
         logger.info(
             f"[OpsAutopilot] Cycle complete: "
             f"{len(self.actions_taken)} actions taken "
