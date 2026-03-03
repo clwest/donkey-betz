@@ -1200,16 +1200,21 @@ class ConversationOrchestrator:
 
         # Session 1075: Guard against 0-turn sessions — mark failed instead of crashing
         if not messages:
-            logger.warning(f"⚠️ [Session 1075] Deliberation produced 0 turns for topic: {topic[:80]}")
+            logger.warning(f"[DELIB] 0 turns for topic: {topic[:80]} | session={deliberation_session.id if deliberation_session else 'N/A'}")
             if deliberation_session:
                 try:
                     from django.utils import timezone
                     deliberation_session.status = 'failed'
+                    deliberation_session.failure_reason_code = 'EMPTY_TURN'
+                    deliberation_session.failure_detail = f'0 turns produced for topic: {topic[:200]}'
                     deliberation_session.completed_at = timezone.now()
-                    deliberation_session.save(update_fields=['status', 'completed_at', 'updated_at'])
-                    logger.info(f"📋 [Session 1075] Marked session {deliberation_session.id} as failed (0 turns)")
+                    deliberation_session.save(update_fields=[
+                        'status', 'failure_reason_code', 'failure_detail',
+                        'completed_at', 'updated_at',
+                    ])
+                    logger.info(f"[DELIB] Session {deliberation_session.id} marked failed: EMPTY_TURN")
                 except Exception as e:
-                    logger.warning(f"[Session 1075] Failed to mark session as failed: {e}")
+                    logger.warning(f"[DELIB] Failed to mark session as failed: {e}")
             return {
                 'messages': [],
                 'decision_summary': {},

@@ -34,6 +34,17 @@ class DeliberationSession(models.Model):
         ('failed', 'Failed'),
     ]
 
+    FAILURE_REASON_CHOICES = [
+        ('', 'N/A'),
+        ('TIMEOUT', 'Soft/hard time limit exceeded'),
+        ('LLM_UPSTREAM', 'LLM provider error or rate limit'),
+        ('EMPTY_TURN', 'Zero turns produced'),
+        ('TOOL_ERROR', 'Tool call or spider failure'),
+        ('GATE_REJECT', 'Publish gate or contract rejection'),
+        ('DRAFT_FAILED', 'Draft generation failed'),
+        ('UNKNOWN', 'Unclassified failure'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     session_type = models.CharField(
         max_length=20, choices=SESSION_TYPE_CHOICES, default='hivemind'
@@ -50,6 +61,14 @@ class DeliberationSession(models.Model):
         related_name='children'
     )
     trace_id = models.CharField(max_length=64, blank=True, default='')
+    failure_reason_code = models.CharField(
+        max_length=20, choices=FAILURE_REASON_CHOICES, blank=True, default='',
+        help_text='Structured reason code when status=failed',
+    )
+    failure_detail = models.TextField(
+        blank=True, default='',
+        help_text='Human-readable failure detail (exception message, stage info)',
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -64,6 +83,7 @@ class DeliberationSession(models.Model):
             models.Index(fields=['-created_at']),
             models.Index(fields=['status']),
             models.Index(fields=['trace_id']),
+            models.Index(fields=['failure_reason_code']),
         ]
 
     def __str__(self):
