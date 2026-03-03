@@ -4014,4 +4014,6 @@ export const deliverablesApi = {
   clone: (id: string) => api.post(`/deliverables/${id}/clone/`),
   templateize: (id: string) => api.post(`/deliverables/${id}/templateize/`),
   export: (id: string, format: string) => api.post(`/deliverables/${id}/export/`, { format }),
+  recordEvent: (id: string, eventType: string, metadata?: Record<string, unknown>) =>
+    api.post(`/deliverables/${id}/event/`, { event_type: eventType, metadata: metadata ?? {} }),
 }
