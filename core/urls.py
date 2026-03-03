@@ -4432,12 +4432,14 @@ from core.views_deliverables import (
     get_deliverable_stats,
     get_deliverable_types,
     record_deliverable_event,
+    stage3_dashboard,
 )
 
 urlpatterns += [
     path('api/deliverables/', list_deliverables, name='deliverables-list'),
     path('api/deliverables/stats/', get_deliverable_stats, name='deliverables-stats'),
     path('api/deliverables/types/', get_deliverable_types, name='deliverables-types'),
+    path('api/deliverables/stage3-dashboard/', stage3_dashboard, name='stage3-dashboard'),
     path('api/deliverables/<uuid:deliverable_id>/', get_deliverable, name='deliverable-detail'),
     path('api/deliverables/<uuid:deliverable_id>/save/', save_deliverable, name='deliverable-save'),
     path('api/deliverables/<uuid:deliverable_id>/unsave/', unsave_deliverable, name='deliverable-unsave'),

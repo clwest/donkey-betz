@@ -12,6 +12,7 @@ import {
   Database,
   BookOpen,
   GraduationCap,
+  FlaskConical,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
@@ -26,6 +27,7 @@ import {
   DataIntelTab,
   KnowledgeTab,
   LearningJourneyTab,
+  Stage3EvaluationTab,
 } from './workspace/tabs'
 import type { PlatformTab } from './workspace/types'
 import { normalizePlatformTab, legacyTabToSubTab } from './workspace/types'
@@ -36,6 +38,7 @@ const tabGroups = [
     tabs: [
       { id: 'command' as PlatformTab, label: 'Command', icon: Target },
       { id: 'initiatives' as PlatformTab, label: 'Initiatives', icon: GitBranch },
+      { id: 'evaluation' as PlatformTab, label: 'Evaluation', icon: FlaskConical },
       { id: 'boardroom' as PlatformTab, label: 'Boardroom', icon: Gavel },
     ],
   },
@@ -167,6 +170,8 @@ export default function PlatformPage() {
       )}
 
       {activeTab === 'initiatives' && <InitiativesTab />}
+
+      {activeTab === 'evaluation' && <Stage3EvaluationTab />}
 
       {activeTab === 'boardroom' && <BoardroomTab />}
 

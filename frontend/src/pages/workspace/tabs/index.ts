@@ -59,3 +59,6 @@ export { DeliverablesTab } from './DeliverablesTab'
 // Session 1035: Workspace split — new workspace-only tabs
 export { WorkspaceOverviewTab } from './WorkspaceOverviewTab'
 export { GitTab } from './GitTab'
+
+// Stage 3 Evaluation Dashboard — Capitalize Opportunity pilot
+export { Stage3EvaluationTab } from './Stage3EvaluationTab'
