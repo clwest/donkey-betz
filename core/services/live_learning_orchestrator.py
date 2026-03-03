@@ -239,7 +239,7 @@ class LiveLearningOrchestrator(LiveLearningLearningMixin):
         """
         Main learning loop that shows continuous improvement
         """
-        print(f"🚀 Starting live learning loop for {project_type}")
+        logger.info(f"Starting live learning loop for {project_type}")
 
         if not agents:
             agents = ['Business Agent', 'ML Recommendation Engine', 'Database Architect']
@@ -256,7 +256,7 @@ class LiveLearningOrchestrator(LiveLearningLearningMixin):
 
         while True:
             self.iteration += 1
-            print(f"\n📚 Learning Iteration {self.iteration}")
+            logger.info(f"Learning Iteration {self.iteration}")
 
             # 1. Generate improved code
             for agent_name in agents:
@@ -282,7 +282,7 @@ class LiveLearningOrchestrator(LiveLearningLearningMixin):
 
             # Stop after 10 iterations for demo
             if self.iteration >= 10:
-                print("✅ Learning demonstration complete!")
+                logger.info("Learning demonstration complete")
                 break
 
     async def generate_improved_code(self, agent_name: str, project_type: str) -> Dict:
@@ -330,7 +330,7 @@ class LiveLearningOrchestrator(LiveLearningLearningMixin):
         stage_num = (agent_data['iterations'] - 1) % 5 + 1
         stage = improvement_stages[stage_num]
 
-        print(f"  🔧 {agent_name}: Applying {stage['focus']}")
+        logger.info(f"{agent_name}: Applying {stage['focus']}")
 
         try:
             # Generate code using real code generator
@@ -391,7 +391,7 @@ class LiveLearningOrchestrator(LiveLearningLearningMixin):
             }
 
         except Exception as e:
-            print(f"  ❌ Error generating code for {agent_name}: {e}")
+            logger.error(f"Error generating code for {agent_name}: {e}")
             return None
 
     async def analyze_code(self, agent_name: str, code_result: Dict) -> Dict:
@@ -475,7 +475,7 @@ class LiveLearningOrchestrator(LiveLearningLearningMixin):
             {'insight': shared_insight, 'impact': 'High'}
         )
 
-        print(f"  💡 {agent_name} shared: {shared_insight}")
+        logger.info(f"{agent_name} shared: {shared_insight}")
 
     async def trigger_collaboration(self, agents: List[str]):
         """
@@ -508,7 +508,7 @@ class LiveLearningOrchestrator(LiveLearningLearningMixin):
             knowledge_exchanged
         )
 
-        print(f"  🤝 Collaboration: {agent1} <-> {agent2}")
+        logger.info(f"Collaboration: {agent1} <-> {agent2}")
 
         # Session 306: Learning Infrastructure - Share collaboration knowledge
         self._share_knowledge(
@@ -560,7 +560,7 @@ class LiveLearningOrchestrator(LiveLearningLearningMixin):
             }
         )
 
-        print(f"  📊 Progress: Quality={total_quality:.1f}% Complexity={total_complexity:.1f}%")
+        logger.info(f"Progress: Quality={total_quality:.1f}% Complexity={total_complexity:.1f}%")
 
         # Session 306: Learning Infrastructure Hooks
         self._record_learning_outcome(

@@ -1872,6 +1872,7 @@ advanced_analytics_service = AdvancedAnalyticsService()
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def analytics_overview_v2(request):
     """
     Session 221 Phase F: Get analytics overview for the current user.

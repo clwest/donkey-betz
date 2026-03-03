@@ -12,7 +12,7 @@ import logging
 from django.db.models import Count, Avg
 from datetime import datetime, timedelta
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 
@@ -2134,6 +2134,7 @@ def analyze_brand_styles(request, project_id):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def get_available_styles(request):
     """
     Get all available image styles grouped by category.

@@ -2849,6 +2849,7 @@ def control_structure(request):
 
 @csrf_exempt
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def control_unified(request):
     """
     Session 199: Unified control endpoint for all Stability AI control types.
