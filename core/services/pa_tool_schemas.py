@@ -1943,8 +1943,12 @@ PA_TOOL_SCHEMAS = [
                 },
                 "window": {
                     "type": "string",
-                    "enum": ["6h", "24h", "7d", "30d"],
+                    "enum": ["1h", "6h", "24h", "7d", "30d"],
                     "description": "Time window for SLO, failure signature, and migration report computation (default 24h).",
+                },
+                "since": {
+                    "type": "string",
+                    "description": "ISO-8601 timestamp cutoff (overrides window). Use for precise time ranges, e.g. '2026-03-02T18:00:00Z'.",
                 },
                 "include_breakdowns": {
                     "type": "boolean",
@@ -1953,6 +1957,54 @@ PA_TOOL_SCHEMAS = [
                 "limit": {
                     "type": "integer",
                     "description": "For failure_signatures: max signatures to return (default 10, max 25).",
+                },
+            },
+            "required": ["action"],
+        },
+    },
+
+    # ── Session 1080: Agent Control Tool ─────────────────────────────────────
+    {
+        "type": "function",
+        "name": "agent_control_tool",
+        "description": (
+            "Manage blocked/enabled agents. Use 'list' to see which agents are blocked. "
+            "Use 'block' to disable an agent (with reason and optional TTL). "
+            "Use 'unblock' to re-enable. Use 'audit_log' for recent changes. "
+            "This is the single source of truth — changes apply to all dispatch paths."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list", "block", "unblock", "audit_log"],
+                    "description": (
+                        "list: show all agent control entries and currently blocked agents. "
+                        "block: disable an agent (requires agent_name, optional reason/ttl_hours). "
+                        "unblock: re-enable a blocked agent (requires agent_name). "
+                        "audit_log: recent control changes."
+                    ),
+                },
+                "agent_name": {
+                    "type": "string",
+                    "description": "Agent name (e.g. 'AudioAgent', 'CodeGeneratorAgent'). Required for block/unblock.",
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "Why blocking/unblocking (stored for audit trail).",
+                },
+                "ttl_hours": {
+                    "type": "integer",
+                    "description": "Auto-unblock after N hours. Omit for permanent block.",
+                },
+                "blocked_by": {
+                    "type": "string",
+                    "description": "Who is blocking (default 'rigby'). E.g. 'rigby', 'chris', 'system'.",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "For audit_log: max entries to return (default 20, max 50).",
                 },
             },
             "required": ["action"],
@@ -2217,6 +2269,7 @@ TOOL_ENRICHMENT_MAP = {
     'conversation_tool': ['strategic_memory'],
     'remember_tool': [],
     'ops_tool': ['intelligence_enricher', 'platform_briefing'],
+    'agent_control_tool': [],
     'work_tool': ['intelligence_enricher', 'strategic_memory'],
     'content_tool': ['blog_performance', 'domain_context', 'spider_trends', 'strategic_memory', 'proactive_intelligence'],
     'governance_tool': ['intelligence_enricher', 'strategic_memory'],
@@ -2296,6 +2349,7 @@ TOOL_TO_INTENT_MAP = {
     'conversation_tool': 'memory_recall',
     'remember_tool': 'memory',
     'ops_tool': 'system_overview',
+    'agent_control_tool': 'system_overview',
     'work_tool': 'initiatives',
     'content_tool': 'content_review',
     'governance_tool': 'boardroom',

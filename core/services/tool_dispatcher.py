@@ -240,6 +240,9 @@ class ToolDispatcher:
         # Session 1078: Ops tool — version, SLO status, failure signatures
         self.register("ops_tool", self._handle_ops)
 
+        # Session 1080: Agent control tool — block/unblock/list agents (DB-backed)
+        self.register("agent_control_tool", self._handle_agent_control)
+
         # Session 1078: Work tool — gateway for initiatives + action items
         self.register("work_tool", self._handle_work)
 
@@ -4131,26 +4134,52 @@ class ToolDispatcher:
             if len(blog.full_text or '') > 500:
                 content_preview += '...'
 
+            blog_detail = {
+                'id': str(blog.id),
+                'title': blog.title,
+                'author': blog.author,
+                'status': blog.status,
+                'category': blog.category,
+                'content_type': blog.content_type,
+                'quality_score': blog.quality_score,
+                'novelty_score': blog.novelty_score,
+                'structure_score': blog.structure_score,
+                'publish_ready': blog.publish_ready,
+                'gate_notes': blog.gate_notes or '',
+                'tone': blog.tone or '',
+                'created_at': blog.created_at.isoformat() if blog.created_at else None,
+                'content_preview': content_preview,
+                'word_count': blog.word_count or 0,
+            }
+
+            # Session 1080: Deliberation traceability — surface provenance
+            # for blogs created by the ContentDeliberation pipeline
+            delib = (blog.stats_snapshot or {}).get('deliberation')
+            if delib:
+                blog_detail['deliberation'] = {
+                    'session_id': delib.get('session_id'),
+                    'decision': delib.get('decision'),
+                    'claims_count': delib.get('claims_count', 0),
+                    'sources_count': delib.get('sources_count', 0),
+                    'reviewers': delib.get('reviewers', []),
+                    'review_verdicts': delib.get('review_verdicts', []),
+                }
+                # Gate result is stored on blog fields, not in stats_snapshot
+                if blog.quality_score is not None:
+                    blog_detail['deliberation']['gate'] = {
+                        'quality': blog.quality_score,
+                        'novelty': blog.novelty_score,
+                        'structure': blog.structure_score,
+                        'decision': 'publish' if blog.publish_ready else (
+                            'enhance' if blog.status == 'needs_enhancement' else 'internal_only'
+                        ),
+                        'notes': blog.gate_notes or '',
+                    }
+
             return {
                 'action': 'details',
                 'source': 'SelfBlog',
-                'blog': {
-                    'id': str(blog.id),
-                    'title': blog.title,
-                    'author': blog.author,
-                    'status': blog.status,
-                    'category': blog.category,
-                    'content_type': blog.content_type,
-                    'quality_score': blog.quality_score,
-                    'novelty_score': blog.novelty_score,
-                    'structure_score': blog.structure_score,
-                    'publish_ready': blog.publish_ready,
-                    'gate_notes': blog.gate_notes or '',
-                    'tone': blog.tone or '',
-                    'created_at': blog.created_at.isoformat() if blog.created_at else None,
-                    'content_preview': content_preview,
-                    'word_count': blog.word_count or 0,
-                }
+                'blog': blog_detail,
             }
 
         elif action == 'related':
@@ -7353,11 +7382,10 @@ class ToolDispatcher:
             rerouted_agents: list = []
             try:
                 from core.agent_router import AgentRouter
+                from core.models_unified_system import AgentControlEntry
                 router_routable_total = len(AgentRouter.AGENT_MAP)
-                # Hard-blocked: won't execute at all on Railway
-                _BLOCKED = frozenset({
-                    'CodeGeneratorAgent',  # No codebase access in Railway sandbox
-                })
+                # Session 1080: DB-backed blocked list
+                _BLOCKED = AgentControlEntry.get_blocked_names()
                 # Non-specialist: tasks get rerouted to specialist agents
                 _NON_SPECIALIST = frozenset({
                     'WorkflowAgent', 'VideoAgent', 'CodeGeneratorAgent', 'DevOpsAgent',
@@ -10689,11 +10717,13 @@ RESEARCH DATA:
         elif action == 'slo_status':
             window = payload.get('window', '24h')
             include_breakdowns = payload.get('include_breakdowns', False)
-            return self._ops_slo_status(window, include_breakdowns, trace_id)
+            since = payload.get('since')  # Session 1080: ISO-8601 override
+            return self._ops_slo_status(window, include_breakdowns, trace_id, since=since)
         elif action == 'failure_signatures':
             window = payload.get('window', '24h')
             limit = min(int(payload.get('limit', 10)), 25)
-            return self._ops_failure_signatures(window, limit, trace_id)
+            since = payload.get('since')  # Session 1080: ISO-8601 override
+            return self._ops_failure_signatures(window, limit, trace_id, since=since)
         elif action == 'tool_migration_report':
             window = payload.get('window', '7d')
             return self._ops_tool_migration_report(window, trace_id)
@@ -10737,22 +10767,36 @@ RESEARCH DATA:
             },
         }
 
-    def _ops_slo_status(self, window: str, include_breakdowns: bool, trace_id: str) -> Dict[str, Any]:
+    def _ops_slo_status(self, window: str, include_breakdowns: bool, trace_id: str, since: str = None) -> Dict[str, Any]:
         """Compute 8 SLOs for the given time window."""
         from django.utils import timezone
         from django.core.cache import cache
         from django.db.models import Count
-        from datetime import timedelta
+        from datetime import timedelta, datetime
 
-        cache_key = f'pa:ops_slo:{window}:{include_breakdowns}'
+        # Session 1080: since_timestamp overrides window
+        if since:
+            cache_key = f'pa:ops_slo:since:{since}:{include_breakdowns}'
+        else:
+            cache_key = f'pa:ops_slo:{window}:{include_breakdowns}'
         cached = cache.get(cache_key)
         if cached:
             return cached
 
-        # Parse window
-        window_hours = {'6h': 6, '24h': 24, '7d': 168}.get(window, 24)
+        # Parse window (Session 1080: added 1h + since_timestamp)
         now = timezone.now()
-        cutoff = now - timedelta(hours=window_hours)
+        if since:
+            try:
+                cutoff = datetime.fromisoformat(since.replace('Z', '+00:00'))
+                if timezone.is_naive(cutoff):
+                    cutoff = timezone.make_aware(cutoff)
+                window = f'since:{since}'
+            except (ValueError, TypeError):
+                window_hours = {'1h': 1, '6h': 6, '24h': 24, '7d': 168, '30d': 720}.get(window, 24)
+                cutoff = now - timedelta(hours=window_hours)
+        else:
+            window_hours = {'1h': 1, '6h': 6, '24h': 24, '7d': 168, '30d': 720}.get(window, 24)
+            cutoff = now - timedelta(hours=window_hours)
 
         slos = []
 
@@ -10987,14 +11031,25 @@ RESEARCH DATA:
         cache.set(cache_key, result, 120)  # 2-min cache
         return result
 
-    def _ops_failure_signatures(self, window: str, limit: int, trace_id: str) -> Dict[str, Any]:
+    def _ops_failure_signatures(self, window: str, limit: int, trace_id: str, since: str = None) -> Dict[str, Any]:
         """Top failure signatures in the given window, deduped and actionable."""
         from django.utils import timezone
-        from datetime import timedelta
+        from datetime import timedelta, datetime
         from django.db.models import Count, Max
 
-        window_hours = {'6h': 6, '24h': 24, '7d': 168}.get(window, 24)
-        cutoff = timezone.now() - timedelta(hours=window_hours)
+        now = timezone.now()
+        if since:
+            try:
+                cutoff = datetime.fromisoformat(since.replace('Z', '+00:00'))
+                if timezone.is_naive(cutoff):
+                    cutoff = timezone.make_aware(cutoff)
+                window = f'since:{since}'
+            except (ValueError, TypeError):
+                window_hours = {'1h': 1, '6h': 6, '24h': 24, '7d': 168, '30d': 720}.get(window, 24)
+                cutoff = now - timedelta(hours=window_hours)
+        else:
+            window_hours = {'1h': 1, '6h': 6, '24h': 24, '7d': 168, '30d': 720}.get(window, 24)
+            cutoff = now - timedelta(hours=window_hours)
 
         signatures = []
 
@@ -11061,6 +11116,123 @@ RESEARCH DATA:
             'total_signatures': len(signatures),
         }
 
+
+    # ── Session 1080: Agent Control Tool ────────────────────────────────────
+
+    def _handle_agent_control(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Session 1080: Centralized agent block/unblock/list.
+        Replaces hardcoded frozensets across tasks.py, agent_router.py, tool_dispatcher.py.
+        """
+        from core.models_unified_system import AgentControlEntry
+        from django.utils import timezone
+
+        action = payload.get('action', 'list')
+
+        if action == 'list':
+            entries = list(
+                AgentControlEntry.objects.all()
+                .order_by('-updated_at')
+                .values('agent_name', 'status', 'reason', 'blocked_at',
+                        'blocked_by', 'ttl_hours', 'updated_at')
+            )
+            for e in entries:
+                if e.get('blocked_at'):
+                    e['blocked_at'] = e['blocked_at'].isoformat()
+                if e.get('updated_at'):
+                    e['updated_at'] = e['updated_at'].isoformat()
+
+            # Also show currently blocked set (includes TTL expiry check)
+            blocked_now = sorted(AgentControlEntry.get_blocked_names())
+
+            return {
+                'action': 'list',
+                'blocked_now': blocked_now,
+                'total_entries': len(entries),
+                'entries': entries,
+            }
+
+        elif action == 'block':
+            agent_name = payload.get('agent_name', '').strip()
+            if not agent_name:
+                raise ValueError("agent_name required for block action")
+            reason = payload.get('reason', 'Blocked via PA')
+            ttl_hours = payload.get('ttl_hours')
+            blocked_by = payload.get('blocked_by', 'rigby')
+
+            now = timezone.now()
+            entry, created = AgentControlEntry.objects.update_or_create(
+                agent_name=agent_name,
+                defaults={
+                    'status': 'blocked',
+                    'reason': reason[:255],
+                    'blocked_at': now,
+                    'blocked_by': blocked_by[:100],
+                    'ttl_hours': ttl_hours,
+                }
+            )
+
+            return {
+                'action': 'block',
+                'agent_name': agent_name,
+                'status': 'blocked',
+                'reason': reason,
+                'ttl_hours': ttl_hours,
+                'blocked_by': blocked_by,
+                'created': created,
+                'success': True,
+            }
+
+        elif action == 'unblock':
+            agent_name = payload.get('agent_name', '').strip()
+            if not agent_name:
+                raise ValueError("agent_name required for unblock action")
+            reason = payload.get('reason', 'Unblocked via PA')
+
+            updated = AgentControlEntry.objects.filter(
+                agent_name=agent_name, status='blocked'
+            ).update(status='enabled', reason=reason[:255])
+
+            return {
+                'action': 'unblock',
+                'agent_name': agent_name,
+                'status': 'enabled',
+                'was_blocked': updated > 0,
+                'success': True,
+            }
+
+        elif action == 'audit_log':
+            # Show recent changes — uses updated_at ordering
+            limit = min(int(payload.get('limit', 20)), 50)
+            entries = list(
+                AgentControlEntry.objects.all()
+                .order_by('-updated_at')[:limit]
+                .values('agent_name', 'status', 'reason', 'blocked_at',
+                        'blocked_by', 'ttl_hours', 'updated_at')
+            )
+            for e in entries:
+                if e.get('blocked_at'):
+                    e['blocked_at'] = e['blocked_at'].isoformat()
+                if e.get('updated_at'):
+                    e['updated_at'] = e['updated_at'].isoformat()
+
+            return {
+                'action': 'audit_log',
+                'count': len(entries),
+                'entries': entries,
+            }
+
+        else:
+            raise ValueError(
+                f"Unknown action: {action}. "
+                f"Valid: list, block, unblock, audit_log"
+            )
 
     def _ops_tool_migration_report(self, window: str, trace_id: str) -> Dict[str, Any]:
         """

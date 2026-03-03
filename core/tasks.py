@@ -163,6 +163,66 @@ def validate_agent_output(agent_name: str, output: str) -> str:
         return output  # Return original if validation fails
 
 
+# ==================== SESSION 1080: TIMEOUT SIGNATURE RECORDING ===============
+
+def _record_timeout_signature(
+    agent_name: str,
+    timeout_source: str,
+    elapsed_seconds: float,
+    execution_id=None,
+    task_name: str = '',
+):
+    """
+    Record a structured timeout event into the FailureSignature/FailureDetection
+    pipeline so ops_tool.failure_signatures can cluster timeouts.
+
+    Args:
+        agent_name: Name of the agent that timed out
+        timeout_source: 'wall_clock', 'watchdog_cleanup', or 'celery_hard_limit'
+        elapsed_seconds: How long the task ran before timeout
+        execution_id: UUID of the AgentExecution record (if available)
+        task_name: Celery task name (if available)
+    """
+    try:
+        from core.models_diagnostic_pipeline import FailureSignature, FailureDetection
+
+        sig_str = f"TIMEOUT_{timeout_source.upper()}_{agent_name}"
+        sig_hash = FailureSignature.generate_hash(sig_str)
+
+        signature, _ = FailureSignature.objects.get_or_create(
+            signature_hash=sig_hash,
+            defaults={
+                'signature': sig_str[:255],
+                'category': FailureSignature.Category.TIMEOUT,
+                'description': (
+                    f"{agent_name} timed out via {timeout_source} "
+                    f"after {elapsed_seconds:.0f}s"
+                ),
+            }
+        )
+        signature.increment_occurrence()
+
+        FailureDetection.objects.create(
+            signature=signature,
+            source_type='agent_execution',
+            source_id=execution_id,
+            source_name=agent_name,
+            error_message=(
+                f"{agent_name} timed out via {timeout_source} "
+                f"after {elapsed_seconds:.0f}s"
+            ),
+            error_code='TIMEOUT',
+            context_snapshot={
+                'agent_name': agent_name,
+                'timeout_source': timeout_source,
+                'elapsed_seconds': round(elapsed_seconds, 1),
+                'task_name': task_name,
+            },
+        )
+    except Exception as e:
+        logger.warning(f"Failed to record timeout signature for {agent_name}: {e}")
+
+
 # ==================== SESSION 835: STALE EXECUTION CLEANUP ====================
 
 
@@ -211,11 +271,18 @@ def cleanup_stale_agent_executions(self, minutes_threshold: int = 60):
         logger.info(f"🧹 [CLEANUP] Stale executions (>{minutes_threshold}min old): {count}")
 
         if count > 0:
-            # Log details of what we're cleaning up
-            sample_tasks = list(stale_tasks.values('id', 'agent__name', 'created_at')[:5])
+            # Log details + emit timeout signatures for each stale task
+            sample_tasks = list(stale_tasks.values('id', 'agent__name', 'created_at')[:20])
             for task in sample_tasks:
                 age_min = (now - task['created_at']).total_seconds() / 60
                 logger.info(f"🧹 [CLEANUP] Marking stale: {task['agent__name']} - {age_min:.0f}min old - ID: {task['id']}")
+                # Session 1080: Emit structured timeout signature
+                _record_timeout_signature(
+                    agent_name=task['agent__name'],
+                    timeout_source='watchdog_cleanup',
+                    elapsed_seconds=age_min * 60,
+                    execution_id=task['id'],
+                )
 
             # Perform the cleanup
             updated = stale_tasks.update(
@@ -1446,10 +1513,9 @@ def execute_agent_task(
     execution_start = time.time()
 
     # Session 1031: Hard-block agents that can't do useful work on Railway
-    # Session 1068: Unblocked AudioAgent (ElevenLabs quota replenished)
-    _BLOCKED_AGENTS = frozenset({
-        'CodeGeneratorAgent',  # No codebase access in Railway sandbox
-    })
+    # Session 1080: Centralized in AgentControlEntry (DB-backed, PA-manageable)
+    from core.models_unified_system import AgentControlEntry
+    _BLOCKED_AGENTS = AgentControlEntry.get_blocked_names()
     if agent_name in _BLOCKED_AGENTS:
         logger.warning(
             f"[execute_agent_task] BLOCKED: {agent_name} disabled on Railway "
@@ -1619,16 +1685,24 @@ def execute_agent_task(
                 _future = _pool.submit(_run_route)
                 result = _future.result(timeout=_wall_timeout)
         except _FuturesTimeout:
+            _elapsed = time.time() - execution_start
             logger.error(
                 f"[execute_agent_task] WALL-CLOCK TIMEOUT: {agent_name} exceeded "
                 f"{_wall_timeout}s limit — killing"
+            )
+            _record_timeout_signature(
+                agent_name=agent_name,
+                timeout_source='wall_clock',
+                elapsed_seconds=_elapsed,
+                execution_id=execution_record.id if execution_record else None,
+                task_name='core.tasks.execute_agent_task',
             )
             from core.agents.base_agent import AgentResult
             result = AgentResult(
                 success=False,
                 error=f'{agent_name} exceeded {_wall_timeout}s wall-clock timeout',
                 agent_name=agent_name,
-                execution_time_ms=int((time.time() - execution_start) * 1000),
+                execution_time_ms=int(_elapsed * 1000),
             )
 
         execution_time_ms = int((time.time() - execution_start) * 1000)
@@ -35004,9 +35078,9 @@ def dispatch_pending_action_items(self):
 
     logger.info("[ACTION-DISPATCH] Starting dispatch cycle")
 
-    # Blocked agents (same as execute_agent_task)
-    # Session 1088: Removed AudioAgent — unblocked in Session 1068 but this list was missed
-    _BLOCKED_AGENTS = frozenset({'CodeGeneratorAgent'})
+    # Session 1080: Centralized in AgentControlEntry (DB-backed)
+    from core.models_unified_system import AgentControlEntry
+    _BLOCKED_AGENTS = AgentControlEntry.get_blocked_names()
 
     # Query pending items on ACTIVE initiatives, auto-dispatch stages only
     items = (

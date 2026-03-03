@@ -46,6 +46,65 @@ class AgentCategory(models.Model):
         return self.name
 
 
+class AgentControlEntry(models.Model):
+    """
+    Session 1080: Centralized blocked/enabled agent control.
+    Replaces hardcoded frozensets in tasks.py, agent_router.py, tool_dispatcher.py.
+    Keyed by agent_name (same string as AGENT_MAP keys).
+    """
+    agent_name = models.CharField(max_length=100, unique=True, db_index=True)
+    status = models.CharField(
+        max_length=20,
+        choices=[('blocked', 'Blocked'), ('enabled', 'Enabled')],
+        default='enabled',
+    )
+    reason = models.CharField(max_length=255, blank=True, default='')
+    blocked_at = models.DateTimeField(null=True, blank=True)
+    blocked_by = models.CharField(
+        max_length=100, blank=True, default='',
+        help_text="Who blocked: 'system', 'rigby', 'claude-code', etc."
+    )
+    ttl_hours = models.IntegerField(
+        null=True, blank=True,
+        help_text="Auto-unblock after N hours (null = permanent)"
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Agent Control Entry'
+        verbose_name_plural = 'Agent Control Entries'
+
+    def __str__(self):
+        return f"{self.agent_name}: {self.status}"
+
+    @classmethod
+    def get_blocked_names(cls) -> frozenset:
+        """Return frozenset of currently blocked agent names, respecting TTL."""
+        from django.utils import timezone
+        try:
+            blocked_qs = cls.objects.filter(status='blocked')
+            names = set()
+            now = timezone.now()
+            for entry in blocked_qs:
+                if entry.ttl_hours and entry.blocked_at:
+                    elapsed = (now - entry.blocked_at).total_seconds() / 3600
+                    if elapsed > entry.ttl_hours:
+                        entry.status = 'enabled'
+                        entry.reason = f'TTL expired ({entry.ttl_hours}h)'
+                        entry.save(update_fields=['status', 'reason', 'updated_at'])
+                        continue
+                names.add(entry.agent_name)
+            return frozenset(names)
+        except Exception:
+            # Fallback during migrations or if table doesn't exist
+            return frozenset({'CodeGeneratorAgent'})
+
+    @classmethod
+    def is_blocked(cls, agent_name: str) -> bool:
+        return agent_name in cls.get_blocked_names()
+
+
 class Agent(models.Model):
     """
     Represents one of the 149 specialized AI agents in the system
