@@ -1818,12 +1818,13 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["get", "search", "summary", "pin_memory"],
+                    "enum": ["get", "search", "summary", "pin_memory", "recent"],
                     "description": (
                         "get: retrieve full conversation by conversation_id. "
                         "search: semantic + keyword search across all conversations. "
                         "summary: dispatch async LLM summarization of a conversation. "
-                        "pin_memory: save a decision/fact as durable memory."
+                        "pin_memory: save a decision/fact as durable memory. "
+                        "recent: list most recent conversations with IDs and timestamps."
                     ),
                 },
                 "conversation_id": {"type": "string", "description": "Conversation ID (e.g. 'pa-33e4d55d31b6')"},
