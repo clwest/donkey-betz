@@ -863,13 +863,9 @@ class AgentRouter:
         logger.info(f"Routing to {agent_name}: {task[:50]}...")
 
         # Session 1032: Hard-block agents that can't do useful work on Railway.
-        # This catches the router dispatch path (execute_agent_task in tasks.py
-        # catches the Celery dispatch path separately).
-        # Session 1068: Unblocked AudioAgent (ElevenLabs quota replenished)
-        _BLOCKED_AGENTS_ROUTER = frozenset({
-            'CodeGeneratorAgent',  # No codebase access in Railway sandbox
-        })
-        if agent_name in _BLOCKED_AGENTS_ROUTER:
+        # Session 1080: Centralized in AgentControlEntry (DB-backed, PA-manageable)
+        from core.models_unified_system import AgentControlEntry
+        if AgentControlEntry.is_blocked(agent_name):
             logger.warning(
                 f"[route] BLOCKED: {agent_name} disabled on Railway "
                 f"(task='{(task or '')[:50]}...')"
