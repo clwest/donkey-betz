@@ -86,8 +86,78 @@ class DeliberationSession(models.Model):
             models.Index(fields=['failure_reason_code']),
         ]
 
+    @staticmethod
+    def classify_failure(error: str) -> str:
+        """Classify an exception string into a failure reason code."""
+        return classify_failure_reason(error)
+
     def __str__(self):
         return f"Deliberation({self.session_type}, {self.status}) {self.objective[:60]}"
+
+
+def classify_failure_reason(error: str) -> str:
+    """
+    Map exception strings to one of the 7 failure reason codes.
+    Used by tasks.py and content_deliberation_runner.py to auto-tag sessions.
+    """
+    err = error.lower()
+
+    # TIMEOUT patterns
+    timeout_signals = [
+        'timeout', 'timed out', 'timelimitexceeded', 'time limit',
+        'deadline exceeded', 'exceeded.*limit', 'wall.clock',
+    ]
+    if any(s in err for s in timeout_signals):
+        return 'TIMEOUT'
+
+    # LLM_UPSTREAM patterns (provider errors, rate limits, API failures)
+    llm_signals = [
+        'rate limit', 'rate_limit', '429', '503', '502', '500',
+        'openai', 'anthropic', 'together', 'deepseek', 'gemini',
+        'api error', 'api_error', 'connection error', 'connection_error',
+        'service unavailable', 'bad gateway', 'internal server error',
+        'overloaded', 'capacity', 'insufficient_quota', 'billing',
+        'invalid_api_key', 'authentication', 'server_error',
+        'remote disconnected', 'connectionreset', 'sslerror',
+    ]
+    if any(s in err for s in llm_signals):
+        return 'LLM_UPSTREAM'
+
+    # EMPTY_TURN patterns
+    empty_signals = [
+        'empty turn', 'zero turns', '0 turns', 'no turns',
+        'empty response', 'empty content', 'no content',
+        'returned empty', 'none response', 'blank response',
+    ]
+    if any(s in err for s in empty_signals):
+        return 'EMPTY_TURN'
+
+    # TOOL_ERROR patterns
+    tool_signals = [
+        'tool call', 'tool error', 'tool_call', 'spider',
+        'web_search', 'websearch', 'function_call',
+        'tool execution', 'tool_error',
+    ]
+    if any(s in err for s in tool_signals):
+        return 'TOOL_ERROR'
+
+    # GATE_REJECT patterns
+    gate_signals = [
+        'gate reject', 'publish gate', 'quality gate',
+        'gate failed', 'contract reject', 'gate_reject',
+    ]
+    if any(s in err for s in gate_signals):
+        return 'GATE_REJECT'
+
+    # DRAFT_FAILED patterns
+    draft_signals = [
+        'draft fail', 'draft generation', 'contentwriteragent fail',
+        'draft_failed', 'no draft', 'empty draft',
+    ]
+    if any(s in err for s in draft_signals):
+        return 'DRAFT_FAILED'
+
+    return 'UNKNOWN'
 
 
 class DeliberationTurn(models.Model):

@@ -11483,10 +11483,37 @@ RESEARCH DATA:
                 'proposed_actions': len(proposed),
             }
 
+        elif action == 'backfill_failure_reasons':
+            # Re-classify sessions that have UNKNOWN or empty failure_reason_code
+            from core.models_deliberation import DeliberationSession, classify_failure_reason
+            from django.db.models import Q
+
+            sessions = DeliberationSession.objects.filter(
+                status='failed',
+            ).filter(
+                Q(failure_reason_code='') | Q(failure_reason_code='UNKNOWN')
+            )
+            updated = 0
+            for s in sessions:
+                detail = getattr(s, 'failure_detail', '') or ''
+                if not detail:
+                    continue
+                new_code = classify_failure_reason(detail)
+                if new_code != 'UNKNOWN':
+                    s.failure_reason_code = new_code
+                    s.save(update_fields=['failure_reason_code'])
+                    updated += 1
+
+            return {
+                'action': 'backfill_failure_reasons',
+                'scanned': sessions.count() + updated,  # approximate
+                'reclassified': updated,
+            }
+
         else:
             raise ValueError(
                 f"Unknown action: {action}. "
-                f"Valid: status, history, run, config, dry_run_report"
+                f"Valid: status, history, run, config, dry_run_report, backfill_failure_reasons"
             )
 
     def _handle_ops_digest(
