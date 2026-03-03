@@ -10262,6 +10262,37 @@ RESEARCH DATA:
                 'message': f'Pinned memory: "{pin_title}"',
             }
 
+        elif action == 'recent':
+            # List most recent PA conversations with IDs + timestamps.
+            # Enables cross-channel discovery (find UI conversation from CLI).
+            qs = ChatConversation.objects.filter(
+                conversation_id__startswith='pa-',
+            ).order_by('-created_at')
+
+            if user_id:
+                qs = qs.filter(user_id=user_id)
+
+            # Distinct conversation IDs with latest timestamp
+            from django.db.models import Max
+            convos = list(
+                qs.values('conversation_id', 'source')
+                .annotate(last_activity=Max('created_at'))
+                .order_by('-last_activity')[:limit]
+            )
+
+            return {
+                'action': 'recent',
+                'count': len(convos),
+                'conversations': [
+                    {
+                        'conversation_id': c['conversation_id'],
+                        'source': c['source'] or 'unknown',
+                        'last_activity': c['last_activity'].isoformat() if c['last_activity'] else None,
+                    }
+                    for c in convos
+                ],
+            }
+
         return {'error': f'Unknown action: {action}'}
 
     def _handle_remember(self, tool_name, payload, user_id, trace_id):
