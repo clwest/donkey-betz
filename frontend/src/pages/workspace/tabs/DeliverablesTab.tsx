@@ -26,6 +26,8 @@ import {
   Bot,
   Zap,
   ListChecks,
+  Inbox,
+  CheckCircle2,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { deliverablesApi } from '@/lib/api'
@@ -240,12 +242,26 @@ export function DeliverablesTab() {
     setPage(1)
   }
 
+  // Track locally which today-queue items have been acted on this session
+  const [actedIds, setActedIds] = useState<Set<string>>(new Set())
+
+  const handleQuickAction = (id: string, eventType: 'action_taken' | 'task_created') => {
+    eventMutation.mutate({ id, eventType, metadata: { source: 'today_queue' } })
+    setActedIds(prev => new Set(prev).add(id))
+  }
+
   const stats: DeliverableStats | null = statsQuery.data?.stats ?? null
   const types: DeliverableType[] = typesQuery.data?.types ?? []
   const deliverables: Deliverable[] = listQuery.data?.deliverables ?? []
   const pagination: Pagination | null = listQuery.data?.pagination ?? null
   const detail: Deliverable | null = detailQuery.data?.deliverable ?? null
   const hasActiveFilters = !!(filters.type || filters.agent || filters.search || filters.saved || filters.template || filters.source)
+
+  // Today queue: recent deliverables (last 24h) that haven't been acted on
+  const recentDeliverables = deliverables.filter(d => {
+    const age = Date.now() - new Date(d.created_at).getTime()
+    return age < 24 * 60 * 60 * 1000 && !actedIds.has(d.id)
+  })
 
   // ============ Detail View ============
   if (selectedId) {
@@ -483,6 +499,48 @@ export function DeliverablesTab() {
           <div className="bg-dark-card border border-dark-border rounded-lg p-3 text-center">
             <div className="text-2xl font-bold text-green-400">{stats.recent_7d}</div>
             <div className="text-xs text-gray-400">Last 7 days</div>
+          </div>
+        </div>
+      )}
+
+      {/* Today Queue */}
+      {recentDeliverables.length > 0 && (
+        <div className="bg-gradient-to-r from-emerald-900/20 to-blue-900/20 border border-emerald-500/20 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Inbox size={16} className="text-emerald-400" />
+            <h4 className="text-sm font-semibold text-emerald-400">Today's Queue</h4>
+            <span className="text-xs text-gray-500">{recentDeliverables.length} items need attention</span>
+          </div>
+          <div className="space-y-2">
+            {recentDeliverables.slice(0, 5).map(d => (
+              <div key={d.id} className="flex items-center justify-between gap-3 bg-dark-card/50 rounded-lg px-3 py-2">
+                <button
+                  onClick={() => setSelectedId(d.id)}
+                  className="flex-1 text-left min-w-0"
+                >
+                  <span className="text-sm text-white truncate block">{d.title}</span>
+                  <span className="text-xs text-gray-500">{d.agent_name} &middot; {formatDate(d.created_at)}</span>
+                </button>
+                <div className="flex gap-1 flex-shrink-0">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleQuickAction(d.id, 'action_taken') }}
+                    className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 transition-colors"
+                    title="Mark as acted on"
+                  >
+                    <CheckCircle2 size={12} />
+                    Done
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleQuickAction(d.id, 'task_created') }}
+                    className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 transition-colors"
+                    title="Create follow-up task"
+                  >
+                    <ListChecks size={12} />
+                    Task
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
