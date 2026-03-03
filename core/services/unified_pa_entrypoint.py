@@ -743,6 +743,45 @@ class UnifiedPAEntrypoint:
             )
 
     # =========================================================================
+    # Session 1080: Live schema reload — detect new tools after deploy
+    # =========================================================================
+
+    _cached_schema_version: Optional[str] = None
+
+    def _get_live_tool_schemas(self) -> list:
+        """
+        Return PA_TOOL_SCHEMAS, reloading the module if the version has changed.
+
+        After a Railway deploy, Celery workers restart and all caches clear.
+        But if a process is long-lived (local dev, or slow worker recycling),
+        this detects that the schema module has been updated and reloads it.
+
+        This ensures Rigby always gets the latest tool schemas without needing
+        a manual cache clear or process restart.
+        """
+        import importlib
+        import core.services.pa_tool_schemas as schema_module
+
+        current_version = schema_module.SCHEMA_VERSION
+
+        if (UnifiedPAEntrypoint._cached_schema_version is not None
+                and UnifiedPAEntrypoint._cached_schema_version != current_version):
+            # Schema version changed — reload module to pick up new tools
+            logger.info(
+                f"[PA] Schema version changed: "
+                f"{UnifiedPAEntrypoint._cached_schema_version} -> {current_version}, "
+                f"reloading tool schemas and dispatcher"
+            )
+            schema_module = importlib.reload(schema_module)
+
+            # Also reset the ToolDispatcher singleton so new handlers are registered
+            from core.services.tool_dispatcher import reset_tool_dispatcher
+            reset_tool_dispatcher()
+
+        UnifiedPAEntrypoint._cached_schema_version = schema_module.SCHEMA_VERSION
+        return schema_module.PA_TOOL_SCHEMAS
+
+    # =========================================================================
     # Session 1036: LLM-Driven Function Calling (Agentic Loop)
     # =========================================================================
 
@@ -760,7 +799,7 @@ class UnifiedPAEntrypoint:
         Returns (content, tool_runs, fc_metadata, response_id)
         where fc_metadata captures the GPT function call info (name, arguments, call_id).
         """
-        from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
+        PA_TOOL_SCHEMAS = self._get_live_tool_schemas()
 
         # Build initial messages array
         messages = self._build_messages_array(message, context)
