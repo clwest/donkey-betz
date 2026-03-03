@@ -10988,15 +10988,16 @@ RESEARCH DATA:
             blogs_published = SelfBlog.objects.filter(
                 **delib_filter, status='approved'
             ).count()
-            pub_rate = blogs_published / blogs_created if blogs_created > 0 else 0.0
+            pub_rate = blogs_published / blogs_created if blogs_created > 0 else None
             slos.append({
                 'key': 'content_publish_conversion',
                 'name': 'Content publish conversion rate',
                 'target': 0.40,
-                'current': round(pub_rate, 4),
-                'breach': pub_rate < 0.40,
+                'current': round(pub_rate, 4) if pub_rate is not None else None,
+                'breach': pub_rate < 0.40 if pub_rate is not None else False,
                 'numerator': blogs_published,
                 'denominator': blogs_created,
+                'status': 'no_data' if blogs_created == 0 else ('ok' if pub_rate >= 0.40 else 'breach'),
             })
         except Exception as e:
             slos.append({'key': 'content_publish_conversion', 'error': str(e)})
