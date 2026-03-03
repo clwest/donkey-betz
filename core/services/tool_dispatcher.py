@@ -259,6 +259,12 @@ class ToolDispatcher:
         # Session 1079: Intelligence tool — gateway for stocks, sports, legislation, search, KB
         self.register("intelligence_tool", self._handle_intelligence)
 
+        # Codebase, analytics, Discord, and mobile introspection tools
+        self.register("repo_tool", self._handle_repo)
+        self.register("analytics_tool", self._handle_analytics)
+        self.register("discord_tool", self._handle_discord)
+        self.register("mobile_tool", self._handle_mobile)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):
@@ -11685,6 +11691,464 @@ RESEARCH DATA:
             }
         except Exception as e:
             return {'action': 'tool_migration_report', 'error': str(e)}
+
+
+    # ── Codebase introspection ─────────────────────────────────────────────
+
+    def _handle_repo(self, tool_name: str, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:
+        """Read-only codebase introspection: tree, read_file, search, git_info."""
+        import os
+        import subprocess
+
+        action = payload.get('action', 'tree')
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+        # Security: block reading secrets
+        BLOCKED_FILES = {'.env', '.env.local', '.env.production', 'credentials.json', 'secrets.yaml'}
+        BLOCKED_DIRS = {'.git/objects', '.git/refs', 'node_modules', '.venv', '__pycache__'}
+
+        def _safe_path(rel_path: str) -> str:
+            """Resolve path and ensure it's within project root."""
+            if not rel_path:
+                return project_root
+            full = os.path.normpath(os.path.join(project_root, rel_path))
+            if not full.startswith(project_root):
+                raise ValueError('Path outside project root')
+            basename = os.path.basename(full)
+            if basename in BLOCKED_FILES:
+                raise ValueError(f'Access denied: {basename}')
+            for bd in BLOCKED_DIRS:
+                if bd in full:
+                    raise ValueError(f'Access denied: {bd}')
+            return full
+
+        try:
+            if action == 'tree':
+                rel_path = payload.get('path', '')
+                depth = min(payload.get('depth', 2), 4)
+                full_path = _safe_path(rel_path)
+                if not os.path.isdir(full_path):
+                    return {'error': f'Not a directory: {rel_path}'}
+
+                entries = []
+                for root, dirs, files in os.walk(full_path):
+                    # Calculate depth relative to full_path
+                    rel = os.path.relpath(root, full_path)
+                    level = 0 if rel == '.' else rel.count(os.sep) + 1
+                    if level >= depth:
+                        dirs.clear()
+                        continue
+                    # Skip blocked dirs
+                    dirs[:] = sorted([d for d in dirs if d not in {'.git', 'node_modules', '.venv', '__pycache__', 'dist', '.next'}])
+                    display_root = os.path.relpath(root, project_root)
+                    for d in dirs:
+                        entries.append(f'{display_root}/{d}/')
+                    for f in sorted(files)[:50]:  # cap files per dir
+                        if f not in BLOCKED_FILES:
+                            entries.append(f'{display_root}/{f}')
+                    if len(entries) > 500:
+                        entries.append('... (truncated at 500 entries)')
+                        break
+
+                return {'action': 'tree', 'path': rel_path or '.', 'depth': depth, 'entries': entries, 'count': len(entries)}
+
+            elif action == 'read_file':
+                rel_path = payload.get('path', '')
+                if not rel_path:
+                    return {'error': 'path is required for read_file'}
+                max_lines = min(payload.get('max_lines', 200), 500)
+                full_path = _safe_path(rel_path)
+                if not os.path.isfile(full_path):
+                    return {'error': f'File not found: {rel_path}'}
+
+                size = os.path.getsize(full_path)
+                if size > 500_000:
+                    return {'error': f'File too large: {size} bytes. Use search instead.'}
+
+                with open(full_path, 'r', errors='replace') as f:
+                    lines = []
+                    for i, line in enumerate(f):
+                        if i >= max_lines:
+                            break
+                        lines.append(line.rstrip('\n'))
+
+                total_lines = sum(1 for _ in open(full_path, 'r', errors='replace'))
+                return {
+                    'action': 'read_file',
+                    'path': rel_path,
+                    'lines': len(lines),
+                    'total_lines': total_lines,
+                    'truncated': total_lines > max_lines,
+                    'content': '\n'.join(lines),
+                }
+
+            elif action == 'search':
+                query = payload.get('query', '')
+                if not query:
+                    return {'error': 'query is required for search'}
+                search_path = payload.get('path', '')
+                file_type = payload.get('file_type', '')
+                full_path = _safe_path(search_path)
+
+                cmd = ['grep', '-rn', '--include=*', '-l', query, full_path]
+                if file_type:
+                    cmd = ['grep', '-rn', f'--include=*.{file_type}', '-l', query, full_path]
+
+                try:
+                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=10, cwd=project_root)
+                    files = [os.path.relpath(f, project_root) for f in result.stdout.strip().split('\n') if f]
+                    files = [f for f in files if not any(bd in f for bd in BLOCKED_DIRS) and os.path.basename(f) not in BLOCKED_FILES]
+
+                    # Get matching lines from first few files
+                    matches = []
+                    for fpath in files[:10]:
+                        cmd2 = ['grep', '-n', query, os.path.join(project_root, fpath)]
+                        r2 = subprocess.run(cmd2, capture_output=True, text=True, timeout=5)
+                        for line in r2.stdout.strip().split('\n')[:5]:
+                            if line:
+                                matches.append(f'{fpath}:{line}')
+
+                    return {
+                        'action': 'search',
+                        'query': query,
+                        'files_matched': len(files),
+                        'files': files[:30],
+                        'sample_matches': matches[:30],
+                    }
+                except subprocess.TimeoutExpired:
+                    return {'error': 'Search timed out (10s limit)'}
+
+            elif action == 'git_info':
+                result = {}
+                try:
+                    r = subprocess.run(['git', 'branch', '--show-current'], capture_output=True, text=True, cwd=project_root, timeout=5)
+                    result['branch'] = r.stdout.strip()
+                except Exception:
+                    result['branch'] = 'unknown'
+
+                try:
+                    r = subprocess.run(['git', 'log', '--oneline', '-10'], capture_output=True, text=True, cwd=project_root, timeout=5)
+                    result['recent_commits'] = r.stdout.strip().split('\n')
+                except Exception:
+                    result['recent_commits'] = []
+
+                try:
+                    r = subprocess.run(['git', 'status', '--short'], capture_output=True, text=True, cwd=project_root, timeout=5)
+                    lines = r.stdout.strip().split('\n') if r.stdout.strip() else []
+                    result['modified_files'] = len(lines)
+                    result['status'] = lines[:20]
+                except Exception:
+                    result['modified_files'] = 0
+                    result['status'] = []
+
+                return {'action': 'git_info', **result}
+
+            return {'error': f'Unknown repo_tool action: {action}'}
+
+        except ValueError as e:
+            return {'error': str(e)}
+        except Exception as e:
+            return {'error': f'repo_tool error: {str(e)}'}
+
+    # ── Analytics / Event Queries ────────────────────────────────────────────
+
+    def _handle_analytics(self, tool_name: str, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:
+        """Query DeliverableEvents and ATR-24h metrics."""
+        from datetime import timedelta
+        from django.utils import timezone
+        from django.db.models import Count, Min, Q
+
+        action = payload.get('action', 'events_summary')
+
+        try:
+            from core.models_deliverables import Deliverable, DeliverableEvent
+
+            if action == 'events_summary':
+                days = payload.get('days', 7)
+                since = timezone.now() - timedelta(days=days)
+
+                events = DeliverableEvent.objects.filter(created_at__gte=since)
+                by_type = list(events.values('event_type').annotate(count=Count('id')).order_by('-count'))
+                by_source = list(events.values('source').annotate(count=Count('id')).order_by('-count'))
+                total = events.count()
+
+                return {
+                    'action': 'events_summary',
+                    'days': days,
+                    'total_events': total,
+                    'by_type': by_type,
+                    'by_source': by_source,
+                }
+
+            elif action == 'atr_dashboard':
+                # Reuse the stage3_dashboard view logic
+                from core.views_deliverables import stage3_dashboard
+                from django.test import RequestFactory
+                from django.contrib.auth.models import AnonymousUser
+
+                rf = RequestFactory()
+                request = rf.get('/api/deliverables/stage3-dashboard/')
+                request.user = AnonymousUser()
+                response = stage3_dashboard(request)
+
+                import json
+                data = json.loads(response.content)
+                return {'action': 'atr_dashboard', **data.get('dashboard', {})}
+
+            elif action == 'events_query':
+                days = payload.get('days', 7)
+                limit = min(payload.get('limit', 50), 200)
+                since = timezone.now() - timedelta(days=days)
+
+                qs = DeliverableEvent.objects.filter(created_at__gte=since)
+
+                event_type = payload.get('event_type')
+                if event_type:
+                    qs = qs.filter(event_type=event_type)
+
+                deliverable_id = payload.get('deliverable_id')
+                if deliverable_id:
+                    qs = qs.filter(deliverable_id=deliverable_id)
+
+                qs = qs.order_by('-created_at')[:limit]
+                events = [
+                    {
+                        'id': str(e.id),
+                        'event_type': e.event_type,
+                        'deliverable_id': str(e.deliverable_id),
+                        'deliverable_title': e.deliverable.title if e.deliverable else None,
+                        'source': e.source,
+                        'created_at': e.created_at.isoformat(),
+                        'metadata': e.metadata or {},
+                    }
+                    for e in qs.select_related('deliverable')
+                ]
+                return {'action': 'events_query', 'count': len(events), 'events': events}
+
+            return {'error': f'Unknown analytics_tool action: {action}'}
+
+        except Exception as e:
+            return {'error': f'analytics_tool error: {str(e)}'}
+
+    # ── Discord Bot Introspection ────────────────────────────────────────────
+
+    def _handle_discord(self, tool_name: str, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:
+        """Inspect Discord bot: commands, cogs, slot usage."""
+        import os
+        import re
+
+        action = payload.get('action', 'status')
+        bot_file = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+            'core', 'services', 'discord_bot.py'
+        )
+
+        try:
+            if not os.path.isfile(bot_file):
+                return {'error': 'discord_bot.py not found'}
+
+            with open(bot_file, 'r') as f:
+                content = f.read()
+
+            if action == 'status':
+                # Extract slot usage from comments
+                slot_match = re.search(r'(\d+)\s*slots?\s*used', content)
+                slots_used = int(slot_match.group(1)) if slot_match else None
+
+                # Count cogs
+                cog_classes = re.findall(r'class\s+(\w+)\(commands\.Cog\)', content)
+
+                # Count app_commands
+                slash_commands = re.findall(r'@app_commands\.command\(name=["\'](\w+)', content)
+                groups = re.findall(r'app_commands\.Group\(name=["\'](\w+)', content)
+                subcommands = re.findall(r'@(\w+)\.command\(name=["\'](\w+)', content)
+
+                # Guild ID
+                guild_match = re.search(r'GUILD_ID\s*=\s*(\d+)', content)
+                guild_id = guild_match.group(1) if guild_match else None
+
+                return {
+                    'action': 'status',
+                    'file': 'core/services/discord_bot.py',
+                    'file_lines': content.count('\n') + 1,
+                    'slots_used': slots_used,
+                    'slots_limit': 100,
+                    'slots_remaining': (100 - slots_used) if slots_used else None,
+                    'sync_mode': 'guild_only',
+                    'guild_id': guild_id,
+                    'cog_count': len(cog_classes),
+                    'top_level_commands': len(slash_commands),
+                    'command_groups': len(groups),
+                    'subcommands': len(subcommands),
+                }
+
+            elif action == 'commands':
+                # Extract all slash commands
+                slash_commands = re.findall(r'@app_commands\.command\(name=["\'](\w+)["\'](?:,\s*description=["\']([^"\']*)["\'])?\)', content)
+                groups = re.findall(r'(\w+)\s*=\s*app_commands\.Group\(name=["\'](\w+)["\'](?:,\s*description=["\']([^"\']*)["\'])?\)', content)
+
+                # Build group -> subcommands map
+                group_vars = {g[0]: g[1] for g in groups}
+                subcommands = re.findall(r'@(\w+)\.command\(name=["\'](\w+)["\']', content)
+                group_subs = {}
+                for var, sub_name in subcommands:
+                    group_name = group_vars.get(var, var)
+                    if group_name not in group_subs:
+                        group_subs[group_name] = []
+                    group_subs[group_name].append(sub_name)
+
+                top_level = [{'name': f'/{c[0]}', 'description': c[1] if len(c) > 1 else ''} for c in slash_commands]
+                grouped = [
+                    {'group': f'/{g[1]}', 'description': g[2] if len(g) > 2 else '', 'subcommands': group_subs.get(g[1], [])}
+                    for g in groups
+                ]
+
+                return {
+                    'action': 'commands',
+                    'top_level': top_level,
+                    'top_level_count': len(top_level),
+                    'groups': grouped,
+                    'groups_count': len(grouped),
+                    'total_subcommands': sum(len(g['subcommands']) for g in grouped),
+                }
+
+            elif action == 'cogs':
+                cog_classes = re.findall(r'class\s+(\w+)\(commands\.Cog\)', content)
+                return {'action': 'cogs', 'cogs': cog_classes, 'count': len(cog_classes)}
+
+            return {'error': f'Unknown discord_tool action: {action}'}
+
+        except Exception as e:
+            return {'error': f'discord_tool error: {str(e)}'}
+
+    # ── Mobile App Introspection ─────────────────────────────────────────────
+
+    def _handle_mobile(self, tool_name: str, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:
+        """Inspect the React Native / Expo mobile app."""
+        import os
+        import json as json_mod
+
+        action = payload.get('action', 'project_status')
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        mobile_root = os.path.join(project_root, 'mobile')
+
+        try:
+            if not os.path.isdir(mobile_root):
+                return {'error': 'No mobile/ directory found in project root'}
+
+            if action == 'project_status':
+                result = {'action': 'project_status', 'path': 'mobile/'}
+
+                # Read package.json
+                pkg_path = os.path.join(mobile_root, 'package.json')
+                if os.path.isfile(pkg_path):
+                    with open(pkg_path, 'r') as f:
+                        pkg = json_mod.load(f)
+                    result['name'] = pkg.get('name', 'unknown')
+                    result['version'] = pkg.get('version', 'unknown')
+                    deps = pkg.get('dependencies', {})
+                    result['expo_version'] = deps.get('expo', 'not found')
+                    result['react_native_version'] = deps.get('react-native', 'not found')
+                    result['navigation'] = 'react-navigation' if '@react-navigation/native' in deps else 'expo-router' if 'expo-router' in deps else 'unknown'
+                    result['total_dependencies'] = len(deps)
+
+                # Read app.config.ts or app.json
+                for cfg_name in ['app.config.ts', 'app.config.js', 'app.json']:
+                    cfg_path = os.path.join(mobile_root, cfg_name)
+                    if os.path.isfile(cfg_path):
+                        result['config_file'] = cfg_name
+                        break
+
+                # Check EAS config
+                eas_path = os.path.join(mobile_root, 'eas.json')
+                if os.path.isfile(eas_path):
+                    with open(eas_path, 'r') as f:
+                        eas = json_mod.load(f)
+                    result['eas_profiles'] = list(eas.get('build', {}).keys())
+
+                return result
+
+            elif action == 'screens':
+                screens_dir = os.path.join(mobile_root, 'src', 'screens')
+                if not os.path.isdir(screens_dir):
+                    return {'error': 'No src/screens/ directory found'}
+
+                screens = []
+                for f in sorted(os.listdir(screens_dir)):
+                    if f.endswith('.tsx') or f.endswith('.ts'):
+                        fpath = os.path.join(screens_dir, f)
+                        size = os.path.getsize(fpath)
+                        # Check if it's a placeholder
+                        with open(fpath, 'r') as fh:
+                            first_500 = fh.read(500)
+                        is_placeholder = 'Placeholder' in first_500 or 'Coming soon' in first_500.lower()
+                        screens.append({
+                            'file': f,
+                            'name': f.replace('.tsx', '').replace('.ts', ''),
+                            'size_bytes': size,
+                            'status': 'placeholder' if is_placeholder else 'implemented',
+                        })
+
+                # Also check screen registry
+                registry_path = os.path.join(mobile_root, 'src', 'navigation', 'screenRegistry.ts')
+                routes = []
+                if os.path.isfile(registry_path):
+                    with open(registry_path, 'r') as f:
+                        import re
+                        reg_content = f.read()
+                    route_matches = re.findall(r"'(/[^']*)'.*?:\s*(\w+)", reg_content)
+                    routes = [{'route': r[0], 'component': r[1]} for r in route_matches]
+
+                return {
+                    'action': 'screens',
+                    'screens': screens,
+                    'count': len(screens),
+                    'implemented': sum(1 for s in screens if s['status'] == 'implemented'),
+                    'placeholders': sum(1 for s in screens if s['status'] == 'placeholder'),
+                    'routes': routes,
+                }
+
+            elif action == 'api_modules':
+                api_dir = os.path.join(mobile_root, 'src', 'api')
+                if not os.path.isdir(api_dir):
+                    return {'error': 'No src/api/ directory found'}
+
+                modules = []
+                for f in sorted(os.listdir(api_dir)):
+                    if f.endswith('.ts') or f.endswith('.tsx'):
+                        fpath = os.path.join(api_dir, f)
+                        size = os.path.getsize(fpath)
+                        modules.append({'file': f, 'size_bytes': size})
+
+                return {'action': 'api_modules', 'modules': modules, 'count': len(modules)}
+
+            elif action == 'dependencies':
+                pkg_path = os.path.join(mobile_root, 'package.json')
+                if not os.path.isfile(pkg_path):
+                    return {'error': 'No package.json found'}
+                with open(pkg_path, 'r') as f:
+                    pkg = json_mod.load(f)
+                deps = pkg.get('dependencies', {})
+                dev_deps = pkg.get('devDependencies', {})
+                # Return key deps only
+                key_packages = [
+                    'expo', 'react-native', 'react', '@react-navigation/native',
+                    '@react-navigation/drawer', 'expo-router', 'zustand',
+                    'axios', '@sentry/react-native', 'expo-notifications',
+                    'expo-secure-store', '@react-native-async-storage/async-storage',
+                ]
+                key_deps = {k: deps.get(k, dev_deps.get(k, 'not installed')) for k in key_packages}
+                return {
+                    'action': 'dependencies',
+                    'total_deps': len(deps),
+                    'total_dev_deps': len(dev_deps),
+                    'key_packages': key_deps,
+                }
+
+            return {'error': f'Unknown mobile_tool action: {action}'}
+
+        except Exception as e:
+            return {'error': f'mobile_tool error: {str(e)}'}
 
 
 def _redact_secrets(text: str) -> str:
