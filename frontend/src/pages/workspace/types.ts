@@ -11,11 +11,12 @@ export type WorkspaceTab =
   | 'git'
   | 'triggers'
 
-// Platform tab IDs (7 tabs — moved from workspace)
+// Platform tab IDs (8 tabs — moved from workspace)
 export type PlatformTab =
   | 'command'
   | 'initiatives'
   | 'boardroom'
+  | 'evaluation'
   | 'content'
   | 'system'
   | 'dataintel'
@@ -24,7 +25,7 @@ export type PlatformTab =
 
 // Set of platform tab IDs for redirect detection
 export const PLATFORM_TABS = new Set<string>([
-  'command', 'initiatives', 'boardroom', 'content',
+  'command', 'initiatives', 'boardroom', 'evaluation', 'content',
   'system', 'dataintel', 'knowledge', 'learning',
 ])
 

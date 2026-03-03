@@ -11,13 +11,14 @@ API endpoints for the Deliverables Marketplace feature:
 - Jobs tracking
 """
 
+import json
 import logging
 from datetime import timedelta
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods, require_GET, require_POST
 from core.auth_middleware import token_auth_required
 from django.core.paginator import Paginator
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Min
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 
@@ -587,6 +588,228 @@ def _export_to_markdown(deliverable: Deliverable) -> str:
 
 {deliverable.content}
 """
+
+
+@require_GET
+def stage3_dashboard(request):
+    """
+    Stage 3 Evaluation Dashboard — ATR-24h metrics for the
+    Capitalize Opportunity initiative pilot.
+
+    Returns headline KPIs, funnel, role breakdown, and top producers.
+    """
+    try:
+        ACTION_TYPES = [
+            'action_taken', 'task_created', 'followup_created',
+            'deliverable_exported', 'shared', 'deliverable_saved',
+        ]
+        VIEW_TYPES = ['synthesis_viewed']
+
+        # ── Syntheses queryset ──────────────────────────────────────
+        syntheses = Deliverable.objects.filter(
+            category='Initiatives',
+            tags__contains=['initiative:capitalize-opportunity'],
+        ).filter(
+            Q(title__istartswith='Synthesis') | Q(deliverable_type__icontains='synthesis')
+        )
+
+        total_syntheses = syntheses.count()
+
+        if total_syntheses == 0:
+            return JsonResponse({'success': True, 'dashboard': {
+                'headline': {
+                    'total_syntheses': 0, 'atr_24h': 0,
+                    'median_hours_to_action': None, 'viewed_rate': 0,
+                },
+                'funnel': [],
+                'by_role': [],
+                'top_agents': [],
+                'gate': {'status': 'NO_DATA', 'details': {}},
+            }})
+
+        synth_ids = set(syntheses.values_list('id', flat=True))
+        synth_created = {
+            str(s['id']): s['created_at']
+            for s in syntheses.values('id', 'created_at')
+        }
+
+        # ── Events queryset ─────────────────────────────────────────
+        all_events = DeliverableEvent.objects.filter(deliverable_id__in=synth_ids)
+
+        # Actions: first action per deliverable
+        action_events = (
+            all_events.filter(event_type__in=ACTION_TYPES)
+            .values('deliverable_id')
+            .annotate(first_action=Min('created_at'))
+        )
+        first_actions = {
+            str(row['deliverable_id']): row['first_action']
+            for row in action_events
+        }
+
+        # Views: unique deliverables viewed
+        viewed_ids = set(
+            str(x) for x in
+            all_events.filter(event_type__in=VIEW_TYPES)
+            .values_list('deliverable_id', flat=True).distinct()
+        )
+
+        # Saved/exported/shared
+        save_export_share_ids = set(
+            str(x) for x in
+            all_events.filter(event_type__in=['deliverable_saved', 'deliverable_exported', 'shared'])
+            .values_list('deliverable_id', flat=True).distinct()
+        )
+
+        # ── Compute ATR-24h overall ────────────────────────────────
+        acted_24h = 0
+        hours_to_action_list = []
+        for sid_str, created_at in synth_created.items():
+            fa = first_actions.get(sid_str)
+            if fa and fa <= created_at + timedelta(hours=24):
+                acted_24h += 1
+                delta_hours = (fa - created_at).total_seconds() / 3600.0
+                hours_to_action_list.append(delta_hours)
+
+        atr_24h = round(acted_24h / total_syntheses, 4) if total_syntheses else 0
+
+        # Median hours
+        median_hours = None
+        if hours_to_action_list:
+            sorted_h = sorted(hours_to_action_list)
+            mid = len(sorted_h) // 2
+            if len(sorted_h) % 2 == 0:
+                median_hours = round((sorted_h[mid - 1] + sorted_h[mid]) / 2, 2)
+            else:
+                median_hours = round(sorted_h[mid], 2)
+
+        viewed_count = len(viewed_ids & {str(s) for s in synth_ids})
+        saved_exported_shared_count = len(save_export_share_ids & {str(s) for s in synth_ids})
+
+        # ── Headline KPIs ───────────────────────────────────────────
+        headline = {
+            'total_syntheses': total_syntheses,
+            'atr_24h': round(atr_24h * 100, 1),
+            'median_hours_to_action': median_hours,
+            'viewed_rate': round(viewed_count / total_syntheses * 100, 1) if total_syntheses else 0,
+        }
+
+        # ── Funnel ──────────────────────────────────────────────────
+        funnel = [
+            {'step': 'Syntheses generated', 'count': total_syntheses, 'pct': 100.0},
+            {'step': 'Viewed/opened', 'count': viewed_count,
+             'pct': round(viewed_count / total_syntheses * 100, 1) if total_syntheses else 0},
+            {'step': 'Saved/exported/shared', 'count': saved_exported_shared_count,
+             'pct': round(saved_exported_shared_count / total_syntheses * 100, 1) if total_syntheses else 0},
+            {'step': 'Action taken (<=24h)', 'count': acted_24h,
+             'pct': round(acted_24h / total_syntheses * 100, 1) if total_syntheses else 0},
+        ]
+
+        # ── Role breakdown ──────────────────────────────────────────
+        def _get_role(d):
+            tags = d.tags or []
+            for t in tags:
+                if t.startswith('role:'):
+                    return t.split(':', 1)[1]
+            title_lower = (d.title or '').lower()
+            if 'manager' in title_lower:
+                return 'manager'
+            if 'recruiter' in title_lower:
+                return 'recruiter'
+            if 'developer' in title_lower:
+                return 'developer'
+            return 'unknown'
+
+        role_data = {}
+        for d in syntheses.only('id', 'title', 'tags', 'created_at'):
+            role = _get_role(d)
+            if role not in role_data:
+                role_data[role] = {'total': 0, 'viewed': 0, 'saved': 0, 'acted': 0, 'hours': []}
+            role_data[role]['total'] += 1
+            sid_str = str(d.id)
+            if sid_str in viewed_ids:
+                role_data[role]['viewed'] += 1
+            if sid_str in save_export_share_ids:
+                role_data[role]['saved'] += 1
+            fa = first_actions.get(sid_str)
+            if fa and fa <= d.created_at + timedelta(hours=24):
+                role_data[role]['acted'] += 1
+                role_data[role]['hours'].append((fa - d.created_at).total_seconds() / 3600.0)
+
+        by_role = []
+        for role, rd in sorted(role_data.items()):
+            total_r = rd['total']
+            atr_r = round(rd['acted'] / total_r * 100, 1) if total_r else 0
+            med_h = None
+            if rd['hours']:
+                sh = sorted(rd['hours'])
+                m = len(sh) // 2
+                med_h = round((sh[m - 1] + sh[m]) / 2, 2) if len(sh) % 2 == 0 else round(sh[m], 2)
+            by_role.append({
+                'role': role,
+                'syntheses': total_r,
+                'viewed': rd['viewed'],
+                'saved_exported_shared': rd['saved'],
+                'acted_24h': rd['acted'],
+                'atr_24h': atr_r,
+                'median_hours': med_h,
+            })
+
+        # ── Top agents ──────────────────────────────────────────────
+        agent_map = {}
+        for d in syntheses.only('id', 'agent_name', 'created_at'):
+            aname = d.agent_name or 'Unknown'
+            if aname not in agent_map:
+                agent_map[aname] = {'total': 0, 'acted': 0}
+            agent_map[aname]['total'] += 1
+            fa = first_actions.get(str(d.id))
+            if fa and fa <= d.created_at + timedelta(hours=24):
+                agent_map[aname]['acted'] += 1
+
+        top_agents = sorted(
+            [
+                {'agent': name, 'syntheses': v['total'], 'acted_24h': v['acted'],
+                 'atr_24h': round(v['acted'] / v['total'] * 100, 1) if v['total'] else 0}
+                for name, v in agent_map.items()
+            ],
+            key=lambda x: (-x['atr_24h'], -x['syntheses']),
+        )[:10]
+
+        # ── Stage gate assessment ───────────────────────────────────
+        overall_pct = headline['atr_24h']
+        role_pass = all(r['atr_24h'] >= 15 for r in by_role if r['role'] != 'unknown')
+        role_fail_count = sum(1 for r in by_role if r['role'] != 'unknown' and r['atr_24h'] < 15)
+
+        if overall_pct >= 25 and role_pass:
+            gate_status = 'APPROVED'
+        elif overall_pct >= 25 and role_fail_count <= 1:
+            gate_status = 'CONDITIONAL'
+        elif overall_pct < 20 or role_fail_count >= 2:
+            gate_status = 'FAILED'
+        else:
+            gate_status = 'IN_PROGRESS'
+
+        gate = {
+            'status': gate_status,
+            'details': {
+                'atr_overall': overall_pct,
+                'atr_target': 25,
+                'roles_below_15': [r['role'] for r in by_role if r['role'] != 'unknown' and r['atr_24h'] < 15],
+                'total_syntheses': total_syntheses,
+            }
+        }
+
+        return JsonResponse({'success': True, 'dashboard': {
+            'headline': headline,
+            'funnel': funnel,
+            'by_role': by_role,
+            'top_agents': top_agents,
+            'gate': gate,
+        }})
+
+    except Exception as e:
+        logger.error("Stage 3 dashboard error: %s", e, exc_info=True)
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 @require_POST
