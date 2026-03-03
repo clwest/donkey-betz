@@ -7357,7 +7357,6 @@ class ToolDispatcher:
                 # Hard-blocked: won't execute at all on Railway
                 _BLOCKED = frozenset({
                     'CodeGeneratorAgent',  # No codebase access in Railway sandbox
-                    'AudioAgent',          # TTS quota exhausted
                 })
                 # Non-specialist: tasks get rerouted to specialist agents
                 _NON_SPECIALIST = frozenset({
