@@ -11547,6 +11547,16 @@ RESEARCH DATA:
             legacy_total = sum(e['count'] for e in legacy_calls)
             gateway_total = sum(e['count'] for e in gateway_calls)
 
+            # Phase 3: Split legacy calls into PA-originated vs agent-internal
+            pa_legacy = dict(
+                all_calls.filter(tool_name__in=legacy_names, agent_name='PersonalAssistant')
+                .values('tool_name')
+                .annotate(count=Count('id'))
+                .values_list('tool_name', 'count')
+            )
+            pa_legacy_total = sum(pa_legacy.values())
+            agent_legacy_total = legacy_total - pa_legacy_total
+
             # Deprecation readiness: legacy tools with 0 calls are safe to remove
             safe_to_deprecate = [
                 tool_name for tool_name in legacy_names
@@ -11568,11 +11578,17 @@ RESEARCH DATA:
                 'summary': {
                     'total_tool_calls': total,
                     'legacy_calls': legacy_total,
+                    'pa_legacy_calls': pa_legacy_total,
+                    'agent_legacy_calls': agent_legacy_total,
                     'gateway_calls': gateway_total,
                     'other_calls': total - legacy_total - gateway_total,
-                    'migration_pct': round(gateway_total / max(gateway_total + legacy_total, 1) * 100, 1),
+                    'migration_pct': round(gateway_total / max(gateway_total + pa_legacy_total, 1) * 100, 1),
                 },
                 'legacy_tools_still_used': legacy_calls[:15],
+                'pa_legacy_breakdown': [
+                    {'tool': t, 'count': c, 'suggested_gateway': self.LEGACY_TO_GATEWAY[t][0]}
+                    for t, c in sorted(pa_legacy.items(), key=lambda x: -x[1])
+                ] if pa_legacy else [],
                 'gateway_tools': gateway_calls,
                 'safe_to_deprecate': sorted(safe_to_deprecate),
                 'failure_comparison': {
@@ -11584,10 +11600,11 @@ RESEARCH DATA:
                 'recommendation': (
                     f'{len(safe_to_deprecate)} legacy tools had zero calls in {window} — '
                     f'safe to remove from PA schema. '
-                    f'{len(legacy_calls)} legacy tools still active.'
+                    f'{len(legacy_calls)} legacy tools still active '
+                    f'({pa_legacy_total} PA-originated, {agent_legacy_total} agent-internal).'
                     if safe_to_deprecate else
                     f'All {len(legacy_calls)} legacy tools still active in {window}. '
-                    f'Gateway adoption at {round(gateway_total / max(gateway_total + legacy_total, 1) * 100, 1)}%.'
+                    f'Gateway adoption at {round(gateway_total / max(gateway_total + pa_legacy_total, 1) * 100, 1)}%.'
                 ),
             }
         except Exception as e:
