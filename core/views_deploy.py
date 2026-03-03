@@ -17,6 +17,8 @@ PROJECT_BASE = Path("/Users/donkeyking/development/unified-donkey-betz/ai_genera
 @require_http_methods(["GET"])
 def view_generated_files(request, project_name):
     """View all generated files for a project"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
     try:
         # Try the project name as-is first, then with cleaning transformations
         possible_names = [
@@ -73,6 +75,8 @@ def view_generated_files(request, project_name):
 @require_http_methods(["GET"])
 def download_project(request, project_name):
     """Download project as ZIP file"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
     try:
         import zipfile
         import tempfile

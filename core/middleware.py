@@ -22,11 +22,16 @@ class DisableCSRFForAuthEndpoints(MiddlewareMixin):
     3. Specific auth endpoints
     """
 
+    # Webhook paths that legitimately need CSRF exemption without auth headers
+    WEBHOOK_PATHS = {
+        '/api/stripe/webhook/',
+        '/api/discord/verify-link-code/',
+    }
+
     def process_view(self, request, view_func, view_args, view_kwargs):
-        # Session 115: Exempt ALL /api/ paths from CSRF (mobile apps use token auth)
-        if request.path.startswith('/api/'):
-            setattr(request, '_dont_enforce_csrf_checks', True)
-            return None
+        # Session 1088: Targeted CSRF exemption — only exempt when token/API-key
+        # auth is present, NOT blanket /api/ exemption (was a CSRF vulnerability).
+        # Browser session-auth requests now get CSRF protection on write operations.
 
         # Check if request has API key authentication (mobile apps)
         if request.META.get('HTTP_X_API_KEY'):
@@ -36,6 +41,11 @@ class DisableCSRFForAuthEndpoints(MiddlewareMixin):
         # Check if request has token authentication
         auth_header = request.META.get('HTTP_AUTHORIZATION', '')
         if auth_header.startswith('Token ') or auth_header.startswith('Bearer '):
+            setattr(request, '_dont_enforce_csrf_checks', True)
+            return None
+
+        # Exempt known webhook paths (external services that can't send CSRF tokens)
+        if request.path in self.WEBHOOK_PATHS:
             setattr(request, '_dont_enforce_csrf_checks', True)
             return None
 

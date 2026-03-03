@@ -22,10 +22,12 @@ PROJECTS_BASE_DIR = Path("/Users/donkeyking/development/unified-donkey-betz/ai_g
 @require_http_methods(["POST"])
 def auto_fix_code(request):
     """Auto-fix failed code using AI agents"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
     try:
         data = json.loads(request.body or b"{}")
         project = data.get('project', '')
-        file_name = data.get('file', '')
+        file_name = os.path.basename(data.get('file', ''))  # sanitize path traversal
         error_message = data.get('error', '')
 
         if not all([project, file_name, error_message]):
