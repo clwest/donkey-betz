@@ -66,10 +66,14 @@ class ContentDeliberationRunner:
             draft_text, generated_content = self._generate_draft(topic, claims_pack, voice)
         except Exception as e:
             logger.error(f"[Phase 4] Draft generation failed: {e}")
+            result['failure_reason_code'] = 'DRAFT_FAILED'
+            result['failure_detail'] = str(e)[:500]
             return result  # Can't proceed without a draft
 
         if not draft_text:
             logger.error("[Phase 4] Draft generation returned empty text")
+            result['failure_reason_code'] = 'DRAFT_FAILED'
+            result['failure_detail'] = 'Draft generation returned empty text'
             return result
 
         # ── Step 3: Review conversation via ConversationOrchestrator ──

@@ -10965,7 +10965,7 @@ RESEARCH DATA:
                 turn_count=Count('turns')
             ).filter(turn_count=0).count()
             zt_rate = zero_turn / total_sessions if total_sessions > 0 else 0.0
-            slos.append({
+            slo = {
                 'key': 'deliberation_zero_turn_rate',
                 'name': 'Deliberation zero-turn failure rate',
                 'target_max': 0.001,
@@ -10973,7 +10973,18 @@ RESEARCH DATA:
                 'breach': zt_rate > 0.001,
                 'numerator': zero_turn,
                 'denominator': total_sessions,
-            })
+            }
+            # Include failure reason breakdown if any failed sessions exist
+            if include_breakdowns:
+                reason_breakdown = list(
+                    DeliberationSession.objects.filter(
+                        created_at__gte=cutoff, status='failed'
+                    ).exclude(failure_reason_code='').values('failure_reason_code')
+                    .annotate(count=Count('id')).order_by('-count')
+                )
+                if reason_breakdown:
+                    slo['failure_reasons'] = reason_breakdown
+            slos.append(slo)
         except Exception as e:
             slos.append({'key': 'deliberation_zero_turn_rate', 'error': str(e)})
 

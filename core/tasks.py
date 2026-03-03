@@ -21765,9 +21765,54 @@ def generate_self_blog_deliberation_task(self, tone='enthusiastic', word_count=1
             'summary': result['summary'],
         }
 
+    except SoftTimeLimitExceeded:
+        logger.error(f"[Phase 4] Deliberation TIMEOUT: topic={blog_topic!r}")
+        # Tag any in-flight deliberation session with TIMEOUT reason code
+        try:
+            from core.models_deliberation import DeliberationSession
+            recent = DeliberationSession.objects.filter(
+                status='active', created_at__gte=timezone.now() - timedelta(minutes=10)
+            ).order_by('-created_at').first()
+            if recent:
+                recent.status = 'failed'
+                recent.failure_reason_code = 'TIMEOUT'
+                recent.failure_detail = f'SoftTimeLimitExceeded (480s) during topic: {blog_topic!r}'
+                recent.completed_at = timezone.now()
+                recent.save(update_fields=[
+                    'status', 'failure_reason_code', 'failure_detail',
+                    'completed_at', 'updated_at',
+                ])
+                logger.info(f"[Phase 4] Tagged session {recent.id} with TIMEOUT reason code")
+        except Exception as tag_err:
+            logger.warning(f"[Phase 4] Failed to tag timeout session: {tag_err}")
+        return {'success': False, 'error': 'SoftTimeLimitExceeded', 'timed_out': True}
+
     except Exception as e:
         logger.error(f"[Phase 4] Deliberation task failed: {e}", exc_info=True)
-        return {'success': False, 'error': str(e)}
+        # Classify the failure reason
+        reason_code = 'UNKNOWN'
+        err_str = str(e).lower()
+        if 'timeout' in err_str or 'timed out' in err_str:
+            reason_code = 'TIMEOUT'
+        elif 'rate limit' in err_str or 'api' in err_str or '429' in err_str or '503' in err_str:
+            reason_code = 'LLM_UPSTREAM'
+        try:
+            from core.models_deliberation import DeliberationSession
+            recent = DeliberationSession.objects.filter(
+                status='active', created_at__gte=timezone.now() - timedelta(minutes=10)
+            ).order_by('-created_at').first()
+            if recent:
+                recent.status = 'failed'
+                recent.failure_reason_code = reason_code
+                recent.failure_detail = str(e)[:500]
+                recent.completed_at = timezone.now()
+                recent.save(update_fields=[
+                    'status', 'failure_reason_code', 'failure_detail',
+                    'completed_at', 'updated_at',
+                ])
+        except Exception:
+            pass
+        return {'success': False, 'error': str(e), 'failure_reason_code': reason_code}
 
     finally:
         cache.delete(lock_key)
