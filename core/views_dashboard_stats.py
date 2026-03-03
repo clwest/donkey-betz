@@ -65,19 +65,19 @@ def dashboard_stats(request):
 
     # Get spider network data points
     spider_data_points = SpiderData.objects.filter(
-        created_at__gte=datetime.now() - timedelta(hours=24)
+        created_at__gte=timezone.now() - timedelta(hours=24)
     ).count()
 
     # Get recent collaborations
     recent_collaborations = Collaboration.objects.filter(
         user=user,
-        created_at__gte=datetime.now() - timedelta(days=7)
+        created_at__gte=timezone.now() - timedelta(days=7)
     ).count()
 
     # Get agent execution stats
     agent_executions_24h = AgentExecution.objects.filter(
         user=user,
-        created_at__gte=datetime.now() - timedelta(hours=24)
+        created_at__gte=timezone.now() - timedelta(hours=24)
     ).count()
 
     # Get opportunities by category
@@ -92,7 +92,7 @@ def dashboard_stats(request):
     # Get revenue trend (last 7 days)
     revenue_trend = []
     for i in range(7):
-        date = datetime.now().date() - timedelta(days=i)
+        date = timezone.now().date() - timedelta(days=i)
         day_revenue = Revenue.objects.filter(
             user=user,
             created_at__date=date,
@@ -126,7 +126,7 @@ def dashboard_stats(request):
     # Calculate AI token usage and costs
     token_usage_24h = AgentExecution.objects.filter(
         user=user,
-        created_at__gte=datetime.now() - timedelta(hours=24)
+        created_at__gte=timezone.now() - timedelta(hours=24)
     ).aggregate(
         total_tokens=Sum('tokens_used'),
         total_cost=Sum('cost')
@@ -176,7 +176,7 @@ def dashboard_stats(request):
 
         # System health
         'system_status': 'operational',
-        'last_sync': datetime.now().isoformat(),
+        'last_sync': timezone.now().isoformat(),
 
         # User context
         'user': {

@@ -7,6 +7,7 @@ import logging
 import uuid
 from typing import Dict, Any, Optional, List
 from datetime import datetime
+from django.utils import timezone
 
 from core.models.agents_registry import UnifiedAgentTemplate, AgentRegistry
 from content.ai_providers import AIProviderManager
@@ -343,7 +344,7 @@ class AgentRouter:
         """
         Execute an agent directly without Celery (for faster response times)
         """
-        execution_start = datetime.now()
+        execution_start = timezone.now()
         execution_id = f"direct_{agent.name}_{uuid.uuid4().hex[:8]}"
         
         try:
@@ -368,7 +369,7 @@ class AgentRouter:
             if not available_providers:
                 execution.status = AgentStatus.FAILED
                 execution.error_message = 'No AI providers available'
-                execution.completed_at = datetime.now()
+                execution.completed_at = timezone.now()
                 execution.save()
                 return {
                     'success': False,
@@ -411,7 +412,7 @@ Please complete this task using your specialized capabilities.
             )
             
             # Calculate execution time
-            execution_time = (datetime.now() - execution_start).total_seconds()
+            execution_time = (timezone.now() - execution_start).total_seconds()
             
             if result.success:
                 # Update execution with success
@@ -419,7 +420,7 @@ Please complete this task using your specialized capabilities.
                 execution.result = {'content': result.content[:1000]}  # Store first 1000 chars
                 execution.token_usage = result.token_usage
                 execution.execution_time_seconds = execution_time
-                execution.completed_at = datetime.now()
+                execution.completed_at = timezone.now()
                 execution.save()
                 
                 # Update agent metrics for learning
@@ -440,7 +441,7 @@ Please complete this task using your specialized capabilities.
                 execution.status = AgentStatus.FAILED
                 execution.error_message = result.error_message
                 execution.execution_time_seconds = execution_time
-                execution.completed_at = datetime.now()
+                execution.completed_at = timezone.now()
                 execution.save()
                 
                 # Update agent metrics for learning
@@ -461,7 +462,7 @@ Please complete this task using your specialized capabilities.
                 if 'execution' in locals():
                     execution.status = AgentStatus.FAILED
                     execution.error_message = str(e)
-                    execution.completed_at = datetime.now()
+                    execution.completed_at = timezone.now()
                     execution.save()
             except Exception:
                 pass

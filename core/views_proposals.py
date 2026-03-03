@@ -9,6 +9,7 @@ import logging
 import os
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from ai_core.intelligence.proposal_manager import ProposalManager
 
@@ -305,7 +306,7 @@ def save_consciousness_proposals(request):
                 category=proposal_data.get('category', 'optimization'),
                 risk_level=ProposalRisk.MEDIUM,  # Default to medium
                 status=ProposalStatus.PENDING,
-                created_at=datetime.now(),
+                created_at=timezone.now(),
                 impact_score=proposal_data.get('impact', 5.0),
                 roi_estimate=proposal_data.get('roi', 3.0),
                 affected_components=proposal_data.get('affected_components', []),

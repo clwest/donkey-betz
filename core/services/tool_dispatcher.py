@@ -343,8 +343,8 @@ class ToolDispatcher:
                 from core.services.data_scrubber import scrub_dict
                 try:
                     result = scrub_dict(result, max_depth=5)
-                except Exception:
-                    pass  # scrub failure must never break tool dispatch
+                except Exception as e:
+                    logger.warning(f"[{trace_id}] PII scrub failed for {tool_name}: {e}")
 
             logger.info(f"[{trace_id}] Tool {tool_name} completed in {latency_ms}ms")
 

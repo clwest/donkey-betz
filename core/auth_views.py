@@ -83,7 +83,8 @@ def logout_view(request):
     try:
         request.user.auth_token.delete()
         return Response({'detail': 'Successfully logged out'})
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Token deletion failed during logout: {e}")
         return Response({'detail': 'Logout successful'})
 
 

@@ -15,7 +15,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config.api_settings import get_openai_client, OPENAI_CONFIG
-from core.module_stubs import SpiderAgent
+# SpiderAgent stub removed — use PA spider_query tool instead
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -79,11 +79,10 @@ def collect_data(request):
         if not topic:
             return JsonResponse({'error': 'Topic is required'}, status=400)
 
-        # Deploy spider to collect real data
-        spider = SpiderAgent("learning_spider", "user_research")
-        spider_data = spider.gather_news_data(topic, 3)
+        # SpiderAgent removed — use PA spider_query tool for live data
+        spider_data = None
 
-        # If no real data, create relevant learning data
+        # Create relevant learning data
         if not spider_data:
             spider_data = [
                 {

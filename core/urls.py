@@ -1091,15 +1091,6 @@ from core.views_unified_bridge import (
 )
 from core.views_unified_metrics import unified_platform_metrics
 from core.views_unified import WebSocketDiagnosticsView
-from core.views_unified_placeholders import (
-    unified_assistant_chat,
-    unified_assistant_context,
-    execute_agent_with_memory,
-    get_agent_recommendations,
-    rate_agent_execution,
-)
-if settings.DEBUG:
-    from core.views_unified_placeholders import unified_assistant_chat_dev
 from core.views_learning_dashboard import (
     learning_dashboard_data, learning_updates_stream
 )

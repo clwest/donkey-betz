@@ -9,6 +9,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from datetime import datetime, timedelta
 import decimal
 import random
@@ -594,7 +595,7 @@ def live_betting_opportunities(request):
         return Response(cached)
 
     # Get recent sports_odds spider data (last 2 hours)
-    cutoff = datetime.now() - timedelta(hours=2)
+    cutoff = timezone.now() - timedelta(hours=2)
     rows = SpiderData.objects.filter(
         data_type='sports_odds',
         created_at__gte=cutoff,

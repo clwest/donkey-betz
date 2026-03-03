@@ -17,13 +17,6 @@ logger = logging.getLogger(__name__)
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# Using stub modules after cleanup - need to refactor
-from core.module_stubs import (
-    AgentErrorHandler,
-    AgentProjectAdvisor,
-    RealAgentOrchestra
-)
-import asyncio
 
 # Project configuration
 PROJECTS_BASE_DIR = Path("/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects")
@@ -276,12 +269,12 @@ def execute_latest_code(request):
                 timeout=5
             )
 
-        # If there's an error, try to fix it automatically
+        # If there's an error, report it (auto-fix via PA tools)
         if result.returncode != 0 and result.stderr:
-            error_handler = AgentErrorHandler()
-            fix_success, fix_message = error_handler.attempt_fix(str(latest_file), result.stderr)
+            fix_success = False
+            fix_message = result.stderr[:500]
 
-            if fix_success:
+            if False:  # Auto-fix removed — use PA auto_fix_code tool instead
                 # Check if the fixed code is server code
                 with open(latest_file, 'r') as f:
                     fixed_content = f.read()
@@ -527,9 +520,11 @@ def get_agent_suggestions(request):
         else:
             code = ""
 
-        # Initialize advisor and get suggestions
-        advisor = AgentProjectAdvisor()
-        analysis = advisor.analyze_project(project, code, requested_agents)
+        # Project advisor removed — use PA agent routing instead
+        analysis = {
+            'suggestions': [],
+            'message': 'Use PA agent routing for project advice',
+        }
 
         # Store suggestions in session for later application
         request.session['latest_suggestions'] = analysis
@@ -749,141 +744,52 @@ def orchestrate_real_build(request):
                     'message': 'Orchestration failed - check server logs'
                 }, json_dumps_params={'ensure_ascii': True})
 
-        # Initialize the Real Agent Orchestra
-        orchestra = RealAgentOrchestra()
-
-        # Run the async build process
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-        try:
-            # Build the project with real agents and advisors
-            # Add timeout to prevent hanging
-            import asyncio
-            raw_result = loop.run_until_complete(
-                asyncio.wait_for(
-                    orchestra.build_project(project_type, project_name),
-                    timeout=30.0  # 30 second timeout
-                )
-            )
-
-            # Ensure result is clean
-            if raw_result:
-                result = raw_result
-            else:
-                result = {}
-
-            # Update build status
-            status_file = PROJECTS_BASE_DIR / "build_status.json"
-
-            if status_file.exists():
-                with open(status_file, 'r') as f:
-                    status = json.load(f)
-            else:
-                status = {"projects": {}}
-
-            status['projects'][project_type] = {
-                'name': project_name,
-                'agents_used': result.get('agents_used', []),
-                'advisors': result.get('advisors', []),
-                'components_built': result.get('components_built', []),
-                'status': result.get('status', 'Building'),
-                'timestamp': datetime.now().isoformat()
-            }
-
-            with open(status_file, 'w') as f:
-                json.dump(status, f, indent=2)
-
-            # Clean result to avoid encoding issues
-            def ensure_ascii_safe(obj):
-                """Ensure all strings are ASCII safe"""
-                if isinstance(obj, dict):
-                    return {k: ensure_ascii_safe(v) for k, v in obj.items()}
-                elif isinstance(obj, list):
-                    return [ensure_ascii_safe(item) for item in obj]
-                elif isinstance(obj, str):
-                    # Remove any non-ASCII characters including broken surrogates
-                    try:
-                        obj.encode('utf-8')
-                        # Remove emojis and non-ASCII characters
-                        import re
-                        return re.sub(r'[^\x00-\x7F]+', '', obj)
-                    except UnicodeEncodeError:
-                        # If encoding fails, remove problematic characters
-                        return obj.encode('utf-8', 'ignore').decode('utf-8')
-                else:
-                    return obj
-
-            clean_result = ensure_ascii_safe({
-                'project': result.get('project', project_type),
-                'type': result.get('type', project_type),
-                'status': result.get('status', 'Building'),
-                'agents_used': result.get('agents_used', []),
-                'advisors': result.get('advisors', []),
-                'components_built': result.get('components_built', []),
-                'next_steps': result.get('next_steps', 'Continue building')
-            })
-
-            return JsonResponse({
-                'success': True,
-                'project': project_type,
-                'result': clean_result,
-                'message': ensure_ascii_safe(f'Real agents and advisors are building {project_name}!')
-            }, json_dumps_params={'ensure_ascii': True, 'allow_nan': False})
-
-        finally:
-            loop.close()
-
-    except Exception as e:
-        import traceback
-        # Try to extract clean error message
-        error_msg = str(e)
-        try:
-            # Remove any problematic characters from error message
-            error_msg = error_msg.encode('ascii', 'ignore').decode('ascii')
-        except Exception:
-            error_msg = 'An error occurred during orchestration'
-
+        # RealAgentOrchestra removed — use PA run_agent tool for orchestrated builds
         return JsonResponse({
             'success': False,
-            'error': error_msg,
-            'details': 'Check server logs for full details'
-        }, json_dumps_params={'ensure_ascii': True})
+            'error': 'Real agent orchestra deprecated — use PA run_agent tool',
+            'project': project_type,
+        })
+
+    except Exception as e:
+        logger.error(f"Orchestration error: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+        })
 
 @csrf_exempt
 @require_http_methods(["GET"])
 def get_real_agents(request):
     """Get list of all real agents available in the system"""
     try:
-        orchestra = RealAgentOrchestra()
+        from core.models_unified_system import Agent
 
-        agents = []
-        for agent_name, agent_class in orchestra.executor.agent_classes.items():
-            agents.append({
-                'id': agent_name,
-                'name': agent_name.replace('_', ' ').title(),
-                'available': True,
-                'description': agent_class.__doc__ if hasattr(agent_class, '__doc__') else 'AI Agent'
-            })
+        agent_qs = Agent.objects.filter(
+            is_active=True
+        ).exclude(agent_type='advisor').values_list('name', flat=True).order_by('name')
 
-        advisors = []
-        for advisor_id, advisor in orchestra.advisor_registry.advisors.items():
-            advisors.append({
-                'id': advisor_id,
-                'name': advisor.name if hasattr(advisor, 'name') else advisor_id,
-                'domain': str(advisor.domain) if hasattr(advisor, 'domain') else 'General',
-                'available': True
-            })
+        agents = [
+            {'id': name, 'name': name.replace('_', ' ').replace('-', ' ').title(), 'available': True}
+            for name in agent_qs
+        ]
+
+        advisors_qs = Agent.objects.filter(
+            agent_type='advisor', is_active=True
+        ).values_list('name', flat=True)[:25]
+
+        advisors = [{'id': name, 'name': name, 'available': True} for name in advisors_qs]
 
         return JsonResponse({
             'success': True,
-            'agents': agents[:20],  # First 20 agents
+            'agents': agents[:20],
             'total_agents': len(agents),
-            'advisors': advisors[:10],  # First 10 advisors
-            'total_advisors': len(advisors)
+            'advisors': advisors,
+            'total_advisors': len(advisors),
         })
 
     except Exception as e:
+        logger.error(f"Error listing agents: {e}")
         return JsonResponse({
             'success': False,
             'error': str(e)

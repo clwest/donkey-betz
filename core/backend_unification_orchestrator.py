@@ -9,6 +9,7 @@ import json
 from typing import Dict, Any
 from datetime import datetime
 from django.db import connection
+from django.utils import timezone
 from django.core.cache import cache
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
@@ -165,7 +166,7 @@ class BackendUnificationOrchestrator:
             return ServiceStatus(
                 name=service_name,
                 status='unknown',
-                last_check=datetime.now(),
+                last_check=timezone.now(),
                 response_time_ms=0,
                 endpoints_available=0
             )
@@ -182,7 +183,7 @@ class BackendUnificationOrchestrator:
             status = ServiceStatus(
                 name=service['name'],
                 status='healthy',
-                last_check=datetime.now(),
+                last_check=timezone.now(),
                 response_time_ms=5.2,  # Mock response time
                 endpoints_available=available_endpoints,
                 metadata={'count': service.get('count', 0)}
@@ -196,7 +197,7 @@ class BackendUnificationOrchestrator:
             return ServiceStatus(
                 name=service['name'],
                 status='down',
-                last_check=datetime.now(),
+                last_check=timezone.now(),
                 response_time_ms=0,
                 endpoints_available=0,
                 error_count=1

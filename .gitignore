@@ -7,6 +7,10 @@
 .env.staging
 .env.*.local
 
+# Backup files
+*.bak
+*.bak.*
+
 # Python
 __pycache__/
 *.py[cod]
