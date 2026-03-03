@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-03-02 19:48
+**Generated:** 2026-03-02 20:07
 **Current Session:** 1075
 **Total Documentation:** 1808 files | 620,668 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/capabilities/06_Decision_Systems/README.md` | 60 | 🎯 DECISION COMMAND SYSTEMS - AI-Powered Decision I |
+| `docs/archive/SYSTEM_CAPABILITIES-original/07_Neural_Visualization/README.md` | 60 | 🎭 NEURAL ORCHESTRA VISUALIZATION - Living AI Symph |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -215,7 +215,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 359 | 2026-03-02 19:18 |
+| INDEX.md | docs | 359 | 2026-03-02 19:58 |
 | tool-consolidation.md | topics | 251 | 2026-03-02 19:17 |
 | personal-assistant.md | topics | 139 | 2026-03-02 19:17 |
 | command_audit.md | discord | 349 | 2026-03-01 21:56 |

@@ -11487,3 +11487,10 @@ def get_tool_dispatcher() -> ToolDispatcher:
     if _tool_dispatcher is None:
         _tool_dispatcher = ToolDispatcher()
     return _tool_dispatcher
+
+
+def reset_tool_dispatcher():
+    """Reset the singleton so the next call to get_tool_dispatcher() creates a fresh instance.
+    Session 1080: Used by PA schema live-reload to pick up new tool handlers."""
+    global _tool_dispatcher
+    _tool_dispatcher = None

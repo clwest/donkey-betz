@@ -12,7 +12,12 @@ Design rules:
 - Agent-delegation tools use `run_agent` with `agent_name` enum
 - Description is the routing signal -- must contain natural language patterns
 - Only `action` is required where applicable; everything else optional
+
+Session 1080: Added SCHEMA_VERSION for live-reload detection. When tools are
+added/removed, the version changes and running processes can detect the change
+and reload schemas without a process restart.
 """
+import hashlib
 
 # ── Tool Schemas for OpenAI Responses API function calling ──────────────────
 
@@ -2393,3 +2398,15 @@ TOOL_TO_INTENT_MAP = {
     'governance_tool': 'boardroom',
     'intelligence_tool': 'stock_intelligence',
 }
+
+
+# ── Schema version — changes when tools are added/removed ────────────────────
+# Used by _run_agentic_loop to detect stale cached schemas and force reload.
+
+def _compute_schema_version() -> str:
+    """Hash of all tool names — changes when any tool is added or removed."""
+    names = sorted(s.get('name', '') for s in PA_TOOL_SCHEMAS if isinstance(s, dict))
+    return hashlib.md5('|'.join(names).encode()).hexdigest()[:12]
+
+
+SCHEMA_VERSION = _compute_schema_version()
