@@ -18,7 +18,7 @@ interface Props {
 }
 
 export default function DecisionDetail({ decisionId, canMutate, onBack }: Props) {
-  const [decision, setDecision] = useState<(Decision & { dissenting_views?: string; context?: string }) | null>(null);
+  const [decision, setDecision] = useState<(Decision & { suggested_feature?: string; rationale?: string }) | null>(null);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
 
@@ -145,11 +145,11 @@ export default function DecisionDetail({ decisionId, canMutate, onBack }: Props)
         </View>
       )}
 
-      {/* Dissenting Views */}
-      {decision.dissenting_views ? (
+      {/* Suggested Feature */}
+      {decision.suggested_feature ? (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Dissenting Views</Text>
-          <Text style={styles.body}>{decision.dissenting_views}</Text>
+          <Text style={styles.sectionTitle}>Suggested Feature</Text>
+          <Text style={styles.body}>{decision.suggested_feature}</Text>
         </View>
       ) : null}
 
@@ -164,14 +164,6 @@ export default function DecisionDetail({ decisionId, canMutate, onBack }: Props)
           </View>
         </View>
       )}
-
-      {/* Context */}
-      {decision.context ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Context</Text>
-          <Text style={styles.body}>{decision.context}</Text>
-        </View>
-      ) : null}
 
       {/* Actions */}
       {showActions && (

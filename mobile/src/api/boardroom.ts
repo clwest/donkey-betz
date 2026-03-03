@@ -63,8 +63,8 @@ export interface DecisionListResponse {
 export interface DecisionDetailResponse {
   success: boolean;
   decision: Decision & {
-    dissenting_views: string;
-    context: string;
+    suggested_feature: string;
+    rationale: string;
   };
 }
 
@@ -118,7 +118,7 @@ export async function listDecisions(params?: {
 }
 
 export async function getDecision(id: string): Promise<DecisionDetailResponse> {
-  const { data } = await http.get<DecisionDetailResponse>(`/boardroom/decisions/${id}/`);
+  const { data } = await http.get<DecisionDetailResponse>(`/decisions/${id}/`);
   return data;
 }
 
