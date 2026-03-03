@@ -1,0 +1,53 @@
+# Synthesis Template Schema v1
+# Used by agents to produce standardized, scorable intelligence summaries
+# for the "Capitalizing on Manager/Position/Developer Opportunity" initiative.
+#
+# All confidence/novelty scores are 0.0-1.0 floats.
+# All fields are required unless marked (optional).
+
+synthesis:
+  meta:
+    date: "YYYY-MM-DD"                    # Date synthesis was generated
+    agent: "string"                        # Agent name that produced this synthesis
+    desk: "string"                         # Desk category: stocks | sports | blockchain | narrative | talent | ops
+    source_types:                          # List of source types used
+      - "string"                           # e.g., spider_data, agent_execution, manual_research, platform_metric
+
+  summary: "string"                        # 2-3 sentence executive summary of findings
+
+  signals:                                 # List of observed signals
+    - signal: "string"                     # What was observed
+      evidence: "string"                   # Supporting data/source
+      confidence: 0.0                      # 0.0-1.0 — how confident are we this signal is real
+
+  insights:                                # List of derived insights
+    - insight: "string"                    # What the signal means
+      rationale: "string"                  # Why we believe this
+      novelty: 0.0                         # 0.0-1.0 — how new/non-obvious is this insight
+
+  recommended_actions:                     # Prioritized list of actions
+    - action: "string"                     # What to do
+      owner: "string"                      # Who should do it (role or person)
+      expected_impact: "string"            # What happens if we do this
+      effort: "string"                     # low | medium | high
+
+  risks:                                   # Things that could go wrong
+    - risk: "string"                       # What could happen
+      mitigation: "string"                 # How to prevent/reduce it
+
+  citations_needed:                        # Items requiring verification
+    - "string"                             # What needs to be cited or fact-checked
+
+  quality_checks:
+    passed:                                # Checks that passed
+      - "string"
+    failed:                                # Checks that failed
+      - "string"
+    notes: "string"                        # Additional quality context
+
+  decision_request:                        # (optional) If this needs governance approval
+    requested: false                       # true if a decision is needed
+    question: "string"                     # What decision is being requested
+    deadline: "YYYY-MM-DD"                 # By when
+    options:                               # Available choices
+      - "string"
