@@ -72,6 +72,7 @@ from core.views_deliberation import (
     deliberation_replay,
     blog_deliberation_detail,
     deliberation_verification_report,
+    deliberation_failure_stats,
 )
 
 # Session 866: ATS Optimization API
@@ -1614,6 +1615,7 @@ urlpatterns = [
     path('api/deliberation/sessions/<uuid:session_id>/verification-report/', deliberation_verification_report, name='deliberation-verification-report'),
     path('api/docs/versions/', doc_versions_list, name='doc-versions-list'),
     path('api/docs/versions/<int:version_id>/', doc_version_detail, name='doc-version-detail'),
+    path('api/deliberation/failure-stats/', deliberation_failure_stats, name='deliberation-failure-stats'),
     # Phase 4: Blog deliberation detail
     path('api/blog/<uuid:blog_id>/deliberation/', blog_deliberation_detail, name='blog-deliberation-detail'),
 

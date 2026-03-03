@@ -27,6 +27,7 @@ import {
   List,
   Server, // Session 924: For Celery workers display
   MessageSquare, // Session 969: HiveMind sessions icon
+  AlertTriangle, // Failure breakdown panel
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { orchestrationApi, adminApi, agentsApi, advisorsApi, hiveMindApi } from '@/lib/api'
@@ -402,6 +403,9 @@ function MonitorSubTab() {
 
       {/* Session 970: Surgical Moves Verification Panel */}
       <SurgicalMovesPanel onSelectSession={setSelectedDeliberationId} />
+
+      {/* Deliberation Failure Breakdown */}
+      <FailureBreakdownPanel />
 
       {/* Recent Executions - Session 857: Clickable header to expand */}
       <div className="card">
@@ -2066,6 +2070,101 @@ function SurgicalMovesPanel({ onSelectSession }: { onSelectSession: (id: string)
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+// ============ Deliberation Failure Breakdown Panel ============
+
+const REASON_LABELS: Record<string, { label: string; color: string }> = {
+  TIMEOUT: { label: 'Timeout', color: 'text-orange-400' },
+  LLM_UPSTREAM: { label: 'LLM Upstream', color: 'text-red-400' },
+  EMPTY_TURN: { label: 'Empty Turn', color: 'text-yellow-400' },
+  TOOL_ERROR: { label: 'Tool Error', color: 'text-red-300' },
+  GATE_REJECT: { label: 'Gate Rejected', color: 'text-purple-400' },
+  DRAFT_FAILED: { label: 'Draft Failed', color: 'text-pink-400' },
+  UNKNOWN: { label: 'Unknown', color: 'text-gray-400' },
+}
+
+function FailureBreakdownPanel() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['deliberation-failure-stats'],
+    queryFn: async () => {
+      const res = await fetch('/api/deliberation/failure-stats/?hours=24')
+      if (!res.ok) return null
+      return res.json() as Promise<{
+        hours: number
+        total_sessions: number
+        total_failed: number
+        failure_rate: number
+        by_reason: Record<string, number>
+        recent_failures: Array<{
+          id: string
+          objective: string
+          failure_reason_code: string
+          failure_detail: string
+          created_at: string | null
+        }>
+      }>
+    },
+    staleTime: 60000,
+  })
+
+  if (isLoading || !data || data.total_failed === 0) return null
+
+  const sorted = Object.entries(data.by_reason).sort((a, b) => b[1] - a[1])
+
+  return (
+    <div className="card">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <AlertTriangle size={14} className="text-orange-400" />
+          <h4 className="text-sm font-medium text-gray-400">Deliberation Failures (24h)</h4>
+          <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 font-medium">
+            {data.total_failed}
+          </span>
+        </div>
+        <span className="text-xs text-gray-500">
+          {data.total_sessions} total / {(data.failure_rate * 100).toFixed(1)}% fail rate
+        </span>
+      </div>
+
+      {/* Reason breakdown bars */}
+      <div className="space-y-1.5 mb-3">
+        {sorted.map(([code, count]) => {
+          const meta = REASON_LABELS[code] || REASON_LABELS.UNKNOWN
+          const pct = data.total_failed > 0 ? (count / data.total_failed) * 100 : 0
+          return (
+            <div key={code} className="flex items-center gap-2">
+              <span className={cn('text-xs w-24 shrink-0 font-medium', meta.color)}>
+                {meta.label}
+              </span>
+              <div className="flex-1 h-2 bg-dark-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-red-500/60 to-orange-500/60 rounded-full"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <span className="text-xs text-gray-400 w-6 text-right">{count}</span>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Recent failures list */}
+      {data.recent_failures.length > 0 && (
+        <div className="border-t border-dark-700 pt-2 space-y-1">
+          <p className="text-xs text-gray-500 mb-1">Recent failures:</p>
+          {data.recent_failures.slice(0, 3).map((f) => (
+            <div key={f.id} className="text-xs flex items-start gap-1.5 text-gray-400">
+              <span className={cn('shrink-0 mt-0.5', (REASON_LABELS[f.failure_reason_code] || REASON_LABELS.UNKNOWN).color)}>
+                {(REASON_LABELS[f.failure_reason_code] || REASON_LABELS.UNKNOWN).label}
+              </span>
+              <span className="truncate">{f.failure_detail || f.objective}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
