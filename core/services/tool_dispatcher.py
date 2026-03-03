@@ -243,6 +243,9 @@ class ToolDispatcher:
         # Session 1080: Agent control tool — block/unblock/list agents (DB-backed)
         self.register("agent_control_tool", self._handle_agent_control)
 
+        # Session 1080: Ops Autopilot tool — status/history/run/config
+        self.register("autopilot_tool", self._handle_autopilot)
+
         # Session 1078: Work tool — gateway for initiatives + action items
         self.register("work_tool", self._handle_work)
 
@@ -11232,6 +11235,113 @@ RESEARCH DATA:
             raise ValueError(
                 f"Unknown action: {action}. "
                 f"Valid: list, block, unblock, audit_log"
+            )
+
+    # ── Session 1080: Ops Autopilot Tool ──────────────────────────────────
+
+    def _handle_autopilot(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Session 1080: Autopilot visibility — status, history, run, config.
+        Lets Rigby inspect and trigger the Ops Autopilot.
+        """
+        from core.models_diagnostic_pipeline import AutopilotAction
+        from core.services.ops_autopilot import OpsAutopilot, AutopilotConfig
+        from django.utils import timezone
+        from datetime import timedelta
+
+        action = payload.get('action', 'status')
+
+        if action == 'status':
+            # Current config + last cycle info
+            last_action = AutopilotAction.objects.first()  # ordered by -created_at
+            last_cycle = None
+            if last_action:
+                last_cycle = {
+                    'action_type': last_action.action_type,
+                    'agent_name': last_action.agent_name,
+                    'policy': last_action.policy,
+                    'dry_run': last_action.dry_run,
+                    'created_at': last_action.created_at.isoformat(),
+                    'deploy_sha': last_action.deploy_sha,
+                }
+
+            total_actions = AutopilotAction.objects.count()
+            blocks_24h = AutopilotAction.objects.filter(
+                action_type='block_agent',
+                dry_run=False,
+                created_at__gte=timezone.now() - timedelta(hours=24),
+            ).count()
+
+            return {
+                'action': 'status',
+                'config': {
+                    'timeout_spike_threshold': AutopilotConfig.TIMEOUT_SPIKE_THRESHOLD,
+                    'timeout_spike_window_minutes': AutopilotConfig.TIMEOUT_SPIKE_WINDOW_MINUTES,
+                    'timeout_block_ttl_minutes': AutopilotConfig.TIMEOUT_BLOCK_TTL_MINUTES,
+                    'max_blocks_per_agent_per_hour': AutopilotConfig.MAX_BLOCKS_PER_AGENT_PER_HOUR,
+                    'max_total_blocks_per_cycle': AutopilotConfig.MAX_TOTAL_BLOCKS_PER_CYCLE,
+                    'stale_block_hours': AutopilotConfig.STALE_BLOCK_HOURS,
+                    'dry_run': AutopilotConfig.DRY_RUN,
+                },
+                'last_action': last_cycle,
+                'total_actions_ever': total_actions,
+                'blocks_last_24h': blocks_24h,
+                'beat_schedule': 'every 10 minutes',
+            }
+
+        elif action == 'history':
+            limit = min(int(payload.get('limit', 20)), 100)
+            actions = list(
+                AutopilotAction.objects.all()[:limit].values(
+                    'id', 'created_at', 'action_type', 'agent_name',
+                    'policy', 'dry_run', 'deploy_sha',
+                )
+            )
+            for a in actions:
+                a['created_at'] = a['created_at'].isoformat()
+
+            return {
+                'action': 'history',
+                'count': len(actions),
+                'actions': actions,
+            }
+
+        elif action == 'run':
+            dry_run = payload.get('dry_run', False)
+            autopilot = OpsAutopilot(dry_run=dry_run)
+            summary = autopilot.run()
+            return {
+                'action': 'run',
+                'dry_run': dry_run,
+                'summary': summary,
+            }
+
+        elif action == 'config':
+            return {
+                'action': 'config',
+                'timeout_spike_threshold': AutopilotConfig.TIMEOUT_SPIKE_THRESHOLD,
+                'timeout_spike_window_minutes': AutopilotConfig.TIMEOUT_SPIKE_WINDOW_MINUTES,
+                'timeout_block_ttl_minutes': AutopilotConfig.TIMEOUT_BLOCK_TTL_MINUTES,
+                'max_blocks_per_agent_per_hour': AutopilotConfig.MAX_BLOCKS_PER_AGENT_PER_HOUR,
+                'max_total_blocks_per_cycle': AutopilotConfig.MAX_TOTAL_BLOCKS_PER_CYCLE,
+                'stale_block_hours': AutopilotConfig.STALE_BLOCK_HOURS,
+                'dry_run': AutopilotConfig.DRY_RUN,
+                'note': (
+                    'Config is currently code-level. '
+                    'Changing thresholds requires a deploy.'
+                ),
+            }
+
+        else:
+            raise ValueError(
+                f"Unknown action: {action}. "
+                f"Valid: status, history, run, config"
             )
 
     def _ops_tool_migration_report(self, window: str, trace_id: str) -> Dict[str, Any]:
