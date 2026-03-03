@@ -23,12 +23,28 @@ from django.shortcuts import get_object_or_404
 
 from core.models_deliverables import (
     Deliverable,
+    DeliverableEvent,
     DeliverableExport,
     DeliverableCollection,
     DeliverableType,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _emit_event(deliverable, event_type, user, source='frontend', metadata=None):
+    """Emit a DeliverableEvent. Fire-and-forget — never raises."""
+    try:
+        resolved_user = user if (user and user.is_authenticated) else None
+        DeliverableEvent.objects.create(
+            deliverable=deliverable,
+            event_type=event_type,
+            user=resolved_user,
+            source=source,
+            metadata=metadata or {},
+        )
+    except Exception as exc:
+        logger.debug("DeliverableEvent emit failed: %s", exc)
 
 
 @require_GET
@@ -144,6 +160,9 @@ def get_deliverable(request, deliverable_id):
                     'error': 'Access denied'
                 }, status=403)
 
+        # Auto-emit view event
+        _emit_event(deliverable, 'synthesis_viewed', request.user, 'frontend')
+
         return JsonResponse({
             'success': True,
             'deliverable': _serialize_deliverable(deliverable, include_content=True)
@@ -177,6 +196,7 @@ def save_deliverable(request, deliverable_id):
 
         deliverable.is_saved = True
         deliverable.save(update_fields=['is_saved', 'user', 'updated_at'])
+        _emit_event(deliverable, 'deliverable_saved', request.user, 'frontend')
 
         return JsonResponse({
             'success': True,
@@ -360,6 +380,8 @@ def export_deliverable(request, deliverable_id):
             export_format=export_format,
             file_size_bytes=len(content.encode('utf-8')),
         )
+        _emit_event(deliverable, 'deliverable_exported', request.user, 'frontend',
+                     {'format': export_format})
 
         # Return file download
         response = HttpResponse(content, content_type=content_type)
@@ -565,3 +587,46 @@ def _export_to_markdown(deliverable: Deliverable) -> str:
 
 {deliverable.content}
 """
+
+
+@require_POST
+def record_deliverable_event(request, deliverable_id):
+    """
+    Record a user interaction event on a deliverable.
+
+    POST body (JSON):
+        event_type: one of synthesis_viewed, deliverable_saved,
+                    deliverable_exported, shared, task_created,
+                    followup_created, action_taken
+        metadata: optional dict of extra context
+    """
+    import json
+
+    valid_types = {c[0] for c in DeliverableEvent.EVENT_TYPES}
+
+    try:
+        deliverable = get_object_or_404(Deliverable, id=deliverable_id)
+
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+
+        event_type = body.get('event_type', '')
+        if event_type not in valid_types:
+            return JsonResponse({
+                'success': False,
+                'error': f'Invalid event_type. Must be one of: {sorted(valid_types)}'
+            }, status=400)
+
+        meta = body.get('metadata', {})
+        if not isinstance(meta, dict):
+            meta = {}
+
+        _emit_event(deliverable, event_type, request.user, 'api', meta)
+
+        return JsonResponse({'success': True, 'event_type': event_type})
+
+    except Exception as e:
+        logger.error(f"Error recording event for {deliverable_id}: {e}", exc_info=True)
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

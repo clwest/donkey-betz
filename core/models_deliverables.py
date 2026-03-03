@@ -15,6 +15,7 @@ __all__ = [
     'Deliverable',
     'DeliverableExport',
     'DeliverableCollection',
+    'DeliverableEvent',
 ]
 
 import uuid
@@ -457,3 +458,55 @@ class DeliverableCollection(models.Model):
     @property
     def item_count(self) -> int:
         return self.deliverables.count()
+
+
+class DeliverableEvent(models.Model):
+    """
+    Lightweight event tracking for deliverable interactions.
+
+    Used by the Stage 3 Evaluation Dashboard to compute ATR-24h
+    (Action-Taken Rate within 24 hours) and other engagement metrics.
+    """
+
+    EVENT_TYPES = [
+        ('synthesis_viewed', 'Synthesis Viewed'),
+        ('deliverable_saved', 'Deliverable Saved'),
+        ('deliverable_exported', 'Deliverable Exported'),
+        ('shared', 'Shared'),
+        ('task_created', 'Task Created'),
+        ('followup_created', 'Follow-up Created'),
+        ('action_taken', 'Action Taken'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    deliverable = models.ForeignKey(
+        Deliverable,
+        on_delete=models.CASCADE,
+        related_name='events',
+    )
+    event_type = models.CharField(max_length=30, choices=EVENT_TYPES, db_index=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    source = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Where the event originated: pa_tool, frontend, api",
+    )
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        app_label = 'core'
+        db_table = 'core_deliverable_events'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['deliverable', '-created_at']),
+            models.Index(fields=['event_type', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.event_type} on {self.deliverable_id} at {self.created_at}"
