@@ -1060,15 +1060,18 @@ from core.views_personal_assistant import (
     list_pa_conversations, get_pa_conversation, create_pa_conversation,  # Session 974: Conversation history
     trigger_boardroom_maintenance,  # Session 977: On-demand boardroom cleanup
 )
-from core.views_personal_assistant_dev import chat_with_assistant_dev, get_assistant_context_dev
 from core.views_assistant_bypass import assistant_chat_bypass, get_task_progress
-from core.views_assistant_minimal import chat_minimal_dev, context_minimal_dev
-from core.simple_ping import ping_dev
+if settings.DEBUG:
+    from core.views_personal_assistant_dev import chat_with_assistant_dev, get_assistant_context_dev
+    from core.views_assistant_minimal import chat_minimal_dev, context_minimal_dev
+    from core.simple_ping import ping_dev
 # Import Unified Assistant
 from core.views_unified_assistant import (
     unified_assistant_chat, unified_assistant_context, execute_agent_with_memory,
-    get_agent_recommendations, rate_agent_execution, unified_assistant_chat_dev
+    get_agent_recommendations, rate_agent_execution,
 )
+if settings.DEBUG:
+    from core.views_unified_assistant import unified_assistant_chat_dev
 # Import Enhanced Profile views
 from core.views_enhanced_profile import (
     get_enhanced_profile, update_enhanced_profile,
@@ -1094,8 +1097,9 @@ from core.views_unified_placeholders import (
     execute_agent_with_memory,
     get_agent_recommendations,
     rate_agent_execution,
-    unified_assistant_chat_dev
 )
+if settings.DEBUG:
+    from core.views_unified_placeholders import unified_assistant_chat_dev
 from core.views_learning_dashboard import (
     learning_dashboard_data, learning_updates_stream
 )
@@ -2266,10 +2270,10 @@ urlpatterns = [
     path('api/v1/ai-opportunities/projects/', get_generated_projects, name='ai-generated-projects'),
 
     # Autonomous Revenue System - 30-day self-running platform
-    path('api/autonomous-system/start', AutonomousSystemStartView.as_view(), name='autonomous-start'),
-    path('api/autonomous-system/status', AutonomousSystemStatusView.as_view(), name='autonomous-status'),
-    path('api/autonomous-system/pause', AutonomousSystemPauseView.as_view(), name='autonomous-pause'),
-    path('api/autonomous-system/resume', AutonomousSystemResumeView.as_view(), name='autonomous-resume'),
+    path('api/autonomous-system/start/', AutonomousSystemStartView.as_view(), name='autonomous-start'),
+    path('api/autonomous-system/status/', AutonomousSystemStatusView.as_view(), name='autonomous-status'),
+    path('api/autonomous-system/pause/', AutonomousSystemPauseView.as_view(), name='autonomous-pause'),
+    path('api/autonomous-system/resume/', AutonomousSystemResumeView.as_view(), name='autonomous-resume'),
 
     # Opportunity Aggregator endpoints
     path('api/opportunities/', get_opportunities, name='get-opportunities'),
@@ -2391,13 +2395,8 @@ urlpatterns = [
     path('api/assistant/learning/', get_learning_summary, name='personal-assistant-learning'),
     path('api/assistant/task-progress/', get_task_progress, name='assistant-task-progress'),  # Session 486: Task Progress
 
-    # Development assistant endpoints (no auth required)
-    path('api/assistant/dev/chat/', chat_with_assistant_dev, name='personal-assistant-chat-dev'),
-    path('api/assistant/dev/context/', get_assistant_context_dev, name='personal-assistant-context-dev'),
-    path('api/assistant/minimal/chat/', chat_minimal_dev, name='personal-assistant-chat-minimal'),
-    path('api/assistant/minimal/context/', context_minimal_dev, name='personal-assistant-context-minimal'),
+    # Development assistant endpoints — gated behind DEBUG (see bottom of file)
     path('api/assistant/bypass/', assistant_chat_bypass, name='assistant-chat-bypass'),
-    path('api/ping/', ping_dev, name='ping-dev'),
     path('api/assistant/feedback/', provide_feedback, name='personal-assistant-feedback'),
     path('api/assistant/reset/', reset_assistant, name='personal-assistant-reset'),
     path('api/assistant/attention-items/', get_attention_items, name='assistant-attention-items'),  # Session 574
@@ -2421,7 +2420,6 @@ urlpatterns = [
     path('api/unified/execute-agent/', execute_agent_with_memory, name='unified-execute-agent'),
     path('api/unified/recommendations/', get_agent_recommendations, name='unified-agent-recommendations'),
     path('api/unified/rate/', rate_agent_execution, name='unified-rate-execution'),
-    path('api/unified/dev/chat/', unified_assistant_chat_dev, name='unified-assistant-chat-dev'),
     path('api/unified/metrics/', unified_platform_metrics, name='unified-metrics'),
     
     # Research endpoints
@@ -4580,6 +4578,19 @@ urlpatterns += [
     path('api/v1/executor/runs/<uuid:run_id>/approve/', approve_run, name='executor-approve-run'),
     path('api/v1/executor/runs/<uuid:run_id>/approve-step/', approve_step, name='executor-approve-step'),
 ]
+
+# =========================================================================
+# Development-only endpoints — never exposed in production
+# =========================================================================
+if settings.DEBUG:
+    urlpatterns += [
+        path('api/assistant/dev/chat/', chat_with_assistant_dev, name='personal-assistant-chat-dev'),
+        path('api/assistant/dev/context/', get_assistant_context_dev, name='personal-assistant-context-dev'),
+        path('api/assistant/minimal/chat/', chat_minimal_dev, name='personal-assistant-chat-minimal'),
+        path('api/assistant/minimal/context/', context_minimal_dev, name='personal-assistant-context-minimal'),
+        path('api/ping/', ping_dev, name='ping-dev'),
+        path('api/unified/dev/chat/', unified_assistant_chat_dev, name='unified-assistant-chat-dev'),
+    ]
 
 # =========================================================================
 # Session 688: React Frontend Catch-All (MUST BE LAST!)

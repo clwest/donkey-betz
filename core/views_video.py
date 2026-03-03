@@ -1892,7 +1892,7 @@ def upscale_video(request):
             # Numeric ID - resolve to UUID
             try:
                 numeric_id = int(video_id)
-                videos = VideoHistory.objects.filter(user=request.user).order_by('id')
+                videos = VideoHistory.objects.filter(user=request.user).order_by('-created_at')
                 if numeric_id < 1 or numeric_id > videos.count():
                     return JsonResponse({
                         'success': False,
@@ -2108,7 +2108,7 @@ def apply_video_effect(request):
             # Numeric ID - resolve to UUID
             try:
                 numeric_id = int(video_id)
-                videos = VideoHistory.objects.filter(user=request.user).order_by('id')
+                videos = VideoHistory.objects.filter(user=request.user).order_by('-created_at')
                 if numeric_id < 1 or numeric_id > videos.count():
                     return JsonResponse({
                         'success': False,
@@ -2344,7 +2344,7 @@ def extract_video_frame(request):
             # Numeric ID - resolve to UUID
             try:
                 numeric_id = int(video_id)
-                videos = VideoHistory.objects.filter(user=request.user).order_by('id')
+                videos = VideoHistory.objects.filter(user=request.user).order_by('-created_at')
                 if numeric_id < 1 or numeric_id > videos.count():
                     return JsonResponse({
                         'success': False,
@@ -2578,7 +2578,7 @@ def reverse_video(request):
             # Numeric ID - resolve to UUID
             try:
                 numeric_id = int(video_id)
-                videos = VideoHistory.objects.filter(user=request.user).order_by('id')
+                videos = VideoHistory.objects.filter(user=request.user).order_by('-created_at')
                 if numeric_id < 1 or numeric_id > videos.count():
                     return JsonResponse({
                         'success': False,
@@ -2851,7 +2851,7 @@ def trim_video(request):
         except (ValueError, AttributeError):
             try:
                 numeric_id = int(video_id)
-                videos = VideoHistory.objects.filter(user=request.user).order_by('id')
+                videos = VideoHistory.objects.filter(user=request.user).order_by('-created_at')
                 if numeric_id < 1 or numeric_id > videos.count():
                     return JsonResponse({
                         'success': False,

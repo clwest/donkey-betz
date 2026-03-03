@@ -339,7 +339,7 @@ AI_PROVIDERS = {
 
 # Make Runway key directly accessible for video provider
 RUNWAY_API_KEY = os.environ.get('RUNWAY_API_KEY', '')
-RUNWAY_MOCK_MODE = os.environ.get('RUNWAY_MOCK_MODE', 'True') == 'True'  # Enable mock mode by default
+RUNWAY_MOCK_MODE = os.environ.get('RUNWAY_MOCK_MODE', 'False') == 'True'  # Production default: real mode
 
 # DaVinci Resolve Bridge Configuration
 # The bridge server runs alongside DaVinci Resolve and provides REST API access
