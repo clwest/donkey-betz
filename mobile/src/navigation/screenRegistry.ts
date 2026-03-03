@@ -10,6 +10,7 @@ import InitiativesHomeScreen from '../screens/initiatives/InitiativesHomeScreen'
 import AgentsScreen from '../screens/AgentsScreen';
 import MediaScreen from '../screens/MediaScreen';
 import DiagnosticsScreen from '../screens/DiagnosticsScreen';
+import DeliberationHomeScreen from '../screens/deliberation/DeliberationHomeScreen';
 
 // ── Registry ─────────────────────────────────────────────────────────────────
 // Maps manifest route paths → RN screen components.
@@ -49,7 +50,8 @@ const SCREEN_REGISTRY: Record<string, ScreenEntry> = {
     icon: 'briefcase',
   },
   '/content': {
-    component: PlaceholderScreen,
+    component: DeliberationHomeScreen,
+    label: 'Deliberation',
     icon: 'file-text',
   },
   '/betting': {
