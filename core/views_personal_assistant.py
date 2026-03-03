@@ -101,10 +101,14 @@ def chat_with_assistant(request):
                 })
 
             except Exception as e:
-                logger.warning(f"UnifiedPA failed, falling back to legacy: {e}")
+                logger.warning(
+                    f"OLD_PA_FALLBACK_INVOKED: UnifiedPA failed for user={request.user.id}, "
+                    f"falling back to legacy PA. Error: {e}"
+                )
                 # Fall through to legacy implementation
 
         # Legacy implementation (fallback or explicit)
+        logger.info(f"OLD_PA_SERVING: user={request.user.id} use_legacy={use_legacy}")
         assistant = PersonalAIAssistant(request.user)
         response_data = assistant.process_message(message, context)
 

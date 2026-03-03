@@ -218,6 +218,43 @@ class TestLegacyDeprecationMetadata(GatewaySmokeTestBase):
                           f"{legacy_name} maps to unknown gateway {gw}")
 
 
+class TestLegacyHandlerKillSwitch(TestCase):
+    """Verify TOOLS_ENABLE_LEGACY_HANDLERS flag controls handler registration."""
+
+    def test_legacy_handlers_skipped_when_flag_false(self):
+        import core.services.tool_dispatcher as mod
+        original = mod.ToolDispatcher.TOOLS_ENABLE_LEGACY_HANDLERS
+        try:
+            mod.ToolDispatcher.TOOLS_ENABLE_LEGACY_HANDLERS = False
+            dispatcher = mod.ToolDispatcher()
+            for legacy_name in mod.ToolDispatcher._LEGACY_HANDLER_NAMES:
+                self.assertNotIn(legacy_name, dispatcher._tool_handlers,
+                                 f"{legacy_name} should NOT be registered when flag=false")
+            # Gateways must still be registered
+            for gw in mod.ToolDispatcher.GATEWAY_TOOLS:
+                self.assertIn(gw, dispatcher._tool_handlers,
+                              f"Gateway {gw} must always be registered")
+        finally:
+            mod.ToolDispatcher.TOOLS_ENABLE_LEGACY_HANDLERS = original
+
+    def test_legacy_handlers_registered_when_flag_true(self):
+        import core.services.tool_dispatcher as mod
+        original = mod.ToolDispatcher.TOOLS_ENABLE_LEGACY_HANDLERS
+        try:
+            mod.ToolDispatcher.TOOLS_ENABLE_LEGACY_HANDLERS = True
+            dispatcher = mod.ToolDispatcher()
+            for legacy_name in mod.ToolDispatcher._LEGACY_HANDLER_NAMES:
+                self.assertIn(legacy_name, dispatcher._tool_handlers,
+                              f"{legacy_name} should be registered when flag=true")
+        finally:
+            mod.ToolDispatcher.TOOLS_ENABLE_LEGACY_HANDLERS = original
+
+    def test_web_search_always_registered(self):
+        """web_search is excluded from legacy handler removal."""
+        import core.services.tool_dispatcher as mod
+        self.assertNotIn('web_search', mod.ToolDispatcher._LEGACY_HANDLER_NAMES)
+
+
 class TestFeatureFlagFiltering(TestCase):
     """Verify TOOLS_EXPOSE_LEGACY flag filters schemas correctly."""
 

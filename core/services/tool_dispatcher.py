@@ -113,6 +113,17 @@ class ToolDispatcher:
         'governance_tool', 'intelligence_tool', 'studio_tool',
     ])
 
+    # Phase 4: When false, legacy tool handlers are not registered.
+    # Legacy tool names called directly will get ToolNotFound.
+    # Default true for backward compat; flip to false after Phase 3 telemetry confirms 0 PA legacy calls.
+    import os as _os
+    TOOLS_ENABLE_LEGACY_HANDLERS = _os.environ.get(
+        'TOOLS_ENABLE_LEGACY_HANDLERS', 'true'
+    ).lower() in ('true', '1', 'yes')
+
+    # The 13 legacy tool names whose handlers can be disabled
+    _LEGACY_HANDLER_NAMES = frozenset(LEGACY_TO_GATEWAY.keys()) - {'web_search'}
+
     def __init__(self):
         self._tool_handlers: Dict[str, Callable] = {}
         self._execution_count = 0
@@ -285,6 +296,8 @@ class ToolDispatcher:
 
     def register(self, tool_name: str, handler: Callable):
         """Register a handler for a tool."""
+        if not self.TOOLS_ENABLE_LEGACY_HANDLERS and tool_name in self._LEGACY_HANDLER_NAMES:
+            return  # Phase 4: skip legacy handler registration
         self._tool_handlers[tool_name] = handler
 
     def _generate_trace_id(self) -> str:
@@ -379,10 +392,19 @@ class ToolDispatcher:
                     'action': gateway_hint[1],
                 }
                 result['_sunset_date'] = '2026-04-01'
-                logger.info(
-                    f"[{trace_id}] LEGACY_TOOL_USED: {tool_name} → "
-                    f"suggest {gateway_hint[0]}.{gateway_hint[1]}"
-                )
+                # Detect PA-originated legacy calls (Phase 3 guardrail)
+                is_pa_call = trace_id and trace_id.startswith('pa-')
+                if is_pa_call:
+                    logger.warning(
+                        f"[{trace_id}] PA_LEGACY_LEAK: {tool_name} called by PA — "
+                        f"should use {gateway_hint[0]}.{gateway_hint[1]} instead. "
+                        f"Phase 3 invariant violated."
+                    )
+                else:
+                    logger.info(
+                        f"[{trace_id}] LEGACY_TOOL_USED: {tool_name} → "
+                        f"suggest {gateway_hint[0]}.{gateway_hint[1]} (agent-internal)"
+                    )
 
             return ToolResult(
                 ok=True,
