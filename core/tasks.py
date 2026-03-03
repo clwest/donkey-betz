@@ -21789,13 +21789,9 @@ def generate_self_blog_deliberation_task(self, tone='enthusiastic', word_count=1
 
     except Exception as e:
         logger.error(f"[Phase 4] Deliberation task failed: {e}", exc_info=True)
-        # Classify the failure reason
-        reason_code = 'UNKNOWN'
-        err_str = str(e).lower()
-        if 'timeout' in err_str or 'timed out' in err_str:
-            reason_code = 'TIMEOUT'
-        elif 'rate limit' in err_str or 'api' in err_str or '429' in err_str or '503' in err_str:
-            reason_code = 'LLM_UPSTREAM'
+        # Classify the failure reason using expanded pattern matcher
+        from core.models_deliberation import classify_failure_reason
+        reason_code = classify_failure_reason(str(e))
         try:
             from core.models_deliberation import DeliberationSession
             recent = DeliberationSession.objects.filter(
