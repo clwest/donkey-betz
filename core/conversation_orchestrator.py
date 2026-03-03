@@ -1069,35 +1069,36 @@ class ConversationOrchestrator:
             is_final_turn = (turn == num_turns - 1)
 
             # Build the prompt for this turn
-            prompt = self._build_turn_prompt(
-                current_agent=current_agent,
-                other_agent=other_agent,
-                topic=topic,
-                conversation_type=conversation_type,
-                turn=turn,
-                context=conversation_context,
-                force_tension=force_tension,
-                is_final_turn=is_final_turn,
-                state=state,
-                system_context=system_context,
-                agent_knowledge_context=current_knowledge_context,  # Session 318: Real knowledge
-                dream_context=dream_context,  # Session 811: Dream injection
-                # Session 826: Goal-driven conversation enhancements
-                rich_context=current_rich_context,
-                turn_type=turn_type,
-                num_turns=num_turns
-            )
-
-            # Generate response with retry logic
-            # Session 1076: Wrap in try/except so one bad turn doesn't kill the session
+            # Wrap prompt building AND generation in try/except — _build_turn_prompt
+            # can crash (e.g., bad agent context) and would kill the entire loop
             try:
+                prompt = self._build_turn_prompt(
+                    current_agent=current_agent,
+                    other_agent=other_agent,
+                    topic=topic,
+                    conversation_type=conversation_type,
+                    turn=turn,
+                    context=conversation_context,
+                    force_tension=force_tension,
+                    is_final_turn=is_final_turn,
+                    state=state,
+                    system_context=system_context,
+                    agent_knowledge_context=current_knowledge_context,  # Session 318: Real knowledge
+                    dream_context=dream_context,  # Session 811: Dream injection
+                    # Session 826: Goal-driven conversation enhancements
+                    rich_context=current_rich_context,
+                    turn_type=turn_type,
+                    num_turns=num_turns
+                )
+
+                # Generate response with retry logic
                 response = self._generate_message(
                     prompt=prompt,
                     is_final_turn=is_final_turn,
                     max_retries=max_retries
                 )
             except Exception as _gen_err:
-                logger.error(f"[Session 1076] Turn {turn + 1} generation crashed: {_gen_err}")
+                logger.error(f"[Session 1076] Turn {turn + 1} prompt/generation crashed: {_gen_err}")
                 response = f"[Turn {turn + 1} failed: {_gen_err}]"
 
             # Analyze and track state
