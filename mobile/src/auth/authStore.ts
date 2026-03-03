@@ -50,15 +50,23 @@ export const useAuthStore = create<AuthState>((set, get) => {
         const user = await getStoredUser();
         if (token && user) {
           // Validate the token is still good
-          const result = await authService.validateToken(token);
-          if (result.valid && result.user) {
-            await setStoredUser(result.user);
-            set({ status: 'signedIn', user: result.user });
+          try {
+            const result = await authService.validateToken(token);
+            if (result.valid && result.user) {
+              await setStoredUser(result.user);
+              set({ status: 'signedIn', user: result.user });
+              return;
+            }
+            // Explicit invalid token — sign out
+          } catch {
+            // Network/server error — trust cached token + user
+            // so a Railway hiccup doesn't log everyone out
+            set({ status: 'signedIn', user });
             return;
           }
         }
       } catch {
-        // Token invalid or network error — fall through to signed out
+        // SecureStore read failed — fall through to signed out
       }
       await clearToken();
       await clearStoredUser();
