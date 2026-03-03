@@ -38146,3 +38146,26 @@ def check_llm_cost_spike():
             )
 
     return {'hourly_cost': hourly_cost, 'hourly_count': hourly_count, 'avg_hourly': avg_hourly}
+
+
+# =============================================================================
+# Ops Autopilot — automated incident response (Session 1080)
+# =============================================================================
+
+@shared_task(ignore_result=True)
+def run_ops_autopilot():
+    """Every 10 min: evaluate ops policies and take allowed automatic actions."""
+    from core.services.ops_autopilot import OpsAutopilot
+
+    try:
+        autopilot = OpsAutopilot()
+        summary = autopilot.run()
+        actions = summary.get('actions_taken', 0)
+        if actions > 0:
+            logger.warning(f"[OpsAutopilot] Cycle took {actions} action(s): {summary.get('actions', [])}")
+        else:
+            logger.info(f"[OpsAutopilot] Cycle complete — no actions needed")
+        return summary
+    except Exception as e:
+        logger.error(f"[OpsAutopilot] Cycle failed: {e}")
+        return {'error': str(e)}

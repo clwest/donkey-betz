@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-03-02 19:17
+**Generated:** 2026-03-02 19:48
 **Current Session:** 1075
 **Total Documentation:** 1808 files | 620,668 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/handoffs/README.md` | 60 | 🤝 Session Handoffs |
+| `docs/archive/old-structure/capabilities/06_Decision_Systems/README.md` | 60 | 🎯 DECISION COMMAND SYSTEMS - AI-Powered Decision I |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -215,9 +215,9 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 359 | 2026-03-02 18:42 |
-| tool-consolidation.md | topics | 251 | 2026-03-02 18:12 |
-| personal-assistant.md | topics | 139 | 2026-03-02 16:31 |
+| INDEX.md | docs | 359 | 2026-03-02 19:18 |
+| tool-consolidation.md | topics | 251 | 2026-03-02 19:17 |
+| personal-assistant.md | topics | 139 | 2026-03-02 19:17 |
 | command_audit.md | discord | 349 | 2026-03-01 21:56 |
 | obs-remote-control.md | context-packets | 497 | 2026-03-01 20:13 |
 | pa-tool-routing-guide.md | tools | 100 | 2026-03-01 15:50 |

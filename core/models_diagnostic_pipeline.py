@@ -508,3 +508,40 @@ class FailurePrescription(models.Model):
             'files_to_modify': self.files_to_modify,
             'success_criteria': self.success_criteria,
         }
+
+
+# ── AutopilotAction audit model (Session 1080) ──────────────────────────────
+
+
+class AutopilotAction(models.Model):
+    """Audit log for every action the ops autopilot takes (or considers)."""
+
+    ACTION_TYPES = [
+        ('block_agent', 'Block Agent'),
+        ('unblock_agent', 'Unblock Agent'),
+        ('attention_item', 'Created Attention Item'),
+        ('deploy_watch', 'Deploy Watch Verdict'),
+        ('dry_run', 'Dry Run (no action taken)'),
+    ]
+
+    id = models.AutoField(primary_key=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    action_type = models.CharField(max_length=30, choices=ACTION_TYPES)
+    agent_name = models.CharField(max_length=100, blank=True, default='')
+    policy = models.CharField(max_length=100, help_text='Policy rule that triggered this action')
+    dry_run = models.BooleanField(default=False)
+    evidence = models.JSONField(default=dict, help_text='Signature IDs, counts, sample exec IDs, etc.')
+    result = models.JSONField(default=dict, help_text='Outcome of the action')
+    deploy_sha = models.CharField(max_length=40, blank=True, default='')
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['action_type', '-created_at']),
+            models.Index(fields=['agent_name', '-created_at']),
+        ]
+
+    def __str__(self):
+        mode = ' [DRY RUN]' if self.dry_run else ''
+        return f"{self.action_type}: {self.agent_name or 'system'}{mode} ({self.created_at})"

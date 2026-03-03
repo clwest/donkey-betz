@@ -2011,6 +2011,42 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
+    # ── Session 1080: Ops Autopilot ──────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "autopilot_tool",
+        "description": (
+            "Monitor and configure the Ops Autopilot — automated incident response "
+            "with governance guardrails. Use 'status' for current config and last cycle. "
+            "Use 'history' for recent autopilot actions. Use 'run' to trigger an "
+            "immediate evaluation cycle. Use 'config' to view/update thresholds."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["status", "history", "run", "config"],
+                    "description": (
+                        "status: current config, last cycle timestamp, and pending actions. "
+                        "history: recent autopilot actions (blocks, attention items, dry runs). "
+                        "run: trigger an immediate autopilot evaluation cycle. "
+                        "config: view current thresholds (timeout spike, block TTL, etc.)."
+                    ),
+                },
+                "dry_run": {
+                    "type": "boolean",
+                    "description": "For 'run' action: evaluate policies but don't actually block/unblock (default false).",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "For 'history': max entries to return (default 20, max 100).",
+                },
+            },
+            "required": ["action"],
+        },
+    },
+
     # ── Session 1079: Governance Gateway ──────────────────────────────────────
     {
         "type": "function",
@@ -2270,6 +2306,7 @@ TOOL_ENRICHMENT_MAP = {
     'remember_tool': [],
     'ops_tool': ['intelligence_enricher', 'platform_briefing'],
     'agent_control_tool': [],
+    'autopilot_tool': [],
     'work_tool': ['intelligence_enricher', 'strategic_memory'],
     'content_tool': ['blog_performance', 'domain_context', 'spider_trends', 'strategic_memory', 'proactive_intelligence'],
     'governance_tool': ['intelligence_enricher', 'strategic_memory'],
@@ -2350,6 +2387,7 @@ TOOL_TO_INTENT_MAP = {
     'remember_tool': 'memory',
     'ops_tool': 'system_overview',
     'agent_control_tool': 'system_overview',
+    'autopilot_tool': 'system_overview',
     'work_tool': 'initiatives',
     'content_tool': 'content_review',
     'governance_tool': 'boardroom',

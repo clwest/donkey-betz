@@ -2491,6 +2491,14 @@ app.conf.beat_schedule = {
             'expires': 3600,
         },
     },
+    # Session 1080: Ops Autopilot — automated incident response with governance
+    'run-ops-autopilot': {
+        'task': 'core.tasks.run_ops_autopilot',
+        'schedule': 600.0,  # Every 10 minutes
+        'options': {
+            'expires': 600,
+        },
+    },
 }
 
 # Task routing configuration
