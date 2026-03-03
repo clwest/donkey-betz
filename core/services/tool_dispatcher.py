@@ -83,9 +83,9 @@ class ToolDispatcher:
     # Default timeout for tool execution (seconds)
     DEFAULT_TIMEOUT = 30
 
-    # Session 1079 Phase 2: Legacy tool → gateway migration map.
-    # Used for telemetry tagging and the tool_migration_report ops action.
-    LEGACY_TO_GATEWAY = {
+    # Session 1079: Removed tool → gateway replacement map.
+    # Used by tool_migration_report to track straggler calls from agent-internal code.
+    REMOVED_TOOL_ALIASES = {
         # work_tool absorbs initiative_tool
         'initiative_tool': ('work_tool', 'initiative_list'),
         # content_tool absorbs content_review_tool, generate_blog_tool, deliverables_tool
@@ -11078,7 +11078,7 @@ RESEARCH DATA:
         try:
             from core.models_tool_calls import ToolCallRecord
 
-            legacy_names = set(self.LEGACY_TO_GATEWAY.keys())
+            removed_names = set(self.REMOVED_TOOL_ALIASES.keys())
             gateway_names = self.GATEWAY_TOOLS
 
             # Total tool calls in window
@@ -11094,44 +11094,44 @@ RESEARCH DATA:
             )
 
             # Classify
-            legacy_calls = []
+            removed_calls = []
             gateway_calls = []
             other_calls = []
 
             for tool_name, count in sorted(tool_counts.items(), key=lambda x: -x[1]):
                 entry = {'tool': tool_name, 'count': count}
-                if tool_name in legacy_names:
-                    gw, suggested_action = self.LEGACY_TO_GATEWAY[tool_name]
+                if tool_name in removed_names:
+                    gw, suggested_action = self.REMOVED_TOOL_ALIASES[tool_name]
                     entry['suggested_gateway'] = gw
                     entry['suggested_action'] = suggested_action
-                    legacy_calls.append(entry)
+                    removed_calls.append(entry)
                 elif tool_name in gateway_names:
                     gateway_calls.append(entry)
                 else:
                     other_calls.append(entry)
 
-            legacy_total = sum(e['count'] for e in legacy_calls)
+            removed_total = sum(e['count'] for e in removed_calls)
             gateway_total = sum(e['count'] for e in gateway_calls)
 
-            # Phase 3: Split legacy calls into PA-originated vs agent-internal
-            pa_legacy = dict(
-                all_calls.filter(tool_name__in=legacy_names, agent_name='PersonalAssistant')
+            # Split removed-tool calls into PA-originated vs agent-internal
+            pa_removed = dict(
+                all_calls.filter(tool_name__in=removed_names, agent_name='PersonalAssistant')
                 .values('tool_name')
                 .annotate(count=Count('id'))
                 .values_list('tool_name', 'count')
             )
-            pa_legacy_total = sum(pa_legacy.values())
-            agent_legacy_total = legacy_total - pa_legacy_total
+            pa_removed_total = sum(pa_removed.values())
+            agent_removed_total = removed_total - pa_removed_total
 
-            # Deprecation readiness: legacy tools with 0 calls are safe to remove
-            safe_to_deprecate = [
-                tool_name for tool_name in legacy_names
+            # Tools with 0 calls — fully silent
+            silent_tools = [
+                tool_name for tool_name in removed_names
                 if tool_counts.get(tool_name, 0) == 0
             ]
 
-            # Failure comparison: legacy vs gateway success rates
-            legacy_failures = all_calls.filter(
-                tool_name__in=legacy_names, success=False
+            # Failure comparison: removed vs gateway success rates
+            removed_failures = all_calls.filter(
+                tool_name__in=removed_names, success=False
             ).count()
             gateway_failures = all_calls.filter(
                 tool_name__in=gateway_names, success=False
@@ -11143,34 +11143,33 @@ RESEARCH DATA:
                 'generated_at': timezone.now().isoformat(),
                 'summary': {
                     'total_tool_calls': total,
-                    'legacy_calls': legacy_total,
-                    'pa_legacy_calls': pa_legacy_total,
-                    'agent_legacy_calls': agent_legacy_total,
+                    'removed_tool_calls': removed_total,
+                    'pa_removed_calls': pa_removed_total,
+                    'agent_removed_calls': agent_removed_total,
                     'gateway_calls': gateway_total,
-                    'other_calls': total - legacy_total - gateway_total,
-                    'migration_pct': round(gateway_total / max(gateway_total + pa_legacy_total, 1) * 100, 1),
+                    'other_calls': total - removed_total - gateway_total,
+                    'migration_pct': round(gateway_total / max(gateway_total + pa_removed_total, 1) * 100, 1),
                 },
-                'legacy_tools_still_used': legacy_calls[:15],
-                'pa_legacy_breakdown': [
-                    {'tool': t, 'count': c, 'suggested_gateway': self.LEGACY_TO_GATEWAY[t][0]}
-                    for t, c in sorted(pa_legacy.items(), key=lambda x: -x[1])
-                ] if pa_legacy else [],
+                'removed_tools_referenced': removed_calls[:15],
+                'pa_removed_breakdown': [
+                    {'tool': t, 'count': c, 'suggested_gateway': self.REMOVED_TOOL_ALIASES[t][0]}
+                    for t, c in sorted(pa_removed.items(), key=lambda x: -x[1])
+                ] if pa_removed else [],
                 'gateway_tools': gateway_calls,
-                'safe_to_deprecate': sorted(safe_to_deprecate),
+                'silent_removed_tools': sorted(silent_tools),
                 'failure_comparison': {
-                    'legacy_failures': legacy_failures,
-                    'legacy_failure_rate': round(legacy_failures / max(legacy_total, 1) * 100, 2),
+                    'removed_failures': removed_failures,
+                    'removed_failure_rate': round(removed_failures / max(removed_total, 1) * 100, 2),
                     'gateway_failures': gateway_failures,
                     'gateway_failure_rate': round(gateway_failures / max(gateway_total, 1) * 100, 2),
                 },
                 'recommendation': (
-                    f'{len(safe_to_deprecate)} legacy tools had zero calls in {window} — '
-                    f'safe to remove from PA schema. '
-                    f'{len(legacy_calls)} legacy tools still active '
-                    f'({pa_legacy_total} PA-originated, {agent_legacy_total} agent-internal).'
-                    if safe_to_deprecate else
-                    f'All {len(legacy_calls)} legacy tools still active in {window}. '
-                    f'Gateway adoption at {round(gateway_total / max(gateway_total + pa_legacy_total, 1) * 100, 1)}%.'
+                    f'{len(silent_tools)} removed tools had zero calls in {window}. '
+                    f'{len(removed_calls)} removed tools still referenced '
+                    f'({pa_removed_total} PA-originated, {agent_removed_total} agent-internal).'
+                    if removed_calls else
+                    f'All {len(removed_names)} removed tools silent in {window}. '
+                    f'Gateway adoption at {round(gateway_total / max(gateway_total + pa_removed_total, 1) * 100, 1)}%.'
                 ),
             }
         except Exception as e:

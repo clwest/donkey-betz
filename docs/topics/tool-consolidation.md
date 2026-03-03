@@ -224,4 +224,28 @@
 8. [x] Updated smoke tests: 22 pass (removed 10 obsolete flag/deprecation tests, added 1 non-registration test)
 9. [x] Handler methods kept for gateway delegation: `_handle_boardroom`, `_handle_human_decisions`, `_handle_initiative`, `_handle_content_review`, `_handle_generate_blog`, `_handle_deliverables`, `_handle_stock_intelligence`, `_handle_sports_betting`, `_handle_legislation`, `_handle_spider_data`, `_handle_rag_query`
 
-**Remaining:** `LEGACY_TO_GATEWAY` map kept for migration report telemetry. `TOOL_ENRICHMENT_MAP` is dead code (no consumers) — can be removed in a future cleanup.
+**Remaining:** `REMOVED_TOOL_ALIASES` map (renamed from `LEGACY_TO_GATEWAY`) kept for migration report telemetry. `TOOL_ENRICHMENT_MAP` is dead code (no consumers) — can be removed in a future cleanup.
+
+## Post-PR2 Hardening (Session 1079)
+
+1. [x] Renamed `LEGACY_TO_GATEWAY` → `REMOVED_TOOL_ALIASES` + updated migration report wording
+2. [x] CI guard tests: `TestRemovedToolGuard` — fails if removed tools reappear in handlers or schemas
+3. [x] Handler boundary test: verifies kept methods are NOT callable via `execute_sync()`
+
+## Old PA Fallback Monitoring Plan
+
+The old PA fallback code path (`views_personal_assistant.py`) emits two log signals:
+- `OLD_PA_FALLBACK_INVOKED` — UnifiedPA failed, falling back to old PA
+- `OLD_PA_SERVING` — old PA is actively serving a request
+
+**Decision criteria (after 30 days from 2026-03-02):**
+- If `OLD_PA_FALLBACK_INVOKED == 0` over 30 days → **remove old PA fallback code path entirely**
+- If > 0 → investigate root causes, fix UnifiedPA reliability, then remove
+
+**Check command:** Search Railway logs for `OLD_PA_FALLBACK_INVOKED` and `OLD_PA_SERVING`.
+
+## Future Cleanup (low priority)
+
+- [ ] Remove `TOOL_ENRICHMENT_MAP` from `pa_tool_schemas.py` (dead code, no consumers)
+- [ ] Move kept handler methods into standalone service functions (decouple from ToolDispatcher)
+- [ ] Remove `REMOVED_TOOL_ALIASES` map once agent-internal callers are fully migrated to gateways
