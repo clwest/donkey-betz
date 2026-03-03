@@ -164,124 +164,15 @@ class TestLegacyToGatewayMapping(GatewaySmokeTestBase):
             self.assertIn(gw, self.dispatcher._tool_handlers,
                           f"Gateway {gw} not registered in ToolDispatcher")
 
-    def test_legacy_tools_still_registered(self):
-        """Legacy tools must still be registered (for backward compat until Phase 4)."""
-        for legacy_name in self.dispatcher.LEGACY_TO_GATEWAY:
-            self.assertIn(legacy_name, self.dispatcher._tool_handlers,
-                          f"Legacy tool {legacy_name} no longer registered — too early to remove")
-
-
-class TestLegacyDeprecationMetadata(GatewaySmokeTestBase):
-    """Verify legacy tool responses include deprecation metadata."""
-
-    def _call_legacy(self, tool_name: str, payload: dict) -> dict:
-        """Call a legacy tool and return the raw result (with metadata)."""
-        tool_result = self.dispatcher.execute_sync(tool_name, payload, self.user_id)
-        self.assertTrue(tool_result.ok, f"{tool_name} failed: {tool_result.error_message}")
-        return tool_result.result
-
-    def test_legacy_call_has_deprecated_flag(self):
-        result = self._call_legacy('system_health_tool', {})
-        self.assertTrue(result.get('_deprecated'), "Legacy call missing _deprecated=True")
-
-    def test_legacy_call_has_replacement(self):
-        result = self._call_legacy('system_health_tool', {})
-        replacement = result.get('_replacement')
-        self.assertIsInstance(replacement, dict)
-        self.assertEqual(replacement['tool'], 'ops_tool')
-        self.assertEqual(replacement['action'], 'slo_status')
-
-    def test_legacy_call_has_sunset_date(self):
-        result = self._call_legacy('system_health_tool', {})
-        self.assertIn('_sunset_date', result)
-        self.assertEqual(result['_sunset_date'], '2026-04-01')
-
-    def test_legacy_call_has_gateway_hint(self):
-        result = self._call_legacy('error_summary_tool', {})
-        hint = result.get('_gateway_hint')
-        self.assertIsInstance(hint, dict)
-        self.assertEqual(hint['suggested_gateway'], 'ops_tool')
-        self.assertEqual(hint['suggested_action'], 'failure_signatures')
-        self.assertEqual(hint['legacy_tool'], 'error_summary_tool')
-
-    def test_gateway_call_has_no_deprecation(self):
-        """Gateway tool responses must NOT have deprecation metadata."""
-        result = self._call_legacy('ops_tool', {'action': 'version'})
-        self.assertNotIn('_deprecated', result)
-        self.assertNotIn('_replacement', result)
-        self.assertNotIn('_sunset_date', result)
-        self.assertNotIn('_gateway_hint', result)
+    def test_legacy_tools_not_registered(self):
+        """Legacy tools must NOT be registered (removed in PR2)."""
+        # web_search is excluded — it's a standalone primitive kept intentionally
+        legacy_only = set(self.dispatcher.LEGACY_TO_GATEWAY.keys()) - {'web_search'}
+        for legacy_name in legacy_only:
+            self.assertNotIn(legacy_name, self.dispatcher._tool_handlers,
+                             f"Legacy tool {legacy_name} should have been removed in PR2")
 
     def test_all_legacy_mappings_point_to_valid_gateways(self):
         for legacy_name, (gw, action) in self.dispatcher.LEGACY_TO_GATEWAY.items():
             self.assertIn(gw, self.dispatcher.GATEWAY_TOOLS,
                           f"{legacy_name} maps to unknown gateway {gw}")
-
-
-class TestLegacyHandlerKillSwitch(TestCase):
-    """Verify TOOLS_ENABLE_LEGACY_HANDLERS flag controls handler registration."""
-
-    def test_legacy_handlers_skipped_when_flag_false(self):
-        import core.services.tool_dispatcher as mod
-        original = mod.ToolDispatcher.TOOLS_ENABLE_LEGACY_HANDLERS
-        try:
-            mod.ToolDispatcher.TOOLS_ENABLE_LEGACY_HANDLERS = False
-            dispatcher = mod.ToolDispatcher()
-            for legacy_name in mod.ToolDispatcher._LEGACY_HANDLER_NAMES:
-                self.assertNotIn(legacy_name, dispatcher._tool_handlers,
-                                 f"{legacy_name} should NOT be registered when flag=false")
-            # Gateways must still be registered
-            for gw in mod.ToolDispatcher.GATEWAY_TOOLS:
-                self.assertIn(gw, dispatcher._tool_handlers,
-                              f"Gateway {gw} must always be registered")
-        finally:
-            mod.ToolDispatcher.TOOLS_ENABLE_LEGACY_HANDLERS = original
-
-    def test_legacy_handlers_registered_when_flag_true(self):
-        import core.services.tool_dispatcher as mod
-        original = mod.ToolDispatcher.TOOLS_ENABLE_LEGACY_HANDLERS
-        try:
-            mod.ToolDispatcher.TOOLS_ENABLE_LEGACY_HANDLERS = True
-            dispatcher = mod.ToolDispatcher()
-            for legacy_name in mod.ToolDispatcher._LEGACY_HANDLER_NAMES:
-                self.assertIn(legacy_name, dispatcher._tool_handlers,
-                              f"{legacy_name} should be registered when flag=true")
-        finally:
-            mod.ToolDispatcher.TOOLS_ENABLE_LEGACY_HANDLERS = original
-
-    def test_web_search_always_registered(self):
-        """web_search is excluded from legacy handler removal."""
-        import core.services.tool_dispatcher as mod
-        self.assertNotIn('web_search', mod.ToolDispatcher._LEGACY_HANDLER_NAMES)
-
-
-class TestFeatureFlagFiltering(TestCase):
-    """Verify TOOLS_EXPOSE_LEGACY flag filters schemas correctly."""
-
-    def test_get_active_includes_all_when_flag_true(self):
-        from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS, get_active_tool_schemas, _LEGACY_TOOL_NAMES
-        import core.services.pa_tool_schemas as mod
-
-        original = mod.TOOLS_EXPOSE_LEGACY
-        try:
-            mod.TOOLS_EXPOSE_LEGACY = True
-            active = get_active_tool_schemas()
-            self.assertEqual(len(active), len(PA_TOOL_SCHEMAS))
-        finally:
-            mod.TOOLS_EXPOSE_LEGACY = original
-
-    def test_get_active_strips_legacy_when_flag_false(self):
-        from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS, get_active_tool_schemas, _LEGACY_TOOL_NAMES
-        import core.services.pa_tool_schemas as mod
-
-        original = mod.TOOLS_EXPOSE_LEGACY
-        try:
-            mod.TOOLS_EXPOSE_LEGACY = False
-            active = get_active_tool_schemas()
-            active_names = {t['name'] for t in active}
-            for legacy in _LEGACY_TOOL_NAMES:
-                self.assertNotIn(legacy, active_names,
-                                 f"{legacy} should be stripped when TOOLS_EXPOSE_LEGACY=false")
-            self.assertEqual(len(active), len(PA_TOOL_SCHEMAS) - len(_LEGACY_TOOL_NAMES))
-        finally:
-            mod.TOOLS_EXPOSE_LEGACY = original

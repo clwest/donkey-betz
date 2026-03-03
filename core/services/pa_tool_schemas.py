@@ -17,118 +17,6 @@ Design rules:
 # ── Tool Schemas for OpenAI Responses API function calling ──────────────────
 
 PA_TOOL_SCHEMAS = [
-    # ── Boardroom ───────────────────────────────────────────────────────────
-    {
-        "type": "function",
-        "name": "boardroom_tool",
-        "description": (
-            "Access the boardroom: pending attention items, draft decisions, "
-            "and approval/rejection actions. Use when the user asks about what "
-            "needs their attention, pending approvals, decisions to make, or "
-            "wants to approve/ignore/promote/reject items."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string",
-                    "enum": [
-                        "stats", "list_attention", "list_decisions",
-                        "approve_attention", "ignore_attention",
-                        "promote_decision", "reject_decision",
-                        "get_triage_batch",
-                        "list_unclassified", "classify_suggest",
-                        "classify_apply", "classify_apply_batch",
-                        "lookup", "create_attention",
-                    ],
-                    "description": "Boardroom action to perform",
-                },
-                "id": {"type": "string", "description": "UUID of item to act on (for approve/ignore/promote/reject)"},
-                "title": {"type": "string", "description": "Title for create_attention"},
-                "summary": {"type": "string", "description": "Summary/description for create_attention"},
-                "item_type": {"type": "string", "description": "Type of attention item (decision, alert, opportunity, task, etc.)"},
-                "title_query": {"type": "string", "description": "Title search query for lookup action"},
-                "artifact_id": {"type": "string", "description": "UUID of artifact (for classify_suggest/classify_apply)"},
-                "classification": {"type": "object", "description": "Classification fields for classify_apply: what_is_this, who_is_it_for, data_allowed, phase_approved"},
-                "items": {"type": "array", "description": "For classify_apply_batch: list of {artifact_id, classification} objects", "items": {"type": "object"}},
-                "urgency": {"type": "string", "enum": ["critical", "high", "medium", "low"], "description": "Filter by urgency level"},
-                "item_type": {"type": "string", "description": "Filter attention items by type"},
-                "decision_type": {"type": "string", "description": "Filter decisions by type"},
-                "limit": {"type": "integer", "description": "Max items to return (default 10)"},
-            },
-            "required": ["action"],
-        },
-    },
-
-    # ── Initiative Pipeline ─────────────────────────────────────────────────
-    {
-        "type": "function",
-        "name": "initiative_tool",
-        "description": (
-            "Access the initiative pipeline: list projects, get stats, view "
-            "details, and check action items. Use when the user asks about "
-            "initiatives, projects, pipeline status, action items, or project progress."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string",
-                    "enum": ["list", "stats", "details", "action_items", "cleanup_action_items", "stage_document", "promote", "start_action_item", "complete_action_item", "create"],
-                    "description": "Initiative action to perform. Use 'create' to create a new initiative. Use 'stage_document' to read the full content of a stage document. Use 'promote' to move a TRIAGE or ON_HOLD initiative to ACTIVE. Use 'start_action_item' or 'complete_action_item' with an item id. Use 'cleanup_action_items' to find/cancel junk items (dry_run=true to preview, dry_run=false to cancel).",
-                },
-                "id": {"type": "string", "description": "Initiative identifier: human ID (e.g., INIT-000012), seq number (e.g., 12), or UUID"},
-                "name": {"type": "string", "description": "Initiative name. For 'create': required title. For list: partial match search."},
-                "description": {"type": "string", "description": "Description of the initiative (for create action)"},
-                "document_id": {"type": "string", "description": "UUID of document (for stage_document action)"},
-                "status": {"type": "string", "description": "Filter by status (ACTIVE, PAUSED, COMPLETED, ARCHIVED, all)"},
-                "stage": {"type": "string", "description": "Filter by pipeline stage (1-5). For stage_document: which stage to fetch."},
-                "purpose": {"type": "string", "description": "Filter by strategic purpose. Valid values: revenue, stability, learning, expansion, maintenance. Only set when user explicitly mentions purpose."},
-                "program": {"type": "string", "description": "Filter by portfolio program. Valid values: growth_intelligence, platform_health, monetization, content_pipeline, ai_capabilities, user_experience, infrastructure, research, experiments. Only set when user explicitly mentions program."},
-                "owner": {"type": "string", "description": "Filter by owner ('me', 'unowned', or agent name)"},
-                "limit": {"type": "integer", "description": "Max items to return (default 50)"},
-                "offset": {"type": "integer", "description": "Skip first N items for pagination (default 0). Use with action_items."},
-                "impact_score": {"type": "number", "description": "Expected impact 0-1 (for create, default 0.5)"},
-                "urgency": {"type": "number", "description": "Time-sensitivity 0-1 (for create, default 0.5)"},
-                "revenue_potential": {"type": "number", "description": "Revenue potential 0-1 (for create, default 0.0)"},
-                "execution_speed": {"type": "string", "enum": ["fast", "balanced", "thorough"], "description": "Execution speed (for create, default balanced)"},
-                "item_status": {"type": "string", "enum": ["pending", "in_progress", "completed", "blocked", "cancelled", "all"], "description": "Filter action items by status (default pending). Use with action_items."},
-                "priority": {"type": "string", "enum": ["critical", "high", "medium", "low"], "description": "Filter action items by priority. Use with action_items."},
-                "dry_run": {"type": "boolean", "description": "For cleanup_action_items: true to preview junk items, false to cancel them (default true)."},
-            },
-            "required": ["action"],
-        },
-    },
-
-    # ── Content Review ──────────────────────────────────────────────────────
-    {
-        "type": "function",
-        "name": "content_review_tool",
-        "description": (
-            "Review content deliverables and blogs: list items awaiting review, "
-            "search by title, get recent content, approve, reject, or get details. "
-            "Use when the user asks about content, blogs, deliverables, articles, "
-            "or content awaiting review. Set type='blog' to query blogs specifically."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string",
-                    "enum": ["list", "search", "recent", "details", "approve", "reject", "stats"],
-                    "description": "Content review action. 'search' finds blogs by title keyword.",
-                },
-                "id": {"type": "string", "description": "UUID of deliverable or blog"},
-                "query": {"type": "string", "description": "Title search term for 'search' action"},
-                "type": {"type": "string", "description": "Content type filter. Use 'blog' for blog posts."},
-                "status": {"type": "string", "description": "Filter by status (draft, pending_review, approved, published)"},
-                "days": {"type": "integer", "description": "Lookback period in days for 'recent' action (default 30)"},
-                "limit": {"type": "integer", "description": "Max items (default 10)"},
-            },
-            "required": ["action"],
-        },
-    },
-
     # ── Dream Browsing ──────────────────────────────────────────────────────
     {
         "type": "function",
@@ -187,125 +75,6 @@ PA_TOOL_SCHEMAS = [
                 "status": {"type": "string", "description": "Filter by conversation status"},
                 "include_transcript": {"type": "boolean", "description": "Include full message transcript (default false)"},
                 "include_full_content": {"type": "boolean", "description": "Include full content in details (default false)"},
-            },
-            "required": ["action"],
-        },
-    },
-
-    # ── Blog Generation ─────────────────────────────────────────────────────
-    {
-        "type": "function",
-        "name": "generate_blog_tool",
-        "description": (
-            "Generate a blog post via the deliberation pipeline. Use when the "
-            "user explicitly asks to write, generate, or create a blog post or article."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "topic": {"type": "string", "description": "Blog topic to write about"},
-                "style": {"type": "string", "description": "Writing style or tone"},
-            },
-            "required": ["topic"],
-        },
-    },
-
-    # ── Stock Intelligence ──────────────────────────────────────────────────
-    {
-        "type": "function",
-        "name": "stock_intelligence_tool",
-        "description": (
-            "Access market intelligence: stock dashboards, market briefs, alerts, "
-            "prediction accuracy, and SEC filings. Use when the user asks about "
-            "stocks, markets, trading, investments, SEC filings, or market predictions."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string",
-                    "enum": ["overview", "briefs", "alerts", "predictions", "sec_filings"],
-                    "description": (
-                        "overview: dashboard summary (latest brief, alert counts, prediction accuracy). "
-                        "briefs: recent market intelligence briefs. "
-                        "alerts: stock alerts (filterable by ticker). "
-                        "predictions: prediction outcomes with accuracy stats (filterable by ticker). "
-                        "sec_filings: SEC Edgar filings from spider."
-                    ),
-                },
-                "ticker": {"type": "string", "description": "Stock ticker symbol to filter alerts/predictions (e.g. 'AAPL')"},
-                "limit": {"type": "integer", "description": "Max items (default 10)"},
-            },
-            "required": ["action"],
-        },
-    },
-
-    # ── Legislation ─────────────────────────────────────────────────────────
-    {
-        "type": "function",
-        "name": "legislation_tool",
-        "description": (
-            "Track congressional bills and legislation. Use when the user asks "
-            "about bills, legislation, congress, laws, or government policy."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string",
-                    "enum": ["overview", "trending", "search", "status", "summary", "ask"],
-                    "description": (
-                        "overview: dashboard stats (total bills, top topics, status breakdown). "
-                        "trending: most recently active bills. "
-                        "search: find bills by keyword (requires query). "
-                        "status: status of a specific bill (requires bill_number). "
-                        "summary: plain-English explanation of a bill (requires bill_number or query). "
-                        "ask: RAG-powered Q&A about legislation (requires query)."
-                    ),
-                },
-                "query": {"type": "string", "description": "Search query or question about legislation"},
-                "bill_number": {"type": "string", "description": "Bill number for status/summary (e.g. 'HR 1234')"},
-                "limit": {"type": "integer", "description": "Max items (default 10, max 20)"},
-            },
-            "required": ["action"],
-        },
-    },
-
-    # ── Sports Betting ──────────────────────────────────────────────────────
-    {
-        "type": "function",
-        "name": "sports_betting_tool",
-        "description": (
-            "Access sports betting intelligence: predictions, arbitrage, odds, "
-            "sharp action, and wager tracking. Use when the user asks about "
-            "sports, betting, predictions, games, odds, or ML model performance."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string",
-                    "enum": ["overview", "predictions", "accuracy", "arbs", "sharp_action", "line_movements", "wagers", "live_odds", "brief", "record_wager"],
-                    "description": (
-                        "overview: dashboard summary (wager counts, arb opps, recent odds). "
-                        "predictions: ML game predictions with confidence. "
-                        "accuracy: prediction accuracy stats and win/loss record. "
-                        "arbs: active arbitrage opportunities. "
-                        "sharp_action: sharp betting signals. "
-                        "line_movements: detected line movements. "
-                        "wagers: user's placed wagers and results. "
-                        "live_odds: current odds from spider network. "
-                        "brief: full betting brief from coordinator."
-                    ),
-                },
-                "sport": {"type": "string", "description": "Sport type filter (nba, nfl, mlb, nhl)"},
-                "stake": {"type": "number", "description": "Wager amount in dollars (for record_wager)"},
-                "odds": {"type": "integer", "description": "American odds e.g. -110, +250 (for record_wager)"},
-                "description": {"type": "string", "description": "Description of the bet (for record_wager)"},
-                "notes": {"type": "string", "description": "Additional notes (for record_wager)"},
-                "wager_type": {"type": "string", "enum": ["single", "parlay"], "description": "Wager type (for record_wager, default single)"},
-                "limit": {"type": "integer", "description": "Max items (default 10)"},
-                "days": {"type": "integer", "description": "Lookback period in days (default 30, used by accuracy action)"},
             },
             "required": ["action"],
         },
@@ -494,37 +263,6 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
-    # ── Human Decisions ─────────────────────────────────────────────────────
-    {
-        "type": "function",
-        "name": "human_decisions_tool",
-        "description": (
-            "Access items requiring human decision: pending approvals, reviews, "
-            "manual actions. Use when the user asks about pending decisions, "
-            "what needs approval, or human-in-the-loop items."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string",
-                    "enum": ["list", "stats", "decide", "create"],
-                    "description": "Human decisions action: list pending, stats, decide on item, or create new decision request",
-                },
-                "id": {"type": "string", "description": "UUID of decision item (alias: item_id)"},
-                "item_id": {"type": "string", "description": "UUID of decision item"},
-                "decision": {"type": "string", "description": "Decision value (approve/reject/defer/watch)"},
-                "feedback": {"type": "string", "description": "Decision feedback/reasoning"},
-                "limit": {"type": "integer", "description": "Max items (default 10)"},
-                "title": {"type": "string", "description": "Title for new decision request (create action)"},
-                "summary": {"type": "string", "description": "Summary/description for new decision request (create action)"},
-                "item_type": {"type": "string", "description": "Type of decision item (decision, alert, opportunity)"},
-                "urgency": {"type": "string", "enum": ["critical", "high", "medium", "low"], "description": "Urgency level for create action"},
-            },
-            "required": ["action"],
-        },
-    },
-
     # ── Reasoning Engine ────────────────────────────────────────────────────
     {
         "type": "function",
@@ -579,32 +317,6 @@ PA_TOOL_SCHEMAS = [
                 "output_type_label": {"type": "string", "description": "Human-readable label for content type"},
             },
             "required": ["query", "research_topic"],
-        },
-    },
-
-    # ── Spider Data ─────────────────────────────────────────────────────────
-    {
-        "type": "function",
-        "name": "spider_data_tool",
-        "description": (
-            "Access data collected by spiders: scraped content, crawl results, "
-            "data feeds. Use when the user asks about spider data, crawled content, "
-            "data sources, or specific spider outputs."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string",
-                    "enum": ["recent", "search", "stats", "by_spider", "by_category", "trigger"],
-                    "description": "Spider data action: recent data, search, stats, by_spider, by_category, or trigger a spider run",
-                },
-                "query": {"type": "string", "description": "Search query for spider data"},
-                "spider_name": {"type": "string", "description": "Filter by specific spider"},
-                "data_type": {"type": "string", "description": "Filter by data type"},
-                "limit": {"type": "integer", "description": "Max items (default 10)"},
-            },
-            "required": ["action"],
         },
     },
 
@@ -709,48 +421,6 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "limit": {"type": "integer", "description": "Max items (default 20)"},
                 "minutes": {"type": "integer", "description": "Look back N minutes (default 60)"},
-            },
-        },
-    },
-
-    # ── System Health ───────────────────────────────────────────────────────
-    {
-        "type": "function",
-        "name": "system_health_tool",
-        "description": (
-            "Check platform system health: service status, database connectivity, "
-            "Redis, Celery workers, body system scores. Use when the user asks about "
-            "system health, is everything working, platform status, or service health."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "verbose": {"type": "boolean", "description": "Include detailed breakdown (default false)"},
-            },
-        },
-    },
-
-    # ── Error Summary ───────────────────────────────────────────────────────
-    {
-        "type": "function",
-        "name": "error_summary_tool",
-        "description": (
-            "Get a summary of recent errors and failures across the platform. "
-            "Covers failure signatures, tool call failures (with error messages), "
-            "Celery task failures, and agent timeout breakdowns by agent name. "
-            "Use when the user asks about errors, failures, what went wrong, "
-            "timeouts, or error logs."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string",
-                    "enum": ["summary", "detailed"],
-                    "description": "summary=counts only, detailed=include individual error messages (default summary)"
-                },
-                "hours": {"type": "integer", "description": "Look back N hours (default 24, use 72 or 168 for wider view)"},
-                "limit": {"type": "integer", "description": "Max items per category (default 20)"},
             },
         },
     },
@@ -972,53 +642,6 @@ PA_TOOL_SCHEMAS = [
                 "name": {"type": "string", "description": "Name for new workspace (for create action)"},
                 "description": {"type": "string", "description": "Description/notes for the workspace (for create action)"},
                 "limit": {"type": "integer", "description": "Max items (default 10)"},
-            },
-            "required": ["action"],
-        },
-    },
-
-    # ── Deliverables Library ──────────────────────────────────────────────
-    {
-        "type": "function",
-        "name": "deliverables_tool",
-        "description": (
-            "Full CRUD access to the Deliverables Library. "
-            "Supported actions: list, search, detail, save, unsave, stats, create, update, delete, cleanup. "
-            "Use 'create' to save new content (scripts, plans, notes, etc.). "
-            "Use 'update' to change a deliverable's title, content, type, format, or tags. Use 'prepend' or 'append' params on update to add text without sending full content. "
-            "Use 'delete' to permanently remove a single deliverable. "
-            "Use 'cleanup' to bulk-remove duplicates or orphans (use dry_run=true first to preview). "
-            "Use 'list'/'search' to browse (supports offset for pagination), 'detail' to read full content, "
-            "'save'/'unsave' to bookmark, 'stats' for aggregate counts by type/category/agent."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string",
-                    "enum": ["list", "search", "detail", "save", "unsave", "stats", "create", "update", "delete", "cleanup"],
-                    "description": "list=browse, search=find by query, detail=full content, save/unsave=bookmark, stats=counts, create=new, update=edit, delete=remove one, cleanup=bulk remove duplicates/orphans.",
-                },
-                "id": {"type": "string", "description": "UUID of deliverable. For detail/save/unsave/update/delete you can pass EITHER id OR title — title lookup is supported so users don't need to copy UUIDs."},
-                "query": {"type": "string", "description": "Search query for title matching"},
-                "type": {"type": "string", "description": "Filter by or set deliverable type (document, image, report, analysis, script, plan, etc.)"},
-                "category": {"type": "string", "description": "Filter by category (e.g. 'Finance', 'Research', 'PA Created')"},
-                "agent": {"type": "string", "description": "Filter by agent_name (e.g. 'StockAnalystAgent', 'ResearchAgent')"},
-                "title": {"type": "string", "description": "Title for create or update"},
-                "content": {"type": "string", "description": "Full content for create or update"},
-                "prepend": {"type": "string", "description": "Text to prepend to existing content (update action only, avoids sending full content)"},
-                "append": {"type": "string", "description": "Text to append to existing content (update action only, avoids sending full content)"},
-                "content_format": {"type": "string", "enum": ["markdown", "text", "html", "json"], "description": "Content format (default: markdown)"},
-                "tags": {"type": "string", "description": "Comma-separated tags for update (e.g. 'finance, report, q1')"},
-                "saved": {"type": "boolean", "description": "Filter to saved items only"},
-                "limit": {"type": "integer", "description": "Max items to return (default 10, max 50)"},
-                "offset": {"type": "integer", "description": "Skip first N items for pagination (default 0). Use with limit to page through results."},
-                "strategy": {
-                    "type": "string",
-                    "enum": ["duplicates", "orphans", "low_quality"],
-                    "description": "Cleanup strategy: duplicates=keep newest per title, delete rest. orphans=delete deliverables with no user. low_quality=delete items with quality_score < 0.5.",
-                },
-                "dry_run": {"type": "boolean", "description": "If true, cleanup returns what WOULD be deleted without actually deleting. Always use dry_run=true first."},
             },
             "required": ["action"],
         },
@@ -2013,57 +1636,6 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
-    # ── RAG Query ────────────────────────────────────────────────────────────
-    {
-        "type": "function",
-        "name": "rag_query_tool",
-        "description": (
-            "Search the RAG knowledge base and document embeddings. Use 'search' "
-            "to perform semantic search across all ingested documents. Use 'stats' "
-            "to get embedding statistics and recent ingestion activity. Use when "
-            "the user asks to search documents, find information in the knowledge "
-            "base, query embeddings, or check RAG status."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string",
-                    "enum": ["search", "stats", "list_documents", "ingest", "promote", "staged"],
-                    "description": "search=semantic search, stats=embedding statistics, list_documents=browse documents, ingest=ingest URL into RAG, promote=promote a staged document for retrieval, staged=list staged (pending review) documents",
-                },
-                "query": {
-                    "type": "string",
-                    "description": "Search query text (required for search action)",
-                },
-                "top_k": {
-                    "type": "integer",
-                    "description": "Max results to return (default 5, max 20)",
-                },
-                "similarity_threshold": {
-                    "type": "number",
-                    "description": "Minimum similarity score 0.0-1.0 (default 0.3)",
-                },
-                "document_id": {
-                    "type": "string",
-                    "description": "Filter results to a specific document UUID",
-                },
-                "url": {
-                    "type": "string",
-                    "description": "URL to ingest into RAG (for ingest action)",
-                },
-                "document_type": {
-                    "type": "string",
-                    "description": "Document type filter for list_documents (e.g. 'article', 'research', 'report')",
-                },
-                "limit": {
-                    "type": "integer",
-                    "description": "Max documents to return for list_documents (default 20)",
-                },
-            },
-            "required": ["action"],
-        },
-    },
     # ── Competitor Comparison (Session G1) ─────────────────────────────────────
     {
         "type": "function",
@@ -2567,36 +2139,6 @@ for _i, _tool in enumerate(PA_TOOL_SCHEMAS):
             f"Keys present: {list(_tool.keys())}. "
             f"Did you use Chat Completions format (nested 'function') instead of Responses API (flat)?"
         )
-
-
-# ── Session 1079 Phase 3 prep: Legacy tool deprecation flag ─────────────────
-# When TOOLS_EXPOSE_LEGACY is False, get_active_tool_schemas() strips legacy
-# tool schemas from the list sent to GPT-5.2, forcing it to use gateways.
-# Set to True for rollback if gateways break.
-
-import os as _os
-
-TOOLS_EXPOSE_LEGACY = _os.environ.get('TOOLS_EXPOSE_LEGACY', 'true').lower() in ('true', '1', 'yes')
-
-# Legacy tool names that have gateway replacements
-_LEGACY_TOOL_NAMES = frozenset([
-    'boardroom_tool', 'initiative_tool', 'content_review_tool',
-    'generate_blog_tool', 'deliverables_tool', 'human_decisions_tool',
-    'stock_intelligence_tool', 'sports_betting_tool', 'legislation_tool',
-    'rag_query_tool', 'spider_data_tool', 'system_health_tool',
-    'error_summary_tool',
-    # web_search is NOT included — it's a standalone primitive, not a legacy tool
-])
-
-
-def get_active_tool_schemas():
-    """
-    Return tool schemas filtered by the TOOLS_EXPOSE_LEGACY flag.
-    When legacy exposure is off, strips legacy tools that have gateway replacements.
-    """
-    if TOOLS_EXPOSE_LEGACY:
-        return PA_TOOL_SCHEMAS
-    return [t for t in PA_TOOL_SCHEMAS if t.get('name') not in _LEGACY_TOOL_NAMES]
 
 
 # ── Tool-to-Enrichment Mapping ──────────────────────────────────────────────

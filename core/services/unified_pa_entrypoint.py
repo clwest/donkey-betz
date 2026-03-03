@@ -760,7 +760,7 @@ class UnifiedPAEntrypoint:
         Returns (content, tool_runs, fc_metadata, response_id)
         where fc_metadata captures the GPT function call info (name, arguments, call_id).
         """
-        from core.services.pa_tool_schemas import get_active_tool_schemas
+        from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
 
         # Build initial messages array
         messages = self._build_messages_array(message, context)
@@ -785,7 +785,7 @@ class UnifiedPAEntrypoint:
                 self.llm_enforcer.enforce_real_ai,
                 prompt=message,
                 input_messages=messages,
-                tools=get_active_tool_schemas() if not is_final else None,
+                tools=PA_TOOL_SCHEMAS if not is_final else None,
                 previous_response_id=response_id,
                 task_type='conversation',
                 max_tokens=self._estimate_max_tokens(message),

@@ -113,17 +113,6 @@ class ToolDispatcher:
         'governance_tool', 'intelligence_tool', 'studio_tool',
     ])
 
-    # Phase 4: When false, legacy tool handlers are not registered.
-    # Legacy tool names called directly will get ToolNotFound.
-    # Default true for backward compat; flip to false after Phase 3 telemetry confirms 0 PA legacy calls.
-    import os as _os
-    TOOLS_ENABLE_LEGACY_HANDLERS = _os.environ.get(
-        'TOOLS_ENABLE_LEGACY_HANDLERS', 'true'
-    ).lower() in ('true', '1', 'yes')
-
-    # The 13 legacy tool names whose handlers can be disabled
-    _LEGACY_HANDLER_NAMES = frozenset(LEGACY_TO_GATEWAY.keys()) - {'web_search'}
-
     def __init__(self):
         self._tool_handlers: Dict[str, Callable] = {}
         self._execution_count = 0
@@ -161,7 +150,6 @@ class ToolDispatcher:
         # Universal tools
         self.register("universal_agent_tool", self._handle_universal_agent)
         self.register("workspace_tool", self._handle_workspace)
-        self.register("deliverables_tool", self._handle_deliverables)
         self.register("media_tool", self._handle_media)
         self.register("davinci_tool", self._handle_davinci)
         self.register("obs_tool", self._handle_obs)
@@ -177,23 +165,10 @@ class ToolDispatcher:
         self.register("predictions_tool", self._handle_predictions)
         self.register("gates_tool", self._handle_gates)
         self.register("pilots_tool", self._handle_pilots)
-        self.register("human_decisions_tool", self._handle_human_decisions)
         self.register("reasoning_engine_tool", self._handle_reasoning_engine)
-
-        # Session 940: Boardroom tools for PA to act on pending items
-        self.register("boardroom_tool", self._handle_boardroom)
 
         # Session 943: Brainstorm search tool for accessing Discussion/Panel insights
         self.register("brainstorm_tool", self._handle_brainstorm)
-
-        # Session 943: Content review tool for accessing Deliverables awaiting human review
-        self.register("content_review_tool", self._handle_content_review)
-
-        # Session 993: Blog generation via deliberation pipeline
-        self.register("generate_blog_tool", self._handle_generate_blog)
-
-        # Session 943: Initiative tool for PA access to project pipeline
-        self.register("initiative_tool", self._handle_initiative)
 
         # Session 1031: Dream browsing/approval via PA
         self.register("dream_tool", self._handle_dream)
@@ -212,27 +187,15 @@ class ToolDispatcher:
         self.register("legal_doc_drafter_agent", self._handle_legal_agent)
 
         # Session 948: New PA enhancement tools
-        self.register("spider_data_tool", self._handle_spider_data)
         self.register("execution_history_tool", self._handle_execution_history)
         self.register("learning_patterns_tool", self._handle_learning_patterns)
         self.register("feedback_tool", self._handle_feedback)
 
         # Session 969: Live telemetry tools for PA self-awareness
         self.register("recent_activity_tool", self._handle_recent_activity)
-        self.register("system_health_tool", self._handle_system_health)
-        self.register("error_summary_tool", self._handle_error_summary)
 
         # Session 970: Surgical moves verification tool
         self.register("surgical_moves_status_tool", self._handle_surgical_moves_status)
-
-        # Session 979: Stock intelligence tool for PA access to market data
-        self.register("stock_intelligence_tool", self._handle_stock_intelligence)
-
-        # Session 1014: Legislation tool for congressional bill tracking
-        self.register("legislation_tool", self._handle_legislation)
-
-        # Session 995B: Sports betting intelligence tool
-        self.register("sports_betting_tool", self._handle_sports_betting)
 
         # Session 973: Status snapshot for broad system overview
         self.register("status_snapshot_tool", self._handle_status_snapshot)
@@ -264,9 +227,6 @@ class ToolDispatcher:
         # PA Learning Loop — insight management
         self.register("learning_tool", self._handle_learning)
 
-        # RAG query — semantic search + stats
-        self.register("rag_query_tool", self._handle_rag_query)
-
         # Session G1: Competitor comparison — generate, status, list, detail
         self.register("competitor_comparison_tool", self._handle_competitor_comparison)
         self.register("workflow_run_tool", self._handle_workflow_run)
@@ -296,8 +256,6 @@ class ToolDispatcher:
 
     def register(self, tool_name: str, handler: Callable):
         """Register a handler for a tool."""
-        if not self.TOOLS_ENABLE_LEGACY_HANDLERS and tool_name in self._LEGACY_HANDLER_NAMES:
-            return  # Phase 4: skip legacy handler registration
         self._tool_handlers[tool_name] = handler
 
     def _generate_trace_id(self) -> str:
@@ -376,35 +334,6 @@ class ToolDispatcher:
                     pass  # scrub failure must never break tool dispatch
 
             logger.info(f"[{trace_id}] Tool {tool_name} completed in {latency_ms}ms")
-
-            # Session 1079 Phase 2: Tag legacy tool calls for migration telemetry
-            # Session 1079 Phase 3 prep: deprecation metadata on legacy responses
-            gateway_hint = self.LEGACY_TO_GATEWAY.get(tool_name)
-            if gateway_hint and isinstance(result, dict):
-                result['_gateway_hint'] = {
-                    'suggested_gateway': gateway_hint[0],
-                    'suggested_action': gateway_hint[1],
-                    'legacy_tool': tool_name,
-                }
-                result['_deprecated'] = True
-                result['_replacement'] = {
-                    'tool': gateway_hint[0],
-                    'action': gateway_hint[1],
-                }
-                result['_sunset_date'] = '2026-04-01'
-                # Detect PA-originated legacy calls (Phase 3 guardrail)
-                is_pa_call = trace_id and trace_id.startswith('pa-')
-                if is_pa_call:
-                    logger.warning(
-                        f"[{trace_id}] PA_LEGACY_LEAK: {tool_name} called by PA — "
-                        f"should use {gateway_hint[0]}.{gateway_hint[1]} instead. "
-                        f"Phase 3 invariant violated."
-                    )
-                else:
-                    logger.info(
-                        f"[{trace_id}] LEGACY_TOOL_USED: {tool_name} → "
-                        f"suggest {gateway_hint[0]}.{gateway_hint[1]} (agent-internal)"
-                    )
 
             return ToolResult(
                 ok=True,
@@ -6620,393 +6549,8 @@ class ToolDispatcher:
             'sections': sections,
         }
 
-    def _handle_system_health(
-        self,
-        tool_name: str,
-        payload: Dict[str, Any],
-        user_id: Optional[int],
-        trace_id: str
-    ) -> Dict[str, Any]:
-        """
-        Session 969: System health tool — aggregate health snapshot.
-
-        Answers "How's the system?" with heartbeat, component, celery, and spider freshness data.
-
-        Actions:
-        - overview: High-level health assessment (default)
-        - components: Detailed per-component breakdown
-        """
-        from django.utils import timezone
-        from django.db.models import Count
-        from datetime import timedelta, date
-
-        action = payload.get('action', 'overview')
-        now = timezone.now()
-
-        health = {}
-
-        # 1. Latest heartbeat
-        try:
-            from core.models_heart import HeartBeat
-            hb = HeartBeat.objects.order_by('-recorded_at').first()
-            if hb:
-                age_seconds = (now - hb.recorded_at).total_seconds()
-                health['heartbeat'] = {
-                    'overall_status': hb.overall_status,
-                    'health_score': hb.health_score,
-                    'recorded_at': hb.recorded_at.isoformat(),
-                    'age_seconds': int(age_seconds),
-                    'is_alive': hb.is_alive,
-                }
-            else:
-                health['heartbeat'] = {'status': 'no_data'}
-        except Exception as e:
-            health['heartbeat'] = {'error': str(e)}
-
-        # 2. Component statuses
-        try:
-            from core.models_heart import ComponentStatus
-            components = list(
-                ComponentStatus.objects.all().values(
-                    'component', 'display_name', 'status', 'is_healthy',
-                    'last_check', 'last_error'
-                )
-            )
-            for c in components:
-                if c.get('last_check'):
-                    c['last_check'] = c['last_check'].isoformat()
-            healthy_count = sum(1 for c in components if c.get('is_healthy'))
-            health['components'] = {
-                'total': len(components),
-                'healthy': healthy_count,
-                'unhealthy': len(components) - healthy_count,
-            }
-            if action == 'components':
-                health['components']['details'] = components  # type: ignore[index]
-        except Exception as e:
-            health['components'] = {'error': str(e)}
-
-        # 3. Celery health (last 1 hour) — Session 983: CeleryTaskEvent
-        try:
-            from core.models_celery_telemetry import CeleryTaskEvent
-            one_hour_ago = now - timedelta(hours=1)
-            task_qs = CeleryTaskEvent.objects.filter(started_at__gte=one_hour_ago)
-            by_status = dict(
-                task_qs.values('status')
-                .annotate(n=Count('id'))
-                .values_list('status', 'n')
-            )
-            total = sum(by_status.values())
-            successes = by_status.get('SUCCESS', 0)
-            success_rate = (successes / total * 100) if total > 0 else None
-            health['celery'] = {
-                'last_hour_total': total,
-                'by_status': by_status,
-                'success_rate_pct': round(success_rate, 1) if success_rate is not None else None,
-            }
-        except Exception as e:
-            health['celery'] = {'error': str(e)}
-
-        # 4. Tool call health (today)
-        try:
-            from core.models_tool_calls import ToolCallAggregate
-            today = date.today()
-            aggs = ToolCallAggregate.objects.filter(date=today)
-            total_calls = sum(a.total_calls for a in aggs)
-            success_calls = sum(a.success_calls for a in aggs)
-            tc_rate = (success_calls / total_calls * 100) if total_calls > 0 else None
-            health['tool_calls'] = {
-                'today_total': total_calls,
-                'today_success': success_calls,
-                'success_rate_pct': round(tc_rate, 1) if tc_rate is not None else None,
-            }
-        except Exception as e:
-            health['tool_calls'] = {'error': str(e)}
-
-        # 5. Spider freshness (last 2 hours)
-        try:
-            from core.models_unified_system import SpiderData
-            two_hours_ago = now - timedelta(hours=2)
-            recent_count = SpiderData.objects.filter(created_at__gte=two_hours_ago).count()
-            latest = SpiderData.objects.order_by('-created_at').first()
-            health['spider_freshness'] = {
-                'items_last_2h': recent_count,
-                'latest_at': latest.created_at.isoformat() if latest else None,
-            }
-        except Exception as e:
-            health['spider_freshness'] = {'error': str(e)}
-
-        # 6. Queue depths (live Redis LLEN)
-        try:
-            from core.views_diagnostics import get_redis_client, CELERY_QUEUE_NAMES
-            r = get_redis_client()
-            if r:
-                depths = {}
-                total_pending = 0
-                for qname in CELERY_QUEUE_NAMES:
-                    try:
-                        length = r.llen(qname)
-                    except Exception:
-                        length = 0
-                    depths[qname] = length
-                    total_pending += length
-                health['queue_depths'] = {
-                    'total_pending': total_pending,
-                    'per_queue': depths,
-                }
-            else:
-                health['queue_depths'] = {'error': 'Redis unavailable'}
-        except Exception as e:
-            health['queue_depths'] = {'error': str(e)}
-
-        # Compute overall assessment
-        assessment = 'healthy'
-        reasons = []
-
-        hb_data = health.get('heartbeat', {})
-        if hb_data.get('status') == 'no_data' or hb_data.get('error'):
-            assessment = 'critical'
-            reasons.append('No heartbeat data')
-        elif hb_data.get('age_seconds', 0) > 600:  # >10 min stale
-            assessment = 'degraded'
-            reasons.append(f"Heartbeat stale ({hb_data['age_seconds']}s ago)")
-        elif hb_data.get('overall_status') not in ('healthy', 'HEALTHY', None):
-            assessment = 'degraded'
-            reasons.append(f"Heartbeat status: {hb_data.get('overall_status')}")
-
-        celery_data = health.get('celery', {})
-        celery_rate = celery_data.get('success_rate_pct')
-        if celery_rate is not None and celery_rate < 80:
-            assessment = 'degraded' if assessment != 'critical' else 'critical'
-            reasons.append(f"Celery success rate low ({celery_rate}%)")
-
-        comp_data = health.get('components', {})
-        # Non-critical components don't affect overall assessment
-        _NON_CRITICAL = {'resolve_node'}
-        critical_unhealthy = comp_data.get('unhealthy', 0)
-        if health.get('components', {}).get('details'):
-            critical_unhealthy = sum(
-                1 for c in health['components']['details']
-                if not c.get('is_healthy') and c.get('component') not in _NON_CRITICAL
-            )
-        elif comp_data.get('unhealthy', 0) > 0:
-            # Fallback: if we don't have details, subtract known non-critical count
-            from core.models_heart import ComponentStatus as _CS
-            non_crit_unhealthy = _CS.objects.filter(
-                component__in=_NON_CRITICAL, is_healthy=False
-            ).count()
-            critical_unhealthy = comp_data['unhealthy'] - non_crit_unhealthy
-
-        if critical_unhealthy > 0:
-            if critical_unhealthy >= comp_data.get('total', 1) / 2:
-                assessment = 'critical'
-            elif assessment == 'healthy':
-                assessment = 'degraded'
-            reasons.append(f"{critical_unhealthy} unhealthy critical components")
-        elif comp_data.get('unhealthy', 0) > 0:
-            reasons.append(f"{comp_data['unhealthy']} unhealthy non-critical components (resolve_node)")
-
-        qd = health.get('queue_depths', {})
-        total_pending = qd.get('total_pending', 0)
-        if total_pending > 5000:
-            assessment = 'degraded' if assessment != 'critical' else 'critical'
-            reasons.append(f"Queue backlog: {total_pending} pending tasks")
-        elif total_pending > 1000:
-            if assessment == 'healthy':
-                assessment = 'degraded'
-            reasons.append(f"Queue backlog: {total_pending} pending tasks")
-
-        health['overall_assessment'] = assessment
-        health['assessment_reasons'] = reasons if reasons else ['All systems nominal']
-
-        return {
-            'action': action,
-            'health': health,
-        }
-
-    def _handle_error_summary(
-        self,
-        tool_name: str,
-        payload: Dict[str, Any],
-        user_id: Optional[int],
-        trace_id: str
-    ) -> Dict[str, Any]:
-        """
-        Session 969: Error summary tool — recent failures and patterns.
-
-        Answers "Any errors?" with failure signatures, detections, failed tool calls, and celery failures.
-
-        Actions:
-        - summary: High-level error counts and top patterns (default)
-        - detailed: Full error details with individual items
-        """
-        from django.utils import timezone
-        from django.db.models import Count
-        from datetime import timedelta
-
-        action = payload.get('action', 'summary')
-        hours = payload.get('hours', 4)
-        cutoff = timezone.now() - timedelta(hours=hours)
-        item_limit = 5 if action == 'summary' else 20
-
-        errors = {}
-        total_errors = 0
-
-        # 1. Active failure signatures
-        try:
-            from core.models_diagnostic_pipeline import FailureSignature
-            sigs = list(
-                FailureSignature.objects.filter(
-                    status='active',
-                    last_seen_at__gte=cutoff
-                ).order_by('-occurrence_count')[:item_limit]
-                .values('signature', 'occurrence_count', 'last_seen_at', 'description')
-            )
-            for item in sigs:
-                if item.get('last_seen_at'):
-                    item['last_seen_at'] = item['last_seen_at'].isoformat()
-            errors['failure_signatures'] = {
-                'count': len(sigs),
-                'items': sigs,
-            }
-            total_errors += len(sigs)
-        except Exception as e:
-            errors['failure_signatures'] = {'error': str(e)}
-
-        # 2. Failure detections grouped by source_type
-        try:
-            from core.models_diagnostic_pipeline import FailureDetection
-            det_qs = FailureDetection.objects.filter(detected_at__gte=cutoff)
-            by_source = dict(
-                det_qs.values('source_type')
-                .annotate(n=Count('id'))
-                .values_list('source_type', 'n')
-            )
-            det_total = sum(by_source.values())
-            errors['failure_detections'] = {
-                'total': det_total,
-                'by_source_type': by_source,
-            }
-            total_errors += det_total
-        except Exception as e:
-            errors['failure_detections'] = {'error': str(e)}
-
-        # 3. Failed tool calls grouped by agent+tool
-        try:
-            from core.models_tool_calls import ToolCallRecord
-            failed_tc = ToolCallRecord.objects.filter(
-                success=False,
-                created_at__gte=cutoff
-            )
-            by_agent_tool = list(
-                failed_tc.values('agent_name', 'tool_name')
-                .annotate(n=Count('id'))
-                .order_by('-n')[:item_limit]
-            )
-            tc_total = failed_tc.count()
-            errors['failed_tool_calls'] = {
-                'total': tc_total,
-                'by_agent_tool': by_agent_tool,
-            }
-            # Session 1068: Include individual rows so PA can see error messages
-            if action == 'detailed' or hours >= 24:
-                detail_rows = list(
-                    failed_tc.order_by('-created_at')[:item_limit]
-                    .values('created_at', 'agent_name', 'tool_name',
-                            'error_type', 'error_message', 'latency_ms',
-                            'task_summary')
-                )
-                for row in detail_rows:
-                    if row.get('created_at'):
-                        row['created_at'] = row['created_at'].isoformat()
-                    if row.get('error_message'):
-                        row['error_message'] = row['error_message'][:500]
-                errors['failed_tool_calls']['details'] = detail_rows
-            total_errors += tc_total
-        except Exception as e:
-            errors['failed_tool_calls'] = {'error': str(e)}
-
-        # 4. Failed Celery tasks grouped by task name — Session 983: CeleryTaskEvent
-        try:
-            from core.models_celery_telemetry import CeleryTaskEvent
-            failed_tasks = CeleryTaskEvent.objects.filter(
-                status='FAILURE',
-                started_at__gte=cutoff,
-            )
-            by_task = dict(
-                failed_tasks.values('task_name')
-                .annotate(n=Count('id'))
-                .order_by('-n')[:item_limit]
-                .values_list('task_name', 'n')
-            )
-            ft_total = failed_tasks.count()
-            errors['failed_celery_tasks'] = {
-                'total': ft_total,
-                'by_task_name': by_task,
-            }
-            total_errors += ft_total
-        except Exception as e:
-            errors['failed_celery_tasks'] = {'error': str(e)}
-
-        # 5. Session 1068: Agent timeout breakdown (top timeout-prone agents)
-        try:
-            from core.models_unified_system import AgentExecution
-            timeout_qs = AgentExecution.objects.filter(
-                created_at__gte=cutoff,
-                status='failed',
-                error_message__icontains='timed out after 45 minutes'
-            )
-            timeout_by_agent = list(
-                timeout_qs.values('agent__name')
-                .annotate(timeouts=Count('id'))
-                .order_by('-timeouts')[:10]
-            )
-            errors['agent_timeouts'] = {
-                'total': timeout_qs.count(),
-                'by_agent': timeout_by_agent,
-            }
-            total_errors += timeout_qs.count()
-
-            # Include recent non-timeout agent failures with error messages
-            if action == 'detailed' or hours >= 24:
-                recent_failures = list(
-                    AgentExecution.objects.filter(
-                        created_at__gte=cutoff,
-                        status='failed',
-                    ).exclude(
-                        error_message__icontains='timed out after 45 minutes'
-                    ).order_by('-created_at')[:item_limit]
-                    .values('agent__name', 'task', 'error_message',
-                            'created_at', 'execution_time_ms')
-                )
-                for row in recent_failures:
-                    if row.get('created_at'):
-                        row['created_at'] = row['created_at'].isoformat()
-                    if row.get('error_message'):
-                        row['error_message'] = row['error_message'][:500]
-                    if row.get('task'):
-                        row['task'] = row['task'][:200]
-                errors['agent_failures_detail'] = recent_failures
-        except Exception as e:
-            errors['agent_timeouts'] = {'error': str(e)}
-
-        # Compute severity
-        if total_errors == 0:
-            severity = 'none'
-        elif total_errors <= 5:
-            severity = 'low'
-        elif total_errors <= 20:
-            severity = 'moderate'
-        else:
-            severity = 'high'
-
-        return {
-            'action': action,
-            'hours_back': hours,
-            'total_errors': total_errors,
-            'severity': severity,
-            'errors': errors,
-        }
+    # _handle_system_health and _handle_error_summary deleted (Session 1079 PR2).
+    # ops_tool.slo_status and ops_tool.failure_signatures replace them.
 
     def _handle_surgical_moves_status(
         self,
