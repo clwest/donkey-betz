@@ -2226,36 +2226,34 @@ PA_TOOL_SCHEMAS = [
     # ── ops_digest_tool ──────────────────────────────────────────────────
     {
         "type": "function",
-        "function": {
-            "name": "ops_digest_tool",
-            "description": (
-                "Generate or post an autonomous ops digest summarizing system health, "
-                "autopilot status, blocked agents, and recent activity. "
-                "Use 'generate' to build a digest, 'post' to write it into a conversation."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "action": {
-                        "type": "string",
-                        "enum": ["generate", "post"],
-                        "description": (
-                            "generate: build an ops digest and return it. "
-                            "post: generate and write the digest into a conversation as a visible message."
-                        ),
-                    },
-                    "conversation_id": {
-                        "type": "string",
-                        "description": "Target conversation ID for 'post' action (e.g. 'pa-9eee6fe61173')",
-                    },
-                    "window": {
-                        "type": "string",
-                        "enum": ["10m", "1h", "6h", "24h"],
-                        "description": "Lookback window for activity counts (default: 1h)",
-                    },
+        "name": "ops_digest_tool",
+        "description": (
+            "Generate or post an autonomous ops digest summarizing system health, "
+            "autopilot status, blocked agents, and recent activity. "
+            "Use 'generate' to build a digest, 'post' to write it into a conversation."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["generate", "post"],
+                    "description": (
+                        "generate: build an ops digest and return it. "
+                        "post: generate and write the digest into a conversation as a visible message."
+                    ),
                 },
-                "required": ["action"],
+                "conversation_id": {
+                    "type": "string",
+                    "description": "Target conversation ID for 'post' action (e.g. 'pa-9eee6fe61173')",
+                },
+                "window": {
+                    "type": "string",
+                    "enum": ["10m", "1h", "6h", "24h"],
+                    "description": "Lookback window for activity counts (default: 1h)",
+                },
             },
+            "required": ["action"],
         },
     },
 ]
