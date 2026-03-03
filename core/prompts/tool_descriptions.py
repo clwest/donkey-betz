@@ -693,12 +693,12 @@ USE FOR: prediction markets, sports odds, arbitrage opportunities
 - "Check sports odds" → SportsOddsAnalyst
 - "Find arbitrage opportunities" → ArbitrageDetector
 
-=== DEVELOPMENT (4 agents) ===
-USE FOR: code generation, code review, full-stack development, DevOps
-- "Generate code for X" → CodeGeneratorAgent
+=== DEVELOPMENT (3 agents) ===
+USE FOR: code review, full-stack development, DevOps
 - "Review this code for bugs" → CodeReviewAgent
 - "Build a full feature" → FullStackDeveloperAgent
 - "Help with CI/CD/Docker" → DevOpsAgent
+NOTE: CodeGeneratorAgent is blocked (no codebase access). Use CodeReviewAgent for analysis.
 
 === PODCAST & DEBATES (4 agents) ===
 USE FOR: AI debates, podcast generation, moderated discussions
@@ -804,7 +804,7 @@ Actions:
 
 This enables:
 - FullStackDeveloperAgent to actually write code to projects
-- CodeGeneratorAgent to create real files
+- CodeReviewAgent to analyze and suggest changes
 - DevOpsAgent to execute commands
 - Complete audit trail of all agent modifications
 

@@ -10196,8 +10196,8 @@ class DeveloperCommands(commands.Cog):
 
             @sync_to_async
             def run_generator():
-                from core.agents.code_generator_agent import CodeGeneratorAgent
-                agent = CodeGeneratorAgent()
+                from core.agents.code_review_agent import CodeReviewAgent
+                agent = CodeReviewAgent()
                 task = f"Generate {language.name} code for: {specification}"
                 if framework:
                     task += f" (using {framework})"

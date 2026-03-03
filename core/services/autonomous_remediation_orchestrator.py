@@ -53,7 +53,7 @@ FINDING_TO_AGENT_MAPPING: List[Tuple[str, str, str]] = [
     ('code_quality', 'core/agents/*', 'CodeReviewAgent'),
     ('code_quality', 'core/services/*', 'CodeReviewAgent'),
     ('code_quality', 'frontend/*', 'FullStackDeveloperAgent'),
-    ('code_quality', '*', 'CodeGeneratorAgent'),
+    ('code_quality', '*', 'CodeReviewAgent'),
 
     # Database and API
     ('data_integrity', '*', 'FullStackDeveloperAgent'),
@@ -72,7 +72,7 @@ FINDING_TO_AGENT_MAPPING: List[Tuple[str, str, str]] = [
     ('consistency', '*', 'CodeReviewAgent'),
 
     # Default fallback
-    ('other', '*', 'CodeGeneratorAgent'),
+    ('other', '*', 'CodeReviewAgent'),
 ]
 
 
@@ -920,7 +920,7 @@ Please review the changes before merging.
                 return agent
 
         # Ultimate fallback
-        return 'CodeGeneratorAgent'
+        return 'CodeReviewAgent'
 
     def _path_matches_pattern(self, path: str, pattern: str) -> bool:
         """Check if a file path matches a glob-like pattern."""

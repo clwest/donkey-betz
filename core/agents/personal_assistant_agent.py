@@ -443,11 +443,12 @@ For LEGAL requests (divorce, custody, court, motion):
 For CODE REVIEW requests (review, audit, check, analyze code/file):
 - ALWAYS use CodeReviewAgent for reviewing existing code
 - CodeReviewAgent can read files and analyze them for bugs, security, performance
-- Do NOT use CodeGeneratorAgent for reviews - that is for WRITING NEW code only
 
 For CODE GENERATION requests (generate, create, write code):
-- Use CodeGeneratorAgent to write new code from specifications
+- CodeGeneratorAgent is BLOCKED (no codebase access on Railway) — do NOT dispatch to it
+- Use CodeReviewAgent for code analysis and diff suggestions
 - Use FullStackDeveloperAgent for complete feature implementations
+- For actual file writing, recommend using Claude Code locally
 
 For DEVOPS requests (deploy, CI/CD, Docker, Kubernetes, infrastructure):
 - Use DevOpsAgent for deployment and infrastructure questions
