@@ -54,12 +54,15 @@ interface AgentRow {
 }
 
 interface GateInfo {
-  status: 'APPROVED' | 'CONDITIONAL' | 'FAILED' | 'IN_PROGRESS' | 'NO_DATA'
+  status: 'APPROVED' | 'CONDITIONAL' | 'FAILED' | 'IN_PROGRESS' | 'NO_DATA' | 'INSUFFICIENT_DATA'
   details: {
     atr_overall?: number
     atr_target?: number
     roles_below_15?: string[]
+    roles_insufficient_data?: string[]
     total_syntheses?: number
+    min_overall?: number
+    min_per_role?: number
   }
 }
 
@@ -380,6 +383,12 @@ function GateBanner({ gate }: { gate: GateInfo }) {
       text: 'text-primary-400',
       label: 'Stage 3 IN PROGRESS — Pilot running',
     },
+    INSUFFICIENT_DATA: {
+      icon: AlertTriangle,
+      bg: 'bg-yellow-400/10 border-yellow-400/30',
+      text: 'text-yellow-400',
+      label: `Insufficient data — Need ${gate.details.min_overall ?? 40} syntheses overall and ${gate.details.min_per_role ?? 10} per role to evaluate gate`,
+    },
     NO_DATA: {
       icon: Minus,
       bg: 'bg-[#333]/30 border-[#333]',
@@ -399,6 +408,11 @@ function GateBanner({ gate }: { gate: GateInfo }) {
         {gate.details.roles_below_15 && gate.details.roles_below_15.length > 0 && (
           <p className="text-xs text-gray-500 mt-0.5">
             Roles below 15%: {gate.details.roles_below_15.join(', ')}
+          </p>
+        )}
+        {gate.details.roles_insufficient_data && gate.details.roles_insufficient_data.length > 0 && (
+          <p className="text-xs text-gray-500 mt-0.5">
+            Roles needing more data (&lt;{gate.details.min_per_role ?? 10}): {gate.details.roles_insufficient_data.join(', ')}
           </p>
         )}
       </div>

@@ -777,14 +777,18 @@ def stage3_dashboard(request):
 
         # ── Stage gate assessment ───────────────────────────────────
         overall_pct = headline['atr_24h']
-        role_pass = all(r['atr_24h'] >= 15 for r in by_role if r['role'] != 'unknown')
-        role_fail_count = sum(1 for r in by_role if r['role'] != 'unknown' and r['atr_24h'] < 15)
+        real_roles = [r for r in by_role if r['role'] != 'unknown']
+        roles_below_min_n = [r['role'] for r in real_roles if r['syntheses'] < 10]
+        roles_below_15 = [r['role'] for r in real_roles if r['syntheses'] >= 10 and r['atr_24h'] < 15]
 
-        if overall_pct >= 25 and role_pass:
+        # Insufficient data: need >= 40 overall and >= 10 per role to evaluate
+        if total_syntheses < 40 or roles_below_min_n:
+            gate_status = 'INSUFFICIENT_DATA'
+        elif overall_pct >= 25 and not roles_below_15:
             gate_status = 'APPROVED'
-        elif overall_pct >= 25 and role_fail_count <= 1:
+        elif overall_pct >= 25 and len(roles_below_15) <= 1:
             gate_status = 'CONDITIONAL'
-        elif overall_pct < 20 or role_fail_count >= 2:
+        elif overall_pct < 20 or len(roles_below_15) >= 2:
             gate_status = 'FAILED'
         else:
             gate_status = 'IN_PROGRESS'
@@ -794,8 +798,11 @@ def stage3_dashboard(request):
             'details': {
                 'atr_overall': overall_pct,
                 'atr_target': 25,
-                'roles_below_15': [r['role'] for r in by_role if r['role'] != 'unknown' and r['atr_24h'] < 15],
+                'roles_below_15': roles_below_15,
+                'roles_insufficient_data': roles_below_min_n,
                 'total_syntheses': total_syntheses,
+                'min_overall': 40,
+                'min_per_role': 10,
             }
         }
 
