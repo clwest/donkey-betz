@@ -10,7 +10,7 @@ import json
 import logging
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_http_methods
-from django.db.models import Count
+from django.db.models import Count, Q
 
 from core.models_deliberation import (
     DeliberationSession,
@@ -79,6 +79,8 @@ def deliberation_sessions_list(request):
             'participant_count': len(s.participants) if s.participants else 0,
             'turn_count': s.turn_count,
             'contract_count': s.contract_count,
+            'failure_reason_code': getattr(s, 'failure_reason_code', '') or '',
+            'failure_detail': (getattr(s, 'failure_detail', '') or '')[:300],
             'blog': _get_blog_for_session(s.id),
         })
 
@@ -558,4 +560,60 @@ def deliberation_verification_report(request, session_id):
         'evidence_stats': evidence_stats,
         'trace_stats': trace_stats,
         'checks': checks,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Failure Stats
+# ---------------------------------------------------------------------------
+
+@require_GET
+def deliberation_failure_stats(request):
+    """
+    GET /api/deliberation/failure-stats/
+    Aggregated failure breakdown for the last N hours (default 24).
+    Returns counts per failure_reason_code and recent failed sessions.
+    """
+    from datetime import timedelta
+    from django.utils import timezone
+
+    hours = min(int(request.GET.get('hours', 24)), 168)  # max 7 days
+    cutoff = timezone.now() - timedelta(hours=hours)
+
+    failed_qs = DeliberationSession.objects.filter(
+        status='failed',
+        created_at__gte=cutoff,
+    )
+
+    # Count by reason code
+    reason_counts = {}
+    for s in failed_qs.values('failure_reason_code'):
+        code = s['failure_reason_code'] or 'UNKNOWN'
+        reason_counts[code] = reason_counts.get(code, 0) + 1
+
+    total_failed = sum(reason_counts.values())
+    total_sessions = DeliberationSession.objects.filter(
+        created_at__gte=cutoff,
+    ).count()
+
+    # Recent failures (last 10)
+    recent = failed_qs.order_by('-created_at')[:10]
+    recent_list = [
+        {
+            'id': str(s.id),
+            'objective': (s.objective or '')[:150],
+            'failure_reason_code': getattr(s, 'failure_reason_code', '') or 'UNKNOWN',
+            'failure_detail': (getattr(s, 'failure_detail', '') or '')[:200],
+            'created_at': s.created_at.isoformat() if s.created_at else None,
+        }
+        for s in recent
+    ]
+
+    return JsonResponse({
+        'hours': hours,
+        'total_sessions': total_sessions,
+        'total_failed': total_failed,
+        'failure_rate': round(total_failed / total_sessions, 3) if total_sessions else 0,
+        'by_reason': reason_counts,
+        'recent_failures': recent_list,
     })
