@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-03-02 16:33
+**Generated:** 2026-03-02 17:25
 **Current Session:** 1075
 **Total Documentation:** 1808 files | 620,631 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/SYSTEM_CAPABILITIES-original/02_Content_Creation/README.md` | 60 | 🎨 AI CONTENT STUDIO - The Complete Creation Suite |
+| `docs/archive/SYSTEM_CAPABILITIES-original/README.md` | 59 | 🚀 UNIFIED DONKEY BETZ - SYSTEM CAPABILITIES DOCUME |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -215,9 +215,9 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
+| INDEX.md | docs | 359 | 2026-03-02 16:33 |
 | tool-consolidation.md | topics | 214 | 2026-03-02 16:32 |
 | personal-assistant.md | topics | 139 | 2026-03-02 16:31 |
-| INDEX.md | docs | 359 | 2026-03-02 16:24 |
 | command_audit.md | discord | 349 | 2026-03-01 21:56 |
 | obs-remote-control.md | context-packets | 497 | 2026-03-01 20:13 |
 | pa-tool-routing-guide.md | tools | 100 | 2026-03-01 15:50 |
