@@ -2267,7 +2267,7 @@ urlpatterns = [
     path('api/autonomous-system/resume/', AutonomousSystemResumeView.as_view(), name='autonomous-resume'),
 
     # Opportunity Aggregator endpoints
-    path('api/opportunities/', get_opportunities, name='get-opportunities'),
+    # api/opportunities/ — REMOVED: duplicate of line 1858 (opportunity_list wins)
     path('api/opportunities/actionable/', get_actionable, name='get-actionable'),
 
     # Proposals API endpoints
@@ -2827,7 +2827,7 @@ urlpatterns = [
     path('api/agents/workflows/save-as-template/', execute_workflow_save_as_template, name='agent-workflow-save-template'),
     path('api/agents/workflows/train-brand-style/', execute_workflow_train_brand_style, name='agent-workflow-train-brand'),
     path('api/agents/workflows/refine-and-perfect/', execute_workflow_refine_and_perfect, name='agent-workflow-refine-perfect'),
-    path('api/agents/status/', get_ecosystem_status, name='agent-ecosystem-status'),
+    # api/agents/status/ — REMOVED: duplicate of line 2286 (AgentStatusAPI wins)
 
     # Intelligent Prompt Improvement (Session 56: Phase B.1)
     path('api/workflows/improve-prompt/', improve_workflow_prompt, name='improve-workflow-prompt'),
@@ -3157,11 +3157,7 @@ urlpatterns = [
     path('api/v1/reasoning/actions/create/', views_autonomous_reasoning.create_action_notifications_api, name='create-actions'),
     path('api/v1/reasoning/actions/<uuid:notification_id>/respond/', views_autonomous_reasoning.handle_human_action_api, name='handle-action'),
 
-    # Session 550: Research Demo APIs (D3.js network visualization)
-    path('api/v1/research/network-graph/', views_research_demo.network_graph_api, name='research-network-graph'),
-    path('api/v1/research/live-feed/', views_research_demo.live_feed_api, name='research-live-feed'),
-    path('api/v1/research/stats/', views_research_demo.stats_api, name='research-stats'),
-    path('api/v1/research/mythology-gate/', views_research_demo.mythology_gate_api, name='research-mythology-gate'),
+    # Session 550: Research Demo APIs — REMOVED: exact duplicates of Session 542 routes (lines 3072-3075)
 
     # Session 1009: Removed odds-calc include (orphan cleanup)
     path('api/v1/intelligence/', include('intelligence.urls')),  # Intelligence module with action plan execution
@@ -3174,7 +3170,7 @@ urlpatterns = [
     path('', include('ai_platform.urls')),  # AI Platform endpoints
 
     # Learning Dashboard APIs for real-time proof
-    path('api/learning/dashboard/', learning_dashboard_data, name='learning-dashboard-data'),
+    # api/learning/dashboard/ — REMOVED: duplicate of line 1966 (learning_dashboard wins)
     path('api/learning/updates/', learning_updates_stream, name='learning-updates-stream'),
 
     # AI Learning System APIs - Real user-facing learning system
@@ -3360,7 +3356,7 @@ urlpatterns = [
     # Session 596: Experiment Tracking Registry
     # Session 692: Added /pilot-experiments/ to avoid conflict with A/B experiments at /experiments/
     path('api/pilot-experiments/', get_experiments, name='pilot-experiments-list'),
-    path('api/experiments/', get_experiments, name='get-experiments'),
+    # api/experiments/ — REMOVED: duplicate of line 2137 (list_experiments wins). Use /api/pilot-experiments/ above instead.
     path('api/experiments/portfolio/', get_experiment_portfolio, name='experiment-portfolio'),
     path('api/experiments/<uuid:experiment_id>/update-kpi/', update_experiment_kpi, name='update-experiment-kpi'),
     path('api/experiments/<uuid:experiment_id>/complete/', complete_experiment, name='complete-experiment'),
@@ -3557,8 +3553,8 @@ urlpatterns = [
 
     # Learning path endpoints
     path('api/learning/trigger/', trigger_learning_query, name='learning-trigger'),
-    path('api/learning/status/', get_overall_learning_status, name='learning-status-overall'),
-    path('api/learning/status/<str:session_id>/', get_learning_status, name='learning-status'),
+    # api/learning/status/ — REMOVED: duplicate of line 2465 (learning_status_api wins)
+    path('api/learning/status/<str:session_id>/', get_learning_status, name='learning-status-by-session'),
     path('api/learning/knowledge-map/<str:agent_id>/', get_agent_knowledge_map, name='agent-knowledge-map'),
     path('api/learning/feed/', get_learning_feed, name='learning-feed'),
     path('api/agents/<str:agent_name>/solutions/recent/', get_agent_solutions_recent, name='agent-solutions-recent'),
@@ -3589,7 +3585,7 @@ urlpatterns = [
     path('api/verify/demo/', run_quick_verification_demo, name='verification-demo'),
 
     # AI Ecosystem Visualization APIs
-    path('api/ecosystem/stats/', get_ecosystem_stats, name='ecosystem-stats'),
+    # api/ecosystem/stats/ — REMOVED: duplicate of line 1741 (ecosystem_stats wins)
     path('api/ecosystem/feed/', get_live_learning_feed, name='ecosystem-feed'),
     path('api/ecosystem/network/', get_agent_network, name='ecosystem-network'),
     path('api/ecosystem/trigger/', trigger_learning_event, name='ecosystem-trigger'),
@@ -4323,7 +4319,7 @@ from core.views_celery_api import (
 )
 
 urlpatterns += [
-    path('api/celery/status/', CeleryStatusView.as_view(), name='celery-status'),
+    # api/celery/status/ — REMOVED: duplicate of line 2106 (celery_status function view wins)
     path('api/celery/quick/', CeleryQuickStatusView.as_view(), name='celery-quick'),
     path('api/celery/workers/', CeleryWorkersView.as_view(), name='celery-workers'),
     path('api/celery/queues/', CeleryQueuesView.as_view(), name='celery-queues'),
