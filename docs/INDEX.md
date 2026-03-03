@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-03-02 21:34
+**Generated:** 2026-03-02 22:22
 **Current Session:** 1075
 **Total Documentation:** 1808 files | 620,668 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,201 |
+| Total cross-references | 2,200 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/SYSTEM_CAPABILITIES-original/08_Sports_Analytics/README.md` | 60 | 🏆 SPORTS ANALYTICS PLATFORM - AI-Powered Betting I |
+| `docs/archive/SYSTEM_CAPABILITIES-original/02_Content_Creation/README.md` | 60 | 🎨 AI CONTENT STUDIO - The Complete Creation Suite |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -215,7 +215,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 359 | 2026-03-02 20:57 |
+| INDEX.md | docs | 359 | 2026-03-02 21:38 |
 | tool-consolidation.md | topics | 251 | 2026-03-02 19:17 |
 | personal-assistant.md | topics | 139 | 2026-03-02 19:17 |
 | command_audit.md | discord | 349 | 2026-03-01 21:56 |

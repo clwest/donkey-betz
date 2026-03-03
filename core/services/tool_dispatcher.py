@@ -245,6 +245,7 @@ class ToolDispatcher:
 
         # Session 1080: Ops Autopilot tool — status/history/run/config
         self.register("autopilot_tool", self._handle_autopilot)
+        self.register("ops_digest_tool", self._handle_ops_digest)
 
         # Session 1078: Work tool — gateway for initiatives + action items
         self.register("work_tool", self._handle_work)
@@ -11374,6 +11375,180 @@ RESEARCH DATA:
                 f"Unknown action: {action}. "
                 f"Valid: status, history, run, config"
             )
+
+    def _handle_ops_digest(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Autonomous ops digest — aggregates live system data into a
+        structured summary that can be posted into a conversation.
+        """
+        from django.utils import timezone
+        from datetime import timedelta
+        from core.models_diagnostic_pipeline import AutopilotAction
+        from core.models_unified_system import AgentControlEntry
+
+        action = payload.get('action', 'generate')
+        window = payload.get('window', '1h')
+        now = timezone.now()
+
+        window_map = {'10m': 10, '1h': 60, '6h': 360, '24h': 1440}
+        window_minutes = window_map.get(window, 60)
+        cutoff = now - timedelta(minutes=window_minutes)
+
+        # ── Gather data ──────────────────────────────────────────────
+        # Deploy SHA
+        import os
+        sha = os.environ.get('RAILWAY_GIT_COMMIT_SHA', '')
+        if not sha:
+            try:
+                import subprocess
+                sha = subprocess.check_output(
+                    ['git', 'rev-parse', 'HEAD'],
+                    stderr=subprocess.DEVNULL,
+                ).decode().strip()[:12]
+            except Exception:
+                sha = 'unknown'
+        sha = sha[:12]
+
+        # Autopilot status
+        autopilot_last = 'never'
+        total_cycles = 0
+        blocks_24h = 0
+        try:
+            last_cycle = AutopilotAction.objects.filter(
+                policy='cycle_evaluation',
+            ).first()
+            autopilot_last = last_cycle.created_at.isoformat() if last_cycle else 'never'
+            total_cycles = AutopilotAction.objects.filter(policy='cycle_evaluation').count()
+            blocks_24h = AutopilotAction.objects.filter(
+                action_type='block_agent', dry_run=False,
+                created_at__gte=now - timedelta(hours=24),
+            ).count()
+        except Exception:
+            pass
+
+        # Blocked agents
+        blocked_names = []
+        try:
+            blocked_names = sorted(AgentControlEntry.get_blocked_names())
+        except Exception:
+            pass
+
+        # Recent activity (agent executions + celery tasks in window)
+        agent_runs = 0
+        task_events = 0
+        task_failures = 0
+        try:
+            from core.models_unified_system import AgentExecution
+            from core.models_celery_telemetry import CeleryTaskEvent
+            agent_runs = AgentExecution.objects.filter(created_at__gte=cutoff).count()
+            task_events = CeleryTaskEvent.objects.filter(started_at__gte=cutoff).count()
+            task_failures = CeleryTaskEvent.objects.filter(
+                started_at__gte=cutoff, status='FAILURE',
+            ).count()
+        except Exception:
+            pass
+
+        # Failure signatures (top 3 in window)
+        top_failures = []
+        try:
+            from core.models_diagnostic_pipeline import FailureSignature
+            from django.db.models import Count
+            sigs = list(
+                FailureSignature.objects.filter(
+                    detections__detected_at__gte=cutoff,
+                ).annotate(
+                    hit_count=Count('detections'),
+                ).order_by('-hit_count')[:3].values(
+                    'category', 'pattern_hash', 'hit_count',
+                )
+            )
+            top_failures = sigs
+        except Exception:
+            pass
+
+        # ── Build digest ─────────────────────────────────────────────
+        digest = {
+            'timestamp': now.isoformat(),
+            'window': window,
+            'deploy_sha': sha,
+            'autopilot': {
+                'status': 'running',
+                'last_cycle': autopilot_last,
+                'total_cycles': total_cycles,
+                'blocks_24h': blocks_24h,
+            },
+            'blocked_agents': blocked_names,
+            'activity': {
+                'agent_runs': agent_runs,
+                'celery_tasks': task_events,
+                'task_failures': task_failures,
+            },
+            'top_failures': top_failures,
+        }
+
+        # Render markdown
+        fa_lines = []
+        for f in top_failures:
+            fa_lines.append(f"  - {f['category']}/{f['pattern_hash'][:8]}: {f['hit_count']} hits")
+
+        md = (
+            f"## Ops Digest — {now.strftime('%Y-%m-%d %H:%M UTC')}\n"
+            f"**SHA:** `{sha}` | **Window:** {window}\n\n"
+            f"**Autopilot:** running (last cycle: {autopilot_last[:19]}Z) | "
+            f"cycles: {total_cycles} | blocks 24h: {blocks_24h}\n\n"
+            f"**Blocked agents:** {', '.join(blocked_names) if blocked_names else 'none'}\n\n"
+            f"**Activity ({window}):** {agent_runs} agent runs, "
+            f"{task_events} tasks, {task_failures} failures\n\n"
+        )
+        if fa_lines:
+            md += "**Top failures:**\n" + '\n'.join(fa_lines) + "\n"
+        else:
+            md += "**Top failures:** none\n"
+
+        digest['markdown'] = md
+
+        if action == 'generate':
+            return {'action': 'generate', 'digest': digest}
+
+        elif action == 'post':
+            conversation_id = payload.get('conversation_id')
+            if not conversation_id:
+                return {'error': 'conversation_id required for post action'}
+
+            from core.models import ChatConversation
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+
+            user = None
+            if user_id:
+                user = User.objects.filter(id=user_id).first()
+            if not user:
+                user = User.objects.filter(is_superuser=True).first()
+
+            ChatConversation.objects.create(
+                user=user,
+                conversation_id=conversation_id,
+                user_message='[Autonomous Ops Digest]',
+                assistant_response=md,
+                platform='api',
+                source='ops_digest',
+                metadata={'digest': digest, 'trace_id': trace_id},
+            )
+
+            return {
+                'action': 'post',
+                'conversation_id': conversation_id,
+                'posted_at': now.isoformat(),
+                'digest': digest,
+            }
+
+        return {'error': f'Unknown action: {action}'}
 
     def _ops_tool_migration_report(self, window: str, trace_id: str) -> Dict[str, Any]:
         """

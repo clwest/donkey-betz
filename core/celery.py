@@ -2499,6 +2499,14 @@ app.conf.beat_schedule = {
             'expires': 600,
         },
     },
+    # Autonomous ops digest — posts system health into PA conversation
+    'post-ops-digest': {
+        'task': 'core.tasks.post_ops_digest',
+        'schedule': 1800.0,  # Every 30 minutes
+        'options': {
+            'expires': 1800,
+        },
+    },
 }
 
 # Task routing configuration
