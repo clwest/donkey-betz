@@ -10873,11 +10873,15 @@ RESEARCH DATA:
             slos.append({'key': 'deliberation_zero_turn_rate', 'error': str(e)})
 
         # SLO 5: Content publish conversion (≥40%)
+        # Session 1080: Scoped to deliberation-sourced blogs only. Other SelfBlog
+        # creators (initiative pipeline, research briefs, audit reports) have no
+        # path to PublishGate and were inflating the denominator.
         try:
             from core.models_unified_system import SelfBlog
-            blogs_created = SelfBlog.objects.filter(created_at__gte=cutoff).count()
+            delib_filter = {'created_at__gte': cutoff, 'author': 'ContentDeliberation'}
+            blogs_created = SelfBlog.objects.filter(**delib_filter).count()
             blogs_published = SelfBlog.objects.filter(
-                created_at__gte=cutoff, status='approved'
+                **delib_filter, status='approved'
             ).count()
             pub_rate = blogs_published / blogs_created if blogs_created > 0 else 0.0
             slos.append({
