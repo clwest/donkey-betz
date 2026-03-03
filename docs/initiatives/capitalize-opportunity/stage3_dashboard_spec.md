@@ -21,9 +21,8 @@ This dashboard tracks the **RoleAware ingestion-to-playbook pilot + synthesis te
 - **Deliverables** are the canonical stored artifacts used for review, reuse, and downstream action tracking.
 
 ### 2.2 What we measure (behavior/outcome path)
-We measure actionability with **events** captured by existing analytics tables:
-- Preferred: `core_abtestevent` (already designed for content + variants + metadata)
-- Fallback: `core_conversionevent` (if product is logging outcomes there instead)
+We measure actionability with **events** captured by `core_deliverable_events` (the `DeliverableEvent` model).
+Auto-emitted on: deliverable detail view (frontend + PA), save, export. Manual via `POST /api/deliverables/<id>/event/`.
 
 ### 2.3 "Action taken" definition (Stage 3)
 A synthesis is considered "acted on" if, within 24 hours of synthesis creation, we observe either:
@@ -59,14 +58,9 @@ A deliverable is a "synthesis output" for this dashboard if:
   - `signal:<cluster_id>`
   - `playbook:<role>` or `template:<name>`
 
-### 3.2 Join key between events and deliverables (critical)
-To compute ATR-24h reliably, events must reference the synthesis deliverable ID:
-
-**MVP join convention (pick one and be consistent)**
-1) `core_abtestevent.content_id = <deliverable_uuid_as_text>`
-2) or store `deliverable_id` in JSON: `core_abtestevent.metadata->>'deliverable_id' = <deliverable_uuid_as_text>`
-
-> If both exist, the queries below prefer `metadata->>'deliverable_id'` then fall back to `content_id`.
+### 3.2 Join key between events and deliverables (built-in)
+`DeliverableEvent.deliverable` is a direct FK to `Deliverable`. Join is natural — no metadata parsing needed.
+The SQL queries below use `e.deliverable_id::text` to match against `d.id::text`.
 
 ### 3.3 Role attribution (manager/recruiter/developer)
 Role should be available either as:
@@ -107,7 +101,7 @@ Mini-cards (or one small table) to the right:
 | source | syntheses | acted_24h | atr_24h |
 
 Source extraction rules (MVP):
-- Prefer `core_abtestevent.metadata->>'source'`
+- Prefer `core_deliverable_events.metadata->>'source'`
 - Else parse deliverable tags like `source:<spider_name>`
 
 ---
@@ -136,9 +130,9 @@ WITH syntheses AS (
 -- Actions CTE
 actions AS (
   SELECT
-    COALESCE(e.metadata->>'deliverable_id', e.content_id) AS deliverable_id,
+    e.deliverable_id::text AS deliverable_id,
     MIN(e.created_at) AS first_action_at
-  FROM core_abtestevent e
+  FROM core_deliverable_events e
   WHERE e.event_type IN (
     'action_taken',
     'task_created',
@@ -162,9 +156,9 @@ WITH syntheses AS (
 ),
 actions AS (
   SELECT
-    COALESCE(e.metadata->>'deliverable_id', e.content_id) AS deliverable_id,
+    e.deliverable_id::text AS deliverable_id,
     MIN(e.created_at) AS first_action_at
-  FROM core_abtestevent e
+  FROM core_deliverable_events e
   WHERE e.event_type IN (
     'action_taken',
     'task_created',
@@ -201,9 +195,9 @@ WITH syntheses AS (
 ),
 actions AS (
   SELECT
-    COALESCE(e.metadata->>'deliverable_id', e.content_id) AS deliverable_id,
+    e.deliverable_id::text AS deliverable_id,
     MIN(e.created_at) AS first_action_at
-  FROM core_abtestevent e
+  FROM core_deliverable_events e
   WHERE e.event_type IN (
     'action_taken',
     'task_created',
@@ -246,9 +240,9 @@ WITH syntheses AS (
 ),
 actions AS (
   SELECT
-    COALESCE(e.metadata->>'deliverable_id', e.content_id) AS deliverable_id,
+    e.deliverable_id::text AS deliverable_id,
     MIN(e.created_at) AS first_action_at
-  FROM core_abtestevent e
+  FROM core_deliverable_events e
   WHERE e.event_type IN (
     'action_taken','task_created','followup_created','deliverable_exported','shared','deliverable_saved'
   )
