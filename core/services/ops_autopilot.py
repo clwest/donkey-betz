@@ -1235,8 +1235,11 @@ class OpsAutopilot:
 
     def _policy_roi_enforcement(self, now) -> dict:
         """
-        Session 1088: Compute ROI per agent and apply selective throttles
-        for low-ROI spenders when under budget pressure.
+        Session 1088/1089: Compute QROI per agent and apply selective
+        throttles for low-QROI spenders when under budget pressure.
+
+        QROI = ROI × quality_weight — factors in output quality so
+        high-cost agents producing excellent work escape throttling.
         """
         result = {'evaluated': False, 'throttles_applied': 0}
 
@@ -1247,8 +1250,8 @@ class OpsAutopilot:
             result['total_spend'] = roi_data['total_spend']
             result['total_outcomes'] = roi_data['total_outcomes']
 
-            # Top 5 worst ROI agents
-            result['worst_roi'] = roi_data['agents'][:5]
+            # Top 5 worst QROI agents
+            result['worst_qroi'] = roi_data['agents'][:5]
 
             # Apply throttles if under budget pressure (non-dry-run only)
             if not self.dry_run:
@@ -1263,17 +1266,17 @@ class OpsAutopilot:
                     })
                     self._create_attention_item(
                         title=(
-                            f"ROI throttles: {len(applied)} agents "
+                            f"QROI throttles: {len(applied)} agents "
                             f"on cooldown"
                         ),
                         summary=(
                             f"Budget pressure detected. Applied "
-                            f"selective throttles to low-ROI agents: "
+                            f"selective throttles to low-QROI agents: "
                             f"{', '.join(a['agent_name'] for a in applied[:5])}. "
-                            f"Throttled agents have cooldown periods "
-                            f"between LLM calls. Undo: clear "
-                            f"SystemConfiguration keys starting "
-                            f"with 'roi_throttle:'."
+                            f"QROI = ROI × quality_weight — agents "
+                            f"producing quality work escape throttling. "
+                            f"Undo: clear SystemConfiguration keys "
+                            f"starting with 'roi_throttle:'."
                         ),
                         urgency='medium',
                         policy='roi_enforcement',
@@ -1283,13 +1286,16 @@ class OpsAutopilot:
                 recs = enforcer.get_throttle_recommendations(now)
                 result['would_throttle'] = len(recs)
                 result['recommendations'] = [
-                    {'agent': r['agent_name'], 'roi': r['roi'],
+                    {'agent': r['agent_name'],
+                     'qroi': r.get('qroi', r['roi']),
+                     'roi': r['roi'],
+                     'quality': r.get('quality_weight', 0.5),
                      'cooldown': r['cooldown_minutes']}
                     for r in recs[:5]
                 ]
 
             logger.info(
-                f"[OpsAutopilot] ROI: "
+                f"[OpsAutopilot] QROI: "
                 f"${roi_data['total_spend']:.2f} spend, "
                 f"{roi_data['total_outcomes']} outcomes, "
                 f"{result['throttles_applied']} throttles applied"
@@ -3392,7 +3398,72 @@ class ROIEnforcer:
         except Exception:
             pass
 
-        # Build per-agent ROI
+        # Quality signals: average quality_score from SelfBlogs (content pipeline)
+        quality_map = {}  # agent_name → avg quality
+        try:
+            from core.models_unified_system import SelfBlog
+            from django.db.models import Avg
+            blog_quality = list(
+                SelfBlog.objects.filter(
+                    created_at__gte=window_start,
+                    quality_score__isnull=False,
+                ).exclude(
+                    quality_score=0,
+                ).values('tone').annotate(  # tone is closest proxy for agent
+                    avg_quality=Avg('quality_score'),
+                    total=Count('id'),
+                    published=Count('id', filter=Q(status='published')),
+                    approved=Count('id', filter=Q(status='approved')),
+                )
+            )
+            # SelfBlogs come from deliberation → ContentWriterAgent
+            for bq in blog_quality:
+                quality_map['_content_avg'] = float(bq.get('avg_quality') or 0)
+                quality_map['_content_published'] = bq.get('published', 0)
+                quality_map['_content_total'] = bq.get('total', 0)
+        except Exception:
+            pass
+
+        # Quality: Deliverable quality scores by agent
+        deliverable_quality = {}
+        try:
+            from core.models_deliverables import Deliverable
+            from django.db.models import Avg
+            dq = list(
+                Deliverable.objects.filter(
+                    created_at__gte=window_start,
+                    quality_score__isnull=False,
+                ).exclude(
+                    quality_score=0,
+                ).values('agent_name').annotate(
+                    avg_quality=Avg('quality_score'),
+                )
+            )
+            for d in dq:
+                if d['agent_name']:
+                    deliverable_quality[d['agent_name']] = float(
+                        d.get('avg_quality') or 0
+                    )
+        except Exception:
+            pass
+
+        # Quality: Deliberation pass rate (completed vs total)
+        delib_pass_rate = 0.5  # default
+        try:
+            from core.models_deliberation import DeliberationSession
+            total_delibs = DeliberationSession.objects.filter(
+                created_at__gte=window_start,
+            ).count()
+            passed_delibs = DeliberationSession.objects.filter(
+                created_at__gte=window_start,
+                status='completed',
+            ).count()
+            if total_delibs > 0:
+                delib_pass_rate = passed_delibs / total_delibs
+        except Exception:
+            pass
+
+        # Build per-agent ROI + QROI
         total_spend = 0
         total_outcomes = 0
         agent_scores = []
@@ -3411,6 +3482,23 @@ class ROIEnforcer:
             # ROI = outcome-to-call ratio (0..1+)
             roi = combined_outcomes / max(calls, 1)
 
+            # QROI = ROI * quality_weight
+            # quality_weight combines:
+            # - deliverable quality score (if available)
+            # - content pipeline quality (if this agent produces content)
+            # - execution success rate as fallback
+            quality_weight = 0.5  # neutral default
+            if name in deliverable_quality:
+                quality_weight = deliverable_quality[name]
+            elif content > 0:
+                # Content-producing agent — use pipeline quality
+                quality_weight = quality_map.get('_content_avg', 0.5)
+            elif outcomes > 0:
+                # Non-content agent — quality = success rate
+                quality_weight = min(outcomes / max(calls, 1), 1.0)
+
+            qroi = roi * quality_weight
+
             agent_scores.append({
                 'agent_name': name,
                 'cost': round(cost, 4),
@@ -3421,10 +3509,12 @@ class ROIEnforcer:
                     'content': content,
                 },
                 'roi': round(roi, 4),
+                'quality_weight': round(quality_weight, 3),
+                'qroi': round(qroi, 4),
             })
 
-        # Sort by ROI ascending (worst first)
-        agent_scores.sort(key=lambda x: x['roi'])
+        # Sort by QROI ascending (worst first)
+        agent_scores.sort(key=lambda x: x['qroi'])
 
         return {
             'agents': agent_scores,
@@ -3437,9 +3527,13 @@ class ROIEnforcer:
     def get_throttle_recommendations(self, now) -> list[dict]:
         """
         When budget utilization is above soft limit, recommend throttles
-        for low-ROI agents.
+        for low-QROI agents.
 
-        Returns list of {agent_name, roi, cooldown_minutes, reason}.
+        QROI (Quality-Adjusted ROI) factors in output quality, so a
+        high-cost agent producing excellent content may escape throttling
+        while a cheap agent producing garbage gets throttled.
+
+        Returns list of {agent_name, qroi, roi, cooldown_minutes, reason}.
         """
         # Check if we're under budget pressure
         controller = BudgetController()
@@ -3454,7 +3548,7 @@ class ROIEnforcer:
         if daily_pct < AutopilotConfig.BUDGET_SOFT_LIMIT_PCT:
             return []  # No pressure, no throttles
 
-        # Compute ROI scores
+        # Compute ROI scores (includes QROI)
         roi_data = self.compute_roi_scores(now, window_hours=24)
         recommendations = []
 
@@ -3465,25 +3559,29 @@ class ROIEnforcer:
             if name.lower() in self.PROTECTED_PURPOSES:
                 continue
 
-            roi = agent['roi']
+            qroi = agent.get('qroi', agent['roi'])
 
-            # Find applicable throttle tier
+            # Find applicable throttle tier (using QROI)
             cooldown = None
             for threshold, minutes in self.THROTTLE_TIERS:
-                if roi < threshold:
+                if qroi < threshold:
                     cooldown = minutes
                     break
 
             if cooldown:
                 recommendations.append({
                     'agent_name': name,
-                    'roi': roi,
+                    'roi': agent['roi'],
+                    'qroi': qroi,
+                    'quality_weight': agent.get('quality_weight', 0.5),
                     'cost_24h': agent['cost'],
                     'calls_24h': agent['calls'],
                     'outcomes_24h': agent['outcomes'],
                     'cooldown_minutes': cooldown,
                     'reason': (
-                        f'ROI {roi:.1%} with ${agent["cost"]:.2f} spent '
+                        f'QROI {qroi:.1%} (ROI {agent["roi"]:.1%} '
+                        f'× quality {agent.get("quality_weight", 0.5):.2f}) '
+                        f'with ${agent["cost"]:.2f} spent '
                         f'({agent["calls"]} calls, '
                         f'{agent["outcomes"]} outcomes)'
                     ),
@@ -3513,12 +3611,14 @@ class ROIEnforcer:
                     'value': {
                         'cooldown_minutes': rec['cooldown_minutes'],
                         'roi': rec['roi'],
+                        'qroi': rec.get('qroi', rec['roi']),
+                        'quality_weight': rec.get('quality_weight', 0.5),
                         'expires_at': expires_at.isoformat(),
                         'set_at': now.isoformat(),
                     },
                     'description': (
-                        f"ROI throttle: {rec['agent_name']} "
-                        f"(ROI {rec['roi']:.1%}, "
+                        f"QROI throttle: {rec['agent_name']} "
+                        f"(QROI {rec.get('qroi', rec['roi']):.1%}, "
                         f"cooldown {rec['cooldown_minutes']}min)"
                     ),
                     'category': 'performance',
@@ -3528,7 +3628,7 @@ class ROIEnforcer:
             logger.info(
                 f"[ROIEnforcer] Throttle: {rec['agent_name']} → "
                 f"{rec['cooldown_minutes']}min cooldown "
-                f"(ROI {rec['roi']:.1%})"
+                f"(QROI {rec.get('qroi', rec['roi']):.1%})"
             )
 
         # Clear expired throttles
@@ -3578,7 +3678,7 @@ class ROIEnforcer:
             return None
 
     def get_roi_report(self, now) -> dict:
-        """Generate ROI report for PA/governance."""
+        """Generate QROI report for PA/governance."""
         roi_data = self.compute_roi_scores(now, window_hours=24)
         throttle_recs = self.get_throttle_recommendations(now)
 
@@ -3588,8 +3688,16 @@ class ROIEnforcer:
             key__startswith='roi_throttle:',
         ).count()
 
+        # Quality summary stats
+        agents = roi_data['agents']
+        quality_weights = [a.get('quality_weight', 0.5) for a in agents]
+        avg_quality = (
+            sum(quality_weights) / len(quality_weights)
+            if quality_weights else 0.5
+        )
+
         return {
-            'agents': roi_data['agents'][:15],
+            'agents': agents[:15],
             'total_spend': roi_data['total_spend'],
             'total_outcomes': roi_data['total_outcomes'],
             'deliberation_passes': roi_data.get('deliberation_passes', 0),
@@ -3597,6 +3705,14 @@ class ROIEnforcer:
             'throttle_recommendations': throttle_recs[:10],
             'active_throttles': active_throttles,
             'budget_pressure': len(throttle_recs) > 0,
+            'quality_summary': {
+                'avg_quality_weight': round(avg_quality, 3),
+                'agents_with_quality_data': sum(
+                    1 for a in agents
+                    if a.get('quality_weight', 0.5) != 0.5
+                ),
+                'total_agents': len(agents),
+            },
         }
 
 

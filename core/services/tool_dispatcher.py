@@ -11618,21 +11618,24 @@ RESEARCH DATA:
             except Exception:
                 pass
 
-            # ROI attribution section
+            # QROI attribution section
             try:
                 from core.services.ops_autopilot import ROIEnforcer
                 enforcer = ROIEnforcer()
                 roi_data = enforcer.compute_roi_scores(tz.now(), window_hours=24)
                 if roi_data.get('agents'):
-                    report_lines.append(f"\n### ROI Attribution (24h)")
+                    report_lines.append(f"\n### QROI Attribution (24h)")
                     report_lines.append(
                         f"Total spend: ${roi_data['total_spend']:.2f} — "
                         f"{roi_data['total_outcomes']} outcomes"
                     )
                     for a in roi_data['agents'][:5]:
                         report_lines.append(
-                            f"- **{a['agent_name']}**: ROI {a['roi']:.1%} "
-                            f"(${a['cost']:.4f}, {a['outcomes']} outcomes)"
+                            f"- **{a['agent_name']}**: "
+                            f"QROI {a.get('qroi', a['roi']):.1%} "
+                            f"(ROI {a['roi']:.1%} × "
+                            f"Q {a.get('quality_weight', 0.5):.2f}) — "
+                            f"${a['cost']:.4f}, {a['outcomes']} outcomes"
                         )
                     recs = enforcer.get_throttle_recommendations(tz.now())
                     if recs:
@@ -11815,7 +11818,7 @@ RESEARCH DATA:
                     'error': f'ROI report failed: {str(e)[:200]}',
                 }
 
-            report_lines = ['## ROI Attribution Report\n']
+            report_lines = ['## QROI Attribution Report\n']
             report_lines.append(
                 f'**Window:** {report["window_hours"]}h — '
                 f'**Total spend:** ${report["total_spend"]:.2f} — '
@@ -11827,13 +11830,25 @@ RESEARCH DATA:
                 f'{"YES" if report["budget_pressure"] else "No"}'
             )
 
+            # Quality summary
+            qs = report.get('quality_summary', {})
+            if qs:
+                report_lines.append(
+                    f'**Avg quality weight:** {qs.get("avg_quality_weight", 0):.3f} — '
+                    f'**Agents with quality data:** '
+                    f'{qs.get("agents_with_quality_data", 0)}'
+                    f'/{qs.get("total_agents", 0)}'
+                )
+
             if report.get('agents'):
-                report_lines.append('\n### Agent ROI (worst → best)')
+                report_lines.append('\n### Agent QROI (worst → best)')
                 for a in report['agents'][:10]:
                     detail = a.get('outcome_detail', {})
                     report_lines.append(
                         f'- **{a["agent_name"]}**: '
-                        f'ROI {a["roi"]:.1%} — '
+                        f'QROI {a.get("qroi", a["roi"]):.1%} '
+                        f'(ROI {a["roi"]:.1%} × '
+                        f'Q {a.get("quality_weight", 0.5):.2f}) — '
                         f'${a["cost"]:.4f} / {a["calls"]} calls → '
                         f'{a["outcomes"]} outcomes '
                         f'(exec: {detail.get("executions", 0)}, '
@@ -11841,7 +11856,7 @@ RESEARCH DATA:
                     )
 
             if report.get('throttle_recommendations'):
-                report_lines.append('\n### Throttle Recommendations')
+                report_lines.append('\n### Throttle Recommendations (by QROI)')
                 for r in report['throttle_recommendations'][:5]:
                     report_lines.append(
                         f'- **{r["agent_name"]}**: '
