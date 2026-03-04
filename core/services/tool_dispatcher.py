@@ -12610,6 +12610,75 @@ RESEARCH DATA:
             report = engine.get_metrics_report(tz.now())
             return {'action': 'meeting_metrics_report', **report}
 
+        # ── Governance & Safe-Mode Controls (Policy 30) ──
+
+        elif action == 'governance_status':
+            from core.services.ops_autopilot import GovernanceEngine
+
+            engine = GovernanceEngine()
+            status = engine.get_status()
+            return {'action': 'governance_status', **status}
+
+        elif action == 'governance_set_mode':
+            from core.services.ops_autopilot import GovernanceEngine
+
+            mode = payload.get('mode', '')
+            if not mode:
+                return {'error': 'mode is required (normal/throttle/freeze/safe_mode)'}
+
+            engine = GovernanceEngine()
+            result = engine.set_mode(
+                mode=mode,
+                reason=payload.get('reason', ''),
+                scope=payload.get('scope', 'global'),
+                scope_target=payload.get('scope_target', ''),
+                ttl_hours=payload.get('ttl_hours'),
+                set_by='pa_tool',
+            )
+            return {'action': 'governance_set_mode', **result}
+
+        elif action == 'governance_kill_switch':
+            from core.services.ops_autopilot import GovernanceEngine
+
+            target = payload.get('target', '')
+            if not target:
+                return {'error': 'target is required (scheduler/queue/agent_family/publishing/outbound/deploys)'}
+
+            engine = GovernanceEngine()
+            result = engine.activate_kill_switch(
+                target=target,
+                reason=payload.get('reason', ''),
+                target_detail=payload.get('target_detail', ''),
+                ttl_hours=payload.get('ttl_hours'),
+                activated_by='pa_tool',
+            )
+            return {'action': 'governance_kill_switch', **result}
+
+        elif action == 'governance_deactivate_switch':
+            from core.services.ops_autopilot import GovernanceEngine
+
+            switch_id = payload.get('switch_id', '')
+            if not switch_id:
+                return {'error': 'switch_id is required'}
+
+            engine = GovernanceEngine()
+            result = engine.deactivate_kill_switch(switch_id)
+            return {'action': 'governance_deactivate_switch', **result}
+
+        elif action == 'governance_throttle_report':
+            from core.services.ops_autopilot import GovernanceEngine
+
+            engine = GovernanceEngine()
+            report = engine.get_throttle_report()
+            return {'action': 'governance_throttle_report', **report}
+
+        elif action == 'governance_audit':
+            from core.services.ops_autopilot import GovernanceEngine
+
+            engine = GovernanceEngine()
+            audit = engine.get_audit_log(limit=payload.get('limit', 20))
+            return {'action': 'governance_audit', **audit}
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason

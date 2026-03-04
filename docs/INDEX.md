@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-03-03 21:50
+**Generated:** 2026-03-03 22:35
 **Current Session:** 1075
 **Total Documentation:** 1817 files | 621,945 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/capabilities/01_Core_Intelligence/README.md` | 60 | 🧠 CONSCIOUSNESS SYSTEM - Self-Aware AI Intelligenc |
+| `docs/archive/SYSTEM_CAPABILITIES-original/03_Revenue_Generation/README.md` | 60 | 💰 REVENUE GENERATION SYSTEMS - Autonomous Money-Ma |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -216,7 +216,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 360 | 2026-03-03 21:49 |
+| INDEX.md | docs | 360 | 2026-03-03 21:59 |
 | stage3_timeline.md | initiatives | 71 | 2026-03-03 12:55 |
 | stage3_rubric_runbook.md | initiatives | 105 | 2026-03-03 12:55 |
 | stage3_dashboard_spec.md | initiatives | 315 | 2026-03-03 12:55 |

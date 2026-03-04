@@ -229,6 +229,9 @@ from ..models_engagement import EngagementEvent
 # Import meeting models (Autonomy #25 - Meeting Engine)
 from ..models_meeting import Meeting
 
+# Import governance models (Autonomy #26 - Governance & Safe-Mode Controls)
+from ..models_governance import GovernanceState, KillSwitch
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -487,5 +490,9 @@ __all__ = [
 
     # Meeting (Autonomy #25)
     'Meeting',
+
+    # Governance (Autonomy #26)
+    'GovernanceState',
+    'KillSwitch',
 
 ]
