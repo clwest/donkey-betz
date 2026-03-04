@@ -21673,6 +21673,17 @@ def generate_self_blog_deliberation_task(self, tone='enthusiastic', word_count=1
         logger.info(f"[Phase 4] Skipping deliberation — another is already running (lock={lock_key})")
         return {'success': False, 'skipped': True, 'reason': 'concurrent deliberation already running'}
 
+    # Session 1088: Budget-aware scheduling preflight
+    try:
+        from core.services.ops_autopilot import BudgetAwareScheduler
+        pf = BudgetAwareScheduler().preflight('core.tasks.generate_self_blog_deliberation_task')
+        if pf['decision'] == 'defer':
+            cache.delete(lock_key)
+            logger.info(f"[Phase 4] Budget preflight: DEFER — {pf['reason']}")
+            return {'success': False, 'deferred': True, 'reason': pf['reason']}
+    except Exception:
+        pass
+
     # Session 969: Weight away from 'system' for diversity
     if topic_category is None or topic_category == 'random':
         topic_category = random.choice(['trending', 'trending', 'dreams', 'conversations'])
@@ -29452,6 +29463,16 @@ def content_autonomy_loop():
     from django.db.models import Q
     from datetime import timedelta
 
+    # Session 1088: Budget-aware scheduling preflight
+    try:
+        from core.services.ops_autopilot import BudgetAwareScheduler
+        pf = BudgetAwareScheduler().preflight('core.tasks.content_autonomy_loop')
+        if pf['decision'] == 'defer':
+            logger.info(f"[ContentAutonomy] Budget preflight: DEFER — {pf['reason']}")
+            return {'success': False, 'deferred': True, 'reason': pf['reason']}
+    except Exception:
+        pass
+
     now = timezone.now()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
@@ -29612,6 +29633,19 @@ def auto_enhance_blogs(limit: int = 5):
     """
     from core.models_unified_system import SelfBlog
     from core.agents.editor_agent import EditorAgent
+
+    # Session 1088: Budget-aware scheduling preflight
+    try:
+        from core.services.ops_autopilot import BudgetAwareScheduler
+        pf = BudgetAwareScheduler().preflight('core.tasks.auto_enhance_blogs')
+        if pf['decision'] == 'defer':
+            logger.info(f"[AutoEnhance] Budget preflight: DEFER — {pf['reason']}")
+            return {'enhanced': 0, 'failed': 0, 'deferred': True, 'reason': pf['reason']}
+        if pf['decision'] == 'downscope' and pf.get('knobs'):
+            limit = pf['knobs'].get('max_items', limit)
+            logger.info(f"[AutoEnhance] Budget preflight: DOWNSCOPE — limit={limit}")
+    except Exception:
+        pass
 
     blogs = list(
         SelfBlog.objects.filter(status='needs_enhancement')
