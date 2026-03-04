@@ -2035,7 +2035,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "timeout_ladder_report", "deliberation_pipeline_report", "backfill_failure_reasons", "backlog_report", "goal_report", "goal_set_weights", "attribution_report", "policy_conflict_report", "release_report", "release_freeze", "release_unfreeze", "revenue_pipeline_report"],
+                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "timeout_ladder_report", "deliberation_pipeline_report", "backfill_failure_reasons", "backlog_report", "goal_report", "goal_set_weights", "attribution_report", "policy_conflict_report", "release_report", "release_freeze", "release_unfreeze", "revenue_pipeline_report", "prospecting_queue", "lead_source_report"],
                     "description": (
                         "status: current config, last cycle timestamp, and pending actions. "
                         "history: recent autopilot actions (blocks, attention items, dry runs). "
@@ -2090,7 +2090,11 @@ PA_TOOL_SCHEMAS = [
                         "release_freeze: manually freeze all deploys (safety override). "
                         "release_unfreeze: manually unfreeze deploys. "
                         "revenue_pipeline_report: opportunity pipeline health — active/stale/critical counts, "
-                        "high-value opportunities, follow-up suggestions by priority."
+                        "high-value opportunities, follow-up suggestions by priority. "
+                        "prospecting_queue: outbound lead engine — top scored leads from spider data, "
+                        "ready for human outreach review. Shows lead scores, sources, and age. "
+                        "lead_source_report: which spider sources produce leads — 30-day source breakdown, "
+                        "7-day vs 30-day trend, data type distribution."
                     ),
                 },
                 "dry_run": {

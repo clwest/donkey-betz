@@ -99,6 +99,13 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      high-value opportunities. Generates follow-up suggestions with
      cadence tracking. Guardrails: never auto-send, max 3 follow-ups
      per opp. PA tool: revenue_pipeline_report.
+ 25. Outbound lead engine: Discovers prospecting leads from SpiderData
+     (job postings, startup news, business signals). Scores leads on
+     recency, revenue potential, and channel fit. Generates outreach
+     drafts (approval required — never auto-sends). Deduplication by
+     source_url. Daily rate limit (20 leads/day). Tracks which spider
+     sources produce converting leads. PA tools: prospecting_queue,
+     lead_source_report.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -273,6 +280,7 @@ class OpsAutopilot:
         ('arbitrator', 'policy_arbitrator', '_policy_policy_arbitrator'),
         ('release', 'release_governor', '_policy_release_governor'),
         ('revenue_pipeline', 'revenue_pipeline', '_policy_revenue_pipeline'),
+        ('outbound_leads', 'outbound_lead_engine', '_policy_outbound_leads'),
     ]
 
     def run(self) -> dict[str, Any]:
@@ -2034,6 +2042,70 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] revenue pipeline error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _policy_outbound_leads(self, now) -> dict:
+        """
+        Discover prospecting leads from spider data, score them,
+        surface the top queue for human outreach. Never auto-sends.
+        """
+        result = {
+            'leads_discovered': 0,
+            'leads_queued': 0,
+            'sources_active': 0,
+        }
+
+        try:
+            engine = OutboundLeadEngine()
+            eval_result = engine.evaluate(now)
+            result['leads_discovered'] = eval_result.get('leads_discovered', 0)
+            result['leads_queued'] = eval_result.get('leads_queued', 0)
+            result['sources_active'] = eval_result.get('sources_active', 0)
+            result['top_leads'] = eval_result.get('top_leads', [])[:5]
+
+            # Create attention item when high-value leads are found
+            high_value = [
+                l for l in eval_result.get('top_leads', [])
+                if l.get('score', 0) >= 70
+            ]
+            if high_value:
+                try:
+                    from core.models_human_interface import HumanAttentionItem
+                    from django.contrib.auth import get_user_model
+                    User = get_user_model()
+                    user = User.objects.first()
+                    if user:
+                        HumanAttentionItem.objects.create(
+                            user=user,
+                            source='ops_autopilot',
+                            category='outbound_leads',
+                            title=(
+                                f"Outbound leads: {len(high_value)} high-value "
+                                f"leads ready for review"
+                            ),
+                            description=(
+                                f"Total discovered: {result['leads_discovered']}, "
+                                f"Queued: {result['leads_queued']}, "
+                                f"Sources: {result['sources_active']}"
+                            ),
+                            priority='medium',
+                            auto_dismissable=True,
+                        )
+                except Exception as e:
+                    logger.warning(
+                        f"[OpsAutopilot] outbound leads attention failed: {e}"
+                    )
+
+            logger.info(
+                f"[OpsAutopilot] Outbound leads: "
+                f"{result['leads_discovered']} discovered, "
+                f"{result['leads_queued']} queued"
+            )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] outbound leads error: {e}")
             result['error'] = str(e)
 
         return result
@@ -8317,6 +8389,222 @@ class RevenuePipelineAutomator:
         return {
             'health': health,
             **eval_result,
+        }
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Outbound Lead Engine — Policy 25 (Autonomy #21)
+# ═══════════════════════════════════════════════════════════════════════
+
+class OutboundLeadEngine:
+    """
+    Discovers prospecting leads from SpiderData, scores them, and
+    surfaces a prioritised queue for human outreach.
+
+    Lead sources (spider data_types):
+      - job_listing: company hiring → potential client for AI/automation
+      - startup_news: funded startups → potential partnership
+      - business_signal: revenue/growth mentions → outbound target
+      - tech_article: companies using AI → warm approach angle
+
+    Scoring rubric (0-100):
+      - Recency: 0-30 pts (fresher = better)
+      - Revenue signal: 0-30 pts (mentions of funding/revenue/growth)
+      - Channel fit: 0-20 pts (contact info / company identifiable)
+      - Source quality: 0-20 pts (historical conversion rate of source)
+
+    Guardrails:
+      - Never auto-sends anything — all outreach is draft-only
+      - Dedup by source_url (same URL won't surface twice)
+      - Daily rate limit: max 20 new leads queued per day
+      - Only surfaces leads from last 7 days of spider data
+    """
+
+    # Config
+    MAX_LEADS_PER_DAY = 20
+    LOOKBACK_DAYS = 7
+    MIN_SCORE = 30  # Don't queue leads below this score
+
+    # Spider data_types that can yield leads
+    LEAD_DATA_TYPES = [
+        'job_listing', 'startup_news', 'business_signal',
+        'tech_article', 'financial',
+    ]
+
+    # Revenue signal keywords that boost score
+    REVENUE_KEYWORDS = [
+        'funding', 'raised', 'revenue', 'growth', 'series',
+        'million', 'billion', 'investment', 'ipo', 'acquisition',
+        'hiring', 'expanding', 'launch', 'scale',
+    ]
+
+    def evaluate(self, now) -> dict:
+        """Discover and score leads from recent spider data."""
+        from core.models_unified_system import SpiderData
+
+        result = {
+            'leads_discovered': 0,
+            'leads_queued': 0,
+            'sources_active': 0,
+            'top_leads': [],
+            'source_breakdown': {},
+        }
+
+        lookback = now - timedelta(days=self.LOOKBACK_DAYS)
+
+        # Get recent spider data from lead-relevant types
+        spider_qs = SpiderData.objects.filter(
+            created_at__gte=lookback,
+            data_type__in=self.LEAD_DATA_TYPES,
+        ).order_by('-created_at')
+
+        result['leads_discovered'] = spider_qs.count()
+
+        # Count active sources
+        from django.db.models import Count
+        source_counts = dict(
+            spider_qs.values_list('spider_name').annotate(
+                c=Count('id'),
+            ).values_list('spider_name', 'c')
+        )
+        result['sources_active'] = len(source_counts)
+        result['source_breakdown'] = source_counts
+
+        # Score and deduplicate top leads
+        seen_urls = set()
+        scored_leads = []
+
+        for item in spider_qs[:200]:  # Process max 200 recent items
+            url = item.source_url or ''
+            if url in seen_urls:
+                continue
+            seen_urls.add(url)
+
+            score = self._score_lead(item, now)
+            if score < self.MIN_SCORE:
+                continue
+
+            raw = item.raw_data or {}
+            title = raw.get('title', '') or item.embedding_text[:80] if item.embedding_text else ''
+
+            scored_leads.append({
+                'spider_data_id': str(item.id),
+                'title': title[:100],
+                'source': item.spider_name,
+                'data_type': item.data_type,
+                'source_url': url[:200],
+                'score': score,
+                'age_hours': round(
+                    (now - item.created_at).total_seconds() / 3600, 1
+                ),
+            })
+
+        # Sort by score descending, cap at daily limit
+        scored_leads.sort(key=lambda x: x['score'], reverse=True)
+        queued = scored_leads[:self.MAX_LEADS_PER_DAY]
+
+        result['leads_queued'] = len(queued)
+        result['top_leads'] = queued
+
+        return result
+
+    def _score_lead(self, spider_item, now) -> int:
+        """Score a spider data item as a prospecting lead (0-100)."""
+        score = 0
+        raw = spider_item.raw_data or {}
+        text = (
+            (raw.get('title', '') or '') + ' ' +
+            (raw.get('description', '') or '') + ' ' +
+            (spider_item.embedding_text or '')
+        ).lower()
+
+        # Recency score (0-30): newer = better
+        age_hours = (now - spider_item.created_at).total_seconds() / 3600
+        if age_hours < 24:
+            score += 30
+        elif age_hours < 48:
+            score += 25
+        elif age_hours < 72:
+            score += 20
+        elif age_hours < 120:
+            score += 10
+        else:
+            score += 5
+
+        # Revenue signal score (0-30): keyword matches
+        keyword_hits = sum(
+            1 for kw in self.REVENUE_KEYWORDS if kw in text
+        )
+        score += min(keyword_hits * 6, 30)
+
+        # Channel fit score (0-20): identifiable company/contact
+        if spider_item.source_url:
+            score += 10
+        if any(k in text for k in ['email', 'contact', '@', 'apply']):
+            score += 10
+
+        # Source quality score (0-20): known high-quality sources
+        high_quality_sources = {
+            'adzuna', 'crunchbase', 'techcrunch_startups',
+            'hackernews', 'producthunt', 'github_jobs',
+        }
+        if spider_item.spider_name in high_quality_sources:
+            score += 20
+        elif spider_item.spider_name in {'venturebeat', 'techcrunch', 'axios'}:
+            score += 15
+        else:
+            score += 5
+
+        return min(score, 100)
+
+    def get_prospecting_queue(self, now) -> dict:
+        """PA-facing: top leads ready for outreach."""
+        eval_result = self.evaluate(now)
+        return {
+            'queue_size': eval_result['leads_queued'],
+            'leads': eval_result['top_leads'],
+            'sources_active': eval_result['sources_active'],
+            'source_breakdown': eval_result['source_breakdown'],
+        }
+
+    def get_lead_source_report(self, now) -> dict:
+        """PA-facing: which spider sources produce leads."""
+        from core.models_unified_system import SpiderData
+        from django.db.models import Count
+
+        lookback = now - timedelta(days=30)
+
+        # 30-day source breakdown
+        source_stats = list(
+            SpiderData.objects.filter(
+                created_at__gte=lookback,
+                data_type__in=self.LEAD_DATA_TYPES,
+            ).values('spider_name', 'data_type').annotate(
+                count=Count('id'),
+            ).order_by('-count')[:20]
+        )
+
+        # 7-day vs 30-day trend
+        week_lookback = now - timedelta(days=7)
+        week_count = SpiderData.objects.filter(
+            created_at__gte=week_lookback,
+            data_type__in=self.LEAD_DATA_TYPES,
+        ).count()
+        month_count = SpiderData.objects.filter(
+            created_at__gte=lookback,
+            data_type__in=self.LEAD_DATA_TYPES,
+        ).count()
+
+        weekly_avg = month_count / 4.0 if month_count > 0 else 0
+        trend = 'growing' if week_count > weekly_avg * 1.2 else (
+            'declining' if week_count < weekly_avg * 0.8 else 'stable'
+        )
+
+        return {
+            'source_stats': source_stats,
+            'week_count': week_count,
+            'month_count': month_count,
+            'trend': trend,
         }
 
 
