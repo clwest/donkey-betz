@@ -121,6 +121,14 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      sent. Max 2 follow-ups per pack. Expires sent packs after 30d with
      no response. PA tools: close_pack_generate, close_pack_inbox,
      close_pack_approve, close_pack_metrics_report.
+ 28. Engagement engine: Captures and classifies inbound prospect
+     engagement (replies, meeting bookings, form fills). Classifies
+     intent (positive, neutral, objection, meeting, unsubscribe).
+     Suggests next actions. Draft replies require approval — never
+     auto-sends. Permanent suppress on unsubscribe. Auto-closes
+     stale unread events after 30 days. PA tools: engagement_inbox,
+     engagement_classify, engagement_draft_reply, engagement_approve_reply,
+     engagement_disqualify, engagement_metrics_report.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -208,7 +216,7 @@ class AutopilotConfig:
     TUNING_MAX_CHANGES_PER_DAY = 2        # Hard daily cap
 
     # Policy 10: Budget controller
-    BUDGET_DAILY_CAP_USD = 15.0           # Global daily spend cap
+    BUDGET_DAILY_CAP_USD = 25.0           # Global daily spend cap
     BUDGET_HOURLY_CAP_USD = 3.0           # Global hourly spend cap
     BUDGET_SOFT_LIMIT_PCT = 0.7           # Trigger downgrade at 70% of cap
     BUDGET_HARD_LIMIT_PCT = 0.95          # Hard freeze at 95% of cap
@@ -298,6 +306,7 @@ class OpsAutopilot:
         ('outbound_leads', 'outbound_lead_engine', '_policy_outbound_leads'),
         ('outreach', 'outreach_sequencer', '_policy_outreach_sequencer'),
         ('close_deal', 'close_the_deal', '_policy_close_the_deal'),
+        ('engagement', 'engagement_engine', '_policy_engagement_engine'),
     ]
 
     def run(self) -> dict[str, Any]:
@@ -2181,6 +2190,35 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] close-the-deal error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _policy_engagement_engine(self, now) -> dict:
+        """
+        Monitor engagement inbox — auto-close stale events,
+        report unread/needs_reply counts.
+        """
+        result = {
+            'unread': 0,
+            'needs_reply': 0,
+            'stale_closed': 0,
+        }
+
+        try:
+            engine = EngagementEngine()
+            eval_result = engine.evaluate(now)
+            result.update(eval_result)
+
+            logger.info(
+                f"[OpsAutopilot] Engagement: "
+                f"{result['unread']} unread, "
+                f"{result['needs_reply']} needs reply, "
+                f"{result['stale_closed']} auto-closed"
+            )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] engagement engine error: {e}")
             result['error'] = str(e)
 
         return result
@@ -9266,6 +9304,250 @@ class CloseTheDealEngine:
                 updated_at__lt=stale_cutoff,
             ).update(status='expired')
             result['expired'] = expired
+
+        except Exception as e:
+            result['error'] = str(e)
+
+        return result
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Engagement Engine — Policy 28 (Autonomy #24)
+# ═══════════════════════════════════════════════════════════════════════
+
+class EngagementEngine:
+    """
+    Captures and classifies inbound prospect engagement (replies,
+    meeting bookings, form fills). Routes to appropriate next action.
+
+    Guardrails:
+      - Never auto-sends replies — approval required
+      - Hard opt-out handling (unsubscribe → permanent suppress)
+      - Dedup: one thread per outreach draft
+    """
+
+    INTENT_ACTIONS = {
+        'positive': 'reply_with_info',
+        'neutral': 'reply_with_answer',
+        'objection': 'reply_address_objection',
+        'meeting': 'book_call',
+        'unsubscribe': 'suppress',
+        'unknown': 'review_manually',
+    }
+
+    def get_inbox(self, now, status_filter='unread') -> dict:
+        """PA-facing: engagement events by status."""
+        from core.models_engagement import EngagementEvent
+
+        try:
+            qs = EngagementEvent.objects.filter(suppressed=False)
+            if status_filter != 'all':
+                qs = qs.filter(status=status_filter)
+
+            events = list(
+                qs.order_by('-created_at').values(
+                    'id', 'prospect_name', 'prospect_company',
+                    'channel', 'intent', 'status', 'subject_line',
+                    'suggested_action', 'created_at',
+                )[:20]
+            )
+
+            for e in events:
+                e['id'] = str(e['id'])
+                if hasattr(e.get('created_at'), 'isoformat'):
+                    e['created_at'] = e['created_at'].isoformat()
+
+            # Counts
+            from django.db.models import Count
+            status_counts = dict(
+                EngagementEvent.objects.filter(
+                    suppressed=False,
+                ).values_list('status').annotate(
+                    c=Count('id'),
+                ).values_list('status', 'c')
+            )
+
+            return {
+                'events': events,
+                'filter': status_filter,
+                'total_unread': status_counts.get('unread', 0),
+                'total_needs_reply': status_counts.get('needs_reply', 0),
+                'total_classified': status_counts.get('classified', 0),
+            }
+        except Exception as e:
+            return {'error': str(e), 'events': []}
+
+    def classify_event(self, event_id: str, intent: str, summary: str = '') -> dict:
+        """Classify an engagement event's intent."""
+        from core.models_engagement import EngagementEvent
+
+        try:
+            event = EngagementEvent.objects.get(id=event_id)
+        except EngagementEvent.DoesNotExist:
+            return {'error': f'Event {event_id} not found'}
+
+        if event.suppressed:
+            return {'error': 'Event is suppressed (opt-out)'}
+
+        event.intent = intent
+        if summary:
+            event.summary = summary
+        event.suggested_action = self.INTENT_ACTIONS.get(intent, 'review_manually')
+        event.status = 'classified'
+
+        # Auto-suppress unsubscribe
+        if intent == 'unsubscribe':
+            event.suppressed = True
+            event.status = 'closed'
+
+        event.save()
+
+        return {
+            'classified': True,
+            'event_id': str(event.id),
+            'intent': intent,
+            'suggested_action': event.suggested_action,
+            'suppressed': event.suppressed,
+        }
+
+    def draft_reply(self, event_id: str, reply_text: str) -> dict:
+        """Set a draft reply for approval."""
+        from core.models_engagement import EngagementEvent
+
+        try:
+            event = EngagementEvent.objects.get(id=event_id)
+        except EngagementEvent.DoesNotExist:
+            return {'error': f'Event {event_id} not found'}
+
+        if event.suppressed:
+            return {'error': 'Cannot reply — prospect opted out'}
+
+        event.draft_reply = reply_text
+        event.status = 'needs_reply'
+        event.save()
+
+        return {
+            'drafted': True,
+            'event_id': str(event.id),
+            'status': 'needs_reply',
+        }
+
+    def approve_reply(self, event_id: str, edited_text: str = '') -> dict:
+        """Approve a draft reply (optionally with edits)."""
+        from core.models_engagement import EngagementEvent
+
+        try:
+            event = EngagementEvent.objects.get(
+                id=event_id, status='needs_reply',
+            )
+        except EngagementEvent.DoesNotExist:
+            return {'error': f'Event {event_id} not found or not in needs_reply status'}
+
+        if edited_text:
+            event.edited_reply = edited_text
+
+        event.status = 'actioned'
+        event.save()
+
+        return {
+            'approved': True,
+            'event_id': str(event.id),
+            'reply_text': edited_text or event.draft_reply,
+        }
+
+    def disqualify(self, event_id: str, reason: str = '') -> dict:
+        """Disqualify an engagement."""
+        from core.models_engagement import EngagementEvent
+
+        try:
+            event = EngagementEvent.objects.get(id=event_id)
+        except EngagementEvent.DoesNotExist:
+            return {'error': f'Event {event_id} not found'}
+
+        event.status = 'disqualified'
+        event.disqualify_reason = reason
+        event.save()
+
+        return {
+            'disqualified': True,
+            'event_id': str(event.id),
+            'reason': reason,
+        }
+
+    def get_metrics_report(self, now) -> dict:
+        """PA-facing: engagement funnel metrics."""
+        from core.models_engagement import EngagementEvent
+        from django.db.models import Count
+
+        try:
+            total = EngagementEvent.objects.filter(suppressed=False).count()
+            by_status = dict(
+                EngagementEvent.objects.filter(
+                    suppressed=False,
+                ).values_list('status').annotate(
+                    c=Count('id'),
+                ).values_list('status', 'c')
+            )
+            by_intent = dict(
+                EngagementEvent.objects.filter(
+                    suppressed=False,
+                ).values_list('intent').annotate(
+                    c=Count('id'),
+                ).values_list('intent', 'c')
+            )
+            by_channel = dict(
+                EngagementEvent.objects.filter(
+                    suppressed=False,
+                ).values_list('channel').annotate(
+                    c=Count('id'),
+                ).values_list('channel', 'c')
+            )
+
+            # Conversion: actioned / total
+            actioned = by_status.get('actioned', 0) + by_status.get('closed', 0)
+            conversion_pct = (actioned / total * 100) if total > 0 else 0
+
+            suppressed_count = EngagementEvent.objects.filter(
+                suppressed=True,
+            ).count()
+
+            return {
+                'total': total,
+                'by_status': by_status,
+                'by_intent': by_intent,
+                'by_channel': by_channel,
+                'conversion_pct': round(conversion_pct, 1),
+                'suppressed': suppressed_count,
+            }
+        except Exception as e:
+            return {'error': str(e)}
+
+    def evaluate(self, now) -> dict:
+        """Policy evaluation — auto-close stale events, report stats."""
+        from core.models_engagement import EngagementEvent
+
+        result = {
+            'unread': 0,
+            'needs_reply': 0,
+            'stale_closed': 0,
+        }
+
+        try:
+            result['unread'] = EngagementEvent.objects.filter(
+                status='unread', suppressed=False,
+            ).count()
+            result['needs_reply'] = EngagementEvent.objects.filter(
+                status='needs_reply', suppressed=False,
+            ).count()
+
+            # Auto-close classified events older than 30 days with no action
+            stale_cutoff = now - timedelta(days=30)
+            stale_closed = EngagementEvent.objects.filter(
+                status__in=['unread', 'classified'],
+                created_at__lt=stale_cutoff,
+                suppressed=False,
+            ).update(status='closed')
+            result['stale_closed'] = stale_closed
 
         except Exception as e:
             result['error'] = str(e)

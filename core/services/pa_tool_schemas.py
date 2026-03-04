@@ -2035,7 +2035,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "timeout_ladder_report", "deliberation_pipeline_report", "backfill_failure_reasons", "backlog_report", "goal_report", "goal_set_weights", "attribution_report", "policy_conflict_report", "release_report", "release_freeze", "release_unfreeze", "revenue_pipeline_report", "prospecting_queue", "lead_source_report", "outreach_inbox", "outreach_approve", "outreach_reject", "outreach_metrics_report", "close_pack_generate", "close_pack_inbox", "close_pack_approve", "close_pack_metrics_report"],
+                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "timeout_ladder_report", "deliberation_pipeline_report", "backfill_failure_reasons", "backlog_report", "goal_report", "goal_set_weights", "attribution_report", "policy_conflict_report", "release_report", "release_freeze", "release_unfreeze", "revenue_pipeline_report", "prospecting_queue", "lead_source_report", "outreach_inbox", "outreach_approve", "outreach_reject", "outreach_metrics_report", "close_pack_generate", "close_pack_inbox", "close_pack_approve", "close_pack_metrics_report", "engagement_inbox", "engagement_classify", "engagement_draft_reply", "engagement_approve_reply", "engagement_disqualify", "engagement_metrics_report"],
                     "description": (
                         "status: current config, last cycle timestamp, and pending actions. "
                         "history: recent autopilot actions (blocks, attention items, dry runs). "
@@ -2105,7 +2105,15 @@ PA_TOOL_SCHEMAS = [
                         "(requires opportunity_id, offer_key, price; optional timeline_days). "
                         "close_pack_inbox: pending close packs for approval — offer details, price, pipeline value. "
                         "close_pack_approve: approve a close pack (requires pack_id). Schedules follow-up automatically. "
-                        "close_pack_metrics_report: deal metrics — win rate, revenue, avg deal size, funnel by status/offer."
+                        "close_pack_metrics_report: deal metrics — win rate, revenue, avg deal size, funnel by status/offer. "
+                        "engagement_inbox: inbound engagement events (replies, meetings, form fills) — "
+                        "filterable by status (unread, needs_reply, classified, all). Shows intent, prospect info. "
+                        "engagement_classify: classify an engagement event's intent (requires event_id, intent: "
+                        "positive/neutral/objection/meeting/unsubscribe). Auto-suppresses unsubscribes. "
+                        "engagement_draft_reply: set a draft reply for an engagement (requires event_id, reply_text). "
+                        "engagement_approve_reply: approve a draft reply (requires event_id, optional edited_text). "
+                        "engagement_disqualify: disqualify an engagement (requires event_id, optional reason). "
+                        "engagement_metrics_report: engagement funnel — by status/intent/channel, conversion rate."
                     ),
                 },
                 "dry_run": {
@@ -2187,6 +2195,22 @@ PA_TOOL_SCHEMAS = [
                 "pack_id": {
                     "type": "string",
                     "description": "For 'close_pack_approve': UUID of the close pack to approve.",
+                },
+                "event_id": {
+                    "type": "string",
+                    "description": "For engagement actions: UUID of the engagement event.",
+                },
+                "intent": {
+                    "type": "string",
+                    "description": "For 'engagement_classify': intent classification — positive, neutral, objection, meeting, unsubscribe.",
+                },
+                "reply_text": {
+                    "type": "string",
+                    "description": "For 'engagement_draft_reply': draft reply text for approval.",
+                },
+                "status_filter": {
+                    "type": "string",
+                    "description": "For 'engagement_inbox': filter by status — unread (default), needs_reply, classified, actioned, all.",
                 },
             },
             "required": ["action"],

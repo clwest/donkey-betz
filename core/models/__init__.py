@@ -223,6 +223,9 @@ from ..models_outreach import OutreachDraft
 # Import close pack models (Autonomy #23 - Close-the-Deal Engine)
 from ..models_close_pack import ClosePack
 
+# Import engagement models (Autonomy #24 - Engagement Engine)
+from ..models_engagement import EngagementEvent
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -475,5 +478,8 @@ __all__ = [
 
     # Close Pack (Autonomy #23)
     'ClosePack',
+
+    # Engagement Event (Autonomy #24)
+    'EngagementEvent',
 
 ]
