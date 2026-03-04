@@ -1,7 +1,7 @@
 """
 VIP Read-Only Middleware — blocks non-GET requests from VIP demo viewers.
 
-VIP users (platform_role='vip_demo_viewer') can only read data. Any
+VIP users (primary_role='vip_demo_viewer') can only read data. Any
 POST/PUT/PATCH/DELETE is rejected with 403, except for the auth
 exchange endpoint itself.
 """
@@ -40,7 +40,7 @@ class VIPReadOnlyMiddleware:
         if not hasattr(request, 'user') or not request.user.is_authenticated:
             return False
         try:
-            profile = request.user.enhanceduserprofile
-            return profile.platform_role == 'vip_demo_viewer'
+            profile = request.user.enhanced_profile
+            return profile.primary_role == 'vip_demo_viewer'
         except Exception:
             return False
