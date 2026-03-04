@@ -12462,6 +12462,85 @@ RESEARCH DATA:
             report = engine.get_metrics_report(tz.now())
             return {'action': 'close_pack_metrics_report', **report}
 
+        elif action == 'engagement_inbox':
+            # Inbound engagement events
+            from core.services.ops_autopilot import EngagementEngine
+            from django.utils import timezone as tz
+
+            status_filter = payload.get('status_filter', 'unread')
+            engine = EngagementEngine()
+            inbox = engine.get_inbox(tz.now(), status_filter=status_filter)
+            return {'action': 'engagement_inbox', **inbox}
+
+        elif action == 'engagement_classify':
+            # Classify engagement intent
+            from core.services.ops_autopilot import EngagementEngine
+
+            event_id = payload.get('event_id')
+            intent = payload.get('intent')
+            if not event_id or not intent:
+                return {'error': 'event_id and intent are required'}
+
+            engine = EngagementEngine()
+            result = engine.classify_event(
+                event_id=event_id,
+                intent=intent,
+                summary=payload.get('summary', ''),
+            )
+            return {'action': 'engagement_classify', **result}
+
+        elif action == 'engagement_draft_reply':
+            # Draft a reply for approval
+            from core.services.ops_autopilot import EngagementEngine
+
+            event_id = payload.get('event_id')
+            reply_text = payload.get('reply_text')
+            if not event_id or not reply_text:
+                return {'error': 'event_id and reply_text are required'}
+
+            engine = EngagementEngine()
+            result = engine.draft_reply(event_id=event_id, reply_text=reply_text)
+            return {'action': 'engagement_draft_reply', **result}
+
+        elif action == 'engagement_approve_reply':
+            # Approve a draft reply
+            from core.services.ops_autopilot import EngagementEngine
+
+            event_id = payload.get('event_id')
+            if not event_id:
+                return {'error': 'event_id is required'}
+
+            engine = EngagementEngine()
+            result = engine.approve_reply(
+                event_id=event_id,
+                edited_text=payload.get('edited_text', ''),
+            )
+            return {'action': 'engagement_approve_reply', **result}
+
+        elif action == 'engagement_disqualify':
+            # Disqualify an engagement
+            from core.services.ops_autopilot import EngagementEngine
+
+            event_id = payload.get('event_id')
+            if not event_id:
+                return {'error': 'event_id is required'}
+
+            engine = EngagementEngine()
+            result = engine.disqualify(
+                event_id=event_id,
+                reason=payload.get('reason', ''),
+            )
+            return {'action': 'engagement_disqualify', **result}
+
+        elif action == 'engagement_metrics_report':
+            # Engagement funnel metrics
+            from core.services.ops_autopilot import EngagementEngine
+            from django.utils import timezone as tz
+
+            engine = EngagementEngine()
+            report = engine.get_metrics_report(tz.now())
+            return {'action': 'engagement_metrics_report', **report}
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason
