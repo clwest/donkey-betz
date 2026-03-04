@@ -1,5 +1,5 @@
 """
-Ops Autopilot v7 — autonomous ops with governance guardrails.
+Ops Autopilot v8 — autonomous ops with governance guardrails.
 
 Policies (v1 — Session 1080):
   1. Timeout spike containment: auto-block agents with high TIMEOUT signature counts
@@ -150,6 +150,13 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      Full pipeline status, conversion funnel metrics, and weighted
      revenue forecasts. Flags stale items across all stages.
      PA tools: revenue_full_pipeline, revenue_funnel, revenue_forecast.
+ 32. Knowledge & citation engine: KnowledgeEngine monitors citation
+     health across the system via CitationViolation tracking, spider
+     data freshness, research result quality, and source provenance.
+     Reports violation trends, top offending agents, block rates,
+     spider source coverage, and staleness detection with refresh
+     recommendations. PA tools: knowledge_health, knowledge_citation_report,
+     knowledge_source_report, knowledge_staleness_report.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -331,6 +338,7 @@ class OpsAutopilot:
         ('meetings', 'meeting_engine', '_policy_meeting_engine'),
         ('governance', 'governance_controls', '_policy_governance_controls'),
         ('revenue_orchestrator', 'revenue_orchestrator', '_policy_revenue_orchestrator'),
+        ('knowledge', 'knowledge_citation_engine', '_policy_knowledge_citation_engine'),
     ]
 
     def run(self) -> dict[str, Any]:
@@ -2329,6 +2337,36 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] revenue orchestrator error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _policy_knowledge_citation_engine(self, now) -> dict:
+        """
+        Monitor citation health and knowledge quality.
+        Flags high violation rates and stale knowledge sources.
+        """
+        result = {
+            'violation_count_24h': 0,
+            'block_count_24h': 0,
+            'spider_staleness': {},
+            'healthy': True,
+        }
+
+        try:
+            engine = KnowledgeEngine()
+            eval_result = engine.evaluate(now)
+            result.update(eval_result)
+
+            if not eval_result.get('healthy', True):
+                logger.info(
+                    f"[OpsAutopilot] Knowledge engine: "
+                    f"{eval_result.get('violation_count_24h', 0)} violations, "
+                    f"{eval_result.get('block_count_24h', 0)} blocks"
+                )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] knowledge citation engine error: {e}")
             result['error'] = str(e)
 
         return result
@@ -11463,6 +11501,396 @@ class RevenueOrchestrator:
 
         return {
             'pipeline_issues': issues,
+            'issue_count': len(issues),
+            'healthy': len(issues) == 0,
+        }
+
+
+# ── Knowledge & Citation Engine (Policy 32 — Autonomy #28) ──────────────────
+
+class KnowledgeEngine:
+    """
+    Knowledge & Citation diagnostics engine.
+
+    Monitors citation health across the system by querying:
+    - CitationViolation: tracks outputs that failed citation requirements
+    - SpiderData: knowledge freshness and source coverage
+    - ResearchResult: research completion and quality
+    - Deliverable: output provenance and source linking
+
+    Provides:
+    - knowledge_health: overall health dashboard
+    - citation_report: violation trends, top offending agents, block rates
+    - source_report: spider data coverage, freshness, top sources
+    - staleness_report: stale knowledge detection and refresh recommendations
+    """
+
+    # Freshness thresholds by data type (hours)
+    FRESHNESS_THRESHOLDS = {
+        'odds': 1,
+        'sports_odds': 1,
+        'live_scores': 0.5,
+        'crypto_prices': 2,
+        'stock_data': 4,
+        'news': 24,
+        'job_listings': 72,
+        'legislation': 168,
+        'research': 168,
+    }
+    DEFAULT_FRESHNESS_HOURS = 48
+
+    def get_health(self) -> dict:
+        """
+        Overall knowledge health dashboard.
+        """
+        from core.models_orchestration import CitationViolation
+        from core.models_unified_system import SpiderData
+        from core.models_research import ResearchResult
+        from django.db.models import Count
+
+        now = timezone.now()
+        day_ago = now - timedelta(hours=24)
+        week_ago = now - timedelta(days=7)
+
+        # Citation violations (24h and 7d)
+        violations_24h = CitationViolation.objects.filter(
+            created_at__gte=day_ago,
+        ).count()
+        violations_7d = CitationViolation.objects.filter(
+            created_at__gte=week_ago,
+        ).count()
+        blocks_24h = CitationViolation.objects.filter(
+            created_at__gte=day_ago,
+            was_blocked=True,
+        ).count()
+
+        # Unresolved violations
+        unresolved = CitationViolation.objects.filter(
+            is_resolved=False,
+        ).count()
+
+        # Spider data freshness (last 24h ingestion)
+        spider_24h = SpiderData.objects.filter(
+            created_at__gte=day_ago,
+        ).count()
+        spider_7d = SpiderData.objects.filter(
+            created_at__gte=week_ago,
+        ).count()
+
+        # Spider data by type (top 10)
+        spider_by_type = list(
+            SpiderData.objects.filter(created_at__gte=week_ago)
+            .values('data_type')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:10]
+        )
+
+        # Active spiders (distinct spider names in last 7d)
+        active_spiders = SpiderData.objects.filter(
+            created_at__gte=week_ago,
+        ).values('spider_name').distinct().count()
+
+        # Research results
+        research_pending = ResearchResult.objects.filter(
+            status='pending',
+        ).count()
+        research_blocked = ResearchResult.objects.filter(
+            status='blocked',
+        ).count()
+        research_complete_7d = ResearchResult.objects.filter(
+            status='complete',
+            completed_at__gte=week_ago,
+        ).count()
+
+        # Health assessment
+        health_issues = []
+        if violations_24h > 10:
+            health_issues.append(f'High violation rate: {violations_24h} in 24h')
+        if blocks_24h > 5:
+            health_issues.append(f'High block rate: {blocks_24h} outputs blocked in 24h')
+        if spider_24h == 0:
+            health_issues.append('No spider data ingested in 24h')
+        if research_blocked > 3:
+            health_issues.append(f'{research_blocked} research tasks blocked')
+
+        return {
+            'healthy': len(health_issues) == 0,
+            'health_issues': health_issues,
+            'citations': {
+                'violations_24h': violations_24h,
+                'violations_7d': violations_7d,
+                'blocks_24h': blocks_24h,
+                'unresolved': unresolved,
+            },
+            'knowledge_sources': {
+                'spider_records_24h': spider_24h,
+                'spider_records_7d': spider_7d,
+                'active_spiders': active_spiders,
+                'spider_by_type': spider_by_type,
+            },
+            'research': {
+                'pending': research_pending,
+                'blocked': research_blocked,
+                'completed_7d': research_complete_7d,
+            },
+            'timestamp': now.isoformat(),
+        }
+
+    def get_citation_report(self, days: int = 7) -> dict:
+        """
+        Citation violation trends and top offending agents.
+        """
+        from core.models_orchestration import CitationViolation
+        from django.db.models import Count
+
+        now = timezone.now()
+        since = now - timedelta(days=days)
+
+        violations = CitationViolation.objects.filter(created_at__gte=since)
+
+        # By type
+        by_type = list(
+            violations.values('violation_type')
+            .annotate(count=Count('id'))
+            .order_by('-count')
+        )
+
+        # By agent (top offenders)
+        by_agent = list(
+            violations.values('agent_name')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:10]
+        )
+
+        # Block rate
+        total = violations.count()
+        blocked = violations.filter(was_blocked=True).count()
+        block_rate = round(blocked / total, 4) if total > 0 else 0.0
+
+        # Resolution rate
+        resolved = violations.filter(is_resolved=True).count()
+        resolution_rate = round(resolved / total, 4) if total > 0 else 0.0
+
+        # Daily trend (last N days)
+        from django.db.models.functions import TruncDate
+        daily_trend = list(
+            violations
+            .annotate(day=TruncDate('created_at'))
+            .values('day')
+            .annotate(count=Count('id'))
+            .order_by('day')
+        )
+        # Serialize dates
+        for entry in daily_trend:
+            entry['day'] = entry['day'].isoformat() if entry.get('day') else None
+
+        return {
+            'period_days': days,
+            'total_violations': total,
+            'blocked_count': blocked,
+            'block_rate': block_rate,
+            'resolved_count': resolved,
+            'resolution_rate': resolution_rate,
+            'by_violation_type': by_type,
+            'top_offending_agents': by_agent,
+            'daily_trend': daily_trend,
+        }
+
+    def get_source_report(self) -> dict:
+        """
+        Spider data coverage and source quality metrics.
+        """
+        from core.models_unified_system import SpiderData
+        from django.db.models import Count, Avg, Max
+
+        now = timezone.now()
+        week_ago = now - timedelta(days=7)
+
+        # Top sources by volume
+        top_spiders = list(
+            SpiderData.objects.filter(created_at__gte=week_ago)
+            .values('spider_name')
+            .annotate(
+                count=Count('id'),
+                avg_relevance=Avg('relevance_score'),
+                latest=Max('created_at'),
+            )
+            .order_by('-count')[:15]
+        )
+        for s in top_spiders:
+            s['avg_relevance'] = round(float(s['avg_relevance'] or 0), 2)
+            s['latest'] = s['latest'].isoformat() if s.get('latest') else None
+
+        # Data type distribution
+        type_dist = list(
+            SpiderData.objects.filter(created_at__gte=week_ago)
+            .values('data_type')
+            .annotate(count=Count('id'))
+            .order_by('-count')
+        )
+
+        # Source URL diversity (unique domains)
+        from django.db.models import Value
+        all_urls = list(
+            SpiderData.objects.filter(created_at__gte=week_ago)
+            .values_list('source_url', flat=True)[:1000]
+        )
+        domains = set()
+        for url in all_urls:
+            if url:
+                try:
+                    parts = url.split('//')
+                    domain = parts[1].split('/')[0] if len(parts) > 1 else parts[0].split('/')[0]
+                    domains.add(domain)
+                except (IndexError, AttributeError):
+                    pass
+
+        # Research sources used
+        from core.models_research import ResearchResult
+        research_with_external = ResearchResult.objects.filter(
+            status='complete',
+            completed_at__gte=week_ago,
+        ).exclude(external_sources=[]).count()
+        research_total = ResearchResult.objects.filter(
+            status='complete',
+            completed_at__gte=week_ago,
+        ).count()
+
+        return {
+            'top_spiders': top_spiders,
+            'data_type_distribution': type_dist,
+            'unique_domains': len(domains),
+            'total_sources_7d': sum(s['count'] for s in top_spiders),
+            'research_with_sources': research_with_external,
+            'research_total': research_total,
+            'research_source_rate': round(
+                research_with_external / research_total, 4
+            ) if research_total > 0 else 0.0,
+        }
+
+    def get_staleness_report(self) -> dict:
+        """
+        Detect stale knowledge sources and recommend refreshes.
+        """
+        from core.models_unified_system import SpiderData
+        from django.db.models import Max
+
+        now = timezone.now()
+
+        # Latest record per data_type
+        latest_by_type = list(
+            SpiderData.objects.values('data_type')
+            .annotate(latest=Max('created_at'), )
+            .order_by('data_type')
+        )
+
+        stale_types = []
+        fresh_types = []
+        for entry in latest_by_type:
+            dt = entry['data_type']
+            latest = entry['latest']
+            threshold_hours = self.FRESHNESS_THRESHOLDS.get(
+                dt, self.DEFAULT_FRESHNESS_HOURS,
+            )
+            age_hours = (now - latest).total_seconds() / 3600 if latest else 999999
+
+            item = {
+                'data_type': dt,
+                'latest_record': latest.isoformat() if latest else None,
+                'age_hours': round(age_hours, 1),
+                'threshold_hours': threshold_hours,
+            }
+
+            if age_hours > threshold_hours:
+                item['status'] = 'stale'
+                item['overdue_hours'] = round(age_hours - threshold_hours, 1)
+                stale_types.append(item)
+            else:
+                item['status'] = 'fresh'
+                fresh_types.append(item)
+
+        # Latest record per spider
+        latest_by_spider = list(
+            SpiderData.objects.values('spider_name')
+            .annotate(latest=Max('created_at'))
+            .order_by('spider_name')
+        )
+        dormant_spiders = []
+        for entry in latest_by_spider:
+            latest = entry['latest']
+            if latest:
+                age_hours = (now - latest).total_seconds() / 3600
+                if age_hours > 168:  # 7 days without data
+                    dormant_spiders.append({
+                        'spider_name': entry['spider_name'],
+                        'last_active': latest.isoformat(),
+                        'dormant_hours': round(age_hours, 1),
+                    })
+
+        return {
+            'stale_data_types': stale_types,
+            'fresh_data_types': fresh_types,
+            'stale_count': len(stale_types),
+            'fresh_count': len(fresh_types),
+            'dormant_spiders': dormant_spiders[:20],
+            'dormant_spider_count': len(dormant_spiders),
+            'recommendations': self._staleness_recommendations(stale_types, dormant_spiders),
+        }
+
+    def _staleness_recommendations(self, stale_types: list, dormant_spiders: list) -> list:
+        """Generate actionable recommendations for stale data."""
+        recs = []
+        for st in stale_types[:5]:
+            recs.append(
+                f"Refresh {st['data_type']} data — {st['overdue_hours']:.0f}h overdue "
+                f"(threshold: {st['threshold_hours']}h)"
+            )
+        if len(dormant_spiders) > 5:
+            recs.append(
+                f"{len(dormant_spiders)} spiders dormant >7d — review spider health"
+            )
+        elif dormant_spiders:
+            for ds in dormant_spiders[:3]:
+                recs.append(
+                    f"Spider {ds['spider_name']} dormant {ds['dormant_hours']:.0f}h — check schedule"
+                )
+        return recs
+
+    def evaluate(self, now) -> dict:
+        """
+        Auto-evaluate knowledge health for autopilot cycle.
+        Returns key metrics and flags issues.
+        """
+        from core.models_orchestration import CitationViolation
+        from core.models_unified_system import SpiderData
+
+        day_ago = now - timedelta(hours=24)
+
+        violations_24h = CitationViolation.objects.filter(
+            created_at__gte=day_ago,
+        ).count()
+        blocks_24h = CitationViolation.objects.filter(
+            created_at__gte=day_ago,
+            was_blocked=True,
+        ).count()
+
+        spider_24h = SpiderData.objects.filter(
+            created_at__gte=day_ago,
+        ).count()
+
+        issues = []
+        if violations_24h > 10:
+            issues.append(f'{violations_24h} citation violations in 24h')
+        if blocks_24h > 5:
+            issues.append(f'{blocks_24h} outputs blocked by citation gate in 24h')
+        if spider_24h == 0:
+            issues.append('No spider data ingested in 24h — knowledge going stale')
+
+        return {
+            'violation_count_24h': violations_24h,
+            'block_count_24h': blocks_24h,
+            'spider_ingestion_24h': spider_24h,
+            'issues': issues,
             'issue_count': len(issues),
             'healthy': len(issues) == 0,
         }
