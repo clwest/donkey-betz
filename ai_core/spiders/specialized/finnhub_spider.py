@@ -7,7 +7,7 @@ Uses Finnhub API for real-time stock data and market news.
 """
 
 import os
-import requests
+from ai_core.spiders.web_request_layer import cached_get
 import feedparser
 import logging
 import re
@@ -111,7 +111,7 @@ class FinnhubSpider:
         # Fetch quotes for tracked symbols
         for symbol in self.TRACKED_SYMBOLS[:5]:
             try:
-                response = requests.get(
+                response = cached_get(
                     f"{self.BASE_URL}/quote",
                     params={'symbol': symbol, 'token': self.api_key},
                     timeout=10
@@ -152,7 +152,7 @@ class FinnhubSpider:
 
         # Fetch market news
         try:
-            response = requests.get(
+            response = cached_get(
                 f"{self.BASE_URL}/news",
                 params={'category': 'general', 'token': self.api_key},
                 timeout=10

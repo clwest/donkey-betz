@@ -7,7 +7,7 @@ Uses Kaggle API when credentials available, RSS fallback otherwise.
 """
 
 import os
-import requests
+from ai_core.spiders.web_request_layer import cached_get
 import base64
 import feedparser
 import logging
@@ -116,7 +116,7 @@ class KaggleSpider:
 
         # Fetch competitions
         try:
-            response = requests.get(
+            response = cached_get(
                 f"{self.BASE_URL}/competitions/list",
                 headers=headers,
                 params={'sortBy': 'recentlyCreated', 'page': 1, 'pageSize': 15},
@@ -158,7 +158,7 @@ class KaggleSpider:
 
         # Fetch trending datasets
         try:
-            response = requests.get(
+            response = cached_get(
                 f"{self.BASE_URL}/datasets/list",
                 headers=headers,
                 params={'sortBy': 'hottest', 'page': 1, 'pageSize': 15},

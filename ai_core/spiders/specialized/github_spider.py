@@ -7,7 +7,7 @@ Uses GitHub API for trending repos and developer trends.
 """
 
 import os
-import requests
+from ai_core.spiders.web_request_layer import cached_get
 import feedparser
 import logging
 import re
@@ -115,7 +115,7 @@ class GitHubSpider:
 
             for query in search_queries[:2]:
                 try:
-                    response = requests.get(
+                    response = cached_get(
                         f"{self.BASE_URL}/search/repositories",
                         headers=headers,
                         params={

@@ -9,6 +9,7 @@ Uses Spotify API when credentials available, RSS fallback otherwise.
 
 import os
 import requests
+from ai_core.spiders.web_request_layer import cached_get
 import base64
 import feedparser
 import logging
@@ -153,7 +154,7 @@ class SpotifySpider:
             url = f"{self.BASE_URL}/browse/new-releases"
             params = {'limit': 20, 'country': 'US'}
 
-            response = requests.get(url, headers=headers, params=params, timeout=15)
+            response = cached_get(url, headers=headers, params=params, timeout=15)
             if response.status_code == 200:
                 data = response.json()
                 albums = data.get('albums', {}).get('items', [])

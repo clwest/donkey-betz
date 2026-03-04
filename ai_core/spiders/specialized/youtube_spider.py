@@ -7,7 +7,7 @@ Uses YouTube API when credentials available, otherwise provides curated topics.
 """
 
 import os
-import requests
+from ai_core.spiders.web_request_layer import cached_get
 import logging
 from datetime import datetime
 from typing import Dict, List, Any
@@ -103,7 +103,7 @@ class YouTubeSpider:
                     'key': self.api_key,
                 }
 
-                response = requests.get(search_url, params=params, timeout=10)
+                response = cached_get(search_url, params=params, timeout=10)
                 if response.status_code == 200:
                     data = response.json()
                     for item in data.get('items', []):
@@ -169,7 +169,7 @@ class YouTubeSpider:
                     'key': self.api_key,
                 }
 
-                response = requests.get(videos_url, params=params, timeout=10)
+                response = cached_get(videos_url, params=params, timeout=10)
                 if response.status_code == 200:
                     data = response.json()
                     for item in data.get('items', []):

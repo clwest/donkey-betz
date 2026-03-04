@@ -6,7 +6,7 @@ Session 534: Simplified to work with spider network interface.
 Uses HuggingFace Hub API to track trending models and datasets.
 """
 
-import requests
+from ai_core.spiders.web_request_layer import cached_get
 import logging
 from datetime import datetime
 from typing import Dict, List, Any
@@ -88,7 +88,7 @@ class HuggingFaceSpider:
                 'limit': limit,
             }
 
-            response = requests.get(url, params=params, timeout=15)
+            response = cached_get(url, params=params, timeout=15)
             response.raise_for_status()
             models = response.json()
 
@@ -143,7 +143,7 @@ class HuggingFaceSpider:
                 'limit': limit,
             }
 
-            response = requests.get(url, params=params, timeout=15)
+            response = cached_get(url, params=params, timeout=15)
             response.raise_for_status()
             datasets = response.json()
 
@@ -190,7 +190,7 @@ class HuggingFaceSpider:
                 'limit': limit,
             }
 
-            response = requests.get(url, params=params, timeout=15)
+            response = cached_get(url, params=params, timeout=15)
             response.raise_for_status()
             spaces = response.json()
 

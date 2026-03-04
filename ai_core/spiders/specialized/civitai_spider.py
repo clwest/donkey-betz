@@ -6,7 +6,7 @@ Session 534: Simplified to work with spider network interface.
 Uses Civitai public API to fetch trending models, LoRAs, and embeddings.
 """
 
-import requests
+from ai_core.spiders.web_request_layer import cached_get
 import logging
 from datetime import datetime
 from typing import Dict, List, Any
@@ -74,7 +74,7 @@ class CivitAISpider:
                 'nsfw': 'false',  # SFW only
             }
 
-            response = requests.get(url, params=params, timeout=15)
+            response = cached_get(url, params=params, timeout=15)
             response.raise_for_status()
             data = response.json()
 

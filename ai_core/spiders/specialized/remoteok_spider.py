@@ -6,7 +6,7 @@ Session 534: Simplified to work with spider network interface.
 Uses RemoteOK API and remote job RSS feeds.
 """
 
-import requests
+from ai_core.spiders.web_request_layer import cached_get
 import feedparser
 import logging
 import re
@@ -102,7 +102,7 @@ class RemoteOKSpider:
 
         try:
             headers = {'User-Agent': 'DonkeyBetz-Spider/1.0'}
-            response = requests.get(self.API_URL, headers=headers, timeout=15)
+            response = cached_get(self.API_URL, headers=headers, timeout=15)
 
             if response.status_code == 200:
                 jobs = response.json()

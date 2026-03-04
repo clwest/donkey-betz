@@ -19,7 +19,7 @@ import os
 import logging
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
-import requests
+from ai_core.spiders.web_request_layer import cached_get
 
 from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
 
@@ -102,7 +102,7 @@ class EtherscanAPISpider(BaseIntelligenceSpider):
         """Fetch recent block information."""
         try:
             # Get current block number
-            response = requests.get(
+            response = cached_get(
                 self.BASE_URL,
                 params={
                     'chainid': self.CHAIN_ID,
@@ -129,7 +129,7 @@ class EtherscanAPISpider(BaseIntelligenceSpider):
     def _fetch_address_transactions(self, address: str, label: str) -> List[Dict[str, Any]]:
         """Fetch recent transactions for an address."""
         try:
-            response = requests.get(
+            response = cached_get(
                 self.BASE_URL,
                 params={
                     'chainid': self.CHAIN_ID,

@@ -141,7 +141,7 @@ class EmbeddingService:
         # Check Redis cache first
         cached = self._cache_get(text, model)
         if cached is not None:
-            logger.debug("Embedding cache hit")
+            logger.info("[embedding_cache] HIT model=%s agent=%s", model, agent_name)
             return EmbeddingResult(
                 embedding=cached,
                 tokens_used=0,
@@ -150,6 +150,7 @@ class EmbeddingService:
                 latency_ms=0
             )
 
+        logger.info("[embedding_cache] MISS model=%s agent=%s", model, agent_name)
         start_time = time.time()
 
         try:
@@ -253,7 +254,10 @@ class EmbeddingService:
 
         if not miss_texts:
             # All cached
-            logger.debug(f"Batch embedding: all {len(texts)} texts cached")
+            logger.info(
+                "[embedding_cache] BATCH all_cached=%d agent=%s",
+                len(texts), agent_name
+            )
             return BatchEmbeddingResult(
                 embeddings=results,
                 total_tokens=0,
@@ -264,7 +268,10 @@ class EmbeddingService:
 
         cache_hits = len(texts) - len(miss_texts)
         if cache_hits:
-            logger.debug(f"Batch embedding: {cache_hits}/{len(texts)} cache hits, fetching {len(miss_texts)}")
+            logger.info(
+                "[embedding_cache] BATCH hits=%d misses=%d agent=%s",
+                cache_hits, len(miss_texts), agent_name
+            )
 
         start_time = time.time()
 

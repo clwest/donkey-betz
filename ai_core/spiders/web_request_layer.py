@@ -310,11 +310,11 @@ class WebRequestLayer:
         if cache_key:
             cached = self._redis_cache_get(cache_key)
             if cached is not None:
-                logger.debug(f"Spider cache hit for {url}")
+                logger.info("[fetch_cache] HIT url=%s", url[:100])
                 return cached
             # Single-flight lock — prevent stampede on same URL
             if not self._flight_lock_acquire(cache_key):
-                logger.debug(f"Spider fetch dedup (in-flight) for {url}")
+                logger.info("[fetch_cache] DEDUP in-flight url=%s", url[:100])
                 return {'status': 0, 'text': '', 'json': None, 'headers': {},
                         'url': url, 'dedup': True, 'timestamp': datetime.now().isoformat()}
 
@@ -444,6 +444,126 @@ class WebRequestLayer:
             'proxy_count': len(self.proxy_list),
             'current_proxy_index': self.current_proxy_index
         }
+
+
+# ── Synchronous cached_get() for specialized spiders ────────────────
+# Drop-in replacement for `requests.get()` that adds Redis caching.
+# Usage:  from ai_core.spiders.web_request_layer import cached_get
+#         response = cached_get(url, params={...}, timeout=10)
+#         response.status_code, response.json(), response.text  # same API
+
+class _CachedResponse:
+    """Lightweight response object matching requests.Response interface."""
+    __slots__ = ('status_code', 'text', '_json', 'headers', 'url', 'ok')
+
+    def __init__(self, status_code, text, json_data, headers, url):
+        self.status_code = status_code
+        self.text = text
+        self._json = json_data
+        self.headers = headers or {}
+        self.url = url
+        self.ok = 200 <= status_code < 300
+
+    def json(self):
+        if self._json is not None:
+            return self._json
+        return json.loads(self.text)
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise Exception(f"HTTP {self.status_code}")
+
+
+# TTLs for sync cached_get (mirrors WebRequestLayer)
+_SYNC_TTL = {200: 600, 301: 86400, 302: 86400, 404: 1800, 429: 60, 500: 60, 503: 60}
+_CACHE_PREFIX = 'sfetch'  # "sync fetch" — separate from async fetch prefix
+
+
+def _sync_cache_key(url: str, params: dict = None) -> str:
+    """Normalized cache key for sync requests."""
+    parsed = urlparse(url)
+    normalized = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+    if parsed.query:
+        from urllib.parse import parse_qs, urlencode
+        qs = {k: v for k, v in sorted(parse_qs(parsed.query).items()) if not k.startswith('utm_')}
+        if qs:
+            normalized += '?' + urlencode(qs, doseq=True)
+    raw = f"{normalized}:{json.dumps(params or {}, sort_keys=True)}"
+    return hashlib.md5(raw.encode()).hexdigest()
+
+
+def _sync_ttl(status_code: int) -> int:
+    if status_code in _SYNC_TTL:
+        return _SYNC_TTL[status_code]
+    if 200 <= status_code < 300:
+        return 600
+    if 300 <= status_code < 400:
+        return 86400
+    if 400 <= status_code < 500:
+        return 1800
+    return 60
+
+
+def cached_get(url: str, params: dict = None, headers: dict = None,
+               timeout: int = 15, **kwargs) -> _CachedResponse:
+    """
+    Drop-in replacement for requests.get() with Redis caching.
+    Returns a _CachedResponse with .status_code, .text, .json(), .ok.
+    """
+    import requests as _requests
+
+    cache_key = _sync_cache_key(url, params)
+    full_key = f'{_CACHE_PREFIX}:{cache_key}'
+
+    # Check cache
+    try:
+        from django.core.cache import cache
+        cached = cache.get(full_key)
+        if cached is not None:
+            logger.info("[spider_cache] HIT url=%s status=%s", url[:100], cached.get('status'))
+            return _CachedResponse(
+                status_code=cached['status'],
+                text=cached.get('text', ''),
+                json_data=cached.get('json'),
+                headers=cached.get('headers', {}),
+                url=cached.get('url', url),
+            )
+    except Exception:
+        pass  # Cache unavailable — fall through to live request
+
+    # Live request (cache miss)
+    logger.info("[spider_cache] MISS url=%s", url[:100])
+    resp = _requests.get(url, params=params, headers=headers, timeout=timeout, **kwargs)
+
+    # Build cacheable payload (cap text at 500KB to avoid Redis bloat)
+    text = resp.text[:512_000] if len(resp.text) > 512_000 else resp.text
+    try:
+        json_data = resp.json()
+    except Exception:
+        json_data = None
+
+    payload = {
+        'status': resp.status_code,
+        'text': text,
+        'json': json_data,
+        'headers': dict(resp.headers),
+        'url': str(resp.url),
+    }
+
+    # Store in cache
+    try:
+        from django.core.cache import cache
+        cache.set(full_key, payload, timeout=_sync_ttl(resp.status_code))
+    except Exception:
+        pass  # Cache write failure is non-fatal
+
+    return _CachedResponse(
+        status_code=resp.status_code,
+        text=text,
+        json_data=json_data,
+        headers=dict(resp.headers),
+        url=str(resp.url),
+    )
 
 
 # Singleton instance

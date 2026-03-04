@@ -6,7 +6,7 @@ Session 534: Simplified to work with spider network interface.
 Uses SEC EDGAR RSS feeds (free, no API key required) for company filings.
 """
 
-import requests
+from ai_core.spiders.web_request_layer import cached_get
 import logging
 import re
 import html
@@ -61,7 +61,7 @@ class SECSpider:
             try:
                 url = f"{self.BASE_URL}?action=getcurrent&type={form_type}&company=&dateb=&owner=include&count=20&output=atom"
 
-                response = requests.get(
+                response = cached_get(
                     url,
                     headers={
                         'User-Agent': self.USER_AGENT,
