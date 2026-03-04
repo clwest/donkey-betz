@@ -2035,7 +2035,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "timeout_ladder_report", "deliberation_pipeline_report", "backfill_failure_reasons", "backlog_report", "goal_report", "goal_set_weights", "attribution_report", "policy_conflict_report", "release_report", "release_freeze", "release_unfreeze", "revenue_pipeline_report", "prospecting_queue", "lead_source_report", "outreach_inbox", "outreach_approve", "outreach_reject", "outreach_metrics_report", "close_pack_generate", "close_pack_inbox", "close_pack_approve", "close_pack_metrics_report", "engagement_inbox", "engagement_classify", "engagement_draft_reply", "engagement_approve_reply", "engagement_disqualify", "engagement_metrics_report", "meeting_create", "meeting_inbox", "meeting_brief", "meeting_recap", "meeting_metrics_report", "governance_status", "governance_set_mode", "governance_kill_switch", "governance_deactivate_switch", "governance_throttle_report", "governance_audit", "revenue_full_pipeline", "revenue_funnel", "revenue_forecast", "knowledge_health", "knowledge_citation_report", "knowledge_source_report", "knowledge_staleness_report", "close_pack_followup_queue", "close_pack_risk_report", "close_pack_velocity", "engagement_sla_queue", "engagement_meeting_suggestions", "engagement_conversion_report"],
+                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "timeout_ladder_report", "deliberation_pipeline_report", "backfill_failure_reasons", "backlog_report", "goal_report", "goal_set_weights", "attribution_report", "policy_conflict_report", "release_report", "release_freeze", "release_unfreeze", "revenue_pipeline_report", "prospecting_queue", "lead_source_report", "outreach_inbox", "outreach_approve", "outreach_reject", "outreach_metrics_report", "close_pack_generate", "close_pack_inbox", "close_pack_approve", "close_pack_metrics_report", "engagement_inbox", "engagement_classify", "engagement_draft_reply", "engagement_approve_reply", "engagement_disqualify", "engagement_metrics_report", "meeting_create", "meeting_inbox", "meeting_brief", "meeting_recap", "meeting_metrics_report", "governance_status", "governance_set_mode", "governance_kill_switch", "governance_deactivate_switch", "governance_throttle_report", "governance_audit", "revenue_full_pipeline", "revenue_funnel", "revenue_forecast", "knowledge_health", "knowledge_citation_report", "knowledge_source_report", "knowledge_staleness_report", "close_pack_followup_queue", "close_pack_risk_report", "close_pack_velocity", "engagement_sla_queue", "engagement_meeting_suggestions", "engagement_conversion_report", "growth_candidates", "growth_schedule", "growth_channel_report", "growth_funnel"],
                     "description": (
                         "status: current config, last cycle timestamp, and pending actions. "
                         "history: recent autopilot actions (blocks, attention items, dry runs). "
@@ -2154,7 +2154,15 @@ PA_TOOL_SCHEMAS = [
                         "engagement_meeting_suggestions: events with positive/meeting intent that should "
                         "be converted to meetings — shows which need booking vs already booked. "
                         "engagement_conversion_report: engagement→meeting→deal conversion funnel over N days — "
-                        "reply rate, meeting conversion, deal conversion, avg response time. Optional days param."
+                        "reply rate, meeting conversion, deal conversion, avg response time. Optional days param. "
+                        "growth_candidates: distribution-ready content ranked by freshness + quality — "
+                        "published deliverables and blogs that passed quality gate, with rank scores. "
+                        "growth_schedule: distribution schedule — recent exports by format, today's rate "
+                        "usage, timeline of distributed content. Optional days param (default 7). "
+                        "growth_channel_report: channel-level distribution stats — formats used, engagement "
+                        "events, content type breakdown, quality averages, unused format gaps. "
+                        "growth_funnel: distribution funnel — candidates→exported→engaged→actions taken, "
+                        "with conversion rates at each stage. Optional days param (default 30)."
                     ),
                 },
                 "dry_run": {

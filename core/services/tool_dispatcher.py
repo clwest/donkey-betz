@@ -12778,6 +12778,38 @@ RESEARCH DATA:
             report = engine.get_conversion_report(days=days)
             return {'action': 'engagement_conversion_report', **report}
 
+        # ── Growth & Distribution (Policy 35) ──
+        elif action == 'growth_candidates':
+            from core.services.ops_autopilot import GrowthEngine
+
+            limit = int(payload.get('limit', 20))
+            engine = GrowthEngine()
+            candidates = engine.get_candidates(limit=limit)
+            return {'action': 'growth_candidates', **candidates}
+
+        elif action == 'growth_schedule':
+            from core.services.ops_autopilot import GrowthEngine
+
+            days = int(payload.get('days', 7))
+            engine = GrowthEngine()
+            schedule = engine.get_schedule(days=days)
+            return {'action': 'growth_schedule', **schedule}
+
+        elif action == 'growth_channel_report':
+            from core.services.ops_autopilot import GrowthEngine
+
+            engine = GrowthEngine()
+            report = engine.get_channel_report()
+            return {'action': 'growth_channel_report', **report}
+
+        elif action == 'growth_funnel':
+            from core.services.ops_autopilot import GrowthEngine
+
+            days = int(payload.get('days', 30))
+            engine = GrowthEngine()
+            funnel = engine.get_funnel(days=days)
+            return {'action': 'growth_funnel', **funnel}
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason
