@@ -62,6 +62,11 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      50%, L2=reduce batch size 50%, L3=temporary block (4h TTL).
      Auto-escalates after 6 cycles without improvement, auto-de-escalates
      after 12 clean cycles. Governance items at L2+.
+ 18. Deliberation failure remediation: Monitors deliberation session
+     failure rate (TIMEOUT, LLM_UPSTREAM, EMPTY_TURN, TOOL_ERROR,
+     DRAFT_FAILED). L1=reduce panel (3→2), L2=reviewer model fallback,
+     L3=single-reviewer bypass. Auto-escalates when rate >25% for 6
+     cycles, de-escalates when rate <10% for 12 cycles.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -229,6 +234,7 @@ class OpsAutopilot:
         ('attribution_debt', 'attribution_debt', '_policy_attribution_debt'),
         ('experiments', 'experiment_engine', '_policy_experiment_engine'),
         ('timeout_playbook', 'timeout_remediation_playbook', '_policy_timeout_remediation_playbook'),
+        ('deliberation_playbook', 'deliberation_remediation_playbook', '_policy_deliberation_remediation_playbook'),
     ]
 
     def run(self) -> dict[str, Any]:
@@ -1735,6 +1741,68 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] timeout playbook error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    # ── Policy 18: Deliberation Failure Remediation Playbook ─────────────
+
+    def _policy_deliberation_remediation_playbook(self, now) -> dict:
+        """
+        Monitor deliberation failure rate and apply graduated fixes:
+        L1=reduce panel, L2=fallback model, L3=single-reviewer bypass.
+        """
+        result = {
+            'failure_rate_pct': 0.0,
+            'total_sessions': 0,
+            'failed_sessions': 0,
+            'current_level': 0,
+            'action_taken': None,
+        }
+
+        try:
+            playbook = DeliberationRemediationPlaybook(
+                dry_run=self.dry_run,
+                deploy_sha=self.deploy_sha,
+            )
+            eval_result = playbook.evaluate(now)
+
+            result['failure_rate_pct'] = eval_result.get('failure_rate_pct', 0.0)
+            result['total_sessions'] = eval_result.get('total_sessions', 0)
+            result['failed_sessions'] = eval_result.get('failed_sessions', 0)
+            result['current_level'] = eval_result.get('current_level', 0)
+
+            action = eval_result.get('action')
+            if action:
+                result['action_taken'] = action
+                self.actions_taken.extend(playbook.actions)
+
+                # Governance item for escalations to L2+
+                if action.get('action') == 'escalate' and action.get('to_level', 0) >= 2:
+                    self._create_attention_item(
+                        title=(
+                            f"Deliberation ladder L{action['to_level']}: "
+                            f"fail rate {action.get('failure_rate_pct', '?')}%"
+                        ),
+                        summary=(
+                            f"Deliberation pipeline escalated to L{action['to_level']}. "
+                            f"{'Reviewer model fallback active.' if action['to_level'] == 2 else ''}"
+                            f"{'Single-reviewer bypass active.' if action['to_level'] == 3 else ''}"
+                        ),
+                        urgency='medium' if action['to_level'] == 3 else 'low',
+                        policy='deliberation_remediation_playbook',
+                        agent_name='ContentDeliberation',
+                    )
+
+            logger.info(
+                f"[OpsAutopilot] Delib playbook: "
+                f"rate={result['failure_rate_pct']:.1f}% "
+                f"level={result['current_level']} "
+                f"action={action['action'] if action else 'none'}"
+            )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] delib playbook error: {e}")
             result['error'] = str(e)
 
         return result
@@ -3476,6 +3544,344 @@ class TimeoutRemediationPlaybook:
             'agents_on_ladder': len(agents),
             'agents': agents,
         }
+
+
+# ── Policy 18: Deliberation Failure Remediation Playbook ─────────────────────
+
+
+class DeliberationRemediationPlaybook:
+    """
+    Graduated remediation for recurring deliberation pipeline failures.
+
+    Monitors DeliberationSession failure rates by failure_reason_code and
+    applies progressive fixes:
+
+      Level 0: Monitoring only
+      Level 1: Reduce panel size (3→2 reviewers) to lower LLM load
+      Level 2: Switch reviewer model to fallback (cheaper/faster)
+      Level 3: Single-reviewer mode (bypass multi-agent deliberation)
+
+    Failure rate = failed sessions / total sessions in the last RATE_WINDOW_HOURS.
+    Entry threshold: failure rate > ENTRY_RATE_PCT.
+
+    Auto-escalates after EVAL_WINDOW_CYCLES without improvement.
+    Auto-de-escalates after RECOVERY_CYCLES below normal threshold.
+    """
+
+    # Thresholds
+    RATE_WINDOW_HOURS = 6  # Look at last 6h of deliberation sessions
+    ENTRY_RATE_PCT = 25.0  # Start remediating when >25% fail
+    RECOVERY_RATE_PCT = 10.0  # De-escalate when <10% fail
+    EVAL_WINDOW_CYCLES = 6  # Wait 6 cycles before escalating
+    RECOVERY_CYCLES = 12  # 12 clean cycles to de-escalate
+
+    # SystemConfiguration keys
+    KEY_LEVEL = 'delib_ladder_level'
+    KEY_LEVEL_TS = 'delib_ladder_level_ts'
+    KEY_CLEAN_CYCLES = 'delib_ladder_clean'
+    KEY_PANEL_SIZE = 'deliberation_panel_size_override'
+    KEY_REVIEWER_MODEL = 'deliberation_reviewer_model_override'
+    KEY_SINGLE_REVIEWER = 'deliberation_single_reviewer_mode'
+
+    # Failure reasons we remediate (all except GATE_REJECT which is quality, not infra)
+    REMEDIABLE_REASONS = {'TIMEOUT', 'LLM_UPSTREAM', 'EMPTY_TURN', 'TOOL_ERROR', 'DRAFT_FAILED'}
+
+    def __init__(self, dry_run: bool = False, deploy_sha: str = ''):
+        self.dry_run = dry_run
+        self.deploy_sha = deploy_sha
+        self.actions: list[dict] = []
+
+    def evaluate(self, now) -> dict:
+        """Evaluate deliberation pipeline health and manage remediation level."""
+        result = {
+            'failure_rate_pct': 0.0,
+            'total_sessions': 0,
+            'failed_sessions': 0,
+            'current_level': 0,
+            'action': None,
+        }
+
+        try:
+            from core.models_deliberation import DeliberationSession
+
+            window = now - timedelta(hours=self.RATE_WINDOW_HOURS)
+
+            total = DeliberationSession.objects.filter(
+                created_at__gte=window,
+            ).count()
+
+            failed = DeliberationSession.objects.filter(
+                created_at__gte=window,
+                status='failed',
+                failure_reason_code__in=self.REMEDIABLE_REASONS,
+            ).count()
+
+            result['total_sessions'] = total
+            result['failed_sessions'] = failed
+
+            if total < 3:
+                result['note'] = 'Too few sessions for rate calculation'
+                return result
+
+            rate = (failed / total) * 100
+            result['failure_rate_pct'] = round(rate, 1)
+
+            current_level = self._get_level()
+            result['current_level'] = current_level
+
+            # Decide action
+            if current_level == 0 and rate >= self.ENTRY_RATE_PCT:
+                action = self._escalate(0, 1, rate, now)
+                result['action'] = action
+
+            elif current_level > 0 and rate < self.RECOVERY_RATE_PCT:
+                clean = self._increment_clean_cycles()
+                if clean >= self.RECOVERY_CYCLES:
+                    action = self._de_escalate(current_level, now)
+                    result['action'] = action
+
+            elif current_level > 0 and rate >= self.ENTRY_RATE_PCT:
+                self._reset_clean_cycles()
+                # Check if enough time passed to escalate
+                level_ts = self._get_level_timestamp()
+                if level_ts:
+                    cycles_since = (now - level_ts).total_seconds() / 600
+                    if cycles_since >= self.EVAL_WINDOW_CYCLES and current_level < 3:
+                        action = self._escalate(current_level, current_level + 1, rate, now)
+                        result['action'] = action
+
+        except Exception as e:
+            logger.error(f"[DelibPlaybook] evaluation error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _escalate(self, from_level: int, to_level: int, rate: float, now) -> dict:
+        """Escalate to next remediation level."""
+        from core.models.system import SystemConfiguration
+
+        action = {
+            'action': 'escalate',
+            'from_level': from_level,
+            'to_level': to_level,
+            'failure_rate_pct': rate,
+        }
+
+        if self.dry_run:
+            action['dry_run'] = True
+            return action
+
+        if to_level == 1:
+            # Reduce panel from 3→2
+            SystemConfiguration.objects.update_or_create(
+                key=self.KEY_PANEL_SIZE,
+                defaults={
+                    'value': '2',
+                    'description': (
+                        f'Delib ladder L1: panel 3→2 '
+                        f'(fail rate {rate:.1f}%)'
+                    ),
+                },
+            )
+            action['panel_size'] = 2
+
+        elif to_level == 2:
+            # Switch to fallback model
+            SystemConfiguration.objects.update_or_create(
+                key=self.KEY_REVIEWER_MODEL,
+                defaults={
+                    'value': 'gpt-4o-mini',
+                    'description': (
+                        f'Delib ladder L2: reviewer model fallback '
+                        f'(fail rate {rate:.1f}%)'
+                    ),
+                },
+            )
+            action['reviewer_model'] = 'gpt-4o-mini'
+
+        elif to_level == 3:
+            # Single-reviewer mode
+            SystemConfiguration.objects.update_or_create(
+                key=self.KEY_SINGLE_REVIEWER,
+                defaults={
+                    'value': 'true',
+                    'description': (
+                        f'Delib ladder L3: single-reviewer bypass '
+                        f'(fail rate {rate:.1f}%)'
+                    ),
+                },
+            )
+            action['single_reviewer'] = True
+
+        self._set_level(to_level, now)
+        self._reset_clean_cycles()
+
+        AutopilotAction.objects.create(
+            action_type='remediate',
+            agent_name='ContentDeliberation',
+            policy='deliberation_remediation_playbook',
+            dry_run=False,
+            evidence={
+                'ladder_from': from_level,
+                'ladder_to': to_level,
+                'failure_rate_pct': rate,
+                **action,
+            },
+            result=action,
+            deploy_sha=self.deploy_sha,
+        )
+
+        self.actions.append(action)
+        logger.info(
+            f"[DelibPlaybook] ESCALATE L{from_level}→L{to_level} "
+            f"(fail rate {rate:.1f}%)"
+        )
+        return action
+
+    def _de_escalate(self, current_level: int, now) -> dict:
+        """De-escalate one level — clean up current level's overrides."""
+        from core.models.system import SystemConfiguration
+
+        new_level = current_level - 1
+        action = {
+            'action': 'de_escalate',
+            'from_level': current_level,
+            'to_level': new_level,
+        }
+
+        if self.dry_run:
+            action['dry_run'] = True
+            return action
+
+        # Clean up current level's config
+        cleanup_keys = {
+            1: [self.KEY_PANEL_SIZE],
+            2: [self.KEY_REVIEWER_MODEL],
+            3: [self.KEY_SINGLE_REVIEWER],
+        }
+        for key in cleanup_keys.get(current_level, []):
+            SystemConfiguration.objects.filter(key=key).delete()
+
+        if new_level > 0:
+            self._set_level(new_level, now)
+        else:
+            self._clear_state()
+
+        self._reset_clean_cycles()
+
+        AutopilotAction.objects.create(
+            action_type='remediate',
+            agent_name='ContentDeliberation',
+            policy='deliberation_remediation_playbook',
+            dry_run=False,
+            evidence={
+                'ladder_from': current_level,
+                'ladder_to': new_level,
+                'recovery': True,
+            },
+            result=action,
+            deploy_sha=self.deploy_sha,
+        )
+
+        self.actions.append(action)
+        logger.info(
+            f"[DelibPlaybook] DE-ESCALATE L{current_level}→L{new_level}"
+        )
+        return action
+
+    # ── State tracking ──────────────────────────────────────────────
+
+    def _get_level(self) -> int:
+        from core.models.system import SystemConfiguration
+        entry = SystemConfiguration.objects.filter(key=self.KEY_LEVEL).first()
+        return int(entry.value) if entry else 0
+
+    def _set_level(self, level: int, now):
+        from core.models.system import SystemConfiguration
+        SystemConfiguration.objects.update_or_create(
+            key=self.KEY_LEVEL,
+            defaults={'value': str(level)},
+        )
+        SystemConfiguration.objects.update_or_create(
+            key=self.KEY_LEVEL_TS,
+            defaults={'value': now.isoformat()},
+        )
+
+    def _get_level_timestamp(self):
+        from core.models.system import SystemConfiguration
+        from django.utils.dateparse import parse_datetime
+        entry = SystemConfiguration.objects.filter(key=self.KEY_LEVEL_TS).first()
+        return parse_datetime(entry.value) if entry else None
+
+    def _increment_clean_cycles(self) -> int:
+        from core.models.system import SystemConfiguration
+        obj, _ = SystemConfiguration.objects.get_or_create(
+            key=self.KEY_CLEAN_CYCLES,
+            defaults={'value': '0'},
+        )
+        new_val = int(obj.value or '0') + 1
+        obj.value = str(new_val)
+        obj.save(update_fields=['value'])
+        return new_val
+
+    def _reset_clean_cycles(self):
+        from core.models.system import SystemConfiguration
+        SystemConfiguration.objects.filter(key=self.KEY_CLEAN_CYCLES).update(value='0')
+
+    def _clear_state(self):
+        from core.models.system import SystemConfiguration
+        SystemConfiguration.objects.filter(
+            key__in=[
+                self.KEY_LEVEL, self.KEY_LEVEL_TS, self.KEY_CLEAN_CYCLES,
+                self.KEY_PANEL_SIZE, self.KEY_REVIEWER_MODEL, self.KEY_SINGLE_REVIEWER,
+            ]
+        ).delete()
+
+    def get_pipeline_report(self, now) -> dict:
+        """Report current deliberation pipeline health + remediation state."""
+        from core.models_deliberation import DeliberationSession
+        from django.db.models import Count
+
+        window = now - timedelta(hours=self.RATE_WINDOW_HOURS)
+
+        total = DeliberationSession.objects.filter(created_at__gte=window).count()
+        by_reason = dict(
+            DeliberationSession.objects.filter(
+                created_at__gte=window, status='failed',
+            ).values_list('failure_reason_code').annotate(
+                count=Count('id')
+            )
+        )
+
+        level = self._get_level()
+        level_ts = self._get_level_timestamp()
+
+        return {
+            'window_hours': self.RATE_WINDOW_HOURS,
+            'total_sessions': total,
+            'failures_by_reason': by_reason,
+            'failure_rate_pct': round(
+                sum(by_reason.values()) / max(total, 1) * 100, 1,
+            ),
+            'ladder_level': level,
+            'ladder_level_since': level_ts.isoformat() if level_ts else None,
+            'level_description': {
+                0: 'Normal operation',
+                1: 'Panel reduced (3→2)',
+                2: 'Reviewer model fallback (gpt-4o-mini)',
+                3: 'Single-reviewer bypass mode',
+            }.get(level, 'Unknown'),
+            'overrides_active': self._get_active_overrides(),
+        }
+
+    def _get_active_overrides(self) -> dict:
+        from core.models.system import SystemConfiguration
+        result = {}
+        for key in [self.KEY_PANEL_SIZE, self.KEY_REVIEWER_MODEL, self.KEY_SINGLE_REVIEWER]:
+            entry = SystemConfiguration.objects.filter(key=key).first()
+            if entry:
+                result[key] = entry.value
+        return result
 
 
 # ── Policy Self-Tuning Engine ────────────────────────────────────────────────
