@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import * as workspaceApi from '../api/workspace';
 import type { Workspace, WorkspaceOperation } from '../api/workspace';
+import { useDemo } from '../demo/useDemo';
+import * as demo from '../demo/demoData';
 import { toast } from '../components/Toast';
 
 // ── View state ───────────────────────────────────────────────────────────────
@@ -55,6 +57,7 @@ function opTypeColor(type: string): string {
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 export default function WorkspaceScreen() {
+  const isDemo = useDemo();
   const [view, setView] = useState<WorkspaceView>('overview');
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [operations, setOperations] = useState<WorkspaceOperation[]>([]);
@@ -66,6 +69,14 @@ export default function WorkspaceScreen() {
   const activeWorkspace = workspaces.find((w) => w.is_active) ?? workspaces[0];
 
   const fetchData = useCallback(async () => {
+    if (isDemo) {
+      setWorkspaces(demo.DEMO_WORKSPACES as any);
+      setOperations(demo.DEMO_WORKSPACE_OPERATIONS as any);
+      setPendingReviews([]);
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
     try {
       setError(null);
       const [wsRes, opsRes, reviewRes] = await Promise.all([
@@ -82,7 +93,7 @@ export default function WorkspaceScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [isDemo]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

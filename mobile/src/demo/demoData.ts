@@ -228,3 +228,83 @@ export const DEMO_COMPARISONS = [
   { platform: 'Medium', revenue: 965, growth_percent: 8, items_count: 6 },
   { platform: 'Patreon', revenue: 320, growth_percent: null, items_count: 3 },
 ];
+
+// ── Agents ────────────────────────────────────────────────────────────────────
+
+export const DEMO_AGENTS = [
+  { id: 'da-1', name: 'ResearchAgent', display_name: 'Research Agent', description: 'Deep-dive research and analysis', specialization: 'research', agent_type: 'specialist', is_active: true, isActive: true, total_executions: 342, successful_executions: 318, success_rate: 93, effectiveness_score: 88, lastActive: ago(8), created_at: ago(43200) },
+  { id: 'da-2', name: 'ContentWriterAgent', display_name: 'Content Writer', description: 'Generates blog posts and articles', specialization: 'content', agent_type: 'specialist', is_active: true, isActive: true, total_executions: 156, successful_executions: 148, success_rate: 95, effectiveness_score: 91, lastActive: ago(45), created_at: ago(43200) },
+  { id: 'da-3', name: 'SportsAnalyticsAgent', display_name: 'Sports Analytics', description: 'Analyzes games and generates picks', specialization: 'sports-analytics', agent_type: 'specialist', is_active: true, isActive: true, total_executions: 289, successful_executions: 261, success_rate: 90, effectiveness_score: 85, lastActive: ago(15), created_at: ago(43200) },
+  { id: 'da-4', name: 'StockIntelligenceAgent', display_name: 'Stock Intelligence', description: 'Market analysis and predictions', specialization: 'financial', agent_type: 'specialist', is_active: true, isActive: true, total_executions: 198, successful_executions: 182, success_rate: 92, effectiveness_score: 87, lastActive: ago(30), created_at: ago(43200) },
+  { id: 'da-5', name: 'SECFilingAgent', display_name: 'SEC Filing Analyst', description: 'Processes SEC filings and extracts insights', specialization: 'financial', agent_type: 'specialist', is_active: true, isActive: true, total_executions: 94, successful_executions: 91, success_rate: 97, effectiveness_score: 94, lastActive: ago(180), created_at: ago(43200) },
+  { id: 'da-6', name: 'ContentDistributionAgent', display_name: 'Content Distribution', description: 'Distributes content across platforms', specialization: 'content', agent_type: 'specialist', is_active: true, isActive: true, total_executions: 78, successful_executions: 72, success_rate: 92, effectiveness_score: 83, lastActive: ago(120), created_at: ago(43200) },
+  { id: 'da-7', name: 'ArbitrageAgent', display_name: 'Arbitrage Scanner', description: 'Scans for arbitrage opportunities', specialization: 'trading', agent_type: 'specialist', is_active: true, isActive: true, total_executions: 456, successful_executions: 430, success_rate: 94, effectiveness_score: 90, lastActive: ago(5), created_at: ago(43200) },
+  { id: 'da-8', name: 'NarrativeAgent', display_name: 'Narrative Builder', description: 'Builds narratives from signals', specialization: 'content', agent_type: 'specialist', is_active: true, isActive: true, total_executions: 67, successful_executions: 62, success_rate: 93, effectiveness_score: 86, lastActive: ago(90), created_at: ago(43200) },
+  { id: 'da-9', name: 'OddsCompilerAgent', display_name: 'Odds Compiler', description: 'Compiles and compares odds across books', specialization: 'sports-analytics', agent_type: 'specialist', is_active: true, isActive: true, total_executions: 312, successful_executions: 298, success_rate: 96, effectiveness_score: 92, lastActive: ago(10), created_at: ago(43200) },
+  { id: 'da-10', name: 'LegalDocDrafterAgent', display_name: 'Legal Doc Drafter', description: 'Drafts legal documents and contracts', specialization: 'business', agent_type: 'specialist', is_active: true, isActive: true, total_executions: 23, successful_executions: 22, success_rate: 96, effectiveness_score: 89, lastActive: ago(1440), created_at: ago(43200) },
+];
+
+export const DEMO_AGENT_EXECUTIONS = [
+  { id: 'de-1', agent_name: 'ResearchAgent', task: 'Market analysis: NVDA sector', task_summary: 'Deep-dive on NVDA AI infrastructure', status: 'completed' as const, output_data: null, error_message: null, tokens_used: 4200, cost: 0.042, execution_time_ms: 12400, created_at: ago(8), completed_at: ago(6) },
+  { id: 'de-2', agent_name: 'ArbitrageAgent', task: 'Scan NBA arbitrage opportunities', task_summary: 'Found 2 opportunities across 4 books', status: 'completed' as const, output_data: null, error_message: null, tokens_used: 1800, cost: 0.018, execution_time_ms: 8200, created_at: ago(12), completed_at: ago(10) },
+  { id: 'de-3', agent_name: 'SportsAnalyticsAgent', task: 'Generate picks for NBA slate', task_summary: 'Analyzed 6 games, generated 4 picks', status: 'completed' as const, output_data: null, error_message: null, tokens_used: 5100, cost: 0.051, execution_time_ms: 18600, created_at: ago(15), completed_at: ago(12) },
+  { id: 'de-4', agent_name: 'ContentWriterAgent', task: 'Write blog: AI in Sports Betting', task_summary: '1,240 word article, quality 0.89', status: 'completed' as const, output_data: null, error_message: null, tokens_used: 6800, cost: 0.068, execution_time_ms: 24000, created_at: ago(45), completed_at: ago(40) },
+  { id: 'de-5', agent_name: 'StockIntelligenceAgent', task: 'Generate daily stock alerts', task_summary: '3 alerts generated: NVDA, AAPL, GOOGL', status: 'completed' as const, output_data: null, error_message: null, tokens_used: 3500, cost: 0.035, execution_time_ms: 15200, created_at: ago(30), completed_at: ago(27) },
+  { id: 'de-6', agent_name: 'OddsCompilerAgent', task: 'Compile NBA odds movement', task_summary: 'Tracked 12 lines across 5 books', status: 'in_progress' as const, output_data: null, error_message: null, tokens_used: null, cost: null, execution_time_ms: null, created_at: ago(2), completed_at: null },
+];
+
+// ── Intelligence ──────────────────────────────────────────────────────────────
+
+export const DEMO_INTELLIGENCE_STATS = {
+  spiders: {
+    total: 74,
+    categories: 12,
+    by_category: {
+      'sports-odds': 18,
+      'stock-market': 14,
+      'sec-filings': 8,
+      'news-general': 7,
+      'social-media': 6,
+      'crypto': 5,
+      'weather': 4,
+      'legislation': 4,
+      'real-estate': 3,
+      'commodities': 3,
+      'earnings': 2,
+    } as Record<string, number>,
+  },
+  agents: {
+    total: 72,
+    legacy: 14,
+    clean: 58,
+  },
+  data: {
+    total_points: 15420,
+    last_24h: 342,
+    success_rate: 96,
+  },
+  learning: {
+    collaborations: 234,
+    collaboration_sessions: 89,
+    learning_events: 1456,
+    agent_memories: 3240,
+    knowledge_sources: 512,
+    learning_connections: 178,
+    knowledge_transfers: 67,
+    synthesized_insights: 42,
+  },
+};
+
+// ── Workspace ─────────────────────────────────────────────────────────────────
+
+export const DEMO_WORKSPACES = [
+  { id: 'dws-1', name: 'VIP Demo', description: 'Demo workspace for investor presentations', is_active: true, created_at: ago(10080), updated_at: ago(60), initiative_count: 4, deliverable_count: 12 },
+  { id: 'dws-2', name: 'Sports Desk', description: 'Sports analytics and betting operations', is_active: false, created_at: ago(20160), updated_at: ago(180), initiative_count: 2, deliverable_count: 8 },
+  { id: 'dws-3', name: 'Content Pipeline', description: 'Content creation and distribution workflows', is_active: false, created_at: ago(30240), updated_at: ago(360), initiative_count: 3, deliverable_count: 15 },
+];
+
+export const DEMO_WORKSPACE_OPERATIONS = [
+  { id: 'dwo-1', type: 'file_create', description: 'Created betting brief template', workspace: 'VIP Demo', status: 'completed', file_path: 'templates/betting-brief.md', created_at: ago(60), completed_at: ago(58), user: 'ResearchAgent' },
+  { id: 'dwo-2', type: 'file_modify', description: 'Updated stock alert schema', workspace: 'Content Pipeline', status: 'completed', file_path: 'schemas/stock-alert.json', created_at: ago(180), completed_at: ago(175), user: 'StockIntelligenceAgent' },
+  { id: 'dwo-3', type: 'git_commit', description: 'Committed weekly report generation', workspace: 'Sports Desk', status: 'completed', file_path: 'reports/weekly-2026-w09.md', created_at: ago(360), completed_at: ago(355), user: 'ContentWriterAgent' },
+];
