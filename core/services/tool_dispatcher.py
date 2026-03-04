@@ -11990,6 +11990,69 @@ RESEARCH DATA:
                 **result,
             }
 
+        elif action == 'attribution_debt_report':
+            # Show attribution debt metrics — unattributed LLM spend
+            from core.services.ops_autopilot import AttributionDebtController
+            from django.utils import timezone as tz
+
+            ctrl = AttributionDebtController()
+            try:
+                report = ctrl.get_debt_report(tz.now())
+            except Exception as e:
+                return {
+                    'action': 'attribution_debt_report',
+                    'error': f'Debt report failed: {str(e)[:200]}',
+                }
+
+            d24 = report['last_24h']
+            d72 = report['last_72h']
+            lines = [
+                '## Attribution Debt Report\n',
+                f'**Status:** {report["status"].upper()} — '
+                f'**Mapped agents:** {report["mapped_agents"]} — '
+                f'**Reallocation:** '
+                f'{"BLOCKED" if report["reallocation_blocked"] else "allowed"} — '
+                f'**Smoothing α:** {report["smoothing_alpha"]}',
+                f'\n### Last 24h',
+                f'- Total spend: ${d24["total_spend"]:.2f}',
+                f'- Attributed: ${d24["attributed_spend"]:.2f}',
+                f'- **Unattributed (debt): ${d24["unattributed_spend"]:.2f} '
+                f'({d24["debt_pct"]:.1f}%)**',
+            ]
+
+            if d24.get('desk_breakdown'):
+                lines.append('\n**Desk breakdown (attributed):**')
+                for desk, cost in d24['desk_breakdown'].items():
+                    lines.append(f'  - {desk}: ${cost:.4f}')
+
+            if d24.get('top_unattributed'):
+                lines.append('\n**Top unattributed agents:**')
+                for u in d24['top_unattributed'][:10]:
+                    lines.append(
+                        f'  - {u["agent"]}: ${u["cost_usd"]:.4f}'
+                    )
+
+            lines.append(f'\n### Last 72h')
+            lines.append(
+                f'- Total: ${d72["total_spend"]:.2f} — '
+                f'Debt: ${d72["unattributed_spend"]:.2f} '
+                f'({d72["debt_pct"]:.1f}%)'
+            )
+
+            lines.append(
+                f'\n### Thresholds'
+                f'\n- Warning: {report["thresholds"]["warning_pct"]}%'
+                f'\n- Critical (blocks reallocation): '
+                f'{report["thresholds"]["critical_pct"]}%'
+                f'\n- USD floor: ${report["thresholds"]["usd_floor"]}'
+            )
+
+            return {
+                'action': 'attribution_debt_report',
+                'report': '\n'.join(lines),
+                **report,
+            }
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason

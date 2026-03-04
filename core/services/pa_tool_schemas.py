@@ -2035,7 +2035,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "backfill_failure_reasons"],
+                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "backfill_failure_reasons"],
                     "description": (
                         "status: current config, last cycle timestamp, and pending actions. "
                         "history: recent autopilot actions (blocks, attention items, dry runs). "
@@ -2058,6 +2058,9 @@ PA_TOOL_SCHEMAS = [
                         "desks, portfolio allocations (budget headroom multipliers), and collected impact events. "
                         "backfill_impacts: scan historical wager settlements, deliverable events, and confirmed revenue "
                         "to create ImpactEvent records for past activity (default 14 days, max 90). Idempotent. "
+                        "attribution_debt_report: show how much LLM spend can't be attributed to a desk — "
+                        "unattributed cost amounts, top offending agents, desk breakdown, and whether portfolio "
+                        "reallocation is blocked due to high debt. "
                         "backfill_failure_reasons: re-classify UNKNOWN failure codes using expanded patterns."
                     ),
                 },

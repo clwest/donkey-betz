@@ -1,5 +1,5 @@
 """
-Ops Autopilot v6 — autonomous ops with governance guardrails.
+Ops Autopilot v7 — autonomous ops with governance guardrails.
 
 Policies (v1 — Session 1080):
   1. Timeout spike containment: auto-block agents with high TIMEOUT signature counts
@@ -40,6 +40,14 @@ Policies (v6 — impact tracking + portfolio allocation):
      revenue) into ImpactEvent table. PortfolioAllocator computes IQROI
      per desk and adjusts budget allocations — high-impact desks get more
      headroom, zero-impact pipelines get deprioritized.
+
+Policies (v7 — attribution debt + allocation protection):
+ 14. Attribution debt controller: AttributionDebtController maps LLM
+     spend to desks via agent→desk lookup. Unattributed spend (agents
+     without desk mapping) is "debt" that distorts IQROI. When debt
+     exceeds 40% of spend, portfolio reallocation is blocked. When
+     debt exceeds 20%, EWMA smoothing is increased to reduce sensitivity.
+     Reports top unattributed agents for remediation.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -222,6 +230,9 @@ class OpsAutopilot:
         # Run policies (v6 — impact collection + portfolio allocation)
         impact_results = self._policy_impact_portfolio(now)
 
+        # Run policies (v7 — attribution debt monitoring)
+        debt_results = self._policy_attribution_debt(now)
+
         summary = {
             'cycle_at': now.isoformat(),
             'dry_run': self.dry_run,
@@ -238,6 +249,7 @@ class OpsAutopilot:
             'budget': budget_results,
             'roi': roi_results,
             'impact_portfolio': impact_results,
+            'attribution_debt': debt_results,
             'actions_taken': len(self.actions_taken),
             'actions': self.actions_taken,
         }
@@ -261,6 +273,7 @@ class OpsAutopilot:
                 'budget': budget_results,
                 'roi': roi_results,
                 'impact_portfolio': impact_results,
+                'attribution_debt': debt_results,
             },
             result=summary,
             deploy_sha=self.deploy_sha,
@@ -1322,9 +1335,13 @@ class OpsAutopilot:
 
     def _policy_impact_portfolio(self, now) -> dict:
         """
-        Session 1089: Collect impact events from settled wagers,
+        Session 1089/1090: Collect impact events from settled wagers,
         deliverable interactions, and confirmed revenue. Then compute
         desk-level IQROI and adjust portfolio allocations.
+
+        Session 1090: Attribution debt check — if too many LLM calls
+        can't be attributed to a desk, reallocation is blocked or
+        smoothing is increased to prevent bad decisions.
         """
         result = {
             'collected': False,
@@ -1340,6 +1357,41 @@ class OpsAutopilot:
             result['collected'] = True
             result['events_created'] = collection['total_created']
             result['collection_detail'] = collection
+
+            # Step 1.5: Check attribution debt (Policy 14)
+            debt_ctrl = AttributionDebtController()
+            debt = debt_ctrl.compute_debt(now, window_hours=24)
+            result['attribution_debt_pct'] = debt['debt_pct']
+            result['attribution_debt_usd'] = debt['unattributed_spend']
+
+            if debt_ctrl.should_block_reallocation(debt):
+                result['allocated'] = False
+                result['allocation_blocked_reason'] = (
+                    f"Attribution debt {debt['debt_pct']:.0f}% exceeds "
+                    f"critical threshold — reallocation unsafe"
+                )
+                self._create_attention_item(
+                    title=(
+                        f"Portfolio reallocation blocked: "
+                        f"{debt['debt_pct']:.0f}% attribution debt"
+                    ),
+                    summary=(
+                        f"${debt['unattributed_spend']:.2f} of "
+                        f"${debt['total_spend']:.2f} LLM spend (24h) "
+                        f"cannot be attributed to a desk. Top offenders: "
+                        f"{', '.join(u['agent'] for u in debt['top_unattributed'][:5])}. "
+                        f"Add these agents to AttributionDebtController."
+                        f"AGENT_DESK_MAP to fix."
+                    ),
+                    urgency='medium',
+                    policy='attribution_debt',
+                    agent_name='AttributionDebtController',
+                )
+                logger.warning(
+                    f"[OpsAutopilot] Portfolio reallocation blocked: "
+                    f"{debt['debt_pct']:.0f}% attribution debt"
+                )
+                return result
 
             # Step 2: Compute and apply portfolio allocations
             if not self.dry_run:
@@ -1391,6 +1443,72 @@ class OpsAutopilot:
         except Exception as e:
             logger.error(
                 f"[OpsAutopilot] Impact/portfolio error: {e}"
+            )
+            result['error'] = str(e)
+
+        return result
+
+    # ── Policy 14: Attribution debt monitoring ────────────────────────────
+
+    def _policy_attribution_debt(self, now) -> dict:
+        """
+        Session 1090: Monitor attribution debt — LLM spend that can't be
+        attributed to a desk. Creates governance alerts when debt is high.
+        """
+        result = {
+            'debt_pct': 0,
+            'debt_usd': 0,
+            'status': 'healthy',
+            'alert_created': False,
+        }
+
+        try:
+            ctrl = AttributionDebtController()
+            debt = ctrl.compute_debt(now, window_hours=24)
+            result['debt_pct'] = debt['debt_pct']
+            result['debt_usd'] = debt['unattributed_spend']
+
+            warning_pct = (
+                AutopilotConfig.get('DEBT_WARNING_PCT')
+                or ctrl.DEBT_WARNING_PCT
+            )
+
+            if (
+                debt['debt_pct'] >= warning_pct
+                and debt['unattributed_spend'] > ctrl.DEBT_USD_FLOOR
+            ):
+                result['status'] = 'warning'
+                top_agents = ', '.join(
+                    u['agent'] for u in debt['top_unattributed'][:5]
+                )
+                self._create_attention_item(
+                    title=(
+                        f"Attribution debt: {debt['debt_pct']:.0f}% "
+                        f"of LLM spend unattributed"
+                    ),
+                    summary=(
+                        f"${debt['unattributed_spend']:.2f} of "
+                        f"${debt['total_spend']:.2f} LLM spend (24h) "
+                        f"lacks desk attribution. Top unattributed: "
+                        f"{top_agents}. Add to AGENT_DESK_MAP to fix. "
+                        f"Portfolio reallocation reliability: "
+                        f"{'blocked' if ctrl.should_block_reallocation(debt) else 'degraded'}."
+                    ),
+                    urgency='low',
+                    policy='attribution_debt',
+                    agent_name='AttributionDebtController',
+                )
+                result['alert_created'] = True
+
+            logger.info(
+                f"[OpsAutopilot] Attribution debt: "
+                f"{debt['debt_pct']:.1f}% "
+                f"(${debt['unattributed_spend']:.2f})"
+            )
+
+        except Exception as e:
+            logger.error(
+                f"[OpsAutopilot] Attribution debt error: {e}"
             )
             result['error'] = str(e)
 
@@ -4698,4 +4816,286 @@ class PortfolioAllocator:
             'total_events': sum(
                 d['events'] for d in desk_data.values()
             ),
+        }
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Attribution Debt Controller — Policy 14 (Session 1090, Autonomy #10)
+# ═══════════════════════════════════════════════════════════════════════
+
+class AttributionDebtController:
+    """
+    Session 1090: Autonomy #10 — Identifies LLM spend that cannot be
+    attributed to a specific desk, reports debt metrics, and protects
+    PortfolioAllocator from making decisions on low-confidence data.
+
+    Attribution debt = LLM cost from agents that don't map to any desk.
+    High debt means IQROI calculations are unreliable (costs land in
+    'general' by default, distorting real desk-level ROI).
+
+    Thresholds (configurable via AutopilotConfig):
+    - DEBT_WARNING_PCT: alert governance when debt exceeds this % (default 20%)
+    - DEBT_CRITICAL_PCT: block portfolio reallocation above this % (default 40%)
+    - DEBT_USD_FLOOR: ignore debt below this $ amount (default $0.10)
+    """
+
+    # Known agent→desk mappings (static, covers most common agents)
+    # Agents not in this map fall back to ImpactEvent history, then 'general'
+    AGENT_DESK_MAP = {
+        # Sports desk
+        'SportsBettingAgent': 'sports',
+        'MLPredictionAgent': 'sports',
+        'StockAnalystAgent': 'trading',
+        'StockAuditCoordinator': 'trading',
+        'MarketMovementMonitorAgent': 'trading',
+        'InstitutionalWatcherAgent': 'trading',
+        'MarketAnomalyDetectorAgent': 'trading',
+        'BullCaseAgent': 'trading',
+        'BearCaseAgent': 'trading',
+        'SignalScannerAgent': 'trading',
+        'MarketIntelligenceCoordinator': 'trading',
+        'BlockchainAuditCoordinator': 'trading',
+        'SmartContractAuditorAgent': 'trading',
+        'TransactionMonitorAgent': 'trading',
+        'WhaleWatcherAgent': 'trading',
+        'ExploitDetectorAgent': 'trading',
+
+        # Content desk
+        'ContentWriterAgent': 'content',
+        'EditorAgent': 'content',
+        'ContentStrategyAgent': 'content',
+        'SEOOptimizerAgent': 'content',
+        'SocialMediaAgent': 'content',
+        'ImageAgent': 'content',
+        'VideoAgent': 'content',
+        'AudioAgent': 'content',
+        'TalkingCharacterAgent': 'content',
+        'ThreeDAgent': 'content',
+        'ImageEditingAgent': 'content',
+        'VideoEditingAgent': 'content',
+        'CreativeDirectorAgent': 'content',
+        'AutonomousContentStudioCoordinator': 'content',
+        'TopicMinerAgent': 'content',
+        'ContrarianAgent': 'content',
+        'BrandIdentityAgent': 'content',
+        'AISeriesWorkflowAgent': 'content',
+        'PromptEngineeringAgent': 'content',
+
+        # Research desk
+        'ResearchAgent': 'research',
+        'TrendAnalysisAgent': 'research',
+        'NarrativeDriftCoordinator': 'research',
+        'NarrativeHistorianAgent': 'research',
+        'TrendBreakDetectorAgent': 'research',
+        'CulturalImpactAgent': 'research',
+        'CompetitorAnalysisAgent': 'research',
+        'CustomerResearchAgent': 'research',
+        'MarketIntelligenceAgent': 'research',
+
+        # Career desk
+        'LegalDocDrafterAgent': 'career',
+        'MarketingStrategyAgent': 'career',
+        'BrandStrategyAgent': 'career',
+        'OpportunityScoringAgent': 'career',
+
+        # General (internal tools, auditing)
+        'PlatformAuditAgent': 'general',
+        'ContentAuditAgent': 'general',
+        'CodeGeneratorAgent': 'general',
+        'FullStackDeveloperAgent': 'general',
+        'CodeReviewAgent': 'general',
+        'DevOpsAgent': 'general',
+        'CTOAgent': 'general',
+        'COOAgent': 'general',
+        'MeetingCoordinatorAgent': 'general',
+        'MemoryIsolationAgent': 'general',
+        'CharacterTrainingAgent': 'general',
+        'TrainedCreationAgent': 'general',
+
+        # PA / system agents
+        'PersonalAssistant': 'general',
+        'InterviewAssistant': 'career',
+        'DynamicPersonaAgent': 'general',
+    }
+
+    # Thresholds (overridable via AutopilotConfig)
+    DEBT_WARNING_PCT = 20.0    # % of total spend
+    DEBT_CRITICAL_PCT = 40.0   # % — block reallocation
+    DEBT_USD_FLOOR = 0.10      # Ignore debt below this
+
+    def get_agent_desk(self, agent_name: str) -> str | None:
+        """
+        Resolve an agent name to a desk.
+        Returns None if unattributed (= debt).
+        """
+        if not agent_name:
+            return None
+
+        # 1. Static map (fast, authoritative)
+        desk = self.AGENT_DESK_MAP.get(agent_name)
+        if desk:
+            return desk
+
+        # 2. Check ImpactEvent history (dynamic, covers persona agents)
+        try:
+            from core.models_impact_events import ImpactEvent
+            ie_desk = ImpactEvent.objects.filter(
+                agent_name=agent_name,
+            ).values_list('desk', flat=True).first()
+            if ie_desk:
+                return ie_desk
+        except Exception:
+            pass
+
+        return None
+
+    def compute_debt(self, now, window_hours=24) -> dict:
+        """
+        Compute attribution debt metrics for the given window.
+
+        Returns:
+            total_spend: total LLM spend in window
+            attributed_spend: spend mapped to a desk
+            unattributed_spend: spend not mapped (= debt)
+            debt_pct: unattributed / total × 100
+            top_unattributed: top agents by unattributed cost
+            desk_breakdown: attributed spend by desk
+        """
+        from core.models_llm_routing import LLMCallLog
+        from django.db.models import Sum
+
+        window_start = now - timedelta(hours=window_hours)
+
+        try:
+            agent_costs = list(
+                LLMCallLog.objects.filter(
+                    created_at__gte=window_start,
+                    success=True,
+                ).values('agent_name').annotate(
+                    total_cost=Sum('cost'),
+                ).order_by('-total_cost')
+            )
+        except Exception:
+            return {
+                'total_spend': 0,
+                'attributed_spend': 0,
+                'unattributed_spend': 0,
+                'debt_pct': 0,
+                'top_unattributed': [],
+                'desk_breakdown': {},
+                'window_hours': window_hours,
+            }
+
+        total_spend = 0.0
+        attributed_spend = 0.0
+        unattributed_spend = 0.0
+        desk_breakdown = {}
+        top_unattributed = []
+
+        for ac in agent_costs:
+            agent = ac['agent_name'] or ''
+            cost = float(ac['total_cost'] or 0)
+            total_spend += cost
+
+            desk = self.get_agent_desk(agent)
+            if desk:
+                attributed_spend += cost
+                desk_breakdown[desk] = desk_breakdown.get(desk, 0) + cost
+            else:
+                unattributed_spend += cost
+                top_unattributed.append({
+                    'agent': agent or '(empty)',
+                    'cost_usd': round(cost, 4),
+                })
+
+        debt_pct = (
+            (unattributed_spend / total_spend * 100)
+            if total_spend > 0 else 0
+        )
+
+        # Sort unattributed by cost descending
+        top_unattributed.sort(key=lambda x: x['cost_usd'], reverse=True)
+
+        return {
+            'total_spend': round(total_spend, 4),
+            'attributed_spend': round(attributed_spend, 4),
+            'unattributed_spend': round(unattributed_spend, 4),
+            'debt_pct': round(debt_pct, 1),
+            'top_unattributed': top_unattributed[:15],
+            'desk_breakdown': {
+                k: round(v, 4) for k, v in
+                sorted(desk_breakdown.items(), key=lambda x: -x[1])
+            },
+            'window_hours': window_hours,
+        }
+
+    def should_block_reallocation(self, debt_report: dict) -> bool:
+        """True if attribution debt is too high for reliable reallocation."""
+        critical_pct = (
+            AutopilotConfig.get('DEBT_CRITICAL_PCT')
+            or self.DEBT_CRITICAL_PCT
+        )
+        return (
+            debt_report['debt_pct'] > critical_pct
+            and debt_report['unattributed_spend'] > self.DEBT_USD_FLOOR
+        )
+
+    def get_smoothing_adjustment(self, debt_report: dict) -> float:
+        """
+        Returns an EWMA alpha adjustment based on debt level.
+        Higher debt → lower alpha (more conservative smoothing).
+
+        Normal:    alpha stays at 0.3
+        Warning:   alpha drops to 0.15 (slower to react)
+        Critical:  alpha drops to 0.05 (near-frozen allocations)
+        """
+        warning_pct = (
+            AutopilotConfig.get('DEBT_WARNING_PCT')
+            or self.DEBT_WARNING_PCT
+        )
+        critical_pct = (
+            AutopilotConfig.get('DEBT_CRITICAL_PCT')
+            or self.DEBT_CRITICAL_PCT
+        )
+
+        pct = debt_report['debt_pct']
+
+        if pct >= critical_pct:
+            return 0.05
+        elif pct >= warning_pct:
+            return 0.15
+        return PortfolioAllocator.EWMA_ALPHA  # Default 0.3
+
+    def get_debt_report(self, now) -> dict:
+        """Generate full attribution debt report for PA/governance."""
+        debt_24h = self.compute_debt(now, window_hours=24)
+        debt_72h = self.compute_debt(now, window_hours=72)
+
+        warning_pct = (
+            AutopilotConfig.get('DEBT_WARNING_PCT')
+            or self.DEBT_WARNING_PCT
+        )
+        critical_pct = (
+            AutopilotConfig.get('DEBT_CRITICAL_PCT')
+            or self.DEBT_CRITICAL_PCT
+        )
+
+        status = 'healthy'
+        if debt_24h['debt_pct'] >= critical_pct:
+            status = 'critical'
+        elif debt_24h['debt_pct'] >= warning_pct:
+            status = 'warning'
+
+        return {
+            'status': status,
+            'last_24h': debt_24h,
+            'last_72h': debt_72h,
+            'thresholds': {
+                'warning_pct': warning_pct,
+                'critical_pct': critical_pct,
+                'usd_floor': self.DEBT_USD_FLOOR,
+            },
+            'reallocation_blocked': self.should_block_reallocation(debt_24h),
+            'smoothing_alpha': self.get_smoothing_adjustment(debt_24h),
+            'mapped_agents': len(self.AGENT_DESK_MAP),
         }
