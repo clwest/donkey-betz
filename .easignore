@@ -20,6 +20,20 @@ scripts/
 templates/
 static/
 *.sqlite3
+*.log
+*.pid
+manage.py
+Makefile
+Procfile
+requirements*.txt
+runtime.txt
+nixpacks.toml
+docker-compose*.yml
+Dockerfile
+*.toml
+discord_bot/
+resolve_node/
+.claude/
 
 # Dev tooling
 .vscode/
