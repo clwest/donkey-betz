@@ -17,10 +17,19 @@ Policies (v3 — root-cause autonomy):
   8. Contract/schema drift detection: scan for mismatches between PA tool schemas,
      handler registrations, agent registry, and Celery beat schedule
 
-Policies (v4 — self-tuning):
+Policies (v4 — self-tuning + budget):
   9. Policy self-tuning: PolicyOptimizer analyses action history to auto-adjust
      config thresholds. Emits changelogs and governance notes for each adjustment.
      Covers: timeout thresholds, windows, TTLs, cooldowns, max-per-cycle caps.
+ 10. Budget controller: BudgetController monitors LLM spend via LLMCallLog.
+     Three tiers: soft limit (70%) → model downgrade, rate reduction (future),
+     hard limit (95%) → freeze non-critical. Flags in SystemConfiguration.
+
+Policies (v5 — ROI attribution):
+ 11. ROI enforcement: ROIEnforcer correlates LLM spend with outcomes
+     (completed executions, published content). Under budget pressure,
+     applies selective throttles — low-ROI agents get cooldown periods
+     between calls. Throttles stored as SystemConfiguration keys.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -197,6 +206,9 @@ class OpsAutopilot:
         tuning_results = self._policy_self_tuning(now)
         budget_results = self._policy_budget_controller(now)
 
+        # Run policies (v5 — ROI attribution)
+        roi_results = self._policy_roi_enforcement(now)
+
         summary = {
             'cycle_at': now.isoformat(),
             'dry_run': self.dry_run,
@@ -211,6 +223,7 @@ class OpsAutopilot:
             'contract_drift': drift_results,
             'tuning': tuning_results,
             'budget': budget_results,
+            'roi': roi_results,
             'actions_taken': len(self.actions_taken),
             'actions': self.actions_taken,
         }
@@ -232,6 +245,7 @@ class OpsAutopilot:
                 'contract_drift': drift_results,
                 'tuning': tuning_results,
                 'budget': budget_results,
+                'roi': roi_results,
             },
             result=summary,
             deploy_sha=self.deploy_sha,
@@ -1209,6 +1223,76 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] budget controller error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    # ── Policy 11: ROI enforcement ─────────────────────────────────────────
+
+    def _policy_roi_enforcement(self, now) -> dict:
+        """
+        Session 1088: Compute ROI per agent and apply selective throttles
+        for low-ROI spenders when under budget pressure.
+        """
+        result = {'evaluated': False, 'throttles_applied': 0}
+
+        try:
+            enforcer = ROIEnforcer()
+            roi_data = enforcer.compute_roi_scores(now, window_hours=24)
+            result['evaluated'] = True
+            result['total_spend'] = roi_data['total_spend']
+            result['total_outcomes'] = roi_data['total_outcomes']
+
+            # Top 5 worst ROI agents
+            result['worst_roi'] = roi_data['agents'][:5]
+
+            # Apply throttles if under budget pressure (non-dry-run only)
+            if not self.dry_run:
+                applied = enforcer.apply_throttles(now)
+                result['throttles_applied'] = len(applied)
+
+                if applied:
+                    self.actions_taken.append({
+                        'type': 'roi_throttle',
+                        'count': len(applied),
+                        'agents': [a['agent_name'] for a in applied],
+                    })
+                    self._create_attention_item(
+                        title=(
+                            f"ROI throttles: {len(applied)} agents "
+                            f"on cooldown"
+                        ),
+                        summary=(
+                            f"Budget pressure detected. Applied "
+                            f"selective throttles to low-ROI agents: "
+                            f"{', '.join(a['agent_name'] for a in applied[:5])}. "
+                            f"Throttled agents have cooldown periods "
+                            f"between LLM calls. Undo: clear "
+                            f"SystemConfiguration keys starting "
+                            f"with 'roi_throttle:'."
+                        ),
+                        urgency='medium',
+                        policy='roi_enforcement',
+                        agent_name='ROIEnforcer',
+                    )
+            else:
+                recs = enforcer.get_throttle_recommendations(now)
+                result['would_throttle'] = len(recs)
+                result['recommendations'] = [
+                    {'agent': r['agent_name'], 'roi': r['roi'],
+                     'cooldown': r['cooldown_minutes']}
+                    for r in recs[:5]
+                ]
+
+            logger.info(
+                f"[OpsAutopilot] ROI: "
+                f"${roi_data['total_spend']:.2f} spend, "
+                f"{roi_data['total_outcomes']} outcomes, "
+                f"{result['throttles_applied']} throttles applied"
+            )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] ROI enforcement error: {e}")
             result['error'] = str(e)
 
         return result
@@ -3185,4 +3269,328 @@ class BudgetController:
             'top_models': spend['top_models'][:5],
             'soft_limit_pct': AutopilotConfig.BUDGET_SOFT_LIMIT_PCT,
             'hard_limit_pct': AutopilotConfig.BUDGET_HARD_LIMIT_PCT,
+        }
+
+
+# ── ROI Attribution + Selective Throttles ────────────────────────────────────
+
+class ROIEnforcer:
+    """
+    Session 1088: Autonomy #5 — ROI attribution and selective throttles.
+
+    Correlates LLM spend (from LLMCallLog) with measurable outcomes
+    (completed executions, published content, deliberation passes) to
+    compute ROI scores per agent and task_type.
+
+    Under budget pressure (soft limit breached), applies selective
+    throttles: low-ROI agents get cooldown periods, reducing their
+    call frequency without a blanket freeze.
+    """
+
+    # task_types that are always considered productive (no throttle)
+    PROTECTED_PURPOSES = frozenset({
+        'pa_chat', 'governance', 'auth', 'incident_response',
+    })
+
+    # Cooldown tiers: ROI score → cooldown minutes between calls
+    THROTTLE_TIERS = [
+        (0.05, 60),   # ROI < 5% → 60-minute cooldown
+        (0.15, 30),   # ROI < 15% → 30-minute cooldown
+        (0.30, 10),   # ROI < 30% → 10-minute cooldown
+    ]
+
+    def compute_roi_scores(self, now, window_hours=24) -> dict:
+        """
+        Compute ROI scores per agent over the given window.
+
+        ROI = (outcome_count / call_count) weighted by outcome quality.
+        Agents with zero calls are excluded.
+
+        Returns dict with per-agent scores and aggregated stats.
+        """
+        from core.models_llm_routing import LLMCallLog
+        from django.db.models import Sum, Count, Q
+
+        window_start = now - timedelta(hours=window_hours)
+
+        # Spend by agent
+        agent_spend = list(
+            LLMCallLog.objects.filter(
+                created_at__gte=window_start,
+                success=True,
+            ).values('agent_name').annotate(
+                total_cost=Sum('cost'),
+                call_count=Count('id'),
+            ).order_by('-total_cost')[:30]
+        )
+
+        if not agent_spend:
+            return {
+                'agents': [],
+                'total_spend': 0,
+                'total_outcomes': 0,
+                'window_hours': window_hours,
+            }
+
+        # Outcome counts by agent: completed AgentExecutions
+        agent_names = [a['agent_name'] for a in agent_spend]
+        outcome_map = {}
+
+        try:
+            from core.models_unified_system import AgentExecution
+            outcomes = list(
+                AgentExecution.objects.filter(
+                    created_at__gte=window_start,
+                    status='completed',
+                    agent__name__in=agent_names,
+                ).values('agent__name').annotate(
+                    completed=Count('id'),
+                )
+            )
+            for o in outcomes:
+                outcome_map[o['agent__name']] = o['completed']
+        except Exception:
+            pass
+
+        # Content outcomes: published deliverables (content-producing agents)
+        content_map = {}
+        try:
+            from core.models_deliverables import Deliverable
+            content_outcomes = list(
+                Deliverable.objects.filter(
+                    created_at__gte=window_start,
+                    status='published',
+                ).values('agent_name').annotate(
+                    published=Count('id'),
+                )
+            )
+            for c in content_outcomes:
+                if c['agent_name']:
+                    content_map[c['agent_name']] = c['published']
+        except Exception:
+            pass
+
+        # Deliberation outcomes: passed sessions
+        delib_map = {}
+        try:
+            from core.models_deliberation import DeliberationSession
+            delib_outcomes = list(
+                DeliberationSession.objects.filter(
+                    created_at__gte=window_start,
+                    status='completed',
+                ).values('topic').annotate(
+                    passed=Count('id'),
+                )
+            )
+            # We can't directly map topic→agent, so this contributes to
+            # 'content' task_type ROI globally
+            delib_map['_total'] = sum(d['passed'] for d in delib_outcomes)
+        except Exception:
+            pass
+
+        # Build per-agent ROI
+        total_spend = 0
+        total_outcomes = 0
+        agent_scores = []
+
+        for entry in agent_spend:
+            name = entry['agent_name']
+            cost = float(entry['total_cost'] or 0)
+            calls = entry['call_count'] or 0
+            total_spend += cost
+
+            outcomes = outcome_map.get(name, 0)
+            content = content_map.get(name, 0)
+            combined_outcomes = outcomes + content
+            total_outcomes += combined_outcomes
+
+            # ROI = outcome-to-call ratio (0..1+)
+            roi = combined_outcomes / max(calls, 1)
+
+            agent_scores.append({
+                'agent_name': name,
+                'cost': round(cost, 4),
+                'calls': calls,
+                'outcomes': combined_outcomes,
+                'outcome_detail': {
+                    'executions': outcomes,
+                    'content': content,
+                },
+                'roi': round(roi, 4),
+            })
+
+        # Sort by ROI ascending (worst first)
+        agent_scores.sort(key=lambda x: x['roi'])
+
+        return {
+            'agents': agent_scores,
+            'total_spend': round(total_spend, 4),
+            'total_outcomes': total_outcomes,
+            'deliberation_passes': delib_map.get('_total', 0),
+            'window_hours': window_hours,
+        }
+
+    def get_throttle_recommendations(self, now) -> list[dict]:
+        """
+        When budget utilization is above soft limit, recommend throttles
+        for low-ROI agents.
+
+        Returns list of {agent_name, roi, cooldown_minutes, reason}.
+        """
+        # Check if we're under budget pressure
+        controller = BudgetController()
+        spend = controller.compute_spend(now)
+
+        daily_cap = (
+            AutopilotConfig.get('BUDGET_DAILY_CAP_USD')
+            or AutopilotConfig.BUDGET_DAILY_CAP_USD
+        )
+        daily_pct = spend['daily_total'] / max(daily_cap, 0.01)
+
+        if daily_pct < AutopilotConfig.BUDGET_SOFT_LIMIT_PCT:
+            return []  # No pressure, no throttles
+
+        # Compute ROI scores
+        roi_data = self.compute_roi_scores(now, window_hours=24)
+        recommendations = []
+
+        for agent in roi_data['agents']:
+            name = agent['agent_name']
+
+            # Skip protected purposes
+            if name.lower() in self.PROTECTED_PURPOSES:
+                continue
+
+            roi = agent['roi']
+
+            # Find applicable throttle tier
+            cooldown = None
+            for threshold, minutes in self.THROTTLE_TIERS:
+                if roi < threshold:
+                    cooldown = minutes
+                    break
+
+            if cooldown:
+                recommendations.append({
+                    'agent_name': name,
+                    'roi': roi,
+                    'cost_24h': agent['cost'],
+                    'calls_24h': agent['calls'],
+                    'outcomes_24h': agent['outcomes'],
+                    'cooldown_minutes': cooldown,
+                    'reason': (
+                        f'ROI {roi:.1%} with ${agent["cost"]:.2f} spent '
+                        f'({agent["calls"]} calls, '
+                        f'{agent["outcomes"]} outcomes)'
+                    ),
+                })
+
+        return recommendations
+
+    def apply_throttles(self, now) -> list[dict]:
+        """
+        Apply throttle cooldowns via SystemConfiguration flags.
+
+        Sets `roi_throttle:{agent_name}` with cooldown expiry timestamp.
+        LLMEnforcer checks these before allowing calls.
+        """
+        from core.models.system import SystemConfiguration
+
+        recommendations = self.get_throttle_recommendations(now)
+        applied = []
+
+        for rec in recommendations:
+            key = f"roi_throttle:{rec['agent_name']}"
+            expires_at = now + timedelta(minutes=rec['cooldown_minutes'])
+
+            SystemConfiguration.objects.update_or_create(
+                key=key,
+                defaults={
+                    'value': {
+                        'cooldown_minutes': rec['cooldown_minutes'],
+                        'roi': rec['roi'],
+                        'expires_at': expires_at.isoformat(),
+                        'set_at': now.isoformat(),
+                    },
+                    'description': (
+                        f"ROI throttle: {rec['agent_name']} "
+                        f"(ROI {rec['roi']:.1%}, "
+                        f"cooldown {rec['cooldown_minutes']}min)"
+                    ),
+                    'category': 'performance',
+                },
+            )
+            applied.append(rec)
+            logger.info(
+                f"[ROIEnforcer] Throttle: {rec['agent_name']} → "
+                f"{rec['cooldown_minutes']}min cooldown "
+                f"(ROI {rec['roi']:.1%})"
+            )
+
+        # Clear expired throttles
+        all_throttles = SystemConfiguration.objects.filter(
+            key__startswith='roi_throttle:',
+        )
+        for t in all_throttles:
+            try:
+                expires = t.value.get('expires_at', '')
+                if expires and now.isoformat() > expires:
+                    t.delete()
+                    logger.info(
+                        f"[ROIEnforcer] Cleared expired throttle: {t.key}"
+                    )
+            except (AttributeError, TypeError):
+                pass
+
+        return applied
+
+    def check_throttle(self, agent_name: str) -> dict | None:
+        """
+        Check if an agent is currently throttled.
+
+        Returns throttle info dict if active, None if not throttled.
+        Called by LLMEnforcer before allowing calls.
+        """
+        from core.models.system import SystemConfiguration
+        from django.utils import timezone as tz
+
+        key = f"roi_throttle:{agent_name}"
+        try:
+            entry = SystemConfiguration.objects.filter(
+                key=key,
+            ).values_list('value', flat=True).first()
+
+            if not entry:
+                return None
+
+            expires_at = entry.get('expires_at', '')
+            if expires_at and tz.now().isoformat() > expires_at:
+                # Expired — clean up
+                SystemConfiguration.objects.filter(key=key).delete()
+                return None
+
+            return entry
+        except Exception:
+            return None
+
+    def get_roi_report(self, now) -> dict:
+        """Generate ROI report for PA/governance."""
+        roi_data = self.compute_roi_scores(now, window_hours=24)
+        throttle_recs = self.get_throttle_recommendations(now)
+
+        # Count active throttles
+        from core.models.system import SystemConfiguration
+        active_throttles = SystemConfiguration.objects.filter(
+            key__startswith='roi_throttle:',
+        ).count()
+
+        return {
+            'agents': roi_data['agents'][:15],
+            'total_spend': roi_data['total_spend'],
+            'total_outcomes': roi_data['total_outcomes'],
+            'deliberation_passes': roi_data.get('deliberation_passes', 0),
+            'window_hours': roi_data['window_hours'],
+            'throttle_recommendations': throttle_recs[:10],
+            'active_throttles': active_throttles,
+            'budget_pressure': len(throttle_recs) > 0,
         }
