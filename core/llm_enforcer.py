@@ -142,6 +142,74 @@ class LLMEnforcer:
         except Exception:
             pass  # Never block LLM calls due to LUNGS errors
 
+        # Session 1088: Check BudgetController flags
+        try:
+            from core.models.system import SystemConfiguration
+
+            # Hard freeze check — only critical purposes allowed
+            freeze_flag = SystemConfiguration.objects.filter(
+                key='budget_freeze_active',
+            ).values_list('value', flat=True).first()
+            if freeze_flag:
+                critical_purposes = {'governance', 'auth', 'incident_response', 'pa_chat'}
+                if task_type not in critical_purposes:
+                    logger.warning(
+                        f"[BudgetController] FROZEN: blocking {agent_name}/{task_type}"
+                    )
+                    return {
+                        'success': False,
+                        'response': '[BLOCKED: Budget freeze active — non-critical calls paused]',
+                        'error': 'Budget freeze active',
+                        'blocked_by_budget': True,
+                        'agent': agent_name,
+                        'call_id': hashlib.md5(
+                            f"{agent_name}_{datetime.now()}".encode()
+                        ).hexdigest()[:8],
+                    }
+
+            # Downgrade check — route to cheaper model
+            downgrade_flag = SystemConfiguration.objects.filter(
+                key='budget_downgrade_active',
+            ).values_list('value', flat=True).first()
+            if downgrade_flag and not use_claude:
+                downgrade_model = SystemConfiguration.objects.filter(
+                    key='autopilot_tuning:BUDGET_DOWNGRADE_MODEL',
+                ).values_list('value', flat=True).first()
+                if not downgrade_model:
+                    downgrade_model = 'gpt-5-mini'
+                # Override will happen via _call_openai model selection
+                if not hasattr(self, '_budget_downgrade_model'):
+                    self._budget_downgrade_model = None
+                self._budget_downgrade_model = downgrade_model
+        except Exception:
+            pass  # Never block LLM calls due to budget check errors
+
+        # Session 1088: ROI throttle check — cooldown for low-ROI agents
+        try:
+            from core.services.ops_autopilot import ROIEnforcer
+            throttle = ROIEnforcer().check_throttle(agent_name)
+            if throttle and task_type not in {'pa_chat', 'governance', 'auth', 'incident_response'}:
+                logger.info(
+                    f"[ROIEnforcer] Throttled: {agent_name} "
+                    f"(cooldown {throttle.get('cooldown_minutes')}min, "
+                    f"ROI {throttle.get('roi', 0):.1%})"
+                )
+                return {
+                    'success': False,
+                    'response': (
+                        f'[THROTTLED: {agent_name} on ROI cooldown — '
+                        f'next call allowed after {throttle.get("expires_at", "soon")}]'
+                    ),
+                    'error': 'ROI throttle active',
+                    'throttled_by_roi': True,
+                    'agent': agent_name,
+                    'call_id': hashlib.md5(
+                        f"{agent_name}_{datetime.now()}".encode()
+                    ).hexdigest()[:8],
+                }
+        except Exception:
+            pass  # Never block due to ROI check errors
+
         # Check if we have any LLM available
         if not self.openai_client and not self.anthropic_client:
             error_msg = "❌ CRITICAL: No LLM clients available! Cannot generate AI response."
@@ -313,8 +381,16 @@ class LLMEnforcer:
         # Build Responses API parameters
         # Session 1036: GPT-5.2 pricing: $1.75/1M input, $14/1M output
         #   Cached input (via previous_response_id): $0.18/1M (90% discount)
+        # Session 1088: Apply budget downgrade if active
+        effective_model = "gpt-5.2"
+        if getattr(self, '_budget_downgrade_model', None):
+            effective_model = self._budget_downgrade_model
+            logger.info(
+                f"[BudgetController] Downgrading {task_type} from gpt-5.2 → {effective_model}"
+            )
+
         params = {
-            'model': "gpt-5.2",                          # Session 1036: Upgraded to GPT-5.2
+            'model': effective_model,                    # Session 1036/1088: Budget-aware model selection
             'input': full_input,                         # Messages array or combined string
             'reasoning': {"effort": reasoning_effort},   # Configurable reasoning
             'text': {"verbosity": "medium"},             # Balanced output length

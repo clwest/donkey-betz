@@ -11618,6 +11618,31 @@ RESEARCH DATA:
             except Exception:
                 pass
 
+            # ROI attribution section
+            try:
+                from core.services.ops_autopilot import ROIEnforcer
+                enforcer = ROIEnforcer()
+                roi_data = enforcer.compute_roi_scores(tz.now(), window_hours=24)
+                if roi_data.get('agents'):
+                    report_lines.append(f"\n### ROI Attribution (24h)")
+                    report_lines.append(
+                        f"Total spend: ${roi_data['total_spend']:.2f} — "
+                        f"{roi_data['total_outcomes']} outcomes"
+                    )
+                    for a in roi_data['agents'][:5]:
+                        report_lines.append(
+                            f"- **{a['agent_name']}**: ROI {a['roi']:.1%} "
+                            f"(${a['cost']:.4f}, {a['outcomes']} outcomes)"
+                        )
+                    recs = enforcer.get_throttle_recommendations(tz.now())
+                    if recs:
+                        report_lines.append(
+                            f"\n**Would throttle {len(recs)} agents** "
+                            f"under budget pressure"
+                        )
+            except Exception:
+                pass
+
             return {
                 'action': 'dry_run_report',
                 'report': '\n'.join(report_lines),
@@ -11777,6 +11802,59 @@ RESEARCH DATA:
                 **report,
             }
 
+        elif action == 'roi_report':
+            # Show ROI attribution per agent and active throttles
+            from core.services.ops_autopilot import ROIEnforcer
+            from django.utils import timezone as tz
+            enforcer = ROIEnforcer()
+            try:
+                report = enforcer.get_roi_report(tz.now())
+            except Exception as e:
+                return {
+                    'action': 'roi_report',
+                    'error': f'ROI report failed: {str(e)[:200]}',
+                }
+
+            report_lines = ['## ROI Attribution Report\n']
+            report_lines.append(
+                f'**Window:** {report["window_hours"]}h — '
+                f'**Total spend:** ${report["total_spend"]:.2f} — '
+                f'**Outcomes:** {report["total_outcomes"]}'
+            )
+            report_lines.append(
+                f'**Active throttles:** {report["active_throttles"]} — '
+                f'**Budget pressure:** '
+                f'{"YES" if report["budget_pressure"] else "No"}'
+            )
+
+            if report.get('agents'):
+                report_lines.append('\n### Agent ROI (worst → best)')
+                for a in report['agents'][:10]:
+                    detail = a.get('outcome_detail', {})
+                    report_lines.append(
+                        f'- **{a["agent_name"]}**: '
+                        f'ROI {a["roi"]:.1%} — '
+                        f'${a["cost"]:.4f} / {a["calls"]} calls → '
+                        f'{a["outcomes"]} outcomes '
+                        f'(exec: {detail.get("executions", 0)}, '
+                        f'content: {detail.get("content", 0)})'
+                    )
+
+            if report.get('throttle_recommendations'):
+                report_lines.append('\n### Throttle Recommendations')
+                for r in report['throttle_recommendations'][:5]:
+                    report_lines.append(
+                        f'- **{r["agent_name"]}**: '
+                        f'{r["cooldown_minutes"]}min cooldown — '
+                        f'{r["reason"]}'
+                    )
+
+            return {
+                'action': 'roi_report',
+                'report': '\n'.join(report_lines),
+                **report,
+            }
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason
@@ -11807,7 +11885,8 @@ RESEARCH DATA:
         else:
             raise ValueError(
                 f"Unknown action: {action}. "
-                f"Valid: status, history, run, config, dry_run_report, backfill_failure_reasons"
+                f"Valid: status, history, run, config, dry_run_report, drift_scan, "
+                f"tuning_report, budget_report, roi_report, backfill_failure_reasons"
             )
 
     def _handle_ops_digest(
