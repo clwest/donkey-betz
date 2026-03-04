@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/SYSTEM_CAPABILITIES-original/02_Content_Creation/README.md` | 60 | 🎨 AI CONTENT STUDIO - The Complete Creation Suite |
+| `docs/archive/SYSTEM_CAPABILITIES-original/08_Sports_Analytics/README.md` | 60 | 🏆 SPORTS ANALYTICS PLATFORM - AI-Powered Betting I |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
