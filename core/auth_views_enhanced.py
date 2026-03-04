@@ -22,6 +22,20 @@ import re
 User = get_user_model()
 
 
+def _platform_role(user) -> str:
+    """Return the user's effective platform role (admin / owner / viewer)."""
+    if user.is_superuser or user.is_staff:
+        return 'admin'
+    try:
+        from core.models import EnhancedUserProfile
+        profile = EnhancedUserProfile.objects.filter(user=user).first()
+        if profile and getattr(profile, 'platform_role', None):
+            return profile.platform_role
+    except Exception:
+        pass
+    return 'viewer'
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_view(request):
@@ -247,7 +261,8 @@ def login_enhanced_view(request):
                 'first_name': user.first_name,
                 'last_name': user.last_name,
                 'credits': getattr(user, 'credits', 10000),
-                'subscription': getattr(user, 'subscription_tier', 'free')
+                'subscription': getattr(user, 'subscription_tier', 'free'),
+                'platform_role': _platform_role(user),
             },
             'remember_me': remember_me
         }
@@ -537,17 +552,17 @@ def validate_token_view(request):
     Validate if a token is still valid.
     """
     token = request.data.get('token')
-    
+
     if not token:
         return Response(
             {'valid': False, 'error': 'No token provided'},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
+
     try:
         token_obj = Token.objects.get(key=token)
         user = token_obj.user
-        
+
         if user.is_active:
             return Response({
                 'valid': True,
@@ -556,7 +571,8 @@ def validate_token_view(request):
                     'username': user.username,
                     'email': user.email,
                     'first_name': user.first_name,
-                    'last_name': user.last_name
+                    'last_name': user.last_name,
+                    'platform_role': _platform_role(user),
                 }
             })
         else:

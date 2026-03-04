@@ -1,8 +1,8 @@
 {
-  "build_sha": "c854b111",
-  "build_timestamp": "2026-02-28T23:33:26.877Z",
+  "build_sha": "c65b5f41",
+  "build_timestamp": "2026-03-04T02:43:52.298Z",
   "env": "production",
-  "route_count": 31,
+  "route_count": 32,
   "routes": [
     {
       "path": "/login",
@@ -190,6 +190,12 @@
       "category": "admin"
     },
     {
+      "path": "/diagnostics",
+      "label": "Diagnostics",
+      "authRequired": true,
+      "category": "admin"
+    },
+    {
       "path": "/profile",
       "label": "Profile",
       "authRequired": true,
@@ -240,19 +246,19 @@
       {
         "method": "GET",
         "path": "/api/human/attention/",
-        "toolSurface": "governance_tool.attention_list",
+        "toolSurface": "boardroom_tool.list_attention",
         "writes": false
       },
       {
         "method": "GET",
         "path": "/api/human/attention/stats/",
-        "toolSurface": "governance_tool.attention_stats",
+        "toolSurface": "boardroom_tool.attention_stats",
         "writes": false
       },
       {
         "method": "GET",
         "path": "/api/boardroom/decisions/",
-        "toolSurface": "governance_tool.decisions_list",
+        "toolSurface": "boardroom_tool.list_decisions",
         "writes": false
       },
       {
@@ -263,13 +269,13 @@
       {
         "method": "POST",
         "path": "/api/human/attention/{itemId}/decide/",
-        "toolSurface": "governance_tool.decision_decide",
+        "toolSurface": "boardroom_tool.decide",
         "writes": true
       },
       {
         "method": "POST",
         "path": "/api/human/attention/bulk-decide/",
-        "toolSurface": "governance_tool.bulk_decide",
+        "toolSurface": "boardroom_tool.bulk_decide",
         "writes": true
       },
       {
@@ -280,13 +286,13 @@
       {
         "method": "POST",
         "path": "/api/boardroom/decisions/{decisionId}/promote/",
-        "toolSurface": "governance_tool.decision_promote",
+        "toolSurface": "boardroom_tool.promote",
         "writes": true
       },
       {
         "method": "POST",
         "path": "/api/boardroom/decisions/{decisionId}/reject/",
-        "toolSurface": "governance_tool.decision_reject",
+        "toolSurface": "boardroom_tool.reject",
         "writes": true
       },
       {
@@ -324,7 +330,7 @@
       {
         "method": "GET",
         "path": "/api/boardroom/decisions/",
-        "toolSurface": "governance_tool.decisions_list",
+        "toolSurface": "boardroom_tool.list_decisions",
         "writes": false
       },
       {
@@ -358,7 +364,7 @@
       {
         "method": "GET",
         "path": "/api/human/attention/",
-        "toolSurface": "governance_tool.attention_list",
+        "toolSurface": "boardroom_tool.list_attention",
         "writes": false
       },
       {
@@ -448,7 +454,7 @@
       {
         "method": "GET",
         "path": "/api/workspaces/",
-        "toolSurface": "work_tool.initiative_list",
+        "toolSurface": "initiative_tool.list_workspaces",
         "writes": false
       },
       {
@@ -687,7 +693,7 @@
       {
         "method": "GET",
         "path": "/api/initiatives/",
-        "toolSurface": "work_tool.initiative_list",
+        "toolSurface": "initiative_tool.list",
         "writes": false
       },
       {
@@ -745,7 +751,7 @@
       {
         "method": "GET",
         "path": "/api/initiatives/",
-        "toolSurface": "work_tool.initiative_list",
+        "toolSurface": "initiative_tool.list",
         "writes": false
       },
       {

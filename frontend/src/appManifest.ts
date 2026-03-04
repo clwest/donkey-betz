@@ -62,6 +62,7 @@ export const APP_ROUTES: AppRoute[] = [
   // Admin
   { path: '/admin', label: 'Admin', authRequired: true, roles: ['admin'], category: 'admin' },
   { path: '/settings', label: 'Settings', authRequired: true, category: 'admin' },
+  { path: '/diagnostics', label: 'Diagnostics', authRequired: true, category: 'admin' },
   { path: '/profile', label: 'Profile', authRequired: true, category: 'admin' },
 ];
 

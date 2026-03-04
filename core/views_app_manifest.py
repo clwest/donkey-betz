@@ -78,6 +78,7 @@ def _fallback_manifest() -> dict:
             {'path': '/how-it-works', 'label': 'How It Works', 'authRequired': True, 'category': 'reference'},
             {'path': '/admin', 'label': 'Admin', 'authRequired': True, 'roles': ['admin'], 'category': 'admin'},
             {'path': '/settings', 'label': 'Settings', 'authRequired': True, 'category': 'admin'},
+            {'path': '/diagnostics', 'label': 'Diagnostics', 'authRequired': True, 'category': 'admin'},
             {'path': '/profile', 'label': 'Profile', 'authRequired': True, 'category': 'admin'},
             {'path': '/login', 'label': 'Login', 'authRequired': False, 'category': 'auth'},
         ],
