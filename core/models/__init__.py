@@ -204,6 +204,9 @@ from ..models_policy_experiment import PolicyExperiment
 # Import DecisionLedgerEntry (Session 1090 - Autonomy #12 Decision Ledger)
 from ..models_decision_ledger import DecisionLedgerEntry
 
+# Import impact credit model (Autonomy #17 - Multi-Touch Attribution)
+from ..models_impact_credit import ImpactCredit
+
 # Import learning journey models (Session 773 - Learning Journeys)
 from ..models_learning_journey import (
     LearningJourneyTemplate,
@@ -457,5 +460,8 @@ __all__ = [
 
     # Decision Ledger (Session 1090 - Autonomy #12)
     'DecisionLedgerEntry',
+
+    # Impact Credit (Autonomy #17)
+    'ImpactCredit',
 
 ]
