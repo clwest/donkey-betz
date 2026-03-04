@@ -10,10 +10,21 @@ export default function OfflineBanner() {
   const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener((state) => {
-      setIsOffline(!(state.isConnected && state.isInternetReachable !== false));
-    });
-    return () => unsubscribe();
+    let unsubscribe: (() => void) | undefined;
+    try {
+      unsubscribe = NetInfo.addEventListener((state) => {
+        try {
+          setIsOffline(!(state.isConnected && state.isInternetReachable !== false));
+        } catch (e) {
+          console.warn('[OfflineBanner] Error processing network state:', e);
+        }
+      });
+    } catch (e) {
+      console.warn('[OfflineBanner] NetInfo.addEventListener failed:', e);
+    }
+    return () => {
+      try { unsubscribe?.(); } catch { /* ignore cleanup errors */ }
+    };
   }, []);
 
   if (!isOffline) return null;
