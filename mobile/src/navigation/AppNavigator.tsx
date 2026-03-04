@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
@@ -6,6 +6,7 @@ import { getManifest, type Manifest } from '../api/manifest';
 import { resolveScreens, type ResolvedScreen } from './manifestRouter';
 import { linking } from './linking';
 import { useAuthStore } from '../auth/authStore';
+import { ScreenErrorBoundary } from '../components/ScreenState';
 
 const Drawer = createDrawerNavigator();
 
@@ -19,6 +20,27 @@ const CATEGORY_LABELS: Record<string, string> = {
   reference: 'Reference',
   admin: 'Admin',
 };
+
+// ── Error boundary wrapper factory ───────────────────────────────────────────
+
+const _boundaryCache = new Map<React.ComponentType<any>, React.ComponentType<any>>();
+
+function wrapWithErrorBoundary(
+  Component: React.ComponentType<any>,
+  screenName: string,
+): React.ComponentType<any> {
+  const cached = _boundaryCache.get(Component);
+  if (cached) return cached;
+
+  const Wrapped = (props: any) => (
+    <ScreenErrorBoundary screenName={screenName}>
+      <Component {...props} />
+    </ScreenErrorBoundary>
+  );
+  Wrapped.displayName = `ErrorBoundary(${screenName})`;
+  _boundaryCache.set(Component, Wrapped);
+  return Wrapped;
+}
 
 // ── Navigator ────────────────────────────────────────────────────────────────
 
@@ -66,6 +88,16 @@ export default function AppNavigator() {
     );
   }
 
+  // Wrap each screen component with ScreenErrorBoundary (stable refs via useMemo)
+  const wrappedScreens = useMemo(
+    () =>
+      screens.map((screen) => ({
+        ...screen,
+        WrappedComponent: wrapWithErrorBoundary(screen.entry.component, screen.label),
+      })),
+    [screens],
+  );
+
   return (
     <NavigationContainer linking={linking}>
       <Drawer.Navigator
@@ -80,11 +112,11 @@ export default function AppNavigator() {
           drawerLabelStyle: { fontSize: 15 },
         }}
       >
-        {screens.map((screen) => (
+        {wrappedScreens.map((screen) => (
           <Drawer.Screen
             key={screen.path}
             name={screen.path}
-            component={screen.entry.component}
+            component={screen.WrappedComponent}
             options={{
               title: screen.label,
               drawerItemStyle: screen.category === 'admin' && manifest?.user_role !== 'admin'

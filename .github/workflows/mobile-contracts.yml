@@ -1,0 +1,77 @@
+name: Mobile Contract Tests
+
+on:
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - 'core/views_app_manifest.py'
+      - 'core/auth_views_enhanced.py'
+      - 'frontend/src/appManifest.ts'
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+      - 'core/views_app_manifest.py'
+      - 'core/auth_views_enhanced.py'
+      - 'frontend/src/appManifest.ts'
+
+jobs:
+  typecheck:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - run: npm ci
+      - run: npx tsc --noEmit
+
+  contract-tests:
+    name: API Contract Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - run: npm ci
+
+      - name: Run contract tests
+        env:
+          API_BASE: ${{ secrets.CONTRACT_TEST_API_BASE }}
+          API_TOKEN: ${{ secrets.CONTRACT_TEST_API_TOKEN }}
+        run: |
+          if [ -z "$API_BASE" ] || [ -z "$API_TOKEN" ]; then
+            echo "::warning::CONTRACT_TEST_API_BASE or CONTRACT_TEST_API_TOKEN not set — skipping live API tests"
+            echo "Set these secrets to enable contract validation against staging/prod"
+            exit 0
+          fi
+          npx tsx scripts/contract-test.ts
+
+      - name: Run manifest contract
+        env:
+          API_BASE: ${{ secrets.CONTRACT_TEST_API_BASE }}
+          API_TOKEN: ${{ secrets.CONTRACT_TEST_API_TOKEN }}
+        run: |
+          if [ -z "$API_BASE" ] || [ -z "$API_TOKEN" ]; then
+            echo "::warning::Skipping manifest contract (no API secrets)"
+            exit 0
+          fi
+          npx tsx scripts/manifest-contract.ts
