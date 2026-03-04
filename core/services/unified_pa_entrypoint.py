@@ -794,6 +794,91 @@ class UnifiedPAEntrypoint:
     # Session 1036: LLM-Driven Function Calling (Agentic Loop)
     # =========================================================================
 
+    # Schema subsets for common intent categories.
+    # Only send the tools the LLM is likely to need — saves ~30K input tokens.
+    _SCHEMA_SUBSETS: Dict[str, set] = {
+        'status': {
+            'status_snapshot_tool', 'ops_tool', 'governance_tool',
+            'autopilot_tool', 'get_body_vitals', 'get_system_alerts',
+            'cost_telemetry_tool', 'check_resource_budget',
+        },
+        'governance': {
+            'governance_tool', 'status_snapshot_tool', 'autopilot_tool',
+            'agent_control_tool',
+        },
+        'ops': {
+            'ops_tool', 'ops_digest_tool', 'status_snapshot_tool',
+            'scheduled_tasks_tool', 'db_health_tool', 'http_smoke_test',
+            'cost_telemetry_tool', 'check_resource_budget',
+            'get_body_vitals', 'get_system_alerts',
+        },
+        'content': {
+            'content_tool', 'content_writer_agent', 'content_strategy_agent',
+            'research_and_create_tool', 'web_search', 'studio_tool',
+        },
+        'media': {
+            'media_tool', 'davinci_tool', 'obs_tool', 'video_history_tool',
+            'image_editing_agent', 'video_editing_agent',
+            'three_d_generation_agent', 'character_training_agent',
+            'create_brand_video', 'studio_tool',
+        },
+        'work': {
+            'work_tool', 'dream_tool', 'task_manager_tool', 'task_breakdown_tool',
+            'pipeline_orchestrator_tool', 'gates_tool', 'pilots_tool',
+            'execution_history_tool', 'learning_patterns_tool',
+        },
+    }
+
+    # Keyword patterns → schema subset key.
+    _INTENT_KEYWORDS: List[tuple] = [
+        ('status', ['status', 'health', 'how are things', "how's everything",
+                     'system check', 'vitals', 'heartbeat']),
+        ('governance', ['governance', 'inbox', 'attention', 'pending decision',
+                        'approve', 'reject', 'ignore', 'clear noise']),
+        ('ops', ['ops', 'slo', 'celery', 'workers', 'queue', 'tasks running',
+                 'costs', 'spend', 'budget', 'cost spike']),
+        ('media', ['video', 'image', 'audio', 'obs', 'davinci', 'render',
+                   'media', 'upload', 'edit video', 'edit image']),
+        ('content', ['blog', 'article', 'write', 'draft', 'publish',
+                     'content pipeline', 'deliberation']),
+        ('work', ['initiative', 'dream', 'project', 'pipeline', 'stage',
+                  'action item', 'task breakdown']),
+    ]
+
+    def _select_tool_schemas(self, message: str, all_schemas: list) -> list:
+        """
+        Return a subset of tool schemas relevant to the detected intent.
+
+        Falls back to full schema set for ambiguous messages.
+        Always includes remember_tool and conversation_tool as universal tools.
+        """
+        msg_lower = message.lower()
+
+        # Universal tools always included
+        universal = {'remember_tool', 'conversation_tool', 'recent_activity_tool'}
+
+        matched_category = None
+        for category, keywords in self._INTENT_KEYWORDS:
+            if any(kw in msg_lower for kw in keywords):
+                matched_category = category
+                break
+
+        if not matched_category:
+            return all_schemas  # Ambiguous — send everything
+
+        allowed = self._SCHEMA_SUBSETS[matched_category] | universal
+        subset = [s for s in all_schemas if s.get('name') in allowed]
+
+        if not subset:
+            return all_schemas  # Safety fallback
+
+        logger.info(
+            "[PA_SCHEMA_SUBSET] category=%s schemas=%d/%d (saved ~%d tokens)",
+            matched_category, len(subset), len(all_schemas),
+            (len(all_schemas) - len(subset)) * 500,  # ~500 tokens per schema
+        )
+        return subset
+
     async def _run_agentic_loop(
         self,
         message: str,
@@ -808,7 +893,8 @@ class UnifiedPAEntrypoint:
         Returns (content, tool_runs, fc_metadata, response_id)
         where fc_metadata captures the GPT function call info (name, arguments, call_id).
         """
-        PA_TOOL_SCHEMAS = self._get_live_tool_schemas()
+        all_schemas = self._get_live_tool_schemas()
+        PA_TOOL_SCHEMAS = self._select_tool_schemas(message, all_schemas)
 
         # Build initial messages array
         messages = self._build_messages_array(message, context)
