@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Clipboard,
   Platform,
   ScrollView,
@@ -13,6 +14,7 @@ import * as Application from 'expo-application';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../auth/authStore';
 import { toast } from '../components/Toast';
+import { useScreenAnalytics } from '../observability/analytics';
 
 interface DiagInfo {
   appVersion: string;
@@ -32,9 +34,24 @@ interface DiagInfo {
 }
 
 export default function DiagnosticsScreen() {
+  useScreenAnalytics('DiagnosticsScreen');
   const user = useAuthStore((s) => s.user);
   const status = useAuthStore((s) => s.status);
+  const hydrate = useAuthStore((s) => s.hydrate);
   const [info, setInfo] = useState<DiagInfo | null>(null);
+  const [revalidating, setRevalidating] = useState(false);
+
+  async function handleRevalidate() {
+    setRevalidating(true);
+    try {
+      await hydrate();
+      toast.success('Token revalidated — user data refreshed');
+    } catch {
+      toast.error('Revalidation failed');
+    } finally {
+      setRevalidating(false);
+    }
+  }
 
   useEffect(() => {
     async function gather() {
@@ -70,21 +87,34 @@ export default function DiagnosticsScreen() {
 
       {info ? (
         <>
-          <TouchableOpacity style={styles.copyBtn} onPress={() => {
-            const debugText = [
-              `App: ${info.appVersion} (${info.nativeVersion})`,
-              `SDK: ${info.expoSdk} | Runtime: ${info.runtimeVersion}`,
-              `Build: ${info.buildSha} | Channel: ${info.buildChannel}`,
-              `Device: ${info.deviceOs}`,
-              `API: ${info.apiBaseUrl}`,
-              `User: ${info.username} (${info.platformRole})`,
-              `Auth: ${info.authStatus}`,
-            ].join('\n');
-            Clipboard.setString(debugText);
-            toast.success('Debug info copied');
-          }}>
-            <Text style={styles.copyBtnText}>Copy Debug Info</Text>
-          </TouchableOpacity>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity style={styles.copyBtn} onPress={() => {
+              const debugText = [
+                `App: ${info.appVersion} (${info.nativeVersion})`,
+                `SDK: ${info.expoSdk} | Runtime: ${info.runtimeVersion}`,
+                `Build: ${info.buildSha} | Channel: ${info.buildChannel}`,
+                `Device: ${info.deviceOs}`,
+                `API: ${info.apiBaseUrl}`,
+                `User: ${info.username} (${info.platformRole})`,
+                `Auth: ${info.authStatus}`,
+              ].join('\n');
+              Clipboard.setString(debugText);
+              toast.success('Debug info copied');
+            }}>
+              <Text style={styles.copyBtnText}>Copy Debug Info</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.copyBtn, styles.revalidateBtn]}
+              onPress={handleRevalidate}
+              disabled={revalidating}
+            >
+              {revalidating
+                ? <ActivityIndicator size="small" color="#ffffff" />
+                : <Text style={styles.copyBtnText}>Revalidate Token</Text>
+              }
+            </TouchableOpacity>
+          </View>
 
           <Section title="App">
             <Row label="Version" value={info.appVersion} />
@@ -176,12 +206,20 @@ const styles = StyleSheet.create({
   label: { color: '#6b7280', fontSize: 13 },
   value: { color: '#d1d5db', fontSize: 13, fontWeight: '500', maxWidth: '60%', textAlign: 'right' },
 
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 16,
+  },
   copyBtn: {
+    flex: 1,
     backgroundColor: '#6366f1',
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
-    marginBottom: 16,
+  },
+  revalidateBtn: {
+    backgroundColor: '#374151',
   },
   copyBtnText: {
     color: '#ffffff',
