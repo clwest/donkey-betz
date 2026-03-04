@@ -67,6 +67,12 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      DRAFT_FAILED). L1=reduce panel (3→2), L2=reviewer model fallback,
      L3=single-reviewer bypass. Auto-escalates when rate >25% for 6
      cycles, de-escalates when rate <10% for 12 cycles.
+ 19. Backlog governor: Monitors Deliverable backlog KPIs — publish-ready
+     count, p95 age hours, draft→published conversion rate. Graduated
+     actions: L1=throttle new generation, L2=governance attention batch,
+     L3=auto-archive stale drafts (>14d, no engagement). Guardrails:
+     never archive pinned, saved, starred, high-quality (>0.7), or
+     initiative-linked deliverables.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -235,6 +241,7 @@ class OpsAutopilot:
         ('experiments', 'experiment_engine', '_policy_experiment_engine'),
         ('timeout_playbook', 'timeout_remediation_playbook', '_policy_timeout_remediation_playbook'),
         ('deliberation_playbook', 'deliberation_remediation_playbook', '_policy_deliberation_remediation_playbook'),
+        ('backlog_governor', 'backlog_governor', '_policy_backlog_governor'),
     ]
 
     def run(self) -> dict[str, Any]:
@@ -1803,6 +1810,70 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] delib playbook error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _policy_backlog_governor(self, now) -> dict:
+        """
+        Monitor deliverable backlog and apply graduated clearance actions:
+        L1=throttle generation, L2=governance batch, L3=auto-archive stale.
+        """
+        result = {
+            'publish_ready_count': 0,
+            'draft_count': 0,
+            'p95_age_hours': 0.0,
+            'conversion_rate_pct': 0.0,
+            'current_level': 0,
+            'action_taken': None,
+        }
+
+        try:
+            governor = BacklogGovernor(
+                dry_run=self.dry_run,
+                deploy_sha=self.deploy_sha,
+            )
+            eval_result = governor.evaluate(now)
+
+            result['publish_ready_count'] = eval_result.get('publish_ready_count', 0)
+            result['draft_count'] = eval_result.get('draft_count', 0)
+            result['p95_age_hours'] = eval_result.get('p95_age_hours', 0.0)
+            result['conversion_rate_pct'] = eval_result.get('conversion_rate_pct', 0.0)
+            result['current_level'] = eval_result.get('current_level', 0)
+
+            action = eval_result.get('action')
+            if action:
+                result['action_taken'] = action
+                self.actions_taken.extend(governor.actions)
+
+                # Governance item for L2+ escalations
+                if action.get('action') == 'escalate' and action.get('to_level', 0) >= 2:
+                    self._create_attention_item(
+                        title=(
+                            f"Backlog governor L{action['to_level']}: "
+                            f"{eval_result.get('publish_ready_count', '?')} items backed up"
+                        ),
+                        summary=(
+                            f"Deliverable backlog escalated to L{action['to_level']}. "
+                            f"p95 age: {eval_result.get('p95_age_hours', 0):.0f}h. "
+                            f"{'Auto-archiving stale drafts.' if action['to_level'] == 3 else 'Review backlog.'}"
+                        ),
+                        urgency='medium' if action['to_level'] == 3 else 'low',
+                        policy='backlog_governor',
+                        agent_name='BacklogGovernor',
+                    )
+
+            logger.info(
+                f"[OpsAutopilot] Backlog governor: "
+                f"ready={result['publish_ready_count']} "
+                f"draft={result['draft_count']} "
+                f"p95={result['p95_age_hours']:.0f}h "
+                f"level={result['current_level']} "
+                f"action={action['action'] if action else 'none'}"
+            )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] backlog governor error: {e}")
             result['error'] = str(e)
 
         return result
@@ -3882,6 +3953,470 @@ class DeliberationRemediationPlaybook:
             if entry:
                 result[key] = entry.value
         return result
+
+
+# ── Backlog Governor ─────────────────────────────────────────────────────────
+
+
+class BacklogGovernor:
+    """
+    Ship-or-kill governor for the Deliverable backlog.
+
+    Monitors the pipeline between "ready" deliverables and actual publishing
+    to ensure content moves through the last mile. Graduated actions:
+
+      Level 0: Monitoring only — backlog within healthy bounds
+      Level 1: Throttle new generation (set config flag)
+      Level 2: Batch governance attention items for manual review
+      Level 3: Auto-archive stale drafts/ready items (>STALE_AGE_DAYS)
+
+    KPIs tracked:
+    - publish_ready_count: deliverables in 'ready' or 'draft' status
+    - p95_age_hours: 95th percentile age of publish-ready items
+    - conversion_rate: published / (published + ready + draft) over window
+
+    Guardrails (never auto-archive):
+    - is_pinned = True
+    - is_saved = True
+    - is_starred = True
+    - quality_score >= 0.7
+    - linked to initiative (initiative_id not null)
+    """
+
+    # Thresholds
+    READY_COUNT_THRESHOLD = 10  # L1 trigger: >=10 items backed up
+    P95_AGE_THRESHOLD_HOURS = 72  # L1 trigger: p95 age > 72h
+    STALE_AGE_DAYS = 14  # L3 auto-archive: older than 14 days
+    QUALITY_FLOOR = 0.7  # Never archive above this quality
+    KPI_WINDOW_DAYS = 7  # Conversion rate lookback window
+
+    # Escalation/recovery
+    EVAL_WINDOW_CYCLES = 6  # Wait 6 cycles before escalating
+    RECOVERY_CYCLES = 12  # 12 clean cycles to de-escalate
+
+    # SystemConfiguration keys
+    KEY_LEVEL = 'backlog_governor_level'
+    KEY_LEVEL_TS = 'backlog_governor_level_ts'
+    KEY_CLEAN_CYCLES = 'backlog_governor_clean'
+    KEY_THROTTLE = 'backlog_generation_throttled'
+
+    def __init__(self, dry_run: bool = False, deploy_sha: str = ''):
+        self.dry_run = dry_run
+        self.deploy_sha = deploy_sha
+        self.actions: list[dict] = []
+
+    def evaluate(self, now) -> dict:
+        """Evaluate backlog health and manage governor level."""
+        result = {
+            'publish_ready_count': 0,
+            'draft_count': 0,
+            'p95_age_hours': 0.0,
+            'conversion_rate_pct': 0.0,
+            'current_level': 0,
+            'action': None,
+        }
+
+        try:
+            from core.models_deliverables import Deliverable
+            from django.db.models import Count
+
+            # Count backlog
+            ready_count = Deliverable.objects.filter(status='ready').count()
+            draft_count = Deliverable.objects.filter(status='draft').count()
+            result['publish_ready_count'] = ready_count
+            result['draft_count'] = draft_count
+
+            # p95 age of ready + draft items
+            backlog_qs = Deliverable.objects.filter(
+                status__in=['ready', 'draft'],
+            ).order_by('created_at')
+
+            if backlog_qs.exists():
+                total = backlog_qs.count()
+                p95_idx = max(0, int(total * 0.95) - 1)
+                p95_item = backlog_qs[p95_idx]
+                p95_age = (now - p95_item.created_at).total_seconds() / 3600
+                result['p95_age_hours'] = round(p95_age, 1)
+
+            # Conversion rate over window
+            window = now - timedelta(days=self.KPI_WINDOW_DAYS)
+            window_total = Deliverable.objects.filter(
+                created_at__gte=window,
+            ).count()
+            window_published = Deliverable.objects.filter(
+                created_at__gte=window, status='published',
+            ).count()
+            if window_total > 0:
+                result['conversion_rate_pct'] = round(
+                    (window_published / window_total) * 100, 1,
+                )
+
+            # Current level
+            current_level = self._get_level()
+            result['current_level'] = current_level
+
+            # Backlog is unhealthy if either threshold is breached
+            backlog_unhealthy = (
+                ready_count >= self.READY_COUNT_THRESHOLD
+                or result['p95_age_hours'] >= self.P95_AGE_THRESHOLD_HOURS
+            )
+
+            if current_level == 0 and backlog_unhealthy:
+                action = self._escalate(0, 1, result, now)
+                result['action'] = action
+
+            elif current_level > 0 and not backlog_unhealthy:
+                # Backlog is healthy — count clean cycles toward de-escalation
+                clean = self._increment_clean_cycles()
+                if clean >= self.RECOVERY_CYCLES:
+                    action = self._de_escalate(current_level, now)
+                    result['action'] = action
+
+            elif current_level > 0 and backlog_unhealthy:
+                self._reset_clean_cycles()
+                # Check if stuck long enough to escalate further
+                level_ts = self._get_level_timestamp()
+                if level_ts and current_level < 3:
+                    cycles_since = (now - level_ts).total_seconds() / 600
+                    if cycles_since >= self.EVAL_WINDOW_CYCLES:
+                        action = self._escalate(
+                            current_level, current_level + 1, result, now,
+                        )
+                        result['action'] = action
+
+        except Exception as e:
+            logger.error(f"[BacklogGovernor] evaluation error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _escalate(self, from_level: int, to_level: int, kpis: dict, now) -> dict:
+        """Escalate to next governor level."""
+        from core.models.system import SystemConfiguration
+
+        action = {
+            'action': 'escalate',
+            'from_level': from_level,
+            'to_level': to_level,
+            'publish_ready_count': kpis.get('publish_ready_count', 0),
+            'p95_age_hours': kpis.get('p95_age_hours', 0),
+        }
+
+        if self.dry_run:
+            action['dry_run'] = True
+            return action
+
+        if to_level == 1:
+            # Throttle new content generation
+            SystemConfiguration.objects.update_or_create(
+                key=self.KEY_THROTTLE,
+                defaults={
+                    'value': 'true',
+                    'description': (
+                        f'Backlog L1: throttle generation '
+                        f'(ready={kpis["publish_ready_count"]}, '
+                        f'p95={kpis["p95_age_hours"]:.0f}h)'
+                    ),
+                },
+            )
+            action['throttle_enabled'] = True
+
+        elif to_level == 2:
+            # Batch governance attention item
+            self._create_backlog_attention(kpis)
+            action['attention_created'] = True
+
+        elif to_level == 3:
+            # Auto-archive stale items
+            archived = self._auto_archive_stale(now)
+            action['archived_count'] = archived
+
+        self._set_level(to_level, now)
+        self._reset_clean_cycles()
+
+        AutopilotAction.objects.create(
+            action_type='backlog_govern',
+            agent_name='BacklogGovernor',
+            policy='backlog_governor',
+            dry_run=False,
+            evidence={
+                'ladder_from': from_level,
+                'ladder_to': to_level,
+                **{k: v for k, v in kpis.items() if k != 'action'},
+            },
+            result=action,
+            deploy_sha=self.deploy_sha,
+        )
+
+        self.actions.append(action)
+        logger.info(
+            f"[BacklogGovernor] ESCALATE L{from_level}→L{to_level} "
+            f"(ready={kpis.get('publish_ready_count')}, "
+            f"p95={kpis.get('p95_age_hours', 0):.0f}h)"
+        )
+        return action
+
+    def _de_escalate(self, current_level: int, now) -> dict:
+        """De-escalate one level — clean up current level's state."""
+        from core.models.system import SystemConfiguration
+
+        new_level = current_level - 1
+        action = {
+            'action': 'de_escalate',
+            'from_level': current_level,
+            'to_level': new_level,
+        }
+
+        if self.dry_run:
+            action['dry_run'] = True
+            return action
+
+        # Clean up current level's config
+        if current_level == 1:
+            SystemConfiguration.objects.filter(key=self.KEY_THROTTLE).delete()
+
+        if new_level > 0:
+            self._set_level(new_level, now)
+        else:
+            self._clear_state()
+
+        self._reset_clean_cycles()
+
+        AutopilotAction.objects.create(
+            action_type='backlog_govern',
+            agent_name='BacklogGovernor',
+            policy='backlog_governor',
+            dry_run=False,
+            evidence={
+                'ladder_from': current_level,
+                'ladder_to': new_level,
+                'recovery': True,
+            },
+            result=action,
+            deploy_sha=self.deploy_sha,
+        )
+
+        self.actions.append(action)
+        logger.info(
+            f"[BacklogGovernor] DE-ESCALATE L{current_level}→L{new_level}"
+        )
+        return action
+
+    def _auto_archive_stale(self, now) -> int:
+        """
+        Archive stale deliverables with guardrails.
+
+        Never archive:
+        - is_pinned, is_saved, is_starred
+        - quality_score >= QUALITY_FLOOR
+        - linked to an initiative
+        """
+        from core.models_deliverables import Deliverable
+
+        stale_cutoff = now - timedelta(days=self.STALE_AGE_DAYS)
+
+        stale_qs = Deliverable.objects.filter(
+            status__in=['draft', 'ready'],
+            created_at__lt=stale_cutoff,
+            is_pinned=False,
+            is_saved=False,
+            is_starred=False,
+            initiative__isnull=True,
+        ).exclude(
+            quality_score__gte=self.QUALITY_FLOOR,
+        )
+
+        count = stale_qs.count()
+        if count > 0:
+            stale_qs.update(status='archived')
+            logger.info(
+                f"[BacklogGovernor] Auto-archived {count} stale deliverables "
+                f"(older than {self.STALE_AGE_DAYS} days)"
+            )
+        return count
+
+    def _create_backlog_attention(self, kpis: dict):
+        """Create governance attention item for backlog review."""
+        try:
+            from core.models_human_interface import HumanAttentionItem
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+
+            user = User.objects.filter(is_superuser=True).first()
+            if not user:
+                user = User.objects.first()
+            if not user:
+                return
+
+            HumanAttentionItem.objects.create(
+                user=user,
+                source_type='ops_autopilot',
+                source_agent='BacklogGovernor',
+                item_type='alert',
+                title=(
+                    f"Backlog review: {kpis.get('publish_ready_count', 0)} "
+                    f"items, p95 age {kpis.get('p95_age_hours', 0):.0f}h"
+                )[:200],
+                summary=(
+                    f"Deliverable backlog needs attention. "
+                    f"{kpis.get('publish_ready_count', 0)} ready/draft items, "
+                    f"p95 age {kpis.get('p95_age_hours', 0):.0f}h, "
+                    f"conversion rate {kpis.get('conversion_rate_pct', 0):.1f}%. "
+                    f"Review and publish or archive stale items."
+                ),
+                payload={
+                    'policy': 'backlog_governor',
+                    **{k: v for k, v in kpis.items() if k != 'action'},
+                },
+                urgency='medium',
+            )
+        except Exception as e:
+            logger.error(f"[BacklogGovernor] attention item error: {e}")
+
+    # ── State tracking ──────────────────────────────────────────────
+
+    def _get_level(self) -> int:
+        from core.models.system import SystemConfiguration
+        entry = SystemConfiguration.objects.filter(key=self.KEY_LEVEL).first()
+        return int(entry.value) if entry else 0
+
+    def _set_level(self, level: int, now):
+        from core.models.system import SystemConfiguration
+        SystemConfiguration.objects.update_or_create(
+            key=self.KEY_LEVEL,
+            defaults={'value': str(level)},
+        )
+        SystemConfiguration.objects.update_or_create(
+            key=self.KEY_LEVEL_TS,
+            defaults={'value': now.isoformat()},
+        )
+
+    def _get_level_timestamp(self):
+        from core.models.system import SystemConfiguration
+        from django.utils.dateparse import parse_datetime
+        entry = SystemConfiguration.objects.filter(key=self.KEY_LEVEL_TS).first()
+        return parse_datetime(entry.value) if entry else None
+
+    def _increment_clean_cycles(self) -> int:
+        from core.models.system import SystemConfiguration
+        obj, _ = SystemConfiguration.objects.get_or_create(
+            key=self.KEY_CLEAN_CYCLES,
+            defaults={'value': '0'},
+        )
+        new_val = int(obj.value or '0') + 1
+        obj.value = str(new_val)
+        obj.save(update_fields=['value'])
+        return new_val
+
+    def _reset_clean_cycles(self):
+        from core.models.system import SystemConfiguration
+        SystemConfiguration.objects.filter(key=self.KEY_CLEAN_CYCLES).update(value='0')
+
+    def _clear_state(self):
+        from core.models.system import SystemConfiguration
+        SystemConfiguration.objects.filter(
+            key__in=[
+                self.KEY_LEVEL, self.KEY_LEVEL_TS, self.KEY_CLEAN_CYCLES,
+                self.KEY_THROTTLE,
+            ]
+        ).delete()
+
+    def get_backlog_report(self, now) -> dict:
+        """Report current backlog health + governor state."""
+        from core.models_deliverables import Deliverable
+        from django.db.models import Count, Avg
+
+        # Status distribution
+        by_status = dict(
+            Deliverable.objects.values_list('status').annotate(
+                count=Count('id')
+            )
+        )
+
+        # Backlog KPIs
+        ready_count = by_status.get('ready', 0)
+        draft_count = by_status.get('draft', 0)
+
+        # p95 age
+        backlog_qs = Deliverable.objects.filter(
+            status__in=['ready', 'draft'],
+        ).order_by('created_at')
+
+        p95_age = 0.0
+        if backlog_qs.exists():
+            total = backlog_qs.count()
+            p95_idx = max(0, int(total * 0.95) - 1)
+            p95_item = backlog_qs[p95_idx]
+            p95_age = round(
+                (now - p95_item.created_at).total_seconds() / 3600, 1,
+            )
+
+        # Conversion rate
+        window = now - timedelta(days=self.KPI_WINDOW_DAYS)
+        window_total = Deliverable.objects.filter(
+            created_at__gte=window,
+        ).count()
+        window_published = Deliverable.objects.filter(
+            created_at__gte=window, status='published',
+        ).count()
+        conversion = round(
+            (window_published / max(window_total, 1)) * 100, 1,
+        )
+
+        # Protected items count
+        from django.db.models import Q
+        protected = Deliverable.objects.filter(
+            status__in=['ready', 'draft'],
+        ).filter(
+            Q(is_pinned=True)
+            | Q(is_saved=True)
+            | Q(is_starred=True)
+            | Q(quality_score__gte=self.QUALITY_FLOOR)
+            | Q(initiative__isnull=False)
+        ).count()
+
+        # Stale items eligible for archive
+        stale_cutoff = now - timedelta(days=self.STALE_AGE_DAYS)
+        stale_archivable = Deliverable.objects.filter(
+            status__in=['draft', 'ready'],
+            created_at__lt=stale_cutoff,
+            is_pinned=False,
+            is_saved=False,
+            is_starred=False,
+            initiative__isnull=True,
+        ).exclude(
+            quality_score__gte=self.QUALITY_FLOOR,
+        ).count()
+
+        # Governor state
+        level = self._get_level()
+        level_ts = self._get_level_timestamp()
+
+        return {
+            'status_distribution': by_status,
+            'publish_ready_count': ready_count,
+            'draft_count': draft_count,
+            'p95_age_hours': p95_age,
+            'conversion_rate_pct': conversion,
+            'window_days': self.KPI_WINDOW_DAYS,
+            'protected_items': protected,
+            'stale_archivable': stale_archivable,
+            'stale_age_days': self.STALE_AGE_DAYS,
+            'governor_level': level,
+            'governor_level_since': level_ts.isoformat() if level_ts else None,
+            'level_description': {
+                0: 'Normal operation',
+                1: 'Generation throttled',
+                2: 'Governance attention batch active',
+                3: 'Auto-archiving stale items',
+            }.get(level, 'Unknown'),
+            'throttle_active': self._is_throttled(),
+        }
+
+    def _is_throttled(self) -> bool:
+        from core.models.system import SystemConfiguration
+        entry = SystemConfiguration.objects.filter(key=self.KEY_THROTTLE).first()
+        return entry is not None and entry.value == 'true'
 
 
 # ── Policy Self-Tuning Engine ────────────────────────────────────────────────

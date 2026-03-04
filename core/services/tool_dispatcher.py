@@ -12237,6 +12237,17 @@ RESEARCH DATA:
                 **report,
             }
 
+        elif action == 'backlog_report':
+            # Show deliverable backlog health + governor state
+            from core.services.ops_autopilot import BacklogGovernor
+
+            governor = BacklogGovernor()
+            report = governor.get_backlog_report(timezone.now())
+            return {
+                'action': 'backlog_report',
+                **report,
+            }
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason
