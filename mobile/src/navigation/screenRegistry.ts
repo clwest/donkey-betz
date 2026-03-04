@@ -11,6 +11,8 @@ import AgentsScreen from '../screens/AgentsScreen';
 import MediaScreen from '../screens/MediaScreen';
 import DiagnosticsScreen from '../screens/DiagnosticsScreen';
 import DeliberationHomeScreen from '../screens/deliberation/DeliberationHomeScreen';
+import WorkspaceScreen from '../screens/WorkspaceScreen';
+import IntelligenceScreen from '../screens/IntelligenceScreen';
 import SettingsScreen from '../screens/settings/SettingsScreen';
 
 // ── Registry ─────────────────────────────────────────────────────────────────
@@ -47,7 +49,7 @@ const SCREEN_REGISTRY: Record<string, ScreenEntry> = {
     icon: 'lock',
   },
   '/workspace': {
-    component: PlaceholderScreen,
+    component: WorkspaceScreen,
     icon: 'briefcase',
   },
   '/content': {
@@ -68,7 +70,7 @@ const SCREEN_REGISTRY: Record<string, ScreenEntry> = {
     icon: 'target',
   },
   '/intelligence': {
-    component: PlaceholderScreen,
+    component: IntelligenceScreen,
     icon: 'cpu',
   },
   '/agents': {
