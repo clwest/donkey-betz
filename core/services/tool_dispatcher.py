@@ -11714,6 +11714,69 @@ RESEARCH DATA:
                 'changes_today': evaluation.get('changes_today', 0),
             }
 
+        elif action == 'budget_report':
+            # Show current budget status, spend, and enforcement mode
+            from core.services.ops_autopilot import BudgetController
+            from django.utils import timezone as tz
+            controller = BudgetController()
+            try:
+                report = controller.get_budget_report(tz.now())
+            except Exception as e:
+                return {
+                    'action': 'budget_report',
+                    'error': f'Budget report failed: {str(e)[:200]}',
+                }
+
+            report_lines = ['## Budget Report\n']
+            report_lines.append(
+                f'**Mode:** {report["mode"].upper()}'
+            )
+            report_lines.append(
+                f'**Daily:** ${report["daily_spend"]:.2f} / '
+                f'${report["daily_cap"]:.2f} '
+                f'({report["daily_utilization"]:.0%}) — '
+                f'{report["daily_calls"]} calls'
+            )
+            report_lines.append(
+                f'**Hourly:** ${report["hourly_spend"]:.2f} / '
+                f'${report["hourly_cap"]:.2f} '
+                f'({report["hourly_utilization"]:.0%}) — '
+                f'{report["hourly_calls"]} calls'
+            )
+
+            if report.get('top_agents'):
+                report_lines.append('\n### Top Spenders (24h)')
+                for a in report['top_agents']:
+                    report_lines.append(
+                        f'- **{a["agent_name"]}**: '
+                        f'${a["total_cost"]:.4f} '
+                        f'({a["call_count"]} calls)'
+                    )
+
+            if report.get('top_models'):
+                report_lines.append('\n### Top Models (24h)')
+                for m in report['top_models']:
+                    report_lines.append(
+                        f'- **{m["provider"]}/{m["model_id"]}**: '
+                        f'${m["total_cost"]:.4f} '
+                        f'({m["call_count"]} calls)'
+                    )
+
+            report_lines.append(
+                f'\n**Soft limit:** {report["soft_limit_pct"]:.0%} '
+                f'→ model downgrade'
+            )
+            report_lines.append(
+                f'**Hard limit:** {report["hard_limit_pct"]:.0%} '
+                f'→ freeze non-critical'
+            )
+
+            return {
+                'action': 'budget_report',
+                'report': '\n'.join(report_lines),
+                **report,
+            }
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason
