@@ -27,10 +27,8 @@ import { useScreenAnalytics } from '../observability/analytics';
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatCurrency(n: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency', currency: 'USD',
-    minimumFractionDigits: 0, maximumFractionDigits: 0,
-  }).format(n);
+  if (n >= 0) return `$${Math.round(n).toLocaleString()}`;
+  return `-$${Math.round(Math.abs(n)).toLocaleString()}`;
 }
 
 function healthColor(score: number): string {
