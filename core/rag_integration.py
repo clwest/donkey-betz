@@ -4,10 +4,9 @@ Connects to unified_embeddings table for context retrieval
 """
 
 import logging
+import os
 import psycopg2
 from typing import List, Dict, Any, Optional
-from django.conf import settings
-import openai
 
 # Import the migrated encryption service
 from core.encryption_service import get_encryption_service
@@ -15,21 +14,12 @@ from core.encryption_service import get_encryption_service
 logger = logging.getLogger(__name__)
 
 def create_embedding(text: str, model: str = "text-embedding-3-small") -> Optional[List[float]]:
-    """Create embedding for a text using OpenAI"""
+    """Create embedding for a text using the centralized EmbeddingService (with Redis cache)."""
     try:
-        # Get API key from Django settings (same as AIProviderManager)
-        api_key = settings.AI_PROVIDERS.get('OPENAI_API_KEY')
-        
-        if not api_key:
-            logger.error("No OpenAI API key found in settings.AI_PROVIDERS")
-            return None
-            
-        client = openai.OpenAI(api_key=api_key)
-        response = client.embeddings.create(
-            input=text,
-            model=model
-        )
-        return response.data[0].embedding
+        from core.services.embedding_service import get_embedding_service
+        service = get_embedding_service()
+        result = service.create_embedding(text, model=model, agent_name='rag_integration', log_usage=True)
+        return result.embedding
     except Exception as e:
         logger.error(f"Failed to create embedding: {e}")
         return None
@@ -250,7 +240,7 @@ def search_personal_memories(
             host='localhost',
             database='ai_unified_platform',
             user='ai_unified_user',
-            password='[REDACTED - HISTORICAL SECRET]'
+            password=os.environ.get('AI_UNIFIED_DB_PASS', '')
         )
         
         with conn.cursor() as cursor:
