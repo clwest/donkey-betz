@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { Feather } from '@expo/vector-icons';
 import type {
   ActivityItem,
   AttentionStats,
@@ -18,8 +19,19 @@ import type {
   Initiative,
 } from '../api/dashboard';
 import * as dashboardApi from '../api/dashboard';
+import { getStats as getBettingStats, type BettingStats } from '../api/betting';
+import { getHub, type StockHub } from '../api/stocks';
+import { getRevenueDashboard, type Revenue } from '../api/portfolio';
+import { useScreenAnalytics } from '../observability/analytics';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatCurrency(n: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency', currency: 'USD',
+    minimumFractionDigits: 0, maximumFractionDigits: 0,
+  }).format(n);
+}
 
 function healthColor(score: number): string {
   if (score >= 80) return '#22c55e';
@@ -60,6 +72,7 @@ function timeAgo(timestamp: string): string {
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardScreen() {
+  useScreenAnalytics('Dashboard');
   const navigation = useNavigation<any>();
 
   const [loading, setLoading] = useState(true);
@@ -73,6 +86,11 @@ export default function DashboardScreen() {
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
 
+  // Money-making verticals
+  const [betting, setBetting] = useState<BettingStats | null>(null);
+  const [stockHub, setStockHub] = useState<StockHub | null>(null);
+  const [revenue, setRevenue] = useState<Revenue | null>(null);
+
   const fetchAll = useCallback(async () => {
     setError(null);
     const results = await Promise.allSettled([
@@ -82,6 +100,9 @@ export default function DashboardScreen() {
       dashboardApi.getInitiatives(),
       dashboardApi.getRecentActivity(),
       dashboardApi.getDashboardStats(),
+      getBettingStats(),
+      getHub(),
+      getRevenueDashboard(),
     ]);
 
     // Accept partial data — show what we can
@@ -91,6 +112,9 @@ export default function DashboardScreen() {
     if (results[3].status === 'fulfilled') setInitiatives(results[3].value);
     if (results[4].status === 'fulfilled') setActivity(results[4].value.activities ?? []);
     if (results[5].status === 'fulfilled') setStats(results[5].value);
+    if (results[6].status === 'fulfilled') setBetting(results[6].value);
+    if (results[7].status === 'fulfilled') setStockHub(results[7].value);
+    if (results[8].status === 'fulfilled') setRevenue(results[8].value);
 
     const allFailed = results.every((r) => r.status === 'rejected');
     if (allFailed) setError('Failed to load dashboard data. Pull to retry.');
@@ -133,6 +157,77 @@ export default function DashboardScreen() {
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
+
+      {/* ── Money-Making Verticals ────────────────────────── */}
+      <View style={styles.verticalsRow}>
+        {/* Betting snapshot */}
+        <TouchableOpacity
+          style={[styles.verticalCard, { borderColor: 'rgba(99,102,241,0.3)' }]}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('/betting')}
+        >
+          <Feather name="trending-up" size={18} color="#818cf8" />
+          <Text style={styles.verticalLabel}>Betting</Text>
+          {betting ? (
+            <>
+              <Text style={[styles.verticalValue, { color: betting.total_profit_loss >= 0 ? '#22c55e' : '#ef4444' }]}>
+                {betting.total_profit_loss >= 0 ? '+' : ''}{formatCurrency(betting.total_profit_loss)}
+              </Text>
+              <Text style={styles.verticalMeta}>
+                {betting.win_rate > 0 ? `${Math.round(betting.win_rate)}% WR` : `${betting.pending} pending`}
+              </Text>
+            </>
+          ) : (
+            <Text style={styles.verticalMeta}>--</Text>
+          )}
+        </TouchableOpacity>
+
+        {/* Stocks snapshot */}
+        <TouchableOpacity
+          style={[styles.verticalCard, { borderColor: 'rgba(6,182,212,0.3)' }]}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('/stocks')}
+        >
+          <Feather name="activity" size={18} color="#06b6d4" />
+          <Text style={styles.verticalLabel}>Stocks</Text>
+          {stockHub ? (
+            <>
+              <Text style={[styles.verticalValue, { color: '#06b6d4' }]}>
+                {stockHub.stats.total_alerts}
+              </Text>
+              <Text style={styles.verticalMeta}>
+                {stockHub.stats.accuracy_7d != null
+                  ? `${Math.round(stockHub.stats.accuracy_7d)}% acc`
+                  : `${stockHub.stats.total_predictions} pred`}
+              </Text>
+            </>
+          ) : (
+            <Text style={styles.verticalMeta}>--</Text>
+          )}
+        </TouchableOpacity>
+
+        {/* Portfolio snapshot */}
+        <TouchableOpacity
+          style={[styles.verticalCard, { borderColor: 'rgba(34,197,94,0.3)' }]}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('/portfolio')}
+        >
+          <Feather name="dollar-sign" size={18} color="#22c55e" />
+          <Text style={styles.verticalLabel}>Portfolio</Text>
+          {revenue ? (
+            <>
+              <Text style={[styles.verticalValue, { color: '#22c55e' }]}>
+                {formatCurrency(revenue.total)}
+              </Text>
+              <Text style={styles.verticalMeta}>
+                {revenue.this_month > 0 ? `${formatCurrency(revenue.this_month)} /mo` : 'revenue'}
+              </Text>
+            </>
+          ) : (
+            <Text style={styles.verticalMeta}>--</Text>
+          )}
+        </TouchableOpacity>
+      </View>
 
       {/* ── System Health ────────────────────────────────── */}
       <TouchableOpacity style={styles.card} activeOpacity={0.7}>
@@ -511,6 +606,35 @@ const styles = StyleSheet.create({
     color: '#4b5563',
     fontSize: 11,
     marginLeft: 8,
+  },
+
+  // Money-making verticals
+  verticalsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 10,
+  },
+  verticalCard: {
+    flex: 1,
+    backgroundColor: '#1a1a2e',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    gap: 4,
+  },
+  verticalLabel: {
+    color: '#9ca3af',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  verticalValue: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  verticalMeta: {
+    color: '#6b7280',
+    fontSize: 10,
   },
 
   // Shared
