@@ -743,7 +743,8 @@ export default function VideoStudioPage() {
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-1.5">Large Upload (recommended)</label>
                       <p className="text-xs text-gray-500 mb-2">
-                        Uploads directly to cloud storage. Supports files up to several GB.
+                        Uploads directly to cloud storage. Max size: <strong className="text-gray-300">10 GB</strong>.
+                        Files over 10 GB must be compressed first (see ffmpeg tips below).
                       </p>
                       <div>
                         <label className="block text-xs text-gray-400 mb-1">Title (optional)</label>
@@ -834,7 +835,15 @@ export default function VideoStudioPage() {
                         ref={uploadInputRef}
                         type="file"
                         accept="video/mp4,video/quicktime,video/webm,video/x-msvideo,video/x-matroska,.mp4,.mov,.webm,.avi,.mkv"
-                        onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null
+                          if (file && file.size > 50 * 1024 * 1024) {
+                            showFeedback('error', `File is ${(file.size / 1024 / 1024).toFixed(0)} MB — Quick Upload max is 50 MB. Use Large Upload above.`)
+                            e.target.value = ''
+                            return
+                          }
+                          setUploadFile(file)
+                        }}
                         className="hidden"
                       />
                       <button
@@ -872,6 +881,17 @@ export default function VideoStudioPage() {
                           )}
                         </button>
                       )}
+                    </div>
+
+                    {/* Compression tips */}
+                    <div className="rounded-lg bg-dark-bg border border-dark-border p-3">
+                      <p className="text-xs font-medium text-gray-300 mb-1.5">Need to compress first?</p>
+                      <code className="block text-[11px] text-gray-400 bg-black/40 rounded px-2 py-1.5 break-all select-all">
+                        ffmpeg -i input.mov -c:v libx264 -crf 23 -preset medium -pix_fmt yuv420p -c:a aac -b:a 192k output.mp4
+                      </code>
+                      <p className="text-[10px] text-gray-500 mt-1">
+                        Typically compresses 10-20x (e.g. 23 GB screen recording to ~1-2 GB).
+                      </p>
                     </div>
                   </div>
                 )}
