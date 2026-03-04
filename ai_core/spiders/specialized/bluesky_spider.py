@@ -8,6 +8,7 @@ Uses BlueSky API when credentials available, falls back to social RSS feeds.
 
 import os
 import requests
+from ai_core.spiders.web_request_layer import cached_get
 import feedparser
 import logging
 import re
@@ -123,7 +124,7 @@ class BlueSkySpider:
                     search_url = "https://bsky.social/xrpc/app.bsky.feed.searchPosts"
                     params = {'q': term, 'limit': 15}
 
-                    response = requests.get(search_url, headers=headers, params=params, timeout=10)
+                    response = cached_get(search_url, headers=headers, params=params, timeout=10)
 
                     if response.status_code == 200:
                         data = response.json()

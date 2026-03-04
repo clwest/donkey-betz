@@ -6,7 +6,7 @@ Session 534: Simplified to work with spider network interface.
 Uses Reddit's public JSON endpoints (no API key required).
 """
 
-import requests
+from ai_core.spiders.web_request_layer import cached_get
 import logging
 from datetime import datetime
 from typing import Dict, List, Any
@@ -82,7 +82,7 @@ class RedditSpider:
         items = []
 
         try:
-            response = requests.get(
+            response = cached_get(
                 f"https://www.reddit.com/r/{subreddit}/hot.json",
                 headers=self.headers,
                 params={'limit': 10},

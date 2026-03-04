@@ -7,7 +7,7 @@ Uses Discord Bot API when configured, falls back to tech community RSS.
 """
 
 import os
-import requests
+from ai_core.spiders.web_request_layer import cached_get
 import feedparser
 import logging
 import re
@@ -105,7 +105,7 @@ class DiscordSpider:
             }
 
             # Get guilds the bot is in
-            guilds_response = requests.get(
+            guilds_response = cached_get(
                 f"{self.base_url}/users/@me/guilds",
                 headers=headers,
                 timeout=10
@@ -122,7 +122,7 @@ class DiscordSpider:
                 guild_name = guild['name']
 
                 # Get channels
-                channels_response = requests.get(
+                channels_response = cached_get(
                     f"{self.base_url}/guilds/{guild_id}/channels",
                     headers=headers,
                     timeout=10
@@ -139,7 +139,7 @@ class DiscordSpider:
                     channel_name = channel['name']
 
                     try:
-                        messages_response = requests.get(
+                        messages_response = cached_get(
                             f"{self.base_url}/channels/{channel_id}/messages",
                             headers=headers,
                             params={'limit': 20},

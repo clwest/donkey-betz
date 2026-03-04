@@ -4,11 +4,13 @@ Views for serving the AI agents visualization
 
 from django.shortcuts import render
 from django.views.decorators.cache import cache_page
+from django.views.decorators.http import require_GET
 
 # Removed csrf_exempt for security - CSRF tokens now properly handled
 # Removed xframe_options_exempt for clickjacking protection
 # Temporarily removed login_required to avoid authentication issues
 
+@require_GET
 @cache_page(60 * 5)  # Cache for 5 minutes
 def ai_agents_visualization(request):
     """Serve the AI agents learning visualization"""

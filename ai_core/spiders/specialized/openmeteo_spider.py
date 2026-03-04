@@ -6,7 +6,7 @@ Session 534: Simplified to work with spider network interface.
 Uses Open-Meteo API (free, no key required) and RSS fallbacks.
 """
 
-import requests
+from ai_core.spiders.web_request_layer import cached_get
 import feedparser
 import logging
 import re
@@ -103,7 +103,7 @@ class OpenMeteoSpider:
 
         for city_key, location in self.DEFAULT_LOCATIONS.items():
             try:
-                response = requests.get(
+                response = cached_get(
                     f"{self.BASE_URL}/forecast",
                     params={
                         'latitude': location['lat'],

@@ -7,7 +7,7 @@ Uses Unsplash API when credentials available, otherwise provides curated topics.
 """
 
 import os
-import requests
+from ai_core.spiders.web_request_layer import cached_get
 import logging
 from datetime import datetime
 from typing import Dict, List, Any
@@ -88,7 +88,7 @@ class UnsplashSpider:
             url = f"{self.BASE_URL}/photos"
             params = {'order_by': 'popular', 'per_page': 20}
 
-            response = requests.get(url, headers=self.headers, params=params, timeout=15)
+            response = cached_get(url, headers=self.headers, params=params, timeout=15)
             if response.status_code == 200:
                 photos = response.json()
 

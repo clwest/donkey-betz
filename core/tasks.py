@@ -312,8 +312,8 @@ def _circuit_breaker_record_timeout(agent_name: str, task: str):
         f"(task_hash={th})"
     )
 
-    if new_count >= 2:
-        # Breaker just tripped — create governance attention item
+    if new_count == 2:
+        # Breaker just tripped — create exactly one governance attention item
         try:
             from core.models_human_interface import HumanAttentionItem
             from django.contrib.auth import get_user_model

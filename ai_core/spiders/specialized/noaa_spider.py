@@ -6,7 +6,7 @@ Session 534: Simplified to work with spider network interface.
 Uses NOAA API when available, RSS fallback for weather news.
 """
 
-import requests
+from ai_core.spiders.web_request_layer import cached_get
 import feedparser
 import logging
 import re
@@ -111,7 +111,7 @@ class NOAASpider:
                 'Accept': 'application/geo+json'
             }
 
-            response = requests.get(
+            response = cached_get(
                 f"{self.BASE_URL}/alerts/active",
                 headers=headers,
                 params={'status': 'actual', 'limit': 30},

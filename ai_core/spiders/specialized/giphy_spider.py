@@ -7,7 +7,7 @@ Uses Giphy API for trending GIFs and meme culture.
 """
 
 import os
-import requests
+from ai_core.spiders.web_request_layer import cached_get
 import feedparser
 import logging
 import re
@@ -101,7 +101,7 @@ class GiphySpider:
 
         try:
             # Fetch trending GIFs
-            response = requests.get(
+            response = cached_get(
                 f"{self.BASE_URL}/gifs/trending",
                 params={
                     'api_key': self.api_key,
@@ -138,7 +138,7 @@ class GiphySpider:
                     })
 
             # Fetch trending stickers
-            response = requests.get(
+            response = cached_get(
                 f"{self.BASE_URL}/stickers/trending",
                 params={
                     'api_key': self.api_key,

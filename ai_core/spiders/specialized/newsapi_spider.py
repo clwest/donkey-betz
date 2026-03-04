@@ -7,7 +7,7 @@ Uses NewsAPI when key available, RSS fallback otherwise.
 """
 
 import os
-import requests
+from ai_core.spiders.web_request_layer import cached_get
 import feedparser
 import logging
 import re
@@ -104,7 +104,7 @@ class NewsAPISpider:
         # Fetch top headlines
         try:
             for category in ['technology', 'business', 'science']:
-                response = requests.get(
+                response = cached_get(
                     f"{self.BASE_URL}/top-headlines",
                     params={
                         'category': category,

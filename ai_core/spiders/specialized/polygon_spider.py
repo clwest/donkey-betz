@@ -7,7 +7,7 @@ Uses Polygon.io API when available, RSS fallback for market news.
 """
 
 import os
-import requests
+from ai_core.spiders.web_request_layer import cached_get
 import feedparser
 import logging
 import re
@@ -103,7 +103,7 @@ class PolygonSpider:
         # Fetch ticker snapshots
         for ticker in self.TRACKED_TICKERS[:5]:  # Limit for rate limits
             try:
-                response = requests.get(
+                response = cached_get(
                     f"{self.BASE_URL}/v2/snapshot/locale/us/markets/stocks/tickers/{ticker}",
                     params={'apiKey': self.api_key},
                     timeout=10

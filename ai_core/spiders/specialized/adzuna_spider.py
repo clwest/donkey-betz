@@ -7,7 +7,7 @@ Uses Adzuna API for job listings or falls back to job-related RSS feeds.
 """
 
 import os
-import requests
+from ai_core.spiders.web_request_layer import cached_get
 import feedparser
 import logging
 import re
@@ -112,7 +112,7 @@ class AdzunaSpider:
             }
 
             url = f"{self.BASE_URL}/jobs/us/search/1"
-            response = requests.get(url, params=params, timeout=10)
+            response = cached_get(url, params=params, timeout=10)
 
             if response.status_code == 200:
                 data = response.json()
