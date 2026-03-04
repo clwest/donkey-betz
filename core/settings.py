@@ -175,6 +175,7 @@ MIDDLEWARE = [
     # Session 789: Disabled for Railway - internal services share IPs causing false rate limits
     # 'core.rate_limiter.RateLimitMiddleware',  # Global rate limiting
     # 'core.auth_middleware.RateLimitingMiddleware',  # Enhanced rate limiting
+    'core.vip_middleware.VIPReadOnlyMiddleware',  # OVL: Block writes from VIP demo viewers
     'core.auth_middleware.APILoggingMiddleware',  # API request/response logging
     'core.middleware_error_capture.RequestErrorCaptureMiddleware',  # Session 1069: HTTP errors → PA telemetry
     'core.middleware.RangeRequestMiddleware',  # Session 111: HTTP range requests for video streaming

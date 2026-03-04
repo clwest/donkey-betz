@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-03-03 23:31
+**Generated:** 2026-03-03 23:37
 **Current Session:** 1075
 **Total Documentation:** 1818 files | 622,120 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,202 |
+| Total cross-references | 2,201 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/session-reports/README.md` | 60 | 📊 Session Reports |
+| `docs/archive/SYSTEM_CAPABILITIES-original/02_Content_Creation/README.md` | 60 | 🎨 AI CONTENT STUDIO - The Complete Creation Suite |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -217,7 +217,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 361 | 2026-03-03 23:30 |
+| INDEX.md | docs | 361 | 2026-03-03 23:31 |
 | OVL_CODE_RUNNER_V0.md | docs | 174 | 2026-03-03 23:21 |
 | stage3_timeline.md | initiatives | 71 | 2026-03-03 12:55 |
 | stage3_rubric_runbook.md | initiatives | 105 | 2026-03-03 12:55 |

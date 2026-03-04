@@ -264,6 +264,7 @@ class ToolDispatcher:
         self.register("analytics_tool", self._handle_analytics)
         self.register("discord_tool", self._handle_discord)
         self.register("mobile_tool", self._handle_mobile)
+        self.register("vip_invite_tool", self._handle_vip_invite)
 
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
@@ -13640,6 +13641,80 @@ def _redact_secrets(text: str) -> str:
     for pattern, replacement in patterns:
         text = re.sub(pattern, replacement, text)
     return text
+
+
+    def _handle_vip_invite(self, tool_name: str, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:
+        """Manage VIP magic-link invites for demo viewers."""
+        from django.contrib.auth import get_user_model
+        from core.models_vip_invite import VIPInvite
+        from django.conf import settings as django_settings
+
+        User = get_user_model()
+        action = payload.get('action', 'list')
+
+        try:
+            if action == 'list':
+                invites = VIPInvite.objects.select_related('created_by', 'redeemed_by').all()[:20]
+                return {
+                    'action': 'list',
+                    'total': VIPInvite.objects.count(),
+                    'invites': [{
+                        'id': str(inv.id),
+                        'label': inv.label,
+                        'is_valid': inv.is_valid,
+                        'token_expires_at': inv.token_expires_at.isoformat(),
+                        'redeemed_by': inv.redeemed_by.username if inv.redeemed_by else None,
+                        'revoked': inv.revoked_at is not None,
+                        'created_by': inv.created_by.username,
+                    } for inv in invites],
+                }
+
+            elif action == 'create':
+                label = payload.get('label', '')
+                admin_user = User.objects.filter(is_superuser=True).first()
+                if not admin_user:
+                    return {'error': 'No admin user found to create invite'}
+
+                invite = VIPInvite.objects.create(created_by=admin_user, label=label)
+                base_url = getattr(django_settings, 'FRONTEND_URL', 'https://donkey-betz-platform-production.up.railway.app')
+                accept_url = f"{base_url.rstrip('/')}/vip/accept?token={invite.token}"
+
+                return {
+                    'action': 'create',
+                    'id': str(invite.id),
+                    'token': invite.token,
+                    'accept_url': accept_url,
+                    'token_expires_at': invite.token_expires_at.isoformat(),
+                    'account_expires_at': invite.account_expires_at.isoformat(),
+                    'label': invite.label,
+                }
+
+            elif action == 'revoke':
+                invite_id = payload.get('id', '')
+                if not invite_id:
+                    return {'error': 'Provide invite id to revoke'}
+                try:
+                    invite = VIPInvite.objects.get(id=invite_id)
+                except VIPInvite.DoesNotExist:
+                    return {'error': f'Invite {invite_id} not found'}
+                if invite.revoked_at:
+                    return {'error': 'Already revoked'}
+
+                from django.utils import timezone
+                invite.revoked_at = timezone.now()
+                invite.save(update_fields=['revoked_at'])
+                if invite.redeemed_by:
+                    invite.redeemed_by.is_active = False
+                    invite.redeemed_by.save(update_fields=['is_active'])
+
+                return {'action': 'revoke', 'id': str(invite.id), 'status': 'revoked'}
+
+            else:
+                return {'error': f'Unknown action: {action}. Use list, create, or revoke.'}
+
+        except Exception as e:
+            logger.error(f"[VIP_INVITE] Error: {e}", exc_info=True)
+            return {'error': str(e)}
 
 
 # Singleton instance
