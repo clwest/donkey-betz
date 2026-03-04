@@ -525,6 +525,15 @@ class AutopilotAction(models.Model):
         ('retry_deliberation', 'Retry Failed Deliberation'),
         ('content_sweep', 'Content Pipeline Sweep'),
         ('auto_resolve', 'Auto-resolve Attention Item'),
+        ('content_publish', 'Content Auto-Publish'),
+    ]
+
+    VERIFICATION_STATES = [
+        ('pending', 'Pending Verification'),
+        ('passed', 'Verification Passed'),
+        ('failed', 'Verification Failed'),
+        ('rolled_back', 'Rolled Back'),
+        ('skipped', 'Verification Skipped'),
     ]
 
     id = models.AutoField(primary_key=True)
@@ -536,6 +545,20 @@ class AutopilotAction(models.Model):
     evidence = models.JSONField(default=dict, help_text='Signature IDs, counts, sample exec IDs, etc.')
     result = models.JSONField(default=dict, help_text='Outcome of the action')
     deploy_sha = models.CharField(max_length=40, blank=True, default='')
+
+    # Verification + rollback fields (Session 1086 — safety layer)
+    verification_state = models.CharField(
+        max_length=20, choices=VERIFICATION_STATES,
+        default='skipped', db_index=True,
+        help_text='Pre/post verification outcome',
+    )
+    verification_result = models.JSONField(
+        default=dict, blank=True,
+        help_text='Pre-check results, post-verification SLO deltas, rollback details',
+    )
+    rolled_back = models.BooleanField(default=False)
+    rolled_back_at = models.DateTimeField(null=True, blank=True)
+    rollback_reason = models.CharField(max_length=255, blank=True, default='')
 
     class Meta:
         app_label = 'core'
