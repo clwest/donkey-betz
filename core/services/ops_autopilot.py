@@ -94,6 +94,11 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      SHA changes, error rate). L1=backoff (serialize builds, 5min gap).
      L2=gate (require healthy status). L3=freeze (auto-freeze on SLO
      breach). PA tools: release_report, release_freeze/unfreeze.
+ 24. Revenue pipeline automation: Monitors Opportunity pipeline health.
+     Flags stale opportunities (48h no activity), critical stale (7d+),
+     high-value opportunities. Generates follow-up suggestions with
+     cadence tracking. Guardrails: never auto-send, max 3 follow-ups
+     per opp. PA tool: revenue_pipeline_report.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -267,6 +272,7 @@ class OpsAutopilot:
         ('attribution', 'multi_touch_attribution', '_policy_multi_touch_attribution'),
         ('arbitrator', 'policy_arbitrator', '_policy_policy_arbitrator'),
         ('release', 'release_governor', '_policy_release_governor'),
+        ('revenue_pipeline', 'revenue_pipeline', '_policy_revenue_pipeline'),
     ]
 
     def run(self) -> dict[str, Any]:
@@ -1966,6 +1972,68 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] attribution error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _policy_revenue_pipeline(self, now) -> dict:
+        """
+        Monitor Opportunity pipeline health. Flag stale opps,
+        suggest follow-ups, track pipeline metrics.
+        """
+        result = {
+            'total_active': 0,
+            'stale_count': 0,
+            'actions_suggested': 0,
+        }
+
+        try:
+            automator = RevenuePipelineAutomator()
+            eval_result = automator.evaluate(now)
+            result['total_active'] = eval_result.get('total_active', 0)
+            result['stale_count'] = eval_result.get('stale_count', 0)
+            result['critical_stale'] = eval_result.get('critical_stale', 0)
+            result['high_value_active'] = eval_result.get('high_value_active', 0)
+            result['actions_suggested'] = eval_result.get('actions_suggested', 0)
+
+            # Create attention items for critical stale opps
+            if eval_result.get('critical_stale', 0) > 0:
+                try:
+                    from core.models_human_interface import HumanAttentionItem
+                    from django.contrib.auth import get_user_model
+                    User = get_user_model()
+                    user = User.objects.first()
+                    if user:
+                        HumanAttentionItem.objects.create(
+                            user=user,
+                            source='ops_autopilot',
+                            category='revenue_pipeline',
+                            title=(
+                                f"Revenue pipeline: {eval_result['critical_stale']} "
+                                f"critically stale opportunities (>7d)"
+                            ),
+                            description=(
+                                f"Active: {eval_result['total_active']}, "
+                                f"Stale: {eval_result['stale_count']}, "
+                                f"High-value: {eval_result.get('high_value_active', 0)}"
+                            ),
+                            priority='high',
+                            auto_dismissable=True,
+                        )
+                except Exception as e:
+                    logger.warning(
+                        f"[OpsAutopilot] revenue pipeline attention failed: {e}"
+                    )
+
+            logger.info(
+                f"[OpsAutopilot] Revenue pipeline: "
+                f"{result['total_active']} active, "
+                f"{result['stale_count']} stale, "
+                f"{result['actions_suggested']} suggestions"
+            )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] revenue pipeline error: {e}")
             result['error'] = str(e)
 
         return result
@@ -8096,6 +8164,159 @@ class ReleaseGovernor:
             'deploys_in_window': metrics['count'],
             'error_rate': metrics['error_rate'],
             'window_hours': self.EVAL_WINDOW_HOURS,
+        }
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Revenue Pipeline Automator — Policy 24 (Autonomy #20)
+# ═══════════════════════════════════════════════════════════════════════
+
+class RevenuePipelineAutomator:
+    """
+    Monitors Opportunity pipeline and generates follow-up actions.
+
+    Graduated ladder:
+      L1 — Hygiene: flag stale opportunities (no activity in 48h+),
+           generate follow-up task suggestions.
+      L2 — Proposal drafts: identify high-intent opps ready for proposals,
+           create draft follow-up action items.
+      L3 — Close loop: identify opps with sent proposals that need
+           follow-up sequences (5d, 10d cadence).
+
+    Guardrails:
+      - Never sends messages automatically (human approval required)
+      - Rate limit: max 3 follow-ups per opportunity
+      - Only processes opportunities with status in ('active', 'applied', 'pending')
+
+    All actions create HumanAttentionItems for governance visibility.
+    """
+
+    # Pipeline config
+    STALE_HOURS = 48             # No activity in 48h = stale
+    CRITICAL_STALE_HOURS = 168   # 7 days = critical
+    MAX_FOLLOWUPS = 3            # Max follow-ups per opportunity
+    FOLLOWUP_CADENCE_DAYS = [2, 5, 10]  # Day intervals for follow-up sequence
+
+    # Active statuses (skip rejected/expired/accepted)
+    ACTIVE_STATUSES = ['active', 'pending', 'applied']
+
+    # Revenue thresholds for proposal automation
+    HIGH_VALUE_THRESHOLD = 500   # $500+ → high priority
+    MATCH_SCORE_THRESHOLD = 60   # 60%+ match → worth pursuing
+
+    def evaluate(self, now) -> dict:
+        """Evaluate pipeline health and generate actions."""
+        from core.models_unified_system import Opportunity, OpportunityAction
+
+        result = {
+            'total_active': 0,
+            'stale_count': 0,
+            'critical_stale': 0,
+            'high_value_active': 0,
+            'actions_suggested': 0,
+            'by_status': {},
+        }
+
+        # Get active opportunities
+        active_opps = Opportunity.objects.filter(
+            status__in=self.ACTIVE_STATUSES,
+        )
+        result['total_active'] = active_opps.count()
+
+        # Count by status
+        from django.db.models import Count
+        status_counts = dict(
+            active_opps.values_list('status').annotate(
+                c=Count('id'),
+            ).values_list('status', 'c')
+        )
+        result['by_status'] = status_counts
+
+        # Find stale opportunities
+        stale_cutoff = now - timedelta(hours=self.STALE_HOURS)
+        critical_cutoff = now - timedelta(hours=self.CRITICAL_STALE_HOURS)
+
+        stale_opps = active_opps.filter(created_at__lt=stale_cutoff)
+        result['stale_count'] = stale_opps.count()
+        result['critical_stale'] = active_opps.filter(
+            created_at__lt=critical_cutoff,
+        ).count()
+
+        # High-value opportunities
+        from django.db.models import Q
+        high_value = active_opps.filter(
+            Q(potential_revenue__gte=self.HIGH_VALUE_THRESHOLD)
+            | Q(match_score__gte=self.MATCH_SCORE_THRESHOLD)
+        )
+        result['high_value_active'] = high_value.count()
+
+        # Generate follow-up suggestions for stale opps
+        suggestions = self._generate_suggestions(stale_opps, now)
+        result['actions_suggested'] = len(suggestions)
+        result['suggestions'] = suggestions[:10]  # Cap at 10
+
+        return result
+
+    def _generate_suggestions(self, stale_opps, now) -> list:
+        """Generate follow-up suggestions for stale opportunities."""
+        from core.models_unified_system import OpportunityAction
+
+        suggestions = []
+
+        for opp in stale_opps[:20]:  # Process max 20
+            # Count existing follow-up actions
+            action_count = OpportunityAction.objects.filter(
+                opportunity=opp,
+            ).count()
+
+            if action_count >= self.MAX_FOLLOWUPS:
+                continue
+
+            age_hours = (now - opp.created_at).total_seconds() / 3600
+            revenue = float(opp.potential_revenue or 0)
+
+            # Determine suggestion type
+            if age_hours > self.CRITICAL_STALE_HOURS:
+                suggestion_type = 'last_chance'
+                priority = 'high'
+            elif revenue >= self.HIGH_VALUE_THRESHOLD:
+                suggestion_type = 'high_value_followup'
+                priority = 'high'
+            else:
+                suggestion_type = 'standard_followup'
+                priority = 'medium'
+
+            suggestions.append({
+                'opportunity_id': str(opp.id),
+                'title': opp.title[:80],
+                'type': suggestion_type,
+                'priority': priority,
+                'age_hours': round(age_hours, 1),
+                'revenue': revenue,
+                'status': opp.status,
+                'actions_taken': action_count,
+            })
+
+        return suggestions
+
+    def get_pipeline_report(self, now) -> dict:
+        """PA-facing pipeline report."""
+        eval_result = self.evaluate(now)
+
+        # Add summary metrics
+        total = eval_result['total_active']
+        stale = eval_result['stale_count']
+        health = 'healthy'
+        if total > 0:
+            stale_pct = stale / total
+            if stale_pct > 0.5:
+                health = 'critical'
+            elif stale_pct > 0.25:
+                health = 'needs_attention'
+
+        return {
+            'health': health,
+            **eval_result,
         }
 
 

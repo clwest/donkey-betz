@@ -12339,6 +12339,18 @@ RESEARCH DATA:
                 **result,
             }
 
+        elif action == 'revenue_pipeline_report':
+            # Revenue pipeline health report
+            from django.utils import timezone as tz
+            from core.services.ops_autopilot import RevenuePipelineAutomator
+
+            automator = RevenuePipelineAutomator()
+            report = automator.get_pipeline_report(tz.now())
+            return {
+                'action': 'revenue_pipeline_report',
+                **report,
+            }
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason
