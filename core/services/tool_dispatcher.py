@@ -12201,6 +12201,31 @@ RESEARCH DATA:
                 'entries': entries,
             }
 
+        elif action == 'timeout_ladder_report':
+            # Show agents currently on the timeout remediation ladder
+            from core.services.ops_autopilot import TimeoutRemediationPlaybook
+
+            playbook = TimeoutRemediationPlaybook()
+            report = playbook.get_ladder_report()
+
+            # Add recent ladder actions
+            recent_actions = list(
+                AutopilotAction.objects.filter(
+                    policy='timeout_remediation_playbook',
+                ).order_by('-created_at').values(
+                    'agent_name', 'action_type', 'evidence', 'created_at',
+                )[:10]
+            )
+            for a in recent_actions:
+                if hasattr(a['created_at'], 'isoformat'):
+                    a['created_at'] = a['created_at'].isoformat()
+
+            return {
+                'action': 'timeout_ladder_report',
+                **report,
+                'recent_actions': recent_actions,
+            }
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason
