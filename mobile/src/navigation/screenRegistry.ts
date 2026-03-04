@@ -11,6 +11,7 @@ import AgentsScreen from '../screens/AgentsScreen';
 import MediaScreen from '../screens/MediaScreen';
 import DiagnosticsScreen from '../screens/DiagnosticsScreen';
 import DeliberationHomeScreen from '../screens/deliberation/DeliberationHomeScreen';
+import SettingsScreen from '../screens/settings/SettingsScreen';
 
 // ── Registry ─────────────────────────────────────────────────────────────────
 // Maps manifest route paths → RN screen components.
@@ -83,7 +84,7 @@ const SCREEN_REGISTRY: Record<string, ScreenEntry> = {
     icon: 'dollar-sign',
   },
   '/settings': {
-    component: PlaceholderScreen,
+    component: SettingsScreen,
     icon: 'settings',
   },
   '/diagnostics': {
