@@ -694,9 +694,9 @@ class UnifiedPAEntrypoint:
                 assistant_turn['response_id'] = response_id
             self._conversation_history.append(assistant_turn)
 
-            # Keep only last 20 turns
-            if len(self._conversation_history) > 40:
-                self._conversation_history = self._conversation_history[-40:]
+            # Keep only last 20 turns (was 40 — each turn is re-sent to GPT-5.2)
+            if len(self._conversation_history) > 20:
+                self._conversation_history = self._conversation_history[-20:]
 
             latency_ms = int((time.time() - start_time) * 1000)
 
@@ -1104,7 +1104,7 @@ class UnifiedPAEntrypoint:
                 tool_result_inputs.append({
                     "type": "function_call_output",
                     "call_id": call_id,
-                    "output": self._truncate_tool_output(output, 16000),
+                    "output": self._truncate_tool_output(output, 8000),
                 })
 
             # Feed tool results back — use previous_response_id for efficiency
@@ -1177,7 +1177,7 @@ class UnifiedPAEntrypoint:
         return content
 
     @staticmethod
-    def _truncate_tool_output(output: str, limit: int = 16000) -> str:
+    def _truncate_tool_output(output: str, limit: int = 8000) -> str:
         """
         Session 1065: Smart truncation that preserves valid JSON structure.
 
