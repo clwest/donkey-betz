@@ -189,6 +189,13 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      PA tools: security_permission_drift, security_abuse_queue,
      security_containment_plan, security_secrets_scan.
 
+ 38. Privacy, data governance & compliance autonomy: ComplianceEngine enforces
+     data-handling rules — detects PII in deliverables/logs, monitors data
+     retention TTLs, audits agent data access patterns, generates compliance
+     reports. Read-only scanning; remediation is recommendation-only.
+     PA tools: compliance_pii_scan, compliance_retention_report,
+     compliance_access_audit, compliance_report.
+
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
 → execute → verify → rollback cycle (ActionVerifier). Successful remediations
@@ -375,6 +382,7 @@ class OpsAutopilot:
         ('growth_distribution', 'growth_distribution', '_policy_growth_distribution'),
         ('capacity_planning', 'capacity_planning', '_policy_capacity_planning'),
         ('security_abuse', 'security_abuse', '_policy_security_abuse'),
+        ('compliance', 'compliance', '_policy_compliance'),
     ]
 
     def run(self) -> dict[str, Any]:
@@ -2548,6 +2556,35 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] security abuse error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _policy_compliance(self, now) -> dict:
+        """
+        Monitor data governance: PII exposure in content,
+        retention TTL compliance, agent data access patterns.
+        """
+        result = {
+            'pii_findings': 0,
+            'retention_violations': 0,
+            'healthy': True,
+        }
+
+        try:
+            engine = ComplianceEngine()
+            eval_result = engine.evaluate(now)
+            result.update(eval_result)
+
+            if not eval_result.get('healthy', True):
+                logger.info(
+                    f"[OpsAutopilot] Compliance: "
+                    f"{eval_result.get('pii_findings', 0)} PII findings, "
+                    f"{eval_result.get('retention_violations', 0)} retention violations"
+                )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] compliance error: {e}")
             result['error'] = str(e)
 
         return result
@@ -13766,3 +13803,329 @@ class SecurityEngine:
             'issue_count': len(issues),
             'healthy': len(issues) == 0,
         }
+
+
+class ComplianceEngine:
+    """
+    Privacy, data governance & compliance — scans for PII exposure,
+    monitors data retention TTLs, audits agent data access patterns,
+    and generates compliance summary reports.
+
+    Data sources:
+    - Deliverable/SelfBlog: content scanning for PII
+    - AgentExecution: agent data access patterns
+    - CockpitAuditLog: data mutation audit trail
+    - User models: consent/retention tracking
+
+    Guardrails:
+    - Read-only analysis — never modifies or deletes data
+    - Recommendations only; human approval required for any action
+    """
+
+    # PII patterns — conservative regex for common PII types
+    PII_PATTERNS = [
+        (r'\b\d{3}-\d{2}-\d{4}\b', 'ssn', 'Social Security Number'),
+        (r'\b\d{16}\b', 'credit_card_16', 'Credit Card (16 digits)'),
+        (r'\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b', 'credit_card', 'Credit Card'),
+        (r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', 'email', 'Email Address'),
+        (r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b', 'phone', 'Phone Number'),
+    ]
+
+    # Retention thresholds (days) — content older than this should be reviewed
+    RETENTION_THRESHOLDS = {
+        'agent_execution': 90,
+        'audit_log': 180,
+        'spider_data': 60,
+        'conversation_memory': 365,
+    }
+
+    def get_pii_scan(self, days: int = 7, limit: int = 50) -> dict:
+        """Scan recent deliverables and blogs for PII patterns."""
+        import re
+        from django.utils import timezone as tz
+
+        cutoff = tz.now() - timedelta(days=days)
+        findings = []
+
+        # Scan Deliverables
+        try:
+            from core.models_deliverables import Deliverable
+            deliverables = list(
+                Deliverable.objects.filter(created_at__gte=cutoff)
+                .values('id', 'title', 'deliverable_type', 'created_at')
+                .order_by('-created_at')[:limit]
+            )
+            for d in deliverables:
+                try:
+                    obj = Deliverable.objects.get(id=d['id'])
+                    content = str(obj.content or '')
+                    for pattern, pii_type, label in self.PII_PATTERNS:
+                        matches = re.findall(pattern, content)
+                        if matches:
+                            findings.append({
+                                'source': 'deliverable',
+                                'source_id': str(d['id']),
+                                'title': d.get('title', ''),
+                                'pii_type': pii_type,
+                                'pii_label': label,
+                                'match_count': len(matches),
+                                'created_at': str(d['created_at']),
+                            })
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+        # Scan SelfBlogs
+        try:
+            from core.models_unified_system import SelfBlog
+            blogs = list(
+                SelfBlog.objects.filter(created_at__gte=cutoff)
+                .values('id', 'title', 'created_at')
+                .order_by('-created_at')[:limit]
+            )
+            for b in blogs:
+                try:
+                    obj = SelfBlog.objects.get(id=b['id'])
+                    content = str(getattr(obj, 'content', '') or '')
+                    for pattern, pii_type, label in self.PII_PATTERNS:
+                        matches = re.findall(pattern, content)
+                        if matches:
+                            findings.append({
+                                'source': 'self_blog',
+                                'source_id': str(b['id']),
+                                'title': b.get('title', ''),
+                                'pii_type': pii_type,
+                                'pii_label': label,
+                                'match_count': len(matches),
+                                'created_at': str(b['created_at']),
+                            })
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+        return {
+            'period_days': days,
+            'findings': findings,
+            'finding_count': len(findings),
+            'has_pii': len(findings) > 0,
+            'by_type': self._group_by_key(findings, 'pii_type'),
+        }
+
+    def get_retention_report(self) -> dict:
+        """Check data retention compliance across key tables."""
+        from django.utils import timezone as tz
+
+        now = tz.now()
+        violations = []
+
+        # Check AgentExecution retention
+        try:
+            from core.models_unified_system import AgentExecution
+            threshold = now - timedelta(days=self.RETENTION_THRESHOLDS['agent_execution'])
+            old_count = AgentExecution.objects.filter(created_at__lt=threshold).count()
+            total = AgentExecution.objects.count()
+            if old_count > 0:
+                violations.append({
+                    'table': 'AgentExecution',
+                    'threshold_days': self.RETENTION_THRESHOLDS['agent_execution'],
+                    'records_past_retention': old_count,
+                    'total_records': total,
+                    'severity': 'warning' if old_count < 1000 else 'critical',
+                    'recommendation': f'Review {old_count} records older than {self.RETENTION_THRESHOLDS["agent_execution"]} days',
+                })
+        except Exception:
+            pass
+
+        # Check CockpitAuditLog retention
+        try:
+            from core.models_cockpit_audit import CockpitAuditLog
+            threshold = now - timedelta(days=self.RETENTION_THRESHOLDS['audit_log'])
+            old_count = CockpitAuditLog.objects.filter(created_at__lt=threshold).count()
+            total = CockpitAuditLog.objects.count()
+            if old_count > 0:
+                violations.append({
+                    'table': 'CockpitAuditLog',
+                    'threshold_days': self.RETENTION_THRESHOLDS['audit_log'],
+                    'records_past_retention': old_count,
+                    'total_records': total,
+                    'severity': 'warning' if old_count < 500 else 'critical',
+                    'recommendation': f'Review {old_count} audit records older than {self.RETENTION_THRESHOLDS["audit_log"]} days',
+                })
+        except Exception:
+            pass
+
+        # Check SpiderData retention
+        try:
+            from core.models_unified_system import SpiderData
+            threshold = now - timedelta(days=self.RETENTION_THRESHOLDS['spider_data'])
+            old_count = SpiderData.objects.filter(created_at__lt=threshold).count()
+            total = SpiderData.objects.count()
+            if old_count > 0:
+                violations.append({
+                    'table': 'SpiderData',
+                    'threshold_days': self.RETENTION_THRESHOLDS['spider_data'],
+                    'records_past_retention': old_count,
+                    'total_records': total,
+                    'severity': 'info' if old_count < 5000 else 'warning',
+                    'recommendation': f'Review {old_count} spider records older than {self.RETENTION_THRESHOLDS["spider_data"]} days',
+                })
+        except Exception:
+            pass
+
+        # Check ConversationMemory retention
+        try:
+            from core.models.conversations import ConversationMemory
+            threshold = now - timedelta(days=self.RETENTION_THRESHOLDS['conversation_memory'])
+            old_count = ConversationMemory.objects.filter(created_at__lt=threshold).count()
+            total = ConversationMemory.objects.count()
+            if old_count > 0:
+                violations.append({
+                    'table': 'ConversationMemory',
+                    'threshold_days': self.RETENTION_THRESHOLDS['conversation_memory'],
+                    'records_past_retention': old_count,
+                    'total_records': total,
+                    'severity': 'info',
+                    'recommendation': f'Review {old_count} conversation memories older than {self.RETENTION_THRESHOLDS["conversation_memory"]} days',
+                })
+        except Exception:
+            pass
+
+        return {
+            'thresholds': self.RETENTION_THRESHOLDS,
+            'violations': violations,
+            'violation_count': len(violations),
+            'has_violations': len(violations) > 0,
+        }
+
+    def get_access_audit(self, hours: int = 24) -> dict:
+        """Audit agent data access patterns for anomalies."""
+        from django.utils import timezone as tz
+        from django.db.models import Count
+
+        cutoff = tz.now() - timedelta(hours=hours)
+        anomalies = []
+
+        # Check agent execution frequency — flag agents with unusually high activity
+        try:
+            from core.models_unified_system import AgentExecution
+            agent_counts = list(
+                AgentExecution.objects.filter(created_at__gte=cutoff)
+                .values('agent__name')
+                .annotate(exec_count=Count('id'))
+                .order_by('-exec_count')[:20]
+            )
+
+            if agent_counts:
+                avg_count = sum(a['exec_count'] for a in agent_counts) / len(agent_counts)
+                for ac in agent_counts:
+                    if ac['exec_count'] > avg_count * 3 and ac['exec_count'] > 10:
+                        anomalies.append({
+                            'type': 'high_frequency_agent',
+                            'agent': ac['agent__name'],
+                            'exec_count': ac['exec_count'],
+                            'average': round(avg_count, 1),
+                            'severity': 'warning' if ac['exec_count'] < avg_count * 5 else 'critical',
+                            'detail': f"{ac['agent__name']} ran {ac['exec_count']}x (avg {avg_count:.0f})",
+                        })
+        except Exception:
+            pass
+
+        # Check audit log for bulk data operations
+        try:
+            from core.models_cockpit_audit import CockpitAuditLog
+            bulk_ops = list(
+                CockpitAuditLog.objects.filter(
+                    created_at__gte=cutoff,
+                    action__in=['bulk_delete', 'bulk_update', 'export', 'data_download'],
+                ).values('action', 'user__username', 'created_at')
+                .order_by('-created_at')[:20]
+            )
+            for op in bulk_ops:
+                anomalies.append({
+                    'type': 'bulk_data_operation',
+                    'action': op['action'],
+                    'user': op.get('user__username', 'system'),
+                    'timestamp': str(op['created_at']),
+                    'severity': 'warning',
+                    'detail': f"Bulk {op['action']} by {op.get('user__username', 'system')}",
+                })
+        except Exception:
+            pass
+
+        return {
+            'period_hours': hours,
+            'anomalies': anomalies,
+            'anomaly_count': len(anomalies),
+            'has_anomalies': len(anomalies) > 0,
+        }
+
+    def get_compliance_report(self) -> dict:
+        """Generate comprehensive compliance summary."""
+        pii = self.get_pii_scan(days=30)
+        retention = self.get_retention_report()
+        access = self.get_access_audit(hours=72)
+
+        # Overall risk level
+        risk_factors = []
+        if pii.get('has_pii'):
+            risk_factors.append(f"{pii['finding_count']} PII findings in content")
+        if retention.get('has_violations'):
+            risk_factors.append(f"{retention['violation_count']} retention policy violations")
+        if access.get('has_anomalies'):
+            risk_factors.append(f"{access['anomaly_count']} access anomalies")
+
+        if any('critical' in str(v.get('severity', '')) for v in retention.get('violations', [])):
+            risk_level = 'high'
+        elif risk_factors:
+            risk_level = 'medium'
+        else:
+            risk_level = 'low'
+
+        return {
+            'risk_level': risk_level,
+            'risk_factors': risk_factors,
+            'pii_summary': {
+                'findings': pii.get('finding_count', 0),
+                'has_pii': pii.get('has_pii', False),
+            },
+            'retention_summary': {
+                'violations': retention.get('violation_count', 0),
+                'has_violations': retention.get('has_violations', False),
+            },
+            'access_summary': {
+                'anomalies': access.get('anomaly_count', 0),
+                'has_anomalies': access.get('has_anomalies', False),
+            },
+            'recommendations': risk_factors,
+            'healthy': risk_level == 'low',
+        }
+
+    def evaluate(self, now) -> dict:
+        """Auto-evaluate compliance health for autopilot cycle."""
+        pii = self.get_pii_scan(days=7)
+        retention = self.get_retention_report()
+
+        issues = []
+        if pii.get('has_pii'):
+            issues.append(f"PII detected: {pii['finding_count']} findings")
+        for v in retention.get('violations', []):
+            if v.get('severity') in ('warning', 'critical'):
+                issues.append(f"retention: {v['table']} has {v['records_past_retention']} old records")
+
+        return {
+            'pii_findings': pii.get('finding_count', 0),
+            'retention_violations': retention.get('violation_count', 0),
+            'issues': issues,
+            'issue_count': len(issues),
+            'healthy': len(issues) == 0,
+        }
+
+    @staticmethod
+    def _group_by_key(items: list, key: str) -> dict:
+        groups: dict[str, int] = {}
+        for item in items:
+            k = item.get(key, 'unknown')
+            groups[k] = groups.get(k, 0) + 1
+        return groups

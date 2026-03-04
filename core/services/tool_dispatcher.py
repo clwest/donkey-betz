@@ -12877,6 +12877,37 @@ RESEARCH DATA:
             scan = engine.get_secrets_scan(days=days)
             return {'action': 'security_secrets_scan', **scan}
 
+        elif action == 'compliance_pii_scan':
+            from core.services.ops_autopilot import ComplianceEngine
+
+            days = int(payload.get('days', 7))
+            limit = int(payload.get('limit', 50))
+            engine = ComplianceEngine()
+            scan = engine.get_pii_scan(days=days, limit=limit)
+            return {'action': 'compliance_pii_scan', **scan}
+
+        elif action == 'compliance_retention_report':
+            from core.services.ops_autopilot import ComplianceEngine
+
+            engine = ComplianceEngine()
+            report = engine.get_retention_report()
+            return {'action': 'compliance_retention_report', **report}
+
+        elif action == 'compliance_access_audit':
+            from core.services.ops_autopilot import ComplianceEngine
+
+            hours = int(payload.get('hours', 24))
+            engine = ComplianceEngine()
+            audit = engine.get_access_audit(hours=hours)
+            return {'action': 'compliance_access_audit', **audit}
+
+        elif action == 'compliance_report':
+            from core.services.ops_autopilot import ComplianceEngine
+
+            engine = ComplianceEngine()
+            report = engine.get_compliance_report()
+            return {'action': 'compliance_report', **report}
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason
