@@ -11563,11 +11563,33 @@ RESEARCH DATA:
                 verif_passed = recent_actions.filter(verification_state='passed').count()
                 verif_failed = recent_actions.filter(verification_state='failed').count()
                 rolled_back = recent_actions.filter(rolled_back=True).count()
+                remediations = recent_actions.filter(action_type='remediate').count()
                 report_lines.append(f"\n### Verification & Safety (24h)")
                 report_lines.append(f"- Verified passed: {verif_passed}")
                 report_lines.append(f"- Pending verification: {verif_pending}")
                 report_lines.append(f"- Failed verification: {verif_failed}")
                 report_lines.append(f"- Auto-rolled back: {rolled_back}")
+                report_lines.append(f"- Auto-remediations applied: {remediations}")
+            except Exception:
+                pass
+
+            # Remediation playbook stats
+            try:
+                from core.models_diagnostic_pipeline import RemediationPlaybook
+                playbook_count = RemediationPlaybook.objects.filter(enabled=True).count()
+                if playbook_count > 0:
+                    top_playbook = RemediationPlaybook.objects.filter(
+                        enabled=True, times_applied__gte=1,
+                    ).order_by('-success_rate').first()
+                    report_lines.append(f"\n### Remediation Playbook")
+                    report_lines.append(f"- Active entries: {playbook_count}")
+                    if top_playbook:
+                        report_lines.append(
+                            f"- Top entry: {top_playbook.signature_pattern} → "
+                            f"{top_playbook.remediation_type} "
+                            f"({top_playbook.success_rate:.0%} success, "
+                            f"{top_playbook.times_applied}x applied)"
+                        )
             except Exception:
                 pass
 

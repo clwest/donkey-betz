@@ -1661,6 +1661,18 @@ def execute_agent_task(
         }
         _wall_timeout = _AGENT_TIMEOUT_SECONDS.get(agent_name, 1200)  # default 20 min (down from 40)
 
+        # Session 1087: Check for remediation-engine timeout overrides
+        try:
+            from core.models.system import SystemConfiguration
+            _override = SystemConfiguration.objects.filter(
+                key=f'agent_timeout_override:{agent_name}',
+            ).values_list('value', flat=True).first()
+            if _override:
+                _wall_timeout = int(_override)
+                logger.info(f"[execute_agent_task] Using override timeout {_wall_timeout}s for {agent_name}")
+        except Exception:
+            pass
+
         router = AgentRouter(user=_route_user)
 
         from concurrent.futures import ThreadPoolExecutor as _TPE, TimeoutError as _FuturesTimeout
