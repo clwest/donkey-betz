@@ -41,7 +41,7 @@ Policies (v6 — impact tracking + portfolio allocation):
      per desk and adjusts budget allocations — high-impact desks get more
      headroom, zero-impact pipelines get deprioritized.
 
-Policies (v7 — attribution debt + experiment engine):
+Policies (v7 — attribution debt + experiment engine + decision ledger):
  14. Attribution debt controller: AttributionDebtController maps LLM
      spend to desks via agent→desk lookup. Unattributed spend (agents
      without desk mapping) is "debt" that distorts IQROI. When debt
@@ -53,6 +53,10 @@ Policies (v7 — attribution debt + experiment engine):
      (IQROI, debt %, impact USD, publish rate, error rate), auto-promotes
      winners and auto-rollbacks losers. Only one active experiment per
      policy. Supports: portfolio_allocator, roi_throttle, budget_controller.
+ 16. Decision ledger: Every policy evaluation is recorded as a
+     DecisionLedgerEntry with structured inputs, outputs, decision_type,
+     and counterfactual context. Grouped by cycle_id for replay and
+     debugging. Queryable by policy, desk, decision_type, experiment_id.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -62,6 +66,8 @@ are persisted via SystemConfiguration and always changelog-documented.
 """
 
 import logging
+import time
+import uuid as _uuid
 from datetime import timedelta
 from typing import Any
 
@@ -201,62 +207,75 @@ class OpsAutopilot:
         self.actions_taken = []
         self.deploy_sha = ''
 
+    # Policy registry: (summary_key, policy_name, method_name)
+    _POLICY_REGISTRY = [
+        ('timeout_spike', 'timeout_spike_containment', '_policy_timeout_spike_containment'),
+        ('blocked_hygiene', 'blocked_agent_hygiene', '_policy_blocked_agent_hygiene'),
+        ('deliberation_retry', 'failed_deliberation_retry', '_policy_failed_deliberation_retry'),
+        ('content_sweep', 'content_pipeline_sweep', '_policy_content_pipeline_sweep'),
+        ('attention_resolve', 'attention_auto_resolve', '_policy_attention_auto_resolve'),
+        ('governance_auto', 'governance_auto_decision', '_policy_governance_auto_decision'),
+        ('remediation', 'root_cause_remediation', '_policy_root_cause_remediation'),
+        ('contract_drift', 'contract_drift_detection', '_policy_contract_drift_detection'),
+        ('tuning', 'self_tuning', '_policy_self_tuning'),
+        ('budget', 'budget_controller', '_policy_budget_controller'),
+        ('roi', 'roi_enforcement', '_policy_roi_enforcement'),
+        ('impact_portfolio', 'impact_portfolio', '_policy_impact_portfolio'),
+        ('attribution_debt', 'attribution_debt', '_policy_attribution_debt'),
+        ('experiments', 'experiment_engine', '_policy_experiment_engine'),
+    ]
+
     def run(self) -> dict[str, Any]:
         """Main entry point. Returns summary of evaluation + actions."""
         now = timezone.now()
-        logger.info(f"[OpsAutopilot] Starting cycle (dry_run={self.dry_run})")
+        cycle_id = _uuid.uuid4()
+        logger.info(f"[OpsAutopilot] Starting cycle {cycle_id} (dry_run={self.dry_run})")
 
         # Load latest config overrides from SystemConfiguration
         AutopilotConfig.load_overrides()
 
         self.deploy_sha = self._get_deploy_sha()
 
-        # Run policies (v1)
-        timeout_results = self._policy_timeout_spike_containment(now)
-        hygiene_results = self._policy_blocked_agent_hygiene(now)
+        # Active experiment lookup for ledger context
+        active_experiments = self._get_active_experiment_map()
 
-        # Run policies (v2 — autonomy)
-        delib_retry_results = self._policy_failed_deliberation_retry(now)
-        content_sweep_results = self._policy_content_pipeline_sweep(now)
-        attention_resolve_results = self._policy_attention_auto_resolve(now)
-        governance_results = self._policy_governance_auto_decision(now)
+        # Run all policies and record ledger entries
+        results = {}
+        for summary_key, policy_name, method_name in self._POLICY_REGISTRY:
+            t0 = time.monotonic()
+            actions_before = len(self.actions_taken)
+            try:
+                policy_result = getattr(self, method_name)(now)
+            except Exception as e:
+                logger.error(f"[OpsAutopilot] Policy {policy_name} error: {e}")
+                policy_result = {'error': str(e)}
 
-        # Run policies (v3 — root-cause autonomy)
-        remediation_results = self._policy_root_cause_remediation(now)
-        drift_results = self._policy_contract_drift_detection(now)
+            elapsed_ms = int((time.monotonic() - t0) * 1000)
+            results[summary_key] = policy_result
 
-        # Run policies (v4 — self-tuning + budget)
-        tuning_results = self._policy_self_tuning(now)
-        budget_results = self._policy_budget_controller(now)
+            # Determine decision type
+            actions_after = len(self.actions_taken)
+            decision_type = self._classify_decision(
+                policy_result, actions_after - actions_before,
+            )
 
-        # Run policies (v5 — ROI attribution)
-        roi_results = self._policy_roi_enforcement(now)
-
-        # Run policies (v6 — impact collection + portfolio allocation)
-        impact_results = self._policy_impact_portfolio(now)
-
-        # Run policies (v7 — attribution debt + experiment engine)
-        debt_results = self._policy_attribution_debt(now)
-        experiment_results = self._policy_experiment_engine(now)
+            # Record ledger entry
+            self._record_ledger_entry(
+                cycle_id=cycle_id,
+                cycle_ts=now,
+                policy=policy_name,
+                decision_type=decision_type,
+                policy_result=policy_result,
+                duration_ms=elapsed_ms,
+                active_experiments=active_experiments,
+            )
 
         summary = {
             'cycle_at': now.isoformat(),
+            'cycle_id': str(cycle_id),
             'dry_run': self.dry_run,
             'deploy_sha': self.deploy_sha,
-            'timeout_spike': timeout_results,
-            'blocked_hygiene': hygiene_results,
-            'deliberation_retry': delib_retry_results,
-            'content_sweep': content_sweep_results,
-            'attention_resolve': attention_resolve_results,
-            'governance_auto': governance_results,
-            'remediation': remediation_results,
-            'contract_drift': drift_results,
-            'tuning': tuning_results,
-            'budget': budget_results,
-            'roi': roi_results,
-            'impact_portfolio': impact_results,
-            'attribution_debt': debt_results,
-            'experiments': experiment_results,
+            **results,
             'actions_taken': len(self.actions_taken),
             'actions': self.actions_taken,
         }
@@ -267,32 +286,107 @@ class OpsAutopilot:
             agent_name='',
             policy='cycle_evaluation',
             dry_run=self.dry_run,
-            evidence={
-                'timeout_spike': timeout_results,
-                'blocked_hygiene': hygiene_results,
-                'deliberation_retry': delib_retry_results,
-                'content_sweep': content_sweep_results,
-                'attention_resolve': attention_resolve_results,
-                'governance_auto': governance_results,
-                'remediation': remediation_results,
-                'contract_drift': drift_results,
-                'tuning': tuning_results,
-                'budget': budget_results,
-                'roi': roi_results,
-                'impact_portfolio': impact_results,
-                'attribution_debt': debt_results,
-                'experiments': experiment_results,
-            },
+            evidence={k: v for k, v in results.items()},
             result=summary,
             deploy_sha=self.deploy_sha,
         )
 
         logger.info(
-            f"[OpsAutopilot] Cycle complete: "
+            f"[OpsAutopilot] Cycle {cycle_id} complete: "
             f"{len(self.actions_taken)} actions taken "
             f"(dry_run={self.dry_run})"
         )
         return summary
+
+    # ── Decision Ledger helpers (Policy 16) ─────────────────────────────
+
+    def _get_active_experiment_map(self) -> dict[str, str]:
+        """Return {policy_name: experiment_id} for active experiments."""
+        try:
+            from core.models_policy_experiment import PolicyExperiment
+            return {
+                exp.policy_name: str(exp.id)
+                for exp in PolicyExperiment.objects.filter(status='active')
+            }
+        except Exception:
+            return {}
+
+    @staticmethod
+    def _classify_decision(policy_result: dict, new_actions: int) -> str:
+        """Classify a policy evaluation into a decision type."""
+        if policy_result.get('error'):
+            return 'skipped'
+        if policy_result.get('allocation_blocked_reason'):
+            return 'blocked'
+        if new_actions > 0:
+            return 'action_taken'
+        return 'no_op'
+
+    def _record_ledger_entry(
+        self,
+        cycle_id,
+        cycle_ts,
+        policy: str,
+        decision_type: str,
+        policy_result: dict,
+        duration_ms: int,
+        active_experiments: dict,
+    ):
+        """Create a DecisionLedgerEntry for one policy evaluation."""
+        try:
+            from core.models_decision_ledger import DecisionLedgerEntry
+
+            # Extract desk if present
+            desk = policy_result.get('desk', '')
+            if not desk and 'desk_allocations' in policy_result:
+                desk = ''  # multi-desk policy, no single desk
+
+            # Build summary
+            summary_parts = []
+            if decision_type == 'no_op':
+                summary_parts.append('No action needed')
+            elif decision_type == 'skipped':
+                summary_parts.append(f"Error: {policy_result.get('error', 'unknown')[:150]}")
+            elif decision_type == 'blocked':
+                summary_parts.append(
+                    policy_result.get('allocation_blocked_reason', 'Blocked')[:150]
+                )
+            elif decision_type == 'action_taken':
+                # Summarize what was done
+                actions = policy_result.get('actions', [])
+                if isinstance(actions, list) and actions:
+                    summary_parts.append(f"{len(actions)} action(s)")
+                else:
+                    summary_parts.append('Action taken')
+
+            # Experiment context
+            experiment_id = active_experiments.get(policy)
+
+            DecisionLedgerEntry.objects.create(
+                cycle_id=cycle_id,
+                cycle_ts=cycle_ts,
+                policy=policy,
+                desk=desk[:20] if desk else '',
+                decision_type=decision_type,
+                decision_summary='; '.join(summary_parts)[:200],
+                inputs=self._safe_json(policy_result),
+                outputs={'actions_taken': decision_type == 'action_taken'},
+                experiment_id=experiment_id,
+                params_used={},
+                duration_ms=duration_ms,
+            )
+        except Exception as e:
+            logger.warning(f"[OpsAutopilot] Ledger entry failed for {policy}: {e}")
+
+    @staticmethod
+    def _safe_json(data: Any) -> dict:
+        """Ensure data is JSON-serializable by converting via str fallback."""
+        import json
+        try:
+            json.dumps(data, default=str)
+            return data if isinstance(data, dict) else {'data': str(data)}
+        except (TypeError, ValueError):
+            return {'raw': str(data)[:500]}
 
     # ── Policy 1: Timeout spike containment ──────────────────────────────
 

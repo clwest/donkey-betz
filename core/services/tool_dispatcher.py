@@ -12148,6 +12148,59 @@ RESEARCH DATA:
             result = engine.start_experiment(exp_id)
             return {'action': 'experiment_start', **result}
 
+        elif action == 'decision_ledger_report':
+            # Query decision ledger entries
+            from core.models_decision_ledger import DecisionLedgerEntry
+
+            policy_filter = payload.get('policy_name', '')
+            decision_filter = payload.get('decision_type', '')
+            days = int(payload.get('days', 1))
+            limit = min(int(payload.get('limit', 50)), 200)
+
+            cutoff = timezone.now() - timedelta(days=days)
+            qs = DecisionLedgerEntry.objects.filter(cycle_ts__gte=cutoff)
+
+            if policy_filter:
+                qs = qs.filter(policy=policy_filter)
+            if decision_filter:
+                qs = qs.filter(decision_type=decision_filter)
+
+            entries = list(
+                qs.order_by('-cycle_ts').values(
+                    'cycle_id', 'cycle_ts', 'policy', 'decision_type',
+                    'decision_summary', 'duration_ms', 'experiment_id',
+                )[:limit]
+            )
+
+            # Serialize
+            for e in entries:
+                for k, v in e.items():
+                    if hasattr(v, 'isoformat'):
+                        e[k] = v.isoformat()
+                    elif hasattr(v, 'hex'):
+                        e[k] = str(v)
+
+            # Summary stats
+            from django.db.models import Count, Avg
+            stats = dict(
+                qs.values('decision_type').annotate(
+                    count=Count('id'),
+                    avg_ms=Avg('duration_ms'),
+                ).values_list('decision_type', 'count')
+            )
+
+            # Distinct cycles
+            cycle_count = qs.values('cycle_id').distinct().count()
+
+            return {
+                'action': 'decision_ledger_report',
+                'period_days': days,
+                'total_entries': len(entries),
+                'cycles': cycle_count,
+                'decision_type_counts': stats,
+                'entries': entries,
+            }
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason
