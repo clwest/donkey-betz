@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './src/auth/authStore';
 import LoginScreen from './src/screens/auth/LoginScreen';
 import AppNavigator from './src/navigation/AppNavigator';
@@ -18,6 +19,17 @@ import ToastBanner from './src/components/Toast';
 
 // Initialize Sentry before any rendering
 initSentry();
+
+// React Query client — shared across all screens
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 60_000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // Configure foreground notification display once at module level
 configureForegroundHandler();
@@ -75,12 +87,14 @@ function App() {
   }
 
   return (
-    <GestureHandlerRootView style={styles.root}>
-      <OfflineBanner />
-      <AppNavigator />
-      <ToastBanner />
-      <StatusBar style="light" />
-    </GestureHandlerRootView>
+    <QueryClientProvider client={queryClient}>
+      <GestureHandlerRootView style={styles.root}>
+        <OfflineBanner />
+        <AppNavigator />
+        <ToastBanner />
+        <StatusBar style="light" />
+      </GestureHandlerRootView>
+    </QueryClientProvider>
   );
 }
 
