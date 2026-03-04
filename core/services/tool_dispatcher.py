@@ -11521,12 +11521,31 @@ RESEARCH DATA:
             else:
                 report_lines.append(f"\n### Attention Auto-Resolve: No stale alerts")
 
+            # Governance auto-decision section
+            gov = summary.get('governance_auto', {})
+            gov_approved = gov.get('auto_approved', 0)
+            gov_dismissed = gov.get('auto_dismissed', 0)
+            gov_skipped = gov.get('skipped', 0)
+            if gov_approved or gov_dismissed:
+                report_lines.append(f"\n### Governance Auto-Decision")
+                if gov_approved:
+                    report_lines.append(f"- Would auto-approve: {gov_approved} low-risk items")
+                if gov_dismissed:
+                    report_lines.append(f"- Would auto-dismiss: {gov_dismissed} low-risk items")
+                if gov_skipped:
+                    report_lines.append(f"- Skipped (high blast radius): {gov_skipped}")
+            else:
+                report_lines.append(f"\n### Governance Auto-Decision: No eligible items")
+
             # Actions proposed
             proposed = summary.get('actions', [])
             if proposed:
                 report_lines.append(f"\n### Proposed Actions ({len(proposed)})")
                 for a in proposed:
-                    report_lines.append(f"- {a.get('type', '?')}: {a.get('agent_name', a.get('session_id', a.get('blog_id', '?'))[:20])} — {a.get('reason', a.get('action', ''))}")
+                    target = a.get('agent_name', a.get('session_id', a.get('blog_id', a.get('attention_item_id', '?'))))
+                    if isinstance(target, str) and len(target) > 20:
+                        target = target[:20]
+                    report_lines.append(f"- {a.get('type', '?')}: {target} — {a.get('reason', a.get('governance_action', a.get('action', '')))}")
             else:
                 report_lines.append(f"\n### Proposed Actions: None (system healthy)")
 

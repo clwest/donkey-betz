@@ -55,6 +55,26 @@ class AutopilotConfig:
     ATTENTION_STALE_HOURS = 12           # Auto-resolve ops alerts older than this
     ATTENTION_AUTO_RESOLVE_SOURCES = {'ops_autopilot'}  # Only resolve our own alerts
 
+    # Policy 6: Governance auto-decision
+    GOVERNANCE_GRACE_PERIOD_HOURS = 1    # Give human a chance first
+    GOVERNANCE_MAX_PER_CYCLE = 10        # Don't resolve too many at once
+    # Source types that are low blast radius (safe to auto-resolve)
+    GOVERNANCE_AUTO_RESOLVE_SOURCES = {
+        'content:deliverable',       # Deliverable reviews — just notifications
+        'content:blog',              # Blog content reviews
+        'agent_output:researchagent',
+        'agent_output:contentwriteragent',
+        'agent_output:stockauditcoordinator',
+        'agent_output:sportsoddsanalyst',
+        'agent_output:stockanalystagent',
+        'agent_output:predictionmarketanalyst',
+    }
+    # Item types safe to auto-approve without human
+    GOVERNANCE_AUTO_APPROVE_TYPES = {
+        'review',      # Content reviews
+        'insight',     # Agent insights
+    }
+
     # Mode
     DRY_RUN = False                      # Set True to evaluate but not act
 
@@ -87,6 +107,7 @@ class OpsAutopilot:
         delib_retry_results = self._policy_failed_deliberation_retry(now)
         content_sweep_results = self._policy_content_pipeline_sweep(now)
         attention_resolve_results = self._policy_attention_auto_resolve(now)
+        governance_results = self._policy_governance_auto_decision(now)
 
         summary = {
             'cycle_at': now.isoformat(),
@@ -97,6 +118,7 @@ class OpsAutopilot:
             'deliberation_retry': delib_retry_results,
             'content_sweep': content_sweep_results,
             'attention_resolve': attention_resolve_results,
+            'governance_auto': governance_results,
             'actions_taken': len(self.actions_taken),
             'actions': self.actions_taken,
         }
@@ -113,6 +135,7 @@ class OpsAutopilot:
                 'deliberation_retry': delib_retry_results,
                 'content_sweep': content_sweep_results,
                 'attention_resolve': attention_resolve_results,
+                'governance_auto': governance_results,
             },
             result=summary,
             deploy_sha=self.deploy_sha,
@@ -619,6 +642,121 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] attention auto-resolve policy error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    # ── Policy 6: Governance auto-decision ──────────────────────────────
+
+    def _policy_governance_auto_decision(self, now) -> dict:
+        """Auto-resolve low-blast-radius governance items after grace period."""
+        from core.models_human_interface import HumanAttentionItem
+
+        result = {
+            'evaluated': True,
+            'auto_approved': 0,
+            'auto_dismissed': 0,
+            'skipped': 0,
+        }
+        grace_cutoff = now - timedelta(hours=AutopilotConfig.GOVERNANCE_GRACE_PERIOD_HOURS)
+        processed = 0
+
+        try:
+            # Find pending items from auto-resolvable sources, past grace period
+            candidates = HumanAttentionItem.objects.filter(
+                status='pending',
+                created_at__lte=grace_cutoff,
+            ).order_by('created_at')[:AutopilotConfig.GOVERNANCE_MAX_PER_CYCLE * 2]
+
+            for item in candidates:
+                if processed >= AutopilotConfig.GOVERNANCE_MAX_PER_CYCLE:
+                    break
+
+                source = item.source_type or ''
+                item_type = item.item_type or ''
+
+                # Classify blast radius
+                is_low_blast = (
+                    source in AutopilotConfig.GOVERNANCE_AUTO_RESOLVE_SOURCES
+                    or item_type in AutopilotConfig.GOVERNANCE_AUTO_APPROVE_TYPES
+                )
+
+                if not is_low_blast:
+                    result['skipped'] += 1
+                    continue
+
+                # Determine action: approve for insights/reviews, dismiss for stale
+                age_hours = (now - item.created_at).total_seconds() / 3600
+
+                if item_type in ('review', 'insight'):
+                    action = 'approve'
+                    reason = (
+                        f"Auto-approved: {item_type} from {source} "
+                        f"(low blast radius, {round(age_hours)}h old)"
+                    )
+                else:
+                    action = 'dismiss'
+                    reason = (
+                        f"Auto-dismissed: {source} item "
+                        f"(low blast radius, {round(age_hours)}h old)"
+                    )
+
+                evidence = {
+                    'attention_item_id': str(item.id),
+                    'title': (item.title or '')[:150],
+                    'source_type': source,
+                    'item_type': item_type,
+                    'urgency': item.urgency,
+                    'age_hours': round(age_hours, 1),
+                    'action': action,
+                    'reason': reason,
+                }
+
+                action_record = {
+                    'type': 'auto_resolve',
+                    'attention_item_id': str(item.id),
+                    'governance_action': action,
+                    'reason': reason,
+                    'dry_run': self.dry_run,
+                }
+
+                if not self.dry_run:
+                    if action == 'approve':
+                        item.status = 'acted'
+                        item.decision = 'approve'
+                    else:
+                        item.status = 'ignored'
+                        item.decision = 'auto_dismiss'
+
+                    item.decision_feedback = reason[:255]
+                    item.decided_at = now
+                    item.save(update_fields=[
+                        'status', 'decision', 'decision_feedback', 'decided_at'
+                    ])
+                    logger.info(
+                        f"[OpsAutopilot] GOVERNANCE {action}: "
+                        f"{item.title[:50]} ({source})"
+                    )
+
+                AutopilotAction.objects.create(
+                    action_type='auto_resolve' if not self.dry_run else 'dry_run',
+                    agent_name=source,
+                    policy='governance_auto_decision',
+                    dry_run=self.dry_run,
+                    evidence=evidence,
+                    result=action_record,
+                    deploy_sha=self.deploy_sha,
+                )
+                self.actions_taken.append(action_record)
+                processed += 1
+
+                if action == 'approve':
+                    result['auto_approved'] += 1
+                else:
+                    result['auto_dismissed'] += 1
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] governance auto-decision error: {e}")
             result['error'] = str(e)
 
         return result
