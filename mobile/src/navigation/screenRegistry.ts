@@ -1,7 +1,5 @@
 import type { ComponentType } from 'react';
 
-// Placeholder screens — replaced by real implementations in later PRs
-import PlaceholderScreen from '../screens/PlaceholderScreen';
 import CommandCenterScreen from '../screens/CommandCenterScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import BoardroomHomeScreen from '../screens/boardroom/BoardroomHomeScreen';
@@ -14,6 +12,9 @@ import DeliberationHomeScreen from '../screens/deliberation/DeliberationHomeScre
 import WorkspaceScreen from '../screens/WorkspaceScreen';
 import IntelligenceScreen from '../screens/IntelligenceScreen';
 import SettingsScreen from '../screens/settings/SettingsScreen';
+import BettingScreen from '../screens/BettingScreen';
+import StocksScreen from '../screens/StocksScreen';
+import PortfolioScreen from '../screens/PortfolioScreen';
 
 // ── Registry ─────────────────────────────────────────────────────────────────
 // Maps manifest route paths → RN screen components.
@@ -58,11 +59,11 @@ const SCREEN_REGISTRY: Record<string, ScreenEntry> = {
     icon: 'file-text',
   },
   '/betting': {
-    component: PlaceholderScreen,
+    component: BettingScreen,
     icon: 'trending-up',
   },
   '/stocks': {
-    component: PlaceholderScreen,
+    component: StocksScreen,
     icon: 'activity',
   },
   '/initiatives': {
@@ -82,7 +83,7 @@ const SCREEN_REGISTRY: Record<string, ScreenEntry> = {
     icon: 'image',
   },
   '/portfolio': {
-    component: PlaceholderScreen,
+    component: PortfolioScreen,
     icon: 'dollar-sign',
   },
   '/settings': {
