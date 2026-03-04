@@ -35,7 +35,7 @@ function App() {
   // Set Sentry user context on auth change
   useEffect(() => {
     if (status === 'signedIn' && user) {
-      setSentryUser({ id: String(user.id), username: user.username });
+      setSentryUser({ id: String(user.id), username: user.username, platform_role: user.platform_role });
     } else {
       setSentryUser(null);
     }
