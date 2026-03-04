@@ -72,14 +72,14 @@ def vip_invite_exchange(request):
         is_active=True,
     )
 
-    # Set platform_role on the profile
+    # Set primary_role on the profile
     try:
         from core.models import EnhancedUserProfile
         profile, _ = EnhancedUserProfile.objects.get_or_create(user=vip_user)
-        profile.platform_role = 'vip_demo_viewer'
-        profile.save(update_fields=['platform_role'])
+        profile.primary_role = 'vip_demo_viewer'
+        profile.save(update_fields=['primary_role'])
     except Exception:
-        logger.warning("Could not set VIP platform_role on profile for %s", username)
+        logger.warning("Could not set VIP primary_role on profile for %s", username)
 
     # Create DRF auth token
     from rest_framework.authtoken.models import Token

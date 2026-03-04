@@ -227,7 +227,6 @@ class UnifiedUser(AbstractUser):
             ('content_creator', 'Content Generation User'),
             ('agent_manager', 'Agent Orchestration Manager'),
             ('unified_user', 'Full Platform Access'),
-            ('vip_demo_viewer', 'VIP Demo Viewer (read-only)'),
         ],
         default='unified_user',
         help_text="Primary role/access level on the platform"
