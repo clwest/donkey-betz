@@ -165,6 +165,9 @@ from ..models_celery_telemetry import CeleryTaskEvent
 # Import code artifact models (Session 1012 - Patch-First Workflow)
 from ..models_code_artifacts import CodeArtifact
 
+# Import code runner models (Code Runner Beta)
+from ..models_code_runner import CodeRun
+
 # Import tenant model (Session 1039 - Multi-Tenant Customer Access)
 from ..models_tenant import Tenant
 
@@ -432,6 +435,9 @@ __all__ = [
 
     # Code Artifacts - Patch-First Workflow (Session 1012)
     'CodeArtifact',
+
+    # Code Runner (Beta)
+    'CodeRun',
 
     # Tenant - Multi-Tenant Customer Access (Session 1039)
     'Tenant',

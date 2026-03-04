@@ -4569,6 +4569,17 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Code Runner (Beta) — admin-only code-agent dispatch
+# =========================================================================
+from core.views_code_runner import code_run_create, code_run_status, code_run_logs
+
+urlpatterns += [
+    path('api/v1/code/run/', code_run_create, name='code-run-create'),
+    path('api/v1/code/status/<uuid:run_id>/', code_run_status, name='code-run-status'),
+    path('api/v1/code/logs/<uuid:run_id>/', code_run_logs, name='code-run-logs'),
+]
+
+# =========================================================================
 # Development-only endpoints — never exposed in production
 # =========================================================================
 if settings.DEBUG:
