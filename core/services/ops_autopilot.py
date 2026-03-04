@@ -104,6 +104,17 @@ class AutopilotConfig:
     TUNING_INTERVAL_HOURS = 24            # Only tune once per day
     TUNING_MAX_CHANGES_PER_CYCLE = 1      # One param change per evaluation
     TUNING_MAX_CHANGES_PER_DAY = 2        # Hard daily cap
+
+    # Policy 10: Budget controller
+    BUDGET_DAILY_CAP_USD = 15.0           # Global daily spend cap
+    BUDGET_HOURLY_CAP_USD = 3.0           # Global hourly spend cap
+    BUDGET_SOFT_LIMIT_PCT = 0.7           # Trigger downgrade at 70% of cap
+    BUDGET_HARD_LIMIT_PCT = 0.95          # Hard freeze at 95% of cap
+    BUDGET_CHECK_INTERVAL_MINUTES = 10    # Check spend every N minutes
+    BUDGET_DOWNGRADE_MODEL = 'gpt-5-mini' # Cheap model for downgrade
+    BUDGET_CRITICAL_PURPOSES = {          # Never freeze these
+        'governance', 'auth', 'incident_response',
+    }
     TUNING_LOOKBACK_DAYS = 7              # Analyse this much history
     TUNING_ROLLBACK_RATE_THRESHOLD = 0.3  # >30% rollbacks → go more conservative
 
@@ -182,8 +193,9 @@ class OpsAutopilot:
         remediation_results = self._policy_root_cause_remediation(now)
         drift_results = self._policy_contract_drift_detection(now)
 
-        # Run policies (v4 — self-tuning)
+        # Run policies (v4 — self-tuning + budget)
         tuning_results = self._policy_self_tuning(now)
+        budget_results = self._policy_budget_controller(now)
 
         summary = {
             'cycle_at': now.isoformat(),
@@ -198,6 +210,7 @@ class OpsAutopilot:
             'remediation': remediation_results,
             'contract_drift': drift_results,
             'tuning': tuning_results,
+            'budget': budget_results,
             'actions_taken': len(self.actions_taken),
             'actions': self.actions_taken,
         }
@@ -218,6 +231,7 @@ class OpsAutopilot:
                 'remediation': remediation_results,
                 'contract_drift': drift_results,
                 'tuning': tuning_results,
+                'budget': budget_results,
             },
             result=summary,
             deploy_sha=self.deploy_sha,
@@ -1099,6 +1113,102 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] self-tuning policy error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    # ── Policy 10: Budget controller ──────────────────────────────────────
+
+    def _policy_budget_controller(self, now) -> dict:
+        """
+        Monitor LLM spend and enforce budget caps.
+
+        Three escalation tiers:
+        1. Soft limit (70%) → downgrade expensive models to gpt-5-mini
+        2. Sustained pressure → reduce autopilot action rate
+        3. Hard limit (95%) → freeze non-critical LLM calls
+        """
+        result = {'evaluated': False, 'spend_1h': 0, 'spend_24h': 0}
+
+        try:
+            controller = BudgetController()
+            spend = controller.compute_spend(now)
+
+            result['evaluated'] = True
+            result['spend_1h'] = round(spend['hourly_total'], 4)
+            result['spend_24h'] = round(spend['daily_total'], 4)
+            result['top_spenders'] = spend.get('top_agents', [])[:5]
+
+            daily_cap = (
+                AutopilotConfig.get('BUDGET_DAILY_CAP_USD')
+                or AutopilotConfig.BUDGET_DAILY_CAP_USD
+            )
+            hourly_cap = (
+                AutopilotConfig.get('BUDGET_HOURLY_CAP_USD')
+                or AutopilotConfig.BUDGET_HOURLY_CAP_USD
+            )
+            soft_pct = AutopilotConfig.BUDGET_SOFT_LIMIT_PCT
+            hard_pct = AutopilotConfig.BUDGET_HARD_LIMIT_PCT
+
+            daily_pct = spend['daily_total'] / max(daily_cap, 0.01)
+            hourly_pct = spend['hourly_total'] / max(hourly_cap, 0.01)
+            result['daily_utilization'] = round(daily_pct, 3)
+            result['hourly_utilization'] = round(hourly_pct, 3)
+
+            # Tier 3: Hard freeze
+            if daily_pct >= hard_pct or hourly_pct >= hard_pct:
+                result['tier'] = 'hard_freeze'
+                if not self.dry_run:
+                    action = controller.enforce_hard_freeze(spend, now)
+                    if action:
+                        self.actions_taken.append(action)
+                        self._create_attention_item(
+                            title=(
+                                f"Budget FREEZE: "
+                                f"${spend['daily_total']:.2f}/"
+                                f"${daily_cap:.2f} daily"
+                            ),
+                            summary=(
+                                f"LLM spend hit hard limit "
+                                f"({daily_pct:.0%} daily, "
+                                f"{hourly_pct:.0%} hourly). "
+                                f"Non-critical purposes frozen. "
+                                f"Only governance/auth/incident "
+                                f"allowed until next period."
+                            ),
+                            urgency='high',
+                            policy='budget_controller',
+                            agent_name='BudgetController',
+                            evidence=spend,
+                        )
+
+            # Tier 1: Soft limit → model downgrade
+            elif daily_pct >= soft_pct or hourly_pct >= soft_pct:
+                result['tier'] = 'model_downgrade'
+                if not self.dry_run:
+                    action = controller.enforce_model_downgrade(
+                        spend, now
+                    )
+                    if action:
+                        self.actions_taken.append(action)
+
+            else:
+                result['tier'] = 'normal'
+                # Clear any active freeze/downgrade flags
+                if not self.dry_run:
+                    controller.clear_budget_flags()
+
+            logger.info(
+                f"[OpsAutopilot] Budget: "
+                f"${spend['daily_total']:.2f} daily "
+                f"({daily_pct:.0%}), "
+                f"${spend['hourly_total']:.2f} hourly "
+                f"({hourly_pct:.0%}) — "
+                f"tier={result.get('tier', 'unknown')}"
+            )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] budget controller error: {e}")
             result['error'] = str(e)
 
         return result
@@ -2803,3 +2913,276 @@ class PolicyOptimizer:
             pass
 
         return report
+
+
+# ── Budget Controller ────────────────────────────────────────────────────────
+
+
+class BudgetController:
+    """
+    Monitors LLM spend from LLMCallLog and enforces budget caps.
+
+    Three enforcement tiers:
+    1. Model downgrade: route to cheaper model when soft limit hit
+    2. Rate reduction: reduce autopilot action rate (future)
+    3. Hard freeze: block non-critical LLM calls at hard limit
+
+    Budget flags are stored in SystemConfiguration:
+    - budget_mode: 'normal' | 'downgrade' | 'freeze'
+    - budget_downgrade_active: True/False
+    - budget_freeze_active: True/False
+    """
+
+    def compute_spend(self, now) -> dict:
+        """Compute current spend from LLMCallLog."""
+        from core.models_llm_routing import LLMCallLog
+        from django.db.models import Sum, Count
+
+        hour_ago = now - timedelta(hours=1)
+        day_ago = now - timedelta(hours=24)
+
+        # Hourly spend
+        hourly = LLMCallLog.objects.filter(
+            created_at__gte=hour_ago,
+        ).aggregate(
+            total=Sum('cost'),
+            calls=Count('id'),
+        )
+
+        # Daily spend
+        daily = LLMCallLog.objects.filter(
+            created_at__gte=day_ago,
+        ).aggregate(
+            total=Sum('cost'),
+            calls=Count('id'),
+        )
+
+        # Top spenders by agent (last 24h)
+        top_agents = list(
+            LLMCallLog.objects.filter(
+                created_at__gte=day_ago,
+            ).values('agent_name').annotate(
+                total_cost=Sum('cost'),
+                call_count=Count('id'),
+            ).order_by('-total_cost')[:10]
+        )
+        for a in top_agents:
+            a['total_cost'] = float(a['total_cost'] or 0)
+
+        # Top models by cost (last 24h)
+        top_models = list(
+            LLMCallLog.objects.filter(
+                created_at__gte=day_ago,
+            ).values('provider', 'model_id').annotate(
+                total_cost=Sum('cost'),
+                call_count=Count('id'),
+            ).order_by('-total_cost')[:10]
+        )
+        for m in top_models:
+            m['total_cost'] = float(m['total_cost'] or 0)
+
+        return {
+            'hourly_total': float(hourly['total'] or 0),
+            'hourly_calls': hourly['calls'] or 0,
+            'daily_total': float(daily['total'] or 0),
+            'daily_calls': daily['calls'] or 0,
+            'top_agents': top_agents,
+            'top_models': top_models,
+        }
+
+    def enforce_model_downgrade(self, spend: dict, now) -> dict | None:
+        """
+        Tier 1: Set a flag so LLM routing prefers cheaper models.
+
+        The llm_enforcer checks 'budget_downgrade_active' before selecting
+        a model, and routes to the downgrade model if set.
+        """
+        from core.models.system import SystemConfiguration
+
+        # Check if already in downgrade mode
+        existing = SystemConfiguration.objects.filter(
+            key='budget_downgrade_active',
+        ).values_list('value', flat=True).first()
+        if existing:
+            return None  # Already active
+
+        SystemConfiguration.objects.update_or_create(
+            key='budget_downgrade_active',
+            defaults={
+                'value': True,
+                'description': (
+                    f'Auto-set by BudgetController at '
+                    f'${spend["daily_total"]:.2f} daily spend. '
+                    f'Routes expensive models to '
+                    f'{AutopilotConfig.BUDGET_DOWNGRADE_MODEL}.'
+                ),
+                'category': 'performance',
+            },
+        )
+        SystemConfiguration.objects.update_or_create(
+            key='budget_mode',
+            defaults={
+                'value': 'downgrade',
+                'description': 'Current budget enforcement mode',
+                'category': 'performance',
+            },
+        )
+
+        logger.warning(
+            f"[BudgetController] Model downgrade activated — "
+            f"daily spend ${spend['daily_total']:.2f}"
+        )
+
+        return {
+            'type': 'budget_downgrade',
+            'daily_spend': round(spend['daily_total'], 4),
+            'hourly_spend': round(spend['hourly_total'], 4),
+            'downgrade_model': AutopilotConfig.BUDGET_DOWNGRADE_MODEL,
+            'reason': (
+                f"Spend at {spend['daily_total']:.2f} USD "
+                f"(soft limit {AutopilotConfig.BUDGET_SOFT_LIMIT_PCT:.0%})"
+            ),
+        }
+
+    def enforce_hard_freeze(self, spend: dict, now) -> dict | None:
+        """
+        Tier 3: Freeze non-critical LLM calls.
+
+        Sets budget_freeze_active flag. LLM enforcer checks this and
+        only allows calls with purpose in BUDGET_CRITICAL_PURPOSES.
+        """
+        from core.models.system import SystemConfiguration
+
+        # Check if already frozen
+        existing = SystemConfiguration.objects.filter(
+            key='budget_freeze_active',
+        ).values_list('value', flat=True).first()
+        if existing:
+            return None  # Already frozen
+
+        SystemConfiguration.objects.update_or_create(
+            key='budget_freeze_active',
+            defaults={
+                'value': True,
+                'description': (
+                    f'HARD FREEZE: daily spend '
+                    f'${spend["daily_total"]:.2f} hit limit. '
+                    f'Only critical purposes allowed.'
+                ),
+                'category': 'performance',
+            },
+        )
+        SystemConfiguration.objects.update_or_create(
+            key='budget_downgrade_active',
+            defaults={
+                'value': True,
+                'description': 'Also active during freeze',
+                'category': 'performance',
+            },
+        )
+        SystemConfiguration.objects.update_or_create(
+            key='budget_mode',
+            defaults={
+                'value': 'freeze',
+                'description': 'Current budget enforcement mode',
+                'category': 'performance',
+            },
+        )
+
+        # Record action
+        AutopilotAction.objects.create(
+            action_type='budget_freeze',
+            agent_name='BudgetController',
+            policy='budget_controller',
+            dry_run=False,
+            evidence=spend,
+            result={
+                'freeze_reason': 'hard_limit',
+                'daily_spend': round(spend['daily_total'], 4),
+            },
+        )
+
+        logger.critical(
+            f"[BudgetController] HARD FREEZE activated — "
+            f"daily spend ${spend['daily_total']:.2f}"
+        )
+
+        return {
+            'type': 'budget_freeze',
+            'daily_spend': round(spend['daily_total'], 4),
+            'hourly_spend': round(spend['hourly_total'], 4),
+            'critical_only': list(AutopilotConfig.BUDGET_CRITICAL_PURPOSES),
+            'reason': (
+                f"Spend at ${spend['daily_total']:.2f} "
+                f"(hard limit {AutopilotConfig.BUDGET_HARD_LIMIT_PCT:.0%})"
+            ),
+        }
+
+    def clear_budget_flags(self):
+        """Clear downgrade/freeze flags when spend is back to normal."""
+        from core.models.system import SystemConfiguration
+
+        cleared = SystemConfiguration.objects.filter(
+            key__in=[
+                'budget_downgrade_active',
+                'budget_freeze_active',
+            ],
+        ).delete()
+
+        if cleared[0] > 0:
+            SystemConfiguration.objects.update_or_create(
+                key='budget_mode',
+                defaults={
+                    'value': 'normal',
+                    'description': 'Budget flags cleared — spend normal',
+                    'category': 'performance',
+                },
+            )
+            logger.info(
+                "[BudgetController] Budget flags cleared — normal mode"
+            )
+
+    def get_budget_report(self, now) -> dict:
+        """Generate a budget status report for PA/governance."""
+        spend = self.compute_spend(now)
+
+        daily_cap = (
+            AutopilotConfig.get('BUDGET_DAILY_CAP_USD')
+            or AutopilotConfig.BUDGET_DAILY_CAP_USD
+        )
+        hourly_cap = (
+            AutopilotConfig.get('BUDGET_HOURLY_CAP_USD')
+            or AutopilotConfig.BUDGET_HOURLY_CAP_USD
+        )
+
+        # Current mode
+        from core.models.system import SystemConfiguration
+        mode = 'normal'
+        try:
+            mode_entry = SystemConfiguration.objects.filter(
+                key='budget_mode',
+            ).values_list('value', flat=True).first()
+            if mode_entry:
+                mode = mode_entry
+        except Exception:
+            pass
+
+        return {
+            'mode': mode,
+            'daily_spend': round(spend['daily_total'], 4),
+            'daily_cap': daily_cap,
+            'daily_utilization': round(
+                spend['daily_total'] / max(daily_cap, 0.01), 3
+            ),
+            'hourly_spend': round(spend['hourly_total'], 4),
+            'hourly_cap': hourly_cap,
+            'hourly_utilization': round(
+                spend['hourly_total'] / max(hourly_cap, 0.01), 3
+            ),
+            'daily_calls': spend['daily_calls'],
+            'hourly_calls': spend['hourly_calls'],
+            'top_agents': spend['top_agents'][:5],
+            'top_models': spend['top_models'][:5],
+            'soft_limit_pct': AutopilotConfig.BUDGET_SOFT_LIMIT_PCT,
+            'hard_limit_pct': AutopilotConfig.BUDGET_HARD_LIMIT_PCT,
+        }

@@ -528,6 +528,7 @@ class AutopilotAction(models.Model):
         ('content_publish', 'Content Auto-Publish'),
         ('remediate', 'Auto-Remediation Applied'),
         ('config_tune', 'Config Self-Tuning'),
+        ('budget_freeze', 'Budget Hard Freeze'),
     ]
 
     VERIFICATION_STATES = [
