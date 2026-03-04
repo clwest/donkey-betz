@@ -11,6 +11,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from core.auth_middleware import token_auth_required
 from django.db.models import Sum, Avg, Count, Q
 from django.utils import timezone
+from django.views.decorators.cache import cache_page
+from django.views.decorators.vary import vary_on_cookie
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
@@ -32,6 +34,8 @@ logger = logging.getLogger(__name__)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@vary_on_cookie
+@cache_page(60)  # 60s — analytics dashboard (17 queries)
 def analytics_dashboard(request):
     """
     CRITICAL FIX: Analytics dashboard with REAL database queries
@@ -978,6 +982,7 @@ def get_confidence_metrics(user, days):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@cache_page(45)  # 45s — learning stats (19 queries)
 def learning_stats(request):
     """
     Get learning system statistics for AI Production Hub

@@ -21,6 +21,7 @@ from decimal import Decimal
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Avg, Count, Sum, Q, F
 from django.db.models.functions import TruncDate, TruncHour
@@ -31,6 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 @require_http_methods(["GET"])
+@cache_page(30)  # 30s — system-wide agent stats (8 queries)
 def agent_analytics_stats(request):
     """
     GET /api/agent-analytics/stats/
@@ -79,6 +81,7 @@ def agent_analytics_stats(request):
 
 
 @require_http_methods(["GET"])
+@cache_page(30)  # 30s — top performers change slowly
 def agent_analytics_top_performers(request):
     """
     GET /api/agent-analytics/top-performers/
@@ -111,6 +114,7 @@ def agent_analytics_top_performers(request):
 
 
 @require_http_methods(["GET"])
+@cache_page(30)  # 30s — attention list is aggregate data
 def agent_analytics_needs_attention(request):
     """
     GET /api/agent-analytics/needs-attention/
@@ -184,6 +188,7 @@ def agent_analytics_needs_attention(request):
 
 
 @require_http_methods(["GET"])
+@cache_page(30)  # 30s — chart data
 def agent_analytics_activity(request):
     """
     GET /api/agent-analytics/activity/
@@ -239,6 +244,7 @@ def agent_analytics_activity(request):
 
 
 @require_http_methods(["GET"])
+@cache_page(15)  # 15s — execution logs refresh frequently
 def agent_analytics_executions(request):
     """
     GET /api/agent-analytics/executions/
@@ -298,6 +304,7 @@ def agent_analytics_executions(request):
 
 
 @require_http_methods(["GET"])
+@cache_page(30)  # 30s — health check aggregates
 def system_health_check(request):
     """
     GET /api/system-health/
