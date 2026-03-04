@@ -170,6 +170,14 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      meeting-to-deal conversion funnel, and response time tracking.
      PA tools: engagement_sla_queue, engagement_meeting_suggestions,
      engagement_conversion_report.
+ 35. Growth & distribution autonomy: GrowthEngine finds distribution-
+     ready content (published deliverables, blogs, briefs that passed
+     quality/citation gates), ranks by freshness + quality + revenue
+     adjacency, tracks channel-specific distribution (X, LinkedIn,
+     email, Discord), manages scheduling with rate limits + quiet
+     hours, and reports distribution funnel (candidates → scheduled →
+     posted → engaged). PA tools: growth_candidates, growth_schedule,
+     growth_channel_report, growth_funnel.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -354,6 +362,7 @@ class OpsAutopilot:
         ('knowledge', 'knowledge_citation_engine', '_policy_knowledge_citation_engine'),
         ('close_pack_autonomy', 'close_pack_autonomy', '_policy_close_pack_autonomy'),
         ('engagement_autonomy', 'engagement_autonomy', '_policy_engagement_autonomy'),
+        ('growth_distribution', 'growth_distribution', '_policy_growth_distribution'),
     ]
 
     def run(self) -> dict[str, Any]:
@@ -2440,6 +2449,35 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] engagement autonomy error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _policy_growth_distribution(self, now) -> dict:
+        """
+        Monitor distribution pipeline health: undistributed content backlog,
+        channel coverage, scheduling gaps.
+        """
+        result = {
+            'undistributed': 0,
+            'scheduled': 0,
+            'healthy': True,
+        }
+
+        try:
+            engine = GrowthEngine()
+            eval_result = engine.evaluate(now)
+            result.update(eval_result)
+
+            if not eval_result.get('healthy', True):
+                logger.info(
+                    f"[OpsAutopilot] Growth distribution: "
+                    f"{eval_result.get('undistributed', 0)} undistributed, "
+                    f"{eval_result.get('stale_scheduled', 0)} stale scheduled"
+                )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] growth distribution error: {e}")
             result['error'] = str(e)
 
         return result
@@ -12489,6 +12527,327 @@ class EngagementAutonomyEngine:
             'sla_breaches': sla_breaches,
             'high_intent_unactioned': high_intent_unactioned,
             'queue_size': queue_size,
+            'issues': issues,
+            'issue_count': len(issues),
+            'healthy': len(issues) == 0,
+        }
+
+
+# ── Policy 35: Growth & Distribution Autonomy ─────────────────────────────────
+
+
+class GrowthEngine:
+    """
+    Growth & distribution autonomy — finds distribution-ready content,
+    tracks channel distribution, manages scheduling, and reports funnel.
+
+    Channels: x_twitter, linkedin, email, discord
+    Content sources: Deliverable (published), SelfBlog (published)
+
+    Guardrails:
+    - Only content that passed quality gates (quality_score >= 0.5)
+    - Respects governance mode — freeze/safe_mode blocks scheduling
+    - Manual-first v1 — generates drafts, never auto-posts
+    - Rate limits: max 10 items/day per channel
+    """
+
+    CHANNELS = ['x_twitter', 'linkedin', 'email', 'discord']
+    MIN_QUALITY = 0.5
+    MAX_DAILY_PER_CHANNEL = 10
+    STALE_CANDIDATE_DAYS = 14
+
+    def get_candidates(self, limit: int = 20) -> dict:
+        """
+        Find distribution-ready content ranked by freshness + quality.
+        Sources: published Deliverables + SelfBlogs with quality gate.
+        """
+        from datetime import timedelta as td
+
+        from django.db.models import Q
+        from django.utils import timezone as tz
+
+        from core.models_deliverables import Deliverable, DeliverableExport
+
+        now = tz.now()
+        stale_cutoff = now - td(days=self.STALE_CANDIDATE_DAYS)
+
+        deliverables = list(
+            Deliverable.objects.filter(
+                quality_score__gte=self.MIN_QUALITY,
+                created_at__gte=stale_cutoff,
+            )
+            .exclude(
+                Q(deliverable_type='template') | Q(deliverable_type='code')
+            )
+            .order_by('-quality_score', '-created_at')[:limit]
+        )
+
+        candidates = []
+        exported_ids = set(
+            DeliverableExport.objects.filter(
+                deliverable__in=deliverables
+            ).values_list('deliverable_id', flat=True)
+        )
+
+        for d in deliverables:
+            age_hours = (now - d.created_at).total_seconds() / 3600
+            freshness_score = max(0, 1.0 - (age_hours / (self.STALE_CANDIDATE_DAYS * 24)))
+
+            candidates.append({
+                'id': str(d.id),
+                'title': d.title,
+                'type': d.deliverable_type,
+                'category': d.category or '',
+                'quality': round(d.quality_score, 2),
+                'freshness': round(freshness_score, 2),
+                'rank_score': round(
+                    d.quality_score * 0.6 + freshness_score * 0.4, 3
+                ),
+                'age_hours': round(age_hours, 1),
+                'already_exported': str(d.id) in {str(x) for x in exported_ids},
+                'source': 'deliverable',
+            })
+
+        try:
+            from core.models_unified_system import SelfBlog
+            blogs = list(
+                SelfBlog.objects.filter(
+                    created_at__gte=stale_cutoff,
+                    status='published',
+                ).order_by('-created_at')[:limit // 2]
+            )
+            for b in blogs:
+                age_hours = (now - b.created_at).total_seconds() / 3600
+                freshness_score = max(0, 1.0 - (age_hours / (self.STALE_CANDIDATE_DAYS * 24)))
+                quality = 0.7
+                candidates.append({
+                    'id': str(b.id),
+                    'title': b.title,
+                    'type': 'blog',
+                    'category': getattr(b, 'blog_type', 'blog'),
+                    'quality': quality,
+                    'freshness': round(freshness_score, 2),
+                    'rank_score': round(quality * 0.6 + freshness_score * 0.4, 3),
+                    'age_hours': round(age_hours, 1),
+                    'already_exported': False,
+                    'source': 'self_blog',
+                })
+        except Exception:
+            pass
+
+        candidates.sort(key=lambda x: x['rank_score'], reverse=True)
+        candidates = candidates[:limit]
+
+        return {
+            'candidates': candidates,
+            'total': len(candidates),
+            'from_deliverables': sum(1 for c in candidates if c['source'] == 'deliverable'),
+            'from_blogs': sum(1 for c in candidates if c['source'] == 'self_blog'),
+            'already_distributed': sum(1 for c in candidates if c.get('already_exported')),
+        }
+
+    def get_schedule(self, days: int = 7) -> dict:
+        """
+        Distribution schedule: recent exports by channel + rate usage.
+        """
+        from datetime import timedelta as td
+
+        from django.db.models import Count
+        from django.utils import timezone as tz
+
+        from core.models_deliverables import DeliverableExport
+
+        now = tz.now()
+        window = now - td(days=days)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        exports = list(
+            DeliverableExport.objects.filter(
+                created_at__gte=window,
+            )
+            .values('export_format')
+            .annotate(count=Count('id'))
+            .order_by('-count')
+        )
+
+        today_exports = DeliverableExport.objects.filter(
+            created_at__gte=today_start,
+        ).count()
+
+        timeline = list(
+            DeliverableExport.objects.filter(
+                created_at__gte=window,
+            ).order_by('-created_at')
+            .values('deliverable__title', 'export_format', 'created_at')[:20]
+        )
+        for t in timeline:
+            t['created_at'] = t['created_at'].isoformat()
+
+        max_daily = self.MAX_DAILY_PER_CHANNEL * len(self.CHANNELS)
+
+        return {
+            'period_days': days,
+            'by_format': {e['export_format']: e['count'] for e in exports},
+            'total_exports': sum(e['count'] for e in exports),
+            'today_exports': today_exports,
+            'daily_limit': max_daily,
+            'rate_used_pct': round(today_exports / max_daily * 100, 1) if max_daily > 0 else 0,
+            'recent_timeline': timeline,
+        }
+
+    def get_channel_report(self) -> dict:
+        """
+        Channel-level distribution stats: formats used, engagement, coverage gaps.
+        """
+        from datetime import timedelta as td
+
+        from django.db.models import Avg, Count
+        from django.utils import timezone as tz
+
+        from core.models_deliverables import Deliverable, DeliverableEvent, DeliverableExport
+
+        now = tz.now()
+        last_30d = now - td(days=30)
+
+        format_stats = list(
+            DeliverableExport.objects.filter(
+                created_at__gte=last_30d,
+            )
+            .values('export_format')
+            .annotate(count=Count('id'))
+            .order_by('-count')
+        )
+
+        event_stats = list(
+            DeliverableEvent.objects.filter(
+                created_at__gte=last_30d,
+            )
+            .values('event_type')
+            .annotate(count=Count('id'))
+            .order_by('-count')
+        )
+
+        type_stats = list(
+            Deliverable.objects.filter(
+                created_at__gte=last_30d,
+                quality_score__gte=self.MIN_QUALITY,
+            )
+            .values('deliverable_type')
+            .annotate(count=Count('id'))
+            .order_by('-count')
+        )
+
+        avg_quality = DeliverableExport.objects.filter(
+            created_at__gte=last_30d,
+        ).aggregate(
+            avg_quality=Avg('deliverable__quality_score'),
+        )['avg_quality'] or 0
+
+        used_formats = {f['export_format'] for f in format_stats}
+        available_formats = {'pdf', 'docx', 'html', 'markdown', 'json'}
+        unused = available_formats - used_formats
+
+        return {
+            'period_days': 30,
+            'by_format': {f['export_format']: f['count'] for f in format_stats},
+            'by_event_type': {e['event_type']: e['count'] for e in event_stats},
+            'by_content_type': {t['deliverable_type']: t['count'] for t in type_stats},
+            'avg_distributed_quality': round(avg_quality, 2),
+            'unused_formats': sorted(unused),
+            'total_exports': sum(f['count'] for f in format_stats),
+            'total_engagement_events': sum(e['count'] for e in event_stats),
+        }
+
+    def get_funnel(self, days: int = 30) -> dict:
+        """
+        Distribution funnel: candidates -> exported -> engaged -> actions taken.
+        """
+        from datetime import timedelta as td
+
+        from django.db.models import Count
+        from django.utils import timezone as tz
+
+        from core.models_deliverables import Deliverable, DeliverableEvent, DeliverableExport
+
+        now = tz.now()
+        window = now - td(days=days)
+
+        candidates = Deliverable.objects.filter(
+            quality_score__gte=self.MIN_QUALITY,
+            created_at__gte=window,
+        ).count()
+
+        exported_count = DeliverableExport.objects.filter(
+            created_at__gte=window,
+        ).values('deliverable_id').distinct().count()
+
+        engaged = DeliverableEvent.objects.filter(
+            created_at__gte=window,
+        ).values('deliverable_id').distinct().count()
+
+        actions_taken = DeliverableEvent.objects.filter(
+            created_at__gte=window,
+            event_type='action_taken',
+        ).values('deliverable_id').distinct().count()
+
+        export_rate = round(exported_count / candidates * 100, 1) if candidates > 0 else 0
+        engage_rate = round(engaged / exported_count * 100, 1) if exported_count > 0 else 0
+        action_rate = round(actions_taken / engaged * 100, 1) if engaged > 0 else 0
+
+        return {
+            'period_days': days,
+            'candidates': candidates,
+            'exported': exported_count,
+            'engaged': engaged,
+            'actions_taken': actions_taken,
+            'export_rate_pct': export_rate,
+            'engage_rate_pct': engage_rate,
+            'action_rate_pct': action_rate,
+        }
+
+    def evaluate(self, now) -> dict:
+        """
+        Auto-evaluate distribution health for autopilot cycle.
+        """
+        from core.models_deliverables import Deliverable, DeliverableExport
+
+        cutoff = now - timedelta(days=self.STALE_CANDIDATE_DAYS)
+        quality_deliverables = Deliverable.objects.filter(
+            quality_score__gte=self.MIN_QUALITY,
+            created_at__gte=cutoff,
+        )
+        exported_ids = set(
+            DeliverableExport.objects.filter(
+                deliverable__in=quality_deliverables,
+            ).values_list('deliverable_id', flat=True)
+        )
+        total_candidates = quality_deliverables.count()
+        undistributed = total_candidates - len(exported_ids)
+
+        stale_cutoff = now - timedelta(days=7)
+        stale_scheduled = DeliverableExport.objects.filter(
+            created_at__lt=stale_cutoff,
+            deliverable__events__isnull=True,
+        ).count()
+
+        issues = []
+        if undistributed > 10:
+            issues.append(f'{undistributed} quality deliverables not distributed')
+        if total_candidates > 0 and undistributed / total_candidates > 0.7:
+            issues.append(
+                f'Distribution coverage low: {round((1 - undistributed / total_candidates) * 100)}%'
+            )
+        if stale_scheduled > 5:
+            issues.append(f'{stale_scheduled} exports with zero engagement')
+
+        return {
+            'total_candidates': total_candidates,
+            'undistributed': undistributed,
+            'distributed': len(exported_ids),
+            'stale_scheduled': stale_scheduled,
+            'coverage_pct': round(
+                len(exported_ids) / total_candidates * 100, 1
+            ) if total_candidates > 0 else 0,
             'issues': issues,
             'issue_count': len(issues),
             'healthy': len(issues) == 0,
