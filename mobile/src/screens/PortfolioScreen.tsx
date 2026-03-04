@@ -1,9 +1,8 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View, Text, ScrollView, RefreshControl, TouchableOpacity,
   StyleSheet, ActivityIndicator, Dimensions,
 } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
 import { Feather } from '@expo/vector-icons';
 import { useScreenAnalytics } from '../observability/analytics';
 import ScreenState from '../components/ScreenState';
@@ -16,7 +15,7 @@ import {
 
 type TabKey = 'overview' | 'platforms' | 'revenue';
 
-const TABS: { key: TabKey; label: string; icon: keyof typeof Feather.glyphMap }[] = [
+const TABS: { key: TabKey; label: string; icon: string }[] = [
   { key: 'overview', label: 'Overview', icon: 'pie-chart' },
   { key: 'platforms', label: 'Platforms', icon: 'globe' },
   { key: 'revenue', label: 'Revenue', icon: 'dollar-sign' },
@@ -25,10 +24,8 @@ const TABS: { key: TabKey; label: string; icon: keyof typeof Feather.glyphMap }[
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmt(n: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency', currency: 'USD',
-    minimumFractionDigits: 0, maximumFractionDigits: 0,
-  }).format(n);
+  if (n >= 0) return `$${Math.round(n).toLocaleString()}`;
+  return `-$${Math.round(Math.abs(n)).toLocaleString()}`;
 }
 
 function statusColor(status: string): string {
@@ -44,47 +41,63 @@ function statusColor(status: string): string {
 export default function PortfolioScreen() {
   useScreenAnalytics('Portfolio');
   const [tab, setTab] = useState<TabKey>('overview');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // ── Queries ──────────────────────────────────────────────────────────────
-  const statsQ = useQuery({ queryKey: ['portfolio-stats'], queryFn: getStats });
-  const platformsQ = useQuery({ queryKey: ['portfolio-platforms'], queryFn: getPlatforms });
-  const revenueQ = useQuery({
-    queryKey: ['portfolio-revenue'], queryFn: getRevenueDashboard,
-    enabled: tab === 'overview' || tab === 'revenue',
-  });
-  const contentQ = useQuery({
-    queryKey: ['portfolio-content'], queryFn: getContent,
-    enabled: tab === 'overview',
-  });
-  const recsQ = useQuery({
-    queryKey: ['portfolio-recs'], queryFn: getRecommendations,
-    enabled: tab === 'overview',
-  });
-  const compareQ = useQuery({
-    queryKey: ['portfolio-compare'], queryFn: comparePlatforms,
-    enabled: tab === 'revenue',
-  });
+  const [stats, setStats] = useState<PortfolioStats | null>(null);
+  const [platforms, setPlatforms] = useState<Platform[]>([]);
+  const [revenue, setRevenue] = useState<Revenue | null>(null);
+  const [content, setContent] = useState<Distribution[]>([]);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [comparison, setComparison] = useState<PlatformComparison[]>([]);
+  const [loadingCompare, setLoadingCompare] = useState(false);
 
-  const loading = statsQ.isLoading;
-  const error = statsQ.error;
+  const fetchAll = useCallback(async () => {
+    setError(null);
+    const results = await Promise.allSettled([
+      getStats(),
+      getPlatforms(),
+      getRevenueDashboard(),
+      getContent(),
+      getRecommendations(),
+    ]);
+    if (results[0].status === 'fulfilled') setStats(results[0].value);
+    if (results[1].status === 'fulfilled') setPlatforms(results[1].value);
+    if (results[2].status === 'fulfilled') setRevenue(results[2].value);
+    if (results[3].status === 'fulfilled') setContent(results[3].value);
+    if (results[4].status === 'fulfilled') setRecommendations(results[4].value);
+    if (results.every((r) => r.status === 'rejected')) {
+      setError('Failed to load portfolio data. Pull to retry.');
+    }
+  }, []);
 
-  const onRefresh = useCallback(() => {
-    statsQ.refetch();
-    platformsQ.refetch();
-    revenueQ.refetch();
-    contentQ.refetch();
-    recsQ.refetch();
-    compareQ.refetch();
-  }, [statsQ, platformsQ, revenueQ, contentQ, recsQ, compareQ]);
+  useEffect(() => {
+    fetchAll().finally(() => setLoading(false));
+  }, [fetchAll]);
 
-  const refreshing = statsQ.isFetching || platformsQ.isFetching;
+  // Lazy-load comparison when revenue tab selected
+  useEffect(() => {
+    if (tab === 'revenue' && comparison.length === 0) {
+      setLoadingCompare(true);
+      comparePlatforms()
+        .then(setComparison)
+        .catch(() => {})
+        .finally(() => setLoadingCompare(false));
+    }
+  }, [tab, comparison.length]);
 
-  const stats: PortfolioStats = statsQ.data ?? { total_revenue: 0, platforms: 0, connected: 0, distributions: 0 };
-  const platforms: Platform[] = platformsQ.data ?? [];
-  const revenue: Revenue = revenueQ.data ?? { total: 0, this_month: 0, last_month: 0, pending: 0, by_platform: {} };
-  const content: Distribution[] = contentQ.data ?? [];
-  const recommendations: Recommendation[] = recsQ.data ?? [];
-  const comparison: PlatformComparison[] = compareQ.data ?? [];
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchAll();
+    if (tab === 'revenue') {
+      comparePlatforms().then(setComparison).catch(() => {});
+    }
+    setRefreshing(false);
+  }, [fetchAll, tab]);
+
+  const safeStats: PortfolioStats = stats ?? { total_revenue: 0, platforms: 0, connected: 0, distributions: 0 };
+  const safeRevenue: Revenue = revenue ?? { total: 0, this_month: 0, last_month: 0, pending: 0, by_platform: {} };
 
   return (
     <View style={s.root}>
@@ -96,21 +109,21 @@ export default function PortfolioScreen() {
             style={[s.tab, tab === key && s.tabActive]}
             onPress={() => setTab(key)}
           >
-            <Feather name={icon} size={14} color={tab === key ? '#fff' : '#9ca3af'} />
+            <Feather name={icon as any} size={14} color={tab === key ? '#fff' : '#9ca3af'} />
             <Text style={[s.tabLabel, tab === key && s.tabLabelActive]}>{label}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      <ScreenState loading={loading} error={error ? String(error) : null} onRetry={onRefresh}>
+      <ScreenState loading={loading} error={error} onRetry={fetchAll}>
         <ScrollView
           contentContainerStyle={s.scroll}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#818cf8" />}
         >
           {tab === 'overview' && (
             <OverviewTab
-              stats={stats}
-              revenue={revenue}
+              stats={safeStats}
+              revenue={safeRevenue}
               platforms={platforms}
               content={content}
               recommendations={recommendations}
@@ -118,7 +131,7 @@ export default function PortfolioScreen() {
           )}
           {tab === 'platforms' && <PlatformsTab platforms={platforms} />}
           {tab === 'revenue' && (
-            <RevenueTab revenue={revenue} comparison={comparison} loadingCompare={compareQ.isLoading} />
+            <RevenueTab revenue={safeRevenue} comparison={comparison} loadingCompare={loadingCompare} />
           )}
         </ScrollView>
       </ScreenState>
@@ -356,7 +369,7 @@ function RevenueTab({ revenue, comparison, loadingCompare }: {
 
 // ── Shared Pieces ────────────────────────────────────────────────────────────
 
-function StatCard({ label, value, color, icon }: { label: string; value: string; color: string; icon: keyof typeof Feather.glyphMap }) {
+function StatCard({ label, value, color, icon }: { label: string; value: string; color: string; icon: string }) {
   return (
     <View style={s.statCard}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -364,16 +377,16 @@ function StatCard({ label, value, color, icon }: { label: string; value: string;
           <Text style={s.statLabel}>{label}</Text>
           <Text style={[s.statValue, { color }]}>{value}</Text>
         </View>
-        <Feather name={icon} size={20} color={color} />
+        <Feather name={icon as any} size={20} color={color} />
       </View>
     </View>
   );
 }
 
-function EmptyBlock({ icon, text, sub }: { icon: keyof typeof Feather.glyphMap; text: string; sub?: string }) {
+function EmptyBlock({ icon, text, sub }: { icon: string; text: string; sub?: string }) {
   return (
     <View style={{ alignItems: 'center', paddingVertical: 24 }}>
-      <Feather name={icon} size={28} color="#4b5563" style={{ marginBottom: 8 }} />
+      <Feather name={icon as any} size={28} color="#4b5563" style={{ marginBottom: 8 }} />
       <Text style={{ color: '#6b7280', fontSize: 13 }}>{text}</Text>
       {sub && <Text style={{ color: '#4b5563', fontSize: 11, marginTop: 4 }}>{sub}</Text>}
     </View>
