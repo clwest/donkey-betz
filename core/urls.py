@@ -3709,7 +3709,8 @@ urlpatterns = [
 from core.views_upload import (
     upload_image, upload_video,
     chunked_upload_init, chunked_upload_chunk, chunked_upload_status,
-    get_uploads
+    get_uploads,
+    cloudinary_upload_sign, cloudinary_upload_register,
 )
 
 urlpatterns += [
@@ -3721,6 +3722,10 @@ urlpatterns += [
     path('api/upload/chunked/init/', chunked_upload_init, name='chunked-upload-init'),
     path('api/upload/chunked/<uuid:upload_id>/chunk/', chunked_upload_chunk, name='chunked-upload-chunk'),
     path('api/upload/chunked/<uuid:upload_id>/status/', chunked_upload_status, name='chunked-upload-status'),
+
+    # Cloudinary direct upload (browser → Cloudinary, no server bottleneck)
+    path('api/upload/cloudinary/sign/', cloudinary_upload_sign, name='cloudinary-upload-sign'),
+    path('api/upload/video/register/', cloudinary_upload_register, name='cloudinary-upload-register'),
 
     # List uploads
     path('api/upload/list/', get_uploads, name='upload-list'),

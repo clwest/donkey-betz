@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-03-04 12:25
+**Generated:** 2026-03-04 12:32
 **Current Session:** 1075
 **Total Documentation:** 1818 files | 622,120 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,197 |
+| Total cross-references | 2,201 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/00-START-HERE/README.md` | 60 | 🚀 START HERE - Unified Donkey Betz Platform |
+| `docs/archive/superseded-docs/README.md` | 60 | 📚 Unified Donkey Betz - Documentation Index |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -217,7 +217,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 361 | 2026-03-04 11:44 |
+| INDEX.md | docs | 361 | 2026-03-04 12:26 |
 | OVL_CODE_RUNNER_V0.md | docs | 174 | 2026-03-04 08:20 |
 | stage3_timeline.md | initiatives | 71 | 2026-03-03 12:55 |
 | stage3_rubric_runbook.md | initiatives | 105 | 2026-03-03 12:55 |
