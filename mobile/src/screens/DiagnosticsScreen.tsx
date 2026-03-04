@@ -1,19 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import {
+  Clipboard,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import Constants from 'expo-constants';
 import * as Application from 'expo-application';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../auth/authStore';
+import { toast } from '../components/Toast';
 
 interface DiagInfo {
   appVersion: string;
   nativeVersion: string;
   expoSdk: string;
+  buildSha: string;
+  buildChannel: string;
+  deviceOs: string;
   apiBaseUrl: string;
   authStatus: string;
   username: string;
@@ -38,6 +45,9 @@ export default function DiagnosticsScreen() {
         appVersion: Constants.expoConfig?.version ?? 'unknown',
         nativeVersion: Application.nativeApplicationVersion ?? 'unknown',
         expoSdk: Constants.expoConfig?.sdkVersion ?? 'unknown',
+        buildSha: Constants.expoConfig?.extra?.buildSha ?? process.env.EXPO_PUBLIC_BUILD_SHA ?? 'dev',
+        buildChannel: (Constants as any).expoGoConfig?.debugMode ? 'development' : (Constants.expoConfig?.extra?.eas?.buildProfile ?? 'unknown'),
+        deviceOs: `${Platform.OS} ${Platform.Version}`,
         apiBaseUrl: Constants.expoConfig?.extra?.apiBaseUrl ?? 'not set',
         authStatus: status,
         username: user?.username ?? 'anonymous',
@@ -60,11 +70,33 @@ export default function DiagnosticsScreen() {
 
       {info ? (
         <>
+          <TouchableOpacity style={styles.copyBtn} onPress={() => {
+            const debugText = [
+              `App: ${info.appVersion} (${info.nativeVersion})`,
+              `SDK: ${info.expoSdk} | Runtime: ${info.runtimeVersion}`,
+              `Build: ${info.buildSha} | Channel: ${info.buildChannel}`,
+              `Device: ${info.deviceOs}`,
+              `API: ${info.apiBaseUrl}`,
+              `User: ${info.username} (${info.platformRole})`,
+              `Auth: ${info.authStatus}`,
+            ].join('\n');
+            Clipboard.setString(debugText);
+            toast.success('Debug info copied');
+          }}>
+            <Text style={styles.copyBtnText}>Copy Debug Info</Text>
+          </TouchableOpacity>
+
           <Section title="App">
             <Row label="Version" value={info.appVersion} />
             <Row label="Native Build" value={info.nativeVersion} />
             <Row label="Expo SDK" value={info.expoSdk} />
             <Row label="Runtime Version" value={info.runtimeVersion} />
+            <Row label="Build SHA" value={info.buildSha} />
+            <Row label="Channel" value={info.buildChannel} />
+          </Section>
+
+          <Section title="Device">
+            <Row label="OS" value={info.deviceOs} />
           </Section>
 
           <Section title="Connection">
@@ -143,4 +175,17 @@ const styles = StyleSheet.create({
   },
   label: { color: '#6b7280', fontSize: 13 },
   value: { color: '#d1d5db', fontSize: 13, fontWeight: '500', maxWidth: '60%', textAlign: 'right' },
+
+  copyBtn: {
+    backgroundColor: '#6366f1',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  copyBtnText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
 });

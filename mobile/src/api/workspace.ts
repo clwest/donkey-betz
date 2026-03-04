@@ -1,75 +1,100 @@
+import { z } from 'zod';
 import http from './http';
+import { safeParse } from './safeParse';
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// ── Zod Schemas ─────────────────────────────────────────────────────────────
 
-export interface Workspace {
-  id: string;
-  name: string;
-  description: string;
-  workspace_type: string;
-  root_path: string;
-  is_active: boolean;
-  tech_stack: Record<string, unknown>;
-  current_branch: string;
-  total_operations: number;
-  total_files_written: number;
-  total_commits: number;
-  last_operation_at: string | null;
-  created_at: string;
-  context_summary: string | null;
-}
+const WorkspaceSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().default(''),
+  workspace_type: z.string().default(''),
+  root_path: z.string().default(''),
+  is_active: z.boolean().default(false),
+  tech_stack: z.record(z.string(), z.unknown()).default({}),
+  current_branch: z.string().default(''),
+  total_operations: z.number().default(0),
+  total_files_written: z.number().default(0),
+  total_commits: z.number().default(0),
+  last_operation_at: z.string().nullable().default(null),
+  created_at: z.string().default(''),
+  context_summary: z.string().nullable().default(null),
+});
 
-export interface WorkspaceOperation {
-  id: string;
-  workspace: string;
-  workspace_name: string;
-  agent_name: string;
-  agent_task: string;
-  operation_type: string;
-  file_path: string;
-  success: boolean;
-  error_message: string;
-  execution_time_ms: number;
-  requires_review: boolean;
-  reviewed_by_human: boolean;
-  human_approved: boolean | null;
-  can_rollback: boolean;
-  rolled_back: boolean;
-  created_at: string;
-}
+const WorkspaceOperationSchema = z.object({
+  id: z.string(),
+  workspace: z.string().default(''),
+  workspace_name: z.string().default(''),
+  agent_name: z.string().default(''),
+  agent_task: z.string().default(''),
+  operation_type: z.string().default(''),
+  file_path: z.string().default(''),
+  success: z.boolean().default(true),
+  error_message: z.string().default(''),
+  execution_time_ms: z.number().default(0),
+  requires_review: z.boolean().default(false),
+  reviewed_by_human: z.boolean().default(false),
+  human_approved: z.boolean().nullable().default(null),
+  can_rollback: z.boolean().default(false),
+  rolled_back: z.boolean().default(false),
+  created_at: z.string().default(''),
+});
 
-export interface PaginatedResponse<T> {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: T[];
-}
+const PaginatedWorkspacesSchema = z.object({
+  count: z.number(),
+  next: z.string().nullable().default(null),
+  previous: z.string().nullable().default(null),
+  results: z.array(WorkspaceSchema),
+});
 
-// ── Endpoints ────────────────────────────────────────────────────────────────
+const PaginatedOperationsSchema = z.object({
+  count: z.number(),
+  next: z.string().nullable().default(null),
+  previous: z.string().nullable().default(null),
+  results: z.array(WorkspaceOperationSchema),
+});
+
+// ── Exported Types ──────────────────────────────────────────────────────────
+
+export type Workspace = z.infer<typeof WorkspaceSchema>;
+export type WorkspaceOperation = z.infer<typeof WorkspaceOperationSchema>;
+export type PaginatedResponse<T> = { count: number; next: string | null; previous: string | null; results: T[] };
+
+// ── Fallbacks ───────────────────────────────────────────────────────────────
+
+const EMPTY_PAGINATED: PaginatedResponse<any> = { count: 0, next: null, previous: null, results: [] };
+
+// ── Endpoints ───────────────────────────────────────────────────────────────
 
 export async function listWorkspaces(): Promise<PaginatedResponse<Workspace>> {
-  const { data } = await http.get<PaginatedResponse<Workspace>>('/workspaces/');
-  return data;
+  const { data } = await http.get('/workspaces/');
+  return safeParse(PaginatedWorkspacesSchema, data, {
+    endpoint: '/workspaces/',
+    fallback: EMPTY_PAGINATED,
+  });
 }
 
 export async function listOperations(params?: {
   limit?: number;
   workspace?: string;
 }): Promise<PaginatedResponse<WorkspaceOperation>> {
-  const { data } = await http.get<PaginatedResponse<WorkspaceOperation>>(
-    '/workspace-operations/',
-    { params },
-  );
-  return data;
+  const { data } = await http.get('/workspace-operations/', { params });
+  return safeParse(PaginatedOperationsSchema, data, {
+    endpoint: '/workspace-operations/',
+    fallback: EMPTY_PAGINATED,
+  });
 }
 
 export async function getPendingReviews(): Promise<PaginatedResponse<WorkspaceOperation>> {
-  // API returns { total, operations: [...] } instead of paginated format
   const { data } = await http.get<any>('/workspace-operations/pending-reviews/');
-  if (data.operations) {
-    return { count: data.total ?? data.operations.length, next: null, previous: null, results: data.operations };
-  }
-  return data;
+  // API returns { total, operations: [...] } instead of paginated format
+  const normalized = data.operations
+    ? { count: data.total ?? data.operations.length, next: null, previous: null, results: data.operations }
+    : data;
+  return safeParse(PaginatedOperationsSchema, normalized, {
+    endpoint: '/workspace-operations/pending-reviews/',
+    fallback: EMPTY_PAGINATED,
+  });
 }
 
 export async function reviewOperation(

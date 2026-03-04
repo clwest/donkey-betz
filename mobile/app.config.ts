@@ -45,8 +45,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   extra: {
     apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL ?? 'https://donkey-betz-platform-production.up.railway.app/api',
+    buildSha: process.env.EAS_BUILD_GIT_COMMIT_HASH ?? process.env.EXPO_PUBLIC_BUILD_SHA ?? 'dev',
     eas: {
       projectId: process.env.EAS_PROJECT_ID ?? '5fcd4ff0-bb20-40c6-b9f4-a0a6753a066d',
+      buildProfile: process.env.EAS_BUILD_PROFILE ?? 'unknown',
     },
   },
   plugins: [

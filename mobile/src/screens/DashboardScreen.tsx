@@ -161,7 +161,7 @@ export default function DashboardScreen() {
             )}
             {Object.entries(health.systems).length > 0 && (
               <View style={styles.systemGrid}>
-                {Object.entries(health.systems).map(([name, sys]) => (
+                {Object.entries(health.systems).map(([name, sys]: [string, any]) => (
                   <View key={name} style={styles.systemChip}>
                     <Text style={styles.systemEmoji}>{sys.emoji}</Text>
                     <Text style={styles.systemName}>{name}</Text>

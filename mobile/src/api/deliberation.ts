@@ -1,79 +1,110 @@
+import { z } from 'zod';
 import http from './http';
+import { safeParse } from './safeParse';
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// ── Zod Schemas ─────────────────────────────────────────────────────────────
 
-export interface FailureStats {
-  hours: number;
-  total_sessions: number;
-  total_failed: number;
-  failure_rate: number;
-  by_reason: Record<string, number>;
-  recent_failures: RecentFailure[];
-}
+const RecentFailureSchema = z.object({
+  id: z.string(),
+  objective: z.string().default(''),
+  failure_reason_code: z.string().default(''),
+  failure_detail: z.string().default(''),
+  created_at: z.string().nullable().default(null),
+}).passthrough();
 
-export interface RecentFailure {
-  id: string;
-  objective: string;
-  failure_reason_code: string;
-  failure_detail: string;
-  created_at: string | null;
-}
+const FailureStatsSchema = z.object({
+  hours: z.number().default(24),
+  total_sessions: z.number().default(0),
+  total_failed: z.number().default(0),
+  total_failures: z.number().default(0),
+  failure_rate: z.number().default(0),
+  by_reason: z.record(z.string(), z.number()).default({}),
+  recent_failures: z.array(RecentFailureSchema).default([]),
+}).passthrough();
 
-export interface DeliberationSession {
-  id: string;
-  session_type: string;
-  status: string;
-  objective: string;
-  created_at: string | null;
-  completed_at: string | null;
-  trace_id: string;
-  participant_count: number;
-  turn_count: number;
-  contract_count: number;
-  failure_reason_code: string;
-  failure_detail: string;
-  blog: {
-    id: string;
-    title: string;
-    status: string;
-    publish_ready: boolean;
-  } | null;
-}
+const BlogSchema = z.object({
+  id: z.string(),
+  title: z.string().default(''),
+  status: z.string().default(''),
+  publish_ready: z.boolean().default(false),
+}).nullable().default(null);
 
-export interface SessionDetail {
-  id: string;
-  session_type: string;
-  status: string;
-  objective: string;
-  participants: Array<{ name: string; type?: string }>;
-  evidence_pack: Record<string, unknown>;
-  trace: Record<string, unknown>;
-  trace_id: string;
-  failure_reason_code: string;
-  failure_detail: string;
-  created_at: string | null;
-  completed_at: string | null;
-  turns: Array<{
-    turn_number: number;
-    agent_name: string;
-    role: string;
-    content: string;
-    created_at: string | null;
-  }>;
-  contracts: Array<{
-    contract_type: string;
-    contract_data: Record<string, unknown>;
-    created_at: string | null;
-  }>;
-}
+const DeliberationSessionSchema = z.object({
+  id: z.string(),
+  session_type: z.string().default(''),
+  status: z.string().default(''),
+  objective: z.string().default(''),
+  created_at: z.string().nullable().default(null),
+  completed_at: z.string().nullable().default(null),
+  trace_id: z.string().default(''),
+  participant_count: z.number().default(0),
+  turn_count: z.number().default(0),
+  contract_count: z.number().default(0),
+  failure_reason_code: z.string().default(''),
+  failure_detail: z.string().default(''),
+  blog: BlogSchema,
+}).passthrough();
 
-// ── Endpoints ────────────────────────────────────────────────────────────────
+const SessionsListSchema = z.object({
+  count: z.number().default(0),
+  sessions: z.array(DeliberationSessionSchema).default([]),
+});
+
+const TurnSchema = z.object({
+  turn_number: z.number(),
+  agent_name: z.string().default(''),
+  role: z.string().default(''),
+  content: z.string().default(''),
+  created_at: z.string().nullable().default(null),
+}).passthrough();
+
+const ContractSchema = z.object({
+  contract_type: z.string().default(''),
+  contract_data: z.record(z.string(), z.unknown()).default({}),
+  created_at: z.string().nullable().default(null),
+}).passthrough();
+
+const SessionDetailSchema = z.object({
+  id: z.string(),
+  session_type: z.string().default(''),
+  status: z.string().default(''),
+  objective: z.string().default(''),
+  participants: z.array(z.object({ name: z.string() }).passthrough()).default([]),
+  evidence_pack: z.record(z.string(), z.unknown()).default({}),
+  trace: z.record(z.string(), z.unknown()).default({}),
+  trace_id: z.string().default(''),
+  failure_reason_code: z.string().default(''),
+  failure_detail: z.string().default(''),
+  created_at: z.string().nullable().default(null),
+  completed_at: z.string().nullable().default(null),
+  turns: z.array(TurnSchema).default([]),
+  contracts: z.array(ContractSchema).default([]),
+}).passthrough();
+
+// ── Exported Types ──────────────────────────────────────────────────────────
+
+export type FailureStats = z.infer<typeof FailureStatsSchema>;
+export type RecentFailure = z.infer<typeof RecentFailureSchema>;
+export type DeliberationSession = z.infer<typeof DeliberationSessionSchema>;
+export type SessionDetail = z.infer<typeof SessionDetailSchema>;
+
+// ── Fallbacks ───────────────────────────────────────────────────────────────
+
+const EMPTY_FAILURE_STATS: FailureStats = {
+  hours: 24, total_sessions: 0, total_failed: 0, total_failures: 0,
+  failure_rate: 0, by_reason: {}, recent_failures: [],
+};
+
+// ── Endpoints ───────────────────────────────────────────────────────────────
 
 export async function getFailureStats(hours = 24): Promise<FailureStats> {
-  const { data } = await http.get<FailureStats>('/deliberation/failure-stats/', {
+  const { data } = await http.get('/deliberation/failure-stats/', {
     params: { hours },
   });
-  return data;
+  return safeParse(FailureStatsSchema, data, {
+    endpoint: '/deliberation/failure-stats/',
+    fallback: EMPTY_FAILURE_STATS,
+  });
 }
 
 export async function listSessions(params?: {
@@ -81,10 +112,16 @@ export async function listSessions(params?: {
   limit?: number;
 }): Promise<{ count: number; sessions: DeliberationSession[] }> {
   const { data } = await http.get('/deliberation/sessions/', { params });
-  return data;
+  return safeParse(SessionsListSchema, data, {
+    endpoint: '/deliberation/sessions/',
+    fallback: { count: 0, sessions: [] },
+  });
 }
 
 export async function getSession(id: string): Promise<SessionDetail> {
-  const { data } = await http.get<SessionDetail>(`/deliberation/sessions/${id}/`);
-  return data;
+  const { data } = await http.get(`/deliberation/sessions/${id}/`);
+  return safeParse(SessionDetailSchema, data, {
+    endpoint: `/deliberation/sessions/${id}/`,
+    fallback: { id, session_type: '', status: 'error', objective: 'Failed to load', participants: [], evidence_pack: {}, trace: {}, trace_id: '', failure_reason_code: '', failure_detail: '', created_at: null, completed_at: null, turns: [], contracts: [] },
+  });
 }
