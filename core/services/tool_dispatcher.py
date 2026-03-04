@@ -12305,6 +12305,40 @@ RESEARCH DATA:
                 **report,
             }
 
+        elif action == 'release_report':
+            # Deploy/release status report
+            from django.utils import timezone as tz
+            from core.services.ops_autopilot import ReleaseGovernor
+
+            governor = ReleaseGovernor()
+            report = governor.get_release_report(tz.now())
+            return {
+                'action': 'release_report',
+                **report,
+            }
+
+        elif action == 'release_freeze':
+            # Manually freeze deploys
+            from core.services.ops_autopilot import ReleaseGovernor
+
+            governor = ReleaseGovernor()
+            result = governor.set_freeze(True, reason='manual PA freeze')
+            return {
+                'action': 'release_freeze',
+                **result,
+            }
+
+        elif action == 'release_unfreeze':
+            # Manually unfreeze deploys
+            from core.services.ops_autopilot import ReleaseGovernor
+
+            governor = ReleaseGovernor()
+            result = governor.set_freeze(False, reason='manual PA unfreeze')
+            return {
+                'action': 'release_unfreeze',
+                **result,
+            }
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason
