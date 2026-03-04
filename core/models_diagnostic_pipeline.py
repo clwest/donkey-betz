@@ -526,6 +526,7 @@ class AutopilotAction(models.Model):
         ('content_sweep', 'Content Pipeline Sweep'),
         ('auto_resolve', 'Auto-resolve Attention Item'),
         ('content_publish', 'Content Auto-Publish'),
+        ('remediate', 'Auto-Remediation Applied'),
     ]
 
     VERIFICATION_STATES = [
@@ -571,3 +572,101 @@ class AutopilotAction(models.Model):
     def __str__(self):
         mode = ' [DRY RUN]' if self.dry_run else ''
         return f"{self.action_type}: {self.agent_name or 'system'}{mode} ({self.created_at})"
+
+
+# ── Remediation Playbook (Session 1087 — Root-Cause Autonomy) ────────────────
+
+
+class RemediationPlaybook(models.Model):
+    """
+    Known remediation patterns that worked before.
+
+    When the system successfully resolves a failure pattern, the fix is
+    recorded here as a playbook entry. On future occurrences of the same
+    signature category, the engine can auto-apply the known fix.
+
+    Safe remediation types (config-only, no code changes):
+    - timeout_adjust: Increase/decrease agent timeout
+    - model_fallback: Route to fallback LLM provider
+    - retry_config: Adjust retry intervals or limits
+    - block_and_wait: Temporary block until provider recovers
+    - queue_reroute: Move tasks to a different Celery queue
+    """
+
+    REMEDIATION_TYPES = [
+        ('timeout_adjust', 'Adjust Agent Timeout'),
+        ('model_fallback', 'Switch to Fallback LLM'),
+        ('retry_config', 'Adjust Retry Configuration'),
+        ('block_and_wait', 'Block Agent Until Recovery'),
+        ('queue_reroute', 'Reroute to Different Queue'),
+    ]
+
+    id = models.AutoField(primary_key=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # What failure this playbook entry fixes
+    signature_pattern = models.CharField(
+        max_length=255, db_index=True,
+        help_text='Signature pattern to match (exact or prefix, e.g. TIMEOUT_PROVIDER_*)',
+    )
+    failure_category = models.CharField(
+        max_length=30, db_index=True,
+        help_text='FailureSignature.Category value to match',
+    )
+
+    # What fix to apply
+    remediation_type = models.CharField(max_length=30, choices=REMEDIATION_TYPES)
+    config = models.JSONField(
+        default=dict,
+        help_text='Remediation config: {"agent": "X", "timeout_seconds": 900} etc.',
+    )
+
+    # Track effectiveness
+    times_applied = models.PositiveIntegerField(default=0)
+    times_succeeded = models.PositiveIntegerField(default=0)
+    times_rolled_back = models.PositiveIntegerField(default=0)
+    success_rate = models.FloatField(
+        default=0.0,
+        help_text='times_succeeded / times_applied',
+    )
+
+    # Whether this playbook entry is active
+    enabled = models.BooleanField(default=True)
+    min_confidence = models.FloatField(
+        default=0.5,
+        help_text='Min success_rate needed to keep auto-applying',
+    )
+
+    # Link back to the original diagnosis that created this entry
+    source_diagnosis = models.ForeignKey(
+        FailureDiagnosis, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='playbook_entries',
+    )
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-success_rate', '-times_applied']
+        indexes = [
+            models.Index(fields=['failure_category', 'enabled']),
+            models.Index(fields=['signature_pattern']),
+        ]
+
+    def __str__(self):
+        return f"{self.remediation_type}: {self.signature_pattern} ({self.success_rate:.0%})"
+
+    def record_outcome(self, succeeded: bool):
+        """Record whether a playbook application succeeded."""
+        self.times_applied += 1
+        if succeeded:
+            self.times_succeeded += 1
+        else:
+            self.times_rolled_back += 1
+        self.success_rate = self.times_succeeded / max(self.times_applied, 1)
+        # Auto-disable if success rate drops below threshold
+        if self.times_applied >= 3 and self.success_rate < self.min_confidence:
+            self.enabled = False
+        self.save(update_fields=[
+            'times_applied', 'times_succeeded', 'times_rolled_back',
+            'success_rate', 'enabled', 'updated_at',
+        ])

@@ -1,5 +1,5 @@
 """
-Ops Autopilot v2 — autonomous ops with governance guardrails.
+Ops Autopilot v3 — autonomous ops with governance guardrails.
 
 Policies (v1 — Session 1080):
   1. Timeout spike containment: auto-block agents with high TIMEOUT signature counts
@@ -9,9 +9,16 @@ Policies (v2 — autonomy push):
   3. Failed deliberation retry: retry TIMEOUT/LLM_UPSTREAM sessions (transient failures)
   4. Content pipeline sweep: kick stuck needs_enhancement/pending_review content
   5. Attention item auto-resolve: dismiss stale ops_autopilot alerts that resolved themselves
+  6. Governance auto-decision: auto-approve/dismiss low-blast-radius items
+
+Policies (v3 — root-cause autonomy):
+  7. Root-cause remediation: auto-apply safe config fixes for recurring failures
+     (timeout adjustments, model fallbacks, temp blocks) with playbook learning
 
 All actions create HumanAttentionItem for governance visibility and are logged
-to AutopilotAction for audit trail.
+to AutopilotAction for audit trail. Non-trivial actions go through pre-check
+→ execute → verify → rollback cycle (ActionVerifier). Successful remediations
+are promoted to RemediationPlaybook for future reuse.
 """
 
 import logging
@@ -20,7 +27,7 @@ from typing import Any
 
 from django.utils import timezone
 
-from core.models_diagnostic_pipeline import AutopilotAction
+from core.models_diagnostic_pipeline import AutopilotAction, RemediationPlaybook
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +82,12 @@ class AutopilotConfig:
         'insight',     # Agent insights
     }
 
+    # Policy 7: Root-cause remediation
+    REMEDIATION_MIN_OCCURRENCES = 5       # Signature must hit N+ before remediation
+    REMEDIATION_MAX_PER_CYCLE = 2         # Don't apply too many remediations at once
+    REMEDIATION_COOLDOWN_HOURS = 4        # Don't re-remediate same signature too soon
+    REMEDIATION_VERIFY_DELAY = 600        # 10 min — wait for fix to take effect
+
     # Mode
     DRY_RUN = False                      # Set True to evaluate but not act
 
@@ -109,6 +122,9 @@ class OpsAutopilot:
         attention_resolve_results = self._policy_attention_auto_resolve(now)
         governance_results = self._policy_governance_auto_decision(now)
 
+        # Run policies (v3 — root-cause autonomy)
+        remediation_results = self._policy_root_cause_remediation(now)
+
         summary = {
             'cycle_at': now.isoformat(),
             'dry_run': self.dry_run,
@@ -119,6 +135,7 @@ class OpsAutopilot:
             'content_sweep': content_sweep_results,
             'attention_resolve': attention_resolve_results,
             'governance_auto': governance_results,
+            'remediation': remediation_results,
             'actions_taken': len(self.actions_taken),
             'actions': self.actions_taken,
         }
@@ -136,6 +153,7 @@ class OpsAutopilot:
                 'content_sweep': content_sweep_results,
                 'attention_resolve': attention_resolve_results,
                 'governance_auto': governance_results,
+                'remediation': remediation_results,
             },
             result=summary,
             deploy_sha=self.deploy_sha,
@@ -772,6 +790,47 @@ class OpsAutopilot:
 
         return result
 
+    # ── Policy 7: Root-cause remediation ────────────────────────────────
+
+    def _policy_root_cause_remediation(self, now) -> dict:
+        """
+        Auto-remediate recurring failure patterns using playbook or heuristics.
+
+        Flow:
+        1. Find active FailureSignatures with high occurrence counts
+        2. Check if a playbook entry exists for the pattern
+        3. If yes: apply known fix (if success rate is high enough)
+        4. If no: attempt heuristic remediation (timeout adjust, model fallback)
+        5. Record outcome, schedule verification, learn from results
+        """
+        result = {
+            'evaluated': True,
+            'playbook_applied': 0,
+            'heuristic_applied': 0,
+            'skipped': 0,
+        }
+
+        try:
+            engine = RemediationEngine(
+                dry_run=self.dry_run,
+                deploy_sha=self.deploy_sha,
+            )
+            remediation_result = engine.run_cycle(now)
+
+            result['playbook_applied'] = remediation_result.get('playbook_applied', 0)
+            result['heuristic_applied'] = remediation_result.get('heuristic_applied', 0)
+            result['skipped'] = remediation_result.get('skipped', 0)
+            result['details'] = remediation_result.get('details', [])
+
+            # Merge engine actions into our action list
+            self.actions_taken.extend(remediation_result.get('actions', []))
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] root-cause remediation error: {e}")
+            result['error'] = str(e)
+
+        return result
+
     # ── Action executors ─────────────────────────────────────────────────
 
     def _execute_block(
@@ -1213,6 +1272,9 @@ class ActionVerifier:
             elif action.action_type == 'content_sweep':
                 result = ActionVerifier._verify_content_sweep(action, now)
 
+            elif action.action_type == 'remediate':
+                result = RemediationEngine.verify_remediation(action)
+
             elif action.action_type in ('auto_resolve', 'content_publish'):
                 # Lightweight: just check no new errors spawned
                 from core.models_diagnostic_pipeline import FailureDetection
@@ -1447,3 +1509,627 @@ class VerifiableAction:
         self.deploy_sha = deploy_sha
         self.pre_check_result: dict = {}
         self.pre_check_passed: bool = True
+
+
+# ── Remediation Engine — root-cause autonomy ─────────────────────────────────
+
+
+class RemediationEngine:
+    """
+    Converts verified failure patterns into safe, reversible config fixes.
+
+    Safe remediation types (all config-only, easy to roll back):
+    1. timeout_adjust: Increase wall-clock timeout for chronically slow agents
+    2. model_fallback: Route agent to fallback LLM when primary provider is down
+    3. block_and_wait: Temp-block agent until external provider recovers
+    4. retry_config: Adjust retry intervals for transient failures
+
+    Flow per cycle:
+      1. Find FailureSignatures with occurrence >= threshold and status='active'
+      2. Look for matching RemediationPlaybook entry
+      3. If playbook match: apply known fix (if confidence high enough)
+      4. If no match: attempt heuristic remediation based on category
+      5. Record as AutopilotAction(action_type='remediate')
+      6. Schedule deferred verification to check if it helped
+      7. On verification: update playbook success rate or create new entry
+    """
+
+    # Heuristic remediation rules by failure category
+    HEURISTIC_RULES = {
+        'timeout': {
+            'remediation_type': 'timeout_adjust',
+            'description': 'Increase agent timeout by 50%',
+            'multiplier': 1.5,
+            'max_timeout': 1800,  # 30 min absolute cap
+        },
+        'provider_error': {
+            'remediation_type': 'model_fallback',
+            'description': 'Switch to fallback LLM provider',
+        },
+        'resource_error': {
+            'remediation_type': 'block_and_wait',
+            'description': 'Block agent until resource recovers',
+            'block_minutes': 60,
+        },
+    }
+
+    def __init__(self, dry_run: bool = False, deploy_sha: str = ''):
+        self.dry_run = dry_run
+        self.deploy_sha = deploy_sha
+        self.actions: list = []
+
+    def run_cycle(self, now) -> dict:
+        """Main remediation cycle. Returns summary dict."""
+        from core.models_diagnostic_pipeline import FailureSignature
+
+        result = {
+            'playbook_applied': 0,
+            'heuristic_applied': 0,
+            'skipped': 0,
+            'details': [],
+            'actions': [],
+        }
+
+        try:
+            # Find active signatures above occurrence threshold
+            candidates = FailureSignature.objects.filter(
+                status='active',
+                occurrence_count__gte=AutopilotConfig.REMEDIATION_MIN_OCCURRENCES,
+            ).order_by('-occurrence_count')[:10]
+
+            applied = 0
+            for sig in candidates:
+                if applied >= AutopilotConfig.REMEDIATION_MAX_PER_CYCLE:
+                    break
+
+                # Cooldown check: don't re-remediate too soon
+                if self._on_cooldown(sig, now):
+                    result['skipped'] += 1
+                    continue
+
+                # Check if we already have a pending remediation for this sig
+                if self._has_pending_remediation(sig, now):
+                    result['skipped'] += 1
+                    continue
+
+                # Try playbook first, then heuristic
+                applied_entry = self._try_playbook(sig, now)
+                if applied_entry:
+                    result['playbook_applied'] += 1
+                    result['details'].append(applied_entry)
+                    result['actions'].append(applied_entry)
+                    self.actions.append(applied_entry)
+                    applied += 1
+                    continue
+
+                heuristic_entry = self._try_heuristic(sig, now)
+                if heuristic_entry:
+                    result['heuristic_applied'] += 1
+                    result['details'].append(heuristic_entry)
+                    result['actions'].append(heuristic_entry)
+                    self.actions.append(heuristic_entry)
+                    applied += 1
+                else:
+                    result['skipped'] += 1
+
+        except Exception as e:
+            logger.error(f"[RemediationEngine] cycle error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _on_cooldown(self, sig, now) -> bool:
+        """Check if this signature was remediated recently."""
+        cutoff = now - timedelta(hours=AutopilotConfig.REMEDIATION_COOLDOWN_HOURS)
+        return AutopilotAction.objects.filter(
+            action_type='remediate',
+            evidence__signature_id=str(sig.id),
+            dry_run=False,
+            created_at__gte=cutoff,
+        ).exists()
+
+    def _has_pending_remediation(self, sig, now) -> bool:
+        """Check if there's a pending (unverified) remediation for this sig."""
+        return AutopilotAction.objects.filter(
+            action_type='remediate',
+            evidence__signature_id=str(sig.id),
+            dry_run=False,
+            verification_state='pending',
+        ).exists()
+
+    def _try_playbook(self, sig, now) -> dict | None:
+        """Try to apply a known playbook fix for this signature."""
+        # Match by exact signature or by category
+        from django.db.models import Q
+        playbook = RemediationPlaybook.objects.filter(
+            enabled=True,
+        ).filter(
+            Q(signature_pattern=sig.signature) |
+            Q(failure_category=sig.category)
+        ).order_by('-success_rate').first()
+
+        if not playbook:
+            return None
+
+        # Confidence gate
+        if playbook.times_applied >= 2 and playbook.success_rate < playbook.min_confidence:
+            logger.info(
+                f"[RemediationEngine] Playbook {playbook.id} for {sig.signature} "
+                f"below confidence ({playbook.success_rate:.0%}), skipping"
+            )
+            return None
+
+        return self._apply_remediation(
+            sig=sig,
+            remediation_type=playbook.remediation_type,
+            config=playbook.config,
+            source='playbook',
+            playbook_id=playbook.id,
+            now=now,
+        )
+
+    def _try_heuristic(self, sig, now) -> dict | None:
+        """Try a heuristic remediation based on failure category."""
+        rule = self.HEURISTIC_RULES.get(sig.category)
+        if not rule:
+            return None
+
+        # Build config from heuristic
+        config = {}
+        remediation_type = rule['remediation_type']
+
+        if remediation_type == 'timeout_adjust':
+            # Find the agent name from recent detections
+            agent_name = self._get_primary_agent(sig)
+            if not agent_name:
+                return None
+            current_timeout = self._get_current_timeout(agent_name)
+            new_timeout = min(
+                int(current_timeout * rule['multiplier']),
+                rule['max_timeout'],
+            )
+            if new_timeout <= current_timeout:
+                return None  # Already at max
+            config = {
+                'agent_name': agent_name,
+                'current_timeout': current_timeout,
+                'new_timeout': new_timeout,
+            }
+
+        elif remediation_type == 'model_fallback':
+            agent_name = self._get_primary_agent(sig)
+            if not agent_name:
+                return None
+            config = {
+                'agent_name': agent_name,
+                'provider': sig.provider,
+                'error_code': sig.error_code,
+            }
+
+        elif remediation_type == 'block_and_wait':
+            agent_name = self._get_primary_agent(sig)
+            if not agent_name:
+                return None
+            config = {
+                'agent_name': agent_name,
+                'block_minutes': rule['block_minutes'],
+            }
+
+        return self._apply_remediation(
+            sig=sig,
+            remediation_type=remediation_type,
+            config=config,
+            source='heuristic',
+            now=now,
+        )
+
+    def _apply_remediation(
+        self,
+        sig,
+        remediation_type: str,
+        config: dict,
+        source: str,
+        now,
+        playbook_id: int | None = None,
+    ) -> dict:
+        """Apply a specific remediation and schedule verification."""
+        agent_name = config.get('agent_name', '')
+
+        evidence = {
+            'signature_id': str(sig.id),
+            'signature': sig.signature,
+            'category': sig.category,
+            'occurrence_count': sig.occurrence_count,
+            'remediation_type': remediation_type,
+            'config': config,
+            'source': source,
+        }
+        if playbook_id:
+            evidence['playbook_id'] = playbook_id
+
+        action_record = {
+            'type': 'remediate',
+            'remediation_type': remediation_type,
+            'signature': sig.signature,
+            'agent_name': agent_name,
+            'config': config,
+            'source': source,
+            'dry_run': self.dry_run,
+        }
+
+        if not self.dry_run:
+            # Execute the remediation
+            exec_result = self._execute_remediation(
+                remediation_type, config, sig,
+            )
+            action_record['execution'] = exec_result
+
+            if exec_result.get('applied'):
+                # Record with deferred verification
+                db_action = AutopilotAction.objects.create(
+                    action_type='remediate',
+                    agent_name=agent_name,
+                    policy='root_cause_remediation',
+                    dry_run=False,
+                    evidence=evidence,
+                    result=action_record,
+                    deploy_sha=self.deploy_sha,
+                    verification_state='pending',
+                    verification_result={
+                        'source': source,
+                        'playbook_id': playbook_id,
+                    },
+                )
+
+                # Schedule verification
+                try:
+                    from core.tasks import verify_autopilot_action
+                    verify_autopilot_action.apply_async(
+                        args=[db_action.id],
+                        countdown=AutopilotConfig.REMEDIATION_VERIFY_DELAY,
+                    )
+                except Exception as e:
+                    logger.warning(
+                        f"[RemediationEngine] Failed to schedule verification: {e}"
+                    )
+
+                # Mark signature as diagnosed
+                sig.mark_diagnosed()
+
+                logger.info(
+                    f"[RemediationEngine] APPLIED {remediation_type} for "
+                    f"{sig.signature} ({source}): {config}"
+                )
+            else:
+                logger.info(
+                    f"[RemediationEngine] Remediation {remediation_type} "
+                    f"for {sig.signature} could not be applied: "
+                    f"{exec_result.get('reason', 'unknown')}"
+                )
+                return action_record
+        else:
+            logger.info(
+                f"[RemediationEngine] DRY RUN: would apply {remediation_type} "
+                f"for {sig.signature}: {config}"
+            )
+            AutopilotAction.objects.create(
+                action_type='dry_run',
+                agent_name=agent_name,
+                policy='root_cause_remediation',
+                dry_run=True,
+                evidence=evidence,
+                result=action_record,
+                deploy_sha=self.deploy_sha,
+            )
+
+        return action_record
+
+    def _execute_remediation(
+        self, remediation_type: str, config: dict, sig
+    ) -> dict:
+        """Execute a specific remediation. Returns {applied: bool, ...}."""
+        if remediation_type == 'timeout_adjust':
+            return self._exec_timeout_adjust(config)
+        elif remediation_type == 'model_fallback':
+            return self._exec_model_fallback(config)
+        elif remediation_type == 'block_and_wait':
+            return self._exec_block_and_wait(config, sig)
+        return {'applied': False, 'reason': f'Unknown type: {remediation_type}'}
+
+    def _exec_timeout_adjust(self, config: dict) -> dict:
+        """
+        Adjust agent timeout by writing to SystemConfiguration.
+
+        We store timeout overrides in SystemConfiguration so they persist
+        across deploys and can be read by execute_agent_task.
+        """
+        agent_name = config['agent_name']
+        new_timeout = config['new_timeout']
+
+        try:
+            from core.models.system import SystemConfiguration
+            key = f'agent_timeout_override:{agent_name}'
+            SystemConfiguration.objects.update_or_create(
+                key=key,
+                defaults={
+                    'value': str(new_timeout),
+                    'description': (
+                        f'Auto-remediation: timeout adjusted from '
+                        f'{config["current_timeout"]}s to {new_timeout}s'
+                    ),
+                },
+            )
+            return {
+                'applied': True,
+                'key': key,
+                'old_timeout': config['current_timeout'],
+                'new_timeout': new_timeout,
+            }
+        except Exception as e:
+            logger.error(f"[RemediationEngine] timeout adjust failed: {e}")
+            return {'applied': False, 'reason': str(e)}
+
+    def _exec_model_fallback(self, config: dict) -> dict:
+        """
+        Trigger model fallback for an agent's LLM provider.
+
+        Records a SystemConfiguration flag that the agent_llm_router checks.
+        """
+        agent_name = config.get('agent_name', '')
+        provider = config.get('provider', '')
+
+        if not agent_name or not provider:
+            return {'applied': False, 'reason': 'Missing agent_name or provider'}
+
+        try:
+            from core.models.system import SystemConfiguration
+            key = f'llm_fallback_active:{provider}'
+            SystemConfiguration.objects.update_or_create(
+                key=key,
+                defaults={
+                    'value': 'true',
+                    'description': (
+                        f'Auto-remediation: {provider} provider failing, '
+                        f'fallback activated for {agent_name}'
+                    ),
+                },
+            )
+            return {
+                'applied': True,
+                'key': key,
+                'provider': provider,
+                'agent': agent_name,
+            }
+        except Exception as e:
+            logger.error(f"[RemediationEngine] model fallback failed: {e}")
+            return {'applied': False, 'reason': str(e)}
+
+    def _exec_block_and_wait(self, config: dict, sig) -> dict:
+        """Block an agent temporarily until external resource recovers."""
+        agent_name = config.get('agent_name', '')
+        block_minutes = config.get('block_minutes', 60)
+
+        if not agent_name:
+            return {'applied': False, 'reason': 'Missing agent_name'}
+
+        try:
+            from core.models_unified_system import AgentControlEntry
+            ttl_hours = round(block_minutes / 60, 2)
+            AgentControlEntry.objects.update_or_create(
+                agent_name=agent_name,
+                defaults={
+                    'status': 'blocked',
+                    'reason': (
+                        f'Auto-remediation: {sig.signature} '
+                        f'({sig.occurrence_count} occurrences)'
+                    )[:255],
+                    'blocked_at': timezone.now(),
+                    'blocked_by': 'remediation_engine',
+                    'ttl_hours': ttl_hours,
+                },
+            )
+            return {
+                'applied': True,
+                'agent': agent_name,
+                'block_minutes': block_minutes,
+                'ttl_hours': ttl_hours,
+            }
+        except Exception as e:
+            logger.error(f"[RemediationEngine] block_and_wait failed: {e}")
+            return {'applied': False, 'reason': str(e)}
+
+    # ── Helpers ──────────────────────────────────────────────────────
+
+    def _get_primary_agent(self, sig) -> str:
+        """Get the most affected agent name from recent detections."""
+        from core.models_diagnostic_pipeline import FailureDetection
+        from django.db.models import Count
+
+        top = (
+            FailureDetection.objects.filter(signature=sig)
+            .values('source_name')
+            .annotate(cnt=Count('id'))
+            .order_by('-cnt')
+            .first()
+        )
+        return (top or {}).get('source_name', '')
+
+    def _get_current_timeout(self, agent_name: str) -> int:
+        """Get current timeout for an agent (check override first, then default map)."""
+        # Check for existing override
+        try:
+            from core.models.system import SystemConfiguration
+            override = SystemConfiguration.objects.filter(
+                key=f'agent_timeout_override:{agent_name}',
+            ).first()
+            if override:
+                return int(override.value)
+        except Exception:
+            pass
+
+        # Fall back to the hardcoded map
+        AGENT_TIMEOUT_DEFAULTS = {
+            'AudioAgent': 300, 'ImageAgent': 300, 'VideoAgent': 600,
+            'ThreeDAgent': 300, 'ImageEditingAgent': 300,
+            'VideoEditingAgent': 600, 'TalkingCharacterAgent': 600,
+            'ResolveAgent': 600, 'ResearchAgent': 600,
+            'SystemIntelligenceAgent': 600, 'MarketingStrategyAgent': 600,
+            'CustomerResearchAgent': 600, 'CharacterTrainingAgent': 600,
+            'ContentWriterAgent': 600, 'CompetitorAnalysisAgent': 600,
+            'BrandStrategyAgent': 600, 'ContentStrategyAgent': 600,
+        }
+        return AGENT_TIMEOUT_DEFAULTS.get(agent_name, 1200)
+
+    @staticmethod
+    def verify_remediation(action: AutopilotAction) -> dict:
+        """
+        Verify a remediation action worked. Called by ActionVerifier.verify_action.
+
+        Checks whether the failure signature's occurrence rate dropped since
+        the remediation was applied.
+        """
+        from core.models_diagnostic_pipeline import FailureDetection
+
+        now = timezone.now()
+        evidence = action.evidence or {}
+        sig_id = evidence.get('signature_id', '')
+        result = {'action_id': action.id, 'checks': [], 'passed': True}
+
+        if not sig_id:
+            result['passed'] = True
+            result['skipped'] = True
+            return result
+
+        # Compare error rate before vs after remediation
+        window = timedelta(hours=1)
+        errors_before = FailureDetection.objects.filter(
+            signature_id=sig_id,
+            detected_at__gte=action.created_at - window,
+            detected_at__lt=action.created_at,
+        ).count()
+
+        errors_after = FailureDetection.objects.filter(
+            signature_id=sig_id,
+            detected_at__gte=action.created_at,
+            detected_at__lte=now,
+        ).count()
+
+        # Normalize by time window
+        time_after = (now - action.created_at).total_seconds() / 3600
+        rate_before = errors_before  # per hour (1h window)
+        rate_after = errors_after / max(time_after, 0.1)  # per hour
+
+        check = {
+            'name': 'error_rate_reduced',
+            'errors_before': errors_before,
+            'errors_after': errors_after,
+            'rate_before': round(rate_before, 2),
+            'rate_after': round(rate_after, 2),
+            'reduction_pct': round(
+                (1 - rate_after / max(rate_before, 0.1)) * 100, 1
+            ) if rate_before > 0 else 100.0,
+            'passed': rate_after <= rate_before,
+        }
+        result['checks'].append(check)
+        result['passed'] = check['passed']
+
+        # Update playbook if this was from one
+        playbook_id = (action.verification_result or {}).get('playbook_id')
+        if playbook_id:
+            try:
+                playbook = RemediationPlaybook.objects.get(id=playbook_id)
+                playbook.record_outcome(succeeded=check['passed'])
+            except RemediationPlaybook.DoesNotExist:
+                pass
+
+        # If heuristic succeeded, create a playbook entry for future use
+        source = (action.verification_result or {}).get('source', '')
+        if check['passed'] and source == 'heuristic':
+            sig_pattern = evidence.get('signature', '')
+            category = evidence.get('category', '')
+            rem_type = evidence.get('remediation_type', '')
+            config = evidence.get('config', {})
+
+            if sig_pattern and rem_type:
+                RemediationPlaybook.objects.get_or_create(
+                    signature_pattern=sig_pattern,
+                    failure_category=category,
+                    remediation_type=rem_type,
+                    defaults={
+                        'config': config,
+                        'times_applied': 1,
+                        'times_succeeded': 1,
+                        'success_rate': 1.0,
+                    },
+                )
+                logger.info(
+                    f"[RemediationEngine] Created playbook entry for "
+                    f"{sig_pattern} → {rem_type}"
+                )
+
+        # If remediation failed, attempt rollback
+        if not check['passed']:
+            RemediationEngine._rollback_remediation(action, evidence)
+
+        return result
+
+    @staticmethod
+    def _rollback_remediation(action: AutopilotAction, evidence: dict):
+        """Roll back a failed remediation."""
+        rem_type = evidence.get('remediation_type', '')
+        config = evidence.get('config', {})
+        now = timezone.now()
+
+        try:
+            if rem_type == 'timeout_adjust':
+                # Restore original timeout
+                from core.models.system import SystemConfiguration
+                agent_name = config.get('agent_name', '')
+                old_timeout = config.get('current_timeout', '')
+                if agent_name and old_timeout:
+                    key = f'agent_timeout_override:{agent_name}'
+                    SystemConfiguration.objects.filter(key=key).update(
+                        value=str(old_timeout),
+                        description=f'Rolled back: timeout restored to {old_timeout}s',
+                    )
+
+            elif rem_type == 'model_fallback':
+                # Remove fallback flag
+                from core.models.system import SystemConfiguration
+                provider = config.get('provider', '')
+                if provider:
+                    key = f'llm_fallback_active:{provider}'
+                    SystemConfiguration.objects.filter(key=key).delete()
+
+            elif rem_type == 'block_and_wait':
+                # Unblock the agent
+                from core.models_unified_system import AgentControlEntry
+                agent_name = config.get('agent_name', '')
+                if agent_name:
+                    AgentControlEntry.objects.filter(
+                        agent_name=agent_name,
+                        blocked_by='remediation_engine',
+                    ).update(
+                        status='active',
+                        reason='Rolled back: remediation did not help',
+                    )
+
+            # Mark action as rolled back
+            action.rolled_back = True
+            action.rolled_back_at = now
+            action.rollback_reason = 'Remediation did not reduce error rate'
+            action.verification_state = 'rolled_back'
+            action.save(update_fields=[
+                'rolled_back', 'rolled_back_at',
+                'rollback_reason', 'verification_state',
+            ])
+
+            logger.warning(
+                f"[RemediationEngine] ROLLED BACK remediation "
+                f"{action.id} ({rem_type})"
+            )
+
+        except Exception as e:
+            logger.error(
+                f"[RemediationEngine] Rollback failed for {action.id}: {e}"
+            )

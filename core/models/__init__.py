@@ -191,9 +191,9 @@ from ..models_workflow_run import WorkflowRun
 # Import ops runs (Context Packet #9 - Ops Observability)
 from ..models_ops_runs import OpsRun, OpsRunEvent
 
-# Import AutopilotAction only (Session 1086 — verification layer)
+# Import AutopilotAction + RemediationPlaybook (Session 1086/1087)
 # Other diagnostic pipeline models already tracked via earlier migrations
-from ..models_diagnostic_pipeline import AutopilotAction
+from ..models_diagnostic_pipeline import AutopilotAction, RemediationPlaybook
 
 # Import learning journey models (Session 773 - Learning Journeys)
 from ..models_learning_journey import (
