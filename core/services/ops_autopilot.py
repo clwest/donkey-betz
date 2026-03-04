@@ -203,6 +203,13 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      PA tools: integrity_quality_report, integrity_null_spike_scan,
      integrity_duplicate_report, integrity_reliability_scores.
 
+ 40. Customer value & outcomes autonomy: ValueRealizationEngine measures
+     whether users are getting real value — tracks value events (agent
+     executions, deliverables, revenue), computes outcome rates, detects
+     usage without outcomes, generates value realization reports.
+     PA tools: value_events_report, value_outcome_rates,
+     value_usage_gaps, value_realization_summary.
+
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
 → execute → verify → rollback cycle (ActionVerifier). Successful remediations
@@ -391,6 +398,7 @@ class OpsAutopilot:
         ('security_abuse', 'security_abuse', '_policy_security_abuse'),
         ('compliance', 'compliance', '_policy_compliance'),
         ('data_integrity', 'data_integrity', '_policy_data_integrity'),
+        ('value_realization', 'value_realization', '_policy_value_realization'),
     ]
 
     def run(self) -> dict[str, Any]:
@@ -2622,6 +2630,35 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] data integrity error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _policy_value_realization(self, now) -> dict:
+        """
+        Monitor user value realization: value events, outcome rates,
+        usage gaps, overall value health.
+        """
+        result = {
+            'value_events': 0,
+            'outcome_rate': 0.0,
+            'healthy': True,
+        }
+
+        try:
+            engine = ValueRealizationEngine()
+            eval_result = engine.evaluate(now)
+            result.update(eval_result)
+
+            if not eval_result.get('healthy', True):
+                logger.info(
+                    f"[OpsAutopilot] ValueRealization: "
+                    f"{eval_result.get('value_events', 0)} events, "
+                    f"{eval_result.get('outcome_rate', 0):.0%} outcome rate"
+                )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] value realization error: {e}")
             result['error'] = str(e)
 
         return result
@@ -14452,6 +14489,282 @@ class DataIntegrityEngine:
             'null_spikes': sum(1 for i in quality.get('issues', []) if i.get('type') == 'null_spike'),
             'duplicate_issues': duplicates.get('duplicate_count', 0),
             'wasted_records': duplicates.get('wasted_records', 0),
+            'issues': issues,
+            'issue_count': len(issues),
+            'healthy': len(issues) == 0,
+        }
+
+
+class ValueRealizationEngine:
+    """
+    Customer value & outcomes — measures whether users are getting real
+    value from the platform by tracking value events, computing outcome
+    rates, detecting usage without outcomes.
+
+    Data sources:
+    - AgentExecution: agent usage patterns
+    - Deliverable: content creation outcomes
+    - Revenue: monetization outcomes
+    - EngagementEvent: user engagement
+    - ClosePack: deal progression
+
+    Guardrails:
+    - Read-only analysis — observation and recommendation only
+    """
+
+    # Value event categories
+    VALUE_CATEGORIES = {
+        'agent_usage': 'Agent execution completed successfully',
+        'content_created': 'Deliverable created',
+        'revenue_generated': 'Revenue recorded',
+        'engagement': 'User engagement event',
+        'deal_progress': 'Deal/close pack progressed',
+    }
+
+    def get_value_events_report(self, days: int = 7) -> dict:
+        """Report on value-generating events across the platform."""
+        from django.utils import timezone as tz
+        from django.db.models import Count
+
+        cutoff = tz.now() - timedelta(days=days)
+        events = {}
+
+        # Agent executions (successful)
+        try:
+            from core.models_unified_system import AgentExecution
+            agent_count = AgentExecution.objects.filter(
+                created_at__gte=cutoff, status='completed'
+            ).count()
+            events['agent_completions'] = agent_count
+
+            # Top agents by usage
+            top_agents = list(
+                AgentExecution.objects.filter(created_at__gte=cutoff, status='completed')
+                .values('agent__name')
+                .annotate(count=Count('id'))
+                .order_by('-count')[:10]
+            )
+            events['top_agents'] = [
+                {'agent': a['agent__name'], 'count': a['count']}
+                for a in top_agents
+            ]
+        except Exception:
+            events['agent_completions'] = 0
+
+        # Deliverables created
+        try:
+            from core.models_deliverables import Deliverable
+            deliv_count = Deliverable.objects.filter(created_at__gte=cutoff).count()
+            events['deliverables_created'] = deliv_count
+        except Exception:
+            events['deliverables_created'] = 0
+
+        # Revenue recorded
+        try:
+            from core.models_unified_system import Revenue
+            from django.db.models import Sum
+            rev = Revenue.objects.filter(created_at__gte=cutoff).aggregate(
+                total=Sum('amount'), count=Count('id')
+            )
+            events['revenue_count'] = rev['count'] or 0
+            events['revenue_total'] = float(rev['total'] or 0)
+        except Exception:
+            events['revenue_count'] = 0
+            events['revenue_total'] = 0.0
+
+        # Engagement events
+        try:
+            from core.models_engagement import EngagementEvent
+            eng_count = EngagementEvent.objects.filter(created_at__gte=cutoff).count()
+            events['engagement_events'] = eng_count
+        except Exception:
+            events['engagement_events'] = 0
+
+        # Close packs
+        try:
+            from core.models_close_pack import ClosePack
+            pack_count = ClosePack.objects.filter(created_at__gte=cutoff).count()
+            events['close_packs'] = pack_count
+        except Exception:
+            events['close_packs'] = 0
+
+        total_events = sum([
+            events.get('agent_completions', 0),
+            events.get('deliverables_created', 0),
+            events.get('revenue_count', 0),
+            events.get('engagement_events', 0),
+            events.get('close_packs', 0),
+        ])
+
+        return {
+            'period_days': days,
+            'events': events,
+            'total_value_events': total_events,
+        }
+
+    def get_outcome_rates(self, days: int = 30) -> dict:
+        """Compute outcome/conversion rates across the value chain."""
+        from django.utils import timezone as tz
+        from django.db.models import Count
+
+        cutoff = tz.now() - timedelta(days=days)
+        rates = {}
+
+        # Agent success rate
+        try:
+            from core.models_unified_system import AgentExecution
+            total = AgentExecution.objects.filter(created_at__gte=cutoff).count()
+            completed = AgentExecution.objects.filter(
+                created_at__gte=cutoff, status='completed'
+            ).count()
+            rates['agent_success_rate'] = round(completed / total, 3) if total > 0 else 0
+            rates['agent_total'] = total
+            rates['agent_completed'] = completed
+        except Exception:
+            rates['agent_success_rate'] = 0
+
+        # Deliverable quality rate (quality_score > 0.5)
+        try:
+            from core.models_deliverables import Deliverable
+            from django.db.models import Q, Avg
+            total = Deliverable.objects.filter(created_at__gte=cutoff).count()
+            high_quality = Deliverable.objects.filter(
+                created_at__gte=cutoff, quality_score__gt=0.5
+            ).count()
+            avg_quality = Deliverable.objects.filter(
+                created_at__gte=cutoff
+            ).aggregate(avg=Avg('quality_score'))['avg']
+            rates['deliverable_quality_rate'] = round(high_quality / total, 3) if total > 0 else 0
+            rates['deliverable_total'] = total
+            rates['deliverable_avg_quality'] = round(float(avg_quality or 0), 3)
+        except Exception:
+            rates['deliverable_quality_rate'] = 0
+
+        # Outreach → meeting conversion
+        try:
+            from core.models_outreach import OutreachDraft
+            from core.models_meeting import Meeting
+            outreach_count = OutreachDraft.objects.filter(created_at__gte=cutoff).count()
+            meeting_count = Meeting.objects.filter(created_at__gte=cutoff).count()
+            rates['outreach_to_meeting'] = round(meeting_count / outreach_count, 3) if outreach_count > 0 else 0
+            rates['outreach_count'] = outreach_count
+            rates['meeting_count'] = meeting_count
+        except Exception:
+            rates['outreach_to_meeting'] = 0
+
+        return {
+            'period_days': days,
+            'rates': rates,
+        }
+
+    def get_usage_gaps(self, days: int = 7) -> dict:
+        """Detect areas with high usage but low outcomes."""
+        from django.utils import timezone as tz
+        from django.db.models import Count
+
+        cutoff = tz.now() - timedelta(days=days)
+        gaps = []
+
+        # Agents with high execution count but high failure rate
+        try:
+            from core.models_unified_system import AgentExecution
+            agent_stats = list(
+                AgentExecution.objects.filter(created_at__gte=cutoff)
+                .values('agent__name')
+                .annotate(
+                    total=Count('id'),
+                    failed=Count('id', filter=__import__('django.db.models', fromlist=['Q']).Q(status='failed')),
+                )
+                .filter(total__gte=5)
+                .order_by('-total')[:20]
+            )
+            for s in agent_stats:
+                fail_rate = s['failed'] / s['total'] if s['total'] > 0 else 0
+                if fail_rate > 0.3:
+                    gaps.append({
+                        'type': 'high_failure_agent',
+                        'agent': s['agent__name'],
+                        'total': s['total'],
+                        'failed': s['failed'],
+                        'fail_rate': round(fail_rate, 3),
+                        'severity': 'critical' if fail_rate > 0.5 else 'warning',
+                        'detail': f"{s['agent__name']}: {fail_rate:.0%} failure rate ({s['failed']}/{s['total']})",
+                    })
+        except Exception:
+            pass
+
+        # Deliverables with low quality scores
+        try:
+            from core.models_deliverables import Deliverable
+            low_quality = Deliverable.objects.filter(
+                created_at__gte=cutoff, quality_score__lt=0.3
+            ).count()
+            total_deliverables = Deliverable.objects.filter(created_at__gte=cutoff).count()
+            if low_quality > 0 and total_deliverables > 0:
+                low_rate = low_quality / total_deliverables
+                if low_rate > 0.2:
+                    gaps.append({
+                        'type': 'low_quality_content',
+                        'low_quality_count': low_quality,
+                        'total': total_deliverables,
+                        'low_rate': round(low_rate, 3),
+                        'severity': 'warning',
+                        'detail': f"{low_rate:.0%} of deliverables have quality < 0.3 ({low_quality}/{total_deliverables})",
+                    })
+        except Exception:
+            pass
+
+        return {
+            'period_days': days,
+            'gaps': gaps,
+            'gap_count': len(gaps),
+            'has_gaps': len(gaps) > 0,
+        }
+
+    def get_realization_summary(self) -> dict:
+        """Comprehensive value realization summary."""
+        events = self.get_value_events_report(days=30)
+        rates = self.get_outcome_rates(days=30)
+        gaps = self.get_usage_gaps(days=7)
+
+        # Overall health assessment
+        health_issues = []
+        agent_rate = rates.get('rates', {}).get('agent_success_rate', 0)
+        if agent_rate < 0.7 and rates.get('rates', {}).get('agent_total', 0) > 10:
+            health_issues.append(f"Low agent success rate: {agent_rate:.0%}")
+        if gaps.get('has_gaps'):
+            health_issues.append(f"{gaps['gap_count']} usage gaps detected")
+        if events.get('total_value_events', 0) == 0:
+            health_issues.append("No value events in past 30 days")
+
+        return {
+            'events_summary': {
+                'total': events.get('total_value_events', 0),
+                'agents': events.get('events', {}).get('agent_completions', 0),
+                'deliverables': events.get('events', {}).get('deliverables_created', 0),
+                'revenue': events.get('events', {}).get('revenue_total', 0),
+            },
+            'outcome_rates': rates.get('rates', {}),
+            'gaps': gaps.get('gaps', []),
+            'health_issues': health_issues,
+            'healthy': len(health_issues) == 0,
+        }
+
+    def evaluate(self, now) -> dict:
+        """Auto-evaluate value realization health for autopilot cycle."""
+        events = self.get_value_events_report(days=7)
+        rates = self.get_outcome_rates(days=7)
+
+        issues = []
+        agent_rate = rates.get('rates', {}).get('agent_success_rate', 0)
+        if agent_rate < 0.7 and rates.get('rates', {}).get('agent_total', 0) > 10:
+            issues.append(f"Low agent success rate: {agent_rate:.0%}")
+        if events.get('total_value_events', 0) == 0:
+            issues.append("No value events in past 7 days")
+
+        return {
+            'value_events': events.get('total_value_events', 0),
+            'outcome_rate': agent_rate,
             'issues': issues,
             'issue_count': len(issues),
             'healthy': len(issues) == 0,

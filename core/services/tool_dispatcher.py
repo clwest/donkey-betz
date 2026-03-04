@@ -12939,6 +12939,37 @@ RESEARCH DATA:
             scores = engine.get_reliability_scores()
             return {'action': 'integrity_reliability_scores', **scores}
 
+        elif action == 'value_events_report':
+            from core.services.ops_autopilot import ValueRealizationEngine
+
+            days = int(payload.get('days', 7))
+            engine = ValueRealizationEngine()
+            report = engine.get_value_events_report(days=days)
+            return {'action': 'value_events_report', **report}
+
+        elif action == 'value_outcome_rates':
+            from core.services.ops_autopilot import ValueRealizationEngine
+
+            days = int(payload.get('days', 30))
+            engine = ValueRealizationEngine()
+            rates = engine.get_outcome_rates(days=days)
+            return {'action': 'value_outcome_rates', **rates}
+
+        elif action == 'value_usage_gaps':
+            from core.services.ops_autopilot import ValueRealizationEngine
+
+            days = int(payload.get('days', 7))
+            engine = ValueRealizationEngine()
+            gaps = engine.get_usage_gaps(days=days)
+            return {'action': 'value_usage_gaps', **gaps}
+
+        elif action == 'value_realization_summary':
+            from core.services.ops_autopilot import ValueRealizationEngine
+
+            engine = ValueRealizationEngine()
+            summary = engine.get_realization_summary()
+            return {'action': 'value_realization_summary', **summary}
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason
