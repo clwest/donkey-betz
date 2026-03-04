@@ -152,7 +152,8 @@ class LLMEnforcer:
             ).values_list('value', flat=True).first()
             if freeze_flag:
                 critical_purposes = {'governance', 'auth', 'incident_response', 'pa_chat'}
-                if task_type not in critical_purposes:
+                critical_agents = {'PersonalAssistant'}
+                if task_type not in critical_purposes and agent_name not in critical_agents:
                     logger.warning(
                         f"[BudgetController] FROZEN: blocking {agent_name}/{task_type}"
                     )
@@ -188,7 +189,7 @@ class LLMEnforcer:
         try:
             from core.services.ops_autopilot import ROIEnforcer
             throttle = ROIEnforcer().check_throttle(agent_name)
-            if throttle and task_type not in {'pa_chat', 'governance', 'auth', 'incident_response'}:
+            if throttle and task_type not in {'pa_chat', 'governance', 'auth', 'incident_response'} and agent_name not in {'PersonalAssistant'}:
                 logger.info(
                     f"[ROIEnforcer] Throttled: {agent_name} "
                     f"(cooldown {throttle.get('cooldown_minutes')}min, "
