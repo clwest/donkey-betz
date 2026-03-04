@@ -80,6 +80,7 @@ const SettingsScreen = safeRequire(() => require('../screens/settings/SettingsSc
 const BettingScreen = safeRequire(() => require('../screens/BettingScreen').default, '/betting');
 const StocksScreen = safeRequire(() => require('../screens/StocksScreen').default, '/stocks');
 const PortfolioScreen = safeRequire(() => require('../screens/PortfolioScreen').default, '/portfolio');
+const CodeRunnerScreen = safeRequire(() => require('../screens/CodeRunnerScreen').default, '/code-runner');
 
 // ── Registry ─────────────────────────────────────────────────────────────────
 // Maps manifest route paths -> RN screen components.
@@ -158,6 +159,10 @@ const SCREEN_REGISTRY: Record<string, ScreenEntry> = {
   '/diagnostics': {
     component: DiagnosticsScreen,
     icon: 'info',
+  },
+  '/code-runner': {
+    component: CodeRunnerScreen,
+    icon: 'terminal',
   },
 };
 

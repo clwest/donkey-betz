@@ -80,6 +80,7 @@ def _fallback_manifest() -> dict:
             {'path': '/settings', 'label': 'Settings', 'authRequired': True, 'category': 'admin'},
             {'path': '/diagnostics', 'label': 'Diagnostics', 'authRequired': True, 'category': 'admin'},
             {'path': '/profile', 'label': 'Profile', 'authRequired': True, 'category': 'admin'},
+            {'path': '/code-runner', 'label': 'Code Runner', 'authRequired': True, 'roles': ['admin'], 'category': 'admin'},
             {'path': '/login', 'label': 'Login', 'authRequired': False, 'category': 'auth'},
         ],
         'studios': {
