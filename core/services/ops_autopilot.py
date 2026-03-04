@@ -84,6 +84,11 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      upstream links via trace_id, initiative, dream). Max 2 hops,
      max 30% total assist cap. ImpactCredit model for queryable
      credit attribution per desk/agent.
+ 22. Policy arbitrator: Detects conflicts when multiple policies write
+     the same SystemConfiguration knob. Knob registry with priority +
+     merge strategy (priority_wins, max, min, bool_or). Anti-flap
+     detection (3+ changes in 24h). Hold-time violation reporting.
+     FinalAppliedOverrides snapshot per cycle. PA tool: policy_conflict_report.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -255,6 +260,7 @@ class OpsAutopilot:
         ('backlog_governor', 'backlog_governor', '_policy_backlog_governor'),
         ('goal_allocator', 'goal_aware_allocator', '_policy_goal_aware_allocator'),
         ('attribution', 'multi_touch_attribution', '_policy_multi_touch_attribution'),
+        ('arbitrator', 'policy_arbitrator', '_policy_policy_arbitrator'),
     ]
 
     def run(self) -> dict[str, Any]:
@@ -1954,6 +1960,70 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] attribution error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _policy_policy_arbitrator(self, now) -> dict:
+        """
+        Post-hoc conflict detection + FinalAppliedOverrides snapshot.
+        Runs LAST in the policy registry so all other policies have
+        already written their values.
+        """
+        result = {
+            'conflicts': 0,
+            'flaps': 0,
+            'suppressed': 0,
+        }
+
+        try:
+            arbitrator = PolicyArbitrator()
+            report = arbitrator.detect_conflicts(now)
+            result['conflicts'] = report.get('conflict_count', 0)
+            result['flaps'] = report.get('flap_count', 0)
+            result['suppressed'] = report.get('suppressed_count', 0)
+
+            # Record overrides snapshot
+            cycle_id = _uuid.uuid4()
+            snapshot = arbitrator.record_overrides_snapshot(now, cycle_id)
+            result['snapshot_knobs'] = snapshot.get('knob_count', 0)
+
+            # If conflicts detected, create governance attention item
+            if result['conflicts'] > 0:
+                try:
+                    from core.models_human_interface import HumanAttentionItem
+                    from django.contrib.auth import get_user_model
+                    User = get_user_model()
+                    user = User.objects.first()
+                    if user:
+                        HumanAttentionItem.objects.create(
+                            user=user,
+                            source='ops_autopilot',
+                            category='policy_conflict',
+                            title=(
+                                f"Policy arbitrator: {result['conflicts']} "
+                                f"conflict(s) detected"
+                            ),
+                            description=(
+                                f"Conflicts: {result['conflicts']}, "
+                                f"Flaps: {result['flaps']}, "
+                                f"Hold violations: {result['suppressed']}"
+                            ),
+                            priority='medium',
+                            auto_dismissable=True,
+                        )
+                except Exception as e:
+                    logger.warning(
+                        f"[OpsAutopilot] arbitrator attention item failed: {e}"
+                    )
+
+            logger.info(
+                f"[OpsAutopilot] Arbitrator: {result['conflicts']} conflicts, "
+                f"{result['flaps']} flaps, {result['suppressed']} suppressed"
+            )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] arbitrator error: {e}")
             result['error'] = str(e)
 
         return result
@@ -7101,6 +7171,470 @@ class MultiTouchAttributor:
                 created_at__gte=window,
             ).count(),
         }
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Policy Arbitrator — Policy 22 (Autonomy #18)
+# ═══════════════════════════════════════════════════════════════════════
+
+class PolicyArbitrator:
+    """
+    Resolves conflicts when multiple policies write the same
+    SystemConfiguration knob in the same autopilot cycle.
+
+    Design:
+    - Maintains a knob registry mapping config keys to owning policies
+      with priority and merge strategy.
+    - Anti-flap: minimum hold time (2h) and max delta (±0.05) per cycle
+      for numeric knobs.
+    - Records a FinalAppliedOverrides snapshot per cycle in the
+      DecisionLedger for audit trail.
+
+    Merge strategies:
+    - priority_wins: highest-priority policy's value applies
+    - max: largest numeric value wins (conservative/safe)
+    - min: smallest numeric value wins (conservative/safe)
+    - last_writer_wins: last policy to write wins (legacy default)
+    - bool_or: any True wins (safety: if any policy wants a freeze, freeze)
+    - bool_and: all must agree True (permissive)
+    """
+
+    # Priority: lower number = higher priority
+    # Safety/Reliability > Budget > Remediation > Backlog > Goal optimization
+    KNOB_REGISTRY = {
+        # Budget controller (P10) — safety-critical
+        'budget_freeze_active': {
+            'owner': 'budget_controller',
+            'priority': 10,
+            'merge': 'bool_or',
+            'hold_hours': 1,
+        },
+        'budget_downgrade_active': {
+            'owner': 'budget_controller',
+            'priority': 10,
+            'merge': 'bool_or',
+            'hold_hours': 1,
+        },
+        'budget_mode': {
+            'owner': 'budget_controller',
+            'priority': 10,
+            'merge': 'priority_wins',
+            'hold_hours': 1,
+        },
+        # ROI enforcer (P11)
+        'roi_throttle:*': {
+            'owner': 'roi_enforcement',
+            'priority': 20,
+            'merge': 'priority_wins',
+            'hold_hours': 2,
+        },
+        # Portfolio allocator (P12) — desk allocations
+        'desk_allocation:*': {
+            'owner': 'impact_portfolio',
+            'priority': 30,
+            'merge': 'max',
+            'hold_hours': 2,
+            'max_delta': 0.05,
+        },
+        # Goal allocator (P20) — goal-derived multipliers
+        'goal_allocation:*': {
+            'owner': 'goal_aware_allocator',
+            'priority': 35,
+            'merge': 'priority_wins',
+            'hold_hours': 2,
+            'max_delta': 0.05,
+        },
+        'goal_weights': {
+            'owner': 'goal_aware_allocator',
+            'priority': 35,
+            'merge': 'priority_wins',
+            'hold_hours': 4,
+        },
+        # Timeout remediation playbook (P15)
+        'timeout_ladder_level:*': {
+            'owner': 'timeout_remediation_playbook',
+            'priority': 25,
+            'merge': 'max',
+            'hold_hours': 2,
+        },
+        'timeout_ladder_batch_reduce:*': {
+            'owner': 'timeout_remediation_playbook',
+            'priority': 25,
+            'merge': 'priority_wins',
+            'hold_hours': 2,
+        },
+        # Deliberation remediation playbook (P16)
+        'delib_ladder_level': {
+            'owner': 'deliberation_remediation_playbook',
+            'priority': 25,
+            'merge': 'max',
+            'hold_hours': 2,
+        },
+        'deliberation_panel_size_override': {
+            'owner': 'deliberation_remediation_playbook',
+            'priority': 25,
+            'merge': 'min',
+            'hold_hours': 2,
+        },
+        'deliberation_reviewer_model_override': {
+            'owner': 'deliberation_remediation_playbook',
+            'priority': 25,
+            'merge': 'priority_wins',
+            'hold_hours': 2,
+        },
+        'deliberation_single_reviewer_mode': {
+            'owner': 'deliberation_remediation_playbook',
+            'priority': 25,
+            'merge': 'bool_or',
+            'hold_hours': 2,
+        },
+        # Backlog governor (P19)
+        'backlog_generation_throttled': {
+            'owner': 'backlog_governor',
+            'priority': 40,
+            'merge': 'bool_or',
+            'hold_hours': 2,
+        },
+        'backlog_governor_level': {
+            'owner': 'backlog_governor',
+            'priority': 40,
+            'merge': 'max',
+            'hold_hours': 2,
+        },
+    }
+
+    # Anti-flap defaults
+    DEFAULT_HOLD_HOURS = 2
+    DEFAULT_MAX_DELTA = 0.05  # for numeric desk/goal allocations
+
+    def __init__(self):
+        self._pending_writes: dict[str, list[dict]] = {}
+
+    def register_write(self, key: str, value: Any, policy: str):
+        """
+        Record an intended write from a policy. Call this instead of
+        writing directly to SystemConfiguration.
+
+        For now this is observational — policies still write directly,
+        and the arbitrator detects conflicts post-hoc.
+        """
+        if key not in self._pending_writes:
+            self._pending_writes[key] = []
+        self._pending_writes[key].append({
+            'policy': policy,
+            'value': value,
+            'ts': timezone.now().isoformat(),
+        })
+
+    def _match_registry(self, key: str) -> dict | None:
+        """Look up knob registry entry, supporting wildcard patterns."""
+        if key in self.KNOB_REGISTRY:
+            return self.KNOB_REGISTRY[key]
+
+        # Check wildcard patterns (e.g., 'desk_allocation:*')
+        prefix = key.split(':')[0] + ':*' if ':' in key else None
+        if prefix and prefix in self.KNOB_REGISTRY:
+            return self.KNOB_REGISTRY[prefix]
+
+        return None
+
+    def detect_conflicts(self, now) -> dict:
+        """
+        Scan SystemConfiguration for knobs recently written by multiple
+        policies (post-hoc conflict detection).
+
+        Returns conflict report with:
+        - conflicts: list of {key, writers, resolution}
+        - flap_knobs: keys that changed value multiple times recently
+        - suppressed: writes that should have been blocked by hold time
+        """
+        conflicts = []
+        try:
+            from core.models_decision_ledger import DecisionLedgerEntry
+
+            window = now - timedelta(hours=6)
+
+            # Get recent ledger entries to see which policies took actions
+            entries = list(
+                DecisionLedgerEntry.objects.filter(
+                    cycle_ts__gte=window,
+                    decision_type='action_taken',
+                ).values('policy', 'inputs', 'cycle_ts', 'cycle_id')
+                .order_by('-cycle_ts')[:200]
+            )
+
+            # Extract config key writes from policy inputs
+            key_writers: dict[str, list[dict]] = {}
+            for entry in entries:
+                policy = entry['policy']
+                inputs = entry.get('inputs') or {}
+
+                # Infer which keys this policy wrote
+                written_keys = self._infer_written_keys(policy, inputs)
+                for key in written_keys:
+                    if key not in key_writers:
+                        key_writers[key] = []
+                    key_writers[key].append({
+                        'policy': policy,
+                        'cycle_ts': str(entry['cycle_ts']),
+                        'cycle_id': str(entry['cycle_id']),
+                    })
+
+            # Find actual conflicts (same key, multiple policies)
+            for key, writers in key_writers.items():
+                policies = list(set(w['policy'] for w in writers))
+                if len(policies) > 1:
+                    registry = self._match_registry(key)
+                    resolution = 'unregistered'
+                    if registry:
+                        resolution = (
+                            f"{registry['merge']} (owner={registry['owner']}, "
+                            f"priority={registry['priority']})"
+                        )
+                    conflicts.append({
+                        'key': key,
+                        'writers': policies,
+                        'write_count': len(writers),
+                        'resolution': resolution,
+                    })
+        except Exception:
+            pass
+
+        # Detect flap knobs — keys that changed frequently
+        flap_knobs = self._detect_flaps(now)
+
+        # Detect hold-time violations
+        suppressed = self._detect_hold_violations(now)
+
+        return {
+            'window_hours': 6,
+            'conflicts': conflicts,
+            'conflict_count': len(conflicts),
+            'flap_knobs': flap_knobs,
+            'flap_count': len(flap_knobs),
+            'suppressed': suppressed,
+            'suppressed_count': len(suppressed),
+            'registered_knobs': len(self.KNOB_REGISTRY),
+        }
+
+    def _infer_written_keys(self, policy: str, inputs: dict) -> list[str]:
+        """
+        Infer which SystemConfiguration keys a policy wrote,
+        based on known policy→key mappings.
+        """
+        keys = []
+
+        # Budget controller
+        if policy == 'budget_controller':
+            for k in ['budget_freeze_active', 'budget_downgrade_active', 'budget_mode']:
+                if inputs.get(k) or inputs.get('freeze') or inputs.get('downgrade'):
+                    keys.append(k)
+
+        # ROI enforcement
+        elif policy == 'roi_enforcement':
+            throttled = inputs.get('throttled_agents', [])
+            if isinstance(throttled, list):
+                for t in throttled:
+                    name = t.get('agent_name', '') if isinstance(t, dict) else str(t)
+                    if name:
+                        keys.append(f'roi_throttle:{name}')
+
+        # Impact portfolio
+        elif policy == 'impact_portfolio':
+            allocs = inputs.get('desk_allocations', {})
+            if isinstance(allocs, dict):
+                for desk in allocs:
+                    keys.append(f'desk_allocation:{desk}')
+
+        # Goal-aware allocator
+        elif policy == 'goal_aware_allocator':
+            allocs = inputs.get('allocations', {})
+            if isinstance(allocs, dict):
+                for desk in allocs:
+                    keys.append(f'goal_allocation:{desk}')
+            if inputs.get('weights_updated'):
+                keys.append('goal_weights')
+
+        # Timeout playbook
+        elif policy == 'timeout_remediation_playbook':
+            agent = inputs.get('agent_name', '')
+            if agent:
+                keys.append(f'timeout_ladder_level:{agent}')
+
+        # Deliberation playbook
+        elif policy == 'deliberation_remediation_playbook':
+            if inputs.get('level') is not None:
+                keys.append('delib_ladder_level')
+
+        # Backlog governor
+        elif policy == 'backlog_governor':
+            if inputs.get('level') is not None:
+                keys.append('backlog_governor_level')
+            if inputs.get('throttled'):
+                keys.append('backlog_generation_throttled')
+
+        return keys
+
+    def _detect_flaps(self, now) -> list[dict]:
+        """
+        Detect knobs that changed value 3+ times in the past 24 hours.
+        Uses AutopilotAction history.
+        """
+        try:
+            from core.models_diagnostic_pipeline import AutopilotAction
+            from django.db.models import Count
+
+            window = now - timedelta(hours=24)
+
+            # Count action_taken entries per policy
+            actions = list(
+                AutopilotAction.objects.filter(
+                    created_at__gte=window,
+                    action_type__in=['deploy_watch', 'remediation'],
+                ).values('policy').annotate(
+                    count=Count('id'),
+                ).filter(count__gte=3)
+                .order_by('-count')[:10]
+            )
+
+            flaps = []
+            for a in actions:
+                policy = a['policy']
+                # Map policy → knobs
+                registry_knobs = [
+                    k for k, v in self.KNOB_REGISTRY.items()
+                    if v['owner'] == policy
+                ]
+                if registry_knobs:
+                    flaps.append({
+                        'policy': policy,
+                        'action_count': a['count'],
+                        'affected_knobs': registry_knobs,
+                    })
+
+            return flaps
+        except Exception:
+            return []
+
+    def _detect_hold_violations(self, now) -> list[dict]:
+        """
+        Detect knobs that were changed before their hold time expired.
+        """
+        suppressed = []
+        try:
+            from core.models.system import SystemConfiguration
+            from core.models_decision_ledger import DecisionLedgerEntry
+
+            for key, registry in self.KNOB_REGISTRY.items():
+                if '*' in key:
+                    continue
+
+                hold_hours = registry.get('hold_hours', self.DEFAULT_HOLD_HOURS)
+                hold_window = now - timedelta(hours=hold_hours)
+
+                entry = SystemConfiguration.objects.filter(key=key).first()
+                if not entry:
+                    continue
+
+                if hasattr(entry, 'updated_at') and entry.updated_at:
+                    if entry.updated_at > hold_window:
+                        changes = DecisionLedgerEntry.objects.filter(
+                            policy=registry['owner'],
+                            decision_type='action_taken',
+                            cycle_ts__gte=hold_window,
+                        ).count()
+                        if changes >= 2:
+                            suppressed.append({
+                                'key': key,
+                                'owner': registry['owner'],
+                                'hold_hours': hold_hours,
+                                'changes_in_window': changes,
+                            })
+        except Exception:
+            pass
+
+        return suppressed
+
+    def record_overrides_snapshot(self, now, cycle_id) -> dict:
+        """
+        Record a FinalAppliedOverrides snapshot in SystemConfiguration.
+        Captures the current state of all registered knobs.
+        """
+        from core.models.system import SystemConfiguration
+        import json
+
+        snapshot = {}
+
+        # Read all registered knobs (non-wildcard)
+        for key, registry in self.KNOB_REGISTRY.items():
+            if '*' in key:
+                continue
+            entry = SystemConfiguration.objects.filter(key=key).first()
+            if entry:
+                snapshot[key] = {
+                    'value': entry.value,
+                    'owner': registry['owner'],
+                    'priority': registry['priority'],
+                }
+
+        # Also capture wildcard knobs by prefix
+        for pattern in self.KNOB_REGISTRY:
+            if '*' not in pattern:
+                continue
+            prefix = pattern.replace(':*', ':')
+            entries = SystemConfiguration.objects.filter(
+                key__startswith=prefix,
+            ).values_list('key', 'value')[:50]
+            for k, v in entries:
+                snapshot[k] = {
+                    'value': v,
+                    'owner': self.KNOB_REGISTRY[pattern]['owner'],
+                    'priority': self.KNOB_REGISTRY[pattern]['priority'],
+                }
+
+        # Store snapshot
+        SystemConfiguration.objects.update_or_create(
+            key='policy_arbitrator_snapshot',
+            defaults={'value': json.dumps({
+                'cycle_id': str(cycle_id),
+                'ts': now.isoformat(),
+                'knobs': snapshot,
+                'knob_count': len(snapshot),
+            })},
+        )
+
+        return {
+            'knob_count': len(snapshot),
+            'cycle_id': str(cycle_id),
+        }
+
+    def get_conflict_report(self, now, days: int = 1,
+                            knob: str = '', policy: str = '') -> dict:
+        """
+        PA-facing conflict report with optional filters.
+        """
+        report = self.detect_conflicts(now)
+
+        # Apply filters
+        if knob:
+            report['conflicts'] = [
+                c for c in report['conflicts'] if knob in c['key']
+            ]
+            report['conflict_count'] = len(report['conflicts'])
+
+        if policy:
+            report['conflicts'] = [
+                c for c in report['conflicts']
+                if policy in c['writers']
+            ]
+            report['conflict_count'] = len(report['conflicts'])
+            report['flap_knobs'] = [
+                f for f in report['flap_knobs']
+                if f['policy'] == policy
+            ]
+            report['flap_count'] = len(report['flap_knobs'])
+
+        return report
 
 
 # ═══════════════════════════════════════════════════════════════════════

@@ -12289,6 +12289,22 @@ RESEARCH DATA:
                 **report,
             }
 
+        elif action == 'policy_conflict_report':
+            # Policy arbitrator conflict detection
+            from django.utils import timezone as tz
+            from core.services.ops_autopilot import PolicyArbitrator
+
+            arbitrator = PolicyArbitrator()
+            report = arbitrator.get_conflict_report(
+                tz.now(),
+                knob=payload.get('knob', ''),
+                policy=payload.get('policy_filter', ''),
+            )
+            return {
+                'action': 'policy_conflict_report',
+                **report,
+            }
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason
