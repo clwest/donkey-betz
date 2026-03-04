@@ -2035,7 +2035,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "backfill_failure_reasons"],
+                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "timeout_ladder_report", "backfill_failure_reasons"],
                     "description": (
                         "status: current config, last cycle timestamp, and pending actions. "
                         "history: recent autopilot actions (blocks, attention items, dry runs). "
@@ -2068,6 +2068,9 @@ PA_TOOL_SCHEMAS = [
                         "decision_ledger_report: query the decision ledger — every policy evaluation is recorded with "
                         "structured inputs, outputs, decision type, timing, and experiment context. Filter by policy_name, "
                         "decision_type (no_op/action_taken/blocked/skipped), and days. Shows cycle count and decision type stats. "
+                        "timeout_ladder_report: show agents currently on the timeout remediation ladder — levels (L0-L3), "
+                        "escalation history, timeout overrides, batch reductions, and blocks. Graduated: L1=timeout increase, "
+                        "L2=batch reduction, L3=temporary block. Auto-de-escalates after recovery. "
                         "backfill_failure_reasons: re-classify UNKNOWN failure codes using expanded patterns."
                     ),
                 },

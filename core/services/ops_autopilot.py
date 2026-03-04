@@ -41,7 +41,7 @@ Policies (v6 — impact tracking + portfolio allocation):
      per desk and adjusts budget allocations — high-impact desks get more
      headroom, zero-impact pipelines get deprioritized.
 
-Policies (v7 — attribution debt + experiment engine + decision ledger):
+Policies (v7 — attribution debt + experiment engine + decision ledger + remediation):
  14. Attribution debt controller: AttributionDebtController maps LLM
      spend to desks via agent→desk lookup. Unattributed spend (agents
      without desk mapping) is "debt" that distorts IQROI. When debt
@@ -57,6 +57,11 @@ Policies (v7 — attribution debt + experiment engine + decision ledger):
      DecisionLedgerEntry with structured inputs, outputs, decision_type,
      and counterfactual context. Grouped by cycle_id for replay and
      debugging. Queryable by policy, desk, decision_type, experiment_id.
+ 17. Timeout remediation playbook: Graduated remediation ladder for
+     agents with sustained timeouts. L0=monitoring, L1=increase timeout
+     50%, L2=reduce batch size 50%, L3=temporary block (4h TTL).
+     Auto-escalates after 6 cycles without improvement, auto-de-escalates
+     after 12 clean cycles. Governance items at L2+.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -223,6 +228,7 @@ class OpsAutopilot:
         ('impact_portfolio', 'impact_portfolio', '_policy_impact_portfolio'),
         ('attribution_debt', 'attribution_debt', '_policy_attribution_debt'),
         ('experiments', 'experiment_engine', '_policy_experiment_engine'),
+        ('timeout_playbook', 'timeout_remediation_playbook', '_policy_timeout_remediation_playbook'),
     ]
 
     def run(self) -> dict[str, Any]:
@@ -1672,6 +1678,67 @@ class OpsAutopilot:
 
         return result
 
+    # ── Policy 17: Timeout Remediation Playbook ──────────────────────────
+
+    def _policy_timeout_remediation_playbook(self, now) -> dict:
+        """
+        Graduated timeout remediation: monitor → increase timeout →
+        reduce scope → block. With auto-de-escalation on recovery.
+        """
+        result = {
+            'agents_evaluated': 0,
+            'escalations': 0,
+            'de_escalations': 0,
+        }
+
+        try:
+            playbook = TimeoutRemediationPlaybook(
+                dry_run=self.dry_run,
+                deploy_sha=self.deploy_sha,
+            )
+            eval_result = playbook.evaluate(now)
+
+            result['agents_evaluated'] = eval_result['agents_evaluated']
+            result['escalations'] = eval_result['escalations']
+            result['de_escalations'] = eval_result['de_escalations']
+            result['details'] = eval_result.get('details', [])
+
+            # Merge actions
+            self.actions_taken.extend(playbook.actions)
+
+            # Create governance items for escalations to L2+
+            for detail in eval_result.get('details', []):
+                if detail.get('action') == 'escalate' and detail.get('to_level', 0) >= 2:
+                    self._create_attention_item(
+                        title=(
+                            f"Timeout ladder L{detail['to_level']}: "
+                            f"{detail['agent_name']}"
+                        ),
+                        summary=(
+                            f"{detail['agent_name']} escalated to "
+                            f"level {detail['to_level']} "
+                            f"({detail.get('timeout_count', '?')} timeouts/hr). "
+                            f"{'Batch reduction applied.' if detail['to_level'] == 2 else ''}"
+                            f"{'Agent blocked.' if detail['to_level'] == 3 else ''}"
+                        ),
+                        urgency='medium' if detail['to_level'] == 3 else 'low',
+                        policy='timeout_remediation_playbook',
+                        agent_name=detail['agent_name'],
+                    )
+
+            logger.info(
+                f"[OpsAutopilot] Timeout playbook: "
+                f"{result['agents_evaluated']} evaluated, "
+                f"{result['escalations']} escalations, "
+                f"{result['de_escalations']} de-escalations"
+            )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] timeout playbook error: {e}")
+            result['error'] = str(e)
+
+        return result
+
     # ── Action executors ─────────────────────────────────────────────────
 
     def _execute_block(
@@ -2974,6 +3041,441 @@ class RemediationEngine:
             logger.error(
                 f"[RemediationEngine] Rollback failed for {action.id}: {e}"
             )
+
+
+# ── Policy 17: Timeout Remediation Playbook ──────────────────────────────────
+
+
+class TimeoutRemediationPlaybook:
+    """
+    Graduated remediation ladder for agents with sustained timeout issues.
+
+    Unlike the RemediationEngine (which does one-shot heuristic fixes),
+    this playbook tracks remediation LEVEL per agent and escalates:
+
+      Level 0: Monitoring only (no action)
+      Level 1: Increase timeout by 50% via SystemConfiguration
+      Level 2: Reduce scope — set batch_size_reduction flag for the agent
+      Level 3: Temporary block with TTL + governance attention item
+
+    Escalation: if timeout rate doesn't improve within EVAL_WINDOW_CYCLES
+    after a remediation, escalate to next level.
+
+    De-escalation: if timeout rate drops to 0 for RECOVERY_CYCLES, step
+    down one level and clean up overrides.
+
+    Auto-rollback: if error_rate or impact_value degrades after remediation,
+    immediately roll back one level.
+    """
+
+    # How many cycles to wait before escalating if no improvement
+    EVAL_WINDOW_CYCLES = 6  # ~60 min at 10min/cycle
+    # How many clean cycles before de-escalating
+    RECOVERY_CYCLES = 12  # ~2 hours clean
+    # Max timeouts per hour to trigger ladder entry
+    ENTRY_THRESHOLD = 5
+    # Max timeout multiplier
+    MAX_TIMEOUT_MULTIPLIER = 2.0
+    MAX_TIMEOUT_ABSOLUTE = 1800  # 30 min
+    # TTL for level-3 block (hours)
+    BLOCK_TTL_HOURS = 4
+
+    # SystemConfiguration key patterns
+    KEY_LEVEL = 'timeout_ladder_level:{agent}'
+    KEY_LEVEL_TS = 'timeout_ladder_level_ts:{agent}'
+    KEY_CLEAN_CYCLES = 'timeout_ladder_clean:{agent}'
+    KEY_BATCH_REDUCTION = 'timeout_ladder_batch_reduce:{agent}'
+
+    def __init__(self, dry_run: bool = False, deploy_sha: str = ''):
+        self.dry_run = dry_run
+        self.deploy_sha = deploy_sha
+        self.actions: list[dict] = []
+
+    def evaluate(self, now) -> dict:
+        """
+        Evaluate all agents for timeout remediation ladder.
+
+        Returns summary of evaluations, escalations, and de-escalations.
+        """
+        from core.models_diagnostic_pipeline import FailureDetection
+        from django.db.models import Count
+
+        result = {
+            'agents_evaluated': 0,
+            'escalations': 0,
+            'de_escalations': 0,
+            'rollbacks': 0,
+            'details': [],
+        }
+
+        try:
+            # Find agents with timeouts in the last hour
+            window = now - timedelta(hours=1)
+            agent_timeouts = list(
+                FailureDetection.objects.filter(
+                    signature__category='timeout',
+                    detected_at__gte=window,
+                ).values('source_name').annotate(
+                    count=Count('id')
+                ).order_by('-count')
+            )
+
+            # Also check agents currently on the ladder that may have recovered
+            current_levels = self._get_all_levels()
+
+            # Combine: agents with current timeouts + agents on ladder
+            agent_names = set()
+            timeout_counts = {}
+            for entry in agent_timeouts:
+                name = entry['source_name']
+                if name:
+                    agent_names.add(name)
+                    timeout_counts[name] = entry['count']
+
+            for name in current_levels:
+                agent_names.add(name)
+
+            for agent_name in agent_names:
+                count = timeout_counts.get(agent_name, 0)
+                current_level = current_levels.get(agent_name, 0)
+
+                action = self._evaluate_agent(
+                    agent_name, count, current_level, now,
+                )
+                result['agents_evaluated'] += 1
+
+                if action:
+                    result['details'].append(action)
+                    if action['action'] == 'escalate':
+                        result['escalations'] += 1
+                    elif action['action'] == 'de_escalate':
+                        result['de_escalations'] += 1
+                    elif action['action'] == 'rollback':
+                        result['rollbacks'] += 1
+
+        except Exception as e:
+            logger.error(f"[TimeoutPlaybook] evaluation error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _evaluate_agent(
+        self, agent_name: str, timeout_count: int,
+        current_level: int, now,
+    ) -> dict | None:
+        """Evaluate a single agent and decide on escalation/de-escalation."""
+
+        # Case 1: Agent not on ladder and below threshold → skip
+        if current_level == 0 and timeout_count < self.ENTRY_THRESHOLD:
+            return None
+
+        # Case 2: Agent not on ladder but above threshold → enter level 1
+        if current_level == 0 and timeout_count >= self.ENTRY_THRESHOLD:
+            return self._escalate(agent_name, 0, 1, timeout_count, now)
+
+        # Case 3: Agent on ladder, check if clean (recovered)
+        if timeout_count == 0:
+            clean = self._increment_clean_cycles(agent_name)
+            if clean >= self.RECOVERY_CYCLES:
+                return self._de_escalate(agent_name, current_level, now)
+            return None  # Still recovering, wait
+
+        # Case 4: Agent on ladder and still timing out → reset clean counter
+        self._reset_clean_cycles(agent_name)
+
+        # Check if enough cycles have passed since last escalation
+        level_ts = self._get_level_timestamp(agent_name)
+        if level_ts:
+            cycles_since = (now - level_ts).total_seconds() / 600  # 10min cycles
+            if cycles_since < self.EVAL_WINDOW_CYCLES:
+                return None  # Too soon to escalate again
+
+        # Still failing after eval window → escalate
+        if current_level < 3:
+            return self._escalate(
+                agent_name, current_level, current_level + 1,
+                timeout_count, now,
+            )
+
+        # Already at max level (3) — nothing more to do
+        return None
+
+    def _escalate(
+        self, agent_name: str, from_level: int, to_level: int,
+        timeout_count: int, now,
+    ) -> dict:
+        """Escalate an agent to the next remediation level."""
+        from core.models.system import SystemConfiguration
+
+        action = {
+            'action': 'escalate',
+            'agent_name': agent_name,
+            'from_level': from_level,
+            'to_level': to_level,
+            'timeout_count': timeout_count,
+        }
+
+        if self.dry_run:
+            action['dry_run'] = True
+            return action
+
+        # Apply the appropriate remediation for the new level
+        if to_level == 1:
+            # Increase timeout by 50%
+            engine = RemediationEngine(dry_run=False, deploy_sha=self.deploy_sha)
+            current_timeout = engine._get_current_timeout(agent_name)
+            new_timeout = min(
+                int(current_timeout * 1.5),
+                self.MAX_TIMEOUT_ABSOLUTE,
+            )
+            SystemConfiguration.objects.update_or_create(
+                key=f'agent_timeout_override:{agent_name}',
+                defaults={
+                    'value': str(new_timeout),
+                    'description': (
+                        f'Timeout ladder L1: {current_timeout}s → {new_timeout}s '
+                        f'({timeout_count} timeouts/hr)'
+                    ),
+                },
+            )
+            action['timeout_change'] = {
+                'from': current_timeout, 'to': new_timeout,
+            }
+
+        elif to_level == 2:
+            # Set batch size reduction flag
+            SystemConfiguration.objects.update_or_create(
+                key=self.KEY_BATCH_REDUCTION.format(agent=agent_name),
+                defaults={
+                    'value': '0.5',  # 50% batch size
+                    'description': (
+                        f'Timeout ladder L2: batch reduction for {agent_name} '
+                        f'({timeout_count} timeouts/hr)'
+                    ),
+                },
+            )
+            action['batch_reduction'] = 0.5
+
+        elif to_level == 3:
+            # Temporary block
+            from core.models_unified_system import AgentControlEntry
+            AgentControlEntry.objects.update_or_create(
+                agent_name=agent_name,
+                defaults={
+                    'status': 'blocked',
+                    'reason': (
+                        f'Timeout ladder L3: sustained timeouts '
+                        f'({timeout_count}/hr after L1+L2 remediation)'
+                    )[:255],
+                    'blocked_at': now,
+                    'blocked_by': 'timeout_playbook',
+                    'ttl_hours': self.BLOCK_TTL_HOURS,
+                },
+            )
+            action['blocked_ttl_hours'] = self.BLOCK_TTL_HOURS
+
+        # Record level
+        self._set_level(agent_name, to_level, now)
+        self._reset_clean_cycles(agent_name)
+
+        # Log
+        AutopilotAction.objects.create(
+            action_type='remediate',
+            agent_name=agent_name,
+            policy='timeout_remediation_playbook',
+            dry_run=False,
+            evidence={
+                'ladder_from': from_level,
+                'ladder_to': to_level,
+                'timeout_count': timeout_count,
+                **action,
+            },
+            result=action,
+            deploy_sha=self.deploy_sha,
+        )
+
+        self.actions.append(action)
+
+        logger.info(
+            f"[TimeoutPlaybook] ESCALATE {agent_name}: "
+            f"L{from_level} → L{to_level} "
+            f"({timeout_count} timeouts/hr)"
+        )
+
+        return action
+
+    def _de_escalate(
+        self, agent_name: str, current_level: int, now,
+    ) -> dict:
+        """De-escalate an agent that has recovered."""
+        from core.models.system import SystemConfiguration
+
+        new_level = current_level - 1
+        action = {
+            'action': 'de_escalate',
+            'agent_name': agent_name,
+            'from_level': current_level,
+            'to_level': new_level,
+        }
+
+        if self.dry_run:
+            action['dry_run'] = True
+            return action
+
+        # Clean up the remediation for the current level
+        if current_level == 1:
+            # Remove timeout override
+            SystemConfiguration.objects.filter(
+                key=f'agent_timeout_override:{agent_name}',
+            ).delete()
+
+        elif current_level == 2:
+            # Remove batch reduction flag
+            SystemConfiguration.objects.filter(
+                key=self.KEY_BATCH_REDUCTION.format(agent=agent_name),
+            ).delete()
+
+        elif current_level == 3:
+            # Unblock agent
+            from core.models_unified_system import AgentControlEntry
+            AgentControlEntry.objects.filter(
+                agent_name=agent_name,
+                blocked_by='timeout_playbook',
+            ).update(
+                status='active',
+                reason=f'Timeout ladder recovered: L{current_level} → L{new_level}',
+            )
+
+        # Update level
+        if new_level > 0:
+            self._set_level(agent_name, new_level, now)
+        else:
+            # Fully recovered — clean up all ladder state
+            self._clear_level(agent_name)
+
+        self._reset_clean_cycles(agent_name)
+
+        # Log
+        AutopilotAction.objects.create(
+            action_type='remediate',
+            agent_name=agent_name,
+            policy='timeout_remediation_playbook',
+            dry_run=False,
+            evidence={
+                'ladder_from': current_level,
+                'ladder_to': new_level,
+                'recovery': True,
+            },
+            result=action,
+            deploy_sha=self.deploy_sha,
+        )
+
+        self.actions.append(action)
+
+        logger.info(
+            f"[TimeoutPlaybook] DE-ESCALATE {agent_name}: "
+            f"L{current_level} → L{new_level}"
+        )
+
+        return action
+
+    # ── Level tracking via SystemConfiguration ──────────────────────
+
+    def _get_all_levels(self) -> dict[str, int]:
+        """Return {agent_name: level} for all agents currently on the ladder."""
+        from core.models.system import SystemConfiguration
+        entries = SystemConfiguration.objects.filter(
+            key__startswith='timeout_ladder_level:',
+        ).exclude(
+            key__contains='_ts:',
+        ).exclude(
+            key__contains='_clean:',
+        ).exclude(
+            key__contains='_batch_reduce:',
+        )
+        result = {}
+        for entry in entries:
+            agent = entry.key.split(':', 1)[1] if ':' in entry.key else ''
+            if agent:
+                try:
+                    result[agent] = int(entry.value)
+                except (ValueError, TypeError):
+                    pass
+        return result
+
+    def _set_level(self, agent_name: str, level: int, now):
+        from core.models.system import SystemConfiguration
+        SystemConfiguration.objects.update_or_create(
+            key=self.KEY_LEVEL.format(agent=agent_name),
+            defaults={'value': str(level)},
+        )
+        SystemConfiguration.objects.update_or_create(
+            key=self.KEY_LEVEL_TS.format(agent=agent_name),
+            defaults={'value': now.isoformat()},
+        )
+
+    def _clear_level(self, agent_name: str):
+        from core.models.system import SystemConfiguration
+        SystemConfiguration.objects.filter(
+            key__in=[
+                self.KEY_LEVEL.format(agent=agent_name),
+                self.KEY_LEVEL_TS.format(agent=agent_name),
+                self.KEY_CLEAN_CYCLES.format(agent=agent_name),
+                self.KEY_BATCH_REDUCTION.format(agent=agent_name),
+            ]
+        ).delete()
+
+    def _get_level_timestamp(self, agent_name: str):
+        from core.models.system import SystemConfiguration
+        from django.utils.dateparse import parse_datetime
+        entry = SystemConfiguration.objects.filter(
+            key=self.KEY_LEVEL_TS.format(agent=agent_name),
+        ).first()
+        if entry:
+            return parse_datetime(entry.value)
+        return None
+
+    def _increment_clean_cycles(self, agent_name: str) -> int:
+        from core.models.system import SystemConfiguration
+        obj, _ = SystemConfiguration.objects.get_or_create(
+            key=self.KEY_CLEAN_CYCLES.format(agent=agent_name),
+            defaults={'value': '0'},
+        )
+        new_val = int(obj.value or '0') + 1
+        obj.value = str(new_val)
+        obj.save(update_fields=['value'])
+        return new_val
+
+    def _reset_clean_cycles(self, agent_name: str):
+        from core.models.system import SystemConfiguration
+        SystemConfiguration.objects.filter(
+            key=self.KEY_CLEAN_CYCLES.format(agent=agent_name),
+        ).update(value='0')
+
+    def get_ladder_report(self) -> dict:
+        """Report current state of all agents on the timeout ladder."""
+        levels = self._get_all_levels()
+        if not levels:
+            return {'agents_on_ladder': 0, 'agents': []}
+
+        agents = []
+        for agent_name, level in sorted(levels.items()):
+            level_ts = self._get_level_timestamp(agent_name)
+            agents.append({
+                'agent_name': agent_name,
+                'level': level,
+                'level_since': level_ts.isoformat() if level_ts else None,
+                'level_description': {
+                    1: 'Timeout increased 50%',
+                    2: 'Batch size reduced 50%',
+                    3: f'Blocked (TTL {self.BLOCK_TTL_HOURS}h)',
+                }.get(level, 'Unknown'),
+            })
+
+        return {
+            'agents_on_ladder': len(agents),
+            'agents': agents,
+        }
 
 
 # ── Policy Self-Tuning Engine ────────────────────────────────────────────────
