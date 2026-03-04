@@ -29404,6 +29404,25 @@ def auto_publish_approved_blogs():
     return {'published': count, 'blog_ids': published_ids}
 
 
+@shared_task(name='core.tasks.verify_autopilot_action', ignore_result=True)
+def verify_autopilot_action(action_id: int):
+    """
+    Deferred verification of an autopilot action.
+
+    Called by ActionVerifier.record_and_verify() after a delay (typically 2min).
+    Checks whether the action improved the situation. If not, auto-rolls back.
+    """
+    from core.services.ops_autopilot import ActionVerifier
+    result = ActionVerifier.verify_action(action_id)
+    if result.get('passed'):
+        logger.info(f"[VERIFY] Action {action_id} verified OK")
+    elif result.get('skipped'):
+        logger.info(f"[VERIFY] Action {action_id} skipped: {result.get('reason', '')}")
+    else:
+        logger.warning(f"[VERIFY] Action {action_id} FAILED verification — rollback attempted")
+    return result
+
+
 @shared_task(name='core.tasks.content_autonomy_loop', ignore_result=True)
 def content_autonomy_loop():
     """

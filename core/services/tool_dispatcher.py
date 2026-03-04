@@ -11549,6 +11549,28 @@ RESEARCH DATA:
             else:
                 report_lines.append(f"\n### Proposed Actions: None (system healthy)")
 
+            # Verification + rollback stats (last 24h)
+            try:
+                from core.models_diagnostic_pipeline import AutopilotAction
+                from django.utils import timezone as tz
+                from datetime import timedelta
+                day_cutoff = tz.now() - timedelta(hours=24)
+                recent_actions = AutopilotAction.objects.filter(
+                    created_at__gte=day_cutoff,
+                    dry_run=False,
+                )
+                verif_pending = recent_actions.filter(verification_state='pending').count()
+                verif_passed = recent_actions.filter(verification_state='passed').count()
+                verif_failed = recent_actions.filter(verification_state='failed').count()
+                rolled_back = recent_actions.filter(rolled_back=True).count()
+                report_lines.append(f"\n### Verification & Safety (24h)")
+                report_lines.append(f"- Verified passed: {verif_passed}")
+                report_lines.append(f"- Pending verification: {verif_pending}")
+                report_lines.append(f"- Failed verification: {verif_failed}")
+                report_lines.append(f"- Auto-rolled back: {rolled_back}")
+            except Exception:
+                pass
+
             return {
                 'action': 'dry_run_report',
                 'report': '\n'.join(report_lines),

@@ -191,6 +191,10 @@ from ..models_workflow_run import WorkflowRun
 # Import ops runs (Context Packet #9 - Ops Observability)
 from ..models_ops_runs import OpsRun, OpsRunEvent
 
+# Import AutopilotAction only (Session 1086 — verification layer)
+# Other diagnostic pipeline models already tracked via earlier migrations
+from ..models_diagnostic_pipeline import AutopilotAction
+
 # Import learning journey models (Session 773 - Learning Journeys)
 from ..models_learning_journey import (
     LearningJourneyTemplate,
@@ -435,4 +439,5 @@ __all__ = [
     # Ops Runs (Context Packet #9)
     'OpsRun',
     'OpsRunEvent',
+
 ]

@@ -738,7 +738,7 @@ class OpsAutopilot:
                         f"{item.title[:50]} ({source})"
                     )
 
-                AutopilotAction.objects.create(
+                db_action = AutopilotAction.objects.create(
                     action_type='auto_resolve' if not self.dry_run else 'dry_run',
                     agent_name=source,
                     policy='governance_auto_decision',
@@ -746,7 +746,18 @@ class OpsAutopilot:
                     evidence=evidence,
                     result=action_record,
                     deploy_sha=self.deploy_sha,
+                    verification_state='pending' if not self.dry_run else 'skipped',
                 )
+
+                # Schedule deferred verification for non-dry-run governance actions
+                if not self.dry_run:
+                    try:
+                        from core.tasks import verify_autopilot_action
+                        verify_autopilot_action.apply_async(
+                            args=[db_action.id], countdown=300,  # 5 min
+                        )
+                    except Exception:
+                        pass
                 self.actions_taken.append(action_record)
                 processed += 1
 
@@ -767,7 +778,7 @@ class OpsAutopilot:
         self, agent_name: str, reason: str, ttl_minutes: int,
         policy: str, evidence: dict
     ):
-        """Block an agent with TTL and create governance item."""
+        """Block an agent with TTL, pre-check via ActionVerifier, auto-rollback."""
         from core.models_unified_system import AgentControlEntry
 
         ttl_hours = round(ttl_minutes / 60, 2)
@@ -781,6 +792,34 @@ class OpsAutopilot:
         }
 
         if not self.dry_run:
+            # Pre-check via ActionVerifier
+            verifier = ActionVerifier()
+            action = verifier.begin(
+                action_type='block_agent',
+                policy=policy,
+                agent_name=agent_name,
+                evidence=evidence,
+                deploy_sha=self.deploy_sha,
+            )
+
+            if not action.pre_check_passed:
+                action_record['blocked_by_pre_check'] = True
+                action_record['pre_check_reason'] = action.pre_check_result.get('reason', '')
+                AutopilotAction.objects.create(
+                    action_type='dry_run',
+                    agent_name=agent_name,
+                    policy=policy,
+                    dry_run=True,
+                    evidence=evidence,
+                    result=action_record,
+                    deploy_sha=self.deploy_sha,
+                    verification_state='failed',
+                    verification_result={'pre_check': action.pre_check_result},
+                )
+                self.actions_taken.append(action_record)
+                return
+
+            # Execute the block
             AgentControlEntry.objects.update_or_create(
                 agent_name=agent_name,
                 defaults={
@@ -810,22 +849,25 @@ class OpsAutopilot:
                 agent_name=agent_name,
                 evidence=evidence,
             )
+
+            # Record with deferred verification (verify in 3 min)
+            verifier.record_and_verify(
+                action, action_record, verify_delay_seconds=180,
+            )
         else:
             logger.info(
                 f"[OpsAutopilot] DRY RUN: would block {agent_name} "
                 f"for {ttl_minutes}min — {reason}"
             )
-
-        # Log to audit table
-        AutopilotAction.objects.create(
-            action_type='block_agent' if not self.dry_run else 'dry_run',
-            agent_name=agent_name,
-            policy=policy,
-            dry_run=self.dry_run,
-            evidence=evidence,
-            result=action_record,
-            deploy_sha=self.deploy_sha,
-        )
+            AutopilotAction.objects.create(
+                action_type='dry_run',
+                agent_name=agent_name,
+                policy=policy,
+                dry_run=True,
+                evidence=evidence,
+                result=action_record,
+                deploy_sha=self.deploy_sha,
+            )
 
         self.actions_taken.append(action_record)
 
@@ -909,3 +951,499 @@ class OpsAutopilot:
             except Exception:
                 sha = 'unknown'
         return sha[:40]
+
+
+# ── Action Verifier — autonomous safety layer ────────────────────────────────
+
+class ActionVerifier:
+    """
+    Wraps autopilot actions with pre-checks, post-verification, and rollback.
+
+    Every non-trivial autonomous action goes through:
+      1. PRE-CHECK: Is it safe to act? (blast radius, rate, invariants)
+      2. EXECUTE: Perform the action
+      3. VERIFY: Did it help? Check SLOs, error rates, queue health
+      4. ROLLBACK: If verification fails, undo the action automatically
+
+    Usage:
+        verifier = ActionVerifier()
+        action = verifier.begin('block_agent', agent_name='FooAgent', policy='timeout_spike')
+        if action.pre_check_passed:
+            # ... execute the action ...
+            action.record_execution({'celery_task_id': '...'})
+            verifier.schedule_verification(action, delay_seconds=120)
+
+    Deferred verification runs via Celery after a delay to check outcomes.
+    """
+
+    # Pre-check rules per action type
+    PRE_CHECK_RULES = {
+        'block_agent': {
+            'max_concurrent_blocks': 3,     # Don't block too many agents at once
+            'min_interval_minutes': 15,     # Don't re-block same agent too fast
+            'require_evidence_count': 3,    # Need N+ timeout signatures
+        },
+        'retry_deliberation': {
+            'max_pending_retries': 4,       # Don't flood content queue
+            'min_interval_minutes': 30,     # Don't retry same topic too fast
+        },
+        'content_sweep': {
+            'max_concurrent_sweeps': 3,     # Don't kick too many blogs at once
+        },
+        'auto_resolve': {
+            'max_per_cycle': 15,            # Don't mass-resolve in one pass
+        },
+        'content_publish': {
+            'max_daily': 8,                 # Hard daily publish limit
+            'min_quality_score': 0.3,       # Don't publish garbage
+        },
+    }
+
+    def begin(
+        self,
+        action_type: str,
+        policy: str,
+        agent_name: str = '',
+        evidence: dict | None = None,
+        deploy_sha: str = '',
+    ) -> 'VerifiableAction':
+        """Create a verifiable action and run pre-checks."""
+        action = VerifiableAction(
+            action_type=action_type,
+            policy=policy,
+            agent_name=agent_name,
+            evidence=evidence or {},
+            deploy_sha=deploy_sha,
+        )
+
+        # Run pre-checks
+        rules = self.PRE_CHECK_RULES.get(action_type, {})
+        pre_check_result = self._run_pre_checks(action, rules)
+        action.pre_check_result = pre_check_result
+        action.pre_check_passed = pre_check_result.get('passed', True)
+
+        if not action.pre_check_passed:
+            logger.warning(
+                f"[ActionVerifier] PRE-CHECK FAILED for {action_type}: "
+                f"{pre_check_result.get('reason', 'unknown')}"
+            )
+
+        return action
+
+    def _run_pre_checks(self, action: 'VerifiableAction', rules: dict) -> dict:
+        """Evaluate pre-check rules. Returns {'passed': bool, 'reason': str, ...}."""
+        result = {'passed': True, 'checks': []}
+
+        try:
+            now = timezone.now()
+
+            # Check: max concurrent blocks
+            if 'max_concurrent_blocks' in rules and action.action_type == 'block_agent':
+                from core.models_unified_system import AgentControlEntry
+                current_blocks = AgentControlEntry.objects.filter(
+                    status='blocked',
+                    blocked_by='ops_autopilot',
+                ).count()
+                check = {
+                    'name': 'max_concurrent_blocks',
+                    'current': current_blocks,
+                    'limit': rules['max_concurrent_blocks'],
+                    'passed': current_blocks < rules['max_concurrent_blocks'],
+                }
+                result['checks'].append(check)
+                if not check['passed']:
+                    result['passed'] = False
+                    result['reason'] = (
+                        f"Too many concurrent autopilot blocks "
+                        f"({current_blocks}/{rules['max_concurrent_blocks']})"
+                    )
+
+            # Check: min interval between same-agent actions
+            if 'min_interval_minutes' in rules and action.agent_name:
+                cutoff = now - timedelta(minutes=rules['min_interval_minutes'])
+                recent = AutopilotAction.objects.filter(
+                    action_type=action.action_type,
+                    agent_name=action.agent_name,
+                    dry_run=False,
+                    created_at__gte=cutoff,
+                ).exists()
+                check = {
+                    'name': 'min_interval',
+                    'agent': action.agent_name,
+                    'interval_minutes': rules['min_interval_minutes'],
+                    'passed': not recent,
+                }
+                result['checks'].append(check)
+                if not check['passed']:
+                    result['passed'] = False
+                    result['reason'] = (
+                        f"Same action on {action.agent_name} too recently "
+                        f"(within {rules['min_interval_minutes']}min)"
+                    )
+
+            # Check: max pending retries (content queue capacity)
+            if 'max_pending_retries' in rules:
+                from core.models_celery_telemetry import CeleryTaskEvent
+                pending = CeleryTaskEvent.objects.filter(
+                    task_name__icontains='deliberation',
+                    status='STARTED',
+                    started_at__gte=now - timedelta(hours=1),
+                ).count()
+                check = {
+                    'name': 'max_pending_retries',
+                    'current': pending,
+                    'limit': rules['max_pending_retries'],
+                    'passed': pending < rules['max_pending_retries'],
+                }
+                result['checks'].append(check)
+                if not check['passed']:
+                    result['passed'] = False
+                    result['reason'] = (
+                        f"Too many pending deliberation tasks ({pending})"
+                    )
+
+            # Check: daily publish limit
+            if 'max_daily' in rules:
+                from core.models_unified_system import SelfBlog
+                today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                published_today = SelfBlog.objects.filter(
+                    status='published',
+                    created_at__gte=today_start,
+                ).count()
+                check = {
+                    'name': 'max_daily_publish',
+                    'current': published_today,
+                    'limit': rules['max_daily'],
+                    'passed': published_today < rules['max_daily'],
+                }
+                result['checks'].append(check)
+                if not check['passed']:
+                    result['passed'] = False
+                    result['reason'] = (
+                        f"Daily publish limit reached ({published_today})"
+                    )
+
+        except Exception as e:
+            logger.error(f"[ActionVerifier] Pre-check error: {e}")
+            result['error'] = str(e)
+            # Fail-open: if pre-checks crash, still allow action (logged)
+
+        return result
+
+    def record_and_verify(
+        self,
+        action: 'VerifiableAction',
+        execution_result: dict,
+        verify_delay_seconds: int = 120,
+    ) -> AutopilotAction:
+        """
+        Record the action to DB and schedule deferred verification.
+
+        After execution, creates an AutopilotAction record with
+        verification_state='pending'. A Celery task checks outcomes
+        after verify_delay_seconds.
+        """
+        db_action = AutopilotAction.objects.create(
+            action_type=action.action_type,
+            agent_name=action.agent_name,
+            policy=action.policy,
+            dry_run=False,
+            evidence=action.evidence,
+            result=execution_result,
+            deploy_sha=action.deploy_sha,
+            verification_state='pending',
+            verification_result={
+                'pre_check': action.pre_check_result,
+                'scheduled_verify_at': (
+                    timezone.now() + timedelta(seconds=verify_delay_seconds)
+                ).isoformat(),
+            },
+        )
+
+        # Schedule deferred verification via Celery
+        if verify_delay_seconds > 0:
+            try:
+                from core.tasks import verify_autopilot_action
+                verify_autopilot_action.apply_async(
+                    args=[db_action.id],
+                    countdown=verify_delay_seconds,
+                )
+                logger.info(
+                    f"[ActionVerifier] Verification scheduled for action "
+                    f"{db_action.id} in {verify_delay_seconds}s"
+                )
+            except Exception as e:
+                logger.warning(f"[ActionVerifier] Failed to schedule verification: {e}")
+                # Mark as skipped if we can't verify
+                db_action.verification_state = 'skipped'
+                db_action.save(update_fields=['verification_state'])
+
+        return db_action
+
+    @staticmethod
+    def verify_action(action_id: int) -> dict:
+        """
+        Deferred verification — called by Celery task after delay.
+
+        Checks whether the action improved the situation:
+        - block_agent: Did error rate for that agent drop?
+        - retry_deliberation: Did the retry succeed (new session completed)?
+        - content_sweep: Did the blog move forward in pipeline?
+        - auto_resolve: No new alerts spawned from same source?
+        - content_publish: No quality complaints?
+        """
+        try:
+            action = AutopilotAction.objects.get(id=action_id)
+        except AutopilotAction.DoesNotExist:
+            return {'error': f'Action {action_id} not found'}
+
+        if action.verification_state not in ('pending',):
+            return {'skipped': True, 'reason': f'State is {action.verification_state}'}
+
+        now = timezone.now()
+        result = {'action_id': action_id, 'checks': [], 'passed': True}
+
+        try:
+            if action.action_type == 'block_agent':
+                result = ActionVerifier._verify_block_agent(action, now)
+
+            elif action.action_type == 'retry_deliberation':
+                result = ActionVerifier._verify_retry_deliberation(action, now)
+
+            elif action.action_type == 'content_sweep':
+                result = ActionVerifier._verify_content_sweep(action, now)
+
+            elif action.action_type in ('auto_resolve', 'content_publish'):
+                # Lightweight: just check no new errors spawned
+                from core.models_diagnostic_pipeline import FailureDetection
+                new_errors = FailureDetection.objects.filter(
+                    detected_at__gte=action.created_at,
+                    source_name__icontains=action.agent_name or 'autopilot',
+                ).count()
+                result['checks'].append({
+                    'name': 'no_cascading_errors',
+                    'new_errors': new_errors,
+                    'passed': new_errors == 0,
+                })
+                result['passed'] = new_errors == 0
+            else:
+                # Unknown action type — skip verification
+                result['passed'] = True
+                result['skipped'] = True
+
+        except Exception as e:
+            logger.error(f"[ActionVerifier] Verification error for {action_id}: {e}")
+            result['error'] = str(e)
+            result['passed'] = True  # Fail-open on verification errors
+
+        # Update the action record
+        action.verification_state = 'passed' if result.get('passed') else 'failed'
+        action.verification_result = {
+            **(action.verification_result or {}),
+            'verification': result,
+            'verified_at': now.isoformat(),
+        }
+        action.save(update_fields=['verification_state', 'verification_result'])
+
+        # If verification failed, attempt rollback
+        if not result.get('passed'):
+            ActionVerifier._attempt_rollback(action, result)
+
+        return result
+
+    @staticmethod
+    def _verify_block_agent(action: AutopilotAction, now) -> dict:
+        """Verify that blocking an agent reduced error rate."""
+        from core.models_diagnostic_pipeline import FailureDetection
+
+        agent_name = action.agent_name
+        result = {'action_id': action.id, 'checks': [], 'passed': True}
+
+        # Check: error rate for this agent dropped since block
+        errors_before = FailureDetection.objects.filter(
+            source_name=agent_name,
+            detected_at__gte=action.created_at - timedelta(hours=1),
+            detected_at__lt=action.created_at,
+        ).count()
+
+        errors_after = FailureDetection.objects.filter(
+            source_name=agent_name,
+            detected_at__gte=action.created_at,
+        ).count()
+
+        check = {
+            'name': 'error_rate_reduced',
+            'errors_before': errors_before,
+            'errors_after': errors_after,
+            'passed': errors_after <= errors_before,  # At least no worse
+        }
+        result['checks'].append(check)
+        result['passed'] = check['passed']
+
+        return result
+
+    @staticmethod
+    def _verify_retry_deliberation(action: AutopilotAction, now) -> dict:
+        """Verify that the retried deliberation produced output."""
+        from core.models_deliberation import DeliberationSession
+
+        result = {'action_id': action.id, 'checks': [], 'passed': True}
+
+        # Check: did a new successful session appear after the retry?
+        evidence = action.evidence or {}
+        topic = evidence.get('topic', '')[:100]
+
+        if topic:
+            new_sessions = DeliberationSession.objects.filter(
+                status='completed',
+                created_at__gte=action.created_at,
+                objective__icontains=topic[:50],
+            ).count()
+
+            check = {
+                'name': 'retry_produced_output',
+                'new_completed_sessions': new_sessions,
+                'passed': new_sessions > 0,
+            }
+            result['checks'].append(check)
+            # Don't fail on this — retry might still be in progress
+            result['passed'] = True  # Retry is best-effort
+        else:
+            result['passed'] = True
+
+        return result
+
+    @staticmethod
+    def _verify_content_sweep(action: AutopilotAction, now) -> dict:
+        """Verify that the swept content moved forward."""
+        from core.models_unified_system import SelfBlog
+
+        result = {'action_id': action.id, 'checks': [], 'passed': True}
+
+        evidence = action.evidence or {}
+        blog_id = evidence.get('blog_id', '')
+
+        if blog_id:
+            try:
+                blog = SelfBlog.objects.get(id=blog_id)
+                # Check if blog moved to a later stage
+                forward_statuses = {'approved', 'published', 'pending_review'}
+                check = {
+                    'name': 'content_progressed',
+                    'current_status': blog.status,
+                    'passed': blog.status in forward_statuses,
+                }
+                result['checks'].append(check)
+                # Content sweep is best-effort — don't roll back
+                result['passed'] = True
+            except SelfBlog.DoesNotExist:
+                result['passed'] = True
+
+        return result
+
+    @staticmethod
+    def _attempt_rollback(action: AutopilotAction, verification_result: dict):
+        """Attempt to rollback a failed action."""
+        now = timezone.now()
+        rollback_reason = verification_result.get(
+            'checks', [{}]
+        )[-1].get('name', 'verification_failed') if verification_result.get('checks') else 'verification_failed'
+
+        logger.warning(
+            f"[ActionVerifier] ROLLBACK for action {action.id} "
+            f"({action.action_type}): {rollback_reason}"
+        )
+
+        try:
+            if action.action_type == 'block_agent' and action.agent_name:
+                # Rollback: unblock the agent
+                from core.models_unified_system import AgentControlEntry
+                AgentControlEntry.objects.filter(
+                    agent_name=action.agent_name,
+                    blocked_by='ops_autopilot',
+                ).update(
+                    status='active',
+                    reason=f"Auto-rollback: {rollback_reason}",
+                )
+                logger.info(
+                    f"[ActionVerifier] ROLLED BACK block on {action.agent_name}"
+                )
+
+            elif action.action_type == 'auto_resolve':
+                # Rollback: re-open the attention item
+                evidence = action.evidence or {}
+                attention_id = evidence.get('attention_item_id', '')
+                if attention_id:
+                    from core.models_human_interface import HumanAttentionItem
+                    HumanAttentionItem.objects.filter(
+                        id=attention_id,
+                    ).update(
+                        status='pending',
+                        decision='',
+                        decision_feedback=f'Reopened by auto-rollback: {rollback_reason}',
+                    )
+                    logger.info(
+                        f"[ActionVerifier] ROLLED BACK auto-resolve on {attention_id}"
+                    )
+
+            # Mark as rolled back
+            action.rolled_back = True
+            action.rolled_back_at = now
+            action.rollback_reason = rollback_reason[:255]
+            action.verification_state = 'rolled_back'
+            action.save(update_fields=[
+                'rolled_back', 'rolled_back_at',
+                'rollback_reason', 'verification_state',
+            ])
+
+            # Create governance alert about the rollback
+            from core.models_human_interface import HumanAttentionItem
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            user = User.objects.filter(is_superuser=True).first()
+            if user:
+                HumanAttentionItem.objects.create(
+                    user=user,
+                    source_type='ops_autopilot',
+                    source_agent='ActionVerifier',
+                    item_type='alert',
+                    title=f"Auto-rollback: {action.action_type} on {action.agent_name or 'system'}",
+                    summary=(
+                        f"Autopilot action #{action.id} ({action.action_type}) was "
+                        f"automatically rolled back because post-verification failed. "
+                        f"Reason: {rollback_reason}. "
+                        f"This may indicate the autonomous action made things worse."
+                    ),
+                    urgency='high',
+                    payload={
+                        'rollback': True,
+                        'action_id': action.id,
+                        'action_type': action.action_type,
+                        'verification_result': verification_result,
+                    },
+                )
+
+        except Exception as e:
+            logger.error(f"[ActionVerifier] Rollback failed for action {action.id}: {e}")
+            action.rollback_reason = f"Rollback error: {str(e)[:200]}"
+            action.save(update_fields=['rollback_reason'])
+
+
+class VerifiableAction:
+    """Holds state for an action being verified."""
+
+    def __init__(
+        self,
+        action_type: str,
+        policy: str,
+        agent_name: str = '',
+        evidence: dict | None = None,
+        deploy_sha: str = '',
+    ):
+        self.action_type = action_type
+        self.policy = policy
+        self.agent_name = agent_name
+        self.evidence = evidence or {}
+        self.deploy_sha = deploy_sha
+        self.pre_check_result: dict = {}
+        self.pre_check_passed: bool = True
