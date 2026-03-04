@@ -15,6 +15,8 @@ import {
 import { initSentry, setSentryUser, SentryErrorBoundary } from './src/observability/sentry';
 import OfflineBanner from './src/observability/OfflineBanner';
 import ToastBanner from './src/components/Toast';
+import DemoBanner from './src/demo/DemoBanner';
+import { useDemoStore } from './src/demo/demoStore';
 
 // Initialize Sentry before any rendering — wrapped so a Sentry failure
 // never prevents the app from starting.
@@ -32,10 +34,12 @@ function App() {
   const user = useAuthStore((s) => s.user);
   const hydrate = useAuthStore((s) => s.hydrate);
   const pushRegistered = useRef(false);
+  const hydrateDemo = useDemoStore((s) => s.hydrate);
 
   useEffect(() => {
     hydrate();
-  }, [hydrate]);
+    hydrateDemo();
+  }, [hydrate, hydrateDemo]);
 
   // Set Sentry user context on auth change
   useEffect(() => {
@@ -81,6 +85,7 @@ function App() {
 
   return (
     <GestureHandlerRootView style={styles.root}>
+      <DemoBanner />
       <OfflineBanner />
       <AppNavigator />
       <ToastBanner />

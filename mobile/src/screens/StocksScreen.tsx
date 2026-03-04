@@ -14,6 +14,8 @@ import ScreenState from '../components/ScreenState';
 import { SkeletonStatRow, SkeletonCard, SkeletonList } from '../components/Skeleton';
 import * as stocksApi from '../api/stocks';
 import type { StockHub, StockAlert, TickerLookup } from '../api/stocks';
+import { useDemo } from '../demo/useDemo';
+import * as demo from '../demo/demoData';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -57,6 +59,7 @@ const TABS: { key: Tab; label: string }[] = [
 
 export default function StocksScreen() {
   useScreenAnalytics('StocksScreen');
+  const isDemo = useDemo();
 
   const [tab, setTab] = useState<Tab>('hub');
   const [loading, setLoading] = useState(true);
@@ -67,6 +70,13 @@ export default function StocksScreen() {
 
   const fetchHub = useCallback(async () => {
     setError(null);
+
+    if (isDemo) {
+      setHub(demo.DEMO_STOCK_HUB as any);
+      setLastUpdated(new Date());
+      return;
+    }
+
     try {
       const data = await stocksApi.getHub();
       setHub(data);
@@ -74,7 +84,7 @@ export default function StocksScreen() {
     } catch {
       setError('Failed to load stock intelligence.');
     }
-  }, []);
+  }, [isDemo]);
 
   useEffect(() => {
     fetchHub().finally(() => setLoading(false));

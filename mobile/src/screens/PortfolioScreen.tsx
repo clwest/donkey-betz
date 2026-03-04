@@ -13,6 +13,8 @@ import {
   type PortfolioStats, type Platform, type Revenue,
   type Recommendation, type PlatformComparison, type Distribution,
 } from '../api/portfolio';
+import { useDemo } from '../demo/useDemo';
+import * as demo from '../demo/demoData';
 
 type TabKey = 'overview' | 'platforms' | 'revenue';
 
@@ -41,6 +43,7 @@ function statusColor(status: string): string {
 
 export default function PortfolioScreen() {
   useScreenAnalytics('Portfolio');
+  const isDemo = useDemo();
   const [tab, setTab] = useState<TabKey>('overview');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -57,6 +60,18 @@ export default function PortfolioScreen() {
 
   const fetchAll = useCallback(async () => {
     setError(null);
+
+    if (isDemo) {
+      setStats(demo.DEMO_PORTFOLIO_STATS);
+      setPlatforms(demo.DEMO_PLATFORMS);
+      setRevenue(demo.DEMO_REVENUE);
+      setContent(demo.DEMO_DISTRIBUTIONS);
+      setRecommendations(demo.DEMO_RECOMMENDATIONS as any);
+      setComparison(demo.DEMO_COMPARISONS);
+      setLastUpdated(new Date());
+      return;
+    }
+
     const results = await Promise.allSettled([
       getStats(),
       getPlatforms(),
@@ -74,7 +89,7 @@ export default function PortfolioScreen() {
     } else {
       setLastUpdated(new Date());
     }
-  }, []);
+  }, [isDemo]);
 
   useEffect(() => {
     fetchAll().finally(() => setLoading(false));
