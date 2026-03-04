@@ -220,6 +220,9 @@ from ..models_learning_journey import (
 # Import outreach models (Autonomy #22 - Outreach Sequencing)
 from ..models_outreach import OutreachDraft
 
+# Import close pack models (Autonomy #23 - Close-the-Deal Engine)
+from ..models_close_pack import ClosePack
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -469,5 +472,8 @@ __all__ = [
 
     # Outreach Draft (Autonomy #22)
     'OutreachDraft',
+
+    # Close Pack (Autonomy #23)
+    'ClosePack',
 
 ]
