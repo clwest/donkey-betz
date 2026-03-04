@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-03-04 13:52
+**Generated:** 2026-03-04 14:00
 **Current Session:** 1075
 **Total Documentation:** 1819 files | 622,221 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/capabilities/04_Agent_Orchestra/README.md` | 60 | 🤖 AI AGENT ORCHESTRA - 149 Specialized Intelligenc |
+| `docs/architecture/README.md` | 60 | Architecture Documentation |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -217,7 +217,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 361 | 2026-03-04 13:14 |
+| INDEX.md | docs | 361 | 2026-03-04 13:54 |
 | video-upload.md | topics | 101 | 2026-03-04 13:08 |
 | OVL_CODE_RUNNER_V0.md | docs | 174 | 2026-03-04 08:20 |
 | stage3_timeline.md | initiatives | 71 | 2026-03-03 12:55 |

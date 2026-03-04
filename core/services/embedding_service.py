@@ -21,6 +21,7 @@ Usage:
     embeddings = service.create_embeddings(["text1", "text2", "text3"])
 """
 
+import hashlib
 import logging
 import time
 from decimal import Decimal
@@ -74,9 +75,39 @@ class EmbeddingService:
 
     _instance = None
 
+    # Cache config
+    CACHE_TTL = 7 * 86400  # 7 days — same text+model always returns same vector
+    CACHE_PREFIX = 'emb'
+
     def __init__(self):
         self._client = None
         self._initialized = False
+
+    # ── Cache helpers ────────────────────────────────────────────
+
+    @staticmethod
+    def _text_hash(text: str, model: str) -> str:
+        """Deterministic hash for cache key. Strip whitespace, collapse spaces."""
+        normalized = ' '.join(text.split())  # collapse whitespace (don't lowercase — changes semantics)
+        return hashlib.sha256(f'{model}:{normalized}'.encode()).hexdigest()[:16]
+
+    def _cache_get(self, text: str, model: str) -> Optional[List[float]]:
+        """Try to fetch cached embedding from Redis."""
+        try:
+            from django.core.cache import cache
+            key = f'{self.CACHE_PREFIX}:{model}:{self._text_hash(text, model)}'
+            return cache.get(key)
+        except Exception:
+            return None
+
+    def _cache_set(self, text: str, model: str, embedding: List[float]) -> None:
+        """Store embedding in Redis cache."""
+        try:
+            from django.core.cache import cache
+            key = f'{self.CACHE_PREFIX}:{model}:{self._text_hash(text, model)}'
+            cache.set(key, embedding, timeout=self.CACHE_TTL)
+        except Exception as e:
+            logger.debug(f"Embedding cache set failed (non-fatal): {e}")
 
     @property
     def client(self):
@@ -107,6 +138,18 @@ class EmbeddingService:
         Returns:
             EmbeddingResult with embedding vector and usage stats
         """
+        # Check Redis cache first
+        cached = self._cache_get(text, model)
+        if cached is not None:
+            logger.debug("Embedding cache hit")
+            return EmbeddingResult(
+                embedding=cached,
+                tokens_used=0,
+                cost=Decimal('0'),
+                model=model,
+                latency_ms=0
+            )
+
         start_time = time.time()
 
         try:
@@ -120,6 +163,9 @@ class EmbeddingService:
             tokens_used = response.usage.total_tokens
             cost = self._calculate_cost(tokens_used, model)
             embedding = response.data[0].embedding
+
+            # Store in cache
+            self._cache_set(text, model, embedding)
 
             # Log usage
             if log_usage:
@@ -193,11 +239,38 @@ class EmbeddingService:
                 latency_ms=0
             )
 
+        # Check cache for each text — only API-call the misses
+        results: list = [None] * len(texts)
+        miss_indices: list = []
+        miss_texts: list = []
+        for i, text in enumerate(texts):
+            cached = self._cache_get(text, model)
+            if cached is not None:
+                results[i] = cached
+            else:
+                miss_indices.append(i)
+                miss_texts.append(text)
+
+        if not miss_texts:
+            # All cached
+            logger.debug(f"Batch embedding: all {len(texts)} texts cached")
+            return BatchEmbeddingResult(
+                embeddings=results,
+                total_tokens=0,
+                cost=Decimal('0'),
+                model=model,
+                latency_ms=0
+            )
+
+        cache_hits = len(texts) - len(miss_texts)
+        if cache_hits:
+            logger.debug(f"Batch embedding: {cache_hits}/{len(texts)} cache hits, fetching {len(miss_texts)}")
+
         start_time = time.time()
 
         try:
             response = self.client.embeddings.create(
-                input=texts,
+                input=miss_texts,
                 model=model,
                 encoding_format='float'
             )
@@ -206,8 +279,11 @@ class EmbeddingService:
             total_tokens = response.usage.total_tokens
             cost = self._calculate_cost(total_tokens, model)
 
-            # Extract embeddings in correct order
-            embeddings = [item.embedding for item in sorted(response.data, key=lambda x: x.index)]
+            # Extract embeddings in correct order and merge with cached results
+            api_embeddings = [item.embedding for item in sorted(response.data, key=lambda x: x.index)]
+            for j, idx in enumerate(miss_indices):
+                results[idx] = api_embeddings[j]
+                self._cache_set(miss_texts[j], model, api_embeddings[j])
 
             # Log usage
             if log_usage:
@@ -218,16 +294,16 @@ class EmbeddingService:
                     latency_ms=latency_ms,
                     agent_name=agent_name,
                     success=True,
-                    batch_size=len(texts)
+                    batch_size=len(miss_texts)
                 )
 
             logger.debug(
-                f"Batch embeddings created: {len(texts)} texts, {total_tokens} tokens, "
+                f"Batch embeddings created: {len(miss_texts)} texts, {total_tokens} tokens, "
                 f"${cost:.6f}, {latency_ms}ms"
             )
 
             return BatchEmbeddingResult(
-                embeddings=embeddings,
+                embeddings=results,
                 total_tokens=total_tokens,
                 cost=cost,
                 model=model,

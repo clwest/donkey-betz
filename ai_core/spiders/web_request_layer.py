@@ -40,11 +40,24 @@ class WebRequestLayer:
         'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/121.0'
     ]
 
+    # Redis cache TTLs by status code range
+    CACHE_TTL_BY_STATUS = {
+        200: 600,      # 10 min for success
+        301: 86400,    # 24h for permanent redirects
+        302: 86400,    # 24h for temp redirects (cache resolved URL)
+        304: 600,      # 10 min for not-modified
+        404: 1800,     # 30 min for not-found
+        429: 60,       # 60s for rate-limited (back off)
+        500: 60,       # 60s for server errors
+        503: 60,       # 60s for service unavailable
+    }
+    CACHE_PREFIX = 'fetch'
+    FLIGHT_PREFIX = 'fetchlock'
+
     def __init__(self):
         self.session = None
         self._session_loop = None  # Session 884: Track which event loop owns the session
         self.rate_limiters = {}  # Per-domain rate limiting
-        self.cache = {}  # Response cache with TTL
         self.cookie_jars = {}  # Per-domain cookie management
         self.proxy_list = self._load_proxies()
         self.current_proxy_index = 0
@@ -144,16 +157,64 @@ class WebRequestLayer:
                 self._session_loop = None
 
     def _get_cache_key(self, url: str, params: Dict = None) -> str:
-        """Generate cache key for URL and params"""
-        cache_data = f"{url}:{json.dumps(params or {}, sort_keys=True)}"
+        """Generate cache key for URL and params (normalized)"""
+        # Normalize: sort query params, strip fragments
+        parsed = urlparse(url)
+        normalized_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+        if parsed.query:
+            # Sort query params, strip tracking params
+            from urllib.parse import parse_qs, urlencode
+            qs = parse_qs(parsed.query)
+            qs = {k: v for k, v in sorted(qs.items()) if not k.startswith('utm_')}
+            if qs:
+                normalized_url += '?' + urlencode(qs, doseq=True)
+        cache_data = f"{normalized_url}:{json.dumps(params or {}, sort_keys=True)}"
         return hashlib.md5(cache_data.encode()).hexdigest()
 
-    def _is_cache_valid(self, cached_item: Dict) -> bool:
-        """Check if cached item is still valid (15-minute TTL)"""
-        if not cached_item:
-            return False
-        cached_time = datetime.fromisoformat(cached_item['timestamp'])
-        return datetime.now() - cached_time < timedelta(minutes=15)
+    def _get_ttl_for_status(self, status_code: int) -> int:
+        """Get cache TTL based on HTTP status code."""
+        if status_code in self.CACHE_TTL_BY_STATUS:
+            return self.CACHE_TTL_BY_STATUS[status_code]
+        if 200 <= status_code < 300:
+            return 600   # 10 min default for 2xx
+        if 300 <= status_code < 400:
+            return 86400  # 24h for redirects
+        if 400 <= status_code < 500:
+            return 1800   # 30 min for client errors
+        return 60         # 60s for server errors
+
+    def _redis_cache_get(self, cache_key: str) -> Optional[Dict]:
+        """Get cached response from Redis."""
+        try:
+            from django.core.cache import cache
+            return cache.get(f'{self.CACHE_PREFIX}:{cache_key}')
+        except Exception:
+            return None
+
+    def _redis_cache_set(self, cache_key: str, data: Dict, status_code: int) -> None:
+        """Store response in Redis with status-appropriate TTL."""
+        try:
+            from django.core.cache import cache
+            ttl = self._get_ttl_for_status(status_code)
+            cache.set(f'{self.CACHE_PREFIX}:{cache_key}', data, timeout=ttl)
+        except Exception as e:
+            logger.debug(f"Spider cache set failed (non-fatal): {e}")
+
+    def _flight_lock_acquire(self, cache_key: str) -> bool:
+        """Acquire single-flight lock for a URL. Returns True if acquired."""
+        try:
+            from django.core.cache import cache
+            return cache.add(f'{self.FLIGHT_PREFIX}:{cache_key}', '1', timeout=120)
+        except Exception:
+            return True  # Proceed on lock failure
+
+    def _flight_lock_release(self, cache_key: str) -> None:
+        """Release single-flight lock."""
+        try:
+            from django.core.cache import cache
+            cache.delete(f'{self.FLIGHT_PREFIX}:{cache_key}')
+        except Exception:
+            pass
 
     async def _enforce_rate_limit(self, domain: str):
         """Enforce per-domain and global rate limiting"""
@@ -244,12 +305,18 @@ class WebRequestLayer:
 
         domain = urlparse(url).netloc
 
-        # Check cache first
-        if use_cache and method == 'GET':
-            cache_key = self._get_cache_key(url, params)
-            if cache_key in self.cache and self._is_cache_valid(self.cache[cache_key]):
-                logger.debug(f"Cache hit for {url}")
-                return self.cache[cache_key]['data']
+        # Check Redis cache first
+        cache_key = self._get_cache_key(url, params) if use_cache and method == 'GET' else None
+        if cache_key:
+            cached = self._redis_cache_get(cache_key)
+            if cached is not None:
+                logger.debug(f"Spider cache hit for {url}")
+                return cached
+            # Single-flight lock — prevent stampede on same URL
+            if not self._flight_lock_acquire(cache_key):
+                logger.debug(f"Spider fetch dedup (in-flight) for {url}")
+                return {'status': 0, 'text': '', 'json': None, 'headers': {},
+                        'url': url, 'dedup': True, 'timestamp': datetime.now().isoformat()}
 
         # Prepare headers
         request_headers = {
@@ -315,13 +382,10 @@ class WebRequestLayer:
                         'timestamp': datetime.now().isoformat()
                     }
 
-                    # Cache successful GET requests
-                    if use_cache and method == 'GET' and response.status == 200:
-                        cache_key = self._get_cache_key(url, params)
-                        self.cache[cache_key] = {
-                            'data': result,
-                            'timestamp': datetime.now().isoformat()
-                        }
+                    # Cache GET responses in Redis (all status codes, with appropriate TTLs)
+                    if cache_key:
+                        self._redis_cache_set(cache_key, result, response.status)
+                        self._flight_lock_release(cache_key)
 
                     # Store cookies
                     if response.cookies:
@@ -345,7 +409,9 @@ class WebRequestLayer:
                     await asyncio.sleep(self.base_backoff * (2 ** attempt))
                     continue
 
-        # All retries failed
+        # All retries failed — release flight lock
+        if cache_key:
+            self._flight_lock_release(cache_key)
         logger.error(f"Failed to fetch {url} after {self.max_retries} attempts")
         return {
             'status': 0,
@@ -372,7 +438,7 @@ class WebRequestLayer:
         """Get request statistics"""
         return {
             'total_requests': self.request_count,
-            'cache_size': len(self.cache),
+            'cache_backend': 'redis',
             'domains_tracked': len(self.rate_limiters),
             'error_counts': self.error_counts,
             'proxy_count': len(self.proxy_list),
