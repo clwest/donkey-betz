@@ -13,11 +13,15 @@ Search priority:
 
 import logging
 import os
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 from django.core.cache import cache
 
 from .base import BaseTool
+
+# DDGS calls can hang indefinitely — cap at 15 seconds
+_DDGS_TIMEOUT = 15
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +41,13 @@ class WebSearchTool(BaseTool):
         self.serper_api_key = os.getenv('SERPER_API_KEY')
         super().__init__()
     
+    @staticmethod
+    def _run_with_timeout(fn, timeout=_DDGS_TIMEOUT):
+        """Run a callable with a hard wall-clock timeout (prevents DDGS hangs)."""
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(fn)
+            return future.result(timeout=timeout)
+
     def _check_configuration(self) -> bool:
         """Check if DuckDuckGo search is available."""
         try:
@@ -190,27 +201,32 @@ class WebSearchTool(BaseTool):
             except Exception as e:
                 logger.warning(f"Serper API failed: {e}, trying DuckDuckGo")
 
-        # Fallback 1: DuckDuckGo search library
+        # Fallback 1: DuckDuckGo search library (with timeout guard)
         try:
-            with self.DDGS() as ddgs:
-                for r in ddgs.text(
-                    query,
-                    max_results=max_results,
-                    safesearch=kwargs.get('safesearch', 'moderate'),
-                    region=kwargs.get('region', 'us-en')
-                ):
-                    results.append({
-                        'title': r.get('title', ''),
-                        'url': r.get('href', ''),
-                        'snippet': r.get('body', ''),
-                        'source': 'DuckDuckGo',
-                        'method': 'ddgs_library'
-                    })
+            def _ddgs_text():
+                with self.DDGS() as ddgs:
+                    return list(ddgs.text(
+                        query,
+                        max_results=max_results,
+                        safesearch=kwargs.get('safesearch', 'moderate'),
+                        region=kwargs.get('region', 'us-en')
+                    ))
 
-                if results:
-                    logger.info(f"DuckDuckGo library returned {len(results)} results")
-                    return results
+            for r in self._run_with_timeout(_ddgs_text):
+                results.append({
+                    'title': r.get('title', ''),
+                    'url': r.get('href', ''),
+                    'snippet': r.get('body', ''),
+                    'source': 'DuckDuckGo',
+                    'method': 'ddgs_library'
+                })
 
+            if results:
+                logger.info(f"DuckDuckGo library returned {len(results)} results")
+                return results
+
+        except FuturesTimeout:
+            logger.warning("DuckDuckGo text search timed out after %ds", _DDGS_TIMEOUT)
         except Exception as e:
             logger.warning(f"DuckDuckGo library failed: {e}, trying backup methods")
 
@@ -357,29 +373,34 @@ class WebSearchTool(BaseTool):
             except Exception as e:
                 logger.warning(f"Serper News API failed: {e}, trying DuckDuckGo")
 
-        # Fallback: DuckDuckGo news search
+        # Fallback: DuckDuckGo news search (with timeout guard)
         try:
-            with self.DDGS() as ddgs:
-                for r in ddgs.news(
-                    query,
-                    max_results=max_results,
-                    safesearch=kwargs.get('safesearch', 'moderate'),
-                    region=kwargs.get('region', 'us-en')
-                ):
-                    results.append({
-                        'title': r.get('title', ''),
-                        'url': r.get('url', ''),
-                        'snippet': r.get('body', ''),
-                        'date': r.get('date', ''),
-                        'source': r.get('source', 'DuckDuckGo News'),
-                        'image': r.get('image', ''),
-                        'method': 'ddgs_news'
-                    })
+            def _ddgs_news():
+                with self.DDGS() as ddgs:
+                    return list(ddgs.news(
+                        query,
+                        max_results=max_results,
+                        safesearch=kwargs.get('safesearch', 'moderate'),
+                        region=kwargs.get('region', 'us-en')
+                    ))
 
-                if results:
-                    logger.info(f"DuckDuckGo News returned {len(results)} results")
-                    return results
+            for r in self._run_with_timeout(_ddgs_news):
+                results.append({
+                    'title': r.get('title', ''),
+                    'url': r.get('url', ''),
+                    'snippet': r.get('body', ''),
+                    'date': r.get('date', ''),
+                    'source': r.get('source', 'DuckDuckGo News'),
+                    'image': r.get('image', ''),
+                    'method': 'ddgs_news'
+                })
 
+            if results:
+                logger.info(f"DuckDuckGo News returned {len(results)} results")
+                return results
+
+        except FuturesTimeout:
+            logger.warning("DuckDuckGo news search timed out after %ds", _DDGS_TIMEOUT)
         except Exception as e:
             logger.warning(f"DuckDuckGo News failed: {e}")
 
@@ -401,49 +422,67 @@ class WebSearchTool(BaseTool):
         return results
     
     def _search_images(self, query: str, max_results: int, **kwargs) -> List[Dict[str, Any]]:
-        """Perform image search."""
-        with self.DDGS() as ddgs:
-            results = []
-            for r in ddgs.images(
-                query,
-                max_results=max_results,
-                safesearch=kwargs.get('safesearch', 'moderate'),
-                size=kwargs.get('size', None),
-                color=kwargs.get('color', None),
-                type_image=kwargs.get('type_image', None)
-            ):
-                results.append({
-                    'title': r.get('title', ''),
-                    'url': r.get('image', ''),
-                    'thumbnail': r.get('thumbnail', ''),
-                    'source': r.get('source', ''),
-                    'width': r.get('width', 0),
-                    'height': r.get('height', 0)
-                })
-            return results
+        """Perform image search (with timeout guard)."""
+        def _ddgs_images():
+            with self.DDGS() as ddgs:
+                return list(ddgs.images(
+                    query,
+                    max_results=max_results,
+                    safesearch=kwargs.get('safesearch', 'moderate'),
+                    size=kwargs.get('size', None),
+                    color=kwargs.get('color', None),
+                    type_image=kwargs.get('type_image', None)
+                ))
+
+        try:
+            raw = self._run_with_timeout(_ddgs_images)
+        except (FuturesTimeout, Exception) as e:
+            logger.warning("DuckDuckGo image search failed: %s", e)
+            return []
+
+        return [
+            {
+                'title': r.get('title', ''),
+                'url': r.get('image', ''),
+                'thumbnail': r.get('thumbnail', ''),
+                'source': r.get('source', ''),
+                'width': r.get('width', 0),
+                'height': r.get('height', 0)
+            }
+            for r in raw
+        ]
     
     def _search_videos(self, query: str, max_results: int, **kwargs) -> List[Dict[str, Any]]:
-        """Perform video search."""
-        with self.DDGS() as ddgs:
-            results = []
-            for r in ddgs.videos(
-                query,
-                max_results=max_results,
-                safesearch=kwargs.get('safesearch', 'moderate'),
-                duration=kwargs.get('duration', None)
-            ):
-                results.append({
-                    'title': r.get('title', ''),
-                    'url': r.get('content', ''),
-                    'description': r.get('description', ''),
-                    'duration': r.get('duration', ''),
-                    'embed_url': r.get('embed_url', ''),
-                    'thumbnail': r.get('images', {}).get('large', ''),
-                    'published': r.get('published', ''),
-                    'publisher': r.get('publisher', ''),
-                    'views': r.get('statistics', {}).get('viewCount', 0)
-                })
-            return results
+        """Perform video search (with timeout guard)."""
+        def _ddgs_videos():
+            with self.DDGS() as ddgs:
+                return list(ddgs.videos(
+                    query,
+                    max_results=max_results,
+                    safesearch=kwargs.get('safesearch', 'moderate'),
+                    duration=kwargs.get('duration', None)
+                ))
+
+        try:
+            raw = self._run_with_timeout(_ddgs_videos)
+        except (FuturesTimeout, Exception) as e:
+            logger.warning("DuckDuckGo video search failed: %s", e)
+            return []
+
+        return [
+            {
+                'title': r.get('title', ''),
+                'url': r.get('content', ''),
+                'description': r.get('description', ''),
+                'duration': r.get('duration', ''),
+                'embed_url': r.get('embed_url', ''),
+                'thumbnail': r.get('images', {}).get('large', ''),
+                'published': r.get('published', ''),
+                'publisher': r.get('publisher', ''),
+                'views': r.get('statistics', {}).get('viewCount', 0)
+            }
+            for r in raw
+        ]
     
     def validate_input(self, query: str = None, search_type: str = None, **kwargs) -> bool:
         """Validate input parameters."""
@@ -461,19 +500,24 @@ class WebSearchTool(BaseTool):
         """Get instant answer for a query (like calculator, conversions, etc)."""
         if not self.is_configured:
             return None
-        
+
         try:
-            with self.DDGS() as ddgs:
-                results = list(ddgs.answers(query))
-                if results:
-                    answer = results[0]
-                    return {
-                        'answer': answer.get('text', ''),
-                        'type': answer.get('type', ''),
-                        'topic': answer.get('topic', ''),
-                        'url': answer.get('url', '')
-                    }
+            def _ddgs_answers():
+                with self.DDGS() as ddgs:
+                    return list(ddgs.answers(query))
+
+            results = self._run_with_timeout(_ddgs_answers)
+            if results:
+                answer = results[0]
+                return {
+                    'answer': answer.get('text', ''),
+                    'type': answer.get('type', ''),
+                    'topic': answer.get('topic', ''),
+                    'url': answer.get('url', '')
+                }
+        except FuturesTimeout:
+            logger.warning("DuckDuckGo instant answer timed out after %ds", _DDGS_TIMEOUT)
         except Exception as e:
             logger.error(f"Instant answer error: {e}")
-        
+
         return None
