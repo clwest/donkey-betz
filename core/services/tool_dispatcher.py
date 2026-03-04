@@ -12755,6 +12755,29 @@ RESEARCH DATA:
             report = engine.get_velocity_report()
             return {'action': 'close_pack_velocity', **report}
 
+        # ── Engagement Autonomy (Policy 34) ──────────────────────
+        elif action == 'engagement_sla_queue':
+            from core.services.ops_autopilot import EngagementAutonomyEngine
+
+            engine = EngagementAutonomyEngine()
+            queue = engine.get_sla_queue()
+            return {'action': 'engagement_sla_queue', **queue}
+
+        elif action == 'engagement_meeting_suggestions':
+            from core.services.ops_autopilot import EngagementAutonomyEngine
+
+            engine = EngagementAutonomyEngine()
+            suggestions = engine.get_meeting_suggestions()
+            return {'action': 'engagement_meeting_suggestions', **suggestions}
+
+        elif action == 'engagement_conversion_report':
+            from core.services.ops_autopilot import EngagementAutonomyEngine
+
+            days = int(payload.get('days', 30))
+            engine = EngagementAutonomyEngine()
+            report = engine.get_conversion_report(days=days)
+            return {'action': 'engagement_conversion_report', **report}
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason

@@ -164,6 +164,12 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      durations), and lifecycle evaluation (overdue follow-ups,
      stale drafts, high-risk flags). PA tools: close_pack_followup_queue,
      close_pack_risk_report, close_pack_velocity.
+ 34. Engagement autonomy: EngagementAutonomyEngine adds SLA-aware
+     reply queue (warning/critical/breach tiers), auto-meeting
+     suggestions for positive/meeting intent events, engagement-to-
+     meeting-to-deal conversion funnel, and response time tracking.
+     PA tools: engagement_sla_queue, engagement_meeting_suggestions,
+     engagement_conversion_report.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -347,6 +353,7 @@ class OpsAutopilot:
         ('revenue_orchestrator', 'revenue_orchestrator', '_policy_revenue_orchestrator'),
         ('knowledge', 'knowledge_citation_engine', '_policy_knowledge_citation_engine'),
         ('close_pack_autonomy', 'close_pack_autonomy', '_policy_close_pack_autonomy'),
+        ('engagement_autonomy', 'engagement_autonomy', '_policy_engagement_autonomy'),
     ]
 
     def run(self) -> dict[str, Any]:
@@ -2404,6 +2411,35 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] close pack autonomy error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _policy_engagement_autonomy(self, now) -> dict:
+        """
+        Monitor engagement SLA health: breaches, high-intent backlogs,
+        queue size.
+        """
+        result = {
+            'sla_breaches': 0,
+            'high_intent_unactioned': 0,
+            'healthy': True,
+        }
+
+        try:
+            engine = EngagementAutonomyEngine()
+            eval_result = engine.evaluate(now)
+            result.update(eval_result)
+
+            if not eval_result.get('healthy', True):
+                logger.info(
+                    f"[OpsAutopilot] Engagement autonomy: "
+                    f"{eval_result.get('sla_breaches', 0)} SLA breaches, "
+                    f"{eval_result.get('high_intent_unactioned', 0)} high-intent unactioned"
+                )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] engagement autonomy error: {e}")
             result['error'] = str(e)
 
         return result
@@ -12204,6 +12240,255 @@ class ClosePackAutonomyEngine:
             'overdue_followups': overdue,
             'high_risk_packs': high_risk,
             'stale_drafts': stale_drafts,
+            'issues': issues,
+            'issue_count': len(issues),
+            'healthy': len(issues) == 0,
+        }
+
+
+# ── Engagement Autonomy (Policy 34 — Autonomy #30) ──────────────────────────
+
+class EngagementAutonomyEngine:
+    """
+    Automates engagement lifecycle: SLA tracking for reply queue,
+    auto-meeting suggestions for positive/meeting intent, engagement-to-
+    meeting conversion tracking, and reply context assembly.
+
+    Sits on top of EngagementEngine, adding:
+    - SLA-aware reply queue with time-since-receipt
+    - Auto-meeting booking suggestions for high-intent events
+    - Conversion funnel from engagement → meeting → deal
+    - Reply context builder (outreach, opportunity, meeting history)
+    """
+
+    # SLA thresholds (hours)
+    SLA_WARNING_HOURS = 4    # Flag after 4h without reply
+    SLA_CRITICAL_HOURS = 24  # Critical after 24h
+    SLA_BREACH_HOURS = 48    # SLA breach after 48h
+
+    def get_sla_queue(self, now=None) -> dict:
+        """
+        Events needing reply, ranked by SLA urgency.
+        Shows time-since-receipt and SLA status.
+        """
+        from core.models_engagement import EngagementEvent
+
+        now = now or timezone.now()
+
+        # Events that need action (unread, classified, needs_reply)
+        events = list(
+            EngagementEvent.objects.filter(
+                status__in=['unread', 'classified', 'needs_reply'],
+                suppressed=False,
+            ).order_by('created_at').values(
+                'id', 'prospect_name', 'prospect_company', 'channel',
+                'intent', 'status', 'subject_line', 'created_at',
+            )[:30]
+        )
+
+        for e in events:
+            e['id'] = str(e['id'])
+            created = e.get('created_at')
+            if created:
+                age_hours = (now - created).total_seconds() / 3600
+                e['age_hours'] = round(age_hours, 1)
+                if age_hours >= self.SLA_BREACH_HOURS:
+                    e['sla_status'] = 'breach'
+                elif age_hours >= self.SLA_CRITICAL_HOURS:
+                    e['sla_status'] = 'critical'
+                elif age_hours >= self.SLA_WARNING_HOURS:
+                    e['sla_status'] = 'warning'
+                else:
+                    e['sla_status'] = 'ok'
+                e['created_at'] = created.isoformat()
+
+        # Counts by SLA status
+        breach = len([e for e in events if e.get('sla_status') == 'breach'])
+        critical = len([e for e in events if e.get('sla_status') == 'critical'])
+        warning = len([e for e in events if e.get('sla_status') == 'warning'])
+
+        return {
+            'events': events,
+            'total': len(events),
+            'breach': breach,
+            'critical': critical,
+            'warning': warning,
+            'ok': len(events) - breach - critical - warning,
+        }
+
+    def get_meeting_suggestions(self, now=None) -> dict:
+        """
+        Engagement events with meeting/positive intent that should
+        be converted to meetings. Shows which events need meeting creation.
+        """
+        from core.models_engagement import EngagementEvent
+        from core.models_meeting import Meeting
+
+        now = now or timezone.now()
+
+        # Events with meeting or positive intent, not yet actioned
+        candidates = list(
+            EngagementEvent.objects.filter(
+                intent__in=['meeting', 'positive'],
+                status__in=['unread', 'classified', 'needs_reply'],
+                suppressed=False,
+            ).order_by('-created_at').values(
+                'id', 'prospect_name', 'prospect_company',
+                'prospect_role', 'channel', 'intent', 'status',
+                'subject_line', 'opportunity_id', 'created_at',
+            )[:20]
+        )
+
+        # Check which already have meetings linked via opportunity
+        for c in candidates:
+            c['id'] = str(c['id'])
+            c['has_meeting'] = False
+            opp_id = c.get('opportunity_id')
+            if opp_id:
+                c['opportunity_id'] = str(opp_id)
+                c['has_meeting'] = Meeting.objects.filter(
+                    opportunity_id=opp_id,
+                    status__in=['scheduled', 'briefed'],
+                ).exists()
+            if hasattr(c.get('created_at'), 'isoformat'):
+                c['created_at'] = c['created_at'].isoformat()
+
+        needs_meeting = [c for c in candidates if not c['has_meeting']]
+
+        return {
+            'candidates': candidates,
+            'needs_meeting': needs_meeting,
+            'needs_meeting_count': len(needs_meeting),
+            'already_booked': len(candidates) - len(needs_meeting),
+        }
+
+    def get_conversion_report(self, days: int = 30) -> dict:
+        """
+        Engagement → meeting → deal conversion metrics.
+        """
+        from core.models_engagement import EngagementEvent
+        from core.models_meeting import Meeting
+        from core.models_close_pack import ClosePack
+        from django.db.models import Count
+
+        now = timezone.now()
+        since = now - timedelta(days=days)
+
+        # Total engagements
+        total = EngagementEvent.objects.filter(
+            created_at__gte=since, suppressed=False,
+        ).count()
+
+        # By intent
+        by_intent = dict(
+            EngagementEvent.objects.filter(
+                created_at__gte=since, suppressed=False,
+            ).values_list('intent').annotate(
+                c=Count('id'),
+            ).values_list('intent', 'c')
+        )
+
+        # Actioned (replied)
+        actioned = EngagementEvent.objects.filter(
+            created_at__gte=since, status='actioned',
+        ).count()
+
+        # Meetings created from engagements
+        meetings_from_engagement = Meeting.objects.filter(
+            engagement__isnull=False,
+            created_at__gte=since,
+        ).count()
+
+        # Meetings completed
+        meetings_completed = Meeting.objects.filter(
+            engagement__isnull=False,
+            created_at__gte=since,
+            status='completed',
+        ).count()
+
+        # Deal packs from opportunities linked to engagements
+        eng_opp_ids = list(
+            EngagementEvent.objects.filter(
+                created_at__gte=since,
+                opportunity_id__isnull=False,
+            ).values_list('opportunity_id', flat=True).distinct()[:100]
+        )
+        deals_from_engagement = ClosePack.objects.filter(
+            opportunity_id__in=eng_opp_ids,
+        ).count()
+
+        # Conversion rates
+        reply_rate = round(actioned / total * 100, 1) if total > 0 else 0
+        meeting_rate = round(meetings_from_engagement / total * 100, 1) if total > 0 else 0
+        deal_rate = round(deals_from_engagement / total * 100, 1) if total > 0 else 0
+
+        # Average response time (for actioned events)
+        actioned_events = EngagementEvent.objects.filter(
+            created_at__gte=since, status='actioned',
+        ).values('created_at', 'updated_at')[:100]
+        response_times = []
+        for e in actioned_events:
+            if e.get('created_at') and e.get('updated_at'):
+                hours = (e['updated_at'] - e['created_at']).total_seconds() / 3600
+                response_times.append(hours)
+        avg_response_hours = (
+            round(sum(response_times) / len(response_times), 1)
+            if response_times else 0
+        )
+
+        return {
+            'period_days': days,
+            'total_engagements': total,
+            'by_intent': by_intent,
+            'actioned': actioned,
+            'reply_rate_pct': reply_rate,
+            'meetings_from_engagement': meetings_from_engagement,
+            'meetings_completed': meetings_completed,
+            'meeting_conversion_pct': meeting_rate,
+            'deals_from_engagement': deals_from_engagement,
+            'deal_conversion_pct': deal_rate,
+            'avg_response_hours': avg_response_hours,
+        }
+
+    def evaluate(self, now) -> dict:
+        """
+        Auto-evaluate engagement health for autopilot cycle.
+        """
+        from core.models_engagement import EngagementEvent
+
+        # SLA breaches
+        breach_cutoff = now - timedelta(hours=self.SLA_BREACH_HOURS)
+        sla_breaches = EngagementEvent.objects.filter(
+            status__in=['unread', 'classified', 'needs_reply'],
+            suppressed=False,
+            created_at__lt=breach_cutoff,
+        ).count()
+
+        # Events needing reply (unactioned positive/meeting intent)
+        high_intent_unactioned = EngagementEvent.objects.filter(
+            intent__in=['meeting', 'positive'],
+            status__in=['unread', 'classified'],
+            suppressed=False,
+        ).count()
+
+        # Overall queue size
+        queue_size = EngagementEvent.objects.filter(
+            status__in=['unread', 'classified', 'needs_reply'],
+            suppressed=False,
+        ).count()
+
+        issues = []
+        if sla_breaches > 0:
+            issues.append(f'{sla_breaches} engagement SLA breaches (>{self.SLA_BREACH_HOURS}h)')
+        if high_intent_unactioned > 3:
+            issues.append(f'{high_intent_unactioned} high-intent events unactioned')
+        if queue_size > 20:
+            issues.append(f'Engagement queue backlog: {queue_size} events')
+
+        return {
+            'sla_breaches': sla_breaches,
+            'high_intent_unactioned': high_intent_unactioned,
+            'queue_size': queue_size,
             'issues': issues,
             'issue_count': len(issues),
             'healthy': len(issues) == 0,
