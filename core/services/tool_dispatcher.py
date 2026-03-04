@@ -12277,6 +12277,18 @@ RESEARCH DATA:
                 **result,
             }
 
+        elif action == 'attribution_report':
+            # Multi-touch attribution report across desks
+            from django.utils import timezone as tz
+            from core.services.ops_autopilot import MultiTouchAttributor
+
+            attributor = MultiTouchAttributor()
+            report = attributor.get_attribution_report(tz.now())
+            return {
+                'action': 'attribution_report',
+                **report,
+            }
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason

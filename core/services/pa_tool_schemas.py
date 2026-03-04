@@ -2035,7 +2035,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "timeout_ladder_report", "deliberation_pipeline_report", "backfill_failure_reasons", "backlog_report", "goal_report", "goal_set_weights"],
+                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "timeout_ladder_report", "deliberation_pipeline_report", "backfill_failure_reasons", "backlog_report", "goal_report", "goal_set_weights", "attribution_report"],
                     "description": (
                         "status: current config, last cycle timestamp, and pending actions. "
                         "history: recent autopilot actions (blocks, attention items, dry runs). "
@@ -2080,7 +2080,9 @@ PA_TOOL_SCHEMAS = [
                         "revenue, engagement, quality, freshness), desk utility scores, and active goal multipliers. "
                         "goal_set_weights: update goal objective weights (provide goal_weights dict, e.g. "
                         "{'sports_profit': 0.3, 'confirmed_revenue': 0.3, 'content_engagement': 0.2, 'quality': 0.1, 'freshness': 0.1}). "
-                        "Weights are auto-normalized to sum=1.0."
+                        "Weights are auto-normalized to sum=1.0. "
+                        "attribution_report: show multi-touch attribution state — credited impact by desk (last-touch vs assist), "
+                        "attributed vs unattributed events, upstream credit flows."
                     ),
                 },
                 "dry_run": {

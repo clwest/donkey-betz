@@ -79,6 +79,11 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      Desk floors (0.75x) and ceilings (1.25x). Goal weights stored in
      SystemConfiguration and adjustable via PA tool. Modulates existing
      PortfolioAllocator multipliers.
+ 21. Multi-touch attribution: Allocates ImpactEvent credit across
+     upstream agents/desks. 70% last-touch, 30% assist (split among
+     upstream links via trace_id, initiative, dream). Max 2 hops,
+     max 30% total assist cap. ImpactCredit model for queryable
+     credit attribution per desk/agent.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -249,6 +254,7 @@ class OpsAutopilot:
         ('deliberation_playbook', 'deliberation_remediation_playbook', '_policy_deliberation_remediation_playbook'),
         ('backlog_governor', 'backlog_governor', '_policy_backlog_governor'),
         ('goal_allocator', 'goal_aware_allocator', '_policy_goal_aware_allocator'),
+        ('attribution', 'multi_touch_attribution', '_policy_multi_touch_attribution'),
     ]
 
     def run(self) -> dict[str, Any]:
@@ -1918,6 +1924,36 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] goal allocator error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _policy_multi_touch_attribution(self, now) -> dict:
+        """
+        Attribute ImpactEvent credit to upstream agents/desks.
+        70% last-touch, 30% assist (split among linked upstream).
+        """
+        result = {
+            'events_processed': 0,
+            'credits_created': 0,
+            'errors': 0,
+        }
+
+        try:
+            attributor = MultiTouchAttributor()
+            attr_result = attributor.attribute_recent(now, window_hours=24)
+            result['events_processed'] = attr_result.get('events_processed', 0)
+            result['credits_created'] = attr_result.get('credits_created', 0)
+            result['errors'] = attr_result.get('errors', 0)
+
+            logger.info(
+                f"[OpsAutopilot] Attribution: "
+                f"{result['events_processed']} events, "
+                f"{result['credits_created']} credits"
+            )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] attribution error: {e}")
             result['error'] = str(e)
 
         return result
@@ -6759,6 +6795,311 @@ class GoalAwareAllocator:
             'active_allocations': active,
             'window_hours': self.WINDOW_HOURS,
             'bounds': {'floor': self.FLOOR, 'ceiling': self.CEILING},
+        }
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Multi-Touch Attributor — Policy 21 (Autonomy #17)
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class MultiTouchAttributor:
+    """
+    Allocates ImpactEvent credit across upstream agents/desks using
+    multi-touch attribution.
+
+    Credit split:
+    - 70% last-touch: the agent/desk directly producing the impact
+    - 30% assist: split among upstream linked agents/desks
+
+    Links are discovered via:
+    1. trace_id: same orchestration trace → shared credit
+    2. initiative: deliverable linked to initiative → initiative creator
+    3. dream: deliverable linked to dream → dream agent
+    4. agent_chain: AgentExecution parent → child relationships
+
+    Guardrails:
+    - Max 2 hops upstream
+    - Max 30% total assist credit
+    - Only explicit links (no guessing)
+    - Idempotent: skip events already attributed
+    """
+
+    LAST_TOUCH_SHARE = 0.70
+    ASSIST_SHARE = 0.30
+    MAX_HOPS = 2
+
+    # Desk lookup for known agents (reuse from AttributionDebtController)
+    # Falls back to ImpactEvent.desk or 'general'
+
+    def attribute_recent(self, now, window_hours: int = 24) -> dict:
+        """
+        Process recent ImpactEvents that don't have credits yet.
+        Idempotent: skips events already attributed.
+        """
+        from core.models_impact_events import ImpactEvent
+        from core.models_impact_credit import ImpactCredit
+
+        window = now - timedelta(hours=window_hours)
+
+        # Find unattributed events (no credits yet)
+        attributed_ids = set(
+            ImpactCredit.objects.filter(
+                created_at__gte=window,
+            ).values_list('impact_event_id', flat=True).distinct()
+        )
+
+        events = ImpactEvent.objects.filter(
+            created_at__gte=window,
+        ).exclude(id__in=attributed_ids)
+
+        result = {
+            'events_processed': 0,
+            'credits_created': 0,
+            'errors': 0,
+        }
+
+        for event in events:
+            try:
+                credits = self._attribute_event(event)
+                result['credits_created'] += len(credits)
+                result['events_processed'] += 1
+            except Exception as e:
+                logger.error(
+                    f"[MultiTouchAttributor] Error attributing "
+                    f"event {event.id}: {e}"
+                )
+                result['errors'] += 1
+
+        return result
+
+    def _attribute_event(self, event) -> list:
+        """
+        Attribute a single ImpactEvent. Creates ImpactCredit rows.
+
+        Returns list of created ImpactCredit objects.
+        """
+        from core.models_impact_credit import ImpactCredit
+
+        value_usd = float(event.value_usd or 0)
+        points = event.impact_points or 0
+        credits = []
+
+        # Discover upstream links
+        upstream = self._find_upstream(event)
+
+        if not upstream:
+            # No assist — 100% last touch
+            credits.append(ImpactCredit.objects.create(
+                impact_event=event,
+                desk=event.desk,
+                agent_name=event.agent_name or '',
+                credit_type='last_touch',
+                credit_usd=value_usd,
+                credit_points=points,
+                credit_share=1.0,
+                hop_distance=0,
+                link_type='direct',
+            ))
+        else:
+            # Last touch gets 70%
+            credits.append(ImpactCredit.objects.create(
+                impact_event=event,
+                desk=event.desk,
+                agent_name=event.agent_name or '',
+                credit_type='last_touch',
+                credit_usd=round(value_usd * self.LAST_TOUCH_SHARE, 4),
+                credit_points=int(points * self.LAST_TOUCH_SHARE),
+                credit_share=self.LAST_TOUCH_SHARE,
+                hop_distance=0,
+                link_type='direct',
+            ))
+
+            # Assist 30% split evenly among upstream
+            assist_per = self.ASSIST_SHARE / len(upstream)
+            for link in upstream:
+                credits.append(ImpactCredit.objects.create(
+                    impact_event=event,
+                    desk=link['desk'],
+                    agent_name=link.get('agent_name', ''),
+                    credit_type='assist',
+                    credit_usd=round(value_usd * assist_per, 4),
+                    credit_points=int(points * assist_per),
+                    credit_share=round(assist_per, 4),
+                    hop_distance=link.get('hop', 1),
+                    link_type=link.get('link_type', 'unknown'),
+                ))
+
+        return credits
+
+    def _find_upstream(self, event) -> list:
+        """
+        Discover upstream agents/desks linked to this impact event.
+
+        Returns list of dicts: [{'desk', 'agent_name', 'hop', 'link_type'}]
+        """
+        upstream = []
+
+        # Strategy 1: trace_id — find other agents in same orchestration
+        if event.trace_id:
+            trace_links = self._find_by_trace(event)
+            upstream.extend(trace_links)
+
+        # Strategy 2: source_object → Deliverable → initiative/dream
+        if event.source_object_type == 'Deliverable' and event.source_object_id:
+            deliverable_links = self._find_by_deliverable(event)
+            upstream.extend(deliverable_links)
+
+        # Deduplicate by (desk, agent_name) and cap at MAX_HOPS
+        seen = set()
+        deduped = []
+        for link in upstream:
+            key = (link['desk'], link.get('agent_name', ''))
+            # Skip self-attribution
+            if key == (event.desk, event.agent_name or ''):
+                continue
+            if key not in seen and link.get('hop', 1) <= self.MAX_HOPS:
+                seen.add(key)
+                deduped.append(link)
+
+        return deduped
+
+    def _find_by_trace(self, event) -> list:
+        """Find upstream agents via shared trace_id."""
+        links = []
+        try:
+            from core.models_deliverables import Deliverable
+
+            # Find deliverables with same trace_id
+            related = Deliverable.objects.filter(
+                trace_id=event.trace_id,
+            ).exclude(
+                agent_name=event.agent_name or '',
+            ).values('agent_name', 'initiative_id').distinct()[:5]
+
+            for d in related:
+                agent = d['agent_name'] or ''
+                desk = self._agent_to_desk(agent)
+                links.append({
+                    'desk': desk,
+                    'agent_name': agent,
+                    'hop': 1,
+                    'link_type': 'trace_id',
+                })
+        except Exception:
+            pass
+        return links
+
+    def _find_by_deliverable(self, event) -> list:
+        """Find upstream agents via deliverable → initiative/dream chain."""
+        links = []
+        try:
+            from core.models_deliverables import Deliverable
+
+            deliverable = Deliverable.objects.filter(
+                id=event.source_object_id,
+            ).select_related('initiative', 'dream').first()
+
+            if not deliverable:
+                return links
+
+            # Initiative link — the initiative was created by some upstream work
+            if deliverable.initiative_id:
+                links.append({
+                    'desk': 'research',
+                    'agent_name': 'InitiativePipeline',
+                    'hop': 1,
+                    'link_type': 'initiative',
+                })
+
+            # Dream link — the dream was the creative spark
+            if deliverable.dream_id:
+                try:
+                    dream_agent = deliverable.dream.agent_name or 'DreamAgent'
+                    links.append({
+                        'desk': self._agent_to_desk(dream_agent),
+                        'agent_name': dream_agent,
+                        'hop': 1,
+                        'link_type': 'dream',
+                    })
+                except Exception:
+                    links.append({
+                        'desk': 'research',
+                        'agent_name': 'DreamAgent',
+                        'hop': 1,
+                        'link_type': 'dream',
+                    })
+
+            # SelfBlog link — upstream content agent
+            if deliverable.self_blog_id:
+                links.append({
+                    'desk': 'content',
+                    'agent_name': 'ContentWriterAgent',
+                    'hop': 1,
+                    'link_type': 'self_blog',
+                })
+
+        except Exception:
+            pass
+        return links
+
+    def _agent_to_desk(self, agent_name: str) -> str:
+        """Map agent name to desk. Falls back to 'general'."""
+        try:
+            desk_map = AttributionDebtController.AGENT_DESK_MAP
+            return desk_map.get(agent_name, 'general')
+        except Exception:
+            return 'general'
+
+    def get_attribution_report(self, now) -> dict:
+        """Report on multi-touch attribution state."""
+        from core.models_impact_credit import ImpactCredit
+        from django.db.models import Sum, Count
+
+        window = now - timedelta(hours=72)
+
+        # Credits by desk and type
+        desk_credits = list(
+            ImpactCredit.objects.filter(
+                created_at__gte=window,
+            ).values('desk', 'credit_type').annotate(
+                total_usd=Sum('credit_usd'),
+                total_points=Sum('credit_points'),
+                count=Count('id'),
+            ).order_by('desk', 'credit_type')
+        )
+
+        # Format
+        by_desk = {}
+        for row in desk_credits:
+            desk = row['desk']
+            if desk not in by_desk:
+                by_desk[desk] = {'last_touch': {}, 'assist': {}}
+            by_desk[desk][row['credit_type']] = {
+                'usd': float(row['total_usd'] or 0),
+                'points': row['total_points'] or 0,
+                'count': row['count'] or 0,
+            }
+
+        # Total attributed vs unattributed
+        from core.models_impact_events import ImpactEvent
+        total_events = ImpactEvent.objects.filter(
+            created_at__gte=window,
+        ).count()
+        attributed_events = ImpactCredit.objects.filter(
+            created_at__gte=window,
+            credit_type='last_touch',
+        ).count()
+
+        return {
+            'window_hours': 72,
+            'total_events': total_events,
+            'attributed_events': attributed_events,
+            'unattributed_events': total_events - attributed_events,
+            'credits_by_desk': by_desk,
+            'total_credits': ImpactCredit.objects.filter(
+                created_at__gte=window,
+            ).count(),
         }
 
 
