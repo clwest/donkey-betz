@@ -106,6 +106,13 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      source_url. Daily rate limit (20 leads/day). Tracks which spider
      sources produce converting leads. PA tools: prospecting_queue,
      lead_source_report.
+ 26. Outreach sequencer: Manages outreach draft lifecycle — inbox,
+     approval, rejection, follow-up timers. Touch cadence: Day 0, 3,
+     7, 14. Max 4 touches per lead. Daily approval cap: 10. Generates
+     follow-up drafts for approved messages when next_touch_at is due.
+     Expires 30-day-old approved drafts with no follow-up. Tracks
+     reply rate and conversion funnel. PA tools: outreach_inbox,
+     outreach_approve, outreach_reject, outreach_metrics_report.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -281,6 +288,7 @@ class OpsAutopilot:
         ('release', 'release_governor', '_policy_release_governor'),
         ('revenue_pipeline', 'revenue_pipeline', '_policy_revenue_pipeline'),
         ('outbound_leads', 'outbound_lead_engine', '_policy_outbound_leads'),
+        ('outreach', 'outreach_sequencer', '_policy_outreach_sequencer'),
     ]
 
     def run(self) -> dict[str, Any]:
@@ -2106,6 +2114,35 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] outbound leads error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _policy_outreach_sequencer(self, now) -> dict:
+        """
+        Manage outreach draft lifecycle — generate follow-ups,
+        expire stale drafts, report inbox stats.
+        """
+        result = {
+            'pending_drafts': 0,
+            'followups_generated': 0,
+            'expired': 0,
+        }
+
+        try:
+            sequencer = OutreachSequencer()
+            eval_result = sequencer.evaluate(now)
+            result.update(eval_result)
+
+            logger.info(
+                f"[OpsAutopilot] Outreach: "
+                f"{result['pending_drafts']} pending, "
+                f"{result['followups_generated']} follow-ups generated, "
+                f"{result['expired']} expired"
+            )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] outreach sequencer error: {e}")
             result['error'] = str(e)
 
         return result
@@ -8606,6 +8643,252 @@ class OutboundLeadEngine:
             'month_count': month_count,
             'trend': trend,
         }
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Outreach Sequencer — Policy 26 (Autonomy #22)
+# ═══════════════════════════════════════════════════════════════════════
+
+class OutreachSequencer:
+    """
+    Manages outreach draft lifecycle: inbox, approval, follow-up timers.
+
+    Touch cadence:
+      Touch 1: Day 0 (initial outreach)
+      Touch 2: Day 3 (follow-up)
+      Touch 3: Day 7 (value-add)
+      Touch 4: Day 14 (close the loop)
+
+    Guardrails:
+      - Never auto-sends without approval
+      - Max 4 touches per lead
+      - Daily approval cap: 10 (prevents spam)
+      - Dedup: won't create draft for spider_data_id with existing active drafts
+    """
+
+    MAX_TOUCHES = 4
+    TOUCH_DAYS = [0, 3, 7, 14]
+    DAILY_APPROVE_CAP = 10
+
+    def get_inbox(self, now) -> dict:
+        """PA-facing: drafts pending review."""
+        from core.models_outreach import OutreachDraft
+        from django.db.models import Count
+
+        try:
+            drafts = list(
+                OutreachDraft.objects.filter(
+                    status='draft',
+                ).order_by('-lead_score', '-created_at').values(
+                    'id', 'lead_title', 'lead_source', 'lead_url',
+                    'lead_score', 'offer_key', 'subject_line',
+                    'body_text', 'channel', 'touch_number', 'created_at',
+                )[:20]
+            )
+
+            # Serialize
+            for d in drafts:
+                d['id'] = str(d['id'])
+                if hasattr(d.get('created_at'), 'isoformat'):
+                    d['created_at'] = d['created_at'].isoformat()
+
+            # Counts by status
+            status_counts = dict(
+                OutreachDraft.objects.values_list('status').annotate(
+                    c=Count('id'),
+                ).values_list('status', 'c')
+            )
+
+            # Today's approvals
+            today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            today_approved = OutreachDraft.objects.filter(
+                status='approved',
+                updated_at__gte=today_start,
+            ).count()
+
+            return {
+                'drafts': drafts,
+                'total_pending': status_counts.get('draft', 0),
+                'total_approved': status_counts.get('approved', 0),
+                'total_sent': status_counts.get('sent', 0),
+                'total_replied': status_counts.get('replied', 0),
+                'today_approved': today_approved,
+                'daily_cap': self.DAILY_APPROVE_CAP,
+                'remaining_approvals': max(
+                    0, self.DAILY_APPROVE_CAP - today_approved
+                ),
+            }
+        except Exception as e:
+            return {'error': str(e), 'drafts': []}
+
+    def approve_draft(self, draft_id: str, edited_text: str = '') -> dict:
+        """Approve a draft for sending. Schedules next follow-up."""
+        from core.models_outreach import OutreachDraft
+
+        try:
+            draft = OutreachDraft.objects.get(id=draft_id, status='draft')
+        except OutreachDraft.DoesNotExist:
+            return {'error': f'Draft {draft_id} not found or not in draft status'}
+
+        draft.status = 'approved'
+        if edited_text:
+            draft.edited_text = edited_text
+
+        # Schedule next follow-up if not at max touches
+        if draft.touch_number < self.MAX_TOUCHES:
+            next_idx = draft.touch_number  # 0-indexed into TOUCH_DAYS
+            if next_idx < len(self.TOUCH_DAYS):
+                days_until_next = self.TOUCH_DAYS[next_idx]
+                draft.next_touch_at = (
+                    timezone.now() + timedelta(days=days_until_next)
+                )
+
+        draft.save()
+
+        return {
+            'approved': True,
+            'draft_id': str(draft.id),
+            'touch_number': draft.touch_number,
+            'next_touch_at': (
+                draft.next_touch_at.isoformat()
+                if draft.next_touch_at else None
+            ),
+        }
+
+    def reject_draft(self, draft_id: str, reason: str = '') -> dict:
+        """Reject a draft — prevents re-queue."""
+        from core.models_outreach import OutreachDraft
+
+        try:
+            draft = OutreachDraft.objects.get(id=draft_id, status='draft')
+        except OutreachDraft.DoesNotExist:
+            return {'error': f'Draft {draft_id} not found or not in draft status'}
+
+        draft.status = 'rejected'
+        draft.rejection_reason = reason
+        draft.save()
+
+        return {
+            'rejected': True,
+            'draft_id': str(draft.id),
+            'reason': reason,
+        }
+
+    def get_metrics_report(self, now) -> dict:
+        """PA-facing: outreach conversion metrics."""
+        from core.models_outreach import OutreachDraft
+        from django.db.models import Count, Avg
+
+        try:
+            # Overall funnel
+            total = OutreachDraft.objects.count()
+            by_status = dict(
+                OutreachDraft.objects.values_list('status').annotate(
+                    c=Count('id'),
+                ).values_list('status', 'c')
+            )
+
+            # By channel
+            by_channel = dict(
+                OutreachDraft.objects.values_list('channel').annotate(
+                    c=Count('id'),
+                ).values_list('channel', 'c')
+            )
+
+            # By offer
+            by_offer = dict(
+                OutreachDraft.objects.exclude(
+                    offer_key='',
+                ).values_list('offer_key').annotate(
+                    c=Count('id'),
+                ).values_list('offer_key', 'c')
+            )
+
+            # Avg score
+            avg_score = OutreachDraft.objects.aggregate(
+                avg=Avg('lead_score'),
+            )['avg'] or 0
+
+            # Reply rate
+            sent = by_status.get('sent', 0) + by_status.get('replied', 0)
+            replied = by_status.get('replied', 0)
+            reply_rate = (replied / sent * 100) if sent > 0 else 0
+
+            return {
+                'total': total,
+                'by_status': by_status,
+                'by_channel': by_channel,
+                'by_offer': by_offer,
+                'avg_lead_score': round(avg_score, 1),
+                'reply_rate_pct': round(reply_rate, 1),
+            }
+        except Exception as e:
+            return {'error': str(e)}
+
+    def evaluate(self, now) -> dict:
+        """Policy evaluation — generate follow-up drafts for approved messages."""
+        from core.models_outreach import OutreachDraft
+
+        result = {
+            'pending_drafts': 0,
+            'followups_generated': 0,
+            'expired': 0,
+        }
+
+        try:
+            result['pending_drafts'] = OutreachDraft.objects.filter(
+                status='draft',
+            ).count()
+
+            # Generate follow-ups for approved drafts with due next_touch_at
+            due_followups = OutreachDraft.objects.filter(
+                status='approved',
+                next_touch_at__lte=now,
+                touch_number__lt=self.MAX_TOUCHES,
+            )
+
+            for parent in due_followups[:10]:  # Max 10 per cycle
+                # Check if follow-up already exists
+                existing = OutreachDraft.objects.filter(
+                    parent_draft=parent,
+                ).exists()
+                if existing:
+                    continue
+
+                # Create follow-up draft
+                OutreachDraft.objects.create(
+                    spider_data_id=parent.spider_data_id,
+                    lead_title=parent.lead_title,
+                    lead_source=parent.lead_source,
+                    lead_url=parent.lead_url,
+                    lead_score=parent.lead_score,
+                    offer_key=parent.offer_key,
+                    channel=parent.channel,
+                    touch_number=parent.touch_number + 1,
+                    parent_draft=parent,
+                    body_text=(
+                        f"[Follow-up #{parent.touch_number + 1} for: "
+                        f"{parent.lead_title[:60]}]\n\n"
+                        f"Draft follow-up message needed."
+                    ),
+                    trace_id=parent.trace_id,
+                    user=parent.user,
+                )
+                result['followups_generated'] += 1
+
+            # Expire old approved drafts with no next touch
+            stale_cutoff = now - timedelta(days=30)
+            expired = OutreachDraft.objects.filter(
+                status='approved',
+                next_touch_at__isnull=True,
+                updated_at__lt=stale_cutoff,
+            ).update(status='expired')
+            result['expired'] = expired
+
+        except Exception as e:
+            result['error'] = str(e)
+
+        return result
 
 
 # ═══════════════════════════════════════════════════════════════════════

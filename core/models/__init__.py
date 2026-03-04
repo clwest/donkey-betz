@@ -217,6 +217,9 @@ from ..models_learning_journey import (
     UserLearningStreak,
 )
 
+# Import outreach models (Autonomy #22 - Outreach Sequencing)
+from ..models_outreach import OutreachDraft
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -463,5 +466,8 @@ __all__ = [
 
     # Impact Credit (Autonomy #17)
     'ImpactCredit',
+
+    # Outreach Draft (Autonomy #22)
+    'OutreachDraft',
 
 ]
