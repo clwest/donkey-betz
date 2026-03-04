@@ -6,6 +6,7 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { useScreenAnalytics } from '../observability/analytics';
 import ScreenState from '../components/ScreenState';
+import { SkeletonStatRow, SkeletonCard, SkeletonList } from '../components/Skeleton';
 import {
   getStats, getPlatforms, getRevenueDashboard,
   getRecommendations, comparePlatforms, getContent,
@@ -52,6 +53,7 @@ export default function PortfolioScreen() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [comparison, setComparison] = useState<PlatformComparison[]>([]);
   const [loadingCompare, setLoadingCompare] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const fetchAll = useCallback(async () => {
     setError(null);
@@ -69,6 +71,8 @@ export default function PortfolioScreen() {
     if (results[4].status === 'fulfilled') setRecommendations(results[4].value);
     if (results.every((r) => r.status === 'rejected')) {
       setError('Failed to load portfolio data. Pull to retry.');
+    } else {
+      setLastUpdated(new Date());
     }
   }, []);
 
@@ -99,6 +103,26 @@ export default function PortfolioScreen() {
   const safeStats: PortfolioStats = stats ?? { total_revenue: 0, platforms: 0, connected: 0, distributions: 0 };
   const safeRevenue: Revenue = revenue ?? { total: 0, this_month: 0, last_month: 0, pending: 0, by_platform: {} };
 
+  if (loading) {
+    return (
+      <View style={s.root}>
+        <View style={s.tabBar}>
+          {TABS.map(({ key, label, icon }) => (
+            <View key={key} style={[s.tab, key === 'overview' && s.tabActive]}>
+              <Feather name={icon as any} size={14} color={key === 'overview' ? '#fff' : '#9ca3af'} />
+              <Text style={[s.tabLabel, key === 'overview' && s.tabLabelActive]}>{label}</Text>
+            </View>
+          ))}
+        </View>
+        <View style={s.scroll}>
+          <SkeletonStatRow count={4} />
+          <SkeletonList rows={3} />
+          <SkeletonCard lines={3} />
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={s.root}>
       {/* Tab bar */}
@@ -115,11 +139,16 @@ export default function PortfolioScreen() {
         ))}
       </View>
 
-      <ScreenState loading={loading} error={error} onRetry={fetchAll}>
+      <ScreenState loading={false} error={error} onRetry={fetchAll}>
         <ScrollView
           contentContainerStyle={s.scroll}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#818cf8" />}
         >
+          {lastUpdated && (
+            <Text style={s.updatedText}>
+              Updated {lastUpdated.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+            </Text>
+          )}
           {tab === 'overview' && (
             <OverviewTab
               stats={safeStats}
@@ -400,6 +429,7 @@ const { width } = Dimensions.get('window');
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0f172a' },
   scroll: { padding: 16, paddingBottom: 32 },
+  updatedText: { color: '#4b5563', fontSize: 10, textAlign: 'right', marginBottom: 4 },
 
   // Tabs
   tabBar: {

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useScreenAnalytics } from '../observability/analytics';
 import ScreenState from '../components/ScreenState';
+import { SkeletonStatRow, SkeletonCard, SkeletonList } from '../components/Skeleton';
 import * as bettingApi from '../api/betting';
 import type { BettingStats, Game, Wager } from '../api/betting';
 
@@ -70,6 +71,7 @@ export default function BettingScreen() {
   const [stats, setStats] = useState<BettingStats | null>(null);
   const [games, setGames] = useState<Game[]>([]);
   const [wagers, setWagers] = useState<Wager[]>([]);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const fetchAll = useCallback(async () => {
     setError(null);
@@ -83,6 +85,8 @@ export default function BettingScreen() {
     if (results[2].status === 'fulfilled') setWagers(results[2].value);
     if (results.every((r) => r.status === 'rejected')) {
       setError('Failed to load betting data. Pull to retry.');
+    } else {
+      setLastUpdated(new Date());
     }
   }, []);
 
@@ -96,8 +100,27 @@ export default function BettingScreen() {
     setRefreshing(false);
   }, [fetchAll]);
 
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.content}>
+          <View style={styles.tabBar}>
+            {TABS.map((t) => (
+              <View key={t.key} style={[styles.tab, t.key === 'overview' && styles.tabActive]}>
+                <Text style={[styles.tabText, t.key === 'overview' && styles.tabTextActive]}>{t.label}</Text>
+              </View>
+            ))}
+          </View>
+          <SkeletonStatRow count={4} />
+          <SkeletonCard lines={4} />
+          <SkeletonList rows={3} />
+        </View>
+      </View>
+    );
+  }
+
   return (
-    <ScreenState loading={loading} error={error} onRetry={fetchAll}>
+    <ScreenState loading={false} error={error} onRetry={fetchAll}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}
@@ -105,6 +128,11 @@ export default function BettingScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" colors={['#6366f1']} />
         }
       >
+        {/* Last updated */}
+        {lastUpdated && (
+          <Text style={styles.updatedText}>Updated {timeAgo(lastUpdated.toISOString())}</Text>
+        )}
+
         {/* Tab Bar */}
         <View style={styles.tabBar}>
           {TABS.map((t) => (
@@ -366,6 +394,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0a0a0f' },
   content: { padding: 12 },
   muted: { color: '#6b7280', fontSize: 14, textAlign: 'center', marginTop: 40 },
+  updatedText: { color: '#4b5563', fontSize: 10, textAlign: 'right', marginBottom: 4 },
 
   // Tabs
   tabBar: { flexDirection: 'row', marginBottom: 12, gap: 8 },

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useScreenAnalytics } from '../observability/analytics';
 import ScreenState from '../components/ScreenState';
+import { SkeletonStatRow, SkeletonCard, SkeletonList } from '../components/Skeleton';
 import * as stocksApi from '../api/stocks';
 import type { StockHub, StockAlert, TickerLookup } from '../api/stocks';
 
@@ -62,12 +63,14 @@ export default function StocksScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hub, setHub] = useState<StockHub | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const fetchHub = useCallback(async () => {
     setError(null);
     try {
       const data = await stocksApi.getHub();
       setHub(data);
+      setLastUpdated(new Date());
     } catch {
       setError('Failed to load stock intelligence.');
     }
@@ -83,8 +86,27 @@ export default function StocksScreen() {
     setRefreshing(false);
   }, [fetchHub]);
 
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.content}>
+          <View style={styles.tabBar}>
+            {TABS.map((t) => (
+              <View key={t.key} style={[styles.tab, t.key === 'hub' && styles.tabActive]}>
+                <Text style={[styles.tabText, t.key === 'hub' && styles.tabTextActive]}>{t.label}</Text>
+              </View>
+            ))}
+          </View>
+          <SkeletonStatRow count={4} />
+          <SkeletonCard lines={5} />
+          <SkeletonList rows={4} />
+        </View>
+      </View>
+    );
+  }
+
   return (
-    <ScreenState loading={loading} error={error} onRetry={fetchHub}>
+    <ScreenState loading={false} error={error} onRetry={fetchHub}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}
@@ -92,6 +114,13 @@ export default function StocksScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" colors={['#6366f1']} />
         }
       >
+        {/* Last updated */}
+        {lastUpdated && (
+          <Text style={styles.updatedText}>
+            Updated {lastUpdated.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+          </Text>
+        )}
+
         <View style={styles.tabBar}>
           {TABS.map((t) => (
             <TouchableOpacity
@@ -366,6 +395,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0a0a0f' },
   content: { padding: 12 },
   muted: { color: '#6b7280', fontSize: 14, textAlign: 'center', marginTop: 40 },
+  updatedText: { color: '#4b5563', fontSize: 10, textAlign: 'right', marginBottom: 4 },
 
   tabBar: { flexDirection: 'row', marginBottom: 12, gap: 8 },
   tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8, backgroundColor: '#1a1a2e' },

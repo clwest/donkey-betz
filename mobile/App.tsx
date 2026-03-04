@@ -1,5 +1,5 @@
 import 'react-native-gesture-handler';
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -16,8 +16,13 @@ import { initSentry, setSentryUser, SentryErrorBoundary } from './src/observabil
 import OfflineBanner from './src/observability/OfflineBanner';
 import ToastBanner from './src/components/Toast';
 
-// Initialize Sentry before any rendering
-initSentry();
+// Initialize Sentry before any rendering — wrapped so a Sentry failure
+// never prevents the app from starting.
+try {
+  initSentry();
+} catch (e) {
+  console.warn('[Sentry] initSentry() threw, continuing without Sentry:', e);
+}
 
 // Configure foreground notification display once at module level
 configureForegroundHandler();
@@ -84,8 +89,17 @@ function App() {
   );
 }
 
-// Wrap root component with Sentry error boundary
-export default SentryErrorBoundary(App);
+// Wrap root component with Sentry error boundary.
+// If Sentry.wrap throws (e.g. Sentry not initialised, wrong version, etc.)
+// fall back to the unwrapped App so the user can still use the app.
+let WrappedApp: React.ComponentType;
+try {
+  WrappedApp = SentryErrorBoundary(App);
+} catch (e) {
+  console.warn('[Sentry] SentryErrorBoundary(App) failed, using unwrapped App:', e);
+  WrappedApp = App;
+}
+export default WrappedApp;
 
 const styles = StyleSheet.create({
   root: {

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
@@ -49,6 +49,7 @@ export default function AppNavigator() {
   const [screens, setScreens] = useState<ResolvedScreen[] | null>(null);
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,21 +59,34 @@ export default function AppNavigator() {
         const m = await getManifest();
         if (cancelled) return;
         setManifest(m);
-        setScreens(resolveScreens(m.routes));
-      } catch {
-        if (!cancelled) setError('Failed to load app manifest');
+
+        // resolveScreens may throw if the manifest shape is unexpected
+        const resolved = resolveScreens(m.routes ?? []);
+        if (cancelled) return;
+        setScreens(resolved);
+      } catch (e) {
+        if (!cancelled) {
+          const msg = e instanceof Error ? e.message : String(e);
+          setError(`Failed to load app manifest: ${msg}`);
+        }
       }
     }
 
     load();
     return () => { cancelled = true; };
+  }, [retryCount]);
+
+  const handleRetry = useCallback(() => {
+    setError(null);
+    setScreens(null);
+    setRetryCount((c) => c + 1);
   }, []);
 
   if (error) {
     return (
       <View style={styles.center}>
         <Text style={styles.errorText}>{error}</Text>
-        <Text style={styles.retryText} onPress={() => { setError(null); setScreens(null); }}>
+        <Text style={styles.retryText} onPress={handleRetry}>
           Tap to retry
         </Text>
       </View>
