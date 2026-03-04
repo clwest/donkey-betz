@@ -2035,7 +2035,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "backfill_failure_reasons"],
+                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "backfill_failure_reasons"],
                     "description": (
                         "status: current config, last cycle timestamp, and pending actions. "
                         "history: recent autopilot actions (blocks, attention items, dry runs). "
@@ -2065,6 +2065,9 @@ PA_TOOL_SCHEMAS = [
                         "which policies are being tested, what metrics are tracked, recent promote/rollback decisions. "
                         "experiment_create: create a new experiment (requires policy_name and treatment_params). "
                         "experiment_start: activate a draft experiment by experiment_id — applies treatment params. "
+                        "decision_ledger_report: query the decision ledger — every policy evaluation is recorded with "
+                        "structured inputs, outputs, decision type, timing, and experiment context. Filter by policy_name, "
+                        "decision_type (no_op/action_taken/blocked/skipped), and days. Shows cycle count and decision type stats. "
                         "backfill_failure_reasons: re-classify UNKNOWN failure codes using expanded patterns."
                     ),
                 },
@@ -2078,11 +2081,15 @@ PA_TOOL_SCHEMAS = [
                 },
                 "days": {
                     "type": "integer",
-                    "description": "For 'backfill_impacts': how many days back to scan (default 14, max 90).",
+                    "description": "For 'backfill_impacts': how many days back to scan (default 14, max 90). For 'decision_ledger_report': how many days to query (default 1).",
+                },
+                "decision_type": {
+                    "type": "string",
+                    "description": "For 'decision_ledger_report': filter by decision type (no_op, action_taken, blocked, skipped).",
                 },
                 "policy_name": {
                     "type": "string",
-                    "description": "For 'experiment_create': which policy to test (portfolio_allocator, roi_throttle, budget_controller).",
+                    "description": "For 'experiment_create': which policy to test (portfolio_allocator, roi_throttle, budget_controller). For 'decision_ledger_report': filter by policy name.",
                 },
                 "treatment_params": {
                     "type": "object",

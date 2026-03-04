@@ -201,6 +201,9 @@ from ..models_impact_events import ImpactEvent
 # Import PolicyExperiment (Session 1090 - Autonomy #11 Experiment Engine)
 from ..models_policy_experiment import PolicyExperiment
 
+# Import DecisionLedgerEntry (Session 1090 - Autonomy #12 Decision Ledger)
+from ..models_decision_ledger import DecisionLedgerEntry
+
 # Import learning journey models (Session 773 - Learning Journeys)
 from ..models_learning_journey import (
     LearningJourneyTemplate,
@@ -451,5 +454,8 @@ __all__ = [
 
     # Policy Experiment (Session 1090 - Autonomy #11)
     'PolicyExperiment',
+
+    # Decision Ledger (Session 1090 - Autonomy #12)
+    'DecisionLedgerEntry',
 
 ]
