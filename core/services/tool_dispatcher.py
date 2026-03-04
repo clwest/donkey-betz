@@ -12248,6 +12248,35 @@ RESEARCH DATA:
                 **report,
             }
 
+        elif action == 'goal_report':
+            # Show goal-aware allocation state — weights, metrics, desk scores
+            from core.services.ops_autopilot import GoalAwareAllocator
+
+            allocator = GoalAwareAllocator()
+            report = allocator.get_goal_report(timezone.now())
+            return {
+                'action': 'goal_report',
+                **report,
+            }
+
+        elif action == 'goal_set_weights':
+            # Update goal objective weights
+            from core.services.ops_autopilot import GoalAwareAllocator
+
+            goal_weights = payload.get('goal_weights')
+            if not goal_weights or not isinstance(goal_weights, dict):
+                return {
+                    'action': 'goal_set_weights',
+                    'error': 'goal_weights dict required (e.g., {"sports_profit": 0.3, "confirmed_revenue": 0.3, ...})',
+                }
+
+            allocator = GoalAwareAllocator()
+            result = allocator.set_weights(goal_weights)
+            return {
+                'action': 'goal_set_weights',
+                **result,
+            }
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason

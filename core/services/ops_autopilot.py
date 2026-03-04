@@ -73,6 +73,12 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      L3=auto-archive stale drafts (>14d, no engagement). Guardrails:
      never archive pinned, saved, starred, high-quality (>0.7), or
      initiative-linked deliverables.
+ 20. Goal-aware allocator: Maps system-level objectives (revenue, sports
+     profit, content engagement, quality, freshness) to desk-level budget
+     multipliers via a weighted utility function. Balanced default weights.
+     Desk floors (0.75x) and ceilings (1.25x). Goal weights stored in
+     SystemConfiguration and adjustable via PA tool. Modulates existing
+     PortfolioAllocator multipliers.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -242,6 +248,7 @@ class OpsAutopilot:
         ('timeout_playbook', 'timeout_remediation_playbook', '_policy_timeout_remediation_playbook'),
         ('deliberation_playbook', 'deliberation_remediation_playbook', '_policy_deliberation_remediation_playbook'),
         ('backlog_governor', 'backlog_governor', '_policy_backlog_governor'),
+        ('goal_allocator', 'goal_aware_allocator', '_policy_goal_aware_allocator'),
     ]
 
     def run(self) -> dict[str, Any]:
@@ -1874,6 +1881,43 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] backlog governor error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _policy_goal_aware_allocator(self, now) -> dict:
+        """
+        Compute goal-derived utility scores per desk and apply
+        goal-weighted allocation multipliers on top of IQROI.
+        """
+        result = {
+            'applied': False,
+            'desks_adjusted': 0,
+            'adjustments': {},
+        }
+
+        try:
+            allocator = GoalAwareAllocator()
+            adjustments = allocator.apply_goal_allocations(now)
+            result['applied'] = True
+            result['desks_adjusted'] = len(adjustments)
+            result['adjustments'] = adjustments
+            result['weights'] = allocator.get_weights()
+
+            if adjustments and not self.dry_run:
+                self.actions_taken.append({
+                    'type': 'goal_allocation',
+                    'desks_adjusted': len(adjustments),
+                    'adjustments': adjustments,
+                })
+
+            logger.info(
+                f"[OpsAutopilot] Goal allocator: "
+                f"{len(adjustments)} desks adjusted"
+            )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] goal allocator error: {e}")
             result['error'] = str(e)
 
         return result
@@ -6417,6 +6461,304 @@ class PortfolioAllocator:
             'total_events': sum(
                 d['events'] for d in desk_data.values()
             ),
+        }
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Goal-Aware Allocator — Policy 20 (Autonomy #16)
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class GoalAwareAllocator:
+    """
+    Maps system-level objectives to desk-level budget multipliers
+    via a weighted utility function.
+
+    Objectives (default balanced weights):
+      - sports_profit   0.25  — wager P/L from ImpactEvent
+      - confirmed_revenue 0.25 — revenue_confirmed from ImpactEvent
+      - content_engagement 0.20 — content action/save/export points
+      - quality          0.15  — avg quality_score of recent deliverables
+      - freshness        0.15  — recently published as % of total
+
+    Each desk computes a utility score [0,1] from the objectives
+    relevant to it. The score maps to an allocation multiplier:
+      utility 0 → 0.75x (floor)
+      utility 1 → 1.25x (ceiling)
+
+    Multipliers are written to SystemConfiguration as
+    'goal_allocation:{desk}' and modulate the IQROI-based allocation
+    from PortfolioAllocator.
+
+    Weights are stored in SystemConfiguration key 'goal_weights'
+    and adjustable via PA tool action 'goal_set_weights'.
+    """
+
+    # Default objective weights (sum = 1.0)
+    DEFAULT_WEIGHTS = {
+        'sports_profit': 0.25,
+        'confirmed_revenue': 0.25,
+        'content_engagement': 0.20,
+        'quality': 0.15,
+        'freshness': 0.15,
+    }
+
+    # Desk→objective relevance matrix (which objectives matter for each desk)
+    DESK_OBJECTIVES = {
+        'sports': ['sports_profit', 'confirmed_revenue', 'quality'],
+        'content': ['confirmed_revenue', 'content_engagement', 'quality', 'freshness'],
+        'research': ['quality', 'freshness'],
+        'career': ['confirmed_revenue', 'quality'],
+        'trading': ['sports_profit', 'confirmed_revenue', 'quality'],
+        'general': ['quality'],
+    }
+
+    # Allocation bounds (tighter than PortfolioAllocator to avoid conflict)
+    FLOOR = 0.75
+    CEILING = 1.25
+    EWMA_ALPHA = 0.3
+
+    # Metric lookback
+    WINDOW_HOURS = 72
+
+    # SystemConfiguration keys
+    KEY_WEIGHTS = 'goal_weights'
+
+    def get_weights(self) -> dict:
+        """Get current objective weights from config or defaults."""
+        from core.models.system import SystemConfiguration
+        try:
+            entry = SystemConfiguration.objects.filter(
+                key=self.KEY_WEIGHTS,
+            ).first()
+            if entry and isinstance(entry.value, dict):
+                return entry.value
+        except Exception:
+            pass
+        return dict(self.DEFAULT_WEIGHTS)
+
+    def set_weights(self, weights: dict) -> dict:
+        """Set objective weights. Normalizes to sum=1.0."""
+        from core.models.system import SystemConfiguration
+
+        total = sum(weights.values())
+        if total <= 0:
+            return {'error': 'Weights must sum to > 0'}
+
+        normalized = {k: round(v / total, 4) for k, v in weights.items()}
+
+        SystemConfiguration.objects.update_or_create(
+            key=self.KEY_WEIGHTS,
+            defaults={
+                'value': normalized,
+                'description': 'Goal-aware allocator objective weights',
+                'category': 'performance',
+            },
+        )
+        return {'weights': normalized, 'normalized': True}
+
+    def compute_metrics(self, now) -> dict:
+        """Compute current system-level objective metrics."""
+        from django.db.models import Sum, Count, Avg
+
+        window = now - timedelta(hours=self.WINDOW_HOURS)
+        metrics = {}
+
+        # Sports profit — total wager P/L from ImpactEvent
+        try:
+            from core.models_impact_events import ImpactEvent
+            sports_impact = ImpactEvent.objects.filter(
+                created_at__gte=window,
+                desk='sports',
+                impact_type='wager_profit',
+            ).aggregate(total=Sum('value_usd'))
+            val = float(sports_impact['total'] or 0)
+            # Normalize: $0 = 0.5, ±$100 = 0/1 (sigmoid-like)
+            metrics['sports_profit'] = max(0, min(1, 0.5 + val / 200))
+        except Exception:
+            metrics['sports_profit'] = 0.5
+
+        # Confirmed revenue
+        try:
+            from core.models_impact_events import ImpactEvent
+            rev = ImpactEvent.objects.filter(
+                created_at__gte=window,
+                impact_type='revenue_confirmed',
+            ).aggregate(total=Sum('value_usd'))
+            val = float(rev['total'] or 0)
+            # Normalize: $0 = 0, $50+ = 1.0
+            metrics['confirmed_revenue'] = min(1.0, val / 50)
+        except Exception:
+            metrics['confirmed_revenue'] = 0.0
+
+        # Content engagement (impact points from content actions)
+        try:
+            from core.models_impact_events import ImpactEvent
+            eng = ImpactEvent.objects.filter(
+                created_at__gte=window,
+                desk='content',
+                impact_type__in=[
+                    'content_action', 'content_save',
+                    'content_export', 'content_share',
+                ],
+            ).aggregate(total=Sum('impact_points'))
+            pts = eng['total'] or 0
+            # Normalize: 0 pts = 0, 50+ pts = 1.0
+            metrics['content_engagement'] = min(1.0, pts / 50)
+        except Exception:
+            metrics['content_engagement'] = 0.0
+
+        # Quality — average quality_score of recent deliverables
+        try:
+            from core.models_deliverables import Deliverable
+            avg_q = Deliverable.objects.filter(
+                created_at__gte=window,
+                quality_score__gt=0,
+            ).aggregate(avg=Avg('quality_score'))
+            metrics['quality'] = float(avg_q['avg'] or 0)
+        except Exception:
+            metrics['quality'] = 0.0
+
+        # Freshness — ratio of published in window vs total unpublished
+        try:
+            from core.models_deliverables import Deliverable
+            published = Deliverable.objects.filter(
+                created_at__gte=window, status='published',
+            ).count()
+            unpublished = Deliverable.objects.filter(
+                status__in=['draft', 'ready'],
+            ).count()
+            total = published + unpublished
+            metrics['freshness'] = (published / max(total, 1))
+        except Exception:
+            metrics['freshness'] = 0.0
+
+        return metrics
+
+    def compute_desk_utility(self, now) -> dict:
+        """
+        Compute utility score per desk based on objective weights
+        and desk-relevant metrics.
+        """
+        weights = self.get_weights()
+        metrics = self.compute_metrics(now)
+
+        desk_scores = {}
+        for desk, objectives in self.DESK_OBJECTIVES.items():
+            # Weighted average of relevant objectives
+            total_weight = 0
+            weighted_sum = 0
+            for obj in objectives:
+                w = weights.get(obj, 0)
+                m = metrics.get(obj, 0)
+                weighted_sum += w * m
+                total_weight += w
+
+            utility = weighted_sum / max(total_weight, 0.001)
+            desk_scores[desk] = {
+                'utility': round(utility, 4),
+                'objectives': {
+                    obj: {
+                        'weight': weights.get(obj, 0),
+                        'metric': round(metrics.get(obj, 0), 4),
+                    }
+                    for obj in objectives
+                },
+            }
+
+        return desk_scores
+
+    def apply_goal_allocations(self, now) -> dict:
+        """
+        Compute goal-derived multipliers and write to SystemConfiguration.
+
+        Returns dict of {desk: {multiplier, utility, prior}}.
+        """
+        from core.models.system import SystemConfiguration
+
+        desk_scores = self.compute_desk_utility(now)
+        adjustments = {}
+
+        for desk, data in desk_scores.items():
+            utility = data['utility']
+
+            # Linear map: utility 0 → floor, utility 1 → ceiling
+            raw_mult = self.FLOOR + (self.CEILING - self.FLOOR) * utility
+
+            # EWMA with prior
+            prior = self._get_prior(desk)
+            if prior is not None:
+                mult = self.EWMA_ALPHA * raw_mult + (1 - self.EWMA_ALPHA) * prior
+            else:
+                mult = raw_mult
+
+            mult = round(max(self.FLOOR, min(self.CEILING, mult)), 3)
+
+            key = f'goal_allocation:{desk}'
+            SystemConfiguration.objects.update_or_create(
+                key=key,
+                defaults={
+                    'value': {
+                        'multiplier': mult,
+                        'utility': utility,
+                        'updated_at': now.isoformat(),
+                    },
+                    'description': (
+                        f"Goal allocation: {desk} — "
+                        f"utility {utility:.3f}, mult {mult}x"
+                    ),
+                    'category': 'performance',
+                },
+            )
+
+            adjustments[desk] = {
+                'multiplier': mult,
+                'utility': utility,
+                'raw_multiplier': round(raw_mult, 3),
+                'prior': prior,
+            }
+
+        return adjustments
+
+    def _get_prior(self, desk: str):
+        """Read prior goal allocation for EWMA."""
+        from core.models.system import SystemConfiguration
+        try:
+            entry = SystemConfiguration.objects.filter(
+                key=f'goal_allocation:{desk}',
+            ).values_list('value', flat=True).first()
+            if entry and isinstance(entry, dict):
+                return entry.get('multiplier')
+        except Exception:
+            pass
+        return None
+
+    def get_goal_report(self, now) -> dict:
+        """Generate goal allocation report for PA/governance."""
+        weights = self.get_weights()
+        metrics = self.compute_metrics(now)
+        desk_scores = self.compute_desk_utility(now)
+
+        # Active allocations
+        from core.models.system import SystemConfiguration
+        active = {}
+        try:
+            entries = SystemConfiguration.objects.filter(
+                key__startswith='goal_allocation:',
+            ).values('key', 'value')
+            for e in entries:
+                desk = e['key'].replace('goal_allocation:', '')
+                active[desk] = e['value']
+        except Exception:
+            pass
+
+        return {
+            'weights': weights,
+            'metrics': {k: round(v, 4) for k, v in metrics.items()},
+            'desk_scores': desk_scores,
+            'active_allocations': active,
+            'window_hours': self.WINDOW_HOURS,
+            'bounds': {'floor': self.FLOOR, 'ceiling': self.CEILING},
         }
 
 
