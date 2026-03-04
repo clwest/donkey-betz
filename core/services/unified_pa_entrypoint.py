@@ -6364,13 +6364,15 @@ Be concise, conversational, and personalized. Address the user by name."""
             ).exclude(platform='discord')
 
             if self.conversation_id:
-                # Scoped: last 20 exchanges from THIS conversation
+                # Scoped: last 10 exchanges from THIS conversation
+                # (each exchange = user_message + assistant_response = 2 turns,
+                # so 10 rows → 20 turns, matching the history trim limit)
                 recent = qs.filter(
                     conversation_id=self.conversation_id,
-                ).order_by('-created_at')[:20]
+                ).order_by('-created_at')[:10]
             else:
-                # Unscoped fallback: last 10 across all conversations (legacy)
-                recent = qs.order_by('-created_at')[:10]
+                # Unscoped fallback: last 5 across all conversations (legacy)
+                recent = qs.order_by('-created_at')[:5]
 
             # Build history in chronological order (oldest first)
             turns = []
