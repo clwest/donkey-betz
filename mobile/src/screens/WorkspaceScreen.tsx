@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import * as workspaceApi from '../api/workspace';
 import type { Workspace, WorkspaceOperation } from '../api/workspace';
+import { toast } from '../components/Toast';
 
 // ── View state ───────────────────────────────────────────────────────────────
 
@@ -149,8 +150,13 @@ export default function WorkspaceScreen() {
           refreshing={refreshing}
           onRefresh={onRefresh}
           onReview={async (id, approved) => {
-            await workspaceApi.reviewOperation(id, approved);
-            fetchData();
+            try {
+              await workspaceApi.reviewOperation(id, approved);
+              toast.success(approved ? 'Operation approved' : 'Operation rejected');
+              fetchData();
+            } catch {
+              toast.error('Failed to submit review');
+            }
           }}
         />
       )}

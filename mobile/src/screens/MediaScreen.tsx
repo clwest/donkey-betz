@@ -14,6 +14,7 @@ import {
 import * as mediaApi from '../api/media';
 import type { MediaItem } from '../api/media';
 import MediaDetailModal from '../components/MediaDetailModal';
+import { toast } from '../components/Toast';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_GAP = 4;
@@ -48,8 +49,8 @@ export default function MediaScreen() {
         });
         setItems((prev) => (append ? [...prev, ...result.items] : result.items));
         setTotal(result.total);
-      } catch (e) {
-        console.warn('[MediaScreen] fetch error:', e);
+      } catch (e: any) {
+        toast.error('Failed to load media');
       }
     },
     [filter],
