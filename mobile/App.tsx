@@ -54,8 +54,12 @@ function App() {
   useEffect(() => {
     if (status === 'signedIn' && !pushRegistered.current) {
       pushRegistered.current = true;
-      registerPushToken();
-      handleInitialNotification();
+      registerPushToken().catch((err) =>
+        console.warn('[Push] registerPushToken failed:', err),
+      );
+      handleInitialNotification().catch((err) =>
+        console.warn('[Push] handleInitialNotification failed:', err),
+      );
     }
   }, [status]);
 

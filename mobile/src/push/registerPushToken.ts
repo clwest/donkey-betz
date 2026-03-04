@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { registerExpoToken } from '../api/push';
 
@@ -40,8 +41,11 @@ export async function registerPushToken(): Promise<string | null> {
     });
   }
 
-  // Get Expo push token
-  const tokenData = await Notifications.getExpoPushTokenAsync();
+  // Get Expo push token — projectId required for EAS standalone builds
+  const projectId =
+    Constants.expoConfig?.extra?.eas?.projectId ??
+    '5fcd4ff0-bb20-40c6-b9f4-a0a6753a066d';
+  const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
   const token = tokenData.data;
 
   // Skip if already registered with same token

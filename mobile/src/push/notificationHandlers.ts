@@ -27,6 +27,7 @@ export function configureForegroundHandler(): void {
       // will see the result inline or in the Media gallery.
       if (data?.object_type === 'media_complete') {
         return {
+          shouldShowAlert: false,
           shouldShowBanner: false,
           shouldShowList: true,
           shouldPlaySound: false,
@@ -35,6 +36,7 @@ export function configureForegroundHandler(): void {
       }
 
       return {
+        shouldShowAlert: true,
         shouldShowBanner: true,
         shouldShowList: true,
         shouldPlaySound: true,
