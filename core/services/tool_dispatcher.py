@@ -11963,6 +11963,33 @@ RESEARCH DATA:
                 **report,
             }
 
+        elif action == 'backfill_impacts':
+            # Backfill ImpactEvents from historical wagers, deliverables, revenue
+            from core.services.ops_autopilot import ImpactCollector
+            days = payload.get('days', 14)
+            days = min(max(int(days), 1), 90)  # Clamp 1-90
+
+            collector = ImpactCollector()
+            try:
+                result = collector.backfill(days=days)
+            except Exception as e:
+                return {
+                    'action': 'backfill_impacts',
+                    'error': f'Backfill failed: {str(e)[:200]}',
+                }
+
+            return {
+                'action': 'backfill_impacts',
+                'message': (
+                    f"Backfilled {result['total_created']} impact events "
+                    f"over {days} days: "
+                    f"{result['wagers']} wagers, "
+                    f"{result['deliverable_events']} deliverable events, "
+                    f"{result['revenues']} revenues"
+                ),
+                **result,
+            }
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason
