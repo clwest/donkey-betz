@@ -1,10 +1,14 @@
 """
-Session 1080: Ops Autopilot — automated incident response with governance guardrails.
+Ops Autopilot v2 — autonomous ops with governance guardrails.
 
-Narrow, allowlisted actions with TTL-based reversibility:
+Policies (v1 — Session 1080):
   1. Timeout spike containment: auto-block agents with high TIMEOUT signature counts
   2. Blocked-agent hygiene: flag agents blocked too long without TTL
-  3. Post-deploy watch: run SLOs since deploy, surface verdict
+
+Policies (v2 — autonomy push):
+  3. Failed deliberation retry: retry TIMEOUT/LLM_UPSTREAM sessions (transient failures)
+  4. Content pipeline sweep: kick stuck needs_enhancement/pending_review content
+  5. Attention item auto-resolve: dismiss stale ops_autopilot alerts that resolved themselves
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail.
@@ -38,6 +42,19 @@ class AutopilotConfig:
     # Blocked-agent hygiene
     STALE_BLOCK_HOURS = 48               # Flag blocks older than this without TTL
 
+    # Policy 3: Failed deliberation retry
+    DELIBERATION_RETRY_AFTER_MINUTES = 30  # Retry failed sessions older than this
+    DELIBERATION_RETRY_REASONS = {'TIMEOUT', 'LLM_UPSTREAM'}  # Transient failures only
+    MAX_DELIBERATION_RETRIES_PER_CYCLE = 2  # Don't flood the content queue
+
+    # Policy 4: Content pipeline sweep
+    CONTENT_STUCK_HOURS = 6              # Kick content stuck longer than this
+    MAX_CONTENT_KICKS_PER_CYCLE = 3      # Limit per cycle
+
+    # Policy 5: Attention auto-resolve
+    ATTENTION_STALE_HOURS = 12           # Auto-resolve ops alerts older than this
+    ATTENTION_AUTO_RESOLVE_SOURCES = {'ops_autopilot'}  # Only resolve our own alerts
+
     # Mode
     DRY_RUN = False                      # Set True to evaluate but not act
 
@@ -62,9 +79,14 @@ class OpsAutopilot:
 
         self.deploy_sha = self._get_deploy_sha()
 
-        # Run policies
+        # Run policies (v1)
         timeout_results = self._policy_timeout_spike_containment(now)
         hygiene_results = self._policy_blocked_agent_hygiene(now)
+
+        # Run policies (v2 — autonomy)
+        delib_retry_results = self._policy_failed_deliberation_retry(now)
+        content_sweep_results = self._policy_content_pipeline_sweep(now)
+        attention_resolve_results = self._policy_attention_auto_resolve(now)
 
         summary = {
             'cycle_at': now.isoformat(),
@@ -72,6 +94,9 @@ class OpsAutopilot:
             'deploy_sha': self.deploy_sha,
             'timeout_spike': timeout_results,
             'blocked_hygiene': hygiene_results,
+            'deliberation_retry': delib_retry_results,
+            'content_sweep': content_sweep_results,
+            'attention_resolve': attention_resolve_results,
             'actions_taken': len(self.actions_taken),
             'actions': self.actions_taken,
         }
@@ -85,6 +110,9 @@ class OpsAutopilot:
             evidence={
                 'timeout_spike': timeout_results,
                 'blocked_hygiene': hygiene_results,
+                'deliberation_retry': delib_retry_results,
+                'content_sweep': content_sweep_results,
+                'attention_resolve': attention_resolve_results,
             },
             result=summary,
             deploy_sha=self.deploy_sha,
@@ -253,6 +281,344 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] blocked hygiene policy error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    # ── Policy 3: Failed deliberation retry ─────────────────────────────
+
+    def _policy_failed_deliberation_retry(self, now) -> dict:
+        """Retry deliberation sessions that failed with transient errors."""
+        from core.models_deliberation import DeliberationSession
+
+        result = {'evaluated': True, 'retried': 0, 'skipped': 0}
+        cutoff = now - timedelta(minutes=AutopilotConfig.DELIBERATION_RETRY_AFTER_MINUTES)
+
+        try:
+            # Find failed sessions with retryable reason codes, old enough to retry
+            candidates = DeliberationSession.objects.filter(
+                status='failed',
+                failure_reason_code__in=AutopilotConfig.DELIBERATION_RETRY_REASONS,
+                created_at__lte=cutoff,
+            ).order_by('created_at')[:AutopilotConfig.MAX_DELIBERATION_RETRIES_PER_CYCLE * 2]
+
+            retried = 0
+            for session in candidates:
+                if retried >= AutopilotConfig.MAX_DELIBERATION_RETRIES_PER_CYCLE:
+                    break
+
+                # Check if we already retried this session recently
+                already_retried = AutopilotAction.objects.filter(
+                    action_type='retry_deliberation',
+                    policy='failed_deliberation_retry',
+                    dry_run=False,
+                    created_at__gte=now - timedelta(hours=2),
+                    evidence__session_id=str(session.id),
+                ).exists()
+
+                if already_retried:
+                    result['skipped'] += 1
+                    continue
+
+                # Extract the topic from the objective
+                topic = session.objective or ''
+                # Strip review conversation prefixes
+                if 'Content Review for:' in topic:
+                    topic = topic.split('Content Review for:')[1].split('\n')[0].strip()
+
+                if not topic or len(topic) < 10:
+                    result['skipped'] += 1
+                    continue
+
+                evidence = {
+                    'session_id': str(session.id),
+                    'failure_reason_code': session.failure_reason_code,
+                    'failure_detail': (session.failure_detail or '')[:200],
+                    'original_created_at': session.created_at.isoformat(),
+                    'topic': topic[:200],
+                }
+
+                action_record = {
+                    'type': 'retry_deliberation',
+                    'session_id': str(session.id),
+                    'topic': topic[:200],
+                    'reason': session.failure_reason_code,
+                    'dry_run': self.dry_run,
+                }
+
+                if not self.dry_run:
+                    # Dispatch a new deliberation task via Celery
+                    try:
+                        from core.tasks import generate_self_blog_deliberation_task
+                        task = generate_self_blog_deliberation_task.delay(
+                            topic_category=topic[:200]
+                        )
+                        action_record['celery_task_id'] = str(task.id)
+                        logger.info(
+                            f"[OpsAutopilot] RETRIED deliberation for: {topic[:60]} "
+                            f"(was {session.failure_reason_code})"
+                        )
+                    except Exception as e:
+                        logger.warning(f"[OpsAutopilot] Retry dispatch failed: {e}")
+                        action_record['dispatch_error'] = str(e)[:200]
+                else:
+                    logger.info(
+                        f"[OpsAutopilot] DRY RUN: would retry deliberation: {topic[:60]}"
+                    )
+
+                AutopilotAction.objects.create(
+                    action_type='retry_deliberation' if not self.dry_run else 'dry_run',
+                    agent_name='ContentDeliberation',
+                    policy='failed_deliberation_retry',
+                    dry_run=self.dry_run,
+                    evidence=evidence,
+                    result=action_record,
+                    deploy_sha=self.deploy_sha,
+                )
+                self.actions_taken.append(action_record)
+                retried += 1
+
+            result['retried'] = retried
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] deliberation retry policy error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    # ── Policy 4: Content pipeline sweep ──────────────────────────────
+
+    def _policy_content_pipeline_sweep(self, now) -> dict:
+        """Kick content stuck in needs_enhancement or pending_review too long."""
+        from core.models_unified_system import SelfBlog
+
+        result = {'evaluated': True, 'kicked_enhance': 0, 'kicked_review': 0}
+        stuck_cutoff = now - timedelta(hours=AutopilotConfig.CONTENT_STUCK_HOURS)
+        kicked = 0
+
+        try:
+            # Find blogs stuck in needs_enhancement
+            stuck_enhance = SelfBlog.objects.filter(
+                status='needs_enhancement',
+                created_at__lte=stuck_cutoff,
+            ).order_by('created_at')[:AutopilotConfig.MAX_CONTENT_KICKS_PER_CYCLE]
+
+            for blog in stuck_enhance:
+                if kicked >= AutopilotConfig.MAX_CONTENT_KICKS_PER_CYCLE:
+                    break
+
+                # Check if we already kicked this blog recently
+                already_kicked = AutopilotAction.objects.filter(
+                    action_type='content_sweep',
+                    policy='content_pipeline_sweep',
+                    dry_run=False,
+                    created_at__gte=now - timedelta(hours=6),
+                    evidence__blog_id=str(blog.id),
+                ).exists()
+
+                if already_kicked:
+                    continue
+
+                evidence = {
+                    'blog_id': str(blog.id),
+                    'title': (blog.title or '')[:100],
+                    'status': blog.status,
+                    'created_at': blog.created_at.isoformat() if blog.created_at else '',
+                    'stuck_hours': round((now - blog.created_at).total_seconds() / 3600, 1),
+                }
+
+                action_record = {
+                    'type': 'content_sweep',
+                    'blog_id': str(blog.id),
+                    'action': 'trigger_enhance',
+                    'dry_run': self.dry_run,
+                }
+
+                if not self.dry_run:
+                    try:
+                        from core.tasks import auto_enhance_blogs
+                        task = auto_enhance_blogs.delay(limit=1)
+                        action_record['celery_task_id'] = str(task.id)
+                        logger.info(
+                            f"[OpsAutopilot] KICKED enhance for stuck blog: "
+                            f"{blog.title[:50]} (stuck {evidence['stuck_hours']}h)"
+                        )
+                    except Exception as e:
+                        action_record['dispatch_error'] = str(e)[:200]
+
+                AutopilotAction.objects.create(
+                    action_type='content_sweep' if not self.dry_run else 'dry_run',
+                    agent_name='ContentPipeline',
+                    policy='content_pipeline_sweep',
+                    dry_run=self.dry_run,
+                    evidence=evidence,
+                    result=action_record,
+                    deploy_sha=self.deploy_sha,
+                )
+                self.actions_taken.append(action_record)
+                kicked += 1
+                result['kicked_enhance'] += 1
+
+            # Find blogs stuck in pending_review (never scored)
+            stuck_review = SelfBlog.objects.filter(
+                status='pending_review',
+                quality_score__isnull=True,
+                created_at__lte=stuck_cutoff,
+            ).order_by('created_at')[:AutopilotConfig.MAX_CONTENT_KICKS_PER_CYCLE - kicked]
+
+            for blog in stuck_review:
+                if kicked >= AutopilotConfig.MAX_CONTENT_KICKS_PER_CYCLE:
+                    break
+
+                evidence = {
+                    'blog_id': str(blog.id),
+                    'title': (blog.title or '')[:100],
+                    'status': blog.status,
+                    'stuck_hours': round((now - blog.created_at).total_seconds() / 3600, 1),
+                }
+
+                action_record = {
+                    'type': 'content_sweep',
+                    'blog_id': str(blog.id),
+                    'action': 'trigger_score',
+                    'dry_run': self.dry_run,
+                }
+
+                if not self.dry_run:
+                    try:
+                        from core.tasks import reevaluate_enhanced_blogs
+                        task = reevaluate_enhanced_blogs.delay(limit=5)
+                        action_record['celery_task_id'] = str(task.id)
+                        logger.info(
+                            f"[OpsAutopilot] KICKED scoring for stuck blog: "
+                            f"{blog.title[:50]}"
+                        )
+                    except Exception as e:
+                        action_record['dispatch_error'] = str(e)[:200]
+
+                AutopilotAction.objects.create(
+                    action_type='content_sweep' if not self.dry_run else 'dry_run',
+                    agent_name='ContentPipeline',
+                    policy='content_pipeline_sweep',
+                    dry_run=self.dry_run,
+                    evidence=evidence,
+                    result=action_record,
+                    deploy_sha=self.deploy_sha,
+                )
+                self.actions_taken.append(action_record)
+                kicked += 1
+                result['kicked_review'] += 1
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] content sweep policy error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    # ── Policy 5: Attention item auto-resolve ─────────────────────────
+
+    def _policy_attention_auto_resolve(self, now) -> dict:
+        """Auto-resolve stale ops_autopilot attention items that resolved themselves."""
+        from core.models_human_interface import HumanAttentionItem
+        from core.models_unified_system import AgentControlEntry
+
+        result = {'evaluated': True, 'resolved': 0}
+        stale_cutoff = now - timedelta(hours=AutopilotConfig.ATTENTION_STALE_HOURS)
+
+        try:
+            # Find pending ops_autopilot alerts that are stale
+            stale_alerts = HumanAttentionItem.objects.filter(
+                status='pending',
+                source_type__in=AutopilotConfig.ATTENTION_AUTO_RESOLVE_SOURCES,
+                created_at__lte=stale_cutoff,
+            ).order_by('created_at')[:20]
+
+            currently_blocked = AgentControlEntry.get_blocked_names()
+
+            for item in stale_alerts:
+                # Determine if the underlying issue resolved itself
+                should_resolve = False
+                resolve_reason = ''
+                agent_name = ''
+
+                payload = item.payload or {}
+                agent_name = payload.get('agent_name', '')
+
+                # If the alert was about a blocked agent that's now unblocked → resolve
+                if 'blocked' in (item.title or '').lower() and agent_name:
+                    if agent_name not in currently_blocked:
+                        should_resolve = True
+                        resolve_reason = (
+                            f"Auto-resolved: {agent_name} is no longer blocked "
+                            f"(TTL expired or manually unblocked)"
+                        )
+
+                # If the alert is a stale hygiene flag older than 24h → resolve
+                if not should_resolve and payload.get('policy') == 'blocked_agent_hygiene':
+                    age_hours = (now - item.created_at).total_seconds() / 3600
+                    if age_hours > 24:
+                        should_resolve = True
+                        resolve_reason = f"Auto-resolved: hygiene alert aged out ({round(age_hours)}h)"
+
+                # Generic: any ops_autopilot alert > ATTENTION_STALE_HOURS → resolve
+                if not should_resolve:
+                    age_hours = (now - item.created_at).total_seconds() / 3600
+                    if age_hours > AutopilotConfig.ATTENTION_STALE_HOURS * 2:
+                        should_resolve = True
+                        resolve_reason = (
+                            f"Auto-resolved: alert aged {round(age_hours)}h "
+                            f"without human action"
+                        )
+
+                if not should_resolve:
+                    continue
+
+                evidence = {
+                    'attention_item_id': str(item.id),
+                    'title': (item.title or '')[:150],
+                    'agent_name': agent_name,
+                    'resolve_reason': resolve_reason,
+                    'age_hours': round((now - item.created_at).total_seconds() / 3600, 1),
+                }
+
+                action_record = {
+                    'type': 'auto_resolve',
+                    'attention_item_id': str(item.id),
+                    'reason': resolve_reason,
+                    'dry_run': self.dry_run,
+                }
+
+                if not self.dry_run:
+                    item.status = 'ignored'
+                    item.decision = 'auto_resolve'
+                    item.decision_feedback = resolve_reason[:255]
+                    item.decided_at = now
+                    item.save(update_fields=[
+                        'status', 'decision', 'decision_feedback', 'decided_at'
+                    ])
+                    logger.info(
+                        f"[OpsAutopilot] AUTO-RESOLVED attention item: "
+                        f"{item.title[:60]} — {resolve_reason[:60]}"
+                    )
+                else:
+                    logger.info(
+                        f"[OpsAutopilot] DRY RUN: would resolve: {item.title[:60]}"
+                    )
+
+                AutopilotAction.objects.create(
+                    action_type='auto_resolve' if not self.dry_run else 'dry_run',
+                    agent_name=agent_name,
+                    policy='attention_auto_resolve',
+                    dry_run=self.dry_run,
+                    evidence=evidence,
+                    result=action_record,
+                    deploy_sha=self.deploy_sha,
+                )
+                self.actions_taken.append(action_record)
+                result['resolved'] += 1
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] attention auto-resolve policy error: {e}")
             result['error'] = str(e)
 
         return result
