@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   ActivityIndicator,
-  Clipboard,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -62,8 +61,7 @@ export default function ScreenState({
         <TouchableOpacity
           style={styles.copyErrorBtn}
           onPress={() => {
-            Clipboard.setString(error);
-            toast.info('Error copied');
+            toast.info(error);
           }}
         >
           <Text style={styles.copyErrorText}>Copy Error</Text>
@@ -136,10 +134,7 @@ export class ScreenErrorBoundary extends React.Component<ErrorBoundaryProps, Err
           <TouchableOpacity
             style={styles.copyErrorBtn}
             onPress={() => {
-              Clipboard.setString(
-                `Screen: ${this.props.screenName}\nError: ${this.state.error}`,
-              );
-              toast.info('Error copied');
+              toast.info(`${this.props.screenName}: ${this.state.error}`);
             }}
           >
             <Text style={styles.copyErrorText}>Copy Error</Text>
