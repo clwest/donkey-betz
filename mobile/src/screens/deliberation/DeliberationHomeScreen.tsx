@@ -16,6 +16,7 @@ import {
   type DeliberationSession,
   type SessionDetail,
 } from '../../api/deliberation';
+import CopyId from '../../components/CopyId';
 
 // ── Reason code labels & colors ──────────────────────────────────────────────
 
@@ -83,7 +84,7 @@ export default function DeliberationHomeScreen() {
           onPress={() => setTab('failures')}
         >
           <Text style={[styles.tabText, tab === 'failures' && styles.tabTextActive]}>
-            Failures (24h)
+            Failures
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -107,25 +108,29 @@ export default function DeliberationHomeScreen() {
 
 // ── Failures Tab ─────────────────────────────────────────────────────────────
 
+const TIME_WINDOWS = [24, 168] as const; // 24h, 7d
+const TIME_LABELS: Record<number, string> = { 24: '24h', 168: '7d' };
+
 function FailuresTab({ onSelect }: { onSelect: (id: string) => void }) {
   const [stats, setStats] = useState<FailureStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [hours, setHours] = useState<number>(24);
 
-  const fetch = useCallback(async () => {
+  const fetchStats = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const data = await getFailureStats(24);
+      const data = await getFailureStats(hours);
       setStats(data);
     } catch (e: any) {
       setError(e?.message ?? 'Failed to load');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [hours]);
 
-  useEffect(() => { fetch(); }, [fetch]);
+  useEffect(() => { fetchStats(); }, [fetchStats]);
 
   if (loading && !stats) {
     return <Text style={styles.muted}>Loading failure stats...</Text>;
@@ -142,8 +147,23 @@ function FailuresTab({ onSelect }: { onSelect: (id: string) => void }) {
     <ScrollView
       style={styles.scrollFlex}
       contentContainerStyle={styles.scrollContent}
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={fetch} tintColor="#6366f1" />}
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchStats} tintColor="#6366f1" />}
     >
+      {/* Time window selector */}
+      <View style={styles.windowRow}>
+        {TIME_WINDOWS.map((w) => (
+          <TouchableOpacity
+            key={w}
+            style={[styles.windowBtn, hours === w && styles.windowBtnActive]}
+            onPress={() => setHours(w)}
+          >
+            <Text style={[styles.windowText, hours === w && styles.windowTextActive]}>
+              {TIME_LABELS[w]}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       {/* Summary cards */}
       <View style={styles.statsRow}>
         <StatCard label="Total" value={String(stats.total_sessions)} color="#d1d5db" />
@@ -325,9 +345,12 @@ function SessionDetailView({ sessionId, onBack }: { sessionId: string; onBack: (
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-        <Text style={styles.backText}>Back</Text>
-      </TouchableOpacity>
+      <View style={styles.detailTopRow}>
+        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+          <Text style={styles.backText}>Back</Text>
+        </TouchableOpacity>
+        <CopyId value={sessionId} label="Session ID" />
+      </View>
 
       {/* Header */}
       <View style={styles.detailHeader}>
@@ -417,7 +440,12 @@ function SessionDetailView({ sessionId, onBack }: { sessionId: string; onBack: (
       {session.trace_id ? (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Trace</Text>
-          <Text style={styles.detailBody} selectable>{session.trace_id}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={styles.detailBody} selectable numberOfLines={1}>
+              {session.trace_id}
+            </Text>
+            <CopyId value={session.trace_id} label="Trace ID" showValue={false} />
+          </View>
         </View>
       ) : null}
 
@@ -515,8 +543,16 @@ const styles = StyleSheet.create({
   sessionMeta: { color: '#9ca3af', fontSize: 11, flex: 1 },
   blogLink: { color: '#818cf8', fontSize: 11, marginTop: 6 },
 
+  // Time window selector
+  windowRow: { flexDirection: 'row', gap: 6, marginBottom: 12 },
+  windowBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6, backgroundColor: '#1a1a2e' },
+  windowBtnActive: { backgroundColor: '#6366f122', borderWidth: 1, borderColor: '#6366f1' },
+  windowText: { color: '#6b7280', fontSize: 12, fontWeight: '600' },
+  windowTextActive: { color: '#818cf8' },
+
   // Detail view
-  backBtn: { paddingHorizontal: 14, paddingVertical: 12 },
+  detailTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14 },
+  backBtn: { paddingVertical: 12 },
   backText: { color: '#6366f1', fontSize: 15, fontWeight: '600' },
   detailHeader: {
     flexDirection: 'row', alignItems: 'center', gap: 10,

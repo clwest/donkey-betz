@@ -14,6 +14,7 @@ import {
 } from './src/push/notificationHandlers';
 import { initSentry, setSentryUser, SentryErrorBoundary } from './src/observability/sentry';
 import OfflineBanner from './src/observability/OfflineBanner';
+import ToastBanner from './src/components/Toast';
 
 // Initialize Sentry before any rendering
 initSentry();
@@ -77,6 +78,7 @@ function App() {
     <GestureHandlerRootView style={styles.root}>
       <OfflineBanner />
       <AppNavigator />
+      <ToastBanner />
       <StatusBar style="light" />
     </GestureHandlerRootView>
   );

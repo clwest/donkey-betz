@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import type { AttentionItem } from '../../api/boardroom';
 import * as boardroomApi from '../../api/boardroom';
+import CopyId from '../../components/CopyId';
+import { toast } from '../../components/Toast';
 
 interface Props {
   itemId: string;
@@ -20,30 +22,34 @@ interface Props {
 export default function AttentionDetail({ itemId, canMutate, onBack }: Props) {
   const [item, setItem] = useState<AttentionItem | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [acting, setActing] = useState(false);
 
-  const fetch = useCallback(async () => {
+  const fetchItem = useCallback(async () => {
     try {
       const res = await boardroomApi.getAttention(itemId);
       setItem(res.item);
     } catch {
-      Alert.alert('Error', 'Failed to load attention item');
+      toast.error('Failed to load attention item');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [itemId]);
 
-  useEffect(() => { fetch(); }, [fetch]);
+  useEffect(() => { fetchItem(); }, [fetchItem]);
+
+  const onRefresh = () => { setRefreshing(true); fetchItem(); };
 
   const handleDecide = async (decision: string) => {
     if (acting) return;
     setActing(true);
     try {
       await boardroomApi.decideAttention(itemId, decision);
-      Alert.alert('Done', `Item ${decision}`);
+      toast.success(`Item ${decision}`);
       onBack();
     } catch {
-      Alert.alert('Error', `Failed to ${decision} item`);
+      toast.error(`Failed to ${decision} item`);
     } finally {
       setActing(false);
     }
@@ -71,11 +77,18 @@ export default function AttentionDetail({ itemId, canMutate, onBack }: Props) {
   const u = urgencyStyle(item.urgency);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Back button */}
-      <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-        <Text style={styles.backText}>Back</Text>
-      </TouchableOpacity>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#818cf8" />}
+    >
+      {/* Back button + ID */}
+      <View style={styles.topRow}>
+        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+          <Text style={styles.backText}>Back</Text>
+        </TouchableOpacity>
+        <CopyId value={itemId} label="Item ID" />
+      </View>
 
       {/* Header */}
       <View style={styles.headerRow}>
@@ -136,25 +149,30 @@ export default function AttentionDetail({ itemId, canMutate, onBack }: Props) {
 
       {/* Actions */}
       {item.status === 'pending' && (
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.approveBtn, !canMutate && styles.disabledBtn]}
-            onPress={() => canMutate && handleDecide('approved')}
-            disabled={!canMutate || acting}
-          >
-            <Text style={styles.actionText}>
-              {canMutate ? 'Approve' : 'Approve (no permission)'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.ignoreBtn, !canMutate && styles.disabledBtn]}
-            onPress={() => canMutate && handleDecide('ignored')}
-            disabled={!canMutate || acting}
-          >
-            <Text style={styles.actionText}>
-              {canMutate ? 'Ignore' : 'Ignore (no permission)'}
-            </Text>
-          </TouchableOpacity>
+        <View style={styles.actionsWrap}>
+          <View style={styles.actions}>
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.approveBtn, !canMutate && styles.disabledBtn]}
+              onPress={() => canMutate && handleDecide('approved')}
+              disabled={!canMutate || acting}
+            >
+              {acting ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <Text style={styles.actionText}>Approve</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.ignoreBtn, !canMutate && styles.disabledBtn]}
+              onPress={() => canMutate && handleDecide('ignored')}
+              disabled={!canMutate || acting}
+            >
+              <Text style={styles.actionText}>Ignore</Text>
+            </TouchableOpacity>
+          </View>
+          {!canMutate && (
+            <Text style={styles.rbacHint}>Requires admin or owner role</Text>
+          )}
         </View>
       )}
 
@@ -188,7 +206,8 @@ const styles = StyleSheet.create({
   errorText: { color: '#ef4444', fontSize: 15, marginBottom: 8 },
   linkText: { color: '#6366f1', fontSize: 14, fontWeight: '600' },
 
-  backBtn: { marginBottom: 12 },
+  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  backBtn: {},
   backText: { color: '#6366f1', fontSize: 14, fontWeight: '600' },
 
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
@@ -211,10 +230,12 @@ const styles = StyleSheet.create({
   metaLabel: { color: '#6b7280', fontSize: 13 },
   metaValue: { color: '#d1d5db', fontSize: 13, fontWeight: '500', maxWidth: '60%', textAlign: 'right' },
 
-  actions: { flexDirection: 'row', gap: 10, marginTop: 16 },
+  actionsWrap: { marginTop: 16 },
+  actions: { flexDirection: 'row', gap: 10 },
   actionBtn: { flex: 1, paddingVertical: 14, borderRadius: 10, alignItems: 'center' },
   approveBtn: { backgroundColor: '#22c55e' },
   ignoreBtn: { backgroundColor: '#6b7280' },
   disabledBtn: { opacity: 0.4 },
   actionText: { color: '#ffffff', fontSize: 15, fontWeight: '700' },
+  rbacHint: { color: '#6b7280', fontSize: 11, textAlign: 'center', marginTop: 6 },
 });
