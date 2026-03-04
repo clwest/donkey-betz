@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-03-03 18:58
+**Generated:** 2026-03-03 19:11
 **Current Session:** 1075
 **Total Documentation:** 1817 files | 621,945 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,202 |
+| Total cross-references | 2,199 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -216,7 +216,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 360 | 2026-03-03 18:49 |
+| INDEX.md | docs | 360 | 2026-03-03 18:58 |
 | stage3_timeline.md | initiatives | 71 | 2026-03-03 12:55 |
 | stage3_rubric_runbook.md | initiatives | 105 | 2026-03-03 12:55 |
 | stage3_dashboard_spec.md | initiatives | 315 | 2026-03-03 12:55 |

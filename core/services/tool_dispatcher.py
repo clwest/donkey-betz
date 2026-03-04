@@ -11914,6 +11914,55 @@ RESEARCH DATA:
                 **report,
             }
 
+        elif action == 'portfolio_report':
+            # Show IQROI per desk and portfolio allocations
+            from core.services.ops_autopilot import PortfolioAllocator
+            from django.utils import timezone as tz
+            allocator = PortfolioAllocator()
+            try:
+                report = allocator.get_portfolio_report(tz.now())
+            except Exception as e:
+                return {
+                    'action': 'portfolio_report',
+                    'error': f'Portfolio report failed: {str(e)[:200]}',
+                }
+
+            report_lines = ['## Portfolio Allocation Report\n']
+            report_lines.append(
+                f'**Window:** {report["window_hours"]}h — '
+                f'**Total impact:** ${report["total_impact_usd"]:.2f} — '
+                f'**Total cost:** ${report["total_cost_usd"]:.2f} — '
+                f'**Events:** {report["total_events"]}'
+            )
+
+            if report.get('desks'):
+                report_lines.append('\n### Desk IQROI (best → worst)')
+                for desk, data in report['desks'].items():
+                    report_lines.append(
+                        f'- **{desk}**: '
+                        f'IQROI {data["iqroi"]:.2f} — '
+                        f'allocation {data["allocation"]}x — '
+                        f'${data["impact_usd"]:.2f} impact + '
+                        f'{data["impact_points"]} pts / '
+                        f'${data["cost_usd"]:.4f} cost — '
+                        f'{data["events"]} events'
+                    )
+
+            if report.get('active_allocations'):
+                report_lines.append('\n### Active Allocations')
+                for desk, alloc in report['active_allocations'].items():
+                    report_lines.append(
+                        f'- **{desk}**: '
+                        f'{alloc.get("allocation", 1.0)}x '
+                        f'(IQROI {alloc.get("iqroi", 0):.2f})'
+                    )
+
+            return {
+                'action': 'portfolio_report',
+                'report': '\n'.join(report_lines),
+                **report,
+            }
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason
