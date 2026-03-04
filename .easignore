@@ -1,0 +1,36 @@
+# EAS Build — ignore files not needed for native builds.
+# This file MUST live at the git root (not mobile/).
+# EAS re-installs node_modules on the server.
+
+# Mobile dependencies + build output
+mobile/node_modules/
+mobile/dist/
+mobile/.expo/
+
+# Backend (not needed for mobile builds)
+.venv/
+__pycache__/
+*.pyc
+core/
+ai_core/
+frontend/
+docs/
+tools/
+scripts/
+templates/
+static/
+*.sqlite3
+
+# Dev tooling
+.vscode/
+.idea/
+.git/
+
+# Test files
+__tests__/
+*.test.ts
+*.test.tsx
+coverage/
+
+# macOS cruft
+.DS_Store
