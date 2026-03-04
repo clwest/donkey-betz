@@ -5573,9 +5573,9 @@ Address the user by name occasionally."""
                         return response
 
                     elif action == 'detail':
-                        title = tool_result.get('title', 'Untitled')
-                        dtype = tool_result.get('deliverable_type', '')
-                        agent = tool_result.get('agent_name', '')
+                        title = tool_result.get('title', 'Untitled Deliverable')
+                        dtype = tool_result.get('deliverable_type', 'document')
+                        agent = tool_result.get('agent_name', 'System')
                         preview = tool_result.get('content_preview', '')
                         score = tool_result.get('quality_score', 0)
                         saved = 'Yes' if tool_result.get('is_saved') else 'No'
@@ -5583,7 +5583,8 @@ Address the user by name occasionally."""
 
                         response = f"**{title}**\n\n"
                         response += f"- **Type:** {dtype}\n"
-                        response += f"- **Agent:** {agent}\n"
+                        if agent:
+                            response += f"- **Agent:** {agent}\n"
                         response += f"- **Quality:** {score:.1f}\n"
                         response += f"- **Saved:** {saved}\n"
                         if tags:

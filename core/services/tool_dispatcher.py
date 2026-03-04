@@ -1358,6 +1358,18 @@ class ToolDispatcher:
             'agent_name', 'quality_score', 'is_saved', 'created_at',
         )
 
+        def _sanitize_deliverable(d: dict) -> dict:
+            """Fill empty deliverable fields with sensible defaults."""
+            if not (d.get('title') or '').strip():
+                d['title'] = 'Untitled Deliverable'
+            if not (d.get('agent_name') or '').strip():
+                d['agent_name'] = 'System'
+            if not (d.get('category') or '').strip():
+                d['category'] = 'General'
+            if not (d.get('deliverable_type') or '').strip():
+                d['deliverable_type'] = 'document'
+            return d
+
         def _resolve_deliverable(qs, payload, action_name):
             """Resolve a deliverable by id OR title. Returns (obj, None) or (None, error_dict)."""
             did = payload.get('id')
@@ -1398,9 +1410,10 @@ class ToolDispatcher:
             qs = _apply_common_filters(base_qs)
             total = qs.count()
 
-            items = list(
+            items = [
+                _sanitize_deliverable(d) for d in
                 qs.order_by('-created_at')[offset:offset + limit].values(*_LIST_FIELDS)
-            )
+            ]
             return {
                 'action': 'list', 'total': total, 'offset': offset,
                 'limit': limit, 'count': len(items), 'items': items,
@@ -1414,9 +1427,10 @@ class ToolDispatcher:
             qs = _apply_common_filters(base_qs.filter(title__icontains=query))
             total = qs.count()
 
-            items = list(
+            items = [
+                _sanitize_deliverable(d) for d in
                 qs.order_by('-created_at')[offset:offset + limit].values(*_LIST_FIELDS)
-            )
+            ]
             return {
                 'action': 'search', 'query': query, 'total': total,
                 'offset': offset, 'limit': limit, 'count': len(items), 'items': items,
@@ -1443,7 +1457,7 @@ class ToolDispatcher:
             # deliverables completely. Cap at 8000 chars to stay within
             # reasonable tool-result size for the LLM context window.
             full_content = obj.content or ''
-            return {
+            return _sanitize_deliverable({
                 'action': 'detail',
                 'id': str(obj.id),
                 'title': obj.title,
@@ -1460,7 +1474,7 @@ class ToolDispatcher:
                 'status': obj.status,
                 'tags': obj.tags or [],
                 'created_at': obj.created_at.isoformat() if obj.created_at else None,
-            }
+            })
 
         elif action == 'save':
             obj, disambiguation = _resolve_deliverable(base_qs, payload, 'save')
