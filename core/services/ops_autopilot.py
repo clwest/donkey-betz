@@ -4202,6 +4202,48 @@ class ImpactCollector:
 
         return results
 
+    def backfill(self, days=14) -> dict:
+        """
+        Backfill ImpactEvents for the last N days.
+        Idempotent — skips events that already exist (keyed on
+        source_object_type + source_object_id).
+        """
+        from django.utils import timezone as tz
+        now = tz.now()
+        window_start = now - timedelta(days=days)
+
+        results = {'wagers': 0, 'deliverable_events': 0, 'revenues': 0}
+
+        try:
+            results['wagers'] = self._collect_wager_impacts(window_start)
+        except Exception as e:
+            logger.error(f"[ImpactCollector] Backfill wager error: {e}")
+
+        try:
+            results['deliverable_events'] = (
+                self._collect_deliverable_impacts(window_start)
+            )
+        except Exception as e:
+            logger.error(f"[ImpactCollector] Backfill deliverable error: {e}")
+
+        try:
+            results['revenues'] = self._collect_revenue_impacts(window_start)
+        except Exception as e:
+            logger.error(f"[ImpactCollector] Backfill revenue error: {e}")
+
+        results['total_created'] = sum(results.values())
+        results['backfill_days'] = days
+
+        logger.info(
+            f"[ImpactCollector] Backfill {days}d: "
+            f"{results['total_created']} events created "
+            f"(wagers={results['wagers']}, "
+            f"deliverables={results['deliverable_events']}, "
+            f"revenues={results['revenues']})"
+        )
+
+        return results
+
     def _collect_wager_impacts(self, window_start) -> int:
         """Convert settled wagers to ImpactEvents."""
         from core.models_bankroll import Wager
@@ -4368,21 +4410,31 @@ class ImpactCollector:
 
 class PortfolioAllocator:
     """
-    Session 1089: Autonomy #8 — Allocates budget and scheduling priority
-    across desks/pipelines based on Impact-adjusted QROI (IQROI).
+    Session 1089: Autonomy #8/#9 — Allocates budget and scheduling
+    priority across desks/pipelines based on Impact-adjusted QROI (IQROI).
 
     IQROI = (impact_value_usd + impact_points × point_usd_value) / cost_usd
 
-    Desks with high IQROI get:
-    - Increased budget headroom (spend cap multiplier)
-    - Higher scheduling priority (longer deferral threshold)
-    - Larger deliberation panels
-
-    Desks with zero/negative IQROI get deprioritized.
+    Guardrails (Session 1089 — smoothing):
+    - MIN_EVENTS: minimum impact events before reallocating (prevents noise)
+    - MIN_COST_USD: minimum spend before reallocating (ignore trivial desks)
+    - ALLOCATION_FLOOR / CEILING: bounds to prevent starvation or runaway
+    - EWMA smoothing: blend new IQROI with prior allocation to avoid swings
     """
 
     # Default impact-point-to-USD conversion (1 point ≈ $0.10)
     POINT_USD_VALUE = 0.10
+
+    # Minimum thresholds before we deviate from neutral allocation
+    MIN_EVENTS = 3       # Need at least 3 impact events to reallocate
+    MIN_COST_USD = 0.05  # Need at least $0.05 spend to be worth tracking
+
+    # Allocation bounds — no desk gets starved or runs away
+    ALLOCATION_FLOOR = 0.5    # Minimum allocation multiplier
+    ALLOCATION_CEILING = 1.5  # Maximum allocation multiplier
+
+    # EWMA smoothing factor (0.3 = 30% new value, 70% prior)
+    EWMA_ALPHA = 0.3
 
     # Desk defaults — scheduling multipliers
     # multiplier > 1.0 = more budget headroom, < 1.0 = throttled
@@ -4501,21 +4553,43 @@ class PortfolioAllocator:
             # IQROI = total_impact / cost (higher = better)
             iqroi = total_impact / max(cost, 0.001)
 
-            # Allocation: scale based on IQROI relative to baseline
+            # Determine raw allocation from IQROI
             # IQROI > 1.0 → producing more value than cost → boost
             # IQROI < 0.5 → underperforming → reduce
-            if iqroi >= 2.0:
-                allocation = 1.5
+            insufficient_data = (
+                events < self.MIN_EVENTS
+                and cost < self.MIN_COST_USD
+            )
+
+            if insufficient_data:
+                raw_allocation = 1.0  # Neutral — not enough data
+            elif iqroi >= 2.0:
+                raw_allocation = 1.5
             elif iqroi >= 1.0:
-                allocation = 1.2
+                raw_allocation = 1.2
             elif iqroi >= 0.5:
-                allocation = 1.0
+                raw_allocation = 1.0
             elif iqroi >= 0.1:
-                allocation = 0.7
-            elif events == 0 and cost == 0:
-                allocation = 1.0  # No data — neutral
+                raw_allocation = 0.7
             else:
-                allocation = 0.5  # Lowest tier
+                raw_allocation = 0.5
+
+            # EWMA smoothing: blend with prior allocation
+            prior = self._get_prior_allocation(desk)
+            if prior is not None and not insufficient_data:
+                allocation = (
+                    self.EWMA_ALPHA * raw_allocation
+                    + (1 - self.EWMA_ALPHA) * prior
+                )
+            else:
+                allocation = raw_allocation
+
+            # Clamp to floor/ceiling
+            allocation = max(
+                self.ALLOCATION_FLOOR,
+                min(self.ALLOCATION_CEILING, allocation),
+            )
+            allocation = round(allocation, 2)
 
             results[desk] = {
                 'iqroi': round(iqroi, 4),
@@ -4525,9 +4599,26 @@ class PortfolioAllocator:
                 'cost_usd': round(cost, 4),
                 'events': events,
                 'allocation': allocation,
+                'raw_allocation': raw_allocation,
+                'insufficient_data': insufficient_data,
             }
 
         return results
+
+    def _get_prior_allocation(self, desk: str) -> float | None:
+        """Read prior allocation from SystemConfiguration for EWMA."""
+        from core.models.system import SystemConfiguration
+
+        try:
+            entry = SystemConfiguration.objects.filter(
+                key=f'desk_allocation:{desk}',
+            ).values_list('value', flat=True).first()
+
+            if entry and isinstance(entry, dict):
+                return entry.get('allocation')
+        except Exception:
+            pass
+        return None
 
     def apply_allocations(self, now) -> list[dict]:
         """

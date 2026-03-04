@@ -2035,7 +2035,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_failure_reasons"],
+                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "backfill_failure_reasons"],
                     "description": (
                         "status: current config, last cycle timestamp, and pending actions. "
                         "history: recent autopilot actions (blocks, attention items, dry runs). "
@@ -2056,6 +2056,8 @@ PA_TOOL_SCHEMAS = [
                         "or downscoped under budget pressure, recent decisions, active knob overrides. "
                         "portfolio_report: show IQROI per desk — impact vs cost across sports/content/research/career "
                         "desks, portfolio allocations (budget headroom multipliers), and collected impact events. "
+                        "backfill_impacts: scan historical wager settlements, deliverable events, and confirmed revenue "
+                        "to create ImpactEvent records for past activity (default 14 days, max 90). Idempotent. "
                         "backfill_failure_reasons: re-classify UNKNOWN failure codes using expanded patterns."
                     ),
                 },
@@ -2066,6 +2068,10 @@ PA_TOOL_SCHEMAS = [
                 "limit": {
                     "type": "integer",
                     "description": "For 'history': max entries to return (default 20, max 100).",
+                },
+                "days": {
+                    "type": "integer",
+                    "description": "For 'backfill_impacts': how many days back to scan (default 14, max 90).",
                 },
             },
             "required": ["action"],
