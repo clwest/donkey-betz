@@ -11601,6 +11601,23 @@ RESEARCH DATA:
                 'proposed_actions': len(proposed),
             }
 
+        elif action == 'drift_scan':
+            # Run contract/schema drift detection on demand
+            from core.services.contract_monitor import ContractMonitor
+            monitor = ContractMonitor()
+            report = monitor.full_scan()
+            summary_text = monitor.summary_for_governance(report)
+            return {
+                'action': 'drift_scan',
+                'critical': report['critical'],
+                'warning': report['warning'],
+                'info': report['info'],
+                'total': report['total'],
+                'checks_run': report['checks_run'],
+                'summary': summary_text,
+                'findings': report['findings'],
+            }
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason
