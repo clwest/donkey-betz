@@ -527,6 +527,7 @@ class AutopilotAction(models.Model):
         ('auto_resolve', 'Auto-resolve Attention Item'),
         ('content_publish', 'Content Auto-Publish'),
         ('remediate', 'Auto-Remediation Applied'),
+        ('config_tune', 'Config Self-Tuning'),
     ]
 
     VERIFICATION_STATES = [
