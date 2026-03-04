@@ -1,5 +1,5 @@
 """
-Ops Autopilot v3 — autonomous ops with governance guardrails.
+Ops Autopilot v4 — autonomous ops with governance guardrails.
 
 Policies (v1 — Session 1080):
   1. Timeout spike containment: auto-block agents with high TIMEOUT signature counts
@@ -17,10 +17,16 @@ Policies (v3 — root-cause autonomy):
   8. Contract/schema drift detection: scan for mismatches between PA tool schemas,
      handler registrations, agent registry, and Celery beat schedule
 
+Policies (v4 — self-tuning):
+  9. Policy self-tuning: PolicyOptimizer analyses action history to auto-adjust
+     config thresholds. Emits changelogs and governance notes for each adjustment.
+     Covers: timeout thresholds, windows, TTLs, cooldowns, max-per-cycle caps.
+
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
 → execute → verify → rollback cycle (ActionVerifier). Successful remediations
-are promoted to RemediationPlaybook for future reuse.
+are promoted to RemediationPlaybook for future reuse. Config tuning changes
+are persisted via SystemConfiguration and always changelog-documented.
 """
 
 import logging
@@ -94,8 +100,49 @@ class AutopilotConfig:
     DRIFT_CHECK_INTERVAL_HOURS = 6        # Only run drift scan every N hours
     DRIFT_ALERT_ON_CRITICAL = True        # Create governance alert for critical drift
 
+    # Policy 9: Self-tuning
+    TUNING_INTERVAL_HOURS = 24            # Only tune once per day
+    TUNING_MAX_CHANGES_PER_CYCLE = 1      # One param change per evaluation
+    TUNING_MAX_CHANGES_PER_DAY = 2        # Hard daily cap
+    TUNING_LOOKBACK_DAYS = 7              # Analyse this much history
+    TUNING_ROLLBACK_RATE_THRESHOLD = 0.3  # >30% rollbacks → go more conservative
+
     # Mode
     DRY_RUN = False                      # Set True to evaluate but not act
+
+    # ── Runtime overrides from SystemConfiguration ──────────────────────
+    # PolicyOptimizer writes tuned values as SystemConfiguration entries
+    # with key = 'autopilot_tuning:{PARAM_NAME}'. This classmethod loads
+    # them once per cycle so policies use the latest values.
+
+    _overrides_loaded = False
+    _override_cache: dict[str, Any] = {}
+
+    @classmethod
+    def load_overrides(cls):
+        """Load tuned parameter overrides from SystemConfiguration."""
+        try:
+            from core.models.system import SystemConfiguration
+            overrides = SystemConfiguration.objects.filter(
+                key__startswith='autopilot_tuning:',
+            ).values_list('key', 'value')
+            cls._override_cache = {}
+            for key, value in overrides:
+                param = key.replace('autopilot_tuning:', '')
+                cls._override_cache[param] = value
+            cls._overrides_loaded = True
+        except Exception:
+            cls._overrides_loaded = True  # Don't retry on table-missing errors
+
+    @classmethod
+    def get(cls, param_name: str):
+        """Get a config value, checking overrides first."""
+        if not cls._overrides_loaded:
+            cls.load_overrides()
+        # Override value takes precedence
+        if param_name in cls._override_cache:
+            return cls._override_cache[param_name]
+        return getattr(cls, param_name, None)
 
 
 # ── Autopilot engine ─────────────────────────────────────────────────────────
@@ -116,6 +163,9 @@ class OpsAutopilot:
         now = timezone.now()
         logger.info(f"[OpsAutopilot] Starting cycle (dry_run={self.dry_run})")
 
+        # Load latest config overrides from SystemConfiguration
+        AutopilotConfig.load_overrides()
+
         self.deploy_sha = self._get_deploy_sha()
 
         # Run policies (v1)
@@ -132,6 +182,9 @@ class OpsAutopilot:
         remediation_results = self._policy_root_cause_remediation(now)
         drift_results = self._policy_contract_drift_detection(now)
 
+        # Run policies (v4 — self-tuning)
+        tuning_results = self._policy_self_tuning(now)
+
         summary = {
             'cycle_at': now.isoformat(),
             'dry_run': self.dry_run,
@@ -144,6 +197,7 @@ class OpsAutopilot:
             'governance_auto': governance_results,
             'remediation': remediation_results,
             'contract_drift': drift_results,
+            'tuning': tuning_results,
             'actions_taken': len(self.actions_taken),
             'actions': self.actions_taken,
         }
@@ -163,6 +217,7 @@ class OpsAutopilot:
                 'governance_auto': governance_results,
                 'remediation': remediation_results,
                 'contract_drift': drift_results,
+                'tuning': tuning_results,
             },
             result=summary,
             deploy_sha=self.deploy_sha,
@@ -183,7 +238,19 @@ class OpsAutopilot:
         from core.models_unified_system import AgentControlEntry
         from django.db.models import Count
 
-        window = now - timedelta(minutes=AutopilotConfig.TIMEOUT_SPIKE_WINDOW_MINUTES)
+        spike_window = (
+            AutopilotConfig.get('TIMEOUT_SPIKE_WINDOW_MINUTES')
+            or AutopilotConfig.TIMEOUT_SPIKE_WINDOW_MINUTES
+        )
+        spike_threshold = (
+            AutopilotConfig.get('TIMEOUT_SPIKE_THRESHOLD')
+            or AutopilotConfig.TIMEOUT_SPIKE_THRESHOLD
+        )
+        block_ttl = (
+            AutopilotConfig.get('TIMEOUT_BLOCK_TTL_MINUTES')
+            or AutopilotConfig.TIMEOUT_BLOCK_TTL_MINUTES
+        )
+        window = now - timedelta(minutes=spike_window)
         result = {'evaluated': True, 'agents_checked': {}, 'blocks_issued': 0}
 
         try:
@@ -209,7 +276,7 @@ class OpsAutopilot:
                 count = entry['count']
                 result['agents_checked'][agent_name] = count
 
-                if count < AutopilotConfig.TIMEOUT_SPIKE_THRESHOLD:
+                if count < spike_threshold:
                     continue
 
                 if agent_name in already_blocked:
@@ -250,8 +317,8 @@ class OpsAutopilot:
                 evidence = {
                     'agent_name': agent_name,
                     'timeout_count': count,
-                    'window_minutes': AutopilotConfig.TIMEOUT_SPIKE_WINDOW_MINUTES,
-                    'threshold': AutopilotConfig.TIMEOUT_SPIKE_THRESHOLD,
+                    'window_minutes': spike_window,
+                    'threshold': spike_threshold,
                     'sample_detections': sample_detections,
                     'deploy_sha': self.deploy_sha,
                 }
@@ -261,10 +328,10 @@ class OpsAutopilot:
                     agent_name=agent_name,
                     reason=(
                         f"Autopilot: {count} timeouts in "
-                        f"{AutopilotConfig.TIMEOUT_SPIKE_WINDOW_MINUTES}min "
-                        f"(threshold={AutopilotConfig.TIMEOUT_SPIKE_THRESHOLD})"
+                        f"{spike_window}min "
+                        f"(threshold={spike_threshold})"
                     ),
-                    ttl_minutes=AutopilotConfig.TIMEOUT_BLOCK_TTL_MINUTES,
+                    ttl_minutes=block_ttl,
                     policy='timeout_spike_containment',
                     evidence=evidence,
                 )
@@ -925,6 +992,113 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] contract drift policy error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    # ── Policy 9: Self-tuning ─────────────────────────────────────────────
+
+    def _policy_self_tuning(self, now) -> dict:
+        """
+        Evaluate policy effectiveness and auto-tune config thresholds.
+
+        Rate-limited to once every TUNING_INTERVAL_HOURS. Emits changelog
+        and governance attention item for each change.
+        """
+        result = {'evaluated': False, 'skipped_reason': ''}
+
+        try:
+            # Rate limit: only tune every N hours
+            cutoff = now - timedelta(
+                hours=AutopilotConfig.get('TUNING_INTERVAL_HOURS')
+                or AutopilotConfig.TUNING_INTERVAL_HOURS
+            )
+            recent_tuning = AutopilotAction.objects.filter(
+                policy='self_tuning',
+                action_type='config_tune',
+                created_at__gte=cutoff,
+            ).exists()
+
+            if recent_tuning:
+                result['skipped_reason'] = (
+                    f'Tuned within last '
+                    f'{AutopilotConfig.TUNING_INTERVAL_HOURS}h'
+                )
+                return result
+
+            # Run the optimizer
+            optimizer = PolicyOptimizer()
+            tuning_report = optimizer.evaluate()
+
+            result['evaluated'] = True
+            result['recommendations'] = tuning_report['recommendations']
+            result['changes_applied'] = 0
+
+            if self.dry_run:
+                result['mode'] = 'dry_run'
+                return result
+
+            # Apply recommendations (capped)
+            changes = optimizer.apply_recommendations(
+                tuning_report['recommendations'],
+                max_changes=AutopilotConfig.TUNING_MAX_CHANGES_PER_CYCLE,
+            )
+
+            result['changes_applied'] = len(changes)
+            result['changes'] = changes
+
+            # Record each change as an AutopilotAction
+            for change in changes:
+                AutopilotAction.objects.create(
+                    action_type='config_tune',
+                    agent_name='PolicyOptimizer',
+                    policy='self_tuning',
+                    dry_run=False,
+                    evidence={
+                        'param': change['param'],
+                        'old_value': change['old_value'],
+                        'new_value': change['new_value'],
+                        'reason': change['reason'],
+                        'metrics': change.get('metrics', {}),
+                    },
+                    result=change,
+                    deploy_sha=self.deploy_sha,
+                )
+
+                # Governance changelog
+                self._create_attention_item(
+                    title=f"Autopilot self-tuned: {change['param']}",
+                    summary=(
+                        f"PolicyOptimizer adjusted **{change['param']}** "
+                        f"from {change['old_value']} → {change['new_value']}.\n\n"
+                        f"**Reason:** {change['reason']}\n"
+                        f"**How to undo:** Set SystemConfiguration key "
+                        f"`autopilot_tuning:{change['param']}` back to "
+                        f"{change['old_value']}, or delete the key to "
+                        f"restore the code default.\n"
+                        f"**Confidence:** {change.get('confidence', 'medium')}"
+                    ),
+                    urgency='low',
+                    policy='self_tuning',
+                    agent_name='PolicyOptimizer',
+                    evidence=change,
+                )
+
+                self.actions_taken.append({
+                    'type': 'config_tune',
+                    'param': change['param'],
+                    'old_value': change['old_value'],
+                    'new_value': change['new_value'],
+                    'reason': change['reason'],
+                })
+
+            logger.info(
+                f"[OpsAutopilot] Self-tuning: {len(changes)} changes applied, "
+                f"{len(tuning_report['recommendations'])} recommendations"
+            )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] self-tuning policy error: {e}")
             result['error'] = str(e)
 
         return result
@@ -2231,3 +2405,401 @@ class RemediationEngine:
             logger.error(
                 f"[RemediationEngine] Rollback failed for {action.id}: {e}"
             )
+
+
+# ── Policy Self-Tuning Engine ────────────────────────────────────────────────
+
+
+class PolicyOptimizer:
+    """
+    Analyses autopilot action history and recommends config adjustments.
+
+    Each tunable parameter has:
+    - safe bounds (min/max) — never exceed these
+    - step size — how much to change per adjustment
+    - direction logic — when to increase vs decrease
+
+    Tuning signals (per policy, last N days):
+    - action_count: how many times the policy acted
+    - rollback_rate: fraction of actions that were rolled back
+    - verification_pass_rate: fraction of verified actions that passed
+    - idle_cycles: how many evaluation cycles the policy produced 0 actions
+
+    Decision matrix:
+    - rollback_rate > 30% → make threshold MORE conservative (raise it)
+    - verification_pass_rate == 100% AND action_count > 5 → can go more aggressive
+    - idle for 7+ days → consider lowering thresholds slightly
+    """
+
+    # Registry of tunable parameters with safe bounds
+    # Format: (default, min, max, step, policy, direction_when_failing)
+    # direction_when_failing: 'up' means raise value when rollbacks are high
+    TUNABLES = {
+        'TIMEOUT_SPIKE_THRESHOLD': {
+            'default': 3, 'min': 2, 'max': 10, 'step': 1,
+            'policy': 'timeout_spike_containment',
+            'direction_when_failing': 'up',  # More conservative = higher threshold
+            'description': 'Timeouts per hour before blocking agent',
+        },
+        'TIMEOUT_SPIKE_WINDOW_MINUTES': {
+            'default': 60, 'min': 15, 'max': 180, 'step': 15,
+            'policy': 'timeout_spike_containment',
+            'direction_when_failing': 'up',  # Wider window = more conservative
+            'description': 'Look-back window for timeout spike detection',
+        },
+        'TIMEOUT_BLOCK_TTL_MINUTES': {
+            'default': 30, 'min': 10, 'max': 120, 'step': 10,
+            'policy': 'timeout_spike_containment',
+            'direction_when_failing': 'down',  # Shorter block = less damage if wrong
+            'description': 'How long to block an agent after timeout spike',
+        },
+        'DELIBERATION_RETRY_AFTER_MINUTES': {
+            'default': 30, 'min': 10, 'max': 120, 'step': 10,
+            'policy': 'deliberation_retry',
+            'direction_when_failing': 'up',  # Wait longer before retry
+            'description': 'Wait time before retrying failed deliberations',
+        },
+        'CONTENT_STUCK_HOURS': {
+            'default': 6, 'min': 2, 'max': 24, 'step': 2,
+            'policy': 'content_sweep',
+            'direction_when_failing': 'up',
+            'description': 'How long content sits before being kicked',
+        },
+        'ATTENTION_STALE_HOURS': {
+            'default': 12, 'min': 4, 'max': 72, 'step': 4,
+            'policy': 'attention_auto_resolve',
+            'direction_when_failing': 'up',
+            'description': 'Hours before auto-resolving stale attention items',
+        },
+        'GOVERNANCE_GRACE_PERIOD_HOURS': {
+            'default': 1, 'min': 0.5, 'max': 12, 'step': 0.5,
+            'policy': 'governance_auto_decision',
+            'direction_when_failing': 'up',
+            'description': 'Hours to wait for human before auto-deciding',
+        },
+        'REMEDIATION_MIN_OCCURRENCES': {
+            'default': 5, 'min': 3, 'max': 20, 'step': 1,
+            'policy': 'root_cause_remediation',
+            'direction_when_failing': 'up',  # Require more evidence before acting
+            'description': 'Failure occurrences required before auto-remediation',
+        },
+        'REMEDIATION_COOLDOWN_HOURS': {
+            'default': 4, 'min': 1, 'max': 24, 'step': 1,
+            'policy': 'root_cause_remediation',
+            'direction_when_failing': 'up',
+            'description': 'Hours between remediating the same signature',
+        },
+    }
+
+    def evaluate(self) -> dict:
+        """
+        Evaluate all tunable parameters and return recommendations.
+
+        Returns:
+            {
+                'recommendations': [
+                    {
+                        'param': 'TIMEOUT_SPIKE_THRESHOLD',
+                        'old_value': 3,
+                        'new_value': 4,
+                        'reason': '...',
+                        'confidence': 'high',
+                        'metrics': {...},
+                    },
+                    ...
+                ],
+                'policy_metrics': {...},
+            }
+        """
+        now = timezone.now()
+        lookback = now - timedelta(
+            days=AutopilotConfig.TUNING_LOOKBACK_DAYS
+        )
+
+        # Gather per-policy metrics
+        policy_metrics = self._compute_policy_metrics(lookback, now)
+
+        # Check daily change cap
+        try:
+            day_start = now - timedelta(hours=24)
+            changes_today = AutopilotAction.objects.filter(
+                action_type='config_tune',
+                dry_run=False,
+                created_at__gte=day_start,
+            ).count()
+        except Exception:
+            changes_today = 0
+
+        if changes_today >= AutopilotConfig.TUNING_MAX_CHANGES_PER_DAY:
+            return {
+                'recommendations': [],
+                'policy_metrics': policy_metrics,
+                'capped': True,
+                'changes_today': changes_today,
+            }
+
+        # Generate recommendations
+        recommendations = []
+        for param_name, spec in self.TUNABLES.items():
+            rec = self._evaluate_param(param_name, spec, policy_metrics)
+            if rec:
+                recommendations.append(rec)
+
+        # Sort by confidence (high first)
+        confidence_order = {'high': 0, 'medium': 1, 'low': 2}
+        recommendations.sort(
+            key=lambda r: confidence_order.get(r.get('confidence', 'low'), 3)
+        )
+
+        return {
+            'recommendations': recommendations,
+            'policy_metrics': policy_metrics,
+            'capped': False,
+            'changes_today': changes_today,
+        }
+
+    def _compute_policy_metrics(self, since, now) -> dict:
+        """Compute effectiveness metrics for each policy."""
+        metrics = {}
+
+        # Map policy names to action types they produce
+        policy_action_types = {
+            'timeout_spike_containment': ['block_agent'],
+            'deliberation_retry': ['retry_deliberation'],
+            'content_sweep': ['content_sweep', 'content_publish'],
+            'attention_auto_resolve': ['auto_resolve'],
+            'governance_auto_decision': ['auto_resolve'],
+            'root_cause_remediation': ['remediate'],
+        }
+
+        for policy, action_types in policy_action_types.items():
+            try:
+                actions = AutopilotAction.objects.filter(
+                    policy=policy,
+                    dry_run=False,
+                    created_at__gte=since,
+                )
+
+                total = actions.count()
+                rolled_back = actions.filter(rolled_back=True).count()
+                verified_passed = actions.filter(
+                    verification_state='passed'
+                ).count()
+                verified_failed = actions.filter(
+                    verification_state='failed'
+                ).count()
+                verified_total = verified_passed + verified_failed
+
+                # Count evaluation cycles (cycle_evaluation actions)
+                eval_cycles = AutopilotAction.objects.filter(
+                    policy='cycle_evaluation',
+                    created_at__gte=since,
+                ).count()
+
+                metrics[policy] = {
+                    'action_count': total,
+                    'rollback_count': rolled_back,
+                    'rollback_rate': (
+                        rolled_back / max(total, 1)
+                    ),
+                    'verification_pass_rate': (
+                        verified_passed / max(verified_total, 1)
+                    ),
+                    'verified_total': verified_total,
+                    'eval_cycles': eval_cycles,
+                    'actions_per_cycle': (
+                        total / max(eval_cycles, 1)
+                    ),
+                }
+            except Exception:
+                metrics[policy] = {
+                    'action_count': 0,
+                    'error': 'query_failed',
+                }
+
+        return metrics
+
+    def _evaluate_param(
+        self, param_name: str, spec: dict, policy_metrics: dict
+    ) -> dict | None:
+        """Evaluate whether a single parameter should be tuned."""
+        policy = spec['policy']
+        pm = policy_metrics.get(policy, {})
+
+        if pm.get('error'):
+            return None
+
+        action_count = pm.get('action_count', 0)
+        rollback_rate = pm.get('rollback_rate', 0)
+        pass_rate = pm.get('verification_pass_rate', 1.0)
+        eval_cycles = pm.get('eval_cycles', 0)
+
+        # Get current effective value
+        current = AutopilotConfig.get(param_name)
+        if current is None:
+            current = spec['default']
+
+        direction = spec['direction_when_failing']
+        step = spec['step']
+        safe_min = spec['min']
+        safe_max = spec['max']
+
+        new_value = None
+        reason = ''
+        confidence = 'low'
+
+        # Signal 1: High rollback rate → go more conservative
+        if (
+            action_count >= 3
+            and rollback_rate > AutopilotConfig.TUNING_ROLLBACK_RATE_THRESHOLD
+        ):
+            if direction == 'up':
+                new_value = min(current + step, safe_max)
+            else:
+                new_value = max(current - step, safe_min)
+            reason = (
+                f'High rollback rate ({rollback_rate:.0%}) over '
+                f'{action_count} actions → going more conservative'
+            )
+            confidence = 'high'
+
+        # Signal 2: Perfect pass rate with enough data → can go more aggressive
+        elif (
+            action_count >= 5
+            and pass_rate == 1.0
+            and rollback_rate == 0
+        ):
+            if direction == 'up':
+                new_value = max(current - step, safe_min)
+            else:
+                new_value = min(current + step, safe_max)
+            reason = (
+                f'100% pass rate over {action_count} actions with '
+                f'0 rollbacks → can be more aggressive'
+            )
+            confidence = 'medium'
+
+        # Signal 3: Policy completely idle for extended period
+        elif (
+            action_count == 0
+            and eval_cycles >= 100  # ~16h at 10min intervals
+        ):
+            # Slightly more aggressive to catch things
+            if direction == 'up':
+                new_value = max(current - step, safe_min)
+            else:
+                new_value = min(current + step, safe_max)
+            reason = (
+                f'Policy idle for {eval_cycles} cycles '
+                f'({eval_cycles * 10 / 60:.0f}h) → slightly more sensitive'
+            )
+            confidence = 'low'
+
+        # No change needed
+        if new_value is None or new_value == current:
+            return None
+
+        return {
+            'param': param_name,
+            'old_value': current,
+            'new_value': new_value,
+            'reason': reason,
+            'confidence': confidence,
+            'description': spec['description'],
+            'metrics': {
+                'action_count': action_count,
+                'rollback_rate': round(rollback_rate, 3),
+                'verification_pass_rate': round(pass_rate, 3),
+                'eval_cycles': eval_cycles,
+            },
+        }
+
+    def apply_recommendations(
+        self, recommendations: list[dict], max_changes: int = 1
+    ) -> list[dict]:
+        """
+        Apply tuning recommendations by writing to SystemConfiguration.
+
+        Returns list of changes actually applied.
+        """
+        from core.models.system import SystemConfiguration
+
+        applied = []
+        for rec in recommendations[:max_changes]:
+            param = rec['param']
+            new_value = rec['new_value']
+            key = f'autopilot_tuning:{param}'
+
+            SystemConfiguration.objects.update_or_create(
+                key=key,
+                defaults={
+                    'value': new_value,
+                    'description': (
+                        f'Auto-tuned by PolicyOptimizer: '
+                        f'{rec["old_value"]} → {new_value}. '
+                        f'Reason: {rec["reason"]}'
+                    ),
+                    'category': 'performance',
+                },
+            )
+
+            # Refresh the override cache
+            AutopilotConfig._override_cache[param] = new_value
+
+            applied.append(rec)
+            logger.info(
+                f"[PolicyOptimizer] Tuned {param}: "
+                f"{rec['old_value']} → {new_value} "
+                f"({rec['confidence']} confidence)"
+            )
+
+        return applied
+
+    def get_tuning_report(self) -> dict:
+        """
+        Generate a human-readable tuning status report.
+
+        Shows current effective values, overrides active, and recent changes.
+        """
+        report = {
+            'parameters': {},
+            'overrides_active': {},
+            'recent_changes': [],
+        }
+
+        # Current effective values
+        for param_name, spec in self.TUNABLES.items():
+            effective = AutopilotConfig.get(param_name)
+            if effective is None:
+                effective = spec['default']
+            report['parameters'][param_name] = {
+                'effective_value': effective,
+                'code_default': spec['default'],
+                'safe_range': [spec['min'], spec['max']],
+                'policy': spec['policy'],
+                'overridden': param_name in AutopilotConfig._override_cache,
+            }
+
+        # Active overrides
+        report['overrides_active'] = dict(AutopilotConfig._override_cache)
+
+        # Recent tuning changes (last 7 days)
+        try:
+            recent = AutopilotAction.objects.filter(
+                action_type='config_tune',
+                created_at__gte=timezone.now() - timedelta(days=7),
+            ).order_by('-created_at')[:10]
+
+            for action in recent:
+                evidence = action.evidence or {}
+                report['recent_changes'].append({
+                    'param': evidence.get('param', ''),
+                    'old_value': evidence.get('old_value'),
+                    'new_value': evidence.get('new_value'),
+                    'reason': evidence.get('reason', ''),
+                    'when': action.created_at.isoformat(),
+                })
+        except Exception:
+            pass
+
+        return report

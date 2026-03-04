@@ -11593,6 +11593,31 @@ RESEARCH DATA:
             except Exception:
                 pass
 
+            # Self-tuning status
+            try:
+                from core.services.ops_autopilot import PolicyOptimizer
+                optimizer = PolicyOptimizer()
+                tuning_eval = optimizer.evaluate()
+                recs = tuning_eval.get('recommendations', [])
+                if recs:
+                    report_lines.append(f"\n### Self-Tuning Recommendations ({len(recs)})")
+                    for r in recs:
+                        report_lines.append(
+                            f"- **{r['param']}**: {r['old_value']} → "
+                            f"{r['new_value']} ({r['confidence']})\n"
+                            f"  _{r['reason']}_"
+                        )
+                else:
+                    report_lines.append('\n### Self-Tuning: All parameters optimal')
+
+                overrides = AutopilotConfig._override_cache
+                if overrides:
+                    report_lines.append(f"\n### Active Config Overrides ({len(overrides)})")
+                    for param, val in overrides.items():
+                        report_lines.append(f"- {param}: {val}")
+            except Exception:
+                pass
+
             return {
                 'action': 'dry_run_report',
                 'report': '\n'.join(report_lines),
@@ -11616,6 +11641,77 @@ RESEARCH DATA:
                 'checks_run': report['checks_run'],
                 'summary': summary_text,
                 'findings': report['findings'],
+            }
+
+        elif action == 'tuning_report':
+            # Show current tuning state, overrides, and recent changes
+            from core.services.ops_autopilot import PolicyOptimizer
+            AutopilotConfig.load_overrides()
+            optimizer = PolicyOptimizer()
+
+            # Evaluate recommendations (read-only)
+            evaluation = optimizer.evaluate()
+            tuning_status = optimizer.get_tuning_report()
+
+            report_lines = ['## Policy Self-Tuning Report\n']
+
+            # Active overrides
+            overrides = tuning_status.get('overrides_active', {})
+            if overrides:
+                report_lines.append(f'### Active Overrides ({len(overrides)})')
+                for param, value in overrides.items():
+                    spec = PolicyOptimizer.TUNABLES.get(param, {})
+                    default = spec.get('default', '?')
+                    report_lines.append(
+                        f'- **{param}**: {value} (default: {default})'
+                    )
+            else:
+                report_lines.append('### Active Overrides: None (all defaults)')
+
+            # Current recommendations
+            recs = evaluation.get('recommendations', [])
+            if recs:
+                report_lines.append(f'\n### Recommendations ({len(recs)})')
+                for r in recs:
+                    report_lines.append(
+                        f'- **{r["param"]}**: {r["old_value"]} → '
+                        f'{r["new_value"]} ({r["confidence"]} confidence)\n'
+                        f'  {r["reason"]}'
+                    )
+            else:
+                report_lines.append('\n### Recommendations: None (all params optimal)')
+
+            # Recent changes
+            changes = tuning_status.get('recent_changes', [])
+            if changes:
+                report_lines.append(f'\n### Recent Changes (7d)')
+                for c in changes[:5]:
+                    report_lines.append(
+                        f'- **{c["param"]}**: {c["old_value"]} → '
+                        f'{c["new_value"]} @ {c["when"][:16]}'
+                    )
+
+            # Policy metrics
+            pm = evaluation.get('policy_metrics', {})
+            if pm:
+                report_lines.append('\n### Policy Effectiveness (7d)')
+                for policy, m in pm.items():
+                    if m.get('error'):
+                        continue
+                    report_lines.append(
+                        f'- **{policy}**: {m.get("action_count", 0)} actions, '
+                        f'rollback rate {m.get("rollback_rate", 0):.0%}, '
+                        f'verify pass {m.get("verification_pass_rate", 0):.0%}'
+                    )
+
+            return {
+                'action': 'tuning_report',
+                'report': '\n'.join(report_lines),
+                'overrides': overrides,
+                'recommendations': recs,
+                'recent_changes': changes,
+                'capped': evaluation.get('capped', False),
+                'changes_today': evaluation.get('changes_today', 0),
             }
 
         elif action == 'backfill_failure_reasons':

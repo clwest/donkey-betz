@@ -2035,7 +2035,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "backfill_failure_reasons"],
+                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "backfill_failure_reasons"],
                     "description": (
                         "status: current config, last cycle timestamp, and pending actions. "
                         "history: recent autopilot actions (blocks, attention items, dry runs). "
@@ -2046,6 +2046,8 @@ PA_TOOL_SCHEMAS = [
                         "and proposed actions. "
                         "drift_scan: scan for contract/schema drift — mismatches between PA tool schemas, "
                         "handler registrations, agent registry, and Celery beat schedule. "
+                        "tuning_report: show current self-tuning state — active config overrides, "
+                        "pending recommendations, recent changes, and per-policy effectiveness metrics. "
                         "backfill_failure_reasons: re-classify UNKNOWN failure codes using expanded patterns."
                     ),
                 },
