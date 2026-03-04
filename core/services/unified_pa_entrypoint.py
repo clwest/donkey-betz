@@ -709,7 +709,16 @@ class UnifiedPAEntrypoint:
                 except Exception as e:
                     logger.warning(f"Profile completeness score failed: {e}")
 
-            logger.info(f"[{trace_id}] Completed in {latency_ms}ms")
+            # Structured task summary for cost/performance analysis
+            tool_names = [r.get('tool', '') for r in tool_runs] if tool_runs else []
+            logger.info(
+                "[PA_TASK_SUMMARY] trace_id=%s latency_ms=%d llm_iterations=%d "
+                "tool_calls=%d tools=%s history_turns=%d intent=%s",
+                trace_id, latency_ms,
+                len(tool_call_metadata) if tool_call_metadata else 1,
+                len(tool_names), ','.join(tool_names) or 'none',
+                len(self._conversation_history), intent,
+            )
 
             return PAResponse(
                 content=content,
@@ -829,6 +838,7 @@ class UnifiedPAEntrypoint:
                 task_type='conversation',
                 max_tokens=self._estimate_max_tokens(message),
                 agent_name='PersonalAssistant',
+                trace_id=trace_id,
             )
 
             if not result.get('success'):
@@ -876,6 +886,7 @@ class UnifiedPAEntrypoint:
                         task_type='conversation',
                         max_tokens=2000,
                         agent_name='PersonalAssistant',
+                        trace_id=trace_id,
                     )
                     if summary_result.get('success'):
                         return (summary_result.get('response', ''), tool_runs, fc_metadata,
@@ -929,6 +940,7 @@ class UnifiedPAEntrypoint:
                             task_type='conversation',
                             max_tokens=2000,
                             agent_name='PersonalAssistant',
+                            trace_id=trace_id,
                         )
                         return (final_result.get('response', ''), tool_runs, fc_metadata, final_result.get('response_id'))
 
@@ -961,6 +973,7 @@ class UnifiedPAEntrypoint:
                             task_type='conversation',
                             max_tokens=2000,
                             agent_name='PersonalAssistant',
+                            trace_id=trace_id,
                         )
                         if not cont_result.get('success'):
                             break
@@ -995,6 +1008,7 @@ class UnifiedPAEntrypoint:
                     task_type='conversation',
                     max_tokens=2000,
                     agent_name='PersonalAssistant',
+                    trace_id=trace_id,
                 )
                 return (final_result.get('response', ''), tool_runs, fc_metadata, final_result.get('response_id'))
 
@@ -1030,6 +1044,7 @@ class UnifiedPAEntrypoint:
                     task_type='conversation',
                     max_tokens=2000,
                     agent_name='PersonalAssistant',
+                    trace_id=trace_id,
                 )
                 return (final_result.get('response', ''), tool_runs, fc_metadata, final_result.get('response_id'))
             prev_tool_sigs.append(sig_key)

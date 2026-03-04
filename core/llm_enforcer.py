@@ -97,7 +97,8 @@ class LLMEnforcer:
                        tools: Optional[List[Dict]] = None,
                        previous_response_id: Optional[str] = None,
                        tool_choice: Optional[Dict] = None,
-                       input_messages: Optional[List[Dict]] = None) -> Dict[str, Any]:
+                       input_messages: Optional[List[Dict]] = None,
+                       trace_id: str = "") -> Dict[str, Any]:
         """
         ENFORCE real AI usage - this is the ONLY way to get AI responses
 
@@ -280,6 +281,7 @@ class LLMEnforcer:
                 cost=response.get('cost', 0),
                 latency_ms=latency_ms,
                 success=True,
+                trace_id=trace_id,
             )
 
             result = {
@@ -610,6 +612,7 @@ class LLMEnforcer:
         latency_ms: int = 0,
         success: bool = True,
         error_message: str = "",
+        trace_id: str = "",
     ) -> None:
         """
         Session 802: Persist LLM usage to both CostTracking and LLMCallLog.
@@ -633,6 +636,7 @@ class LLMEnforcer:
                 latency_ms=latency_ms,
                 success=success,
                 error_message=error_message,
+                trace_id=trace_id,
             )
             logger.debug(f"💾 Saved LLM call log: {provider}/{model} - ${cost:.6f}")
         except Exception as e:

@@ -334,6 +334,10 @@ class LLMCallLog(models.Model):
     # Cost
     cost = models.DecimalField(max_digits=10, decimal_places=6, default=0)
 
+    # Correlation
+    trace_id = models.CharField(max_length=64, blank=True, db_index=True,
+                                help_text='PA request trace ID for joining LLM calls to Celery tasks')
+
     # Error Info (if failed)
     error_type = models.CharField(max_length=100, blank=True)
     error_message = models.TextField(blank=True)
