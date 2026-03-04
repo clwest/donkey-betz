@@ -923,6 +923,16 @@ export const contentApi = {
   imageToVideo: (imageUrl: string, options?: Record<string, unknown>) =>
     api.post('/v1/video/image-to-video/', { image_url: imageUrl, ...options }),
 
+  // Video Upload
+  uploadVideo: (file: File, title?: string) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    if (title) formData.append('title', title)
+    return api.post('/upload/video/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
   // Video Status & History
   videoStatus: (taskId: string) =>
     api.get(`/v1/video/status/${taskId}/`),
