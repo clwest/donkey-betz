@@ -499,6 +499,126 @@ def chunked_upload_status(request, upload_id):
 
 
 # =============================================================================
+# Cloudinary Direct Upload (browser → Cloudinary, no server bottleneck)
+# =============================================================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def cloudinary_upload_sign(request):
+    """
+    Generate signed params for direct-to-Cloudinary upload from the browser.
+
+    POST /api/upload/cloudinary/sign/
+
+    JSON body:
+        - resource_type: 'video' or 'image' (default: 'video')
+        - title: Optional title for the upload
+
+    Returns signed params the frontend passes to Cloudinary Upload Widget.
+    """
+    import time
+    import hashlib
+    import cloudinary
+
+    resource_type = request.data.get('resource_type', 'video')
+    if resource_type not in ('video', 'image'):
+        return JsonResponse({'error': 'resource_type must be video or image'}, status=400)
+
+    cloud_name = cloudinary.config().cloud_name
+    api_key = cloudinary.config().api_key
+    api_secret = cloudinary.config().api_secret
+
+    if not all([cloud_name, api_key, api_secret]):
+        return JsonResponse({'error': 'Cloudinary not configured'}, status=500)
+
+    timestamp = int(time.time())
+    folder = f"uploads/videos/{request.user.id}/{timezone.now().strftime('%Y/%m')}"
+
+    # Build params to sign (alphabetical order, no api_key or file)
+    params = {
+        'folder': folder,
+        'resource_type': resource_type,
+        'timestamp': timestamp,
+    }
+
+    # Generate signature: join sorted key=value pairs + api_secret
+    sign_str = '&'.join(f'{k}={v}' for k, v in sorted(params.items())) + api_secret
+    signature = hashlib.sha1(sign_str.encode('utf-8')).hexdigest()
+
+    return JsonResponse({
+        'success': True,
+        'cloud_name': cloud_name,
+        'api_key': api_key,
+        'timestamp': timestamp,
+        'signature': signature,
+        'folder': folder,
+        'resource_type': resource_type,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def cloudinary_upload_register(request):
+    """
+    Register a Cloudinary-uploaded video into VideoHistory.
+    Called by the frontend after a successful direct-to-Cloudinary upload.
+
+    POST /api/upload/video/register/
+
+    JSON body:
+        - secure_url: Cloudinary secure URL (required)
+        - public_id: Cloudinary public ID (required)
+        - bytes: File size in bytes
+        - duration: Duration in seconds
+        - width: Video width
+        - height: Video height
+        - format: File format (mp4, mov, etc.)
+        - original_filename: Original file name
+        - title: User-provided title
+    """
+    data = request.data
+    secure_url = data.get('secure_url')
+    public_id = data.get('public_id')
+
+    if not secure_url or not public_id:
+        return JsonResponse({'error': 'secure_url and public_id are required'}, status=400)
+
+    original_filename = data.get('original_filename', '')
+    title = data.get('title') or f'Uploaded: {original_filename}' if original_filename else 'Uploaded video'
+
+    video = VideoHistory.objects.create(
+        user=request.user,
+        source_type=MediaSourceType.UPLOADED,
+        video_file=public_id,
+        original_filename=original_filename,
+        video_url=secure_url,
+        file_size_bytes=int(data.get('bytes', 0)) or None,
+        mime_type=f"video/{data.get('format', 'mp4')}",
+        video_type='uploaded',
+        prompt=title,
+        duration=int(data.get('duration', 0)) or None,
+        video_width=int(data.get('width', 0)) or None,
+        video_height=int(data.get('height', 0)) or None,
+        status='completed',
+    )
+
+    logger.info(f"User {request.user.username} registered Cloudinary upload: {public_id}")
+
+    return JsonResponse({
+        'success': True,
+        'video': {
+            'id': str(video.id),
+            'url': video.video_url,
+            'duration': video.duration,
+            'width': video.video_width,
+            'height': video.video_height,
+            'source_type': video.source_type,
+            'created_at': video.created_at.isoformat(),
+        }
+    })
+
+
+# =============================================================================
 # Gallery Endpoints with Upload Support
 # =============================================================================
 

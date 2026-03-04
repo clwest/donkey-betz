@@ -923,7 +923,7 @@ export const contentApi = {
   imageToVideo: (imageUrl: string, options?: Record<string, unknown>) =>
     api.post('/v1/video/image-to-video/', { image_url: imageUrl, ...options }),
 
-  // Video Upload
+  // Video Upload (simple — <50MB)
   uploadVideo: (file: File, title?: string) => {
     const formData = new FormData()
     formData.append('file', file)
@@ -932,6 +932,14 @@ export const contentApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
   },
+  // Cloudinary direct upload (large files — browser → Cloudinary)
+  getCloudinarySignature: (resourceType = 'video') =>
+    api.post('/upload/cloudinary/sign/', { resource_type: resourceType }),
+  registerCloudinaryUpload: (data: {
+    secure_url: string; public_id: string; bytes?: number;
+    duration?: number; width?: number; height?: number;
+    format?: string; original_filename?: string; title?: string;
+  }) => api.post('/upload/video/register/', data),
 
   // Video Status & History
   videoStatus: (taskId: string) =>

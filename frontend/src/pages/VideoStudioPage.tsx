@@ -739,8 +739,97 @@ export default function VideoStudioPage() {
                 {/* Upload inputs */}
                 {mode === 'upload' && (
                   <div className="space-y-4">
+                    {/* Large upload — Cloudinary direct (recommended) */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1.5">Video File</label>
+                      <label className="block text-sm font-medium text-gray-300 mb-1.5">Large Upload (recommended)</label>
+                      <p className="text-xs text-gray-500 mb-2">
+                        Uploads directly to cloud storage. Supports files up to several GB.
+                      </p>
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Title (optional)</label>
+                        <input
+                          type="text"
+                          value={uploadTitle}
+                          onChange={(e) => setUploadTitle(e.target.value)}
+                          placeholder="Give your video a name..."
+                          className="w-full rounded-lg bg-dark-bg border border-dark-border px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500 mb-3"
+                        />
+                      </div>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const res = await contentApi.getCloudinarySignature('video')
+                            const sig = res.data
+                            const w = (window as any).cloudinary
+                            if (!w?.openUploadWidget) {
+                              showFeedback('error', 'Upload widget not loaded. Please refresh and try again.')
+                              return
+                            }
+                            w.openUploadWidget(
+                              {
+                                cloudName: sig.cloud_name,
+                                apiKey: sig.api_key,
+                                uploadSignature: sig.signature,
+                                uploadSignatureTimestamp: sig.timestamp,
+                                folder: sig.folder,
+                                resourceType: 'video',
+                                sources: ['local'],
+                                multiple: false,
+                                maxFileSize: 10737418240, // 10 GB
+                                clientAllowedFormats: ['mp4', 'mov', 'webm', 'avi', 'mkv', 'wmv', 'flv', 'm4v'],
+                                showPoweredBy: false,
+                                styles: {
+                                  palette: { window: '#1a1a2e', windowBorder: '#2d2d44', tabIcon: '#7c3aed', menuIcons: '#9ca3af', link: '#7c3aed', action: '#7c3aed', inactiveTabIcon: '#6b7280', error: '#ef4444', inProgress: '#7c3aed', complete: '#22c55e', sourceBg: '#16162a' },
+                                },
+                              },
+                              (error: any, result: any) => {
+                                if (error) {
+                                  showFeedback('error', 'Upload failed: ' + (error.message || 'Unknown error'))
+                                  return
+                                }
+                                if (result.event === 'success') {
+                                  const info = result.info
+                                  contentApi.registerCloudinaryUpload({
+                                    secure_url: info.secure_url,
+                                    public_id: info.public_id,
+                                    bytes: info.bytes,
+                                    duration: info.duration,
+                                    width: info.width,
+                                    height: info.height,
+                                    format: info.format,
+                                    original_filename: info.original_filename,
+                                    title: uploadTitle || undefined,
+                                  }).then(() => {
+                                    refetchGallery()
+                                    setUploadTitle('')
+                                    showFeedback('success', 'Video uploaded and registered!')
+                                  }).catch(() => {
+                                    showFeedback('error', 'Video uploaded to cloud but failed to register. Contact support.')
+                                  })
+                                }
+                              }
+                            )
+                          } catch {
+                            showFeedback('error', 'Failed to initialize upload. Please try again.')
+                          }
+                        }}
+                        className="w-full rounded-lg border-2 border-dashed border-primary-500/50 bg-primary-500/5 px-4 py-6 text-center transition-colors hover:border-primary-400 hover:bg-primary-500/10"
+                      >
+                        <Upload size={28} className="mx-auto text-primary-400 mb-2" />
+                        <p className="text-sm text-white font-medium">Upload Large Video</p>
+                        <p className="text-xs text-gray-400 mt-1">MP4, MOV, WebM, AVI, MKV — up to 10 GB</p>
+                      </button>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 border-t border-dark-border" />
+                      <span className="text-xs text-gray-500">or quick upload (&lt;50 MB)</span>
+                      <div className="flex-1 border-t border-dark-border" />
+                    </div>
+
+                    {/* Small upload — through server */}
+                    <div>
                       <input
                         ref={uploadInputRef}
                         type="file"
@@ -751,59 +840,39 @@ export default function VideoStudioPage() {
                       <button
                         onClick={() => uploadInputRef.current?.click()}
                         className={cn(
-                          'w-full rounded-lg border-2 border-dashed px-4 py-8 text-center transition-colors',
+                          'w-full rounded-lg border-2 border-dashed px-4 py-4 text-center transition-colors',
                           uploadFile
-                            ? 'border-primary-500 bg-primary-500/5'
+                            ? 'border-green-500 bg-green-500/5'
                             : 'border-dark-border hover:border-gray-500'
                         )}
                       >
                         {uploadFile ? (
                           <div className="space-y-1">
-                            <Film size={24} className="mx-auto text-primary-400" />
+                            <Film size={20} className="mx-auto text-green-400" />
                             <p className="text-sm text-white font-medium truncate">{uploadFile.name}</p>
                             <p className="text-xs text-gray-400">{(uploadFile.size / 1024 / 1024).toFixed(1)} MB</p>
                           </div>
                         ) : (
                           <div className="space-y-1">
-                            <Upload size={24} className="mx-auto text-gray-500" />
-                            <p className="text-sm text-gray-400">Click to select a video file</p>
-                            <p className="text-xs text-gray-500">MP4, MOV, WebM, AVI, MKV — max 50 MB</p>
+                            <Film size={20} className="mx-auto text-gray-500" />
+                            <p className="text-xs text-gray-400">Select small video file (&lt;50 MB)</p>
                           </div>
                         )}
                       </button>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1.5">Title (optional)</label>
-                      <input
-                        type="text"
-                        value={uploadTitle}
-                        onChange={(e) => setUploadTitle(e.target.value)}
-                        placeholder="Give your video a name..."
-                        className="w-full rounded-lg bg-dark-bg border border-dark-border px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                      />
-                    </div>
-                    <button
-                      onClick={() => uploadVideoMutation.mutate()}
-                      disabled={!uploadFile || uploadVideoMutation.isPending}
-                      className={cn(
-                        'w-full rounded-lg py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-2',
-                        uploadFile && !uploadVideoMutation.isPending
-                          ? 'bg-primary-600 text-white hover:bg-primary-500'
-                          : 'bg-dark-border text-gray-500 cursor-not-allowed'
+                      {uploadFile && (
+                        <button
+                          onClick={() => uploadVideoMutation.mutate()}
+                          disabled={!uploadFile || uploadVideoMutation.isPending}
+                          className="w-full mt-2 rounded-lg py-2 text-sm font-medium bg-green-600 text-white hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          {uploadVideoMutation.isPending ? (
+                            <><Loader2 size={14} className="animate-spin" /> Uploading...</>
+                          ) : (
+                            <><Upload size={14} /> Quick Upload</>
+                          )}
+                        </button>
                       )}
-                    >
-                      {uploadVideoMutation.isPending ? (
-                        <>
-                          <Loader2 size={16} className="animate-spin" />
-                          Uploading...
-                        </>
-                      ) : (
-                        <>
-                          <Upload size={16} />
-                          Upload Video
-                        </>
-                      )}
-                    </button>
+                    </div>
                   </div>
                 )}
 
