@@ -136,6 +136,14 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      briefs (T-24h) and completed meetings awaiting follow-up (>48h).
      PA tools: meeting_create, meeting_inbox, meeting_brief,
      meeting_recap, meeting_metrics_report.
+ 30. Governance & safe-mode controls: GovernanceEngine manages global
+     autonomy mode (normal/throttle/freeze/safe_mode) with per-agent
+     and per-desk overrides. Kill switches with mandatory TTL for
+     emergency stops. Auto-expires stale states to prevent deadlocks.
+     Syncs budget flags with governance mode. Diagnostic "why are we
+     throttled?" report. PA tools: governance_status, governance_set_mode,
+     governance_kill_switch, governance_deactivate_switch,
+     governance_throttle_report, governance_audit.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -315,6 +323,7 @@ class OpsAutopilot:
         ('close_deal', 'close_the_deal', '_policy_close_the_deal'),
         ('engagement', 'engagement_engine', '_policy_engagement_engine'),
         ('meetings', 'meeting_engine', '_policy_meeting_engine'),
+        ('governance', 'governance_controls', '_policy_governance_controls'),
     ]
 
     def run(self) -> dict[str, Any]:
@@ -2256,6 +2265,35 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] meeting engine error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _policy_governance_controls(self, now) -> dict:
+        """
+        Auto-expire governance states and kill switches.
+        Sync budget flags when governance mode changes.
+        """
+        result = {
+            'expired_states': 0,
+            'expired_switches': 0,
+        }
+
+        try:
+            engine = GovernanceEngine()
+            eval_result = engine.evaluate(now)
+            if eval_result:
+                result.update(eval_result)
+
+                if eval_result.get('expired_states', 0) > 0:
+                    logger.info(
+                        f"[OpsAutopilot] Governance: expired "
+                        f"{eval_result['expired_states']} states, "
+                        f"{eval_result.get('expired_switches', 0)} switches"
+                    )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] governance controls error: {e}")
             result['error'] = str(e)
 
         return result
@@ -10634,4 +10672,443 @@ class ExperimentEngine:
             'recent_decisions': recent,
             'supported_policies': list(self.EXPERIMENTABLE_PARAMS.keys()),
             'supported_metrics': list(self.METRIC_COLLECTORS.keys()),
+        }
+
+
+# ── Policy 30: Governance & Safe-Mode Controls ─────────────────────────────
+
+
+class GovernanceEngine:
+    """
+    Autonomy control plane — single source of truth for system-wide
+    governance state, per-agent overrides, and kill switches.
+
+    Modes (escalation ladder):
+      normal   → full autonomy, all systems go
+      throttle → reduced batch sizes, deferred non-critical tasks
+      freeze   → only critical LLM calls allowed
+      safe_mode → all autonomous actions paused, human approval for everything
+
+    Kill switches: targeted emergency controls with mandatory TTL.
+    """
+
+    MODE_SEVERITY = {'normal': 0, 'throttle': 1, 'freeze': 2, 'safe_mode': 3}
+    VALID_MODES = set(MODE_SEVERITY.keys())
+    DEFAULT_TTL_HOURS = 4  # Kill switches expire after 4h by default
+    MAX_TTL_HOURS = 72     # No kill switch longer than 72h
+
+    # ── Status ────────────────────────────────────────────────────────
+
+    def get_status(self) -> dict:
+        """Full governance status report."""
+        from core.models_governance import GovernanceState, KillSwitch
+        from django.utils import timezone as tz
+
+        now = tz.now()
+
+        # Global mode
+        global_state = GovernanceState.objects.filter(
+            scope='global', scope_target='',
+        ).first()
+
+        if not global_state:
+            global_mode = 'normal'
+            global_reason = 'No explicit governance state set'
+            global_expires = None
+        else:
+            global_mode = global_state.effective_mode
+            global_reason = global_state.reason
+            global_expires = (
+                global_state.expires_at.isoformat()
+                if global_state.expires_at else None
+            )
+
+        # Per-scope overrides
+        overrides = []
+        for ov in GovernanceState.objects.exclude(
+            scope='global',
+        ).order_by('scope', 'scope_target'):
+            overrides.append({
+                'scope': ov.scope,
+                'target': ov.scope_target,
+                'mode': ov.effective_mode,
+                'reason': ov.reason,
+                'set_by': ov.set_by,
+                'expires_at': ov.expires_at.isoformat() if ov.expires_at else None,
+                'expired': ov.is_expired,
+            })
+
+        # Active kill switches
+        active_switches = []
+        for ks in KillSwitch.objects.filter(is_active=True):
+            active_switches.append({
+                'id': str(ks.id),
+                'target': ks.target,
+                'detail': ks.target_detail,
+                'reason': ks.reason,
+                'activated_by': ks.activated_by,
+                'expires_at': ks.expires_at.isoformat(),
+                'expired': ks.is_expired,
+                'time_remaining': str(ks.expires_at - now) if ks.expires_at > now else 'expired',
+            })
+
+        # Budget state
+        from core.models.system import SystemConfiguration
+        budget_flags = {}
+        for key in ['budget_freeze_active', 'budget_downgrade_active', 'budget_mode']:
+            val = SystemConfiguration.objects.filter(
+                key=key, is_active=True,
+            ).values_list('value', flat=True).first()
+            budget_flags[key] = val or ''
+
+        # Active throttles
+        throttle_count = SystemConfiguration.objects.filter(
+            key__startswith='roi_throttle:', is_active=True,
+        ).count()
+
+        return {
+            'global_mode': global_mode,
+            'global_reason': global_reason,
+            'global_expires_at': global_expires,
+            'overrides': overrides,
+            'active_kill_switches': active_switches,
+            'budget_flags': budget_flags,
+            'active_throttle_count': throttle_count,
+            'timestamp': now.isoformat(),
+        }
+
+    # ── Set mode ──────────────────────────────────────────────────────
+
+    def set_mode(
+        self,
+        mode: str,
+        reason: str = '',
+        scope: str = 'global',
+        scope_target: str = '',
+        ttl_hours: float | None = None,
+        set_by: str = 'user',
+        user=None,
+    ) -> dict:
+        """Set governance mode for a scope."""
+        from core.models_governance import GovernanceState
+        from django.utils import timezone as tz
+
+        if mode not in self.VALID_MODES:
+            return {'error': f'Invalid mode: {mode}. Valid: {list(self.VALID_MODES)}'}
+
+        if scope not in ('global', 'agent', 'desk'):
+            return {'error': f'Invalid scope: {scope}'}
+
+        if scope != 'global' and not scope_target:
+            return {'error': f'scope_target required for scope={scope}'}
+
+        expires_at = None
+        if ttl_hours:
+            ttl_hours = min(ttl_hours, self.MAX_TTL_HOURS)
+            expires_at = tz.now() + timedelta(hours=ttl_hours)
+
+        state, created = GovernanceState.objects.update_or_create(
+            scope=scope,
+            scope_target=scope_target or '',
+            defaults={
+                'mode': mode,
+                'reason': reason,
+                'set_by': set_by,
+                'expires_at': expires_at,
+                'user': user,
+            },
+        )
+
+        # Sync budget flags when setting global mode
+        if scope == 'global':
+            self._sync_budget_flags(mode)
+
+        return {
+            'id': str(state.id),
+            'scope': scope,
+            'target': scope_target,
+            'mode': mode,
+            'reason': reason,
+            'expires_at': expires_at.isoformat() if expires_at else None,
+            'created': created,
+        }
+
+    def _sync_budget_flags(self, mode: str):
+        """Sync SystemConfiguration budget flags with governance mode."""
+        from core.models.system import SystemConfiguration
+
+        if mode == 'normal':
+            # Clear freeze/downgrade
+            SystemConfiguration.objects.filter(
+                key__in=['budget_freeze_active', 'budget_downgrade_active'],
+            ).update(value='', is_active=False)
+            SystemConfiguration.objects.update_or_create(
+                key='budget_mode',
+                defaults={'value': 'normal', 'category': 'performance', 'is_active': True},
+            )
+        elif mode == 'throttle':
+            SystemConfiguration.objects.filter(
+                key='budget_freeze_active',
+            ).update(value='', is_active=False)
+            SystemConfiguration.objects.update_or_create(
+                key='budget_downgrade_active',
+                defaults={'value': True, 'category': 'performance', 'is_active': True},
+            )
+            SystemConfiguration.objects.update_or_create(
+                key='budget_mode',
+                defaults={'value': 'downgrade', 'category': 'performance', 'is_active': True},
+            )
+        elif mode in ('freeze', 'safe_mode'):
+            SystemConfiguration.objects.update_or_create(
+                key='budget_freeze_active',
+                defaults={'value': True, 'category': 'performance', 'is_active': True},
+            )
+            SystemConfiguration.objects.update_or_create(
+                key='budget_downgrade_active',
+                defaults={'value': True, 'category': 'performance', 'is_active': True},
+            )
+            SystemConfiguration.objects.update_or_create(
+                key='budget_mode',
+                defaults={'value': 'freeze', 'category': 'performance', 'is_active': True},
+            )
+
+    # ── Kill switch ───────────────────────────────────────────────────
+
+    def activate_kill_switch(
+        self,
+        target: str,
+        reason: str = '',
+        target_detail: str = '',
+        ttl_hours: float | None = None,
+        activated_by: str = 'user',
+        user=None,
+    ) -> dict:
+        """Activate an emergency kill switch."""
+        from core.models_governance import KillSwitch
+        from django.utils import timezone as tz
+
+        valid_targets = {c[0] for c in KillSwitch.TARGET_CHOICES}
+        if target not in valid_targets:
+            return {'error': f'Invalid target: {target}. Valid: {valid_targets}'}
+
+        ttl = ttl_hours or self.DEFAULT_TTL_HOURS
+        ttl = min(ttl, self.MAX_TTL_HOURS)
+        expires_at = tz.now() + timedelta(hours=ttl)
+
+        ks = KillSwitch.objects.create(
+            target=target,
+            target_detail=target_detail,
+            reason=reason,
+            activated_by=activated_by,
+            expires_at=expires_at,
+            user=user,
+        )
+
+        return {
+            'id': str(ks.id),
+            'target': target,
+            'detail': target_detail,
+            'reason': reason,
+            'expires_at': expires_at.isoformat(),
+            'ttl_hours': ttl,
+        }
+
+    def deactivate_kill_switch(self, switch_id: str) -> dict:
+        """Manually deactivate a kill switch."""
+        from core.models_governance import KillSwitch
+
+        try:
+            ks = KillSwitch.objects.get(id=switch_id, is_active=True)
+        except KillSwitch.DoesNotExist:
+            return {'error': f'Kill switch {switch_id} not found or already inactive'}
+
+        ks.deactivate()
+        return {
+            'id': str(ks.id),
+            'target': ks.target,
+            'detail': ks.target_detail,
+            'deactivated': True,
+        }
+
+    # ── Diagnostics ───────────────────────────────────────────────────
+
+    def get_throttle_report(self) -> dict:
+        """'Why are we throttled?' diagnostic report."""
+        from core.models.system import SystemConfiguration
+        from core.models_governance import GovernanceState
+        from django.utils import timezone as tz
+
+        now = tz.now()
+
+        # Current governance mode
+        global_state = GovernanceState.objects.filter(
+            scope='global', scope_target='',
+        ).first()
+        current_mode = global_state.effective_mode if global_state else 'normal'
+
+        # Budget state
+        budget_info = {}
+        for key in ['budget_freeze_active', 'budget_downgrade_active', 'budget_mode',
+                     'BUDGET_DAILY_CAP_USD', 'budget_daily_cap_usd']:
+            val = SystemConfiguration.objects.filter(
+                key=key,
+            ).values_list('value', 'is_active').first()
+            if val:
+                budget_info[key] = {'value': val[0], 'is_active': val[1]}
+
+        # Active ROI throttles
+        throttles = []
+        for entry in SystemConfiguration.objects.filter(
+            key__startswith='roi_throttle:',
+        ).values('key', 'value', 'is_active'):
+            throttles.append({
+                'agent': entry['key'].replace('roi_throttle:', ''),
+                'is_active': entry['is_active'],
+                'data': entry['value'],
+            })
+
+        # Recent spend (last 24h)
+        from django.db.models import Sum
+        from core.models_llm_routing import LLMCallLog
+        day_ago = now - timedelta(hours=24)
+        spend_24h = LLMCallLog.objects.filter(
+            created_at__gte=day_ago,
+        ).aggregate(total=Sum('cost'))['total'] or 0
+
+        hour_ago = now - timedelta(hours=1)
+        spend_1h = LLMCallLog.objects.filter(
+            created_at__gte=hour_ago,
+        ).aggregate(total=Sum('cost'))['total'] or 0
+
+        # Budget cap
+        cap = (
+            AutopilotConfig.get('BUDGET_DAILY_CAP_USD')
+            or AutopilotConfig.BUDGET_DAILY_CAP_USD
+        )
+        try:
+            cap = float(cap)
+        except (TypeError, ValueError):
+            cap = 100.0
+
+        return {
+            'current_mode': current_mode,
+            'spend_24h_usd': round(float(spend_24h), 4),
+            'spend_1h_usd': round(float(spend_1h), 4),
+            'budget_cap_usd': cap,
+            'spend_pct': round(float(spend_24h) / cap * 100, 1) if cap > 0 else 0,
+            'budget_flags': budget_info,
+            'active_throttles': [t for t in throttles if t['is_active']],
+            'inactive_throttles': [t for t in throttles if not t['is_active']],
+            'diagnosis': self._diagnose(current_mode, float(spend_24h), cap, throttles),
+        }
+
+    def _diagnose(self, mode: str, spend: float, cap: float, throttles: list) -> list[str]:
+        """Generate human-readable diagnosis of why the system is constrained."""
+        issues = []
+
+        if mode != 'normal':
+            issues.append(f'Global mode is "{mode}" — not all systems are running freely')
+
+        pct = spend / cap * 100 if cap > 0 else 0
+        if pct > 95:
+            issues.append(
+                f'Daily spend ${spend:.2f} is {pct:.0f}% of ${cap:.0f} cap — '
+                f'hard freeze threshold reached'
+            )
+        elif pct > 70:
+            issues.append(
+                f'Daily spend ${spend:.2f} is {pct:.0f}% of ${cap:.0f} cap — '
+                f'soft limit / downgrade zone'
+            )
+
+        active = [t for t in throttles if t['is_active']]
+        if active:
+            names = ', '.join(t['agent'] for t in active[:5])
+            issues.append(f'{len(active)} agents on ROI cooldown: {names}')
+
+        if not issues:
+            issues.append('System is operating normally — no constraints detected')
+
+        return issues
+
+    # ── Evaluate (called by autopilot cycle) ─────────────────────────
+
+    def evaluate(self, now) -> dict | None:
+        """
+        Auto-expire stale governance states and kill switches.
+        Called by the autopilot cycle.
+        """
+        from core.models_governance import GovernanceState, KillSwitch
+
+        expired_states = 0
+        expired_switches = 0
+
+        # Auto-expire governance states
+        for state in GovernanceState.objects.filter(
+            expires_at__isnull=False,
+            expires_at__lt=now,
+        ).exclude(mode='normal'):
+            state.mode = 'normal'
+            state.reason = f'Auto-expired (was: {state.reason[:100]})'
+            state.set_by = 'autopilot_expire'
+            state.expires_at = None
+            state.save(update_fields=['mode', 'reason', 'set_by', 'expires_at', 'updated_at'])
+            expired_states += 1
+
+        # Auto-expire kill switches
+        for ks in KillSwitch.objects.filter(
+            is_active=True,
+            expires_at__lt=now,
+        ):
+            ks.deactivate()
+            expired_switches += 1
+
+        # Sync global mode → budget flags (in case expire changed it)
+        global_state = GovernanceState.objects.filter(
+            scope='global', scope_target='',
+        ).first()
+        if global_state and global_state.effective_mode == 'normal':
+            self._sync_budget_flags('normal')
+
+        if expired_states == 0 and expired_switches == 0:
+            return None
+
+        return {
+            'type': 'governance_expire',
+            'expired_states': expired_states,
+            'expired_switches': expired_switches,
+        }
+
+    # ── Audit log ─────────────────────────────────────────────────────
+
+    def get_audit_log(self, limit: int = 20) -> dict:
+        """Recent governance changes."""
+        from core.models_governance import GovernanceState, KillSwitch
+
+        recent_states = list(
+            GovernanceState.objects.order_by('-updated_at').values(
+                'id', 'scope', 'scope_target', 'mode', 'reason',
+                'set_by', 'expires_at', 'updated_at',
+            )[:limit]
+        )
+
+        recent_switches = list(
+            KillSwitch.objects.order_by('-created_at').values(
+                'id', 'target', 'target_detail', 'reason',
+                'activated_by', 'is_active', 'expires_at',
+                'created_at', 'deactivated_at',
+            )[:limit]
+        )
+
+        # Serialize
+        for item in recent_states + recent_switches:
+            for k, v in item.items():
+                if hasattr(v, 'isoformat'):
+                    item[k] = v.isoformat()
+                elif hasattr(v, 'hex'):
+                    item[k] = str(v)
+
+        return {
+            'recent_state_changes': recent_states,
+            'recent_kill_switches': recent_switches,
         }
