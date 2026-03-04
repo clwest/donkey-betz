@@ -75,13 +75,27 @@ export async function getBodySummary(): Promise<BodySummary> {
 }
 
 export async function getAttentionStats(): Promise<AttentionStats> {
-  const { data } = await http.get<AttentionStats>('/human/attention/stats/');
-  return data;
+  // API wraps payload in { success, stats: {...} }
+  const { data } = await http.get<{ stats: AttentionStats } & AttentionStats>(
+    '/human/attention/stats/',
+  );
+  return (data as any).stats ?? data;
 }
 
 export async function getGovernanceStats(): Promise<GovernanceStats> {
-  const { data } = await http.get<GovernanceStats>('/boardroom/governance-stats/');
-  return data;
+  // API returns { stats: { total, canonical, drafts, pending, ... } }
+  const { data } = await http.get<any>('/boardroom/governance-stats/');
+  const s = data.stats ?? data;
+  return {
+    total_decisions: s.total ?? 0,
+    draft_count: s.drafts ?? 0,
+    approved_count: s.canonical ?? 0,
+    rejected_count: 0,
+    promoted_count: s.human_promoted ?? 0,
+    pending_review_count: s.pending ?? 0,
+    by_impact_area: {},
+    by_decision_type: {},
+  };
 }
 
 export async function getInitiatives(): Promise<Initiative[]> {
