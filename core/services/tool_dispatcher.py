@@ -12733,6 +12733,28 @@ RESEARCH DATA:
             report = engine.get_staleness_report()
             return {'action': 'knowledge_staleness_report', **report}
 
+        # ── Close Pack Autonomy (Policy 33) ──────────────────────
+        elif action == 'close_pack_followup_queue':
+            from core.services.ops_autopilot import ClosePackAutonomyEngine
+
+            engine = ClosePackAutonomyEngine()
+            queue = engine.get_followup_queue()
+            return {'action': 'close_pack_followup_queue', **queue}
+
+        elif action == 'close_pack_risk_report':
+            from core.services.ops_autopilot import ClosePackAutonomyEngine
+
+            engine = ClosePackAutonomyEngine()
+            report = engine.get_risk_report()
+            return {'action': 'close_pack_risk_report', **report}
+
+        elif action == 'close_pack_velocity':
+            from core.services.ops_autopilot import ClosePackAutonomyEngine
+
+            engine = ClosePackAutonomyEngine()
+            report = engine.get_velocity_report()
+            return {'action': 'close_pack_velocity', **report}
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason

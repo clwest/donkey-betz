@@ -25,13 +25,10 @@ import { getRevenueDashboard, type Revenue } from '../api/portfolio';
 import { useScreenAnalytics } from '../observability/analytics';
 import { useDemo } from '../demo/useDemo';
 import * as demo from '../demo/demoData';
+import { formatMoney } from '../utils/format';
+import DataStatusChip, { type DataStatus } from '../components/DataStatusChip';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatCurrency(n: number): string {
-  if (n >= 0) return `$${Math.round(n).toLocaleString()}`;
-  return `-$${Math.round(Math.abs(n)).toLocaleString()}`;
-}
 
 function healthColor(score: number): string {
   if (score >= 80) return '#22c55e';
@@ -91,6 +88,8 @@ export default function DashboardScreen() {
   const [betting, setBetting] = useState<BettingStats | null>(null);
   const [stockHub, setStockHub] = useState<StockHub | null>(null);
   const [revenue, setRevenue] = useState<Revenue | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [dataStatus, setDataStatus] = useState<DataStatus>('live');
 
   const fetchAll = useCallback(async () => {
     setError(null);
@@ -105,6 +104,7 @@ export default function DashboardScreen() {
       setBetting(demo.DEMO_BETTING_STATS);
       setStockHub(demo.DEMO_STOCK_HUB as any);
       setRevenue(demo.DEMO_REVENUE);
+      setLastUpdated(new Date());
       return;
     }
 
@@ -132,7 +132,13 @@ export default function DashboardScreen() {
     if (results[8].status === 'fulfilled') setRevenue(results[8].value);
 
     const allFailed = results.every((r) => r.status === 'rejected');
-    if (allFailed) setError('Failed to load dashboard data. Pull to retry.');
+    if (allFailed) {
+      setError('Failed to load dashboard data. Pull to retry.');
+      setDataStatus('error');
+    } else {
+      setLastUpdated(new Date());
+      setDataStatus('live');
+    }
   }, [isDemo]);
 
   useEffect(() => {
@@ -167,6 +173,8 @@ export default function DashboardScreen() {
         />
       }
     >
+      <DataStatusChip status={dataStatus} lastUpdated={lastUpdated} />
+
       {error && (
         <View style={styles.errorBanner}>
           <Text style={styles.errorText}>{error}</Text>
@@ -186,7 +194,7 @@ export default function DashboardScreen() {
           {betting ? (
             <>
               <Text style={[styles.verticalValue, { color: betting.total_profit_loss >= 0 ? '#22c55e' : '#ef4444' }]}>
-                {betting.total_profit_loss >= 0 ? '+' : ''}{formatCurrency(betting.total_profit_loss)}
+                {betting.total_profit_loss >= 0 ? '+' : ''}{formatMoney(betting.total_profit_loss)}
               </Text>
               <Text style={styles.verticalMeta}>
                 {betting.win_rate > 0 ? `${Math.round(betting.win_rate)}% WR` : `${betting.pending} pending`}
@@ -232,10 +240,10 @@ export default function DashboardScreen() {
           {revenue ? (
             <>
               <Text style={[styles.verticalValue, { color: '#22c55e' }]}>
-                {formatCurrency(revenue.total)}
+                {formatMoney(revenue.total)}
               </Text>
               <Text style={styles.verticalMeta}>
-                {revenue.this_month > 0 ? `${formatCurrency(revenue.this_month)} /mo` : 'revenue'}
+                {revenue.this_month > 0 ? `${formatMoney(revenue.this_month)} /mo` : 'revenue'}
               </Text>
             </>
           ) : (

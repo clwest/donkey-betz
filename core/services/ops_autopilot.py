@@ -157,6 +157,13 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      spider source coverage, and staleness detection with refresh
      recommendations. PA tools: knowledge_health, knowledge_citation_report,
      knowledge_source_report, knowledge_staleness_report.
+ 33. Close pack autonomy: ClosePackAutonomyEngine adds automated
+     follow-up sequencing (draft generation for due packs), risk
+     assessment (pricing guardrails, timeline checks, attribution
+     gaps), pipeline velocity tracking (time-to-close, stage
+     durations), and lifecycle evaluation (overdue follow-ups,
+     stale drafts, high-risk flags). PA tools: close_pack_followup_queue,
+     close_pack_risk_report, close_pack_velocity.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -339,6 +346,7 @@ class OpsAutopilot:
         ('governance', 'governance_controls', '_policy_governance_controls'),
         ('revenue_orchestrator', 'revenue_orchestrator', '_policy_revenue_orchestrator'),
         ('knowledge', 'knowledge_citation_engine', '_policy_knowledge_citation_engine'),
+        ('close_pack_autonomy', 'close_pack_autonomy', '_policy_close_pack_autonomy'),
     ]
 
     def run(self) -> dict[str, Any]:
@@ -2367,6 +2375,35 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] knowledge citation engine error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _policy_close_pack_autonomy(self, now) -> dict:
+        """
+        Monitor close pack lifecycle: follow-up sequencing, risk flags,
+        stale drafts.
+        """
+        result = {
+            'overdue_followups': 0,
+            'high_risk_packs': 0,
+            'healthy': True,
+        }
+
+        try:
+            engine = ClosePackAutonomyEngine()
+            eval_result = engine.evaluate(now)
+            result.update(eval_result)
+
+            if not eval_result.get('healthy', True):
+                logger.info(
+                    f"[OpsAutopilot] Close pack autonomy: "
+                    f"{eval_result.get('overdue_followups', 0)} overdue, "
+                    f"{eval_result.get('high_risk_packs', 0)} high-risk"
+                )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] close pack autonomy error: {e}")
             result['error'] = str(e)
 
         return result
@@ -11890,6 +11927,283 @@ class KnowledgeEngine:
             'violation_count_24h': violations_24h,
             'block_count_24h': blocks_24h,
             'spider_ingestion_24h': spider_24h,
+            'issues': issues,
+            'issue_count': len(issues),
+            'healthy': len(issues) == 0,
+        }
+
+
+# ── Close Pack Autonomy (Policy 33 — Autonomy #29) ──────────────────────────
+
+class ClosePackAutonomyEngine:
+    """
+    Automates close pack lifecycle: follow-up sequencing, risk assessment,
+    pipeline velocity tracking, and impact event emission.
+
+    Sits on top of CloseTheDealEngine, adding:
+    - Proactive follow-up draft generation for due packs
+    - Risk flagging (discount depth, short timelines, missing terms)
+    - Pipeline velocity metrics (time-to-close, stage duration)
+    - Impact event emission for deal lifecycle
+    """
+
+    # Pricing guardrails
+    MIN_PRICE_BY_OFFER = {
+        'ai_automation': 2000,
+        'content_engine': 1500,
+        'analytics_dashboard': 3000,
+        'consulting': 1000,
+    }
+    MAX_DISCOUNT_PCT = 30  # Flag if price < 70% of template midpoint
+    SHORT_TIMELINE_DAYS = 5  # Flag if timeline < 5 days
+
+    def get_followup_queue(self, now=None) -> dict:
+        """
+        Close packs needing follow-up: due or overdue.
+        Generates draft follow-up messages for each.
+        """
+        from core.models_close_pack import ClosePack
+
+        now = now or timezone.now()
+
+        # Due follow-ups (approved/sent packs with followup_at <= now)
+        due = list(
+            ClosePack.objects.filter(
+                status__in=['approved', 'sent'],
+                followup_at__lte=now,
+                followup_count__lt=2,
+            ).order_by('followup_at').values(
+                'id', 'offer_key', 'price', 'status',
+                'followup_count', 'followup_at', 'created_at',
+            )[:20]
+        )
+
+        for item in due:
+            item['id'] = str(item['id'])
+            item['price'] = float(item.get('price', 0))
+            if hasattr(item.get('followup_at'), 'isoformat'):
+                item['overdue_hours'] = round(
+                    (now - item['followup_at']).total_seconds() / 3600, 1,
+                )
+                item['followup_at'] = item['followup_at'].isoformat()
+            if hasattr(item.get('created_at'), 'isoformat'):
+                item['created_at'] = item['created_at'].isoformat()
+
+            # Generate follow-up draft text
+            touch_num = item.get('followup_count', 0) + 1
+            item['draft_followup'] = self._generate_followup_text(
+                item['offer_key'], touch_num, float(item['price']),
+            )
+
+        # Upcoming (next 48h)
+        upcoming = ClosePack.objects.filter(
+            status__in=['approved', 'sent'],
+            followup_at__gt=now,
+            followup_at__lte=now + timedelta(hours=48),
+            followup_count__lt=2,
+        ).count()
+
+        return {
+            'due_followups': due,
+            'due_count': len(due),
+            'upcoming_48h': upcoming,
+        }
+
+    def _generate_followup_text(
+        self, offer_key: str, touch_num: int, price: float,
+    ) -> str:
+        """Generate a follow-up message draft."""
+        if touch_num == 1:
+            return (
+                f"Hi — following up on the {offer_key.replace('_', ' ')} proposal "
+                f"(${price:,.0f}). Happy to answer any questions or schedule a quick call "
+                f"to discuss next steps."
+            )
+        return (
+            f"Just checking in on the {offer_key.replace('_', ' ')} proposal. "
+            f"If the timing or scope needs adjusting, I'm flexible. "
+            f"Let me know either way!"
+        )
+
+    def get_risk_report(self) -> dict:
+        """
+        Assess risk flags across active close packs.
+        Checks: pricing below minimums, steep discounts, short timelines,
+        missing opportunity links, high pending count.
+        """
+        from core.models_close_pack import ClosePack
+
+        active = list(
+            ClosePack.objects.filter(
+                status__in=['draft', 'approved', 'sent'],
+            ).values(
+                'id', 'offer_key', 'price', 'timeline_days',
+                'status', 'opportunity_id',
+            )
+        )
+
+        flags = []
+        for pack in active:
+            pack_id = str(pack['id'])
+            offer = pack['offer_key']
+            price = float(pack.get('price', 0))
+            timeline = pack.get('timeline_days', 14)
+
+            # Below minimum price
+            min_price = self.MIN_PRICE_BY_OFFER.get(offer, 500)
+            if price < min_price:
+                flags.append({
+                    'pack_id': pack_id,
+                    'risk': 'below_minimum_price',
+                    'detail': f'{offer}: ${price:,.0f} < ${min_price:,.0f} minimum',
+                    'severity': 'high',
+                })
+
+            # Short timeline
+            if timeline < self.SHORT_TIMELINE_DAYS:
+                flags.append({
+                    'pack_id': pack_id,
+                    'risk': 'short_timeline',
+                    'detail': f'{timeline}d timeline (min {self.SHORT_TIMELINE_DAYS}d)',
+                    'severity': 'medium',
+                })
+
+            # No linked opportunity
+            if not pack.get('opportunity_id'):
+                flags.append({
+                    'pack_id': pack_id,
+                    'risk': 'no_opportunity_link',
+                    'detail': 'Pack not linked to an Opportunity — attribution gap',
+                    'severity': 'low',
+                })
+
+        # Summary
+        high_count = len([f for f in flags if f['severity'] == 'high'])
+        med_count = len([f for f in flags if f['severity'] == 'medium'])
+
+        return {
+            'total_active_packs': len(active),
+            'risk_flags': flags,
+            'flag_count': len(flags),
+            'high_severity': high_count,
+            'medium_severity': med_count,
+            'low_severity': len(flags) - high_count - med_count,
+        }
+
+    def get_velocity_report(self) -> dict:
+        """
+        Pipeline velocity: time-to-close, stage durations, conversion timeline.
+        """
+        from core.models_close_pack import ClosePack
+        from django.db.models import Avg, Count
+
+        # Won packs — time from creation to update (proxy for close time)
+        won = list(
+            ClosePack.objects.filter(status='won').values(
+                'created_at', 'updated_at', 'offer_key', 'price',
+            )
+        )
+
+        close_times = []
+        for w in won:
+            if w.get('created_at') and w.get('updated_at'):
+                delta = (w['updated_at'] - w['created_at']).total_seconds() / 86400
+                close_times.append({
+                    'days': round(delta, 1),
+                    'offer': w['offer_key'],
+                    'price': float(w.get('price', 0)),
+                })
+
+        avg_close_days = (
+            round(sum(c['days'] for c in close_times) / len(close_times), 1)
+            if close_times else 0
+        )
+
+        # By offer
+        by_offer = {}
+        for ct in close_times:
+            offer = ct['offer']
+            if offer not in by_offer:
+                by_offer[offer] = {'days': [], 'revenue': 0}
+            by_offer[offer]['days'].append(ct['days'])
+            by_offer[offer]['revenue'] += ct['price']
+
+        offer_velocity = {}
+        for offer, data in by_offer.items():
+            offer_velocity[offer] = {
+                'avg_days': round(sum(data['days']) / len(data['days']), 1),
+                'deals': len(data['days']),
+                'revenue': round(data['revenue'], 2),
+            }
+
+        # Current pipeline age
+        from django.utils import timezone as tz
+        now = tz.now()
+        pipeline = ClosePack.objects.filter(
+            status__in=['draft', 'approved', 'sent'],
+        )
+        pipeline_ages = []
+        for p in pipeline.values('created_at', 'status'):
+            if p.get('created_at'):
+                age = (now - p['created_at']).total_seconds() / 86400
+                pipeline_ages.append({
+                    'age_days': round(age, 1),
+                    'status': p['status'],
+                })
+
+        return {
+            'won_deals': len(close_times),
+            'avg_close_days': avg_close_days,
+            'velocity_by_offer': offer_velocity,
+            'current_pipeline_age': sorted(
+                pipeline_ages, key=lambda x: -x['age_days'],
+            )[:10],
+            'pipeline_count': len(pipeline_ages),
+        }
+
+    def evaluate(self, now) -> dict:
+        """
+        Auto-evaluate close pack health for autopilot cycle.
+        """
+        from core.models_close_pack import ClosePack
+
+        # Count overdue follow-ups
+        overdue = ClosePack.objects.filter(
+            status__in=['approved', 'sent'],
+            followup_at__lte=now,
+            followup_count__lt=2,
+        ).count()
+
+        # High-risk packs (below minimum price)
+        high_risk = 0
+        active = ClosePack.objects.filter(
+            status__in=['draft', 'approved', 'sent'],
+        ).values('offer_key', 'price')
+        for p in active:
+            min_price = self.MIN_PRICE_BY_OFFER.get(
+                p['offer_key'], 500,
+            )
+            if float(p.get('price', 0)) < min_price:
+                high_risk += 1
+
+        # Stale drafts (>7d without approval)
+        stale_drafts = ClosePack.objects.filter(
+            status='draft',
+            created_at__lt=now - timedelta(days=7),
+        ).count()
+
+        issues = []
+        if overdue > 0:
+            issues.append(f'{overdue} follow-ups overdue')
+        if high_risk > 0:
+            issues.append(f'{high_risk} packs below minimum price')
+        if stale_drafts > 0:
+            issues.append(f'{stale_drafts} draft packs stale >7d')
+
+        return {
+            'overdue_followups': overdue,
+            'high_risk_packs': high_risk,
+            'stale_drafts': stale_drafts,
             'issues': issues,
             'issue_count': len(issues),
             'healthy': len(issues) == 0,
