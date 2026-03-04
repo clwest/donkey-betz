@@ -223,6 +223,126 @@ def _record_timeout_signature(
         logger.warning(f"Failed to record timeout signature for {agent_name}: {e}")
 
 
+# ==================== AGENT TASK CIRCUIT BREAKER ==============================
+# Prevents the same doomed task from being re-dispatched after repeated timeouts.
+# Uses Redis (via Django cache) for distributed state.
+#
+# Two mechanisms:
+# 1. Single-flight lock: only one execution of (agent, task_hash) at a time
+# 2. Timeout counter: 2+ timeouts in 24h → breaker trips, creates attention item
+# =============================================================================
+
+import hashlib as _hashlib
+
+
+def _task_hash(agent_name: str, task: str) -> str:
+    """Normalized hash for (agent, task) dedup. Strips whitespace, lowercases."""
+    normalized = f"{agent_name}:{task.strip().lower()}"
+    return _hashlib.sha256(normalized.encode()).hexdigest()[:16]
+
+
+def _circuit_breaker_check(agent_name: str, task: str) -> dict | None:
+    """
+    Check if the circuit breaker should block this task.
+
+    Returns None if the task should proceed, or a dict with block reason.
+    Also acquires a single-flight lock if proceeding.
+    """
+    from django.core.cache import cache
+
+    th = _task_hash(agent_name, task)
+    breaker_key = f'circuit:{agent_name}:{th}:timeouts'
+    lock_key = f'flight:{agent_name}:{th}'
+
+    # Check timeout count (circuit breaker)
+    timeout_count = cache.get(breaker_key, 0)
+    if timeout_count >= 2:
+        logger.warning(
+            f"[circuit_breaker] TRIPPED for {agent_name} — "
+            f"{timeout_count} timeouts in 24h (task_hash={th})"
+        )
+        return {
+            'status': 'circuit_breaker_tripped',
+            'agent': agent_name,
+            'reason': f'{agent_name} timed out {timeout_count}x in 24h — breaker tripped',
+            'task_hash': th,
+            'timeout_count': timeout_count,
+        }
+
+    # Single-flight lock: prevent duplicate concurrent executions
+    if not cache.add(lock_key, '1', timeout=1800):  # 30 min lock
+        logger.info(
+            f"[circuit_breaker] DEDUP: {agent_name} task already in flight "
+            f"(task_hash={th})"
+        )
+        return {
+            'status': 'dedup_skipped',
+            'agent': agent_name,
+            'reason': f'Identical {agent_name} task already running',
+            'task_hash': th,
+        }
+
+    return None  # Proceed
+
+
+def _circuit_breaker_release(agent_name: str, task: str):
+    """Release the single-flight lock after task completion."""
+    from django.core.cache import cache
+    th = _task_hash(agent_name, task)
+    cache.delete(f'flight:{agent_name}:{th}')
+
+
+def _circuit_breaker_record_timeout(agent_name: str, task: str):
+    """
+    Increment timeout counter and trip breaker if threshold reached.
+    Creates a governance attention item when breaker trips.
+    """
+    from django.core.cache import cache
+
+    th = _task_hash(agent_name, task)
+    breaker_key = f'circuit:{agent_name}:{th}:timeouts'
+
+    # Increment (or set to 1 with 24h TTL)
+    current = cache.get(breaker_key, 0)
+    new_count = current + 1
+    cache.set(breaker_key, new_count, timeout=86400)  # 24h TTL
+
+    logger.warning(
+        f"[circuit_breaker] Timeout #{new_count} for {agent_name} "
+        f"(task_hash={th})"
+    )
+
+    if new_count >= 2:
+        # Breaker just tripped — create governance attention item
+        try:
+            from core.models_human_interface import HumanAttentionItem
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            admin = User.objects.filter(is_superuser=True).first()
+            if admin:
+                HumanAttentionItem.objects.create(
+                    user=admin,
+                    title=f'Circuit breaker tripped: {agent_name}',
+                    description=(
+                        f'{agent_name} has timed out {new_count}x in 24h on the same task. '
+                        f'Task hash: {th}. Task preview: "{task[:200]}..."\n\n'
+                        f'The circuit breaker is blocking further retries. '
+                        f'Review the agent\'s task scope or increase its timeout.'
+                    ),
+                    priority='high',
+                    category='system',
+                    source_type='circuit_breaker',
+                    source_id=th,
+                    requires_response=True,
+                )
+                logger.warning(
+                    f"[circuit_breaker] Created attention item for {agent_name} "
+                    f"breaker trip (hash={th})"
+                )
+        except Exception as e:
+            logger.error(f"[circuit_breaker] Failed to create attention item: {e}")
+
+
 # ==================== SESSION 835: STALE EXECUTION CLEANUP ====================
 
 
@@ -1541,6 +1661,17 @@ def execute_agent_task(
             'reason': f'{agent_name} only handles generation/editing tasks',
         }
 
+    # Session 1095: Circuit breaker — prevent repeated execution of doomed tasks.
+    # Checks: (1) has this (agent, task) timed out 2+ times in 24h? If so, skip.
+    # (2) is an identical task already running? If so, dedup.
+    _cb_block = _circuit_breaker_check(agent_name, task)
+    if _cb_block:
+        logger.warning(
+            f"[execute_agent_task] CIRCUIT BREAKER: {agent_name} — "
+            f"{_cb_block['status']} (task='{task[:50]}...')"
+        )
+        return _cb_block
+
     logger.info(
         f"[execute_agent_task] Starting: {agent_name} <- '{task[:50]}...' "
         f"(conversation={conversation_id})"
@@ -1709,6 +1840,10 @@ def execute_agent_task(
                 execution_id=execution_record.id if execution_record else None,
                 task_name='core.tasks.execute_agent_task',
             )
+            # Session 1095: Record timeout for circuit breaker
+            _circuit_breaker_record_timeout(agent_name, task)
+            _circuit_breaker_release(agent_name, task)
+
             from core.agents.base_agent import AgentResult
             result = AgentResult(
                 success=False,
@@ -1755,6 +1890,9 @@ def execute_agent_task(
                 f"[execute_agent_task] SLOW AGENT: {agent_name} took "
                 f"{execution_time_ms // 60_000}min — approaching timeout"
             )
+
+        # Session 1095: Release circuit breaker single-flight lock
+        _circuit_breaker_release(agent_name, task)
 
         logger.info(
             f"[execute_agent_task] Completed: {agent_name} "
@@ -1807,6 +1945,8 @@ def execute_agent_task(
     except SoftTimeLimitExceeded:
         execution_time_ms = int((time.time() - execution_start) * 1000)
         logger.error(f"[execute_agent_task] KILLED by soft_time_limit: {agent_name} after {execution_time_ms}ms")
+        _circuit_breaker_record_timeout(agent_name, task)
+        _circuit_breaker_release(agent_name, task)
         if execution_record:
             execution_record.status = 'failed'
             execution_record.error_message = 'Celery soft_time_limit exceeded (60 min)'
@@ -1825,6 +1965,7 @@ def execute_agent_task(
     except Exception as e:
         execution_time_ms = int((time.time() - execution_start) * 1000)
         logger.error(f"[execute_agent_task] Failed: {agent_name} - {e}")
+        _circuit_breaker_release(agent_name, task)
 
         # Update execution record on failure
         if execution_record:

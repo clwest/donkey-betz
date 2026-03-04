@@ -3,6 +3,7 @@ Ecosystem API views for the visualization
 """
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.cache import cache_page
 from django.views.decorators.http import require_GET
 from django.shortcuts import render
 from datetime import datetime
@@ -11,6 +12,7 @@ import random
 
 @csrf_exempt
 @require_GET
+@cache_page(45)  # 45s — ecosystem stats (10 queries)
 def ecosystem_stats(request):
     """Return real-time ecosystem statistics for Dashboard"""
     from core.models_unified_system import Agent

@@ -5,6 +5,8 @@ This aggregates REAL data from all 149 agents, 25 advisors, and user activities
 
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.cache import cache_page
+from django.views.decorators.vary import vary_on_cookie
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
@@ -22,6 +24,8 @@ from core.models import (
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@vary_on_cookie
+@cache_page(30)  # 30s — high-traffic dashboard endpoint (19 queries)
 def dashboard_stats(request):
     """
     Get real-time dashboard statistics for the unified command center.

@@ -10,6 +10,7 @@ from datetime import timedelta
 
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
@@ -19,6 +20,7 @@ from core.models_unified_system import SpiderData
 
 
 @require_http_methods(["GET"])
+@cache_page(45)  # 45s — spider registry + data counts (13 queries)
 def spider_network_data(request):
     """
     Session 207: Get spider network status using REAL spider registry.
@@ -128,6 +130,7 @@ def _format_display_name(name: str) -> str:
 
 
 @require_http_methods(["GET"])
+@cache_page(15)  # 15s — activity feed refreshes frequently
 def spider_activity_feed(request):
     """Get recent spider activity feed"""
 
@@ -232,6 +235,7 @@ def execute_spider(request):
 
 
 @require_http_methods(["GET"])
+@cache_page(30)  # 30s — spider data aggregates
 def spider_data_stats(request):
     """Get statistics about collected spider data"""
 
@@ -278,6 +282,7 @@ def spider_data_stats(request):
 
 
 @require_http_methods(["GET"])
+@cache_page(60)  # 60s — health check doesn't change fast
 def spider_health_check(request):
     """
     Session 290: Spider network health check endpoint for HANDOFF_06.
@@ -477,6 +482,7 @@ def retry_spider_execution(request, execution_id):
 
 
 @require_http_methods(["GET"])
+@cache_page(60)  # 60s — embedding coverage is slow-moving
 def spider_embedding_coverage(request):
     """
     Session 484: Get embedding coverage statistics per spider.
@@ -553,6 +559,7 @@ def run_spider_manual(request, spider_name):
 
 
 @require_http_methods(["GET"])
+@cache_page(60)  # 60s — summary is aggregate data
 def spider_health_summary(request):
     """
     Session 484: Get overall spider health summary for dashboard.
