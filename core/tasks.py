@@ -29404,6 +29404,165 @@ def auto_publish_approved_blogs():
     return {'published': count, 'blog_ids': published_ids}
 
 
+@shared_task(name='core.tasks.content_autonomy_loop', ignore_result=True)
+def content_autonomy_loop():
+    """
+    Autonomous content pipeline orchestrator.
+
+    Runs as a single Celery beat task that ties together the full pipeline:
+    1. Check daily publish budget (throttle)
+    2. Gate-to-repair routing: failed gates → targeted fix agents
+    3. Publish approved blogs within budget
+    4. Report pipeline stats
+
+    Designed to reduce human intervention to zero for content flow.
+    """
+    from core.models_unified_system import SelfBlog
+    from django.db.models import Q
+    from datetime import timedelta
+
+    now = timezone.now()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # ── Config ──
+    DAILY_PUBLISH_BUDGET = 8       # Max blogs to publish per day
+    MAX_REPAIR_PER_CYCLE = 3       # Max gate-to-repair passes per cycle
+    STUCK_THRESHOLD_HOURS = 4      # How long before content is "stuck"
+
+    stats = {
+        'published_today': 0,
+        'budget_remaining': DAILY_PUBLISH_BUDGET,
+        'repairs_attempted': 0,
+        'repairs_succeeded': 0,
+        'published_this_cycle': 0,
+    }
+
+    try:
+        # ── Step 1: Check daily budget ──
+        published_today = SelfBlog.objects.filter(
+            status='published',
+            created_at__gte=today_start,
+        ).count()
+        stats['published_today'] = published_today
+        stats['budget_remaining'] = max(0, DAILY_PUBLISH_BUDGET - published_today)
+
+        if stats['budget_remaining'] <= 0:
+            logger.info(
+                f"[CONTENT-AUTONOMY] Daily publish budget exhausted "
+                f"({published_today}/{DAILY_PUBLISH_BUDGET})"
+            )
+            return stats
+
+        # ── Step 2: Gate-to-repair routing ──
+        # Find blogs that failed gate (needs_enhancement with gate_notes)
+        stuck_cutoff = now - timedelta(hours=STUCK_THRESHOLD_HOURS)
+        repair_candidates = SelfBlog.objects.filter(
+            status='needs_enhancement',
+            gate_notes__isnull=False,
+            created_at__lte=stuck_cutoff,
+        ).exclude(
+            gate_notes=''
+        ).order_by('created_at')[:MAX_REPAIR_PER_CYCLE]
+
+        for blog in repair_candidates:
+            try:
+                repair_action = _route_gate_repair(blog)
+                if repair_action:
+                    stats['repairs_attempted'] += 1
+                    success = _execute_gate_repair(blog, repair_action)
+                    if success:
+                        stats['repairs_succeeded'] += 1
+            except Exception as e:
+                logger.warning(f"[CONTENT-AUTONOMY] Repair failed for {blog.id}: {e}")
+
+        # ── Step 3: Publish approved blogs within budget ──
+        approved = SelfBlog.objects.filter(
+            status='approved',
+            publish_ready=True,
+        ).order_by('-quality_score')[:stats['budget_remaining']]
+
+        for blog in approved:
+            blog.status = 'published'
+            blog.save(update_fields=['status'])
+            stats['published_this_cycle'] += 1
+            logger.info(f"[CONTENT-AUTONOMY] Published: {blog.title[:60]}")
+
+        if stats['published_this_cycle'] or stats['repairs_attempted']:
+            logger.info(
+                f"[CONTENT-AUTONOMY] Cycle: published={stats['published_this_cycle']}, "
+                f"repairs={stats['repairs_succeeded']}/{stats['repairs_attempted']}, "
+                f"budget={stats['budget_remaining'] - stats['published_this_cycle']} remaining"
+            )
+
+    except Exception as e:
+        logger.error(f"[CONTENT-AUTONOMY] Loop error: {e}")
+        stats['error'] = str(e)
+
+    return stats
+
+
+def _route_gate_repair(blog) -> str | None:
+    """Determine the best repair action based on gate_notes."""
+    notes = (blog.gate_notes or '').lower()
+
+    # Map gate failure reasons to repair strategies
+    if 'research' in notes or 'claim' in notes or 'citation' in notes:
+        return 'research'  # Needs more research backing
+    if 'structure' in notes or 'heading' in notes or 'format' in notes:
+        return 'structure'  # Needs structural improvement
+    if 'quality' in notes or 'writing' in notes or 'engagement' in notes:
+        return 'enhance'  # Needs general enhancement
+    if 'novelty' in notes or 'generic' in notes or 'repetitive' in notes:
+        return 'differentiate'  # Needs unique angle
+    if 'mythology' in notes or 'operational' in notes:
+        return None  # Don't repair internal/operational content
+    if 'panel_failed' in notes:
+        return None  # Review panel itself failed, not content issue
+
+    return 'enhance'  # Default to general enhancement
+
+
+def _execute_gate_repair(blog, repair_action: str) -> bool:
+    """Execute a targeted repair pass on a blog."""
+    from core.agents.editor_agent import EditorAgent
+
+    focus_map = {
+        'research': ['citations', 'evidence', 'data_backing'],
+        'structure': ['headers', 'structure', 'flow', 'readability'],
+        'enhance': ['hooks', 'engagement', 'conclusion', 'structure'],
+        'differentiate': ['unique_angle', 'original_analysis', 'hooks'],
+    }
+
+    focus_areas = focus_map.get(repair_action, ['engagement', 'structure'])
+
+    try:
+        agent = EditorAgent()
+        result = agent.execute(
+            task=f"Repair blog ({repair_action}): {blog.title[:80]}",
+            context={
+                'blog_id': str(blog.id),
+                'focus_areas': focus_areas,
+                'gate_notes': (blog.gate_notes or '')[:300],
+                'repair_type': repair_action,
+                'save': True,
+            },
+            scifi_context={},
+            spider_context={},
+        )
+
+        if result.success:
+            logger.info(
+                f"[CONTENT-AUTONOMY] Repair ({repair_action}) succeeded: "
+                f"{blog.title[:50]}"
+            )
+            return True
+        return False
+
+    except Exception as e:
+        logger.warning(f"[CONTENT-AUTONOMY] Repair ({repair_action}) error: {e}")
+        return False
+
+
 # =============================================================================
 # Session 1033: Content Finishing Loop + Deliverable Quality Scoring
 # =============================================================================
