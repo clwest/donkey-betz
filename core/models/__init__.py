@@ -198,6 +198,9 @@ from ..models_diagnostic_pipeline import AutopilotAction, RemediationPlaybook
 # Import ImpactEvent (Session 1089 - Autonomy #8 Impact Tracking)
 from ..models_impact_events import ImpactEvent
 
+# Import PolicyExperiment (Session 1090 - Autonomy #11 Experiment Engine)
+from ..models_policy_experiment import PolicyExperiment
+
 # Import learning journey models (Session 773 - Learning Journeys)
 from ..models_learning_journey import (
     LearningJourneyTemplate,
@@ -445,5 +448,8 @@ __all__ = [
 
     # Impact Events (Session 1089 - Autonomy #8)
     'ImpactEvent',
+
+    # Policy Experiment (Session 1090 - Autonomy #11)
+    'PolicyExperiment',
 
 ]

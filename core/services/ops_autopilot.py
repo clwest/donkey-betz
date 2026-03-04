@@ -41,13 +41,18 @@ Policies (v6 — impact tracking + portfolio allocation):
      per desk and adjusts budget allocations — high-impact desks get more
      headroom, zero-impact pipelines get deprioritized.
 
-Policies (v7 — attribution debt + allocation protection):
+Policies (v7 — attribution debt + experiment engine):
  14. Attribution debt controller: AttributionDebtController maps LLM
      spend to desks via agent→desk lookup. Unattributed spend (agents
      without desk mapping) is "debt" that distorts IQROI. When debt
      exceeds 40% of spend, portfolio reallocation is blocked. When
      debt exceeds 20%, EWMA smoothing is increased to reduce sensitivity.
      Reports top unattributed agents for remediation.
+ 15. Experiment engine: A/B testing for policy parameters. Creates
+     experiments with baseline + treatment params, collects metrics
+     (IQROI, debt %, impact USD, publish rate, error rate), auto-promotes
+     winners and auto-rollbacks losers. Only one active experiment per
+     policy. Supports: portfolio_allocator, roi_throttle, budget_controller.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -230,8 +235,9 @@ class OpsAutopilot:
         # Run policies (v6 — impact collection + portfolio allocation)
         impact_results = self._policy_impact_portfolio(now)
 
-        # Run policies (v7 — attribution debt monitoring)
+        # Run policies (v7 — attribution debt + experiment engine)
         debt_results = self._policy_attribution_debt(now)
+        experiment_results = self._policy_experiment_engine(now)
 
         summary = {
             'cycle_at': now.isoformat(),
@@ -250,6 +256,7 @@ class OpsAutopilot:
             'roi': roi_results,
             'impact_portfolio': impact_results,
             'attribution_debt': debt_results,
+            'experiments': experiment_results,
             'actions_taken': len(self.actions_taken),
             'actions': self.actions_taken,
         }
@@ -274,6 +281,7 @@ class OpsAutopilot:
                 'roi': roi_results,
                 'impact_portfolio': impact_results,
                 'attribution_debt': debt_results,
+                'experiments': experiment_results,
             },
             result=summary,
             deploy_sha=self.deploy_sha,
@@ -1509,6 +1517,62 @@ class OpsAutopilot:
         except Exception as e:
             logger.error(
                 f"[OpsAutopilot] Attribution debt error: {e}"
+            )
+            result['error'] = str(e)
+
+        return result
+
+    # ── Policy 15: Experiment engine ──────────────────────────────────────
+
+    def _policy_experiment_engine(self, now) -> dict:
+        """
+        Session 1090: Evaluate active experiments — auto-promote or
+        rollback based on metric comparison.
+        """
+        result = {
+            'experiments_evaluated': 0,
+            'actions': [],
+        }
+
+        try:
+            engine = ExperimentEngine()
+            evaluations = engine.evaluate_experiments(now)
+            result['experiments_evaluated'] = len(evaluations)
+
+            for eval_result in evaluations:
+                action = eval_result.get('action', 'continue')
+                if action in ('promoted', 'rolled_back', 'expired'):
+                    result['actions'].append(eval_result)
+                    self.actions_taken.append({
+                        'type': f'experiment_{action}',
+                        'experiment_id': eval_result['experiment_id'],
+                        'policy': eval_result['policy'],
+                    })
+                    self._create_attention_item(
+                        title=(
+                            f"Experiment {action}: "
+                            f"{eval_result['policy']}"
+                        ),
+                        summary=(
+                            f"Experiment {eval_result['experiment_id'][:8]} "
+                            f"on {eval_result['policy']} was {action}. "
+                            f"Change: {eval_result.get('pct_change', 'N/A')}% "
+                            f"on metric."
+                        ),
+                        urgency='medium' if action == 'rolled_back' else 'low',
+                        policy='experiment_engine',
+                        agent_name='ExperimentEngine',
+                    )
+
+            logger.info(
+                f"[OpsAutopilot] Experiments: "
+                f"{len(evaluations)} evaluated, "
+                f"{len(result['actions'])} decisions"
+            )
+
+        except Exception as e:
+            logger.error(
+                f"[OpsAutopilot] Experiment engine error: {e}"
             )
             result['error'] = str(e)
 
@@ -5098,4 +5162,485 @@ class AttributionDebtController:
             'reallocation_blocked': self.should_block_reallocation(debt_24h),
             'smoothing_alpha': self.get_smoothing_adjustment(debt_24h),
             'mapped_agents': len(self.AGENT_DESK_MAP),
+        }
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Experiment Engine — Policy 15 (Session 1090, Autonomy #11)
+# ═══════════════════════════════════════════════════════════════════════
+
+class ExperimentEngine:
+    """
+    Session 1090: Autonomy #11 — A/B testing for policy parameter changes.
+
+    Creates experiments that:
+    1. Snapshot current policy params as baseline
+    2. Apply treatment params
+    3. Collect metrics during both periods
+    4. Auto-promote (treatment wins) or auto-rollback (treatment loses)
+
+    Supported policy levers:
+    - portfolio_allocator: ALLOCATION_FLOOR, ALLOCATION_CEILING, EWMA_ALPHA
+    - roi_throttle: THROTTLE_TIERS cooldown thresholds
+    - budget_controller: BUDGET_SOFT_PCT, BUDGET_HARD_PCT
+
+    Each experiment writes params to SystemConfiguration so policies read
+    them dynamically. On rollback, baseline params are restored.
+    """
+
+    # Config key prefix for experiment-managed parameters
+    EXPERIMENT_CONFIG_PREFIX = 'experiment_param'
+
+    # Policy → parameter names that can be experimented on
+    EXPERIMENTABLE_PARAMS = {
+        'portfolio_allocator': [
+            'ALLOCATION_FLOOR',
+            'ALLOCATION_CEILING',
+            'EWMA_ALPHA',
+            'IMPACT_POINT_USD_VALUE',
+        ],
+        'roi_throttle': [
+            'THROTTLE_TIER_0_ROI',
+            'THROTTLE_TIER_0_MINUTES',
+            'THROTTLE_TIER_1_ROI',
+            'THROTTLE_TIER_1_MINUTES',
+        ],
+        'budget_controller': [
+            'BUDGET_SOFT_PCT',
+            'BUDGET_HARD_PCT',
+            'BUDGET_DAILY_USD',
+        ],
+    }
+
+    # Metric collectors keyed by success_metric name
+    METRIC_COLLECTORS = {
+        'avg_desk_iqroi': '_collect_avg_iqroi',
+        'attribution_debt_pct': '_collect_debt_pct',
+        'total_impact_usd': '_collect_total_impact',
+        'publish_pass_rate': '_collect_publish_rate',
+        'error_rate': '_collect_error_rate',
+    }
+
+    def create_experiment(
+        self,
+        policy_name: str,
+        treatment_params: dict,
+        success_metric: str = 'avg_desk_iqroi',
+        description: str = '',
+        success_threshold_pct: float = 5.0,
+        failure_threshold_pct: float = -10.0,
+        min_duration_hours: int = 24,
+        max_duration_hours: int = 168,
+        created_by: str = 'autopilot',
+    ) -> dict:
+        """Create a new experiment (draft). Must be started separately."""
+        from core.models_policy_experiment import PolicyExperiment
+
+        if policy_name not in self.EXPERIMENTABLE_PARAMS:
+            return {
+                'error': (
+                    f"Unknown policy '{policy_name}'. "
+                    f"Valid: {list(self.EXPERIMENTABLE_PARAMS.keys())}"
+                ),
+            }
+
+        if success_metric not in self.METRIC_COLLECTORS:
+            return {
+                'error': (
+                    f"Unknown metric '{success_metric}'. "
+                    f"Valid: {list(self.METRIC_COLLECTORS.keys())}"
+                ),
+            }
+
+        # Check for existing active experiment on this policy
+        active = PolicyExperiment.objects.filter(
+            policy_name=policy_name,
+            status='active',
+        ).exists()
+        if active:
+            return {
+                'error': (
+                    f"Policy '{policy_name}' already has an active experiment. "
+                    f"Finish or rollback the current one first."
+                ),
+            }
+
+        # Snapshot current baseline params
+        baseline = self._get_current_params(policy_name)
+
+        # Validate treatment params
+        allowed = set(self.EXPERIMENTABLE_PARAMS[policy_name])
+        invalid = set(treatment_params.keys()) - allowed
+        if invalid:
+            return {
+                'error': (
+                    f"Invalid params for {policy_name}: {invalid}. "
+                    f"Allowed: {allowed}"
+                ),
+            }
+
+        exp = PolicyExperiment.objects.create(
+            policy_name=policy_name,
+            description=description or (
+                f"Test {list(treatment_params.keys())} changes on {policy_name}"
+            ),
+            baseline_params=baseline,
+            treatment_params=treatment_params,
+            success_metric=success_metric,
+            success_threshold_pct=success_threshold_pct,
+            failure_threshold_pct=failure_threshold_pct,
+            min_duration_hours=min_duration_hours,
+            max_duration_hours=max_duration_hours,
+            created_by=created_by,
+        )
+
+        return {
+            'experiment_id': str(exp.id),
+            'policy': policy_name,
+            'status': 'draft',
+            'baseline': baseline,
+            'treatment': treatment_params,
+            'success_metric': success_metric,
+        }
+
+    def start_experiment(self, experiment_id: str) -> dict:
+        """Activate an experiment — apply treatment params."""
+        from core.models_policy_experiment import PolicyExperiment
+
+        try:
+            exp = PolicyExperiment.objects.get(id=experiment_id)
+        except PolicyExperiment.DoesNotExist:
+            return {'error': f'Experiment {experiment_id} not found'}
+
+        if exp.status != 'draft':
+            return {'error': f'Experiment is {exp.status}, can only start drafts'}
+
+        # Capture baseline metrics before switching
+        now = timezone.now()
+        exp.baseline_metrics = self._collect_metrics(exp.success_metric, now)
+
+        # Apply treatment params to SystemConfiguration
+        self._apply_params(exp.policy_name, exp.treatment_params)
+
+        exp.start()  # sets status='active', started_at=now
+
+        return {
+            'experiment_id': str(exp.id),
+            'status': 'active',
+            'baseline_metrics': exp.baseline_metrics,
+            'treatment_params_applied': exp.treatment_params,
+        }
+
+    def evaluate_experiments(self, now) -> list[dict]:
+        """
+        Check all active experiments and decide: promote, rollback, or continue.
+        Called by OpsAutopilot on each cycle.
+        """
+        from core.models_policy_experiment import PolicyExperiment
+
+        results = []
+        active = PolicyExperiment.objects.filter(status='active')
+
+        for exp in active:
+            result = self._evaluate_single(exp, now)
+            results.append(result)
+
+        return results
+
+    def _evaluate_single(self, exp, now) -> dict:
+        """Evaluate a single experiment."""
+        result = {
+            'experiment_id': str(exp.id),
+            'policy': exp.policy_name,
+            'action': 'continue',
+        }
+
+        # Check expiration first
+        if exp.is_expired:
+            self._rollback_experiment(exp, 'Max duration exceeded')
+            result['action'] = 'expired'
+            return result
+
+        # Not mature enough yet
+        if not exp.is_mature:
+            elapsed_h = 0
+            if exp.started_at:
+                elapsed_h = (now - exp.started_at).total_seconds() / 3600
+            result['elapsed_hours'] = round(elapsed_h, 1)
+            result['min_hours'] = exp.min_duration_hours
+            return result
+
+        # Collect treatment metrics
+        treatment_metrics = self._collect_metrics(exp.success_metric, now)
+        exp.treatment_metrics = treatment_metrics
+        exp.save(update_fields=['treatment_metrics', 'updated_at'])
+
+        # Compare baseline vs treatment
+        baseline_val = exp.baseline_metrics.get('value', 0)
+        treatment_val = treatment_metrics.get('value', 0)
+
+        if baseline_val == 0:
+            pct_change = 100.0 if treatment_val > 0 else 0.0
+        else:
+            pct_change = ((treatment_val - baseline_val) / abs(baseline_val)) * 100
+
+        result['baseline_value'] = baseline_val
+        result['treatment_value'] = treatment_val
+        result['pct_change'] = round(pct_change, 2)
+
+        # Decision
+        if pct_change >= exp.success_threshold_pct:
+            self._promote_experiment(exp, pct_change)
+            result['action'] = 'promoted'
+        elif pct_change <= exp.failure_threshold_pct:
+            self._rollback_experiment(
+                exp,
+                f'Treatment underperformed by {abs(pct_change):.1f}%'
+            )
+            result['action'] = 'rolled_back'
+        else:
+            result['action'] = 'continue'
+
+        return result
+
+    def _promote_experiment(self, exp, pct_change: float):
+        """Treatment won — persist treatment params as new defaults."""
+        from core.models.system import SystemConfiguration
+
+        # Treatment params are already in SystemConfiguration,
+        # just update the description to note they're promoted
+        for param, value in exp.treatment_params.items():
+            key = f"{self.EXPERIMENT_CONFIG_PREFIX}:{exp.policy_name}:{param}"
+            SystemConfiguration.objects.update_or_create(
+                key=key,
+                defaults={
+                    'value': {'value': value, 'promoted': True},
+                    'description': (
+                        f"Promoted from experiment {str(exp.id)[:8]}: "
+                        f"+{pct_change:.1f}% on {exp.success_metric}"
+                    ),
+                    'category': 'experiment',
+                },
+            )
+
+        exp.promote(
+            f"Treatment +{pct_change:.1f}% on {exp.success_metric} "
+            f"(threshold: +{exp.success_threshold_pct}%)"
+        )
+
+    def _rollback_experiment(self, exp, reason: str):
+        """Revert to baseline params."""
+        # Restore baseline params in SystemConfiguration
+        self._apply_params(exp.policy_name, exp.baseline_params)
+        exp.rollback(reason)
+
+    def _apply_params(self, policy_name: str, params: dict):
+        """Write experiment params to SystemConfiguration."""
+        from core.models.system import SystemConfiguration
+
+        for param, value in params.items():
+            key = f"{self.EXPERIMENT_CONFIG_PREFIX}:{policy_name}:{param}"
+            SystemConfiguration.objects.update_or_create(
+                key=key,
+                defaults={
+                    'value': {'value': value},
+                    'description': (
+                        f"Experiment param: {policy_name}.{param}"
+                    ),
+                    'category': 'experiment',
+                },
+            )
+
+    def _get_current_params(self, policy_name: str) -> dict:
+        """Read current parameter values (from config or defaults)."""
+        from core.models.system import SystemConfiguration
+
+        defaults = {
+            'portfolio_allocator': {
+                'ALLOCATION_FLOOR': PortfolioAllocator.ALLOCATION_FLOOR,
+                'ALLOCATION_CEILING': PortfolioAllocator.ALLOCATION_CEILING,
+                'EWMA_ALPHA': PortfolioAllocator.EWMA_ALPHA,
+                'IMPACT_POINT_USD_VALUE': PortfolioAllocator.POINT_USD_VALUE,
+            },
+            'roi_throttle': {
+                'THROTTLE_TIER_0_ROI': 0.05,
+                'THROTTLE_TIER_0_MINUTES': 120,
+                'THROTTLE_TIER_1_ROI': 0.2,
+                'THROTTLE_TIER_1_MINUTES': 60,
+            },
+            'budget_controller': {
+                'BUDGET_SOFT_PCT': 70.0,
+                'BUDGET_HARD_PCT': 95.0,
+                'BUDGET_DAILY_USD': 5.0,
+            },
+        }
+
+        current = dict(defaults.get(policy_name, {}))
+
+        # Override with SystemConfiguration values if present
+        for param in current:
+            key = f"{self.EXPERIMENT_CONFIG_PREFIX}:{policy_name}:{param}"
+            try:
+                entry = SystemConfiguration.objects.filter(
+                    key=key,
+                ).values_list('value', flat=True).first()
+                if entry and isinstance(entry, dict) and 'value' in entry:
+                    current[param] = entry['value']
+            except Exception:
+                pass
+
+        return current
+
+    def get_experiment_param(self, policy_name: str, param: str, default=None):
+        """
+        Read a single experiment-managed parameter.
+        Policies call this to get the currently active value.
+        """
+        from core.models.system import SystemConfiguration
+
+        key = f"{self.EXPERIMENT_CONFIG_PREFIX}:{policy_name}:{param}"
+        try:
+            entry = SystemConfiguration.objects.filter(
+                key=key,
+            ).values_list('value', flat=True).first()
+            if entry and isinstance(entry, dict) and 'value' in entry:
+                return entry['value']
+        except Exception:
+            pass
+
+        return default
+
+    # ── Metric collectors ──────────────────────────────────────────────
+
+    def _collect_metrics(self, metric_name: str, now) -> dict:
+        """Dispatch to the appropriate metric collector."""
+        method_name = self.METRIC_COLLECTORS.get(metric_name)
+        if not method_name:
+            return {'value': 0, 'error': f'Unknown metric: {metric_name}'}
+
+        collector = getattr(self, method_name, None)
+        if not collector:
+            return {'value': 0, 'error': f'Collector not found: {method_name}'}
+
+        try:
+            return collector(now)
+        except Exception as e:
+            return {'value': 0, 'error': str(e)}
+
+    def _collect_avg_iqroi(self, now) -> dict:
+        """Average IQROI across all desks (72h window)."""
+        allocator = PortfolioAllocator()
+        desk_data = allocator.compute_desk_iqroi(now)
+        if not desk_data:
+            return {'value': 0, 'desks': 0}
+
+        iqrois = [d['iqroi'] for d in desk_data.values()]
+        avg = sum(iqrois) / len(iqrois) if iqrois else 0
+        return {
+            'value': round(avg, 4),
+            'desks': len(desk_data),
+            'per_desk': {k: v['iqroi'] for k, v in desk_data.items()},
+        }
+
+    def _collect_debt_pct(self, now) -> dict:
+        """Attribution debt % (24h)."""
+        ctrl = AttributionDebtController()
+        debt = ctrl.compute_debt(now, window_hours=24)
+        return {
+            'value': debt['debt_pct'],
+            'total_spend': debt['total_spend'],
+        }
+
+    def _collect_total_impact(self, now) -> dict:
+        """Total impact USD (72h)."""
+        from core.models_impact_events import ImpactEvent
+        from django.db.models import Sum
+
+        window = now - timedelta(hours=72)
+        result = ImpactEvent.objects.filter(
+            created_at__gte=window,
+        ).aggregate(total=Sum('value_usd'))
+        total = float(result['total'] or 0)
+        return {'value': round(total, 2)}
+
+    def _collect_publish_rate(self, now) -> dict:
+        """Deliverable publish rate (72h)."""
+        from core.models_deliverables import Deliverable
+        window = now - timedelta(hours=72)
+        try:
+            total = Deliverable.objects.filter(
+                created_at__gte=window,
+            ).count()
+            published = Deliverable.objects.filter(
+                created_at__gte=window,
+                status='published',
+            ).count()
+            rate = (published / total * 100) if total > 0 else 0
+            return {
+                'value': round(rate, 1),
+                'published': published,
+                'total': total,
+            }
+        except Exception:
+            return {'value': 0}
+
+    def _collect_error_rate(self, now) -> dict:
+        """Agent execution error rate (24h)."""
+        from core.models_unified_system import AgentExecution
+        window = now - timedelta(hours=24)
+        try:
+            total = AgentExecution.objects.filter(
+                created_at__gte=window,
+            ).count()
+            failed = AgentExecution.objects.filter(
+                created_at__gte=window,
+                status='failed',
+            ).count()
+            rate = (failed / total * 100) if total > 0 else 0
+            return {
+                'value': round(rate, 1),
+                'failed': failed,
+                'total': total,
+            }
+        except Exception:
+            return {'value': 0}
+
+    def get_experiments_report(self, now) -> dict:
+        """Generate experiment status report for PA/governance."""
+        from core.models_policy_experiment import PolicyExperiment
+
+        active = list(
+            PolicyExperiment.objects.filter(
+                status='active',
+            ).values(
+                'id', 'policy_name', 'description',
+                'success_metric', 'started_at',
+                'baseline_metrics', 'treatment_metrics',
+                'treatment_params', 'baseline_params',
+                'success_threshold_pct', 'failure_threshold_pct',
+            )
+        )
+
+        recent = list(
+            PolicyExperiment.objects.filter(
+                status__in=['promoted', 'rolled_back', 'expired'],
+            ).order_by('-ended_at').values(
+                'id', 'policy_name', 'status',
+                'decision_reason', 'ended_at',
+            )[:10]
+        )
+
+        # Serialize UUIDs and datetimes
+        for exp in active + recent:
+            for k, v in exp.items():
+                if hasattr(v, 'isoformat'):
+                    exp[k] = v.isoformat()
+                elif hasattr(v, 'hex'):
+                    exp[k] = str(v)
+
+        return {
+            'active_experiments': active,
+            'recent_decisions': recent,
+            'supported_policies': list(self.EXPERIMENTABLE_PARAMS.keys()),
+            'supported_metrics': list(self.METRIC_COLLECTORS.keys()),
         }
