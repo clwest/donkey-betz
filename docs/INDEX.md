@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-03-03 17:28
+**Generated:** 2026-03-03 17:36
 **Current Session:** 1075
 **Total Documentation:** 1817 files | 621,945 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/features/README.md` | 60 | Feature Documentation |
+| `docs/apis/README.md` | 60 | API Integration References |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -216,7 +216,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 360 | 2026-03-03 17:08 |
+| INDEX.md | docs | 360 | 2026-03-03 17:29 |
 | stage3_timeline.md | initiatives | 71 | 2026-03-03 12:55 |
 | stage3_rubric_runbook.md | initiatives | 105 | 2026-03-03 12:55 |
 | stage3_dashboard_spec.md | initiatives | 315 | 2026-03-03 12:55 |
