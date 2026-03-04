@@ -1,87 +1,109 @@
+import { z } from 'zod';
 import http from './http';
+import { safeParse } from './safeParse';
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// ── Zod Schemas ─────────────────────────────────────────────────────────────
 
-export interface AttentionItem {
-  id: string;
-  title: string;
-  summary: string;
-  urgency: 'critical' | 'high' | 'medium' | 'low';
-  status: string;
-  item_type: string;
-  source_type: string;
-  source_agent: string;
-  payload: Record<string, unknown>;
-  priority_score: number;
-  ml_recommendation: string;
-  ml_confidence: number;
-  decision: string;
-  decision_feedback: string;
-  decided_at: string | null;
-  created_at: string;
-  expires_at: string | null;
-}
+const AttentionItemSchema = z.object({
+  id: z.string(),
+  title: z.string().default(''),
+  summary: z.string().default(''),
+  urgency: z.enum(['critical', 'high', 'medium', 'low']).default('low'),
+  status: z.string().default(''),
+  item_type: z.string().default(''),
+  source_type: z.string().default(''),
+  source_agent: z.string().default(''),
+  payload: z.record(z.string(), z.unknown()).default({}),
+  priority_score: z.number().default(0),
+  ml_recommendation: z.string().default(''),
+  ml_confidence: z.number().default(0),
+  decision: z.string().default(''),
+  decision_feedback: z.string().default(''),
+  decided_at: z.string().nullable().default(null),
+  created_at: z.string().default(''),
+  expires_at: z.string().nullable().default(null),
+}).passthrough();
 
-export interface AttentionListResponse {
-  success: boolean;
-  items: AttentionItem[];
-  count: number;
-}
+const AttentionListResponseSchema = z.object({
+  success: z.boolean().default(true),
+  items: z.array(AttentionItemSchema).default([]),
+  count: z.number().default(0),
+});
 
-export interface AttentionDetailResponse {
-  success: boolean;
-  item: AttentionItem;
-}
+const AttentionDetailResponseSchema = z.object({
+  success: z.boolean().default(true),
+  item: AttentionItemSchema,
+});
 
-export interface Decision {
-  id: string;
-  topic: string;
-  decision_type: string;
-  decision_type_display: string;
-  impact_area: string;
-  impact_area_display: string;
-  key_insights: string[];
-  recommended_stance: string;
-  rationale: string;
-  participants: string[];
-  status: 'draft' | 'review' | 'canonical' | 'rejected';
-  is_canonical: boolean;
-  promoted_at: string | null;
-  source_type: string;
-  created_at: string;
-  confidence_score?: number;
-}
+const DecisionSchema = z.object({
+  id: z.string(),
+  topic: z.string().default(''),
+  decision_type: z.string().default(''),
+  decision_type_display: z.string().default(''),
+  impact_area: z.string().default(''),
+  impact_area_display: z.string().default(''),
+  key_insights: z.array(z.string()).default([]),
+  recommended_stance: z.string().default(''),
+  rationale: z.string().default(''),
+  participants: z.array(z.string()).default([]),
+  status: z.enum(['draft', 'review', 'canonical', 'rejected']).default('draft'),
+  is_canonical: z.boolean().default(false),
+  promoted_at: z.string().nullable().default(null),
+  source_type: z.string().default(''),
+  created_at: z.string().default(''),
+  confidence_score: z.number().optional(),
+}).passthrough();
 
-export interface DecisionListResponse {
-  success: boolean;
-  decisions: Decision[];
-  count: number;
-  total: number;
-  canonical_count: number;
-}
+const DecisionListResponseSchema = z.object({
+  success: z.boolean().default(true),
+  decisions: z.array(DecisionSchema).default([]),
+  count: z.number().default(0),
+  total: z.number().default(0),
+  canonical_count: z.number().default(0),
+});
 
-export interface DecisionDetailResponse {
-  success: boolean;
-  decision: Decision & {
-    suggested_feature: string;
-    rationale: string;
-  };
-}
+const DecisionDetailResponseSchema = z.object({
+  success: z.boolean().default(true),
+  decision: DecisionSchema.extend({
+    suggested_feature: z.string().default(''),
+    rationale: z.string().default(''),
+  }),
+});
 
-// ── Attention endpoints ──────────────────────────────────────────────────────
+// ── Exported Types ──────────────────────────────────────────────────────────
+
+export type AttentionItem = z.infer<typeof AttentionItemSchema>;
+export type AttentionListResponse = z.infer<typeof AttentionListResponseSchema>;
+export type AttentionDetailResponse = z.infer<typeof AttentionDetailResponseSchema>;
+export type Decision = z.infer<typeof DecisionSchema>;
+export type DecisionListResponse = z.infer<typeof DecisionListResponseSchema>;
+export type DecisionDetailResponse = z.infer<typeof DecisionDetailResponseSchema>;
+
+// ── Fallbacks ───────────────────────────────────────────────────────────────
+
+const EMPTY_ATTENTION_LIST: AttentionListResponse = { success: false, items: [], count: 0 };
+const EMPTY_DECISION_LIST: DecisionListResponse = { success: false, decisions: [], count: 0, total: 0, canonical_count: 0 };
+
+// ── Attention endpoints ─────────────────────────────────────────────────────
 
 export async function listAttention(params?: {
   limit?: number;
   urgency?: string;
   status?: string;
 }): Promise<AttentionListResponse> {
-  const { data } = await http.get<AttentionListResponse>('/human/attention/', { params });
-  return data;
+  const { data } = await http.get('/human/attention/', { params });
+  return safeParse(AttentionListResponseSchema, data, {
+    endpoint: '/human/attention/',
+    fallback: EMPTY_ATTENTION_LIST,
+  });
 }
 
 export async function getAttention(id: string): Promise<AttentionDetailResponse> {
-  const { data } = await http.get<AttentionDetailResponse>(`/human/attention/${id}/`);
-  return data;
+  const { data } = await http.get(`/human/attention/${id}/`);
+  return safeParse(AttentionDetailResponseSchema, data, {
+    endpoint: `/human/attention/${id}/`,
+    fallback: { success: false, item: { id, title: 'Error loading', summary: '', urgency: 'low', status: '', item_type: '', source_type: '', source_agent: '', payload: {}, priority_score: 0, ml_recommendation: '', ml_confidence: 0, decision: '', decision_feedback: '', decided_at: null, created_at: '', expires_at: null } },
+  });
 }
 
 export async function decideAttention(
@@ -106,20 +128,26 @@ export async function deferAttention(
   return data;
 }
 
-// ── Decision endpoints ───────────────────────────────────────────────────────
+// ── Decision endpoints ──────────────────────────────────────────────────────
 
 export async function listDecisions(params?: {
   limit?: number;
   status?: string;
   decision_type?: string;
 }): Promise<DecisionListResponse> {
-  const { data } = await http.get<DecisionListResponse>('/boardroom/decisions/', { params });
-  return data;
+  const { data } = await http.get('/boardroom/decisions/', { params });
+  return safeParse(DecisionListResponseSchema, data, {
+    endpoint: '/boardroom/decisions/',
+    fallback: EMPTY_DECISION_LIST,
+  });
 }
 
 export async function getDecision(id: string): Promise<DecisionDetailResponse> {
-  const { data } = await http.get<DecisionDetailResponse>(`/decisions/${id}/`);
-  return data;
+  const { data } = await http.get(`/decisions/${id}/`);
+  return safeParse(DecisionDetailResponseSchema, data, {
+    endpoint: `/decisions/${id}/`,
+    fallback: { success: false, decision: { id, topic: 'Error loading', decision_type: '', decision_type_display: '', impact_area: '', impact_area_display: '', key_insights: [], recommended_stance: '', rationale: '', participants: [], status: 'draft', is_canonical: false, promoted_at: null, source_type: '', created_at: '', suggested_feature: '' } },
+  });
 }
 
 export async function promoteDecision(
