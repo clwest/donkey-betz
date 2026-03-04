@@ -437,6 +437,10 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
 
         return super()._execute_tool_call(tool_name, arguments)
 
+    # Per-request timeout for GPT-5-mini tool calls (seconds).
+    # Prevents unbounded hangs when multiple tool calls run sequentially.
+    _LLM_TIMEOUT = 60
+
     def _monitor_large_transfers(
         self,
         token: str,
@@ -487,7 +491,8 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
                 {"role": "system", "content": "You are a whale movement analyst. Track large crypto transfers and assess market impact."},
                 {"role": "user", "content": prompt}
             ],
-            max_completion_tokens=4000
+            max_completion_tokens=4000,
+            timeout=self._LLM_TIMEOUT,
         )
 
         return {
@@ -542,7 +547,8 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
                 {"role": "system", "content": "You are a whale wallet analyst. Identify, categorize, and assess whale addresses."},
                 {"role": "user", "content": prompt}
             ],
-            max_completion_tokens=4000
+            max_completion_tokens=4000,
+            timeout=self._LLM_TIMEOUT,
         )
 
         return {
@@ -602,7 +608,8 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
                 {"role": "system", "content": "You are an exchange flow analyst. Track crypto movements in/out of exchanges."},
                 {"role": "user", "content": prompt}
             ],
-            max_completion_tokens=4000
+            max_completion_tokens=4000,
+            timeout=self._LLM_TIMEOUT,
         )
 
         return {
@@ -666,7 +673,8 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
                 {"role": "system", "content": "You are a crypto accumulation pattern analyst. Detect buying and selling patterns."},
                 {"role": "user", "content": prompt}
             ],
-            max_completion_tokens=4000
+            max_completion_tokens=4000,
+            timeout=self._LLM_TIMEOUT,
         )
 
         return {
