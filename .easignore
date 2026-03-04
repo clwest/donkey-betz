@@ -9,6 +9,8 @@ mobile/.expo/
 
 # Backend (not needed for mobile builds)
 .venv/
+venv/
+venv_ml/
 __pycache__/
 *.pyc
 core/
@@ -19,6 +21,7 @@ tools/
 scripts/
 templates/
 static/
+staticfiles/
 *.sqlite3
 *.log
 *.pid
@@ -35,10 +38,30 @@ discord_bot/
 resolve_node/
 .claude/
 
+# Large data directories (not needed for mobile builds)
+media/
+backups/
+logs/
+_archived/
+external-project-docs/
+pgvector_local_repo/
+intelligence/
+income_builder_outputs/
+models/
+content/
+archive/
+review/
+tests/
+
 # Dev tooling
 .vscode/
 .idea/
 .git/
+
+# Cache / data files
+*.pkl
+.rag/
+.rag_cache.pkl
 
 # Test files
 __tests__/
