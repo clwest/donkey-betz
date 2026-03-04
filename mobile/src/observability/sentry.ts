@@ -59,5 +59,8 @@ export function setSentryUser(user: { id: string; username: string; email?: stri
 
 /**
  * Wrap the root app component with Sentry error boundary.
+ * Only apply if DSN is configured — Sentry.wrap without init can crash
+ * the native module in EAS builds.
  */
-export const SentryErrorBoundary = Sentry.wrap;
+export const SentryErrorBoundary: (component: React.ComponentType) => React.ComponentType =
+  SENTRY_DSN ? Sentry.wrap : (c) => c;

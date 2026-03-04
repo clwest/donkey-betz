@@ -10,7 +10,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   icon: './assets/icon.png',
   userInterfaceStyle: 'automatic',
   scheme: 'donkeybetz',
-  newArchEnabled: true,
+  newArchEnabled: false,
   runtimeVersion: {
     policy: 'appVersion',
   },

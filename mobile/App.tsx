@@ -27,7 +27,11 @@ try {
 }
 
 // Configure foreground notification display once at module level
-configureForegroundHandler();
+try {
+  configureForegroundHandler();
+} catch (e) {
+  console.warn('[Notifications] configureForegroundHandler() threw:', e);
+}
 
 function App() {
   const status = useAuthStore((s) => s.status);
@@ -65,8 +69,12 @@ function App() {
 
   // Listen for notification taps
   useEffect(() => {
-    const cleanup = addNotificationResponseListener();
-    return cleanup;
+    try {
+      const cleanup = addNotificationResponseListener();
+      return cleanup;
+    } catch (e) {
+      console.warn('[Push] addNotificationResponseListener failed:', e);
+    }
   }, []);
 
   if (status === 'loading') {
