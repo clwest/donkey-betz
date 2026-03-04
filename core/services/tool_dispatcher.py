@@ -11855,6 +11855,50 @@ RESEARCH DATA:
                 **report,
             }
 
+        elif action == 'scheduler_report':
+            # Show budget-aware scheduling state
+            from core.services.ops_autopilot import BudgetAwareScheduler
+            from django.utils import timezone as tz
+            scheduler = BudgetAwareScheduler()
+            try:
+                report = scheduler.get_scheduler_report(tz.now())
+            except Exception as e:
+                return {
+                    'action': 'scheduler_report',
+                    'error': f'Scheduler report failed: {str(e)[:200]}',
+                }
+
+            report_lines = ['## Budget-Aware Scheduler Report\n']
+            report_lines.append(
+                f'**Budget:** {report["budget_pct"]:.0%} — '
+                f'**Pressure:** {report["pressure"].upper()}'
+            )
+            report_lines.append(
+                f'**Last 24h:** {report["defers_24h"]} deferred, '
+                f'{report["downscopes_24h"]} downscoped'
+            )
+            report_lines.append(
+                f'**Task tiers:** '
+                f'Tier 1 (cheap): {report["tier_counts"].get(1, 0)}, '
+                f'Tier 2 (moderate): {report["tier_counts"].get(2, 0)}, '
+                f'Tier 3 (expensive): {report["tier_counts"].get(3, 0)}'
+            )
+            report_lines.append(
+                f'**Deferable tasks:** {report["deferable_tasks"]} — '
+                f'**Downscope-capable:** {report["downscope_tasks"]}'
+            )
+
+            if report.get('active_overrides'):
+                report_lines.append('\n### Active Knob Overrides')
+                for key, val in report['active_overrides'].items():
+                    report_lines.append(f'- {key}: {val}')
+
+            return {
+                'action': 'scheduler_report',
+                'report': '\n'.join(report_lines),
+                **report,
+            }
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason
@@ -11886,7 +11930,8 @@ RESEARCH DATA:
             raise ValueError(
                 f"Unknown action: {action}. "
                 f"Valid: status, history, run, config, dry_run_report, drift_scan, "
-                f"tuning_report, budget_report, roi_report, backfill_failure_reasons"
+                f"tuning_report, budget_report, roi_report, scheduler_report, "
+                f"backfill_failure_reasons"
             )
 
     def _handle_ops_digest(

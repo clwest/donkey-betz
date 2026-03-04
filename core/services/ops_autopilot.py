@@ -25,11 +25,15 @@ Policies (v4 — self-tuning + budget):
      Three tiers: soft limit (70%) → model downgrade, rate reduction (future),
      hard limit (95%) → freeze non-critical. Flags in SystemConfiguration.
 
-Policies (v5 — ROI attribution):
+Policies (v5 — ROI attribution + scheduling):
  11. ROI enforcement: ROIEnforcer correlates LLM spend with outcomes
      (completed executions, published content). Under budget pressure,
      applies selective throttles — low-ROI agents get cooldown periods
      between calls. Throttles stored as SystemConfiguration keys.
+ 12. Budget-aware scheduling: BudgetAwareScheduler provides preflight
+     checks for expensive Beat tasks. Under pressure, tasks are deferred
+     (skipped) or downscoped (reduced batch sizes, fewer items). Tasks
+     classified by cost tier (1-3). Knobs overridable via SystemConfiguration.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -3593,4 +3597,334 @@ class ROIEnforcer:
             'throttle_recommendations': throttle_recs[:10],
             'active_throttles': active_throttles,
             'budget_pressure': len(throttle_recs) > 0,
+        }
+
+
+# ── Budget-Aware Scheduler ───────────────────────────────────────────────────
+
+class BudgetAwareScheduler:
+    """
+    Session 1088: Autonomy #6 — Budget-aware task scheduling.
+
+    Provides a `preflight(task_name)` check that expensive Beat tasks
+    call at entry. Under budget pressure the scheduler returns:
+    - 'proceed': run normally
+    - 'downscope': run with reduced parameters (fewer items, smaller panels)
+    - 'defer': skip this cycle entirely
+
+    Tasks are classified into cost tiers. The scheduler reads current
+    budget utilization and applies appropriate decisions.
+
+    Downscope knobs are stored in SystemConfiguration as
+    `scheduler_knob:{task_name}:{knob}` and read by task code.
+    """
+
+    # Cost tier classification for scheduled tasks
+    # tier 1 = cheapest (no LLM), tier 2 = moderate, tier 3 = expensive LLM
+    TASK_TIERS = {
+        # Tier 3: Heavy LLM consumers — defer first
+        'core.tasks.generate_self_blog_deliberation_task': 3,
+        'core.tasks.content_autonomy_loop': 3,
+        'core.tasks.auto_enhance_blogs': 3,
+        'core.tasks.generate_smart_suggestions': 3,
+        'core.tasks.agent_think_and_synthesize': 3,
+        'core.tasks.process_content_ideas': 3,
+        'core.tasks.run_daily_learning_pipeline': 3,
+
+        # Tier 2: Moderate LLM or embedding usage
+        'core.tasks.enrich_boardroom_ml_predictions': 2,
+        'core.tasks.backfill_spider_embeddings': 2,
+        'core.tasks.backfill_memory_embeddings': 2,
+        'core.tasks.backfill_conversation_embeddings': 2,
+        'core.tasks.score_opportunities_from_spider_data': 2,
+        'core.tasks.generate_human_attention_items': 2,
+        'core.tasks.run_proactive_system_check': 2,
+        'core.tasks.execute_pending_opportunity_tasks': 2,
+        'core.tasks.discover_success_patterns': 2,
+        'core.tasks.generate_user_insights': 2,
+        'core.tasks.reevaluate_enhanced_blogs': 2,
+        'sports.generate_game_predictions': 2,
+        'sports.run_market_analysis': 2,
+        'intelligence.tasks.scan_spider_opportunities': 2,
+        'intelligence.tasks.monitor_and_process_opportunities': 2,
+
+        # Tier 1: No/minimal LLM — always proceed
+        'core.tasks.run_spider_network': 1,
+        'core.tasks.process_core_spider_data': 1,
+        'core.tasks.process_spider_data_automatic': 1,
+        'core.tasks.check_all_alerts': 1,
+        'sports.update_game_scores': 1,
+        'sports.settle_user_bets': 1,
+        'sports.verify_betting_outcomes': 1,
+    }
+
+    # Downscope knobs per task (param_name → {normal, pressured, critical})
+    DOWNSCOPE_KNOBS = {
+        'core.tasks.generate_self_blog_deliberation_task': {
+            'max_reviewers': {'normal': 3, 'pressured': 1, 'critical': 0},
+            'max_topics': {'normal': 3, 'pressured': 1, 'critical': 0},
+        },
+        'core.tasks.backfill_spider_embeddings': {
+            'batch_size': {'normal': 100, 'pressured': 30, 'critical': 10},
+        },
+        'core.tasks.content_autonomy_loop': {
+            'max_items': {'normal': 10, 'pressured': 3, 'critical': 0},
+        },
+        'core.tasks.auto_enhance_blogs': {
+            'max_items': {'normal': 5, 'pressured': 1, 'critical': 0},
+        },
+        'core.tasks.enrich_boardroom_ml_predictions': {
+            'batch_size': {'normal': 20, 'pressured': 5, 'critical': 0},
+        },
+        'core.tasks.execute_pending_opportunity_tasks': {
+            'limit': {'normal': 20, 'pressured': 5, 'critical': 0},
+        },
+        'core.tasks.agent_think_and_synthesize': {
+            'max_agents': {'normal': 10, 'pressured': 3, 'critical': 0},
+        },
+    }
+
+    # Tasks that are safe to defer (skip cycle) under hard pressure
+    DEFERABLE = frozenset({
+        'core.tasks.generate_self_blog_deliberation_task',
+        'core.tasks.content_autonomy_loop',
+        'core.tasks.auto_enhance_blogs',
+        'core.tasks.generate_smart_suggestions',
+        'core.tasks.agent_think_and_synthesize',
+        'core.tasks.process_content_ideas',
+        'core.tasks.discover_success_patterns',
+        'core.tasks.generate_user_insights',
+        'core.tasks.reevaluate_enhanced_blogs',
+    })
+
+    def preflight(self, task_name: str) -> dict:
+        """
+        Called at the start of an expensive Beat task.
+
+        Returns:
+            {
+                'decision': 'proceed' | 'downscope' | 'defer',
+                'reason': str,
+                'knobs': {param: value, ...} if downscoped,
+                'budget_pct': float,
+            }
+        """
+        tier = self.TASK_TIERS.get(task_name, 1)
+        budget_pct = self._get_budget_utilization()
+
+        # Determine pressure level
+        soft_pct = AutopilotConfig.BUDGET_SOFT_LIMIT_PCT  # 0.70
+        hard_pct = AutopilotConfig.BUDGET_HARD_LIMIT_PCT  # 0.95
+
+        if budget_pct < soft_pct:
+            # Normal — everything proceeds
+            return {
+                'decision': 'proceed',
+                'reason': f'Budget normal ({budget_pct:.0%})',
+                'knobs': self._get_knobs(task_name, 'normal'),
+                'budget_pct': budget_pct,
+            }
+
+        if budget_pct >= hard_pct:
+            # Critical — defer tier 3, heavy downscope tier 2, proceed tier 1
+            if tier >= 3 and task_name in self.DEFERABLE:
+                self._log_decision(task_name, 'defer', budget_pct)
+                return {
+                    'decision': 'defer',
+                    'reason': (
+                        f'Budget critical ({budget_pct:.0%}) — '
+                        f'tier {tier} task deferred'
+                    ),
+                    'knobs': {},
+                    'budget_pct': budget_pct,
+                }
+            elif tier >= 2:
+                knobs = self._get_knobs(task_name, 'critical')
+                if knobs and any(v == 0 for v in knobs.values()):
+                    # Knob set to 0 means effective defer
+                    self._log_decision(task_name, 'defer', budget_pct)
+                    return {
+                        'decision': 'defer',
+                        'reason': (
+                            f'Budget critical ({budget_pct:.0%}) — '
+                            f'all knobs at zero'
+                        ),
+                        'knobs': knobs,
+                        'budget_pct': budget_pct,
+                    }
+                self._log_decision(task_name, 'downscope', budget_pct)
+                return {
+                    'decision': 'downscope',
+                    'reason': (
+                        f'Budget critical ({budget_pct:.0%}) — '
+                        f'heavy downscope applied'
+                    ),
+                    'knobs': knobs,
+                    'budget_pct': budget_pct,
+                }
+            else:
+                return {
+                    'decision': 'proceed',
+                    'reason': f'Tier 1 task always proceeds ({budget_pct:.0%})',
+                    'knobs': {},
+                    'budget_pct': budget_pct,
+                }
+
+        # Pressured (soft_pct <= budget_pct < hard_pct)
+        if tier >= 3 and task_name in self.DEFERABLE:
+            self._log_decision(task_name, 'defer', budget_pct)
+            return {
+                'decision': 'defer',
+                'reason': (
+                    f'Budget pressured ({budget_pct:.0%}) — '
+                    f'tier {tier} deferred'
+                ),
+                'knobs': {},
+                'budget_pct': budget_pct,
+            }
+
+        if tier >= 2:
+            knobs = self._get_knobs(task_name, 'pressured')
+            self._log_decision(task_name, 'downscope', budget_pct)
+            return {
+                'decision': 'downscope',
+                'reason': (
+                    f'Budget pressured ({budget_pct:.0%}) — '
+                    f'downscoped'
+                ),
+                'knobs': knobs,
+                'budget_pct': budget_pct,
+            }
+
+        return {
+            'decision': 'proceed',
+            'reason': f'Tier 1 proceeds ({budget_pct:.0%})',
+            'knobs': {},
+            'budget_pct': budget_pct,
+        }
+
+    def _get_budget_utilization(self) -> float:
+        """Get current daily budget utilization (0..1+)."""
+        try:
+            controller = BudgetController()
+            from django.utils import timezone as tz
+            spend = controller.compute_spend(tz.now())
+            daily_cap = (
+                AutopilotConfig.get('BUDGET_DAILY_CAP_USD')
+                or AutopilotConfig.BUDGET_DAILY_CAP_USD
+            )
+            return spend['daily_total'] / max(daily_cap, 0.01)
+        except Exception:
+            return 0.0  # Fail open
+
+    def _get_knobs(self, task_name: str, level: str) -> dict:
+        """
+        Get downscope parameter values for a task at the given level.
+
+        Checks SystemConfiguration overrides first, falls back to defaults.
+        """
+        knob_config = self.DOWNSCOPE_KNOBS.get(task_name, {})
+        result = {}
+
+        for param, levels in knob_config.items():
+            # Check for runtime override
+            override_key = f"scheduler_knob:{task_name}:{param}"
+            try:
+                from core.models.system import SystemConfiguration
+                override = SystemConfiguration.objects.filter(
+                    key=override_key,
+                ).values_list('value', flat=True).first()
+                if override is not None:
+                    result[param] = override
+                    continue
+            except Exception:
+                pass
+
+            # Use static default for the level
+            result[param] = levels.get(level, levels.get('normal'))
+
+        return result
+
+    def _log_decision(self, task_name: str, decision: str, budget_pct: float):
+        """Log scheduling decision for audit trail."""
+        try:
+            AutopilotAction.objects.create(
+                action_type='config_tune',
+                agent_name=task_name,
+                policy='budget_aware_scheduler',
+                dry_run=False,
+                evidence={
+                    'decision': decision,
+                    'budget_pct': round(budget_pct, 3),
+                    'task_tier': self.TASK_TIERS.get(task_name, 1),
+                },
+                result={'scheduled_action': decision},
+            )
+        except Exception:
+            pass
+
+        logger.info(
+            f"[BudgetAwareScheduler] {decision.upper()}: "
+            f"{task_name} (budget {budget_pct:.0%})"
+        )
+
+    def get_scheduler_report(self, now) -> dict:
+        """Generate report on scheduling state for PA/governance."""
+        budget_pct = self._get_budget_utilization()
+        soft_pct = AutopilotConfig.BUDGET_SOFT_LIMIT_PCT
+        hard_pct = AutopilotConfig.BUDGET_HARD_LIMIT_PCT
+
+        if budget_pct >= hard_pct:
+            pressure = 'critical'
+        elif budget_pct >= soft_pct:
+            pressure = 'pressured'
+        else:
+            pressure = 'normal'
+
+        # Count recent defer/downscope decisions (last 24h)
+        from django.utils import timezone as tz
+        cutoff = now - timedelta(hours=24)
+        try:
+            recent = list(
+                AutopilotAction.objects.filter(
+                    policy='budget_aware_scheduler',
+                    created_at__gte=cutoff,
+                ).values_list('evidence', flat=True)[:50]
+            )
+        except Exception:
+            recent = []
+
+        defers = sum(1 for r in recent if r.get('decision') == 'defer')
+        downscopes = sum(
+            1 for r in recent if r.get('decision') == 'downscope'
+        )
+
+        # Get active knob overrides
+        overrides = {}
+        try:
+            from core.models.system import SystemConfiguration
+            entries = SystemConfiguration.objects.filter(
+                key__startswith='scheduler_knob:',
+            ).values('key', 'value')
+            for e in entries:
+                overrides[e['key']] = e['value']
+        except Exception:
+            pass
+
+        # Task tier summary
+        tier_counts = {1: 0, 2: 0, 3: 0}
+        for tier in self.TASK_TIERS.values():
+            tier_counts[tier] = tier_counts.get(tier, 0) + 1
+
+        return {
+            'budget_pct': round(budget_pct, 3),
+            'pressure': pressure,
+            'soft_limit': soft_pct,
+            'hard_limit': hard_pct,
+            'defers_24h': defers,
+            'downscopes_24h': downscopes,
+            'active_overrides': overrides,
+            'tier_counts': tier_counts,
+            'deferable_tasks': len(self.DEFERABLE),
+            'downscope_tasks': len(self.DOWNSCOPE_KNOBS),
         }

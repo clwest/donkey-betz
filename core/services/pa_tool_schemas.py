@@ -2035,7 +2035,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "backfill_failure_reasons"],
+                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "backfill_failure_reasons"],
                     "description": (
                         "status: current config, last cycle timestamp, and pending actions. "
                         "history: recent autopilot actions (blocks, attention items, dry runs). "
@@ -2052,6 +2052,8 @@ PA_TOOL_SCHEMAS = [
                         "and model, enforcement mode (normal/downgrade/freeze), and utilization percentages. "
                         "roi_report: show ROI attribution per agent — spend vs outcomes (completed executions, "
                         "published content), active throttles, and cooldown recommendations. "
+                        "scheduler_report: show budget-aware scheduling state — which tasks get deferred "
+                        "or downscoped under budget pressure, recent decisions, active knob overrides. "
                         "backfill_failure_reasons: re-classify UNKNOWN failure codes using expanded patterns."
                     ),
                 },
