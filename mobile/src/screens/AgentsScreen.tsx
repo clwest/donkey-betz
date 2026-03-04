@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import * as agentsApi from '../api/agents';
+import CopyId from '../components/CopyId';
 import type {
   AgentExecution,
   AgentListItem,
@@ -494,10 +495,13 @@ export default function AgentsScreen() {
 
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        {/* Back button */}
-        <TouchableOpacity style={styles.backButton} onPress={goBack}>
-          <Text style={styles.backText}>{'< Back'}</Text>
-        </TouchableOpacity>
+        {/* Back + Copy ID */}
+        <View style={styles.detailTopRow}>
+          <TouchableOpacity style={styles.backButton} onPress={goBack}>
+            <Text style={styles.backText}>{'< Back'}</Text>
+          </TouchableOpacity>
+          <CopyId value={selectedAgent.name} label="Agent name" />
+        </View>
 
         {/* Header */}
         <View style={styles.card}>
@@ -1066,9 +1070,9 @@ const styles = StyleSheet.create({
   },
 
   // Back button
+  detailTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   backButton: {
     paddingVertical: 8,
-    marginBottom: 4,
   },
   backText: {
     color: '#6366f1',

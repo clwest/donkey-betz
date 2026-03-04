@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,6 +8,8 @@ import {
 } from 'react-native';
 import type { Artifact, ClassificationPayload } from '../../api/governance';
 import * as governanceApi from '../../api/governance';
+import CopyId from '../../components/CopyId';
+import { toast } from '../../components/Toast';
 
 // ── Option configs ───────────────────────────────────────────────────────────
 
@@ -72,10 +73,10 @@ export default function ClassificationDetail({ artifact, canMutate, onBack, onCl
         data_allowed: dataAllowed!,
         phase_approved: phase!,
       });
-      Alert.alert('Done', 'Artifact classified successfully');
+      toast.success('Artifact classified');
       onClassified();
     } catch {
-      Alert.alert('Error', 'Failed to classify artifact');
+      toast.error('Failed to classify artifact');
     } finally {
       setSubmitting(false);
     }
@@ -83,9 +84,12 @@ export default function ClassificationDetail({ artifact, canMutate, onBack, onCl
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-        <Text style={styles.backText}>Back</Text>
-      </TouchableOpacity>
+      <View style={styles.topRow}>
+        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+          <Text style={styles.backText}>Back</Text>
+        </TouchableOpacity>
+        <CopyId value={artifact.id} label="Artifact ID" />
+      </View>
 
       {/* Artifact info */}
       <Text style={styles.title}>{artifact.title}</Text>
@@ -187,7 +191,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0a0a0f' },
   content: { padding: 16 },
 
-  backBtn: { marginBottom: 12 },
+  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  backBtn: {},
   backText: { color: '#6366f1', fontSize: 14, fontWeight: '600' },
 
   title: { color: '#ffffff', fontSize: 20, fontWeight: '700', marginBottom: 10 },

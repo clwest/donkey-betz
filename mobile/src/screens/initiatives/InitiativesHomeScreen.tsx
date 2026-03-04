@@ -8,10 +8,11 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Alert,
 } from 'react-native';
 import Markdown from 'react-native-markdown-display';
 import * as initiativesApi from '../../api/initiatives';
+import CopyId from '../../components/CopyId';
+import { toast } from '../../components/Toast';
 import type {
   ActionItemsResponse,
   InitiativeActionItem,
@@ -389,9 +390,12 @@ function InitiativeDetail({
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
-      <TouchableOpacity onPress={onBack}>
-        <Text style={styles.backButton}>Back</Text>
-      </TouchableOpacity>
+      <View style={styles.detailTopRow}>
+        <TouchableOpacity onPress={onBack}>
+          <Text style={styles.backButton}>Back</Text>
+        </TouchableOpacity>
+        <CopyId value={initiativeId} label="Initiative ID" />
+      </View>
 
       <View style={styles.detailHeader}>
         <Text style={[styles.badge, {
@@ -545,9 +549,10 @@ function ActionItemsScreen({
     setBusyItem(item.id);
     try {
       await initiativesApi.updateActionItem(item.id, { status: newStatus as any });
+      toast.success(`Action item ${newStatus}`);
       await fetchItems();
     } catch {
-      Alert.alert('Error', `Failed to update action item to ${newStatus}`);
+      toast.error(`Failed to update action item to ${newStatus}`);
     } finally {
       setBusyItem(null);
     }
@@ -852,6 +857,7 @@ const styles = StyleSheet.create({
   },
 
   // Detail
+  detailTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   detailHeader: {
     flexDirection: 'row',
     alignItems: 'center',
