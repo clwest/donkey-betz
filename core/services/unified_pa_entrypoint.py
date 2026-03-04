@@ -1107,6 +1107,14 @@ class UnifiedPAEntrypoint:
                     "output": self._truncate_tool_output(output, 8000),
                 })
 
+            # Log tool output token budget for this iteration
+            tool_output_chars = sum(len(t.get('output', '')) for t in tool_result_inputs)
+            logger.info(
+                "[PA_TOOL_INJECTION] iteration=%d tools=%d chars=%d tokens_est=%d",
+                iteration + 1, len(tool_result_inputs),
+                tool_output_chars, tool_output_chars // 4,
+            )
+
             # Feed tool results back — use previous_response_id for efficiency
             messages = tool_result_inputs
 
@@ -1190,6 +1198,12 @@ class UnifiedPAEntrypoint:
         """
         if len(output) <= limit:
             return output
+
+        original_chars = len(output)
+        logger.info(
+            "[PA_TOOL_TRUNCATE] chars=%d limit=%d trimming=%d",
+            original_chars, limit, original_chars - limit,
+        )
 
         # Try JSON-aware truncation
         try:
@@ -1415,15 +1429,18 @@ class UnifiedPAEntrypoint:
         messages = []
 
         # System instruction
+        system_content = self._build_function_calling_system_prompt(context)
         messages.append({
             "role": "system",
-            "content": self._build_function_calling_system_prompt(context),
+            "content": system_content,
         })
 
         # Conversation history with tool call metadata
+        history_chars = 0
         for turn in self._conversation_history:
             role = turn.get('role', 'user')
             content = turn.get('content', '')
+            history_chars += len(content)
 
             if role == 'user':
                 messages.append({"role": "user", "content": content})
@@ -1434,6 +1451,17 @@ class UnifiedPAEntrypoint:
 
         # Current user message
         messages.append({"role": "user", "content": message})
+
+        # Token budget instrumentation — estimate tokens as chars/4
+        system_tokens_est = len(system_content) // 4
+        history_tokens_est = history_chars // 4
+        message_tokens_est = len(message) // 4
+        total_est = system_tokens_est + history_tokens_est + message_tokens_est
+        logger.info(
+            "[PA_TOKEN_BUDGET] system=%d history=%d (turns=%d) message=%d total=%d",
+            system_tokens_est, history_tokens_est,
+            len(self._conversation_history), message_tokens_est, total_est,
+        )
 
         return messages
 
