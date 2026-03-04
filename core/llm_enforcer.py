@@ -149,6 +149,7 @@ class LLMEnforcer:
             # Hard freeze check — only critical purposes allowed
             freeze_flag = SystemConfiguration.objects.filter(
                 key='budget_freeze_active',
+                is_active=True,
             ).values_list('value', flat=True).first()
             if freeze_flag:
                 critical_purposes = {'governance', 'auth', 'incident_response', 'pa_chat'}

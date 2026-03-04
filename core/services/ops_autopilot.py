@@ -223,7 +223,7 @@ class AutopilotConfig:
     TUNING_MAX_CHANGES_PER_DAY = 2        # Hard daily cap
 
     # Policy 10: Budget controller
-    BUDGET_DAILY_CAP_USD = 25.0           # Global daily spend cap
+    BUDGET_DAILY_CAP_USD = 100.0          # Global daily spend cap
     BUDGET_HOURLY_CAP_USD = 3.0           # Global hourly spend cap
     BUDGET_SOFT_LIMIT_PCT = 0.7           # Trigger downgrade at 70% of cap
     BUDGET_HARD_LIMIT_PCT = 0.95          # Hard freeze at 95% of cap
@@ -5460,7 +5460,7 @@ class BudgetController:
 
         # Check if already frozen
         existing = SystemConfiguration.objects.filter(
-            key='budget_freeze_active',
+            key='budget_freeze_active', is_active=True,
         ).values_list('value', flat=True).first()
         if existing:
             return None  # Already frozen
@@ -5981,7 +5981,7 @@ class ROIEnforcer:
         key = f"roi_throttle:{agent_name}"
         try:
             entry = SystemConfiguration.objects.filter(
-                key=key,
+                key=key, is_active=True,
             ).values_list('value', flat=True).first()
 
             if not entry:
