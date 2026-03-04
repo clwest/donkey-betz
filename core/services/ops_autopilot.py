@@ -14,6 +14,8 @@ Policies (v2 — autonomy push):
 Policies (v3 — root-cause autonomy):
   7. Root-cause remediation: auto-apply safe config fixes for recurring failures
      (timeout adjustments, model fallbacks, temp blocks) with playbook learning
+  8. Contract/schema drift detection: scan for mismatches between PA tool schemas,
+     handler registrations, agent registry, and Celery beat schedule
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -88,6 +90,10 @@ class AutopilotConfig:
     REMEDIATION_COOLDOWN_HOURS = 4        # Don't re-remediate same signature too soon
     REMEDIATION_VERIFY_DELAY = 600        # 10 min — wait for fix to take effect
 
+    # Policy 8: Contract/schema drift detection
+    DRIFT_CHECK_INTERVAL_HOURS = 6        # Only run drift scan every N hours
+    DRIFT_ALERT_ON_CRITICAL = True        # Create governance alert for critical drift
+
     # Mode
     DRY_RUN = False                      # Set True to evaluate but not act
 
@@ -124,6 +130,7 @@ class OpsAutopilot:
 
         # Run policies (v3 — root-cause autonomy)
         remediation_results = self._policy_root_cause_remediation(now)
+        drift_results = self._policy_contract_drift_detection(now)
 
         summary = {
             'cycle_at': now.isoformat(),
@@ -136,6 +143,7 @@ class OpsAutopilot:
             'attention_resolve': attention_resolve_results,
             'governance_auto': governance_results,
             'remediation': remediation_results,
+            'contract_drift': drift_results,
             'actions_taken': len(self.actions_taken),
             'actions': self.actions_taken,
         }
@@ -154,6 +162,7 @@ class OpsAutopilot:
                 'attention_resolve': attention_resolve_results,
                 'governance_auto': governance_results,
                 'remediation': remediation_results,
+                'contract_drift': drift_results,
             },
             result=summary,
             deploy_sha=self.deploy_sha,
@@ -827,6 +836,95 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] root-cause remediation error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    # ── Policy 8: Contract/schema drift detection ──────────────────────
+
+    def _policy_contract_drift_detection(self, now) -> dict:
+        """
+        Scan for contract drift between system components.
+
+        Rate-limited to once every DRIFT_CHECK_INTERVAL_HOURS to avoid
+        unnecessary overhead (drift changes slowly).
+        """
+        result = {'evaluated': False, 'skipped_reason': ''}
+
+        try:
+            # Rate limit: only scan every N hours
+            cutoff = now - timedelta(hours=AutopilotConfig.DRIFT_CHECK_INTERVAL_HOURS)
+            recent_scan = AutopilotAction.objects.filter(
+                policy='contract_drift_detection',
+                created_at__gte=cutoff,
+            ).exists()
+
+            if recent_scan:
+                result['skipped_reason'] = (
+                    f'Scanned within last {AutopilotConfig.DRIFT_CHECK_INTERVAL_HOURS}h'
+                )
+                return result
+
+            # Run the scan
+            from core.services.contract_monitor import ContractMonitor
+            monitor = ContractMonitor()
+            report = monitor.full_scan()
+
+            result['evaluated'] = True
+            result['critical'] = report['critical']
+            result['warning'] = report['warning']
+            result['info'] = report['info']
+            result['total'] = report['total']
+            result['checks_run'] = report['checks_run']
+
+            # Log the scan
+            AutopilotAction.objects.create(
+                action_type='deploy_watch',
+                agent_name='ContractMonitor',
+                policy='contract_drift_detection',
+                dry_run=self.dry_run,
+                evidence={
+                    'critical': report['critical'],
+                    'warning': report['warning'],
+                    'info': report['info'],
+                    'total': report['total'],
+                    'checks_run': report['checks_run'],
+                    'findings': report['findings'][:20],  # Cap stored findings
+                },
+                result=result,
+                deploy_sha=self.deploy_sha,
+            )
+
+            # Create governance alert if critical drift found
+            if (
+                report['critical'] > 0
+                and AutopilotConfig.DRIFT_ALERT_ON_CRITICAL
+                and not self.dry_run
+            ):
+                summary_text = monitor.summary_for_governance(report)
+                self._create_attention_item(
+                    title=f"Contract drift: {report['critical']} critical findings",
+                    summary=summary_text[:1000],
+                    urgency='medium',
+                    policy='contract_drift_detection',
+                    agent_name='ContractMonitor',
+                    evidence={
+                        'critical_findings': [
+                            f for f in report['findings']
+                            if f['severity'] == 'critical'
+                        ][:5],
+                    },
+                )
+
+            logger.info(
+                f"[OpsAutopilot] Contract drift scan: "
+                f"{report['critical']} critical, "
+                f"{report['warning']} warning, "
+                f"{report['info']} info"
+            )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] contract drift policy error: {e}")
             result['error'] = str(e)
 
         return result

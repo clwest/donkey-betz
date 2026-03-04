@@ -81,6 +81,7 @@ from .models_diagnostic_pipeline import (
     FailureDetection,
     FailureDiagnosis,
     FailurePrescription,
+    AutopilotAction,
 )
 
 # Import tool call recording models (Session 861 - Tool Call Audit Trail)
