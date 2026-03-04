@@ -13,6 +13,8 @@ import {
 import { useRoute } from '@react-navigation/native';
 import * as agentsApi from '../api/agents';
 import CopyId from '../components/CopyId';
+import { useDemo } from '../demo/useDemo';
+import * as demo from '../demo/demoData';
 import type {
   AgentExecution,
   AgentListItem,
@@ -81,6 +83,7 @@ function specializationColor(spec: string): string {
 export default function AgentsScreen() {
   const route = useRoute<any>();
   const initialAgentId = route.params?.agentId as string | undefined;
+  const isDemo = useDemo();
 
   const [view, setView] = useState<AgentsView>(initialAgentId ? 'detail' : 'overview');
   const [previousView, setPreviousView] = useState<AgentsView>('overview');
@@ -114,6 +117,14 @@ export default function AgentsScreen() {
 
   const fetchOverview = useCallback(async () => {
     setOverviewError(null);
+
+    if (isDemo) {
+      setOverviewAgents(demo.DEMO_AGENTS as any);
+      setBody({ ...demo.DEMO_BODY_SUMMARY, success: true, timestamp: new Date().toISOString() } as any);
+      setRecentExecs(demo.DEMO_AGENT_EXECUTIONS as any);
+      return;
+    }
+
     try {
       const [agentRes, bodyRes, execRes] = await Promise.allSettled([
         agentsApi.listAgents({ page_size: 250 }),
@@ -128,16 +139,20 @@ export default function AgentsScreen() {
     } catch {
       setOverviewError('Failed to load overview.');
     }
-  }, []);
+  }, [isDemo]);
 
   const fetchAgents = useCallback(async () => {
+    if (isDemo) {
+      setAgents(demo.DEMO_AGENTS as any);
+      return;
+    }
     setAgentsLoading(true);
     try {
       const res = await agentsApi.listAgents({ page_size: 250 });
       setAgents(res.agents ?? []);
     } catch { /* empty */ }
     setAgentsLoading(false);
-  }, []);
+  }, [isDemo]);
 
   const fetchAgentDetail = useCallback(async (agent: AgentListItem) => {
     setDetailLoading(true);
@@ -150,6 +165,10 @@ export default function AgentsScreen() {
   }, []);
 
   const fetchExecutionsFeed = useCallback(async (status?: string) => {
+    if (isDemo) {
+      setExecutions(demo.DEMO_AGENT_EXECUTIONS as any);
+      return;
+    }
     setExecLoading(true);
     try {
       const params: { limit: number; status?: string } = { limit: 50 };
@@ -158,7 +177,7 @@ export default function AgentsScreen() {
       setExecutions(res.data?.executions ?? []);
     } catch { /* empty */ }
     setExecLoading(false);
-  }, []);
+  }, [isDemo]);
 
   // ── Initial load ─────────────────────────────────────────────────────────
 

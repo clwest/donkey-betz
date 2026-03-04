@@ -8,6 +8,8 @@ import {
   View,
 } from 'react-native';
 import http from '../api/http';
+import { useDemo } from '../demo/useDemo';
+import * as demo from '../demo/demoData';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -50,12 +52,19 @@ function formatNumber(n: number): string {
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 export default function IntelligenceScreen() {
+  const isDemo = useDemo();
   const [stats, setStats] = useState<IntelligenceStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
+    if (isDemo) {
+      setStats(demo.DEMO_INTELLIGENCE_STATS);
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
     try {
       setError(null);
       // This endpoint is in PUBLIC_PATHS — works without auth
@@ -67,7 +76,7 @@ export default function IntelligenceScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [isDemo]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
