@@ -12843,6 +12843,40 @@ RESEARCH DATA:
             envelope = engine.get_budget_envelope(days=days)
             return {'action': 'capacity_budget_envelope', **envelope}
 
+        # ── Security & Abuse (Policy 37) ──
+        elif action == 'security_permission_drift':
+            from core.services.ops_autopilot import SecurityEngine
+
+            hours = int(payload.get('hours', 24))
+            engine = SecurityEngine()
+            report = engine.get_permission_drift_report(hours=hours)
+            return {'action': 'security_permission_drift', **report}
+
+        elif action == 'security_abuse_queue':
+            from core.services.ops_autopilot import SecurityEngine
+
+            hours = int(payload.get('hours', 24))
+            limit = int(payload.get('limit', 50))
+            engine = SecurityEngine()
+            queue = engine.get_abuse_risk_queue(hours=hours, limit=limit)
+            return {'action': 'security_abuse_queue', **queue}
+
+        elif action == 'security_containment_plan':
+            from core.services.ops_autopilot import SecurityEngine
+
+            dry_run = payload.get('dry_run', True)
+            engine = SecurityEngine()
+            plan = engine.get_containment_plan(dry_run=dry_run)
+            return {'action': 'security_containment_plan', **plan}
+
+        elif action == 'security_secrets_scan':
+            from core.services.ops_autopilot import SecurityEngine
+
+            days = int(payload.get('days', 7))
+            engine = SecurityEngine()
+            scan = engine.get_secrets_scan(days=days)
+            return {'action': 'security_secrets_scan', **scan}
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason

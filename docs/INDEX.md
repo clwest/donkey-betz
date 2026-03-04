@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-03-03 23:37
+**Generated:** 2026-03-04 08:24
 **Current Session:** 1075
 **Total Documentation:** 1818 files | 622,120 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,201 |
+| Total cross-references | 2,202 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/SYSTEM_CAPABILITIES-original/02_Content_Creation/README.md` | 60 | 🎨 AI CONTENT STUDIO - The Complete Creation Suite |
+| `docs/archive/old-structure/audits/README.md` | 60 | AUDITS |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -155,7 +155,7 @@
 | [FRONTEND_BACKEND_DATA_FLOW_AUDIT.md](FRONTEND_BACKEND_DATA_FLOW_AUDIT.md) | 402 | 2026-02-15 |
 | [FRONTEND_INTEGRATION_NOTE.md](FRONTEND_INTEGRATION_NOTE.md) | 128 | 2026-01-21 |
 | [GOLDEN_GOOSE_STRATEGY.md](GOLDEN_GOOSE_STRATEGY.md) | 751 | 2026-01-21 |
-| [INDEX.md](INDEX.md) | 361 | 2026-03-03 |
+| [INDEX.md](INDEX.md) | 361 | 2026-03-04 |
 | [INTELLIGENCE_SYSTEMS.md](INTELLIGENCE_SYSTEMS.md) | 530 | 2026-01-21 |
 | [KNOWLEDGE_PIPELINE.md](KNOWLEDGE_PIPELINE.md) | 475 | 2026-01-21 |
 | [LEGAL_ASSISTANT.md](LEGAL_ASSISTANT.md) | 442 | 2026-01-21 |
@@ -164,7 +164,7 @@
 | [MEMORY_SAFETY_CLASSIFICATION.md](MEMORY_SAFETY_CLASSIFICATION.md) | 232 | 2026-01-21 |
 | [MODELS.md](MODELS.md) | 720 | 2026-01-21 |
 | [ORCHESTRATION_UI_AUDIT.md](ORCHESTRATION_UI_AUDIT.md) | 524 | 2026-01-21 |
-| [OVL_CODE_RUNNER_V0.md](OVL_CODE_RUNNER_V0.md) | 174 | 2026-03-03 |
+| [OVL_CODE_RUNNER_V0.md](OVL_CODE_RUNNER_V0.md) | 174 | 2026-03-04 |
 | [PATH_TO_FULL_COMPOSABILITY.md](PATH_TO_FULL_COMPOSABILITY.md) | 421 | 2026-01-21 |
 | [PERSONAL_ASSISTANT_ARCHITECTURE.md](PERSONAL_ASSISTANT_ARCHITECTURE.md) | 302 | 2026-02-04 |
 | [PERSONA_AGENTS.md](PERSONA_AGENTS.md) | 274 | 2026-02-01 |
@@ -217,8 +217,8 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 361 | 2026-03-03 23:31 |
-| OVL_CODE_RUNNER_V0.md | docs | 174 | 2026-03-03 23:21 |
+| INDEX.md | docs | 361 | 2026-03-04 08:20 |
+| OVL_CODE_RUNNER_V0.md | docs | 174 | 2026-03-04 08:20 |
 | stage3_timeline.md | initiatives | 71 | 2026-03-03 12:55 |
 | stage3_rubric_runbook.md | initiatives | 105 | 2026-03-03 12:55 |
 | stage3_dashboard_spec.md | initiatives | 315 | 2026-03-03 12:55 |

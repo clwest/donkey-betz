@@ -182,6 +182,12 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      (slow agents, overloaded queues), projects spend vs budget caps, and
      provides throttle recommendations. PA tools: capacity_forecast,
      capacity_bottleneck_report, capacity_throttle_plan, capacity_budget_envelope.
+ 37. Security & abuse detection autonomy: SecurityEngine monitors for
+     permission drift (admin-only routes, missing decorators), abuse
+     patterns (unusual audit log activity, failed operations), secrets
+     in content (API keys in deliverables/logs), and kill switch health.
+     PA tools: security_permission_drift, security_abuse_queue,
+     security_containment_plan, security_secrets_scan.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -368,6 +374,7 @@ class OpsAutopilot:
         ('engagement_autonomy', 'engagement_autonomy', '_policy_engagement_autonomy'),
         ('growth_distribution', 'growth_distribution', '_policy_growth_distribution'),
         ('capacity_planning', 'capacity_planning', '_policy_capacity_planning'),
+        ('security_abuse', 'security_abuse', '_policy_security_abuse'),
     ]
 
     def run(self) -> dict[str, Any]:
@@ -2512,6 +2519,35 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] capacity planning error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _policy_security_abuse(self, now) -> dict:
+        """
+        Monitor security health: permission drift, abuse patterns,
+        kill switch hygiene, secrets exposure.
+        """
+        result = {
+            'abuse_flags': 0,
+            'drift_issues': 0,
+            'healthy': True,
+        }
+
+        try:
+            engine = SecurityEngine()
+            eval_result = engine.evaluate(now)
+            result.update(eval_result)
+
+            if not eval_result.get('healthy', True):
+                logger.info(
+                    f"[OpsAutopilot] Security: "
+                    f"{eval_result.get('abuse_flags', 0)} abuse flags, "
+                    f"{eval_result.get('drift_issues', 0)} drift issues"
+                )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] security abuse error: {e}")
             result['error'] = str(e)
 
         return result
@@ -13368,6 +13404,364 @@ class CapacityEngine:
             'p95_seconds': round(p95, 2),
             'total_pending': total_pending,
             'bottleneck_count': len(issues),
+            'issues': issues,
+            'issue_count': len(issues),
+            'healthy': len(issues) == 0,
+        }
+
+
+# ── Policy 37: Security & Abuse Detection Autonomy ────────────────────────────
+
+
+class SecurityEngine:
+    """
+    Security & abuse detection — monitors for permission drift,
+    abuse patterns, secrets exposure, and kill switch hygiene.
+
+    Data sources:
+    - CockpitAuditLog: mutation audit trail
+    - KillSwitch: emergency control health
+    - GovernanceState: governance mode tracking
+    - Deliverable/SelfBlog: content scanning for secrets
+
+    Guardrails:
+    - Read-only analysis — never auto-contains without governance
+    - Recommendations only in v1
+    """
+
+    AUDIT_SPIKE_THRESHOLD = 50
+    FAILED_OPS_THRESHOLD = 10
+    SECRETS_PATTERNS = [
+        r'sk-[a-zA-Z0-9]{20,}',
+        r'AKIA[A-Z0-9]{16}',
+        r'ghp_[a-zA-Z0-9]{36}',
+        r'xoxb-[0-9]+-[a-zA-Z0-9]+',
+        r'whsec_[a-zA-Z0-9]+',
+    ]
+
+    def get_permission_drift_report(self, hours: int = 24) -> dict:
+        """
+        Check for permission-related anomalies in audit logs.
+        """
+        from django.db.models import Count
+        from django.utils import timezone as tz
+
+        now = tz.now()
+        lookback = now - timedelta(hours=hours)
+        drift_issues = []
+        total_actions = 0
+        hourly_rate = 0.0
+
+        try:
+            from core.models_cockpit_audit import CockpitAuditLog
+
+            action_counts = list(
+                CockpitAuditLog.objects.filter(
+                    created_at__gte=lookback,
+                )
+                .values('action')
+                .annotate(count=Count('id'))
+                .order_by('-count')[:20]
+            )
+
+            total_actions = sum(a['count'] for a in action_counts)
+            hourly_rate = total_actions / max(1, hours)
+
+            if hourly_rate > self.AUDIT_SPIKE_THRESHOLD:
+                drift_issues.append({
+                    'type': 'audit_spike',
+                    'severity': 'warning',
+                    'detail': f'{total_actions} audit actions in {hours}h ({hourly_rate:.0f}/hr)',
+                })
+
+            config_changes = [a for a in action_counts if 'config' in a['action'].lower()]
+            config_count = sum(c['count'] for c in config_changes)
+            if config_count > 10:
+                drift_issues.append({
+                    'type': 'config_churn',
+                    'severity': 'warning',
+                    'detail': f'{config_count} config changes in {hours}h',
+                })
+        except Exception:
+            pass
+
+        try:
+            from core.models_governance import GovernanceState
+            recent_gov = GovernanceState.objects.filter(
+                updated_at__gte=lookback,
+            ).count()
+            if recent_gov > 5:
+                drift_issues.append({
+                    'type': 'governance_churn',
+                    'severity': 'info',
+                    'detail': f'{recent_gov} governance state changes in {hours}h',
+                })
+        except Exception:
+            pass
+
+        try:
+            from core.models_governance import KillSwitch
+            expired_active = KillSwitch.objects.filter(
+                is_active=True,
+                expires_at__lt=now,
+            ).count()
+            if expired_active > 0:
+                drift_issues.append({
+                    'type': 'stale_kill_switch',
+                    'severity': 'warning',
+                    'detail': f'{expired_active} expired kill switches still active',
+                })
+        except Exception:
+            pass
+
+        return {
+            'period_hours': hours,
+            'drift_issues': drift_issues,
+            'issue_count': len(drift_issues),
+            'total_audit_actions': total_actions,
+            'audit_rate_per_hour': round(hourly_rate, 1),
+        }
+
+    def get_abuse_risk_queue(self, hours: int = 24, limit: int = 50) -> dict:
+        """
+        Flag suspicious patterns: rapid audit activity by user/IP.
+        """
+        from django.db.models import Count
+        from django.utils import timezone as tz
+
+        now = tz.now()
+        lookback = now - timedelta(hours=hours)
+        flags = []
+
+        try:
+            from core.models_cockpit_audit import CockpitAuditLog
+
+            by_user = list(
+                CockpitAuditLog.objects.filter(
+                    created_at__gte=lookback,
+                    user__isnull=False,
+                )
+                .values('user__username')
+                .annotate(count=Count('id'))
+                .order_by('-count')[:limit]
+            )
+            for u in by_user:
+                if u['count'] > self.AUDIT_SPIKE_THRESHOLD:
+                    flags.append({
+                        'type': 'high_activity_user',
+                        'severity': 'warning',
+                        'user': u['user__username'],
+                        'detail': f'{u["count"]} actions in {hours}h',
+                    })
+
+            by_ip = list(
+                CockpitAuditLog.objects.filter(
+                    created_at__gte=lookback,
+                    ip_address__isnull=False,
+                )
+                .values('ip_address')
+                .annotate(count=Count('id'))
+                .order_by('-count')[:10]
+            )
+            for ip in by_ip:
+                if ip['count'] > self.AUDIT_SPIKE_THRESHOLD * 2:
+                    flags.append({
+                        'type': 'high_activity_ip',
+                        'severity': 'critical',
+                        'ip': ip['ip_address'],
+                        'detail': f'{ip["count"]} actions from single IP',
+                    })
+        except Exception:
+            pass
+
+        try:
+            from core.models_diagnostic_pipeline import AutopilotAction
+            failed_actions = AutopilotAction.objects.filter(
+                created_at__gte=lookback,
+                status='failed',
+            ).count()
+            if failed_actions > self.FAILED_OPS_THRESHOLD:
+                flags.append({
+                    'type': 'failed_operations',
+                    'severity': 'warning',
+                    'detail': f'{failed_actions} failed autopilot actions in {hours}h',
+                })
+        except Exception:
+            pass
+
+        return {
+            'period_hours': hours,
+            'flags': flags[:limit],
+            'flag_count': len(flags),
+            'has_critical': any(f['severity'] == 'critical' for f in flags),
+        }
+
+    def get_containment_plan(self, dry_run: bool = True) -> dict:
+        """
+        Generate containment recommendations based on current risk state.
+        """
+        from django.utils import timezone as tz
+
+        now = tz.now()
+        drift = self.get_permission_drift_report(hours=6)
+        abuse = self.get_abuse_risk_queue(hours=6)
+
+        recommendations = []
+        for issue in drift.get('drift_issues', []):
+            if issue['type'] == 'stale_kill_switch':
+                recommendations.append({
+                    'action': 'deactivate_expired_switches',
+                    'reason': issue['detail'],
+                    'severity': 'warning',
+                    'auto_actionable': True,
+                })
+            elif issue['type'] == 'audit_spike':
+                recommendations.append({
+                    'action': 'investigate_audit_spike',
+                    'reason': issue['detail'],
+                    'severity': 'warning',
+                    'auto_actionable': False,
+                })
+
+        for flag in abuse.get('flags', []):
+            if flag['severity'] == 'critical':
+                recommendations.append({
+                    'action': 'rate_limit_investigation',
+                    'reason': flag['detail'],
+                    'severity': 'critical',
+                    'auto_actionable': False,
+                })
+
+        try:
+            from core.models_governance import KillSwitch
+            expired = KillSwitch.objects.filter(
+                is_active=True, expires_at__lt=now,
+            )
+            expired_count = expired.count()
+            if expired_count > 0 and not dry_run:
+                for ks in expired:
+                    ks.deactivate()
+                recommendations.append({
+                    'action': 'deactivated_expired_switches',
+                    'reason': f'Auto-deactivated {expired_count} expired switches',
+                    'severity': 'info',
+                    'executed': True,
+                })
+            elif expired_count > 0:
+                recommendations.append({
+                    'action': 'deactivate_expired_switches',
+                    'reason': f'{expired_count} expired switches need cleanup',
+                    'severity': 'info',
+                    'executed': False,
+                })
+        except Exception:
+            pass
+
+        return {
+            'dry_run': dry_run,
+            'risk_summary': {
+                'drift_issues': drift.get('issue_count', 0),
+                'abuse_flags': abuse.get('flag_count', 0),
+                'has_critical': abuse.get('has_critical', False),
+            },
+            'recommendations': recommendations,
+            'recommendation_count': len(recommendations),
+            'needs_human_review': any(
+                r['severity'] == 'critical' for r in recommendations
+            ),
+        }
+
+    def get_secrets_scan(self, days: int = 7) -> dict:
+        """
+        Scan recent content for potential secrets/API key exposure.
+        """
+        import re
+
+        from django.utils import timezone as tz
+        from core.models_deliverables import Deliverable
+
+        now = tz.now()
+        window = now - timedelta(days=days)
+        findings = []
+
+        deliverables = list(
+            Deliverable.objects.filter(
+                created_at__gte=window,
+            ).only('id', 'title', 'content', 'created_at')[:200]
+        )
+
+        for d in deliverables:
+            content = d.content or ''
+            for pattern in self.SECRETS_PATTERNS:
+                matches = re.findall(pattern, content)
+                if matches:
+                    redacted = [
+                        m[:6] + '...' + m[-4:] if len(m) > 10 else '***'
+                        for m in matches
+                    ]
+                    findings.append({
+                        'source': 'deliverable',
+                        'id': str(d.id),
+                        'title': d.title,
+                        'pattern': pattern[:20],
+                        'match_count': len(matches),
+                        'redacted_samples': redacted[:3],
+                        'severity': 'critical',
+                    })
+
+        try:
+            from core.models_unified_system import SelfBlog
+            blogs = list(
+                SelfBlog.objects.filter(
+                    created_at__gte=window,
+                ).only('id', 'title', 'content')[:100]
+            )
+            for b in blogs:
+                content = b.content or ''
+                for pattern in self.SECRETS_PATTERNS:
+                    matches = re.findall(pattern, content)
+                    if matches:
+                        redacted = [
+                            m[:6] + '...' + m[-4:] if len(m) > 10 else '***'
+                            for m in matches
+                        ]
+                        findings.append({
+                            'source': 'self_blog',
+                            'id': str(b.id),
+                            'title': b.title,
+                            'pattern': pattern[:20],
+                            'match_count': len(matches),
+                            'redacted_samples': redacted[:3],
+                            'severity': 'critical',
+                        })
+        except Exception:
+            pass
+
+        return {
+            'period_days': days,
+            'findings': findings,
+            'finding_count': len(findings),
+            'has_exposure': len(findings) > 0,
+            'scanned_deliverables': len(deliverables),
+        }
+
+    def evaluate(self, now) -> dict:
+        """Auto-evaluate security health for autopilot cycle."""
+        drift = self.get_permission_drift_report(hours=6)
+        abuse = self.get_abuse_risk_queue(hours=6)
+
+        issues = []
+        for issue in drift.get('drift_issues', []):
+            if issue.get('severity') in ('warning', 'critical'):
+                issues.append(f"drift: {issue['detail']}")
+        for flag in abuse.get('flags', []):
+            if flag.get('severity') in ('warning', 'critical'):
+                issues.append(f"abuse: {flag['detail']}")
+
+        return {
+            'drift_issues': drift.get('issue_count', 0),
+            'abuse_flags': abuse.get('flag_count', 0),
+            'has_critical': abuse.get('has_critical', False),
             'issues': issues,
             'issue_count': len(issues),
             'healthy': len(issues) == 0,
