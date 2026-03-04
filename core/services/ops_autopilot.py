@@ -113,6 +113,14 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      Expires 30-day-old approved drafts with no follow-up. Tracks
      reply rate and conversion funnel. PA tools: outreach_inbox,
      outreach_approve, outreach_reject, outreach_metrics_report.
+ 27. Close-the-deal engine: Generates deal-closing document bundles
+     (ClosePacks) when an opportunity reaches high-intent stage.
+     Each pack contains a 1-page proposal, SOW/MSA-lite contract, and
+     invoice draft. 4 offer templates: ai_automation, content_engine,
+     analytics_dashboard, consulting. Follow-up cadence: 5d, 10d after
+     sent. Max 2 follow-ups per pack. Expires sent packs after 30d with
+     no response. PA tools: close_pack_generate, close_pack_inbox,
+     close_pack_approve, close_pack_metrics_report.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -289,6 +297,7 @@ class OpsAutopilot:
         ('revenue_pipeline', 'revenue_pipeline', '_policy_revenue_pipeline'),
         ('outbound_leads', 'outbound_lead_engine', '_policy_outbound_leads'),
         ('outreach', 'outreach_sequencer', '_policy_outreach_sequencer'),
+        ('close_deal', 'close_the_deal', '_policy_close_the_deal'),
     ]
 
     def run(self) -> dict[str, Any]:
@@ -2143,6 +2152,35 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] outreach sequencer error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _policy_close_the_deal(self, now) -> dict:
+        """
+        Manage close pack lifecycle — follow-up scheduling,
+        expiration, and deal pipeline stats.
+        """
+        result = {
+            'pending_packs': 0,
+            'followups_scheduled': 0,
+            'expired': 0,
+        }
+
+        try:
+            engine = CloseTheDealEngine()
+            eval_result = engine.evaluate(now)
+            result.update(eval_result)
+
+            logger.info(
+                f"[OpsAutopilot] Close-the-Deal: "
+                f"{result['pending_packs']} pending, "
+                f"{result['followups_scheduled']} follow-ups, "
+                f"{result['expired']} expired"
+            )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] close-the-deal error: {e}")
             result['error'] = str(e)
 
         return result
@@ -5799,7 +5837,16 @@ class ROIEnforcer:
         recommendations = self.get_throttle_recommendations(now)
         applied = []
 
+        # Never throttle PA or its core subsystems — user-facing chat must
+        # always work regardless of ROI score.
+        THROTTLE_EXEMPT = frozenset({
+            'PersonalAssistant', 'KnowledgeFirstRouter',
+            'conversation_tool', 'scoped_retrieval', 'system',
+        })
+
         for rec in recommendations:
+            if rec['agent_name'] in THROTTLE_EXEMPT:
+                continue
             key = f"roi_throttle:{rec['agent_name']}"
             expires_at = now + timedelta(minutes=rec['cooldown_minutes'])
 
@@ -8881,6 +8928,341 @@ class OutreachSequencer:
             expired = OutreachDraft.objects.filter(
                 status='approved',
                 next_touch_at__isnull=True,
+                updated_at__lt=stale_cutoff,
+            ).update(status='expired')
+            result['expired'] = expired
+
+        except Exception as e:
+            result['error'] = str(e)
+
+        return result
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Close-the-Deal Engine — Policy 27 (Autonomy #23)
+# ═══════════════════════════════════════════════════════════════════════
+
+class CloseTheDealEngine:
+    """
+    Generates deal-closing document bundles (ClosePacks) when
+    an opportunity reaches high-intent stage.
+
+    Close Pack contents:
+      - 1-page proposal (scope, timeline, price, assumptions)
+      - SOW/MSA-lite contract draft
+      - Invoice draft (line items, payment terms)
+
+    Guardrails:
+      - Nothing sent without human approval
+      - Requires price + offer_key before generating
+      - Max 2 follow-ups per pack
+      - Follow-up cadence: 5d, 10d after sent
+    """
+
+    MAX_FOLLOWUPS = 2
+    FOLLOWUP_DAYS = [5, 10]
+
+    # Offer templates with default scope descriptions
+    OFFER_TEMPLATES = {
+        'ai_automation': {
+            'name': 'AI Automation Sprint',
+            'scope': (
+                'AI-powered workflow automation for your business processes. '
+                'Includes: needs assessment, custom AI agent development, '
+                'integration with existing tools, testing, and deployment.'
+            ),
+            'deliverables': [
+                'Custom AI agent(s) deployed',
+                'Integration with existing workflows',
+                'Documentation and training',
+                '30-day support period',
+            ],
+        },
+        'content_engine': {
+            'name': 'Content Engine Setup',
+            'scope': (
+                'Automated content generation pipeline powered by AI. '
+                'Includes: content strategy, AI agent configuration, '
+                'quality control system, and publishing automation.'
+            ),
+            'deliverables': [
+                'Content generation pipeline',
+                'Quality scoring system',
+                'Publishing automation',
+                '30-day content calendar',
+            ],
+        },
+        'analytics_dashboard': {
+            'name': 'Analytics Dashboard',
+            'scope': (
+                'Custom analytics dashboard with AI-powered insights. '
+                'Includes: data integration, visualization design, '
+                'predictive analytics, and alerting system.'
+            ),
+            'deliverables': [
+                'Custom dashboard',
+                'Data integrations',
+                'Predictive models',
+                'Alerting system',
+            ],
+        },
+        'consulting': {
+            'name': 'AI Strategy Consulting',
+            'scope': (
+                'Strategic AI assessment and roadmap for your organization. '
+                'Includes: current state analysis, opportunity identification, '
+                'implementation roadmap, and vendor evaluation.'
+            ),
+            'deliverables': [
+                'AI readiness assessment',
+                'Implementation roadmap',
+                'Vendor comparison matrix',
+                'Executive presentation',
+            ],
+        },
+    }
+
+    def generate_pack(
+        self, opportunity_id: str, offer_key: str,
+        price: float, timeline_days: int = 14,
+    ) -> dict:
+        """Generate a close pack for an opportunity."""
+        from core.models_close_pack import ClosePack
+
+        template = self.OFFER_TEMPLATES.get(
+            offer_key, self.OFFER_TEMPLATES.get('consulting')
+        )
+
+        # Generate proposal
+        deliverables_text = '\n'.join(
+            f'  - {d}' for d in template['deliverables']
+        )
+        proposal = (
+            f"# Proposal: {template['name']}\n\n"
+            f"## Scope\n{template['scope']}\n\n"
+            f"## Deliverables\n{deliverables_text}\n\n"
+            f"## Timeline\n{timeline_days} business days from project kickoff.\n\n"
+            f"## Investment\n${price:,.2f} USD\n\n"
+            f"## Payment Terms\n"
+            f"50% upon project start, 50% upon completion.\n\n"
+            f"## Next Steps\n"
+            f"1. Review and approve this proposal\n"
+            f"2. Sign the attached agreement\n"
+            f"3. Schedule kickoff call\n"
+        )
+
+        # Generate contract
+        contract = (
+            f"# Statement of Work\n\n"
+            f"## Project: {template['name']}\n\n"
+            f"### Scope of Work\n{template['scope']}\n\n"
+            f"### Deliverables\n{deliverables_text}\n\n"
+            f"### Timeline\n{timeline_days} business days.\n\n"
+            f"### Compensation\n${price:,.2f} USD total.\n"
+            f"Payment schedule: 50/50 (start/completion).\n\n"
+            f"### Terms\n"
+            f"- Changes to scope require written agreement and may adjust timeline/price.\n"
+            f"- Client provides timely feedback (within 2 business days).\n"
+            f"- Intellectual property transfers to client upon final payment.\n"
+        )
+
+        # Generate invoice
+        invoice = (
+            f"# Invoice\n\n"
+            f"## Service: {template['name']}\n\n"
+            f"| Item | Amount |\n"
+            f"|------|--------|\n"
+            f"| {template['name']} — Phase 1 (50%) | ${price/2:,.2f} |\n"
+            f"| Due upon completion — Phase 2 (50%) | ${price/2:,.2f} |\n"
+            f"| **Total** | **${price:,.2f}** |\n\n"
+            f"**Payment Terms:** Net 15 days\n"
+            f"**Payment Methods:** Bank transfer, Stripe\n"
+        )
+
+        # Create ClosePack
+        opp_id = opportunity_id if opportunity_id else None
+        try:
+            pack = ClosePack.objects.create(
+                opportunity_id=opp_id,
+                offer_key=offer_key,
+                price=price,
+                timeline_days=timeline_days,
+                proposal_text=proposal,
+                contract_text=contract,
+                invoice_text=invoice,
+            )
+            return {
+                'pack_id': str(pack.id),
+                'offer': template['name'],
+                'price': price,
+                'timeline_days': timeline_days,
+                'status': 'draft',
+                'documents': ['proposal', 'contract', 'invoice'],
+            }
+        except Exception as e:
+            return {'error': str(e)}
+
+    def get_inbox(self, now) -> dict:
+        """PA-facing: close packs pending approval."""
+        from core.models_close_pack import ClosePack
+        from django.db.models import Count, Sum
+
+        try:
+            drafts = list(
+                ClosePack.objects.filter(
+                    status='draft',
+                ).order_by('-created_at').values(
+                    'id', 'offer_key', 'price', 'timeline_days',
+                    'status', 'created_at',
+                )[:20]
+            )
+
+            for d in drafts:
+                d['id'] = str(d['id'])
+                if hasattr(d.get('created_at'), 'isoformat'):
+                    d['created_at'] = d['created_at'].isoformat()
+                d['price'] = float(d.get('price', 0))
+
+            # Counts by status
+            status_counts = dict(
+                ClosePack.objects.values_list('status').annotate(
+                    c=Count('id'),
+                ).values_list('status', 'c')
+            )
+
+            # Total pipeline value
+            pipeline_value = ClosePack.objects.filter(
+                status__in=['draft', 'approved', 'sent'],
+            ).aggregate(total=Sum('price'))['total'] or 0
+
+            return {
+                'packs': drafts,
+                'total_draft': status_counts.get('draft', 0),
+                'total_sent': status_counts.get('sent', 0),
+                'total_won': status_counts.get('won', 0),
+                'total_lost': status_counts.get('lost', 0),
+                'pipeline_value_usd': float(pipeline_value),
+            }
+        except Exception as e:
+            return {'error': str(e), 'packs': []}
+
+    def approve_pack(self, pack_id: str, edits: dict = None) -> dict:
+        """Approve a close pack and schedule follow-up."""
+        from core.models_close_pack import ClosePack
+
+        try:
+            pack = ClosePack.objects.get(id=pack_id, status='draft')
+        except ClosePack.DoesNotExist:
+            return {'error': f'Pack {pack_id} not found or not in draft status'}
+
+        # Apply edits if provided
+        if edits:
+            if 'proposal' in edits:
+                pack.edited_proposal = edits['proposal']
+            if 'contract' in edits:
+                pack.edited_contract = edits['contract']
+            if 'invoice' in edits:
+                pack.edited_invoice = edits['invoice']
+
+        pack.status = 'approved'
+
+        # Schedule first follow-up
+        if self.FOLLOWUP_DAYS:
+            pack.followup_at = (
+                timezone.now() + timedelta(days=self.FOLLOWUP_DAYS[0])
+            )
+
+        pack.save()
+
+        return {
+            'approved': True,
+            'pack_id': str(pack.id),
+            'followup_at': (
+                pack.followup_at.isoformat() if pack.followup_at else None
+            ),
+        }
+
+    def get_metrics_report(self, now) -> dict:
+        """PA-facing: deal metrics."""
+        from core.models_close_pack import ClosePack
+        from django.db.models import Count, Sum, Avg
+
+        try:
+            total = ClosePack.objects.count()
+            by_status = dict(
+                ClosePack.objects.values_list('status').annotate(
+                    c=Count('id'),
+                ).values_list('status', 'c')
+            )
+            by_offer = dict(
+                ClosePack.objects.values_list('offer_key').annotate(
+                    c=Count('id'),
+                ).values_list('offer_key', 'c')
+            )
+
+            # Win rate
+            sent = by_status.get('sent', 0) + by_status.get('won', 0) + by_status.get('lost', 0)
+            won = by_status.get('won', 0)
+            win_rate = (won / sent * 100) if sent > 0 else 0
+
+            # Revenue
+            won_value = ClosePack.objects.filter(
+                status='won',
+            ).aggregate(total=Sum('price'))['total'] or 0
+
+            avg_deal = ClosePack.objects.filter(
+                status='won',
+            ).aggregate(avg=Avg('price'))['avg'] or 0
+
+            return {
+                'total': total,
+                'by_status': by_status,
+                'by_offer': by_offer,
+                'win_rate_pct': round(win_rate, 1),
+                'won_revenue_usd': float(won_value),
+                'avg_deal_size_usd': round(float(avg_deal), 2),
+            }
+        except Exception as e:
+            return {'error': str(e)}
+
+    def evaluate(self, now) -> dict:
+        """Policy evaluation — schedule follow-ups for sent packs."""
+        from core.models_close_pack import ClosePack
+
+        result = {
+            'pending_packs': 0,
+            'followups_scheduled': 0,
+            'expired': 0,
+        }
+
+        try:
+            result['pending_packs'] = ClosePack.objects.filter(
+                status='draft',
+            ).count()
+
+            # Process due follow-ups
+            due = ClosePack.objects.filter(
+                status__in=['approved', 'sent'],
+                followup_at__lte=now,
+                followup_count__lt=self.MAX_FOLLOWUPS,
+            )
+
+            for pack in due[:10]:
+                pack.followup_count += 1
+                # Schedule next follow-up if available
+                if pack.followup_count < len(self.FOLLOWUP_DAYS):
+                    next_days = self.FOLLOWUP_DAYS[pack.followup_count]
+                    pack.followup_at = now + timedelta(days=next_days)
+                else:
+                    pack.followup_at = None
+                pack.save()
+                result['followups_scheduled'] += 1
+
+            # Expire old sent packs with no response (30 days)
+            stale_cutoff = now - timedelta(days=30)
+            expired = ClosePack.objects.filter(
+                status='sent',
+                followup_at__isnull=True,
                 updated_at__lt=stale_cutoff,
             ).update(status='expired')
             result['expired'] = expired
