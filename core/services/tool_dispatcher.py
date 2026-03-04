@@ -12810,6 +12810,38 @@ RESEARCH DATA:
             funnel = engine.get_funnel(days=days)
             return {'action': 'growth_funnel', **funnel}
 
+        # ── Capacity Planning (Policy 36) ──
+        elif action == 'capacity_forecast':
+            from core.services.ops_autopilot import CapacityEngine
+
+            hours = int(payload.get('hours', 24))
+            engine = CapacityEngine()
+            forecast = engine.get_capacity_forecast(hours=hours)
+            return {'action': 'capacity_forecast', **forecast}
+
+        elif action == 'capacity_bottleneck_report':
+            from core.services.ops_autopilot import CapacityEngine
+
+            hours = int(payload.get('hours', 24))
+            engine = CapacityEngine()
+            report = engine.get_bottleneck_report(hours=hours)
+            return {'action': 'capacity_bottleneck_report', **report}
+
+        elif action == 'capacity_throttle_plan':
+            from core.services.ops_autopilot import CapacityEngine
+
+            engine = CapacityEngine()
+            plan = engine.get_throttle_plan()
+            return {'action': 'capacity_throttle_plan', **plan}
+
+        elif action == 'capacity_budget_envelope':
+            from core.services.ops_autopilot import CapacityEngine
+
+            days = int(payload.get('days', 7))
+            engine = CapacityEngine()
+            envelope = engine.get_budget_envelope(days=days)
+            return {'action': 'capacity_budget_envelope', **envelope}
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason
