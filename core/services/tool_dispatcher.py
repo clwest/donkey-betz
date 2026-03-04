@@ -12351,6 +12351,24 @@ RESEARCH DATA:
                 **report,
             }
 
+        elif action == 'prospecting_queue':
+            # Outbound lead engine — top scored leads
+            from django.utils import timezone as tz
+            from core.services.ops_autopilot import OutboundLeadEngine
+
+            engine = OutboundLeadEngine()
+            report = engine.get_prospecting_queue(tz.now())
+            return {'action': 'prospecting_queue', **report}
+
+        elif action == 'lead_source_report':
+            # Which spider sources produce leads
+            from django.utils import timezone as tz
+            from core.services.ops_autopilot import OutboundLeadEngine
+
+            engine = OutboundLeadEngine()
+            report = engine.get_lead_source_report(tz.now())
+            return {'action': 'lead_source_report', **report}
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason
