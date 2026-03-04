@@ -13626,23 +13626,6 @@ RESEARCH DATA:
         except Exception as e:
             return {'error': f'mobile_tool error: {str(e)}'}
 
-
-def _redact_secrets(text: str) -> str:
-    """Redact API keys, tokens, and secrets from memory content."""
-    import re
-    patterns = [
-        (r'(sk-[a-zA-Z0-9]{20,})', '[REDACTED_API_KEY]'),
-        (r'(ghp_[a-zA-Z0-9]{36,})', '[REDACTED_GITHUB_TOKEN]'),
-        (r'(xoxb-[a-zA-Z0-9\-]+)', '[REDACTED_SLACK_TOKEN]'),
-        (r'(eyJ[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,})', '[REDACTED_JWT]'),
-        (r'(AKIA[A-Z0-9]{16})', '[REDACTED_AWS_KEY]'),
-        (r'(key-[a-zA-Z0-9]{32,})', '[REDACTED_KEY]'),
-    ]
-    for pattern, replacement in patterns:
-        text = re.sub(pattern, replacement, text)
-    return text
-
-
     def _handle_vip_invite(self, tool_name: str, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:
         """Manage VIP magic-link invites for demo viewers."""
         from django.contrib.auth import get_user_model
@@ -13715,6 +13698,22 @@ def _redact_secrets(text: str) -> str:
         except Exception as e:
             logger.error(f"[VIP_INVITE] Error: {e}", exc_info=True)
             return {'error': str(e)}
+
+
+def _redact_secrets(text: str) -> str:
+    """Redact API keys, tokens, and secrets from memory content."""
+    import re
+    patterns = [
+        (r'(sk-[a-zA-Z0-9]{20,})', '[REDACTED_API_KEY]'),
+        (r'(ghp_[a-zA-Z0-9]{36,})', '[REDACTED_GITHUB_TOKEN]'),
+        (r'(xoxb-[a-zA-Z0-9\-]+)', '[REDACTED_SLACK_TOKEN]'),
+        (r'(eyJ[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,})', '[REDACTED_JWT]'),
+        (r'(AKIA[A-Z0-9]{16})', '[REDACTED_AWS_KEY]'),
+        (r'(key-[a-zA-Z0-9]{32,})', '[REDACTED_KEY]'),
+    ]
+    for pattern, replacement in patterns:
+        text = re.sub(pattern, replacement, text)
+    return text
 
 
 # Singleton instance
