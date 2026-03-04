@@ -3,7 +3,7 @@ Enhanced authentication views with full registration, email verification, and re
 """
 
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
@@ -530,6 +530,7 @@ def logout_enhanced_view(request):
 
 
 @api_view(['POST'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def validate_token_view(request):
     """
