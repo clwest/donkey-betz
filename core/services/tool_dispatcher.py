@@ -12679,6 +12679,30 @@ RESEARCH DATA:
             audit = engine.get_audit_log(limit=payload.get('limit', 20))
             return {'action': 'governance_audit', **audit}
 
+        # ── Revenue Pipeline Orchestrator (Policy 31) ──
+
+        elif action == 'revenue_full_pipeline':
+            from core.services.ops_autopilot import RevenueOrchestrator
+
+            engine = RevenueOrchestrator()
+            pipeline = engine.get_full_pipeline()
+            return {'action': 'revenue_full_pipeline', **pipeline}
+
+        elif action == 'revenue_funnel':
+            from core.services.ops_autopilot import RevenueOrchestrator
+
+            days = int(payload.get('days', 30))
+            engine = RevenueOrchestrator()
+            funnel = engine.get_conversion_funnel(days=days)
+            return {'action': 'revenue_funnel', **funnel}
+
+        elif action == 'revenue_forecast':
+            from core.services.ops_autopilot import RevenueOrchestrator
+
+            engine = RevenueOrchestrator()
+            forecast = engine.get_revenue_forecast()
+            return {'action': 'revenue_forecast', **forecast}
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason
