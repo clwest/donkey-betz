@@ -12226,6 +12226,17 @@ RESEARCH DATA:
                 'recent_actions': recent_actions,
             }
 
+        elif action == 'deliberation_pipeline_report':
+            # Show deliberation pipeline health + remediation ladder state
+            from core.services.ops_autopilot import DeliberationRemediationPlaybook
+
+            playbook = DeliberationRemediationPlaybook()
+            report = playbook.get_pipeline_report(timezone.now())
+            return {
+                'action': 'deliberation_pipeline_report',
+                **report,
+            }
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason

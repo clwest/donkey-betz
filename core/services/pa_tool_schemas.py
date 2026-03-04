@@ -2035,7 +2035,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "timeout_ladder_report", "backfill_failure_reasons"],
+                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "timeout_ladder_report", "deliberation_pipeline_report", "backfill_failure_reasons"],
                     "description": (
                         "status: current config, last cycle timestamp, and pending actions. "
                         "history: recent autopilot actions (blocks, attention items, dry runs). "
@@ -2071,6 +2071,8 @@ PA_TOOL_SCHEMAS = [
                         "timeout_ladder_report: show agents currently on the timeout remediation ladder — levels (L0-L3), "
                         "escalation history, timeout overrides, batch reductions, and blocks. Graduated: L1=timeout increase, "
                         "L2=batch reduction, L3=temporary block. Auto-de-escalates after recovery. "
+                        "deliberation_pipeline_report: show deliberation pipeline health — failure rate, breakdown by reason code, "
+                        "remediation ladder state (L1=panel reduced, L2=model fallback, L3=single-reviewer bypass), active overrides. "
                         "backfill_failure_reasons: re-classify UNKNOWN failure codes using expanded patterns."
                     ),
                 },
