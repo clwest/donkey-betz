@@ -12053,6 +12053,101 @@ RESEARCH DATA:
                 **report,
             }
 
+        elif action == 'experiment_report':
+            # Show active and recent experiments
+            from core.services.ops_autopilot import ExperimentEngine
+            from django.utils import timezone as tz
+
+            engine = ExperimentEngine()
+            try:
+                report = engine.get_experiments_report(tz.now())
+            except Exception as e:
+                return {
+                    'action': 'experiment_report',
+                    'error': f'Report failed: {str(e)[:200]}',
+                }
+
+            lines = ['## Experiment Engine Report\n']
+            lines.append(
+                f'**Supported policies:** '
+                f'{", ".join(report["supported_policies"])}'
+            )
+            lines.append(
+                f'**Supported metrics:** '
+                f'{", ".join(report["supported_metrics"])}'
+            )
+
+            if report['active_experiments']:
+                lines.append('\n### Active Experiments')
+                for exp in report['active_experiments']:
+                    lines.append(
+                        f'- **{exp["policy_name"]}**: '
+                        f'{exp.get("description", "")[:80]} '
+                        f'(metric: {exp["success_metric"]}, '
+                        f'started: {exp.get("started_at", "N/A")})'
+                    )
+            else:
+                lines.append('\n*No active experiments.*')
+
+            if report['recent_decisions']:
+                lines.append('\n### Recent Decisions')
+                for exp in report['recent_decisions']:
+                    lines.append(
+                        f'- {exp["policy_name"]}: '
+                        f'**{exp["status"]}** — '
+                        f'{exp.get("decision_reason", "")[:100]}'
+                    )
+
+            return {
+                'action': 'experiment_report',
+                'report': '\n'.join(lines),
+                **report,
+            }
+
+        elif action == 'experiment_create':
+            # Create a new experiment
+            from core.services.ops_autopilot import ExperimentEngine
+
+            policy = payload.get('policy_name', '')
+            treatment = payload.get('treatment_params', {})
+            metric = payload.get('success_metric', 'avg_desk_iqroi')
+            desc = payload.get('description', '')
+
+            if not policy or not treatment:
+                return {
+                    'action': 'experiment_create',
+                    'error': (
+                        'Required: policy_name and treatment_params. '
+                        'Example: policy_name="portfolio_allocator", '
+                        'treatment_params={"ALLOCATION_CEILING": 2.0}'
+                    ),
+                }
+
+            engine = ExperimentEngine()
+            result = engine.create_experiment(
+                policy_name=policy,
+                treatment_params=treatment,
+                success_metric=metric,
+                description=desc,
+                created_by='PA',
+            )
+            return {'action': 'experiment_create', **result}
+
+        elif action == 'experiment_start':
+            # Start a draft experiment
+            from core.services.ops_autopilot import ExperimentEngine
+
+            exp_id = payload.get('experiment_id', '')
+            if not exp_id:
+                return {
+                    'action': 'experiment_start',
+                    'error': 'Required: experiment_id',
+                }
+
+            engine = ExperimentEngine()
+            result = engine.start_experiment(exp_id)
+            return {'action': 'experiment_start', **result}
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason

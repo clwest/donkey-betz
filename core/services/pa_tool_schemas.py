@@ -2035,7 +2035,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "backfill_failure_reasons"],
+                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "backfill_failure_reasons"],
                     "description": (
                         "status: current config, last cycle timestamp, and pending actions. "
                         "history: recent autopilot actions (blocks, attention items, dry runs). "
@@ -2061,6 +2061,10 @@ PA_TOOL_SCHEMAS = [
                         "attribution_debt_report: show how much LLM spend can't be attributed to a desk — "
                         "unattributed cost amounts, top offending agents, desk breakdown, and whether portfolio "
                         "reallocation is blocked due to high debt. "
+                        "experiment_report: show active and recent A/B experiments on policy parameters — "
+                        "which policies are being tested, what metrics are tracked, recent promote/rollback decisions. "
+                        "experiment_create: create a new experiment (requires policy_name and treatment_params). "
+                        "experiment_start: activate a draft experiment by experiment_id — applies treatment params. "
                         "backfill_failure_reasons: re-classify UNKNOWN failure codes using expanded patterns."
                     ),
                 },
@@ -2075,6 +2079,26 @@ PA_TOOL_SCHEMAS = [
                 "days": {
                     "type": "integer",
                     "description": "For 'backfill_impacts': how many days back to scan (default 14, max 90).",
+                },
+                "policy_name": {
+                    "type": "string",
+                    "description": "For 'experiment_create': which policy to test (portfolio_allocator, roi_throttle, budget_controller).",
+                },
+                "treatment_params": {
+                    "type": "object",
+                    "description": "For 'experiment_create': dict of param name → new value (e.g., {\"ALLOCATION_CEILING\": 2.0}).",
+                },
+                "success_metric": {
+                    "type": "string",
+                    "description": "For 'experiment_create': metric to evaluate (avg_desk_iqroi, attribution_debt_pct, total_impact_usd, publish_pass_rate, error_rate). Default: avg_desk_iqroi.",
+                },
+                "experiment_id": {
+                    "type": "string",
+                    "description": "For 'experiment_start': UUID of the experiment to activate.",
+                },
+                "description": {
+                    "type": "string",
+                    "description": "For 'experiment_create': human-readable description of the experiment.",
                 },
             },
             "required": ["action"],
