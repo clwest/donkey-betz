@@ -144,6 +144,12 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      throttled?" report. PA tools: governance_status, governance_set_mode,
      governance_kill_switch, governance_deactivate_switch,
      governance_throttle_report, governance_audit.
+ 31. Revenue pipeline orchestrator: RevenueOrchestrator unifies
+     OutboundLeadEngine, OutreachSequencer, EngagementEngine,
+     MeetingEngine, and CloseTheDealEngine into a single funnel view.
+     Full pipeline status, conversion funnel metrics, and weighted
+     revenue forecasts. Flags stale items across all stages.
+     PA tools: revenue_full_pipeline, revenue_funnel, revenue_forecast.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -324,6 +330,7 @@ class OpsAutopilot:
         ('engagement', 'engagement_engine', '_policy_engagement_engine'),
         ('meetings', 'meeting_engine', '_policy_meeting_engine'),
         ('governance', 'governance_controls', '_policy_governance_controls'),
+        ('revenue_orchestrator', 'revenue_orchestrator', '_policy_revenue_orchestrator'),
     ]
 
     def run(self) -> dict[str, Any]:
@@ -2294,6 +2301,34 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] governance controls error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _policy_revenue_orchestrator(self, now) -> dict:
+        """
+        Monitor unified revenue pipeline health.
+        Flags stale items across all pipeline stages.
+        """
+        result = {
+            'issue_count': 0,
+            'healthy': True,
+        }
+
+        try:
+            engine = RevenueOrchestrator()
+            eval_result = engine.evaluate(now)
+            result.update(eval_result)
+
+            if eval_result.get('issue_count', 0) > 0:
+                logger.info(
+                    f"[OpsAutopilot] Revenue pipeline: "
+                    f"{eval_result['issue_count']} issues — "
+                    f"{', '.join(eval_result.get('pipeline_issues', []))}"
+                )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] revenue orchestrator error: {e}")
             result['error'] = str(e)
 
         return result
@@ -11111,4 +11146,323 @@ class GovernanceEngine:
         return {
             'recent_state_changes': recent_states,
             'recent_kill_switches': recent_switches,
+        }
+
+
+# ── Policy 31: Revenue Pipeline Orchestrator ────────────────────────────────
+
+
+class RevenueOrchestrator:
+    """
+    Unified revenue pipeline view — stitches together OutboundLeadEngine,
+    OutreachSequencer, EngagementEngine, MeetingEngine, CloseTheDealEngine
+    into a single end-to-end funnel.
+
+    Pipeline stages:
+      lead → outreach_draft → outreach_sent → engagement → meeting → close_pack → won/lost
+
+    Does NOT replace individual engines — it reads from their models to
+    produce cross-cutting views, funnel metrics, and pipeline forecasts.
+    """
+
+    # Rough conversion rates for forecasting (adjusted from actual data over time)
+    DEFAULT_CONVERSION = {
+        'lead_to_outreach': 0.40,      # 40% of leads get outreach drafted
+        'outreach_to_sent': 0.60,      # 60% of drafts get approved
+        'sent_to_reply': 0.15,         # 15% reply rate
+        'reply_to_meeting': 0.40,      # 40% of replies become meetings
+        'meeting_to_deal': 0.30,       # 30% of meetings produce close packs
+        'deal_to_won': 0.25,           # 25% win rate
+    }
+
+    def get_full_pipeline(self) -> dict:
+        """
+        Unified pipeline view across all revenue stages.
+        Shows counts at each stage + items needing attention.
+        """
+        from core.models_outreach import OutreachDraft
+        from core.models_engagement import EngagementEvent
+        from core.models_meeting import Meeting
+        from core.models_close_pack import ClosePack
+        from core.models_unified_system import Opportunity
+        from django.db.models import Count
+        from django.utils import timezone as tz
+
+        now = tz.now()
+
+        # Outreach pipeline
+        outreach_by_status = dict(
+            OutreachDraft.objects.values('status').annotate(
+                count=Count('id'),
+            ).values_list('status', 'count')
+        )
+
+        # Engagement pipeline
+        engagement_by_status = dict(
+            EngagementEvent.objects.values('status').annotate(
+                count=Count('id'),
+            ).values_list('status', 'count')
+        )
+
+        # Meeting pipeline
+        meeting_by_status = dict(
+            Meeting.objects.values('status').annotate(
+                count=Count('id'),
+            ).values_list('status', 'count')
+        )
+
+        # Close pack pipeline
+        pack_by_status = dict(
+            ClosePack.objects.values('status').annotate(
+                count=Count('id'),
+            ).values_list('status', 'count')
+        )
+
+        # Opportunity pipeline
+        opp_by_status = dict(
+            Opportunity.objects.values('status').annotate(
+                count=Count('id'),
+            ).values_list('status', 'count')
+        )
+
+        # Items needing attention
+        needs_attention = []
+
+        # Outreach drafts pending approval
+        pending_drafts = outreach_by_status.get('draft', 0)
+        if pending_drafts > 0:
+            needs_attention.append(f'{pending_drafts} outreach drafts pending approval')
+
+        # Engagement events needing reply
+        needs_reply = engagement_by_status.get('needs_reply', 0)
+        unread = engagement_by_status.get('unread', 0)
+        if needs_reply > 0:
+            needs_attention.append(f'{needs_reply} engagement events need reply')
+        if unread > 0:
+            needs_attention.append(f'{unread} unread engagement events')
+
+        # Meetings needing briefs
+        needs_brief = Meeting.objects.filter(
+            status='scheduled',
+            scheduled_at__lte=now + timedelta(hours=24),
+            brief_text='',
+        ).count()
+        if needs_brief > 0:
+            needs_attention.append(f'{needs_brief} meetings need pre-call briefs')
+
+        # Close packs pending approval
+        pending_packs = pack_by_status.get('draft', 0)
+        if pending_packs > 0:
+            needs_attention.append(f'{pending_packs} close packs pending approval')
+
+        return {
+            'outreach': outreach_by_status,
+            'engagement': engagement_by_status,
+            'meetings': meeting_by_status,
+            'close_packs': pack_by_status,
+            'opportunities': opp_by_status,
+            'needs_attention': needs_attention,
+            'total_active_items': sum([
+                outreach_by_status.get('draft', 0),
+                outreach_by_status.get('approved', 0),
+                engagement_by_status.get('unread', 0),
+                engagement_by_status.get('needs_reply', 0),
+                meeting_by_status.get('scheduled', 0),
+                pack_by_status.get('draft', 0),
+                pack_by_status.get('sent', 0),
+            ]),
+            'timestamp': now.isoformat(),
+        }
+
+    def get_conversion_funnel(self, days: int = 30) -> dict:
+        """
+        Full conversion funnel over the given period.
+        lead → outreach → sent → reply → meeting → deal → won
+        """
+        from core.models_outreach import OutreachDraft
+        from core.models_engagement import EngagementEvent
+        from core.models_meeting import Meeting
+        from core.models_close_pack import ClosePack
+        from django.db.models import Count
+        from django.utils import timezone as tz
+
+        cutoff = tz.now() - timedelta(days=days)
+
+        # Count at each stage
+        leads_created = OutreachDraft.objects.filter(
+            created_at__gte=cutoff,
+        ).count()
+
+        drafts_approved = OutreachDraft.objects.filter(
+            created_at__gte=cutoff,
+            status__in=['approved', 'sent', 'replied'],
+        ).count()
+
+        drafts_sent = OutreachDraft.objects.filter(
+            created_at__gte=cutoff,
+            status__in=['sent', 'replied'],
+        ).count()
+
+        replies_received = EngagementEvent.objects.filter(
+            created_at__gte=cutoff,
+        ).exclude(status='disqualified').count()
+
+        meetings_scheduled = Meeting.objects.filter(
+            created_at__gte=cutoff,
+        ).count()
+
+        meetings_completed = Meeting.objects.filter(
+            created_at__gte=cutoff,
+            status__in=['completed', 'followed_up'],
+        ).count()
+
+        packs_created = ClosePack.objects.filter(
+            created_at__gte=cutoff,
+        ).count()
+
+        deals_won = ClosePack.objects.filter(
+            created_at__gte=cutoff,
+            status='won',
+        ).count()
+
+        # Build funnel with conversion rates
+        funnel = [
+            {'stage': 'leads_created', 'count': leads_created, 'rate': 1.0},
+            {'stage': 'drafts_approved', 'count': drafts_approved,
+             'rate': drafts_approved / leads_created if leads_created else 0},
+            {'stage': 'outreach_sent', 'count': drafts_sent,
+             'rate': drafts_sent / drafts_approved if drafts_approved else 0},
+            {'stage': 'replies_received', 'count': replies_received,
+             'rate': replies_received / drafts_sent if drafts_sent else 0},
+            {'stage': 'meetings_scheduled', 'count': meetings_scheduled,
+             'rate': meetings_scheduled / replies_received if replies_received else 0},
+            {'stage': 'meetings_completed', 'count': meetings_completed,
+             'rate': meetings_completed / meetings_scheduled if meetings_scheduled else 0},
+            {'stage': 'close_packs', 'count': packs_created,
+             'rate': packs_created / meetings_completed if meetings_completed else 0},
+            {'stage': 'deals_won', 'count': deals_won,
+             'rate': deals_won / packs_created if packs_created else 0},
+        ]
+
+        # Overall conversion
+        overall_rate = deals_won / leads_created if leads_created else 0
+
+        return {
+            'period_days': days,
+            'funnel': funnel,
+            'overall_conversion': round(overall_rate, 4),
+            'total_leads': leads_created,
+            'total_won': deals_won,
+        }
+
+    def get_revenue_forecast(self) -> dict:
+        """
+        Projected revenue from current pipeline based on stage probabilities.
+        """
+        from core.models_close_pack import ClosePack
+        from core.models_meeting import Meeting
+        from core.models_outreach import OutreachDraft
+        from core.models_engagement import EngagementEvent
+        from django.db.models import Sum
+        from django.utils import timezone as tz
+
+        # Active close packs with prices
+        active_packs = ClosePack.objects.filter(
+            status__in=['draft', 'approved', 'sent'],
+        )
+        pack_value = sum(
+            float(p.price or 0) for p in active_packs
+        )
+
+        # Won revenue
+        won_packs = ClosePack.objects.filter(status='won')
+        won_revenue = sum(float(p.price or 0) for p in won_packs)
+
+        # Pipeline stages
+        draft_packs = ClosePack.objects.filter(status='draft').count()
+        sent_packs = ClosePack.objects.filter(status='sent').count()
+        upcoming_meetings = Meeting.objects.filter(status='scheduled').count()
+        active_engagements = EngagementEvent.objects.filter(
+            status__in=['unread', 'classified', 'needs_reply'],
+        ).count()
+        pending_outreach = OutreachDraft.objects.filter(status='draft').count()
+
+        # Weighted forecast
+        conv = self.DEFAULT_CONVERSION
+        forecast_from_packs = pack_value * conv['deal_to_won']
+        forecast_from_meetings = (
+            upcoming_meetings * conv['meeting_to_deal'] * conv['deal_to_won'] * 5000
+        )  # Assume avg deal $5000
+        forecast_from_engagement = (
+            active_engagements * conv['reply_to_meeting']
+            * conv['meeting_to_deal'] * conv['deal_to_won'] * 5000
+        )
+
+        total_forecast = forecast_from_packs + forecast_from_meetings + forecast_from_engagement
+
+        return {
+            'won_revenue': round(won_revenue, 2),
+            'active_pipeline_value': round(pack_value, 2),
+            'weighted_forecast': round(total_forecast, 2),
+            'forecast_breakdown': {
+                'from_close_packs': round(forecast_from_packs, 2),
+                'from_meetings': round(forecast_from_meetings, 2),
+                'from_engagement': round(forecast_from_engagement, 2),
+            },
+            'pipeline_counts': {
+                'pending_outreach': pending_outreach,
+                'active_engagements': active_engagements,
+                'upcoming_meetings': upcoming_meetings,
+                'draft_packs': draft_packs,
+                'sent_packs': sent_packs,
+            },
+        }
+
+    def evaluate(self, now) -> dict:
+        """
+        Auto-flag pipeline health issues for the autopilot cycle.
+        """
+        from core.models_outreach import OutreachDraft
+        from core.models_engagement import EngagementEvent
+        from core.models_meeting import Meeting
+        from core.models_close_pack import ClosePack
+
+        issues = []
+
+        # Stale outreach drafts (>7 days without approval)
+        stale_drafts = OutreachDraft.objects.filter(
+            status='draft',
+            created_at__lt=now - timedelta(days=7),
+        ).count()
+        if stale_drafts > 0:
+            issues.append(f'{stale_drafts} outreach drafts stale >7d')
+
+        # Unread engagement events >3 days
+        stale_engagement = EngagementEvent.objects.filter(
+            status='unread',
+            created_at__lt=now - timedelta(days=3),
+        ).count()
+        if stale_engagement > 0:
+            issues.append(f'{stale_engagement} engagement events unread >3d')
+
+        # Completed meetings without follow-up >48h
+        stale_meetings = Meeting.objects.filter(
+            status='completed',
+            updated_at__lt=now - timedelta(hours=48),
+        ).count()
+        if stale_meetings > 0:
+            issues.append(f'{stale_meetings} completed meetings awaiting follow-up >48h')
+
+        # Sent close packs without response >14d
+        stale_packs = ClosePack.objects.filter(
+            status='sent',
+            updated_at__lt=now - timedelta(days=14),
+        ).count()
+        if stale_packs > 0:
+            issues.append(f'{stale_packs} close packs sent >14d without response')
+
+        return {
+            'pipeline_issues': issues,
+            'issue_count': len(issues),
+            'healthy': len(issues) == 0,
         }

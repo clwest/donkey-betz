@@ -2035,7 +2035,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "timeout_ladder_report", "deliberation_pipeline_report", "backfill_failure_reasons", "backlog_report", "goal_report", "goal_set_weights", "attribution_report", "policy_conflict_report", "release_report", "release_freeze", "release_unfreeze", "revenue_pipeline_report", "prospecting_queue", "lead_source_report", "outreach_inbox", "outreach_approve", "outreach_reject", "outreach_metrics_report", "close_pack_generate", "close_pack_inbox", "close_pack_approve", "close_pack_metrics_report", "engagement_inbox", "engagement_classify", "engagement_draft_reply", "engagement_approve_reply", "engagement_disqualify", "engagement_metrics_report", "meeting_create", "meeting_inbox", "meeting_brief", "meeting_recap", "meeting_metrics_report", "governance_status", "governance_set_mode", "governance_kill_switch", "governance_deactivate_switch", "governance_throttle_report", "governance_audit"],
+                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "timeout_ladder_report", "deliberation_pipeline_report", "backfill_failure_reasons", "backlog_report", "goal_report", "goal_set_weights", "attribution_report", "policy_conflict_report", "release_report", "release_freeze", "release_unfreeze", "revenue_pipeline_report", "prospecting_queue", "lead_source_report", "outreach_inbox", "outreach_approve", "outreach_reject", "outreach_metrics_report", "close_pack_generate", "close_pack_inbox", "close_pack_approve", "close_pack_metrics_report", "engagement_inbox", "engagement_classify", "engagement_draft_reply", "engagement_approve_reply", "engagement_disqualify", "engagement_metrics_report", "meeting_create", "meeting_inbox", "meeting_brief", "meeting_recap", "meeting_metrics_report", "governance_status", "governance_set_mode", "governance_kill_switch", "governance_deactivate_switch", "governance_throttle_report", "governance_audit", "revenue_full_pipeline", "revenue_funnel", "revenue_forecast"],
                     "description": (
                         "status: current config, last cycle timestamp, and pending actions. "
                         "history: recent autopilot actions (blocks, attention items, dry runs). "
@@ -2129,7 +2129,12 @@ PA_TOOL_SCHEMAS = [
                         "governance_deactivate_switch: deactivate a kill switch by switch_id. "
                         "governance_throttle_report: diagnostic 'why are we throttled?' report — spend vs cap, budget flags, "
                         "active ROI throttles, diagnosis with plain-English explanations. "
-                        "governance_audit: recent governance changes — state changes and kill switch activations."
+                        "governance_audit: recent governance changes — state changes and kill switch activations. "
+                        "revenue_full_pipeline: unified pipeline view — outreach, engagement, meetings, close packs, "
+                        "opportunities by status + items needing attention. "
+                        "revenue_funnel: conversion funnel from leads to won deals — rates at each stage over N days. "
+                        "revenue_forecast: weighted revenue forecast from current pipeline items, "
+                        "won revenue total, and pipeline value."
                     ),
                 },
                 "dry_run": {
