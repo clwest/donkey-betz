@@ -23,6 +23,8 @@ import { getStats as getBettingStats, type BettingStats } from '../api/betting';
 import { getHub, type StockHub } from '../api/stocks';
 import { getRevenueDashboard, type Revenue } from '../api/portfolio';
 import { useScreenAnalytics } from '../observability/analytics';
+import { useDemo } from '../demo/useDemo';
+import * as demo from '../demo/demoData';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -72,6 +74,7 @@ function timeAgo(timestamp: string): string {
 export default function DashboardScreen() {
   useScreenAnalytics('Dashboard');
   const navigation = useNavigation<any>();
+  const isDemo = useDemo();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -91,6 +94,20 @@ export default function DashboardScreen() {
 
   const fetchAll = useCallback(async () => {
     setError(null);
+
+    if (isDemo) {
+      setHealth(demo.DEMO_BODY_SUMMARY);
+      setAttention(demo.DEMO_ATTENTION_STATS);
+      setGovernance(demo.DEMO_GOVERNANCE_STATS);
+      setInitiatives(demo.DEMO_INITIATIVES);
+      setActivity(demo.DEMO_ACTIVITY.activities);
+      setStats(demo.DEMO_DASHBOARD_STATS);
+      setBetting(demo.DEMO_BETTING_STATS);
+      setStockHub(demo.DEMO_STOCK_HUB as any);
+      setRevenue(demo.DEMO_REVENUE);
+      return;
+    }
+
     const results = await Promise.allSettled([
       dashboardApi.getBodySummary(),
       dashboardApi.getAttentionStats(),
@@ -116,7 +133,7 @@ export default function DashboardScreen() {
 
     const allFailed = results.every((r) => r.status === 'rejected');
     if (allFailed) setError('Failed to load dashboard data. Pull to retry.');
-  }, []);
+  }, [isDemo]);
 
   useEffect(() => {
     fetchAll().finally(() => setLoading(false));

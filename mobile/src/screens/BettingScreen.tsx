@@ -12,6 +12,8 @@ import ScreenState from '../components/ScreenState';
 import { SkeletonStatRow, SkeletonCard, SkeletonList } from '../components/Skeleton';
 import * as bettingApi from '../api/betting';
 import type { BettingStats, Game, Wager } from '../api/betting';
+import { useDemo } from '../demo/useDemo';
+import * as demo from '../demo/demoData';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -62,6 +64,7 @@ const TABS: { key: Tab; label: string }[] = [
 
 export default function BettingScreen() {
   useScreenAnalytics('BettingScreen');
+  const isDemo = useDemo();
 
   const [tab, setTab] = useState<Tab>('overview');
   const [loading, setLoading] = useState(true);
@@ -75,6 +78,15 @@ export default function BettingScreen() {
 
   const fetchAll = useCallback(async () => {
     setError(null);
+
+    if (isDemo) {
+      setStats(demo.DEMO_BETTING_STATS);
+      setGames(demo.DEMO_GAMES);
+      setWagers(demo.DEMO_WAGERS as any);
+      setLastUpdated(new Date());
+      return;
+    }
+
     const results = await Promise.allSettled([
       bettingApi.getStats(),
       bettingApi.getTodaysGames(),
@@ -88,7 +100,7 @@ export default function BettingScreen() {
     } else {
       setLastUpdated(new Date());
     }
-  }, []);
+  }, [isDemo]);
 
   useEffect(() => {
     fetchAll().finally(() => setLoading(false));

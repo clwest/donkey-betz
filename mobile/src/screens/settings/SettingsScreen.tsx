@@ -14,12 +14,15 @@ import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../../auth/authStore';
 import { clearToken, clearStoredUser } from '../../auth/tokenStore';
+import { useDemoStore } from '../../demo/demoStore';
 
 // ── Screen ───────────────────────────────────────────────────────────────────
 
 export default function SettingsScreen() {
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
+  const demoEnabled = useDemoStore((s) => s.enabled);
+  const toggleDemo = useDemoStore((s) => s.toggle);
 
   const [pushToken, setPushToken] = useState<string>('');
   const [pushPermission, setPushPermission] = useState<string>('');
@@ -82,6 +85,18 @@ export default function SettingsScreen() {
         <Row label="Role" value={user?.platform_role ?? 'unknown'} />
         <Row label="Subscription" value={user?.subscription ?? 'unknown'} />
         <Row label="Credits" value={String(user?.credits ?? 0)} />
+      </Section>
+
+      {/* Demo Mode */}
+      <Section title="Demo Mode">
+        <ActionRow
+          label={demoEnabled ? 'VIP Demo: ON' : 'VIP Demo: OFF'}
+          color={demoEnabled ? '#22c55e' : '#6b7280'}
+          onPress={toggleDemo}
+        />
+        <Text style={{ color: '#6b7280', fontSize: 11, marginTop: 4 }}>
+          Shows curated demo data for investor presentations
+        </Text>
       </Section>
 
       {/* Session */}
