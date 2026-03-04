@@ -64,9 +64,11 @@ export async function listOperations(params?: {
 }
 
 export async function getPendingReviews(): Promise<PaginatedResponse<WorkspaceOperation>> {
-  const { data } = await http.get<PaginatedResponse<WorkspaceOperation>>(
-    '/workspace-operations/pending-reviews/',
-  );
+  // API returns { total, operations: [...] } instead of paginated format
+  const { data } = await http.get<any>('/workspace-operations/pending-reviews/');
+  if (data.operations) {
+    return { count: data.total ?? data.operations.length, next: null, previous: null, results: data.operations };
+  }
   return data;
 }
 
