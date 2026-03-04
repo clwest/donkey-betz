@@ -2035,7 +2035,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "timeout_ladder_report", "deliberation_pipeline_report", "backfill_failure_reasons", "backlog_report", "goal_report", "goal_set_weights", "attribution_report", "policy_conflict_report"],
+                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "timeout_ladder_report", "deliberation_pipeline_report", "backfill_failure_reasons", "backlog_report", "goal_report", "goal_set_weights", "attribution_report", "policy_conflict_report", "release_report", "release_freeze", "release_unfreeze"],
                     "description": (
                         "status: current config, last cycle timestamp, and pending actions. "
                         "history: recent autopilot actions (blocks, attention items, dry runs). "
@@ -2084,7 +2084,11 @@ PA_TOOL_SCHEMAS = [
                         "attribution_report: show multi-touch attribution state — credited impact by desk (last-touch vs assist), "
                         "attributed vs unattributed events, upstream credit flows. "
                         "policy_conflict_report: detect conflicts when multiple policies write the same knob, "
-                        "flap detection (3+ changes in 24h), hold-time violations. Optional filters: knob, policy."
+                        "flap detection (3+ changes in 24h), hold-time violations. Optional filters: knob, policy. "
+                        "release_report: current deploy status — governor level, deploy rate, error rate, freeze state, "
+                        "last deploy SHA and timestamp, recovery progress. "
+                        "release_freeze: manually freeze all deploys (safety override). "
+                        "release_unfreeze: manually unfreeze deploys."
                     ),
                 },
                 "dry_run": {

@@ -89,6 +89,11 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      merge strategy (priority_wins, max, min, bool_or). Anti-flap
      detection (3+ changes in 24h). Hold-time violation reporting.
      FinalAppliedOverrides snapshot per cycle. PA tool: policy_conflict_report.
+ 23. Release/deploy governor: Monitors Railway deploy health with
+     graduated safety ladder. L0=observe (track deploy frequency,
+     SHA changes, error rate). L1=backoff (serialize builds, 5min gap).
+     L2=gate (require healthy status). L3=freeze (auto-freeze on SLO
+     breach). PA tools: release_report, release_freeze/unfreeze.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -261,6 +266,7 @@ class OpsAutopilot:
         ('goal_allocator', 'goal_aware_allocator', '_policy_goal_aware_allocator'),
         ('attribution', 'multi_touch_attribution', '_policy_multi_touch_attribution'),
         ('arbitrator', 'policy_arbitrator', '_policy_policy_arbitrator'),
+        ('release', 'release_governor', '_policy_release_governor'),
     ]
 
     def run(self) -> dict[str, Any]:
@@ -1960,6 +1966,63 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] attribution error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _policy_release_governor(self, now) -> dict:
+        """
+        Monitor deploy health and apply graduated safety measures.
+        L0=observe, L1=backoff, L2=gate, L3=freeze.
+        """
+        result = {
+            'level': 0,
+            'deploy_rate_per_hour': 0.0,
+            'error_rate': 0.0,
+            'frozen': False,
+        }
+
+        try:
+            governor = ReleaseGovernor()
+            eval_result = governor.evaluate(now)
+            result.update(eval_result)
+
+            # Create governance attention item for L2+
+            if result['level'] >= 2:
+                try:
+                    from core.models_human_interface import HumanAttentionItem
+                    from django.contrib.auth import get_user_model
+                    User = get_user_model()
+                    user = User.objects.first()
+                    if user:
+                        HumanAttentionItem.objects.create(
+                            user=user,
+                            source='ops_autopilot',
+                            category='deploy_health',
+                            title=(
+                                f"Release governor L{result['level']}: "
+                                f"{'FROZEN' if result['frozen'] else 'gated'}"
+                            ),
+                            description=(
+                                f"Deploy rate: {result['deploy_rate_per_hour']:.1f}/hr, "
+                                f"Error rate: {result['error_rate']:.1%}"
+                            ),
+                            priority='high' if result['level'] >= 3 else 'medium',
+                            auto_dismissable=True,
+                        )
+                except Exception as e:
+                    logger.warning(
+                        f"[OpsAutopilot] release attention item failed: {e}"
+                    )
+
+            logger.info(
+                f"[OpsAutopilot] Release: L{result['level']}, "
+                f"rate={result['deploy_rate_per_hour']:.1f}/hr, "
+                f"err={result['error_rate']:.1%}"
+            )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] release governor error: {e}")
             result['error'] = str(e)
 
         return result
@@ -7301,6 +7364,25 @@ class PolicyArbitrator:
             'merge': 'max',
             'hold_hours': 2,
         },
+        # Release governor (P23)
+        'deploy_freeze': {
+            'owner': 'release_governor',
+            'priority': 5,
+            'merge': 'bool_or',
+            'hold_hours': 1,
+        },
+        'deploy_backoff_seconds': {
+            'owner': 'release_governor',
+            'priority': 5,
+            'merge': 'max',
+            'hold_hours': 1,
+        },
+        'deploy_governor_level': {
+            'owner': 'release_governor',
+            'priority': 5,
+            'merge': 'max',
+            'hold_hours': 1,
+        },
     }
 
     # Anti-flap defaults
@@ -7635,6 +7717,386 @@ class PolicyArbitrator:
             report['flap_count'] = len(report['flap_knobs'])
 
         return report
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Release / Deploy Governor — Policy 23 (Autonomy #19)
+# ═══════════════════════════════════════════════════════════════════════
+
+class ReleaseGovernor:
+    """
+    Monitors Railway deploy health and applies graduated safety measures.
+
+    Ladder:
+      L0 — Observe: track deploy frequency, success rate, time-to-healthy.
+      L1 — Backoff: enforce minimum gap between deploys, serialize builds.
+      L2 — Gate: require healthy status before allowing next deploy.
+      L3 — Freeze: auto-freeze deploys on SLO breach, governance attention.
+
+    Knobs (SystemConfiguration):
+      deploy_freeze           — bool, blocks all deploys
+      deploy_backoff_seconds  — int, min gap between deploys
+      deploy_governor_level   — current ladder level (0-3)
+      deploy_governor_level_ts — when level last changed
+      deploy_governor_clean   — consecutive clean cycles
+
+    SLO signals:
+      - AutopilotAction history for deploy_watch events
+      - Error rate from recent cycles
+      - Deploy SHA changes (frequency)
+    """
+
+    # Ladder thresholds
+    EVAL_WINDOW_HOURS = 6
+    DEPLOYS_PER_HOUR_WARNING = 4    # > 4 deploys/hour → L1
+    DEPLOYS_PER_HOUR_CRITICAL = 8   # > 8 deploys/hour → L2
+    ERROR_RATE_L2 = 0.15            # 15%+ error rate → L2
+    ERROR_RATE_L3 = 0.30            # 30%+ error rate → L3
+
+    # Backoff
+    DEFAULT_BACKOFF_SECONDS = 300   # 5 minutes between deploys at L1
+    FREEZE_BACKOFF_SECONDS = 1800   # 30 minutes at L3
+
+    # Escalation / de-escalation
+    ESCALATION_CYCLES = 3           # consecutive warning cycles to escalate
+    RECOVERY_CYCLES = 6             # consecutive clean cycles to de-escalate
+
+    # State keys
+    KEY_LEVEL = 'deploy_governor_level'
+    KEY_LEVEL_TS = 'deploy_governor_level_ts'
+    KEY_CLEAN = 'deploy_governor_clean'
+    KEY_FREEZE = 'deploy_freeze'
+    KEY_BACKOFF = 'deploy_backoff_seconds'
+    KEY_LAST_SHA = 'deploy_last_sha'
+    KEY_LAST_DEPLOY_TS = 'deploy_last_ts'
+
+    def evaluate(self, now) -> dict:
+        """
+        Evaluate deploy health and return ladder status.
+        """
+        from core.models.system import SystemConfiguration
+
+        result = {
+            'level': 0,
+            'deploys_recent': 0,
+            'deploy_rate_per_hour': 0.0,
+            'error_rate': 0.0,
+            'sha_changes': 0,
+            'frozen': False,
+        }
+
+        # Current level
+        level_entry = SystemConfiguration.objects.filter(
+            key=self.KEY_LEVEL,
+        ).first()
+        current_level = int(level_entry.value) if level_entry else 0
+
+        # Track deploy SHA changes
+        current_sha = self._get_current_sha()
+        last_sha_entry = SystemConfiguration.objects.filter(
+            key=self.KEY_LAST_SHA,
+        ).first()
+        last_sha = last_sha_entry.value if last_sha_entry else ''
+
+        if current_sha and current_sha != last_sha:
+            # New deploy detected
+            SystemConfiguration.objects.update_or_create(
+                key=self.KEY_LAST_SHA,
+                defaults={'value': current_sha},
+            )
+            SystemConfiguration.objects.update_or_create(
+                key=self.KEY_LAST_DEPLOY_TS,
+                defaults={'value': now.isoformat()},
+            )
+
+        # Count recent deploys (SHA changes in window)
+        deploy_metrics = self._count_recent_deploys(now)
+        result['deploys_recent'] = deploy_metrics['count']
+        result['deploy_rate_per_hour'] = deploy_metrics['rate_per_hour']
+        result['sha_changes'] = deploy_metrics['sha_changes']
+        result['error_rate'] = deploy_metrics['error_rate']
+
+        # Determine target level
+        target_level = 0
+        if result['error_rate'] >= self.ERROR_RATE_L3:
+            target_level = 3
+        elif (result['error_rate'] >= self.ERROR_RATE_L2
+              or result['deploy_rate_per_hour'] >= self.DEPLOYS_PER_HOUR_CRITICAL):
+            target_level = 2
+        elif result['deploy_rate_per_hour'] >= self.DEPLOYS_PER_HOUR_WARNING:
+            target_level = 1
+
+        # Apply escalation / de-escalation
+        if target_level > current_level:
+            new_level = self._escalate(current_level, target_level, now)
+        elif target_level < current_level:
+            new_level = self._de_escalate(current_level, now)
+        else:
+            new_level = current_level
+            # Track clean cycles for de-escalation
+            if target_level == 0 and current_level > 0:
+                self._increment_clean_cycles()
+
+        # Apply level actions
+        self._apply_level_actions(new_level, now)
+
+        result['level'] = new_level
+        result['frozen'] = new_level >= 3
+
+        return result
+
+    def _get_current_sha(self) -> str:
+        """Get current deploy SHA."""
+        import os
+        sha = os.environ.get('RAILWAY_GIT_COMMIT_SHA', '')
+        if not sha:
+            try:
+                import subprocess
+                sha = subprocess.check_output(
+                    ['git', 'rev-parse', 'HEAD'],
+                    stderr=subprocess.DEVNULL,
+                ).decode().strip()[:12]
+            except Exception:
+                sha = ''
+        return sha[:40]
+
+    def _count_recent_deploys(self, now) -> dict:
+        """Count deploy events in evaluation window."""
+        result = {
+            'count': 0,
+            'rate_per_hour': 0.0,
+            'sha_changes': 0,
+            'error_rate': 0.0,
+        }
+
+        try:
+            from core.models_diagnostic_pipeline import AutopilotAction
+
+            window = now - timedelta(hours=self.EVAL_WINDOW_HOURS)
+
+            # Count cycle evaluations (each cycle records the SHA)
+            cycles = list(
+                AutopilotAction.objects.filter(
+                    created_at__gte=window,
+                    policy='cycle_evaluation',
+                ).values_list('deploy_sha', flat=True)
+            )
+
+            # Count unique SHAs (= number of deploys)
+            unique_shas = set(s for s in cycles if s)
+            result['sha_changes'] = len(unique_shas)
+            result['count'] = len(unique_shas)
+            result['rate_per_hour'] = (
+                len(unique_shas) / self.EVAL_WINDOW_HOURS
+                if self.EVAL_WINDOW_HOURS > 0 else 0
+            )
+
+            # Error rate from recent cycles
+            total_cycles = AutopilotAction.objects.filter(
+                created_at__gte=window,
+                policy='cycle_evaluation',
+            ).count()
+
+            error_cycles = AutopilotAction.objects.filter(
+                created_at__gte=window,
+                policy='cycle_evaluation',
+                result__has_key='error',
+            ).count()
+
+            if total_cycles > 0:
+                result['error_rate'] = round(error_cycles / total_cycles, 3)
+
+        except Exception:
+            pass
+
+        return result
+
+    def _escalate(self, current: int, target: int, now) -> int:
+        """Escalate to higher level."""
+        from core.models.system import SystemConfiguration
+
+        new_level = min(current + 1, target)
+
+        SystemConfiguration.objects.update_or_create(
+            key=self.KEY_LEVEL,
+            defaults={'value': str(new_level)},
+        )
+        SystemConfiguration.objects.update_or_create(
+            key=self.KEY_LEVEL_TS,
+            defaults={'value': now.isoformat()},
+        )
+        # Reset clean counter
+        clean_entry = SystemConfiguration.objects.filter(
+            key=self.KEY_CLEAN,
+        ).first()
+        if clean_entry:
+            clean_entry.value = '0'
+            clean_entry.save(update_fields=['value'])
+
+        logger.info(
+            f"[ReleaseGovernor] Escalated {current} → {new_level}"
+        )
+        return new_level
+
+    def _de_escalate(self, current: int, now) -> int:
+        """De-escalate if enough clean cycles."""
+        from core.models.system import SystemConfiguration
+
+        clean_entry = SystemConfiguration.objects.filter(
+            key=self.KEY_CLEAN,
+        ).first()
+        clean_cycles = int(clean_entry.value) if clean_entry else 0
+
+        if clean_cycles >= self.RECOVERY_CYCLES:
+            new_level = max(current - 1, 0)
+            SystemConfiguration.objects.update_or_create(
+                key=self.KEY_LEVEL,
+                defaults={'value': str(new_level)},
+            )
+            SystemConfiguration.objects.update_or_create(
+                key=self.KEY_LEVEL_TS,
+                defaults={'value': now.isoformat()},
+            )
+            # Reset clean counter
+            if clean_entry:
+                clean_entry.value = '0'
+                clean_entry.save(update_fields=['value'])
+
+            # Remove freeze if dropping below L3
+            if new_level < 3:
+                SystemConfiguration.objects.filter(
+                    key=self.KEY_FREEZE,
+                ).delete()
+
+            logger.info(
+                f"[ReleaseGovernor] De-escalated {current} → {new_level}"
+            )
+            return new_level
+
+        return current
+
+    def _increment_clean_cycles(self):
+        """Increment clean cycle counter."""
+        from core.models.system import SystemConfiguration
+
+        obj, _ = SystemConfiguration.objects.get_or_create(
+            key=self.KEY_CLEAN,
+            defaults={'value': '0'},
+        )
+        obj.value = str(int(obj.value or '0') + 1)
+        obj.save(update_fields=['value'])
+
+    def _apply_level_actions(self, level: int, now):
+        """Apply actions based on current level."""
+        from core.models.system import SystemConfiguration
+
+        if level >= 1:
+            # Set backoff between deploys
+            backoff = (self.FREEZE_BACKOFF_SECONDS if level >= 3
+                       else self.DEFAULT_BACKOFF_SECONDS)
+            SystemConfiguration.objects.update_or_create(
+                key=self.KEY_BACKOFF,
+                defaults={'value': str(backoff)},
+            )
+        else:
+            # Clear backoff at L0
+            SystemConfiguration.objects.filter(
+                key=self.KEY_BACKOFF,
+            ).delete()
+
+        if level >= 3:
+            # Freeze deploys
+            SystemConfiguration.objects.update_or_create(
+                key=self.KEY_FREEZE,
+                defaults={'value': 'true'},
+            )
+        else:
+            # Clear freeze below L3
+            SystemConfiguration.objects.filter(
+                key=self.KEY_FREEZE,
+            ).delete()
+
+    def set_freeze(self, freeze: bool, reason: str = '') -> dict:
+        """Manually freeze/unfreeze deploys."""
+        from core.models.system import SystemConfiguration
+
+        if freeze:
+            SystemConfiguration.objects.update_or_create(
+                key=self.KEY_FREEZE,
+                defaults={'value': 'true'},
+            )
+            return {
+                'frozen': True,
+                'reason': reason or 'manual freeze',
+            }
+        else:
+            SystemConfiguration.objects.filter(
+                key=self.KEY_FREEZE,
+            ).delete()
+            return {
+                'frozen': False,
+                'reason': reason or 'manual unfreeze',
+            }
+
+    def get_release_report(self, now) -> dict:
+        """PA-facing release/deploy status report."""
+        from core.models.system import SystemConfiguration
+
+        # Current state
+        level_entry = SystemConfiguration.objects.filter(
+            key=self.KEY_LEVEL,
+        ).first()
+        level = int(level_entry.value) if level_entry else 0
+
+        freeze_entry = SystemConfiguration.objects.filter(
+            key=self.KEY_FREEZE,
+        ).first()
+        frozen = bool(freeze_entry)
+
+        backoff_entry = SystemConfiguration.objects.filter(
+            key=self.KEY_BACKOFF,
+        ).first()
+        backoff = int(backoff_entry.value) if backoff_entry else 0
+
+        last_sha_entry = SystemConfiguration.objects.filter(
+            key=self.KEY_LAST_SHA,
+        ).first()
+        last_sha = last_sha_entry.value if last_sha_entry else 'unknown'
+
+        last_deploy_entry = SystemConfiguration.objects.filter(
+            key=self.KEY_LAST_DEPLOY_TS,
+        ).first()
+        last_deploy_ts = last_deploy_entry.value if last_deploy_entry else None
+
+        clean_entry = SystemConfiguration.objects.filter(
+            key=self.KEY_CLEAN,
+        ).first()
+        clean_cycles = int(clean_entry.value) if clean_entry else 0
+
+        # Recent deploy metrics
+        metrics = self._count_recent_deploys(now)
+
+        level_labels = {
+            0: 'L0 — Observing (normal)',
+            1: 'L1 — Backoff (serialize builds)',
+            2: 'L2 — Gate (require healthy)',
+            3: 'L3 — Frozen (SLO breach)',
+        }
+
+        return {
+            'level': level,
+            'level_label': level_labels.get(level, f'L{level}'),
+            'frozen': frozen,
+            'backoff_seconds': backoff,
+            'last_deploy_sha': last_sha,
+            'last_deploy_ts': last_deploy_ts,
+            'clean_cycles': clean_cycles,
+            'recovery_at': self.RECOVERY_CYCLES - clean_cycles,
+            'deploy_rate_per_hour': metrics['rate_per_hour'],
+            'deploys_in_window': metrics['count'],
+            'error_rate': metrics['error_rate'],
+            'window_hours': self.EVAL_WINDOW_HOURS,
+        }
 
 
 # ═══════════════════════════════════════════════════════════════════════
