@@ -11012,7 +11012,7 @@ RESEARCH DATA:
             delib_filter = {'created_at__gte': cutoff, 'author': 'ContentDeliberation'}
             blogs_created = SelfBlog.objects.filter(**delib_filter).count()
             blogs_published = SelfBlog.objects.filter(
-                **delib_filter, status='approved'
+                **delib_filter, status__in=['approved', 'published']
             ).count()
             pub_rate = blogs_published / blogs_created if blogs_created > 0 else None
             slos.append({
