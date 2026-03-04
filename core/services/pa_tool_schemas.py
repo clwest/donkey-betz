@@ -2035,7 +2035,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "timeout_ladder_report", "deliberation_pipeline_report", "backfill_failure_reasons", "backlog_report"],
+                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "timeout_ladder_report", "deliberation_pipeline_report", "backfill_failure_reasons", "backlog_report", "goal_report", "goal_set_weights"],
                     "description": (
                         "status: current config, last cycle timestamp, and pending actions. "
                         "history: recent autopilot actions (blocks, attention items, dry runs). "
@@ -2075,7 +2075,12 @@ PA_TOOL_SCHEMAS = [
                         "remediation ladder state (L1=panel reduced, L2=model fallback, L3=single-reviewer bypass), active overrides. "
                         "backfill_failure_reasons: re-classify UNKNOWN failure codes using expanded patterns. "
                         "backlog_report: show deliverable backlog health — ready/draft counts, p95 age, conversion rate, "
-                        "governor level (L1=throttle, L2=governance batch, L3=auto-archive), protected vs archivable items."
+                        "governor level (L1=throttle, L2=governance batch, L3=auto-archive), protected vs archivable items. "
+                        "goal_report: show goal-aware allocation state — objective weights, current metrics (sports profit, "
+                        "revenue, engagement, quality, freshness), desk utility scores, and active goal multipliers. "
+                        "goal_set_weights: update goal objective weights (provide goal_weights dict, e.g. "
+                        "{'sports_profit': 0.3, 'confirmed_revenue': 0.3, 'content_engagement': 0.2, 'quality': 0.1, 'freshness': 0.1}). "
+                        "Weights are auto-normalized to sum=1.0."
                     ),
                 },
                 "dry_run": {
@@ -2113,6 +2118,10 @@ PA_TOOL_SCHEMAS = [
                 "description": {
                     "type": "string",
                     "description": "For 'experiment_create': human-readable description of the experiment.",
+                },
+                "goal_weights": {
+                    "type": "object",
+                    "description": "For 'goal_set_weights': dict of objective weights (e.g., {'sports_profit': 0.3, 'confirmed_revenue': 0.3, 'content_engagement': 0.2, 'quality': 0.1, 'freshness': 0.1}). Auto-normalized to sum=1.0.",
                 },
             },
             "required": ["action"],
