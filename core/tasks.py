@@ -36511,6 +36511,7 @@ def process_pa_chat_task(self, user_id, message, context=None, generate_audio=Fa
         'latency_ms': response.latency_ms,
         'error': response.error,
         'conversation_id': conversation_id,
+        'source': source,
     }
 
 

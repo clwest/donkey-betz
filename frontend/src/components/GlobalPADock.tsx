@@ -12,7 +12,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   Bot, User, Send, X, Minus, Maximize2, MessageSquare,
   Loader2, Copy, ThumbsUp, ThumbsDown, Trash2, Clock, Plus, Terminal,
@@ -49,6 +49,7 @@ export default function GlobalPADock() {
     toggleSidebar,
     startNewConversation,
     fetchConversations,
+    setActiveConversation,
   } = usePAStore()
 
   const [localInput, setLocalInput] = useState(currentInput)
@@ -86,6 +87,23 @@ export default function GlobalPADock() {
     }
   }, [isDockOpen, isDockMinimized, isSidebarOpen])
 
+  // Live sync: poll server for new messages from Claude Code or other clients
+  useQuery({
+    queryKey: ['pa-dock-sync', activeConversationId],
+    queryFn: async () => {
+      if (!activeConversationId) return null
+      const response = await assistantApi.getConversation(activeConversationId)
+      const data = response.data
+      if (data.success && data.messages.length > messages.length) {
+        setActiveConversation(activeConversationId)
+      }
+      return data
+    },
+    enabled: !!activeConversationId && isDockOpen && !isPolling,
+    refetchInterval: 5000,
+    refetchIntervalInBackground: false,
+  })
+
   // Session 974b: Chat mutation — dispatches Celery task, then polls for result
   const chatMutation = useMutation({
     mutationFn: (message: string) =>
@@ -108,7 +126,8 @@ export default function GlobalPADock() {
 
             const content = status.data.content || 'No response'
             const toolNames = (status.data.tool_runs || []).map((r) => r.tool)
-            addMessage({ role: 'assistant', content, tools_used: toolNames })
+            const sourceLabel = status.data.source
+            addMessage({ role: 'assistant', content, tools_used: toolNames, source: sourceLabel })
 
             if (status.data.conversation_id && !activeConversationId) {
               setActiveConversationId(status.data.conversation_id)
