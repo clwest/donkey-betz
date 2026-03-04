@@ -1,5 +1,5 @@
 """
-Ops Autopilot v4 — autonomous ops with governance guardrails.
+Ops Autopilot v6 — autonomous ops with governance guardrails.
 
 Policies (v1 — Session 1080):
   1. Timeout spike containment: auto-block agents with high TIMEOUT signature counts
@@ -25,15 +25,21 @@ Policies (v4 — self-tuning + budget):
      Three tiers: soft limit (70%) → model downgrade, rate reduction (future),
      hard limit (95%) → freeze non-critical. Flags in SystemConfiguration.
 
-Policies (v5 — ROI attribution + scheduling):
- 11. ROI enforcement: ROIEnforcer correlates LLM spend with outcomes
-     (completed executions, published content). Under budget pressure,
-     applies selective throttles — low-ROI agents get cooldown periods
-     between calls. Throttles stored as SystemConfiguration keys.
+Policies (v5 — QROI attribution + scheduling):
+ 11. QROI enforcement: ROIEnforcer correlates LLM spend with outcomes
+     (completed executions, published content) × quality_weight. Under
+     budget pressure, applies selective throttles — low-QROI agents get
+     cooldown periods between calls.
  12. Budget-aware scheduling: BudgetAwareScheduler provides preflight
      checks for expensive Beat tasks. Under pressure, tasks are deferred
-     (skipped) or downscoped (reduced batch sizes, fewer items). Tasks
-     classified by cost tier (1-3). Knobs overridable via SystemConfiguration.
+     (skipped) or downscoped (reduced batch sizes, fewer items).
+
+Policies (v6 — impact tracking + portfolio allocation):
+ 13. Impact collection + portfolio allocation: ImpactCollector harvests
+     real downstream value (wager P/L, deliverable engagement, confirmed
+     revenue) into ImpactEvent table. PortfolioAllocator computes IQROI
+     per desk and adjusts budget allocations — high-impact desks get more
+     headroom, zero-impact pipelines get deprioritized.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -213,6 +219,9 @@ class OpsAutopilot:
         # Run policies (v5 — ROI attribution)
         roi_results = self._policy_roi_enforcement(now)
 
+        # Run policies (v6 — impact collection + portfolio allocation)
+        impact_results = self._policy_impact_portfolio(now)
+
         summary = {
             'cycle_at': now.isoformat(),
             'dry_run': self.dry_run,
@@ -228,6 +237,7 @@ class OpsAutopilot:
             'tuning': tuning_results,
             'budget': budget_results,
             'roi': roi_results,
+            'impact_portfolio': impact_results,
             'actions_taken': len(self.actions_taken),
             'actions': self.actions_taken,
         }
@@ -250,6 +260,7 @@ class OpsAutopilot:
                 'tuning': tuning_results,
                 'budget': budget_results,
                 'roi': roi_results,
+                'impact_portfolio': impact_results,
             },
             result=summary,
             deploy_sha=self.deploy_sha,
@@ -1303,6 +1314,84 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] ROI enforcement error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    # ── Policy 13: Impact Collection + Portfolio Allocation ───────────────
+
+    def _policy_impact_portfolio(self, now) -> dict:
+        """
+        Session 1089: Collect impact events from settled wagers,
+        deliverable interactions, and confirmed revenue. Then compute
+        desk-level IQROI and adjust portfolio allocations.
+        """
+        result = {
+            'collected': False,
+            'allocated': False,
+            'events_created': 0,
+            'allocations_changed': 0,
+        }
+
+        try:
+            # Step 1: Collect new impact events
+            collector = ImpactCollector()
+            collection = collector.collect_all(now, window_hours=24)
+            result['collected'] = True
+            result['events_created'] = collection['total_created']
+            result['collection_detail'] = collection
+
+            # Step 2: Compute and apply portfolio allocations
+            if not self.dry_run:
+                allocator = PortfolioAllocator()
+                applied = allocator.apply_allocations(now)
+                result['allocated'] = True
+                result['allocations_changed'] = len(applied)
+
+                if applied:
+                    self.actions_taken.append({
+                        'type': 'portfolio_allocation',
+                        'desks': [a['desk'] for a in applied],
+                        'allocations': applied,
+                    })
+                    desk_summary = ', '.join(
+                        f"{a['desk']} {a['allocation']}x"
+                        for a in applied[:5]
+                    )
+                    self._create_attention_item(
+                        title=(
+                            f"Portfolio rebalanced: "
+                            f"{len(applied)} desks adjusted"
+                        ),
+                        summary=(
+                            f"IQROI-based portfolio rebalance: "
+                            f"{desk_summary}. Desks with higher "
+                            f"impact-to-cost ratio get more budget "
+                            f"headroom. Undo: clear SystemConfiguration "
+                            f"keys starting with 'desk_allocation:'."
+                        ),
+                        urgency='low',
+                        policy='impact_portfolio',
+                        agent_name='PortfolioAllocator',
+                    )
+            else:
+                allocator = PortfolioAllocator()
+                desk_data = allocator.compute_desk_iqroi(now)
+                result['desk_iqroi'] = {
+                    k: {'iqroi': v['iqroi'], 'allocation': v['allocation']}
+                    for k, v in desk_data.items()
+                }
+
+            logger.info(
+                f"[OpsAutopilot] Impact: "
+                f"{collection['total_created']} events collected, "
+                f"{result['allocations_changed']} allocations changed"
+            )
+
+        except Exception as e:
+            logger.error(
+                f"[OpsAutopilot] Impact/portfolio error: {e}"
+            )
             result['error'] = str(e)
 
         return result
@@ -4043,4 +4132,479 @@ class BudgetAwareScheduler:
             'tier_counts': tier_counts,
             'deferable_tasks': len(self.DEFERABLE),
             'downscope_tasks': len(self.DOWNSCOPE_KNOBS),
+        }
+
+
+# ── Impact Collector ─────────────────────────────────────────────────────────
+
+class ImpactCollector:
+    """
+    Session 1089: Autonomy #8 — Harvests impact events from existing models.
+
+    Scans Wager settlements, DeliverableEvents, and Revenue confirmations
+    to create ImpactEvent records. Each ImpactEvent attributes value back
+    to an agent/desk for IQROI computation.
+
+    Run periodically (via OpsAutopilot policy or Beat task) to keep
+    the ImpactEvent table current.
+    """
+
+    # Desk mapping from model source types
+    REVENUE_SOURCE_DESK = {
+        'sports_betting': 'sports',
+        'trading': 'trading',
+        'content': 'content',
+        'freelance': 'career',
+        'consulting': 'career',
+        'quick_apply': 'career',
+        'ai_project': 'research',
+        'affiliate': 'content',
+        'other': 'general',
+    }
+
+    def collect_all(self, now, window_hours=24) -> dict:
+        """
+        Scan for new impact events in the last window.
+        Returns summary of what was collected.
+        """
+        window_start = now - timedelta(hours=window_hours)
+        results = {
+            'wagers': 0,
+            'deliverable_events': 0,
+            'revenues': 0,
+            'total_created': 0,
+        }
+
+        try:
+            results['wagers'] = self._collect_wager_impacts(window_start)
+        except Exception as e:
+            logger.error(f"[ImpactCollector] Wager collection error: {e}")
+
+        try:
+            results['deliverable_events'] = self._collect_deliverable_impacts(
+                window_start
+            )
+        except Exception as e:
+            logger.error(
+                f"[ImpactCollector] Deliverable collection error: {e}"
+            )
+
+        try:
+            results['revenues'] = self._collect_revenue_impacts(window_start)
+        except Exception as e:
+            logger.error(f"[ImpactCollector] Revenue collection error: {e}")
+
+        results['total_created'] = (
+            results['wagers']
+            + results['deliverable_events']
+            + results['revenues']
+        )
+
+        return results
+
+    def _collect_wager_impacts(self, window_start) -> int:
+        """Convert settled wagers to ImpactEvents."""
+        from core.models_bankroll import Wager
+        from core.models_impact_events import ImpactEvent
+
+        settled = Wager.objects.filter(
+            settled_at__gte=window_start,
+            status__in=['won', 'lost'],
+            profit__isnull=False,
+        ).select_related('bankroll')
+
+        created = 0
+        for wager in settled:
+            # Skip if already recorded
+            exists = ImpactEvent.objects.filter(
+                source_object_type='Wager',
+                source_object_id=wager.id if hasattr(wager, 'id') and isinstance(wager.id, type(ImpactEvent().id)) else None,
+                impact_type='wager_profit',
+            ).exists()
+
+            if exists:
+                continue
+
+            profit = float(wager.profit or 0)
+            agent = (
+                'SportsAnalyticsAgent'
+                if wager.agent_recommendation
+                else ''
+            )
+
+            ImpactEvent.objects.create(
+                impact_type='wager_profit',
+                desk='sports',
+                value_usd=profit,
+                impact_points=3 if profit > 0 else 0,
+                agent_name=agent,
+                source_object_type='Wager',
+                metadata={
+                    'sport': wager.sport,
+                    'event': wager.event_name[:100],
+                    'status': wager.status,
+                    'stake': str(wager.stake),
+                    'agent_recommended': wager.agent_recommendation,
+                },
+                user=wager.bankroll.user if hasattr(wager.bankroll, 'user') else None,
+            )
+            created += 1
+
+        return created
+
+    def _collect_deliverable_impacts(self, window_start) -> int:
+        """Convert DeliverableEvents to ImpactEvents."""
+        from core.models_deliverables import DeliverableEvent, Deliverable
+        from core.models_impact_events import ImpactEvent
+
+        # Map event types to impact types
+        event_map = {
+            'deliverable_saved': 'content_save',
+            'deliverable_exported': 'content_export',
+            'shared': 'content_share',
+            'action_taken': 'content_action',
+        }
+
+        events = DeliverableEvent.objects.filter(
+            created_at__gte=window_start,
+            event_type__in=list(event_map.keys()),
+        ).select_related('deliverable')
+
+        created = 0
+        for ev in events:
+            impact_type = event_map.get(ev.event_type)
+            if not impact_type:
+                continue
+
+            # Skip if already recorded
+            exists = ImpactEvent.objects.filter(
+                source_object_type='DeliverableEvent',
+                source_object_id=ev.id,
+            ).exists()
+            if exists:
+                continue
+
+            deliverable = ev.deliverable
+            agent = deliverable.agent_name or '' if deliverable else ''
+            points = ImpactEvent.points_for_type(impact_type)
+
+            ImpactEvent.objects.create(
+                impact_type=impact_type,
+                desk='content',
+                value_usd=0,  # Non-monetary — use impact_points
+                impact_points=points,
+                agent_name=agent,
+                source_object_type='DeliverableEvent',
+                source_object_id=ev.id,
+                trace_id=deliverable.trace_id if deliverable else None,
+                attributed_cost_usd=float(
+                    deliverable.llm_cost or 0
+                ) if deliverable else 0,
+                user=ev.user,
+                metadata={
+                    'event_type': ev.event_type,
+                    'deliverable_type': str(
+                        deliverable.deliverable_type
+                    ) if deliverable else '',
+                },
+            )
+            created += 1
+
+        return created
+
+    def _collect_revenue_impacts(self, window_start) -> int:
+        """Convert confirmed Revenue entries to ImpactEvents."""
+        from core.models_impact_events import ImpactEvent
+
+        try:
+            from core.models_unified_system import Revenue
+        except ImportError:
+            return 0
+
+        # Revenue model uses: source_type, paid_at, earned_at, status
+        confirmed = Revenue.objects.filter(
+            status__in=['confirmed', 'received'],
+        ).filter(
+            # Use paid_at or earned_at as the activity timestamp
+            paid_at__gte=window_start,
+        ) | Revenue.objects.filter(
+            status__in=['confirmed', 'received'],
+            paid_at__isnull=True,
+            earned_at__gte=window_start,
+        )
+
+        created = 0
+        for rev in confirmed:
+            exists = ImpactEvent.objects.filter(
+                source_object_type='Revenue',
+                source_object_id=rev.id,
+            ).exists()
+            if exists:
+                continue
+
+            source = getattr(rev, 'source_type', 'other') or 'other'
+            desk = self.REVENUE_SOURCE_DESK.get(source, 'general')
+
+            ImpactEvent.objects.create(
+                impact_type='revenue_confirmed',
+                desk=desk,
+                value_usd=float(rev.amount or 0),
+                impact_points=10,
+                agent_name='',
+                source_object_type='Revenue',
+                source_object_id=rev.id,
+                user=rev.user if hasattr(rev, 'user') else None,
+                metadata={
+                    'source_type': source,
+                    'description': (rev.description or '')[:100],
+                },
+            )
+            created += 1
+
+        return created
+
+
+# ── Portfolio Allocator (Policy 13) ──────────────────────────────────────────
+
+class PortfolioAllocator:
+    """
+    Session 1089: Autonomy #8 — Allocates budget and scheduling priority
+    across desks/pipelines based on Impact-adjusted QROI (IQROI).
+
+    IQROI = (impact_value_usd + impact_points × point_usd_value) / cost_usd
+
+    Desks with high IQROI get:
+    - Increased budget headroom (spend cap multiplier)
+    - Higher scheduling priority (longer deferral threshold)
+    - Larger deliberation panels
+
+    Desks with zero/negative IQROI get deprioritized.
+    """
+
+    # Default impact-point-to-USD conversion (1 point ≈ $0.10)
+    POINT_USD_VALUE = 0.10
+
+    # Desk defaults — scheduling multipliers
+    # multiplier > 1.0 = more budget headroom, < 1.0 = throttled
+    DEFAULT_ALLOCATIONS = {
+        'sports': 1.0,
+        'content': 1.0,
+        'research': 1.0,
+        'career': 1.0,
+        'trading': 1.0,
+        'general': 1.0,
+    }
+
+    # Desk-to-task mapping for scheduling adjustments
+    DESK_TASKS = {
+        'sports': [
+            'core.tasks.run_ml_predictions_batch',
+            'core.tasks.run_sports_prediction_pipeline',
+        ],
+        'content': [
+            'core.tasks.generate_self_blog_deliberation_task',
+            'core.tasks.content_autonomy_loop',
+            'core.tasks.auto_enhance_blogs',
+        ],
+        'research': [
+            'core.tasks.agent_think_and_synthesize',
+            'core.tasks.generate_smart_suggestions',
+        ],
+    }
+
+    def compute_desk_iqroi(self, now, window_hours=72) -> dict:
+        """
+        Compute IQROI per desk over the given window.
+
+        Returns dict of {desk: {iqroi, impact_usd, impact_points,
+                                cost_usd, events, allocation}}.
+        """
+        from core.models_impact_events import ImpactEvent
+        from core.models_llm_routing import LLMCallLog
+        from django.db.models import Sum, Count
+
+        window_start = now - timedelta(hours=window_hours)
+
+        # Impact by desk
+        desk_impact = {}
+        try:
+            impact_rows = list(
+                ImpactEvent.objects.filter(
+                    created_at__gte=window_start,
+                ).values('desk').annotate(
+                    total_usd=Sum('value_usd'),
+                    total_points=Sum('impact_points'),
+                    event_count=Count('id'),
+                )
+            )
+            for row in impact_rows:
+                desk_impact[row['desk']] = {
+                    'impact_usd': float(row['total_usd'] or 0),
+                    'impact_points': row['total_points'] or 0,
+                    'events': row['event_count'] or 0,
+                }
+        except Exception:
+            pass
+
+        # Cost by desk (approximate: map agent costs to desks)
+        desk_cost = {}
+        try:
+            # Agent-to-desk mapping from ImpactEvent history
+            agent_desk = dict(
+                ImpactEvent.objects.filter(
+                    agent_name__gt='',
+                ).values_list('agent_name', 'desk').distinct()[:200]
+            )
+
+            # Get agent costs
+            agent_costs = list(
+                LLMCallLog.objects.filter(
+                    created_at__gte=window_start,
+                    success=True,
+                ).values('agent_name').annotate(
+                    total_cost=Sum('cost'),
+                )
+            )
+
+            for ac in agent_costs:
+                agent = ac['agent_name'] or ''
+                desk = agent_desk.get(agent, 'general')
+                if desk not in desk_cost:
+                    desk_cost[desk] = 0
+                desk_cost[desk] += float(ac['total_cost'] or 0)
+        except Exception:
+            pass
+
+        # Compute IQROI per desk
+        point_value = (
+            AutopilotConfig.get('IMPACT_POINT_USD_VALUE')
+            or self.POINT_USD_VALUE
+        )
+        results = {}
+
+        all_desks = set(
+            list(desk_impact.keys())
+            + list(desk_cost.keys())
+            + list(self.DEFAULT_ALLOCATIONS.keys())
+        )
+
+        for desk in all_desks:
+            impact = desk_impact.get(desk, {})
+            impact_usd = impact.get('impact_usd', 0)
+            impact_pts = impact.get('impact_points', 0)
+            events = impact.get('events', 0)
+            cost = desk_cost.get(desk, 0)
+
+            # Total impact value = direct USD + (points × point_value)
+            total_impact = impact_usd + (impact_pts * point_value)
+
+            # IQROI = total_impact / cost (higher = better)
+            iqroi = total_impact / max(cost, 0.001)
+
+            # Allocation: scale based on IQROI relative to baseline
+            # IQROI > 1.0 → producing more value than cost → boost
+            # IQROI < 0.5 → underperforming → reduce
+            if iqroi >= 2.0:
+                allocation = 1.5
+            elif iqroi >= 1.0:
+                allocation = 1.2
+            elif iqroi >= 0.5:
+                allocation = 1.0
+            elif iqroi >= 0.1:
+                allocation = 0.7
+            elif events == 0 and cost == 0:
+                allocation = 1.0  # No data — neutral
+            else:
+                allocation = 0.5  # Lowest tier
+
+            results[desk] = {
+                'iqroi': round(iqroi, 4),
+                'impact_usd': round(impact_usd, 4),
+                'impact_points': impact_pts,
+                'total_impact_value': round(total_impact, 4),
+                'cost_usd': round(cost, 4),
+                'events': events,
+                'allocation': allocation,
+            }
+
+        return results
+
+    def apply_allocations(self, now) -> list[dict]:
+        """
+        Write desk allocation multipliers to SystemConfiguration.
+
+        BudgetAwareScheduler reads these to adjust preflight decisions
+        per desk/pipeline.
+        """
+        from core.models.system import SystemConfiguration
+
+        desk_data = self.compute_desk_iqroi(now)
+        applied = []
+
+        for desk, data in desk_data.items():
+            key = f"desk_allocation:{desk}"
+
+            SystemConfiguration.objects.update_or_create(
+                key=key,
+                defaults={
+                    'value': {
+                        'allocation': data['allocation'],
+                        'iqroi': data['iqroi'],
+                        'updated_at': now.isoformat(),
+                    },
+                    'description': (
+                        f"Portfolio allocation: {desk} desk — "
+                        f"IQROI {data['iqroi']:.2f}, "
+                        f"allocation {data['allocation']}x"
+                    ),
+                    'category': 'performance',
+                },
+            )
+
+            if data['allocation'] != 1.0:
+                applied.append({
+                    'desk': desk,
+                    'allocation': data['allocation'],
+                    'iqroi': data['iqroi'],
+                })
+
+        return applied
+
+    def get_portfolio_report(self, now) -> dict:
+        """Generate portfolio allocation report for PA/governance."""
+        desk_data = self.compute_desk_iqroi(now)
+
+        # Sort by IQROI descending (best performing first)
+        sorted_desks = sorted(
+            desk_data.items(),
+            key=lambda x: x[1]['iqroi'],
+            reverse=True,
+        )
+
+        # Active allocation overrides
+        from core.models.system import SystemConfiguration
+        active_allocs = {}
+        try:
+            entries = SystemConfiguration.objects.filter(
+                key__startswith='desk_allocation:',
+            ).values('key', 'value')
+            for e in entries:
+                desk = e['key'].replace('desk_allocation:', '')
+                active_allocs[desk] = e['value']
+        except Exception:
+            pass
+
+        return {
+            'desks': dict(sorted_desks),
+            'active_allocations': active_allocs,
+            'window_hours': 72,
+            'total_impact_usd': sum(
+                d['impact_usd'] for d in desk_data.values()
+            ),
+            'total_cost_usd': sum(
+                d['cost_usd'] for d in desk_data.values()
+            ),
+            'total_events': sum(
+                d['events'] for d in desk_data.values()
+            ),
         }

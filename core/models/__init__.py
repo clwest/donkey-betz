@@ -195,6 +195,9 @@ from ..models_ops_runs import OpsRun, OpsRunEvent
 # Other diagnostic pipeline models already tracked via earlier migrations
 from ..models_diagnostic_pipeline import AutopilotAction, RemediationPlaybook
 
+# Import ImpactEvent (Session 1089 - Autonomy #8 Impact Tracking)
+from ..models_impact_events import ImpactEvent
+
 # Import learning journey models (Session 773 - Learning Journeys)
 from ..models_learning_journey import (
     LearningJourneyTemplate,
@@ -439,5 +442,8 @@ __all__ = [
     # Ops Runs (Context Packet #9)
     'OpsRun',
     'OpsRunEvent',
+
+    # Impact Events (Session 1089 - Autonomy #8)
+    'ImpactEvent',
 
 ]
