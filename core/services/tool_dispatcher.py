@@ -12369,6 +12369,48 @@ RESEARCH DATA:
             report = engine.get_lead_source_report(tz.now())
             return {'action': 'lead_source_report', **report}
 
+        elif action == 'outreach_inbox':
+            # Outreach drafts pending approval
+            from core.services.ops_autopilot import OutreachSequencer
+            from django.utils import timezone as tz
+
+            sequencer = OutreachSequencer()
+            report = sequencer.get_inbox(tz.now())
+            return {'action': 'outreach_inbox', **report}
+
+        elif action == 'outreach_approve':
+            # Approve a draft for sending
+            from core.services.ops_autopilot import OutreachSequencer
+
+            draft_id = payload.get('draft_id', '')
+            edited_text = payload.get('edited_text', '')
+            if not draft_id:
+                return {'error': 'draft_id is required'}
+            sequencer = OutreachSequencer()
+            result = sequencer.approve_draft(draft_id, edited_text)
+            return {'action': 'outreach_approve', **result}
+
+        elif action == 'outreach_reject':
+            # Reject a draft
+            from core.services.ops_autopilot import OutreachSequencer
+
+            draft_id = payload.get('draft_id', '')
+            reason = payload.get('reason', '')
+            if not draft_id:
+                return {'error': 'draft_id is required'}
+            sequencer = OutreachSequencer()
+            result = sequencer.reject_draft(draft_id, reason)
+            return {'action': 'outreach_reject', **result}
+
+        elif action == 'outreach_metrics_report':
+            # Outreach conversion funnel
+            from core.services.ops_autopilot import OutreachSequencer
+            from django.utils import timezone as tz
+
+            sequencer = OutreachSequencer()
+            report = sequencer.get_metrics_report(tz.now())
+            return {'action': 'outreach_metrics_report', **report}
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason
