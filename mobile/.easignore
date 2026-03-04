@@ -1,0 +1,36 @@
+# EAS Build — ignore files not needed for native builds
+# EAS installs node_modules on the server, so we exclude them here.
+
+# Dependencies (re-installed on EAS server)
+node_modules/
+
+# Build output (metro bundles locally; EAS runs its own metro)
+dist/
+
+# Development tooling
+.expo/
+.vscode/
+.idea/
+
+# Scripts (dev-only)
+scripts/
+
+# Docs
+README.md
+CHANGELOG.md
+docs/
+
+# TypeScript build artifacts
+*.tsbuildinfo
+
+# Test files
+__tests__/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+jest.config.*
+coverage/
+
+# macOS cruft
+.DS_Store
