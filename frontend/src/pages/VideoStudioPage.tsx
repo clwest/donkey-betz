@@ -123,7 +123,12 @@ export default function VideoStudioPage() {
   const [studioMode, setStudioMode] = useState<StudioMode>('generate')
 
   // Generate > Mode
-  const [mode, setMode] = useState<'text' | 'image'>('text')
+  const [mode, setMode] = useState<'text' | 'image' | 'upload'>('text')
+
+  // Upload
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [uploadTitle, setUploadTitle] = useState('')
+  const uploadInputRef = useRef<HTMLInputElement>(null)
 
   // Text-to-video
   const [prompt, setPrompt] = useState('')
@@ -340,6 +345,21 @@ export default function VideoStudioPage() {
       }
     },
     onError: () => showFeedback('error', 'Failed to start video generation'),
+  })
+
+  const uploadVideoMutation = useMutation({
+    mutationFn: () => contentApi.uploadVideo(uploadFile!, uploadTitle || undefined),
+    onSuccess: () => {
+      refetchGallery()
+      setUploadFile(null)
+      setUploadTitle('')
+      if (uploadInputRef.current) uploadInputRef.current.value = ''
+      showFeedback('success', 'Video uploaded!')
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.error || 'Upload failed'
+      showFeedback('error', msg)
+    },
   })
 
   const favoriteMutation = useMutation({
@@ -642,6 +662,18 @@ export default function VideoStudioPage() {
                     <Image size={14} />
                     Image to Video
                   </button>
+                  <button
+                    onClick={() => setMode('upload')}
+                    className={cn(
+                      'flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
+                      mode === 'upload'
+                        ? 'border-primary-500 text-primary-400'
+                        : 'border-transparent text-gray-500 hover:text-gray-300'
+                    )}
+                  >
+                    <Upload size={14} />
+                    Upload
+                  </button>
                 </div>
 
                 {/* Text-to-video inputs */}
@@ -704,6 +736,79 @@ export default function VideoStudioPage() {
                   </>
                 )}
 
+                {/* Upload inputs */}
+                {mode === 'upload' && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1.5">Video File</label>
+                      <input
+                        ref={uploadInputRef}
+                        type="file"
+                        accept="video/mp4,video/quicktime,video/webm,video/x-msvideo,video/x-matroska,.mp4,.mov,.webm,.avi,.mkv"
+                        onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                        className="hidden"
+                      />
+                      <button
+                        onClick={() => uploadInputRef.current?.click()}
+                        className={cn(
+                          'w-full rounded-lg border-2 border-dashed px-4 py-8 text-center transition-colors',
+                          uploadFile
+                            ? 'border-primary-500 bg-primary-500/5'
+                            : 'border-dark-border hover:border-gray-500'
+                        )}
+                      >
+                        {uploadFile ? (
+                          <div className="space-y-1">
+                            <Film size={24} className="mx-auto text-primary-400" />
+                            <p className="text-sm text-white font-medium truncate">{uploadFile.name}</p>
+                            <p className="text-xs text-gray-400">{(uploadFile.size / 1024 / 1024).toFixed(1)} MB</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-1">
+                            <Upload size={24} className="mx-auto text-gray-500" />
+                            <p className="text-sm text-gray-400">Click to select a video file</p>
+                            <p className="text-xs text-gray-500">MP4, MOV, WebM, AVI, MKV — max 50 MB</p>
+                          </div>
+                        )}
+                      </button>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1.5">Title (optional)</label>
+                      <input
+                        type="text"
+                        value={uploadTitle}
+                        onChange={(e) => setUploadTitle(e.target.value)}
+                        placeholder="Give your video a name..."
+                        className="w-full rounded-lg bg-dark-bg border border-dark-border px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      />
+                    </div>
+                    <button
+                      onClick={() => uploadVideoMutation.mutate()}
+                      disabled={!uploadFile || uploadVideoMutation.isPending}
+                      className={cn(
+                        'w-full rounded-lg py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-2',
+                        uploadFile && !uploadVideoMutation.isPending
+                          ? 'bg-primary-600 text-white hover:bg-primary-500'
+                          : 'bg-dark-border text-gray-500 cursor-not-allowed'
+                      )}
+                    >
+                      {uploadVideoMutation.isPending ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <Upload size={16} />
+                          Upload Video
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* Generation options — hidden in upload mode */}
+                {mode !== 'upload' && (<>
                 {/* Duration */}
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-1.5">Duration</label>
@@ -835,6 +940,7 @@ export default function VideoStudioPage() {
                     </>
                   )}
                 </button>
+                </>)}
 
                 {/* Active Generations */}
                 {activeGenerations.length > 0 && (
