@@ -12541,6 +12541,75 @@ RESEARCH DATA:
             report = engine.get_metrics_report(tz.now())
             return {'action': 'engagement_metrics_report', **report}
 
+        elif action == 'meeting_create':
+            # Create a new meeting
+            from core.services.ops_autopilot import MeetingEngine
+
+            scheduled_at = payload.get('scheduled_at')
+            if not scheduled_at:
+                return {'error': 'scheduled_at is required (ISO datetime)'}
+
+            engine = MeetingEngine()
+            result = engine.create_meeting(
+                opportunity_id=payload.get('opportunity_id', ''),
+                scheduled_at=scheduled_at,
+                title=payload.get('title', ''),
+                channel=payload.get('channel', 'zoom'),
+                duration_minutes=int(payload.get('duration_minutes', 30)),
+                meeting_link=payload.get('meeting_link', ''),
+                prospect_name=payload.get('prospect_name', ''),
+                prospect_company=payload.get('prospect_company', ''),
+            )
+            return {'action': 'meeting_create', **result}
+
+        elif action == 'meeting_inbox':
+            # Meeting inbox by filter
+            from core.services.ops_autopilot import MeetingEngine
+            from django.utils import timezone as tz
+
+            filter_type = payload.get('filter_type', 'upcoming')
+            engine = MeetingEngine()
+            inbox = engine.get_inbox(tz.now(), filter_type=filter_type)
+            return {'action': 'meeting_inbox', **inbox}
+
+        elif action == 'meeting_brief':
+            # Generate pre-call brief
+            from core.services.ops_autopilot import MeetingEngine
+
+            meeting_id = payload.get('meeting_id')
+            if not meeting_id:
+                return {'error': 'meeting_id is required'}
+
+            engine = MeetingEngine()
+            result = engine.generate_brief(meeting_id=meeting_id)
+            return {'action': 'meeting_brief', **result}
+
+        elif action == 'meeting_recap':
+            # Add post-meeting recap
+            from core.services.ops_autopilot import MeetingEngine
+
+            meeting_id = payload.get('meeting_id')
+            if not meeting_id:
+                return {'error': 'meeting_id is required'}
+
+            engine = MeetingEngine()
+            result = engine.add_recap(
+                meeting_id=meeting_id,
+                notes=payload.get('notes', ''),
+                outcome=payload.get('outcome', ''),
+                next_steps=payload.get('next_steps', ''),
+            )
+            return {'action': 'meeting_recap', **result}
+
+        elif action == 'meeting_metrics_report':
+            # Meeting pipeline metrics
+            from core.services.ops_autopilot import MeetingEngine
+            from django.utils import timezone as tz
+
+            engine = MeetingEngine()
+            report = engine.get_metrics_report(tz.now())
+            return {'action': 'meeting_metrics_report', **report}
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason
