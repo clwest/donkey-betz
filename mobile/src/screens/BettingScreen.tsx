@@ -14,6 +14,7 @@ import * as bettingApi from '../api/betting';
 import type { BettingStats, Game, Wager } from '../api/betting';
 import { useDemo } from '../demo/useDemo';
 import * as demo from '../demo/demoData';
+import DataStatusChip, { type DataStatus } from '../components/DataStatusChip';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -75,6 +76,7 @@ export default function BettingScreen() {
   const [games, setGames] = useState<Game[]>([]);
   const [wagers, setWagers] = useState<Wager[]>([]);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [dataStatus, setDataStatus] = useState<DataStatus>('live');
 
   const fetchAll = useCallback(async () => {
     setError(null);
@@ -97,8 +99,10 @@ export default function BettingScreen() {
     if (results[2].status === 'fulfilled') setWagers(results[2].value);
     if (results.every((r) => r.status === 'rejected')) {
       setError('Failed to load betting data. Pull to retry.');
+      setDataStatus('error');
     } else {
       setLastUpdated(new Date());
+      setDataStatus('live');
     }
   }, [isDemo]);
 
@@ -140,10 +144,7 @@ export default function BettingScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" colors={['#6366f1']} />
         }
       >
-        {/* Last updated */}
-        {lastUpdated && (
-          <Text style={styles.updatedText}>Updated {timeAgo(lastUpdated.toISOString())}</Text>
-        )}
+        <DataStatusChip status={dataStatus} lastUpdated={lastUpdated} />
 
         {/* Tab Bar */}
         <View style={styles.tabBar}>

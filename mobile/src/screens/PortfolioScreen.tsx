@@ -15,6 +15,7 @@ import {
 } from '../api/portfolio';
 import { useDemo } from '../demo/useDemo';
 import * as demo from '../demo/demoData';
+import DataStatusChip, { type DataStatus } from '../components/DataStatusChip';
 
 type TabKey = 'overview' | 'platforms' | 'revenue';
 
@@ -57,6 +58,7 @@ export default function PortfolioScreen() {
   const [comparison, setComparison] = useState<PlatformComparison[]>([]);
   const [loadingCompare, setLoadingCompare] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [dataStatus, setDataStatus] = useState<DataStatus>('live');
 
   const fetchAll = useCallback(async () => {
     setError(null);
@@ -86,8 +88,10 @@ export default function PortfolioScreen() {
     if (results[4].status === 'fulfilled') setRecommendations(results[4].value);
     if (results.every((r) => r.status === 'rejected')) {
       setError('Failed to load portfolio data. Pull to retry.');
+      setDataStatus('error');
     } else {
       setLastUpdated(new Date());
+      setDataStatus('live');
     }
   }, [isDemo]);
 
@@ -159,11 +163,7 @@ export default function PortfolioScreen() {
           contentContainerStyle={s.scroll}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#818cf8" />}
         >
-          {lastUpdated && (
-            <Text style={s.updatedText}>
-              Updated {lastUpdated.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-            </Text>
-          )}
+          <DataStatusChip status={dataStatus} lastUpdated={lastUpdated} />
           {tab === 'overview' && (
             <OverviewTab
               stats={safeStats}

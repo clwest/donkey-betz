@@ -2035,7 +2035,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "timeout_ladder_report", "deliberation_pipeline_report", "backfill_failure_reasons", "backlog_report", "goal_report", "goal_set_weights", "attribution_report", "policy_conflict_report", "release_report", "release_freeze", "release_unfreeze", "revenue_pipeline_report", "prospecting_queue", "lead_source_report", "outreach_inbox", "outreach_approve", "outreach_reject", "outreach_metrics_report", "close_pack_generate", "close_pack_inbox", "close_pack_approve", "close_pack_metrics_report", "engagement_inbox", "engagement_classify", "engagement_draft_reply", "engagement_approve_reply", "engagement_disqualify", "engagement_metrics_report", "meeting_create", "meeting_inbox", "meeting_brief", "meeting_recap", "meeting_metrics_report", "governance_status", "governance_set_mode", "governance_kill_switch", "governance_deactivate_switch", "governance_throttle_report", "governance_audit", "revenue_full_pipeline", "revenue_funnel", "revenue_forecast", "knowledge_health", "knowledge_citation_report", "knowledge_source_report", "knowledge_staleness_report"],
+                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "timeout_ladder_report", "deliberation_pipeline_report", "backfill_failure_reasons", "backlog_report", "goal_report", "goal_set_weights", "attribution_report", "policy_conflict_report", "release_report", "release_freeze", "release_unfreeze", "revenue_pipeline_report", "prospecting_queue", "lead_source_report", "outreach_inbox", "outreach_approve", "outreach_reject", "outreach_metrics_report", "close_pack_generate", "close_pack_inbox", "close_pack_approve", "close_pack_metrics_report", "engagement_inbox", "engagement_classify", "engagement_draft_reply", "engagement_approve_reply", "engagement_disqualify", "engagement_metrics_report", "meeting_create", "meeting_inbox", "meeting_brief", "meeting_recap", "meeting_metrics_report", "governance_status", "governance_set_mode", "governance_kill_switch", "governance_deactivate_switch", "governance_throttle_report", "governance_audit", "revenue_full_pipeline", "revenue_funnel", "revenue_forecast", "knowledge_health", "knowledge_citation_report", "knowledge_source_report", "knowledge_staleness_report", "close_pack_followup_queue", "close_pack_risk_report", "close_pack_velocity"],
                     "description": (
                         "status: current config, last cycle timestamp, and pending actions. "
                         "history: recent autopilot actions (blocks, attention items, dry runs). "
@@ -2142,7 +2142,13 @@ PA_TOOL_SCHEMAS = [
                         "knowledge_source_report: spider source coverage — top spiders by volume, data type distribution, "
                         "unique domains, research source rates. "
                         "knowledge_staleness_report: stale data detection — which data types are overdue for refresh, "
-                        "dormant spiders, freshness thresholds, and actionable recommendations."
+                        "dormant spiders, freshness thresholds, and actionable recommendations. "
+                        "close_pack_followup_queue: close packs needing follow-up — due/overdue packs with "
+                        "draft follow-up messages, overdue hours, upcoming follow-ups in next 48h. "
+                        "close_pack_risk_report: risk assessment of active close packs — pricing below minimums, "
+                        "short timelines, missing opportunity links, severity breakdown. "
+                        "close_pack_velocity: pipeline velocity — time-to-close for won deals, velocity by offer type, "
+                        "current pipeline age, deal count and revenue."
                     ),
                 },
                 "dry_run": {

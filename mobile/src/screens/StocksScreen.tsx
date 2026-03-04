@@ -16,6 +16,7 @@ import * as stocksApi from '../api/stocks';
 import type { StockHub, StockAlert, TickerLookup } from '../api/stocks';
 import { useDemo } from '../demo/useDemo';
 import * as demo from '../demo/demoData';
+import DataStatusChip, { type DataStatus } from '../components/DataStatusChip';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -67,6 +68,7 @@ export default function StocksScreen() {
   const [error, setError] = useState<string | null>(null);
   const [hub, setHub] = useState<StockHub | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [dataStatus, setDataStatus] = useState<DataStatus>('live');
 
   const fetchHub = useCallback(async () => {
     setError(null);
@@ -81,8 +83,10 @@ export default function StocksScreen() {
       const data = await stocksApi.getHub();
       setHub(data);
       setLastUpdated(new Date());
+      setDataStatus('live');
     } catch {
       setError('Failed to load stock intelligence.');
+      setDataStatus('error');
     }
   }, [isDemo]);
 
@@ -124,12 +128,7 @@ export default function StocksScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" colors={['#6366f1']} />
         }
       >
-        {/* Last updated */}
-        {lastUpdated && (
-          <Text style={styles.updatedText}>
-            Updated {lastUpdated.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-          </Text>
-        )}
+        <DataStatusChip status={dataStatus} lastUpdated={lastUpdated} />
 
         <View style={styles.tabBar}>
           {TABS.map((t) => (
