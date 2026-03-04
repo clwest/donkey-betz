@@ -12411,6 +12411,57 @@ RESEARCH DATA:
             report = sequencer.get_metrics_report(tz.now())
             return {'action': 'outreach_metrics_report', **report}
 
+        elif action == 'close_pack_generate':
+            # Generate a close pack (proposal + contract + invoice)
+            from core.services.ops_autopilot import CloseTheDealEngine
+
+            opportunity_id = payload.get('opportunity_id', '')
+            offer_key = payload.get('offer_key', 'consulting')
+            price = payload.get('price')
+            timeline_days = payload.get('timeline_days', 14)
+
+            if not price:
+                return {'error': 'price is required for close_pack_generate'}
+
+            engine = CloseTheDealEngine()
+            result = engine.generate_pack(
+                opportunity_id=opportunity_id,
+                offer_key=offer_key,
+                price=float(price),
+                timeline_days=int(timeline_days),
+            )
+            return {'action': 'close_pack_generate', **result}
+
+        elif action == 'close_pack_inbox':
+            # Pending close packs for approval
+            from core.services.ops_autopilot import CloseTheDealEngine
+            from django.utils import timezone as tz
+
+            engine = CloseTheDealEngine()
+            inbox = engine.get_inbox(tz.now())
+            return {'action': 'close_pack_inbox', **inbox}
+
+        elif action == 'close_pack_approve':
+            # Approve a close pack
+            from core.services.ops_autopilot import CloseTheDealEngine
+
+            pack_id = payload.get('pack_id')
+            if not pack_id:
+                return {'error': 'pack_id is required for close_pack_approve'}
+
+            engine = CloseTheDealEngine()
+            result = engine.approve_pack(pack_id)
+            return {'action': 'close_pack_approve', **result}
+
+        elif action == 'close_pack_metrics_report':
+            # Deal metrics — win rate, revenue, etc.
+            from core.services.ops_autopilot import CloseTheDealEngine
+            from django.utils import timezone as tz
+
+            engine = CloseTheDealEngine()
+            report = engine.get_metrics_report(tz.now())
+            return {'action': 'close_pack_metrics_report', **report}
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason

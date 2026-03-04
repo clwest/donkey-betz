@@ -2035,7 +2035,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "timeout_ladder_report", "deliberation_pipeline_report", "backfill_failure_reasons", "backlog_report", "goal_report", "goal_set_weights", "attribution_report", "policy_conflict_report", "release_report", "release_freeze", "release_unfreeze", "revenue_pipeline_report", "prospecting_queue", "lead_source_report", "outreach_inbox", "outreach_approve", "outreach_reject", "outreach_metrics_report"],
+                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "timeout_ladder_report", "deliberation_pipeline_report", "backfill_failure_reasons", "backlog_report", "goal_report", "goal_set_weights", "attribution_report", "policy_conflict_report", "release_report", "release_freeze", "release_unfreeze", "revenue_pipeline_report", "prospecting_queue", "lead_source_report", "outreach_inbox", "outreach_approve", "outreach_reject", "outreach_metrics_report", "close_pack_generate", "close_pack_inbox", "close_pack_approve", "close_pack_metrics_report"],
                     "description": (
                         "status: current config, last cycle timestamp, and pending actions. "
                         "history: recent autopilot actions (blocks, attention items, dry runs). "
@@ -2100,7 +2100,12 @@ PA_TOOL_SCHEMAS = [
                         "outreach_approve: approve a draft for sending (requires draft_id, optional edited_text). "
                         "Schedules next follow-up in the sequence automatically. "
                         "outreach_reject: reject a draft (requires draft_id, optional reason). Prevents re-queue. "
-                        "outreach_metrics_report: outreach conversion funnel — by status/channel/offer, reply rate."
+                        "outreach_metrics_report: outreach conversion funnel — by status/channel/offer, reply rate. "
+                        "close_pack_generate: generate a close pack (proposal, contract, invoice) for an opportunity "
+                        "(requires opportunity_id, offer_key, price; optional timeline_days). "
+                        "close_pack_inbox: pending close packs for approval — offer details, price, pipeline value. "
+                        "close_pack_approve: approve a close pack (requires pack_id). Schedules follow-up automatically. "
+                        "close_pack_metrics_report: deal metrics — win rate, revenue, avg deal size, funnel by status/offer."
                     ),
                 },
                 "dry_run": {
@@ -2162,6 +2167,26 @@ PA_TOOL_SCHEMAS = [
                 "reason": {
                     "type": "string",
                     "description": "For 'outreach_reject': reason for rejecting the draft.",
+                },
+                "opportunity_id": {
+                    "type": "string",
+                    "description": "For 'close_pack_generate': UUID of the Opportunity to create a close pack for.",
+                },
+                "offer_key": {
+                    "type": "string",
+                    "description": "For 'close_pack_generate': offer template — ai_automation, content_engine, analytics_dashboard, consulting.",
+                },
+                "price": {
+                    "type": "number",
+                    "description": "For 'close_pack_generate': quoted price in USD.",
+                },
+                "timeline_days": {
+                    "type": "integer",
+                    "description": "For 'close_pack_generate': delivery timeline in days (default 14).",
+                },
+                "pack_id": {
+                    "type": "string",
+                    "description": "For 'close_pack_approve': UUID of the close pack to approve.",
                 },
             },
             "required": ["action"],
