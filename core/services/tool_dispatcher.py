@@ -12703,6 +12703,36 @@ RESEARCH DATA:
             forecast = engine.get_revenue_forecast()
             return {'action': 'revenue_forecast', **forecast}
 
+        # ── Knowledge & Citation Engine (Policy 32) ──────────────
+        elif action == 'knowledge_health':
+            from core.services.ops_autopilot import KnowledgeEngine
+
+            engine = KnowledgeEngine()
+            health = engine.get_health()
+            return {'action': 'knowledge_health', **health}
+
+        elif action == 'knowledge_citation_report':
+            from core.services.ops_autopilot import KnowledgeEngine
+
+            days = int(payload.get('days', 7))
+            engine = KnowledgeEngine()
+            report = engine.get_citation_report(days=days)
+            return {'action': 'knowledge_citation_report', **report}
+
+        elif action == 'knowledge_source_report':
+            from core.services.ops_autopilot import KnowledgeEngine
+
+            engine = KnowledgeEngine()
+            report = engine.get_source_report()
+            return {'action': 'knowledge_source_report', **report}
+
+        elif action == 'knowledge_staleness_report':
+            from core.services.ops_autopilot import KnowledgeEngine
+
+            engine = KnowledgeEngine()
+            report = engine.get_staleness_report()
+            return {'action': 'knowledge_staleness_report', **report}
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason
