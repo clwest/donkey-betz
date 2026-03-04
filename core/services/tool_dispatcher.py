@@ -12908,6 +12908,37 @@ RESEARCH DATA:
             report = engine.get_compliance_report()
             return {'action': 'compliance_report', **report}
 
+        elif action == 'integrity_quality_report':
+            from core.services.ops_autopilot import DataIntegrityEngine
+
+            hours = int(payload.get('hours', 24))
+            engine = DataIntegrityEngine()
+            report = engine.get_quality_report(hours=hours)
+            return {'action': 'integrity_quality_report', **report}
+
+        elif action == 'integrity_null_spike_scan':
+            from core.services.ops_autopilot import DataIntegrityEngine
+
+            hours = int(payload.get('hours', 24))
+            engine = DataIntegrityEngine()
+            scan = engine.get_null_spike_scan(hours=hours)
+            return {'action': 'integrity_null_spike_scan', **scan}
+
+        elif action == 'integrity_duplicate_report':
+            from core.services.ops_autopilot import DataIntegrityEngine
+
+            hours = int(payload.get('hours', 24))
+            engine = DataIntegrityEngine()
+            report = engine.get_duplicate_report(hours=hours)
+            return {'action': 'integrity_duplicate_report', **report}
+
+        elif action == 'integrity_reliability_scores':
+            from core.services.ops_autopilot import DataIntegrityEngine
+
+            engine = DataIntegrityEngine()
+            scores = engine.get_reliability_scores()
+            return {'action': 'integrity_reliability_scores', **scores}
+
         elif action == 'backfill_failure_reasons':
             # Re-classify sessions that have UNKNOWN or empty failure_reason_code
             from core.models_deliberation import DeliberationSession, classify_failure_reason

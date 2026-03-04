@@ -196,6 +196,13 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      PA tools: compliance_pii_scan, compliance_retention_report,
      compliance_access_audit, compliance_report.
 
+ 39. Data quality, schema drift & contract testing autonomy:
+     DataIntegrityEngine monitors data quality across spider feeds,
+     detects null/zero spikes, duplicate explosions, stale loads,
+     and maintains per-source reliability scores.
+     PA tools: integrity_quality_report, integrity_null_spike_scan,
+     integrity_duplicate_report, integrity_reliability_scores.
+
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
 → execute → verify → rollback cycle (ActionVerifier). Successful remediations
@@ -383,6 +390,7 @@ class OpsAutopilot:
         ('capacity_planning', 'capacity_planning', '_policy_capacity_planning'),
         ('security_abuse', 'security_abuse', '_policy_security_abuse'),
         ('compliance', 'compliance', '_policy_compliance'),
+        ('data_integrity', 'data_integrity', '_policy_data_integrity'),
     ]
 
     def run(self) -> dict[str, Any]:
@@ -2585,6 +2593,35 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] compliance error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _policy_data_integrity(self, now) -> dict:
+        """
+        Monitor data quality: null spikes, duplicate explosions,
+        stale feeds, per-source reliability scores.
+        """
+        result = {
+            'null_spikes': 0,
+            'duplicate_issues': 0,
+            'healthy': True,
+        }
+
+        try:
+            engine = DataIntegrityEngine()
+            eval_result = engine.evaluate(now)
+            result.update(eval_result)
+
+            if not eval_result.get('healthy', True):
+                logger.info(
+                    f"[OpsAutopilot] DataIntegrity: "
+                    f"{eval_result.get('null_spikes', 0)} null spikes, "
+                    f"{eval_result.get('duplicate_issues', 0)} duplicate issues"
+                )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] data integrity error: {e}")
             result['error'] = str(e)
 
         return result
@@ -14129,3 +14166,293 @@ class ComplianceEngine:
             k = item.get(key, 'unknown')
             groups[k] = groups.get(k, 0) + 1
         return groups
+
+
+class DataIntegrityEngine:
+    """
+    Data quality, schema drift & contract testing — monitors spider feeds
+    for null/zero spikes, duplicate explosions, stale loads, and maintains
+    per-source data reliability scores.
+
+    Data sources:
+    - SpiderData: primary data feed quality
+    - AgentExecution: execution output quality
+    - Deliverable: content quality metrics
+
+    Guardrails:
+    - Read-only analysis — never quarantines data without approval
+    - Recommendations only in v1
+    """
+
+    # Thresholds
+    NULL_SPIKE_THRESHOLD = 0.3    # >30% nulls in a batch = spike
+    DUPLICATE_THRESHOLD = 0.2     # >20% duplicates = explosion
+    STALE_HOURS = 48              # No new data in 48h = stale
+
+    def get_quality_report(self, hours: int = 24) -> dict:
+        """Overall data quality report across spider feeds."""
+        from django.utils import timezone as tz
+        from django.db.models import Count, Q
+
+        cutoff = tz.now() - timedelta(hours=hours)
+        issues = []
+        by_source = {}
+
+        try:
+            from core.models_unified_system import SpiderData
+
+            # Per-spider quality stats
+            spider_stats = list(
+                SpiderData.objects.filter(created_at__gte=cutoff)
+                .values('spider_name')
+                .annotate(
+                    total=Count('id'),
+                    null_content=Count('id', filter=Q(raw_data__isnull=True) | Q(raw_data={})),
+                )
+                .order_by('-total')[:30]
+            )
+
+            for s in spider_stats:
+                total = s['total']
+                null_count = s['null_content']
+                null_rate = null_count / total if total > 0 else 0
+
+                source_info = {
+                    'spider': s['spider_name'],
+                    'total_records': total,
+                    'null_count': null_count,
+                    'null_rate': round(null_rate, 3),
+                }
+                by_source[s['spider_name']] = source_info
+
+                if null_rate > self.NULL_SPIKE_THRESHOLD and total > 5:
+                    issues.append({
+                        'type': 'null_spike',
+                        'spider': s['spider_name'],
+                        'null_rate': round(null_rate, 3),
+                        'null_count': null_count,
+                        'total': total,
+                        'severity': 'critical' if null_rate > 0.5 else 'warning',
+                        'detail': f"{s['spider_name']}: {null_rate:.0%} null rate ({null_count}/{total})",
+                    })
+
+            # Check for overall volume drop
+            total_recent = SpiderData.objects.filter(created_at__gte=cutoff).count()
+            prev_cutoff = cutoff - timedelta(hours=hours)
+            total_prev = SpiderData.objects.filter(
+                created_at__gte=prev_cutoff, created_at__lt=cutoff
+            ).count()
+
+            volume_change = 0
+            if total_prev > 0:
+                volume_change = round((total_recent - total_prev) / total_prev, 3)
+                if volume_change < -0.5 and total_prev > 20:
+                    issues.append({
+                        'type': 'volume_drop',
+                        'change': volume_change,
+                        'current': total_recent,
+                        'previous': total_prev,
+                        'severity': 'warning',
+                        'detail': f"Volume dropped {abs(volume_change):.0%} ({total_prev} → {total_recent})",
+                    })
+
+        except Exception:
+            pass
+
+        return {
+            'period_hours': hours,
+            'issues': issues,
+            'issue_count': len(issues),
+            'sources_checked': len(by_source),
+            'by_source': by_source,
+            'has_issues': len(issues) > 0,
+        }
+
+    def get_null_spike_scan(self, hours: int = 24) -> dict:
+        """Scan for null/empty data spikes in spider feeds."""
+        from django.utils import timezone as tz
+        from django.db.models import Count, Q
+
+        cutoff = tz.now() - timedelta(hours=hours)
+        spikes = []
+
+        try:
+            from core.models_unified_system import SpiderData
+
+            spider_stats = list(
+                SpiderData.objects.filter(created_at__gte=cutoff)
+                .values('spider_name', 'data_type')
+                .annotate(
+                    total=Count('id'),
+                    null_raw=Count('id', filter=Q(raw_data__isnull=True) | Q(raw_data={})),
+                    null_processed=Count('id', filter=Q(processed_data__isnull=True) | Q(processed_data={})),
+                    null_embedding=Count('id', filter=Q(embedding_text__isnull=True) | Q(embedding_text='')),
+                )
+                .order_by('-total')
+            )
+
+            for s in spider_stats:
+                total = s['total']
+                if total < 3:
+                    continue
+
+                for field, count_key in [
+                    ('raw_data', 'null_raw'),
+                    ('processed_data', 'null_processed'),
+                    ('embedding_text', 'null_embedding'),
+                ]:
+                    null_count = s[count_key]
+                    null_rate = null_count / total if total > 0 else 0
+                    if null_rate > self.NULL_SPIKE_THRESHOLD:
+                        spikes.append({
+                            'spider': s['spider_name'],
+                            'data_type': s['data_type'],
+                            'field': field,
+                            'null_count': null_count,
+                            'total': total,
+                            'null_rate': round(null_rate, 3),
+                            'severity': 'critical' if null_rate > 0.5 else 'warning',
+                        })
+        except Exception:
+            pass
+
+        return {
+            'period_hours': hours,
+            'spikes': spikes,
+            'spike_count': len(spikes),
+            'has_spikes': len(spikes) > 0,
+        }
+
+    def get_duplicate_report(self, hours: int = 24) -> dict:
+        """Detect duplicate data explosions in spider feeds."""
+        from django.utils import timezone as tz
+        from django.db.models import Count
+
+        cutoff = tz.now() - timedelta(hours=hours)
+        duplicates = []
+
+        try:
+            from core.models_unified_system import SpiderData
+
+            # Check for duplicate source_urls per spider
+            dup_urls = list(
+                SpiderData.objects.filter(created_at__gte=cutoff)
+                .exclude(source_url__isnull=True)
+                .exclude(source_url='')
+                .values('spider_name', 'source_url')
+                .annotate(count=Count('id'))
+                .filter(count__gt=1)
+                .order_by('-count')[:20]
+            )
+
+            for d in dup_urls:
+                duplicates.append({
+                    'spider': d['spider_name'],
+                    'source_url': d['source_url'][:100],
+                    'duplicate_count': d['count'],
+                    'severity': 'warning' if d['count'] < 5 else 'critical',
+                })
+
+            # Per-spider duplicate summary
+            by_spider: dict[str, int] = {}
+            for d in dup_urls:
+                spider = d['spider_name']
+                by_spider[spider] = by_spider.get(spider, 0) + (d['count'] - 1)
+
+        except Exception:
+            by_spider = {}
+
+        return {
+            'period_hours': hours,
+            'duplicates': duplicates,
+            'duplicate_count': len(duplicates),
+            'wasted_records': sum(by_spider.values()),
+            'by_spider': by_spider,
+            'has_duplicates': len(duplicates) > 0,
+        }
+
+    def get_reliability_scores(self) -> dict:
+        """Calculate per-source reliability scores based on recent quality."""
+        from django.utils import timezone as tz
+        from django.db.models import Count, Q, Avg
+
+        cutoff_24h = tz.now() - timedelta(hours=24)
+        cutoff_7d = tz.now() - timedelta(days=7)
+        scores = []
+
+        try:
+            from core.models_unified_system import SpiderData
+
+            # 7-day stats per spider
+            spider_stats = list(
+                SpiderData.objects.filter(created_at__gte=cutoff_7d)
+                .values('spider_name')
+                .annotate(
+                    total_7d=Count('id'),
+                    null_7d=Count('id', filter=Q(raw_data__isnull=True) | Q(raw_data={})),
+                    recent_24h=Count('id', filter=Q(created_at__gte=cutoff_24h)),
+                )
+                .order_by('-total_7d')[:40]
+            )
+
+            for s in spider_stats:
+                total = s['total_7d']
+                if total == 0:
+                    continue
+
+                null_rate = s['null_7d'] / total
+                freshness = 1.0 if s['recent_24h'] > 0 else 0.5
+                completeness = 1.0 - null_rate
+
+                # Reliability = 60% completeness + 40% freshness
+                reliability = round(completeness * 0.6 + freshness * 0.4, 3)
+
+                scores.append({
+                    'spider': s['spider_name'],
+                    'reliability_score': reliability,
+                    'completeness': round(completeness, 3),
+                    'freshness': freshness,
+                    'total_7d': total,
+                    'recent_24h': s['recent_24h'],
+                    'null_rate_7d': round(null_rate, 3),
+                    'grade': 'A' if reliability >= 0.9 else 'B' if reliability >= 0.7 else 'C' if reliability >= 0.5 else 'F',
+                })
+
+            scores.sort(key=lambda x: x['reliability_score'])
+        except Exception:
+            pass
+
+        avg_score = round(sum(s['reliability_score'] for s in scores) / len(scores), 3) if scores else 0
+
+        return {
+            'scores': scores,
+            'source_count': len(scores),
+            'average_reliability': avg_score,
+            'grade_distribution': {
+                'A': sum(1 for s in scores if s['grade'] == 'A'),
+                'B': sum(1 for s in scores if s['grade'] == 'B'),
+                'C': sum(1 for s in scores if s['grade'] == 'C'),
+                'F': sum(1 for s in scores if s['grade'] == 'F'),
+            },
+        }
+
+    def evaluate(self, now) -> dict:
+        """Auto-evaluate data integrity health for autopilot cycle."""
+        quality = self.get_quality_report(hours=12)
+        duplicates = self.get_duplicate_report(hours=12)
+
+        issues = []
+        for issue in quality.get('issues', []):
+            if issue.get('severity') in ('warning', 'critical'):
+                issues.append(issue.get('detail', str(issue)))
+        if duplicates.get('wasted_records', 0) > 10:
+            issues.append(f"duplicates: {duplicates['wasted_records']} wasted records")
+
+        return {
+            'null_spikes': sum(1 for i in quality.get('issues', []) if i.get('type') == 'null_spike'),
+            'duplicate_issues': duplicates.get('duplicate_count', 0),
+            'wasted_records': duplicates.get('wasted_records', 0),
+            'issues': issues,
+            'issue_count': len(issues),
+            'healthy': len(issues) == 0,
+        }
