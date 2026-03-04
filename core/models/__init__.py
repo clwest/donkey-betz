@@ -226,6 +226,9 @@ from ..models_close_pack import ClosePack
 # Import engagement models (Autonomy #24 - Engagement Engine)
 from ..models_engagement import EngagementEvent
 
+# Import meeting models (Autonomy #25 - Meeting Engine)
+from ..models_meeting import Meeting
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -481,5 +484,8 @@ __all__ = [
 
     # Engagement Event (Autonomy #24)
     'EngagementEvent',
+
+    # Meeting (Autonomy #25)
+    'Meeting',
 
 ]

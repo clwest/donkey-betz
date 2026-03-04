@@ -129,6 +129,13 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      stale unread events after 30 days. PA tools: engagement_inbox,
      engagement_classify, engagement_draft_reply, engagement_approve_reply,
      engagement_disqualify, engagement_metrics_report.
+ 29. Meeting engine: Tracks meetings from scheduling through follow-up.
+     Generates pre-call briefs with prospect context, discovery questions,
+     and suggested agenda. Post-meeting recap drafts (approval-gated).
+     Manual-first v1 (no calendar integration). Flags meetings needing
+     briefs (T-24h) and completed meetings awaiting follow-up (>48h).
+     PA tools: meeting_create, meeting_inbox, meeting_brief,
+     meeting_recap, meeting_metrics_report.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -307,6 +314,7 @@ class OpsAutopilot:
         ('outreach', 'outreach_sequencer', '_policy_outreach_sequencer'),
         ('close_deal', 'close_the_deal', '_policy_close_the_deal'),
         ('engagement', 'engagement_engine', '_policy_engagement_engine'),
+        ('meetings', 'meeting_engine', '_policy_meeting_engine'),
     ]
 
     def run(self) -> dict[str, Any]:
@@ -2219,6 +2227,35 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] engagement engine error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _policy_meeting_engine(self, now) -> dict:
+        """
+        Monitor meeting pipeline — flag meetings needing briefs,
+        stale follow-ups, and upcoming meeting counts.
+        """
+        result = {
+            'upcoming': 0,
+            'needs_brief': 0,
+            'past_no_followup': 0,
+        }
+
+        try:
+            engine = MeetingEngine()
+            eval_result = engine.evaluate(now)
+            result.update(eval_result)
+
+            logger.info(
+                f"[OpsAutopilot] Meetings: "
+                f"{result['upcoming']} upcoming, "
+                f"{result['needs_brief']} need brief, "
+                f"{result['past_no_followup']} need follow-up"
+            )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] meeting engine error: {e}")
             result['error'] = str(e)
 
         return result
@@ -9548,6 +9585,288 @@ class EngagementEngine:
                 suppressed=False,
             ).update(status='closed')
             result['stale_closed'] = stale_closed
+
+        except Exception as e:
+            result['error'] = str(e)
+
+        return result
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Meeting Engine — Policy 29 (Autonomy #25)
+# ═══════════════════════════════════════════════════════════════════════
+
+class MeetingEngine:
+    """
+    Tracks meetings from scheduling through follow-up.
+    Generates pre-call briefs with prospect context.
+
+    Guardrails:
+      - No auto-sending (recap drafts need approval)
+      - Manual-first v1 (no calendar integration)
+      - Brief auto-generated before meeting
+    """
+
+    def create_meeting(
+        self, opportunity_id: str, scheduled_at: str,
+        title: str = '', channel: str = 'zoom',
+        duration_minutes: int = 30, meeting_link: str = '',
+        prospect_name: str = '', prospect_company: str = '',
+        attendees: list = None,
+    ) -> dict:
+        """Create a meeting for an opportunity."""
+        from core.models_meeting import Meeting
+        from django.utils.dateparse import parse_datetime
+
+        dt = parse_datetime(scheduled_at)
+        if not dt:
+            return {'error': f'Invalid datetime: {scheduled_at}'}
+
+        try:
+            opp_id = opportunity_id if opportunity_id else None
+            meeting = Meeting.objects.create(
+                opportunity_id=opp_id,
+                title=title or f'Meeting with {prospect_name or "prospect"}',
+                scheduled_at=dt,
+                duration_minutes=duration_minutes,
+                channel=channel,
+                meeting_link=meeting_link,
+                prospect_name=prospect_name,
+                prospect_company=prospect_company,
+                attendees=attendees or [],
+            )
+            return {
+                'meeting_id': str(meeting.id),
+                'title': meeting.title,
+                'scheduled_at': dt.isoformat(),
+                'channel': channel,
+                'status': 'scheduled',
+            }
+        except Exception as e:
+            return {'error': str(e)}
+
+    def get_inbox(self, now, filter_type='upcoming') -> dict:
+        """PA-facing: meetings by filter type."""
+        from core.models_meeting import Meeting
+        from django.db.models import Count
+
+        try:
+            if filter_type == 'upcoming':
+                qs = Meeting.objects.filter(
+                    scheduled_at__gte=now,
+                    status__in=['scheduled', 'briefed'],
+                ).order_by('scheduled_at')
+            elif filter_type == 'needs_brief':
+                qs = Meeting.objects.filter(
+                    scheduled_at__gte=now,
+                    status='scheduled',
+                    brief_text='',
+                ).order_by('scheduled_at')
+            elif filter_type == 'past_needs_followup':
+                qs = Meeting.objects.filter(
+                    scheduled_at__lt=now,
+                    status='completed',
+                ).order_by('-scheduled_at')
+            else:
+                qs = Meeting.objects.all().order_by('-scheduled_at')
+
+            meetings = list(
+                qs.values(
+                    'id', 'title', 'scheduled_at', 'channel',
+                    'prospect_name', 'prospect_company', 'status',
+                    'duration_minutes',
+                )[:20]
+            )
+
+            for m in meetings:
+                m['id'] = str(m['id'])
+                if hasattr(m.get('scheduled_at'), 'isoformat'):
+                    m['scheduled_at'] = m['scheduled_at'].isoformat()
+
+            status_counts = dict(
+                Meeting.objects.values_list('status').annotate(
+                    c=Count('id'),
+                ).values_list('status', 'c')
+            )
+
+            return {
+                'meetings': meetings,
+                'filter': filter_type,
+                'total_scheduled': status_counts.get('scheduled', 0),
+                'total_completed': status_counts.get('completed', 0),
+                'total_no_show': status_counts.get('no_show', 0),
+            }
+        except Exception as e:
+            return {'error': str(e), 'meetings': []}
+
+    def generate_brief(self, meeting_id: str) -> dict:
+        """Generate a pre-call brief for a meeting."""
+        from core.models_meeting import Meeting
+
+        try:
+            meeting = Meeting.objects.get(id=meeting_id)
+        except Meeting.DoesNotExist:
+            return {'error': f'Meeting {meeting_id} not found'}
+
+        lines = [f"# Pre-Call Brief: {meeting.title}"]
+        lines.append(f"\n## Meeting Details")
+        lines.append(f"- **When:** {meeting.scheduled_at.strftime('%A, %B %d at %I:%M %p')}")
+        lines.append(f"- **Duration:** {meeting.duration_minutes} minutes")
+        lines.append(f"- **Channel:** {meeting.get_channel_display()}")
+        if meeting.meeting_link:
+            lines.append(f"- **Link:** {meeting.meeting_link}")
+
+        lines.append(f"\n## Prospect")
+        lines.append(f"- **Name:** {meeting.prospect_name or 'Unknown'}")
+        lines.append(f"- **Company:** {meeting.prospect_company or 'Unknown'}")
+
+        if meeting.engagement_id:
+            try:
+                from core.models_engagement import EngagementEvent
+                eng = EngagementEvent.objects.get(id=meeting.engagement_id)
+                if eng.extracted_fields:
+                    fields = eng.extracted_fields
+                    if fields.get('need'):
+                        lines.append(f"- **Need:** {fields['need']}")
+                    if fields.get('budget_cues'):
+                        lines.append(f"- **Budget cues:** {fields['budget_cues']}")
+            except Exception:
+                pass
+
+        lines.append(f"\n## Suggested Agenda")
+        lines.append("1. Introduction and rapport (2 min)")
+        lines.append("2. Understand current situation (5 min)")
+        lines.append("3. Pain points and goals (10 min)")
+        lines.append("4. Present relevant solution (8 min)")
+        lines.append("5. Q&A and objection handling (5 min)")
+
+        lines.append(f"\n## Discovery Questions")
+        lines.append("- What's your biggest challenge right now?")
+        lines.append("- What have you tried so far?")
+        lines.append("- What does success look like for you?")
+        lines.append("- What's your timeline for a solution?")
+        lines.append("- Who else is involved in the decision?")
+
+        lines.append(f"\n## Definition of Done")
+        lines.append("- Prospect confirms interest in specific offer")
+        lines.append("- Agreement on next step (proposal, trial, follow-up)")
+        lines.append("- Clear timeline established")
+
+        brief = '\n'.join(lines)
+        meeting.brief_text = brief
+        meeting.brief_generated_at = timezone.now()
+        meeting.status = 'briefed'
+        meeting.save()
+
+        return {
+            'meeting_id': str(meeting.id),
+            'brief_generated': True,
+            'brief_preview': brief[:500],
+        }
+
+    def add_recap(
+        self, meeting_id: str, notes: str = '',
+        outcome: str = '', next_steps: str = '',
+    ) -> dict:
+        """Add post-meeting notes, outcome, and draft recap."""
+        from core.models_meeting import Meeting
+
+        try:
+            meeting = Meeting.objects.get(id=meeting_id)
+        except Meeting.DoesNotExist:
+            return {'error': f'Meeting {meeting_id} not found'}
+
+        if notes:
+            meeting.notes = notes
+        if outcome:
+            meeting.outcome = outcome
+        if next_steps:
+            meeting.next_steps = next_steps
+
+        recap_lines = [f"# Meeting Recap: {meeting.title}"]
+        recap_lines.append(f"\nThank you for taking the time to meet!")
+        if notes:
+            recap_lines.append(f"\n## Summary\n{notes}")
+        if next_steps:
+            recap_lines.append(f"\n## Next Steps\n{next_steps}")
+        recap_lines.append(f"\nLooking forward to our continued conversation.")
+
+        meeting.recap_draft = '\n'.join(recap_lines)
+        meeting.status = 'completed'
+        meeting.save()
+
+        return {
+            'meeting_id': str(meeting.id),
+            'status': 'completed',
+            'outcome': outcome,
+            'recap_preview': meeting.recap_draft[:300],
+        }
+
+    def get_metrics_report(self, now) -> dict:
+        """PA-facing: meeting pipeline metrics."""
+        from core.models_meeting import Meeting
+        from django.db.models import Count
+
+        try:
+            total = Meeting.objects.count()
+            by_status = dict(
+                Meeting.objects.values_list('status').annotate(
+                    c=Count('id'),
+                ).values_list('status', 'c')
+            )
+            by_outcome = dict(
+                Meeting.objects.exclude(
+                    outcome='',
+                ).values_list('outcome').annotate(
+                    c=Count('id'),
+                ).values_list('outcome', 'c')
+            )
+
+            completed = by_status.get('completed', 0) + by_status.get('followed_up', 0)
+            no_show = by_status.get('no_show', 0)
+            show_rate = (
+                completed / (completed + no_show) * 100
+            ) if (completed + no_show) > 0 else 0
+
+            return {
+                'total': total,
+                'by_status': by_status,
+                'by_outcome': by_outcome,
+                'upcoming': by_status.get('scheduled', 0) + by_status.get('briefed', 0),
+                'show_rate_pct': round(show_rate, 1),
+            }
+        except Exception as e:
+            return {'error': str(e)}
+
+    def evaluate(self, now) -> dict:
+        """Policy evaluation — flag meetings needing briefs, stale follow-ups."""
+        from core.models_meeting import Meeting
+
+        result = {
+            'upcoming': 0,
+            'needs_brief': 0,
+            'past_no_followup': 0,
+        }
+
+        try:
+            result['upcoming'] = Meeting.objects.filter(
+                scheduled_at__gte=now,
+                status__in=['scheduled', 'briefed'],
+            ).count()
+
+            brief_cutoff = now + timedelta(hours=24)
+            result['needs_brief'] = Meeting.objects.filter(
+                scheduled_at__lte=brief_cutoff,
+                scheduled_at__gte=now,
+                status='scheduled',
+                brief_text='',
+            ).count()
+
+            followup_cutoff = now - timedelta(hours=48)
+            result['past_no_followup'] = Meeting.objects.filter(
+                status='completed',
+                scheduled_at__lt=followup_cutoff,
+            ).count()
 
         except Exception as e:
             result['error'] = str(e)

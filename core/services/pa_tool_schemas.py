@@ -2035,7 +2035,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "timeout_ladder_report", "deliberation_pipeline_report", "backfill_failure_reasons", "backlog_report", "goal_report", "goal_set_weights", "attribution_report", "policy_conflict_report", "release_report", "release_freeze", "release_unfreeze", "revenue_pipeline_report", "prospecting_queue", "lead_source_report", "outreach_inbox", "outreach_approve", "outreach_reject", "outreach_metrics_report", "close_pack_generate", "close_pack_inbox", "close_pack_approve", "close_pack_metrics_report", "engagement_inbox", "engagement_classify", "engagement_draft_reply", "engagement_approve_reply", "engagement_disqualify", "engagement_metrics_report"],
+                    "enum": ["status", "history", "run", "config", "dry_run_report", "drift_scan", "tuning_report", "budget_report", "roi_report", "scheduler_report", "portfolio_report", "backfill_impacts", "attribution_debt_report", "experiment_report", "experiment_create", "experiment_start", "decision_ledger_report", "timeout_ladder_report", "deliberation_pipeline_report", "backfill_failure_reasons", "backlog_report", "goal_report", "goal_set_weights", "attribution_report", "policy_conflict_report", "release_report", "release_freeze", "release_unfreeze", "revenue_pipeline_report", "prospecting_queue", "lead_source_report", "outreach_inbox", "outreach_approve", "outreach_reject", "outreach_metrics_report", "close_pack_generate", "close_pack_inbox", "close_pack_approve", "close_pack_metrics_report", "engagement_inbox", "engagement_classify", "engagement_draft_reply", "engagement_approve_reply", "engagement_disqualify", "engagement_metrics_report", "meeting_create", "meeting_inbox", "meeting_brief", "meeting_recap", "meeting_metrics_report"],
                     "description": (
                         "status: current config, last cycle timestamp, and pending actions. "
                         "history: recent autopilot actions (blocks, attention items, dry runs). "
@@ -2113,7 +2113,13 @@ PA_TOOL_SCHEMAS = [
                         "engagement_draft_reply: set a draft reply for an engagement (requires event_id, reply_text). "
                         "engagement_approve_reply: approve a draft reply (requires event_id, optional edited_text). "
                         "engagement_disqualify: disqualify an engagement (requires event_id, optional reason). "
-                        "engagement_metrics_report: engagement funnel — by status/intent/channel, conversion rate."
+                        "engagement_metrics_report: engagement funnel — by status/intent/channel, conversion rate. "
+                        "meeting_create: schedule a meeting (requires scheduled_at ISO datetime; optional: "
+                        "opportunity_id, title, channel, duration_minutes, meeting_link, prospect_name, prospect_company). "
+                        "meeting_inbox: upcoming meetings, needs_brief, or past_needs_followup (filter_type param). "
+                        "meeting_brief: generate a pre-call brief for a meeting (requires meeting_id). "
+                        "meeting_recap: add post-meeting notes and recap draft (requires meeting_id; optional: notes, outcome, next_steps). "
+                        "meeting_metrics_report: meeting pipeline metrics — show rate, upcoming count, by status/outcome."
                     ),
                 },
                 "dry_run": {
@@ -2211,6 +2217,42 @@ PA_TOOL_SCHEMAS = [
                 "status_filter": {
                     "type": "string",
                     "description": "For 'engagement_inbox': filter by status — unread (default), needs_reply, classified, actioned, all.",
+                },
+                "meeting_id": {
+                    "type": "string",
+                    "description": "For 'meeting_brief' / 'meeting_recap': UUID of the meeting.",
+                },
+                "scheduled_at": {
+                    "type": "string",
+                    "description": "For 'meeting_create': ISO datetime for the meeting (e.g. '2026-03-10T14:00:00Z').",
+                },
+                "duration_minutes": {
+                    "type": "integer",
+                    "description": "For 'meeting_create': meeting duration in minutes (default 30).",
+                },
+                "meeting_link": {
+                    "type": "string",
+                    "description": "For 'meeting_create': video call link (Zoom, Meet, etc.).",
+                },
+                "prospect_name": {
+                    "type": "string",
+                    "description": "For 'meeting_create': prospect's name.",
+                },
+                "prospect_company": {
+                    "type": "string",
+                    "description": "For 'meeting_create': prospect's company.",
+                },
+                "notes": {
+                    "type": "string",
+                    "description": "For 'meeting_recap': meeting notes / outcome summary.",
+                },
+                "next_steps": {
+                    "type": "string",
+                    "description": "For 'meeting_recap': agreed next steps from the meeting.",
+                },
+                "filter_type": {
+                    "type": "string",
+                    "description": "For 'meeting_inbox': filter — upcoming (default), needs_brief, past_needs_followup, all.",
                 },
             },
             "required": ["action"],
