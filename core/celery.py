@@ -205,6 +205,15 @@ app.conf.beat_schedule = {
             'expires': 7200,
         },
     },
+    # Content autonomy loop: gate-to-repair + budget-throttled publishing
+    'content-autonomy-loop': {
+        'task': 'core.tasks.content_autonomy_loop',
+        'schedule': crontab(hour='*/3', minute=15),  # Every 3h at :15
+        'options': {
+            'expires': 10800,
+            'queue': 'content',
+        },
+    },
     # Session 1033: Auto-enhance blogs stuck in needs_enhancement
     'auto-enhance-blogs': {
         'task': 'core.tasks.auto_enhance_blogs',
