@@ -170,14 +170,18 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      meeting-to-deal conversion funnel, and response time tracking.
      PA tools: engagement_sla_queue, engagement_meeting_suggestions,
      engagement_conversion_report.
- 35. Growth & distribution autonomy: GrowthEngine finds distribution-
-     ready content (published deliverables, blogs, briefs that passed
-     quality/citation gates), ranks by freshness + quality + revenue
-     adjacency, tracks channel-specific distribution (X, LinkedIn,
-     email, Discord), manages scheduling with rate limits + quiet
-     hours, and reports distribution funnel (candidates → scheduled →
-     posted → engaged). PA tools: growth_candidates, growth_schedule,
+ 35. Growth & distribution autonomy: GrowthEngine finds distribution-ready
+     content (published deliverables, blogs that passed quality gates),
+     ranks by freshness + quality + revenue adjacency, tracks channel
+     distribution (exports by format), manages scheduling with rate limits,
+     and reports distribution funnel (candidates → exported → engaged →
+     actions). PA tools: growth_candidates, growth_schedule,
      growth_channel_report, growth_funnel.
+ 36. Cost & capacity planning autonomy: CapacityEngine monitors task
+     throughput (CeleryTaskEvent p50/p95 latency), identifies bottlenecks
+     (slow agents, overloaded queues), projects spend vs budget caps, and
+     provides throttle recommendations. PA tools: capacity_forecast,
+     capacity_bottleneck_report, capacity_throttle_plan, capacity_budget_envelope.
 
 All actions create HumanAttentionItem for governance visibility and are logged
 to AutopilotAction for audit trail. Non-trivial actions go through pre-check
@@ -363,6 +367,7 @@ class OpsAutopilot:
         ('close_pack_autonomy', 'close_pack_autonomy', '_policy_close_pack_autonomy'),
         ('engagement_autonomy', 'engagement_autonomy', '_policy_engagement_autonomy'),
         ('growth_distribution', 'growth_distribution', '_policy_growth_distribution'),
+        ('capacity_planning', 'capacity_planning', '_policy_capacity_planning'),
     ]
 
     def run(self) -> dict[str, Any]:
@@ -2478,6 +2483,35 @@ class OpsAutopilot:
 
         except Exception as e:
             logger.error(f"[OpsAutopilot] growth distribution error: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _policy_capacity_planning(self, now) -> dict:
+        """
+        Monitor capacity health: task throughput, queue wait times,
+        bottlenecks, spend projections.
+        """
+        result = {
+            'bottlenecks': 0,
+            'projected_overspend': False,
+            'healthy': True,
+        }
+
+        try:
+            engine = CapacityEngine()
+            eval_result = engine.evaluate(now)
+            result.update(eval_result)
+
+            if not eval_result.get('healthy', True):
+                logger.info(
+                    f"[OpsAutopilot] Capacity planning: "
+                    f"{eval_result.get('bottleneck_count', 0)} bottlenecks, "
+                    f"queue backlog {eval_result.get('total_pending', 0)}"
+                )
+
+        except Exception as e:
+            logger.error(f"[OpsAutopilot] capacity planning error: {e}")
             result['error'] = str(e)
 
         return result
@@ -12848,6 +12882,492 @@ class GrowthEngine:
             'coverage_pct': round(
                 len(exported_ids) / total_candidates * 100, 1
             ) if total_candidates > 0 else 0,
+            'issues': issues,
+            'issue_count': len(issues),
+            'healthy': len(issues) == 0,
+        }
+
+
+# ── Policy 36: Cost & Capacity Planning Autonomy ──────────────────────────────
+
+
+class CapacityEngine:
+    """
+    Cost & capacity planning — monitors task throughput, identifies
+    bottlenecks, projects spend, and recommends throttle actions.
+
+    Data sources:
+    - CeleryTaskEvent: task latency, queue wait times, failure rates
+    - LLMCallLog: token spend, model costs
+    - AgentExecution: agent throughput and success rates
+
+    Guardrails:
+    - Read-only analysis — never auto-throttles without governance
+    - Recommendations only, tied to GovernanceEngine for enforcement
+    """
+
+    # Latency thresholds (seconds)
+    P95_WARNING = 120       # 2 min
+    P95_CRITICAL = 300      # 5 min
+    QUEUE_BACKLOG_WARNING = 50
+    QUEUE_BACKLOG_CRITICAL = 200
+
+    def get_capacity_forecast(self, hours: int = 24) -> dict:
+        """
+        Forecast task volume, latency, and spend for the next N hours
+        based on recent trends.
+        """
+        from django.db.models import Avg, Count, Max, Sum
+        from django.utils import timezone as tz
+
+        from core.models_celery_telemetry import CeleryTaskEvent
+
+        now = tz.now()
+        lookback = now - timedelta(hours=hours)
+
+        # Recent task volume and latency
+        recent_tasks = CeleryTaskEvent.objects.filter(
+            started_at__gte=lookback,
+        )
+
+        total_tasks = recent_tasks.count()
+        completed = recent_tasks.filter(status='SUCCESS').count()
+        failed = recent_tasks.filter(status='FAILURE').count()
+
+        # Latency stats
+        latency_stats = recent_tasks.filter(
+            duration_seconds__isnull=False,
+            status='SUCCESS',
+        ).aggregate(
+            avg=Avg('duration_seconds'),
+            max=Max('duration_seconds'),
+        )
+
+        # p95 approximation — top 5% slowest
+        success_count = recent_tasks.filter(
+            duration_seconds__isnull=False,
+            status='SUCCESS',
+        ).count()
+        p95_idx = max(0, int(success_count * 0.95))
+        p95_tasks = list(
+            recent_tasks.filter(
+                duration_seconds__isnull=False,
+                status='SUCCESS',
+            ).order_by('duration_seconds')
+            .values_list('duration_seconds', flat=True)[p95_idx:p95_idx + 1]
+        )
+        p95 = p95_tasks[0] if p95_tasks else 0
+
+        # By queue
+        by_queue = list(
+            recent_tasks.filter(queue__gt='')
+            .values('queue')
+            .annotate(
+                count=Count('id'),
+                avg_duration=Avg('duration_seconds'),
+                failures=Count('id', filter=__import__('django').db.models.Q(status='FAILURE')),
+            )
+            .order_by('-count')[:10]
+        )
+        for q in by_queue:
+            q['avg_duration'] = round(q['avg_duration'] or 0, 2)
+            q['failure_rate_pct'] = round(
+                q['failures'] / q['count'] * 100, 1
+            ) if q['count'] > 0 else 0
+
+        # Memory usage
+        memory_stats = recent_tasks.filter(
+            rss_mb_end__isnull=False,
+        ).aggregate(
+            avg_rss=Avg('rss_mb_end'),
+            max_rss=Max('rss_mb_end'),
+            avg_delta=Avg('rss_delta_mb'),
+        )
+
+        # Spend projection (from LLMCallLog if available)
+        spend_data = self._get_spend_projection(lookback, now, hours)
+
+        # Task rate (tasks per hour)
+        hours_actual = max(1, (now - lookback).total_seconds() / 3600)
+        task_rate = round(total_tasks / hours_actual, 1)
+
+        return {
+            'forecast_hours': hours,
+            'recent_tasks': total_tasks,
+            'completed': completed,
+            'failed': failed,
+            'failure_rate_pct': round(failed / total_tasks * 100, 1) if total_tasks > 0 else 0,
+            'task_rate_per_hour': task_rate,
+            'projected_tasks': round(task_rate * hours),
+            'latency': {
+                'avg_seconds': round(latency_stats['avg'] or 0, 2),
+                'max_seconds': round(latency_stats['max'] or 0, 2),
+                'p95_seconds': round(p95, 2),
+            },
+            'memory': {
+                'avg_rss_mb': round(memory_stats['avg_rss'] or 0, 1),
+                'max_rss_mb': round(memory_stats['max_rss'] or 0, 1),
+                'avg_delta_mb': round(memory_stats['avg_delta'] or 0, 1),
+            },
+            'by_queue': by_queue,
+            'spend': spend_data,
+        }
+
+    def get_bottleneck_report(self, hours: int = 24) -> dict:
+        """
+        Identify top bottlenecks: slow agents, overloaded queues, failing tasks.
+        """
+        from django.db.models import Avg, Count
+        from django.utils import timezone as tz
+
+        from core.models_celery_telemetry import CeleryTaskEvent
+
+        now = tz.now()
+        lookback = now - timedelta(hours=hours)
+
+        # Slowest task types
+        slow_tasks = list(
+            CeleryTaskEvent.objects.filter(
+                started_at__gte=lookback,
+                duration_seconds__isnull=False,
+                status='SUCCESS',
+            )
+            .values('task_name')
+            .annotate(
+                count=Count('id'),
+                avg_duration=Avg('duration_seconds'),
+            )
+            .filter(avg_duration__gte=30)  # only tasks >30s avg
+            .order_by('-avg_duration')[:10]
+        )
+        for t in slow_tasks:
+            t['avg_duration'] = round(t['avg_duration'], 2)
+
+        # Highest failure rate tasks
+        failing_tasks = list(
+            CeleryTaskEvent.objects.filter(
+                started_at__gte=lookback,
+            )
+            .values('task_name')
+            .annotate(
+                total=Count('id'),
+                failures=Count('id', filter=__import__('django').db.models.Q(status='FAILURE')),
+            )
+            .filter(failures__gte=1, total__gte=3)
+            .order_by('-failures')[:10]
+        )
+        for t in failing_tasks:
+            t['failure_rate_pct'] = round(t['failures'] / t['total'] * 100, 1)
+
+        # Memory hogs
+        memory_hogs = list(
+            CeleryTaskEvent.objects.filter(
+                started_at__gte=lookback,
+                rss_delta_mb__isnull=False,
+                rss_delta_mb__gte=50,
+            )
+            .values('task_name')
+            .annotate(
+                count=Count('id'),
+                avg_delta=Avg('rss_delta_mb'),
+            )
+            .order_by('-avg_delta')[:10]
+        )
+        for m in memory_hogs:
+            m['avg_delta'] = round(m['avg_delta'], 1)
+
+        bottlenecks = []
+        for t in slow_tasks[:3]:
+            bottlenecks.append({
+                'type': 'slow_task',
+                'name': t['task_name'],
+                'detail': f"avg {t['avg_duration']}s ({t['count']} runs)",
+            })
+        for t in failing_tasks[:3]:
+            bottlenecks.append({
+                'type': 'failing_task',
+                'name': t['task_name'],
+                'detail': f"{t['failure_rate_pct']}% failure rate ({t['failures']}/{t['total']})",
+            })
+        for m in memory_hogs[:2]:
+            bottlenecks.append({
+                'type': 'memory_hog',
+                'name': m['task_name'],
+                'detail': f"avg +{m['avg_delta']}MB per run",
+            })
+
+        return {
+            'period_hours': hours,
+            'slow_tasks': slow_tasks,
+            'failing_tasks': failing_tasks,
+            'memory_hogs': memory_hogs,
+            'bottlenecks': bottlenecks,
+            'bottleneck_count': len(bottlenecks),
+        }
+
+    def get_throttle_plan(self) -> dict:
+        """
+        Propose throttle actions based on current capacity state.
+        Read-only — never auto-applies.
+        """
+        from django.db.models import Avg, Count
+        from django.utils import timezone as tz
+
+        from core.models_celery_telemetry import CeleryTaskEvent
+
+        now = tz.now()
+        last_1h = now - timedelta(hours=1)
+
+        # Current throughput
+        recent = CeleryTaskEvent.objects.filter(started_at__gte=last_1h)
+        total = recent.count()
+        failures = recent.filter(status='FAILURE').count()
+        failure_rate = failures / total * 100 if total > 0 else 0
+
+        # p95 latency
+        success_tasks = recent.filter(
+            duration_seconds__isnull=False,
+            status='SUCCESS',
+        )
+        success_count = success_tasks.count()
+        p95_idx = max(0, int(success_count * 0.95))
+        p95_vals = list(
+            success_tasks.order_by('duration_seconds')
+            .values_list('duration_seconds', flat=True)[p95_idx:p95_idx + 1]
+        )
+        p95 = p95_vals[0] if p95_vals else 0
+
+        # Current governance mode
+        gov_mode = 'normal'
+        try:
+            from core.models_governance import GovernanceState
+            gs = GovernanceState.objects.filter(scope='global').first()
+            if gs:
+                gov_mode = gs.effective_mode
+        except Exception:
+            pass
+
+        # Generate recommendations
+        recommendations = []
+        if p95 > self.P95_CRITICAL:
+            recommendations.append({
+                'action': 'reduce_concurrency',
+                'reason': f'p95 latency {round(p95)}s > {self.P95_CRITICAL}s threshold',
+                'severity': 'critical',
+            })
+        elif p95 > self.P95_WARNING:
+            recommendations.append({
+                'action': 'monitor_latency',
+                'reason': f'p95 latency {round(p95)}s approaching critical threshold',
+                'severity': 'warning',
+            })
+
+        if failure_rate > 20:
+            recommendations.append({
+                'action': 'pause_non_critical',
+                'reason': f'Failure rate {round(failure_rate, 1)}% exceeds 20% threshold',
+                'severity': 'critical',
+            })
+        elif failure_rate > 10:
+            recommendations.append({
+                'action': 'investigate_failures',
+                'reason': f'Failure rate {round(failure_rate, 1)}% elevated',
+                'severity': 'warning',
+            })
+
+        if total > 200:  # More than 200 tasks/hour
+            recommendations.append({
+                'action': 'defer_batch_tasks',
+                'reason': f'{total} tasks/hour — consider deferring non-critical batches',
+                'severity': 'info',
+            })
+
+        return {
+            'current_state': {
+                'tasks_last_hour': total,
+                'failure_rate_pct': round(failure_rate, 1),
+                'p95_seconds': round(p95, 2),
+                'governance_mode': gov_mode,
+            },
+            'recommendations': recommendations,
+            'recommendation_count': len(recommendations),
+            'needs_action': any(r['severity'] == 'critical' for r in recommendations),
+        }
+
+    def get_budget_envelope(self, days: int = 7) -> dict:
+        """
+        Per-queue/agent spend tracking with budget envelope projections.
+        """
+        from django.db.models import Count, Sum
+        from django.utils import timezone as tz
+
+        from core.models_celery_telemetry import CeleryTaskEvent
+
+        now = tz.now()
+        window = now - timedelta(days=days)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # Task volume by queue (proxy for resource consumption)
+        by_queue = list(
+            CeleryTaskEvent.objects.filter(
+                started_at__gte=window,
+                queue__gt='',
+            )
+            .values('queue')
+            .annotate(
+                total=Count('id'),
+                total_duration=Sum('duration_seconds'),
+            )
+            .order_by('-total')
+        )
+        for q in by_queue:
+            q['total_duration'] = round(q['total_duration'] or 0, 1)
+            q['avg_per_day'] = round(q['total'] / max(1, days), 1)
+
+        # Today's task count
+        today_tasks = CeleryTaskEvent.objects.filter(
+            started_at__gte=today_start,
+        ).count()
+
+        # LLM spend if available
+        spend = self._get_spend_projection(window, now, days * 24)
+
+        # Budget cap from config
+        budget_cap = 5.0  # default
+        try:
+            from core.models.system import SystemConfiguration
+            cap_entry = SystemConfiguration.objects.filter(
+                key='BUDGET_DAILY_CAP_USD',
+            ).first()
+            if cap_entry and cap_entry.value:
+                val = cap_entry.value
+                if isinstance(val, dict):
+                    budget_cap = float(val.get('value', 5.0))
+                else:
+                    budget_cap = float(val)
+        except Exception:
+            pass
+
+        daily_spend = spend.get('daily_avg_usd', 0)
+        projected_monthly = round(daily_spend * 30, 2)
+
+        return {
+            'period_days': days,
+            'by_queue': by_queue,
+            'today_tasks': today_tasks,
+            'spend': spend,
+            'budget_cap_daily_usd': budget_cap,
+            'daily_spend_usd': daily_spend,
+            'projected_monthly_usd': projected_monthly,
+            'budget_utilization_pct': round(
+                daily_spend / budget_cap * 100, 1
+            ) if budget_cap > 0 else 0,
+        }
+
+    def _get_spend_projection(self, start, end, hours: int) -> dict:
+        """
+        Calculate spend from LLMCallLog for the given window.
+        """
+        result = {
+            'total_usd': 0,
+            'daily_avg_usd': 0,
+            'by_model': {},
+        }
+
+        try:
+            from django.db.models import Count, Sum
+            from core.models_llm_routing import LLMCallLog
+
+            calls = LLMCallLog.objects.filter(
+                created_at__gte=start,
+                created_at__lte=end,
+            )
+            total_cost = calls.aggregate(
+                total=Sum('cost_usd'),
+            )['total'] or 0
+
+            by_model = list(
+                calls.values('model_name')
+                .annotate(
+                    cost=Sum('cost_usd'),
+                    count=Count('id'),
+                )
+                .order_by('-cost')[:10]
+            )
+
+            days = max(1, hours / 24)
+            result['total_usd'] = round(float(total_cost), 4)
+            result['daily_avg_usd'] = round(float(total_cost) / days, 4)
+            result['by_model'] = {
+                m['model_name']: {
+                    'cost_usd': round(float(m['cost'] or 0), 4),
+                    'calls': m['count'],
+                }
+                for m in by_model
+            }
+        except Exception:
+            pass
+
+        return result
+
+    def evaluate(self, now) -> dict:
+        """
+        Auto-evaluate capacity health for autopilot cycle.
+        """
+        from core.models_celery_telemetry import CeleryTaskEvent
+
+        last_1h = now - timedelta(hours=1)
+
+        # Recent task stats
+        recent = CeleryTaskEvent.objects.filter(started_at__gte=last_1h)
+        total = recent.count()
+        failures = recent.filter(status='FAILURE').count()
+        failure_rate = failures / total * 100 if total > 0 else 0
+
+        # p95 latency
+        success_tasks = recent.filter(
+            duration_seconds__isnull=False,
+            status='SUCCESS',
+        )
+        success_count = success_tasks.count()
+        p95_idx = max(0, int(success_count * 0.95))
+        p95_vals = list(
+            success_tasks.order_by('duration_seconds')
+            .values_list('duration_seconds', flat=True)[p95_idx:p95_idx + 1]
+        )
+        p95 = p95_vals[0] if p95_vals else 0
+
+        # Pending tasks (started but not finished)
+        total_pending = CeleryTaskEvent.objects.filter(
+            status='STARTED',
+            started_at__lt=now - timedelta(minutes=5),
+        ).count()
+
+        issues = []
+        if p95 > self.P95_CRITICAL:
+            issues.append(f'p95 latency {round(p95)}s exceeds {self.P95_CRITICAL}s')
+        if failure_rate > 20:
+            issues.append(f'Failure rate {round(failure_rate, 1)}% exceeds 20%')
+        if total_pending > self.QUEUE_BACKLOG_CRITICAL:
+            issues.append(f'{total_pending} stale pending tasks (>5min)')
+
+        # Check spend
+        try:
+            spend = self._get_spend_projection(
+                now - timedelta(hours=24), now, 24
+            )
+            daily_spend = spend.get('daily_avg_usd', 0)
+            if daily_spend > 4.0:  # Near default cap
+                issues.append(f'Daily spend ${daily_spend:.2f} approaching cap')
+        except Exception:
+            pass
+
+        return {
+            'tasks_last_hour': total,
+            'failure_rate_pct': round(failure_rate, 1),
+            'p95_seconds': round(p95, 2),
+            'total_pending': total_pending,
+            'bottleneck_count': len(issues),
             'issues': issues,
             'issue_count': len(issues),
             'healthy': len(issues) == 0,
