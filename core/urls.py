@@ -4580,6 +4580,18 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# VIP Invites (OVL) — magic-link onboarding for demo viewers
+# =========================================================================
+from core.views_vip_invite import vip_invite_create, vip_invite_exchange, vip_invite_revoke, vip_invite_list
+
+urlpatterns += [
+    path('api/v1/vip-invites/', vip_invite_list, name='vip-invite-list'),
+    path('api/v1/vip-invites/create/', vip_invite_create, name='vip-invite-create'),
+    path('api/v1/vip-invites/exchange/', vip_invite_exchange, name='vip-invite-exchange'),
+    path('api/v1/vip-invites/revoke/', vip_invite_revoke, name='vip-invite-revoke'),
+]
+
+# =========================================================================
 # Development-only endpoints — never exposed in production
 # =========================================================================
 if settings.DEBUG:

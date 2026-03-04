@@ -26,6 +26,12 @@ export const linking: LinkingOptions<any> = {
       '/portfolio': 'portfolio',
       '/settings': 'settings',
 
+      // VIP magic-link accept (deep link)
+      VIPAccept: {
+        path: 'vip/accept',
+        parse: { token: (token: string) => token },
+      },
+
       // Detail screens (nested stacks added in future PRs)
       // 'boardroom/attention/:id': 'boardroom-attention-detail',
       // 'boardroom/decision/:id': 'boardroom-decision-detail',

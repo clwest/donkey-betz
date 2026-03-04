@@ -2643,6 +2643,37 @@ PA_TOOL_SCHEMAS = [
             "required": ["action"],
         },
     },
+
+    # ── VIP Invite Management ────────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "vip_invite_tool",
+        "description": (
+            "Manage VIP magic-link invites for demo viewers. "
+            "Create invite links, list existing invites, revoke access. "
+            "Use when asked to create a demo link, VIP invite, magic link, "
+            "or manage demo viewer access."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list", "create", "revoke"],
+                    "description": "list: show all invites. create: generate new magic link. revoke: disable an invite and deactivate its user.",
+                },
+                "label": {
+                    "type": "string",
+                    "description": "Internal label for the invite (e.g. 'Austin demo Mar-2026'). Used with create action.",
+                },
+                "id": {
+                    "type": "string",
+                    "description": "Invite UUID to revoke. Used with revoke action.",
+                },
+            },
+            "required": ["action"],
+        },
+    },
 ]
 
 # ── Startup validation: every tool must have name, description, parameters ──

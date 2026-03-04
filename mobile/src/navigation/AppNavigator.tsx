@@ -7,6 +7,7 @@ import { resolveScreens, type ResolvedScreen } from './manifestRouter';
 import { linking } from './linking';
 import { useAuthStore } from '../auth/authStore';
 import { ScreenErrorBoundary } from '../components/ScreenState';
+import VIPAcceptScreen from '../screens/VIPAcceptScreen';
 
 const Drawer = createDrawerNavigator();
 
@@ -140,6 +141,12 @@ export default function AppNavigator() {
             initialParams={{ manifestPath: screen.path, category: screen.category }}
           />
         ))}
+        {/* VIP Accept — hidden from drawer, accessible via deep link */}
+        <Drawer.Screen
+          name="VIPAccept"
+          component={VIPAcceptScreen}
+          options={{ drawerItemStyle: { display: 'none' }, title: 'VIP Invite' }}
+        />
       </Drawer.Navigator>
     </NavigationContainer>
   );

@@ -235,6 +235,9 @@ from ..models_meeting import Meeting
 # Import governance models (Autonomy #26 - Governance & Safe-Mode Controls)
 from ..models_governance import GovernanceState, KillSwitch
 
+# Import VIP invite model (OVL - Magic Link Invites)
+from ..models_vip_invite import VIPInvite
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -500,5 +503,8 @@ __all__ = [
     # Governance (Autonomy #26)
     'GovernanceState',
     'KillSwitch',
+
+    # VIP Invite (OVL - Magic Link)
+    'VIPInvite',
 
 ]
