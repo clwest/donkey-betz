@@ -522,6 +522,9 @@ class AutopilotAction(models.Model):
         ('attention_item', 'Created Attention Item'),
         ('deploy_watch', 'Deploy Watch Verdict'),
         ('dry_run', 'Dry Run (no action taken)'),
+        ('retry_deliberation', 'Retry Failed Deliberation'),
+        ('content_sweep', 'Content Pipeline Sweep'),
+        ('auto_resolve', 'Auto-resolve Attention Item'),
     ]
 
     id = models.AutoField(primary_key=True)

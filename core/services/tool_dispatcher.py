@@ -11487,12 +11487,46 @@ RESEARCH DATA:
             else:
                 report_lines.append(f"\n### Stale Blocks: None")
 
+            # Deliberation retry section
+            delib = summary.get('deliberation_retry', {})
+            retried = delib.get('retried', 0)
+            skipped = delib.get('skipped', 0)
+            if retried > 0 or skipped > 0:
+                report_lines.append(f"\n### Deliberation Retry")
+                report_lines.append(f"- Would retry: {retried} failed sessions")
+                if skipped:
+                    report_lines.append(f"- Skipped: {skipped} (already retried or no valid topic)")
+            else:
+                report_lines.append(f"\n### Deliberation Retry: No retryable failures")
+
+            # Content sweep section
+            content = summary.get('content_sweep', {})
+            enhance = content.get('kicked_enhance', 0)
+            review = content.get('kicked_review', 0)
+            if enhance or review:
+                report_lines.append(f"\n### Content Pipeline Sweep")
+                if enhance:
+                    report_lines.append(f"- Would kick {enhance} stuck needs_enhancement blogs")
+                if review:
+                    report_lines.append(f"- Would kick {review} unscored pending_review blogs")
+            else:
+                report_lines.append(f"\n### Content Pipeline Sweep: No stuck content")
+
+            # Attention auto-resolve section
+            attn = summary.get('attention_resolve', {})
+            resolved = attn.get('resolved', 0)
+            if resolved:
+                report_lines.append(f"\n### Attention Auto-Resolve")
+                report_lines.append(f"- Would auto-resolve: {resolved} stale ops alerts")
+            else:
+                report_lines.append(f"\n### Attention Auto-Resolve: No stale alerts")
+
             # Actions proposed
             proposed = summary.get('actions', [])
             if proposed:
                 report_lines.append(f"\n### Proposed Actions ({len(proposed)})")
                 for a in proposed:
-                    report_lines.append(f"- {a.get('type', '?')}: {a.get('agent_name', '?')} — {a.get('reason', '')}")
+                    report_lines.append(f"- {a.get('type', '?')}: {a.get('agent_name', a.get('session_id', a.get('blog_id', '?'))[:20])} — {a.get('reason', a.get('action', ''))}")
             else:
                 report_lines.append(f"\n### Proposed Actions: None (system healthy)")
 
