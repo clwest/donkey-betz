@@ -805,6 +805,7 @@ class UnifiedPAEntrypoint:
             'autopilot_tool', 'get_body_vitals', 'get_system_alerts',
             'cost_telemetry_tool', 'check_resource_budget',
             'intelligence_tool', 'ml_analysis',
+            'cockpit_tool',  # Session 1100
         },
         'governance': {
             'governance_tool', 'status_snapshot_tool', 'autopilot_tool',
@@ -822,6 +823,7 @@ class UnifiedPAEntrypoint:
             'agent_introspection_tool',
             'discord_tool', 'mobile_tool', 'vip_invite_tool',
             'learning_tool',
+            'cockpit_tool',  # Session 1100
         },
         'content': {
             'content_tool', 'content_writer_agent', 'content_strategy_agent',
@@ -852,6 +854,7 @@ class UnifiedPAEntrypoint:
             'brand_strategy_agent', 'marketing_strategy_agent',
             'competitor_comparison_tool', 'strategic_review',
             'create_project_from_research',
+            'narrative_tool',  # Session 1100
         },
     }
 
