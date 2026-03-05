@@ -2330,14 +2330,13 @@ app.conf.beat_schedule = {
 
     # Session 925: Cleanup Stuck Agent Executions
     # Marks executions stuck in running/in_progress as failed
-    # Session 1080: Reduced from 45min to 25min — per-agent wall-clock timeouts
-    # (Session 1076) cap agents at 5-20 min via ThreadPoolExecutor, so 25 min
-    # gives 5 min grace past the longest default (20 min). Old 45 min threshold
-    # let duplicate/orphan tasks waste capacity for too long.
+    # Session 1098: Raised from 25min to 35min — research agents now have 25 min
+    # wall-clock timeouts (ResearchAgent, CustomerResearchAgent, WhaleWatcherAgent).
+    # 35 min gives 10 min grace past the longest explicit timeout (25 min).
     'cleanup-stuck-agent-executions': {
         'task': 'core.tasks.cleanup_stale_agent_executions',
-        'schedule': crontab(minute='*/10'),  # Every 10 minutes (was 15)
-        'kwargs': {'minutes_threshold': 25},  # 25 min (was 45) — 5 min past 20 min default wall-clock
+        'schedule': crontab(minute='*/10'),  # Every 10 minutes
+        'kwargs': {'minutes_threshold': 35},  # 35 min — 10 min grace past 25 min research agent timeout
         'options': {
             'expires': 600,  # 10 minutes
         }

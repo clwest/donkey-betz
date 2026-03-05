@@ -337,12 +337,36 @@ class AutopilotConfig:
 
     @classmethod
     def get(cls, param_name: str):
-        """Get a config value, checking overrides first."""
+        """Get a config value, checking overrides first.
+
+        Session 1098: Coerce override values to match the type of the class
+        default.  SystemConfiguration.value is JSONField — JSON stores all
+        numbers as floats, but Django may deserialize them as strings when
+        the value was saved via admin or raw SQL.  Without coercion,
+        ``max(daily_cap, 0.01)`` explodes with ``'>' not supported between
+        instances of 'float' and 'str'``.
+        """
         if not cls._overrides_loaded:
             cls.load_overrides()
         # Override value takes precedence
         if param_name in cls._override_cache:
-            return cls._override_cache[param_name]
+            raw = cls._override_cache[param_name]
+            # Coerce to match type of the class-level default
+            default = getattr(cls, param_name, None)
+            if default is not None and raw is not None:
+                try:
+                    # bool before int — bool is subclass of int in Python
+                    if isinstance(default, bool) and not isinstance(raw, bool):
+                        if isinstance(raw, str):
+                            return raw.lower() in ('true', '1', 'yes')
+                        return bool(raw)
+                    if isinstance(default, float) and not isinstance(raw, float):
+                        return float(raw)
+                    if isinstance(default, int) and not isinstance(raw, (int, bool)):
+                        return int(float(raw))  # handles "100.0" → 100
+                except (ValueError, TypeError):
+                    pass  # Fall through to raw value
+            return raw
         return getattr(cls, param_name, None)
 
 

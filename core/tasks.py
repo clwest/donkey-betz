@@ -1776,16 +1776,21 @@ def execute_agent_task(
             'VideoEditingAgent': 600,  # 10 min
             'TalkingCharacterAgent': 600,  # 10 min
             'ResolveAgent': 600,      # 10 min
-            # Research/analysis agents: LLM + web search, should complete < 10 min
-            'ResearchAgent': 600,             # 10 min
+            # Research/analysis agents: LLM + web search
+            # Session 1098: ResearchAgent, CustomerResearchAgent, WhaleWatcherAgent
+            # raised from 600→1500s — multi-source web research + LLM synthesis
+            # was breaching SLO (4.28% timeout rate, target 0.2%)
+            'ResearchAgent': 1500,            # 25 min (was 10 — too tight for multi-source research)
             'SystemIntelligenceAgent': 600,   # 10 min
             'MarketingStrategyAgent': 600,    # 10 min
-            'CustomerResearchAgent': 600,     # 10 min
+            'CustomerResearchAgent': 1500,    # 25 min (was 10 — top timeout offender: 5 in 24h)
             'CharacterTrainingAgent': 600,    # 10 min
             'ContentWriterAgent': 600,        # 10 min
             'CompetitorAnalysisAgent': 600,   # 10 min
             'BrandStrategyAgent': 600,        # 10 min
             'ContentStrategyAgent': 600,      # 10 min
+            # Blockchain agents: whale tracking involves multi-chain scanning
+            'WhaleWatcherAgent': 1500,        # 25 min (was default 20 — hitting watchdog at 25)
             # Orchestrators: may coordinate multiple agents
             'StockAuditCoordinator': 900,     # 15 min
             'WorkflowOrchestrationAgent': 900,  # 15 min
