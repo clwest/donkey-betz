@@ -632,7 +632,7 @@ class AutonomyEngine:
 
             dispatched = 0
             for category in categories[:5]:  # Limit to 5 categories
-                run_spider_by_category.delay(category)
+                run_spider_by_category.delay(category, execution_mode='scheduled')
                 dispatched += 1
 
             return {

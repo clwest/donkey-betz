@@ -372,7 +372,7 @@ class UnifiedIntelligenceSearch:
         tasks_triggered = []
         for category in triggered_categories:
             try:
-                run_spider_by_category.delay(category)
+                run_spider_by_category.delay(category, execution_mode='scheduled')
                 tasks_triggered.append(category)
                 logger.info(f"Triggered spider refresh for category: {category}")
             except Exception as e:
