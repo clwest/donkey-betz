@@ -2849,13 +2849,13 @@ PA_TOOL_SCHEMAS = [
                     "type": "string",
                     "description": "Narrative UUID (for evidence action)",
                 },
-                "category": {
+                "domain": {
                     "type": "string",
                     "enum": [
                         "politics", "markets", "tech", "culture",
                         "geopolitics", "crypto", "climate", "health",
                     ],
-                    "description": "Filter narratives by category",
+                    "description": "Filter narratives by domain",
                 },
                 "limit": {
                     "type": "integer",

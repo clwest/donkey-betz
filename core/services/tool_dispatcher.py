@@ -10916,20 +10916,21 @@ RESEARCH DATA:
         if action == 'kb_ingest':
             return _tag(self._handle_rag_query('rag_query_tool', {'action': 'ingest', 'url': payload.get('url', '')}, user_id, trace_id))
 
-        # ── Session 1100: Stock briefs ──
+        # ── Session 1100: Stock/market intelligence briefs ──
         if action == 'stock_briefs':
             try:
-                from core.models import StockBrief
-                briefs = StockBrief.objects.order_by('-created_at')[:limit]
+                from core.models_unified_system import MarketIntelligenceBrief
+                briefs = MarketIntelligenceBrief.objects.order_by('-brief_date')[:limit]
                 return _tag({
                     'action': 'stock_briefs',
                     'count': len(briefs),
                     'briefs': [{
                         'id': str(b.id),
-                        'ticker': b.ticker if hasattr(b, 'ticker') else '',
-                        'title': b.title if hasattr(b, 'title') else str(b),
-                        'summary': (b.summary or '')[:300] if hasattr(b, 'summary') else '',
-                        'created_at': b.created_at.isoformat() if hasattr(b, 'created_at') and b.created_at else None,
+                        'brief_date': str(b.brief_date),
+                        'brief_type': b.brief_type,
+                        'executive_summary': (b.executive_summary or '')[:300],
+                        'high_conviction_count': len(b.high_conviction_opportunities or []),
+                        'debate_zone_count': len(b.debate_zone) if hasattr(b, 'debate_zone') and b.debate_zone else 0,
                     } for b in briefs],
                 })
             except Exception as e:
@@ -14486,7 +14487,7 @@ RESEARCH DATA:
                 }
 
             if action == 'worker_health':
-                from core.celery_app import app as celery_app
+                from core.celery import app as celery_app
                 inspector = celery_app.control.inspect(timeout=5)
                 active = inspector.active() or {}
                 stats = inspector.stats() or {}
@@ -14525,7 +14526,7 @@ RESEARCH DATA:
                 }
 
             if action == 'queue_lengths':
-                from core.celery_app import app as celery_app
+                from core.celery import app as celery_app
                 inspector = celery_app.control.inspect(timeout=5)
                 active = inspector.active() or {}
                 reserved = inspector.reserved() or {}
@@ -14552,7 +14553,7 @@ RESEARCH DATA:
         """Narrative drift analysis: narratives, shifts, evidence, alerts."""
         action = payload.get('action', 'help')
         limit = min(int(payload.get('limit', 10)), 30)
-        category = payload.get('category')
+        domain = payload.get('category') or payload.get('domain')  # accept both, model field is 'domain'
 
         try:
             if action == 'help':
@@ -14572,8 +14573,8 @@ RESEARCH DATA:
 
             if action == 'narratives':
                 qs = Narrative.objects.all().order_by('-updated_at')
-                if category:
-                    qs = qs.filter(category=category)
+                if domain:
+                    qs = qs.filter(domain=domain)
                 narratives = qs[:limit]
                 return {
                     'action': 'narratives',
@@ -14581,30 +14582,32 @@ RESEARCH DATA:
                     'narratives': [{
                         'id': str(n.id),
                         'title': n.title,
-                        'category': n.category,
+                        'domain': n.domain,
                         'status': n.status,
-                        'confidence': n.confidence,
-                        'evidence_count': n.evidence_count if hasattr(n, 'evidence_count') else NarrativeEvidence.objects.filter(narrative=n).count(),
+                        'confidence': float(n.confidence) if n.confidence else None,
+                        'evidence_count': NarrativeEvidence.objects.filter(narrative=n).count(),
                         'updated_at': n.updated_at.isoformat() if hasattr(n, 'updated_at') and n.updated_at else None,
                     } for n in narratives],
                 }
 
             if action == 'shifts':
-                qs = NarrativeShift.objects.select_related('narrative').order_by('-detected_at')
-                if category:
-                    qs = qs.filter(narrative__category=category)
+                qs = NarrativeShift.objects.select_related('old_narrative').order_by('-detected_at')
+                if domain:
+                    qs = qs.filter(domain=domain)
                 shifts = qs[:limit]
                 return {
                     'action': 'shifts',
                     'count': len(shifts),
                     'shifts': [{
                         'id': str(s.id),
-                        'narrative': s.narrative.title if s.narrative else 'Unknown',
-                        'shift_type': s.shift_type if hasattr(s, 'shift_type') else 'unknown',
-                        'magnitude': s.magnitude if hasattr(s, 'magnitude') else None,
-                        'trend_break_analysis': (s.trend_break_analysis or '')[:200] if hasattr(s, 'trend_break_analysis') else '',
-                        'cultural_impact_analysis': (s.cultural_impact_analysis or '')[:200] if hasattr(s, 'cultural_impact_analysis') else '',
-                        'detected_at': s.detected_at.isoformat() if hasattr(s, 'detected_at') and s.detected_at else None,
+                        'narrative': s.old_narrative.title if s.old_narrative else 'Unknown',
+                        'domain': s.domain,
+                        'shift_summary': (s.shift_summary or '')[:200],
+                        'confidence': float(s.confidence) if s.confidence else None,
+                        'importance': float(s.importance) if s.importance else None,
+                        'trend_break_analysis': (s.trend_break_analysis or '')[:200],
+                        'cultural_impact_analysis': (s.cultural_impact_analysis or '')[:200],
+                        'detected_at': s.detected_at.isoformat() if s.detected_at else None,
                     } for s in shifts],
                 }
 
@@ -14621,10 +14624,13 @@ RESEARCH DATA:
                     'count': len(evidence),
                     'evidence': [{
                         'id': str(e.id),
-                        'source': str(e.spider_data_id) if hasattr(e, 'spider_data_id') else 'unknown',
-                        'relevance_score': e.relevance_score if hasattr(e, 'relevance_score') else None,
-                        'excerpt': (e.excerpt or '')[:200] if hasattr(e, 'excerpt') else '',
-                        'created_at': e.created_at.isoformat() if hasattr(e, 'created_at') and e.created_at else None,
+                        'source_title': e.source_title or '',
+                        'source_url': e.source_url or '',
+                        'source_type': e.source_type or '',
+                        'sentiment': e.sentiment,
+                        'strength': float(e.strength) if e.strength else None,
+                        'excerpt': (e.excerpt or '')[:200],
+                        'created_at': e.created_at.isoformat() if e.created_at else None,
                     } for e in evidence],
                 }
 
@@ -14635,10 +14641,11 @@ RESEARCH DATA:
                     'count': len(alerts),
                     'alerts': [{
                         'id': str(a.id),
-                        'title': a.title if hasattr(a, 'title') else str(a),
-                        'severity': a.severity if hasattr(a, 'severity') else 'unknown',
-                        'sent_to_discord': a.sent_to_discord if hasattr(a, 'sent_to_discord') else False,
-                        'created_at': a.created_at.isoformat() if hasattr(a, 'created_at') and a.created_at else None,
+                        'title': a.title or '',
+                        'alert_type': a.alert_type,
+                        'summary': (a.summary or a.message or '')[:200],
+                        'sent_to_discord': a.sent_to_discord,
+                        'created_at': a.created_at.isoformat() if a.created_at else None,
                     } for a in alerts],
                 }
 
