@@ -22,6 +22,14 @@ from core.api_helpers import smart_truncate
 
 logger = logging.getLogger(__name__)
 
+
+# Session 1076: Stable exception class for scheduled tasks that should fail loudly
+class ScheduledTaskError(RuntimeError):
+    """Raised by scheduled/automated tasks so Celery marks FAILURE and
+    the failure-signature pipeline can cluster them cleanly."""
+    pass
+
+
 # --------------------------------------------------------------------------- #
 # Session 1031: Task-agent routing override                                    #
 # Prevents LLM-generated next_steps from sending specialist tasks to the       #
@@ -1583,7 +1591,9 @@ def run_autonomy_cycle(user_id: int = None):
 
     except Exception as e:
         logger.exception(f"Autonomy cycle task failed: {e}")
-        return {'error': str(e)}
+        raise ScheduledTaskError(
+            f"SCHEDULED_FAIL_LOUD::run_autonomy_cycle::{type(e).__name__}: {e}"
+        ) from e
 
 
 # ==================== SESSION 811: CONVERSATION ACTION EXECUTION ====================
@@ -33277,7 +33287,9 @@ def run_metrics_action_check():
 
     except Exception as e:
         logger.exception(f"❌ [METRICS CHECK] Failed: {e}")
-        return {'error': str(e)}
+        raise ScheduledTaskError(
+            f"SCHEDULED_FAIL_LOUD::run_metrics_action_check::{type(e).__name__}: {e}"
+        ) from e
 
 
 @shared_task
@@ -33341,7 +33353,9 @@ def run_agent_health_rotation():
 
     except Exception as e:
         logger.exception(f"❌ [AGENT HEALTH] Failed: {e}")
-        return {'error': str(e)}
+        raise ScheduledTaskError(
+            f"SCHEDULED_FAIL_LOUD::run_agent_health_rotation::{type(e).__name__}: {e}"
+        ) from e
 
 
 @shared_task
@@ -33498,9 +33512,10 @@ def run_system_self_audit():
             return {'success': False, 'error': result.message, 'live_metrics': live_metrics}
 
     except Exception as e:
-        logger.error(f"❌ [SYSTEM AUDIT] Self-audit failed: {e}")
-        import traceback
-        return {'error': str(e), 'traceback': traceback.format_exc()}
+        logger.exception(f"❌ [SYSTEM AUDIT] Self-audit failed: {e}")
+        raise ScheduledTaskError(
+            f"SCHEDULED_FAIL_LOUD::run_system_self_audit::{type(e).__name__}: {e}"
+        ) from e
 
 
 # =============================================================================
@@ -38587,8 +38602,10 @@ def run_ops_autopilot():
             logger.info(f"[OpsAutopilot] Cycle complete — no actions needed")
         return summary
     except Exception as e:
-        logger.error(f"[OpsAutopilot] Cycle failed: {e}")
-        return {'error': str(e)}
+        logger.exception(f"[OpsAutopilot] Cycle failed: {e}")
+        raise ScheduledTaskError(
+            f"SCHEDULED_FAIL_LOUD::run_ops_autopilot::{type(e).__name__}: {e}"
+        ) from e
 
 
 @shared_task(ignore_result=True)
@@ -38631,5 +38648,7 @@ def post_ops_digest():
         logger.info(f"[OpsDigest] Posted to {target_cid}")
         return result
     except Exception as e:
-        logger.error(f"[OpsDigest] Failed: {e}")
-        return {'error': str(e)}
+        logger.exception(f"[OpsDigest] Failed: {e}")
+        raise ScheduledTaskError(
+            f"SCHEDULED_FAIL_LOUD::post_ops_digest::{type(e).__name__}: {e}"
+        ) from e
