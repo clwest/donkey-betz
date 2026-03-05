@@ -366,9 +366,26 @@ def export_deliverable(request, deliverable_id):
             content_type = 'application/json'
             filename = f"{deliverable.slug}.json"
 
+        elif export_format == 'pdf':
+            from core.services.pdf_export_service import generate_deliverable_pdf_bytes
+            pdf_bytes = generate_deliverable_pdf_bytes(
+                title=deliverable.title,
+                content=deliverable.content or '',
+                content_format=deliverable.content_format or 'markdown',
+            )
+            DeliverableExport.objects.create(
+                deliverable=deliverable,
+                user=request.user,
+                export_format='pdf',
+                file_size_bytes=len(pdf_bytes),
+            )
+            _emit_event(deliverable, 'deliverable_exported', request.user, 'frontend',
+                         {'format': 'pdf'})
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{deliverable.slug}.pdf"'
+            return response
+
         else:
-            # PDF and DOCX require additional libraries
-            # For now, return error
             return JsonResponse({
                 'success': False,
                 'error': f'{export_format.upper()} export not yet implemented'
