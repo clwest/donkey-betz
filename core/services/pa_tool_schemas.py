@@ -901,7 +901,7 @@ PA_TOOL_SCHEMAS = [
                         "debate_advocate_agent", "debate_skeptic_agent",
                         "moderator_agent",
                         # ── Training & Security ──
-                        "trained_creation_agent", "memory_isolation_agent",
+                        "trained_creation_agent", "memory_isolation_agent", "security_agent",
                     ],
                     "description": (
                         "Which agent to run. 72 agents across 12 domains. "
