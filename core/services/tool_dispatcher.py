@@ -107,10 +107,11 @@ class ToolDispatcher:
         'error_summary_tool': ('ops_tool', 'failure_signatures'),
     }
 
-    # The 6 gateway tool names (+ 3 standalone primitives)
+    # The 8 gateway tool names (+ 3 standalone primitives)
     GATEWAY_TOOLS = frozenset([
         'ops_tool', 'work_tool', 'content_tool',
         'governance_tool', 'intelligence_tool', 'studio_tool',
+        'cockpit_tool', 'narrative_tool',  # Session 1100
     ])
 
     def __init__(self):
@@ -131,7 +132,7 @@ class ToolDispatcher:
         self.register("character_training_agent", self._handle_agent_tool)
         self.register("talking_character_agent", self._handle_agent_tool)
 
-        # Research tools
+        # Research & Analysis agents
         self.register("web_search", self._handle_web_search)
         self.register("competitor_analysis_agent", self._handle_agent_tool)
         self.register("customer_research_agent", self._handle_agent_tool)
@@ -139,6 +140,81 @@ class ToolDispatcher:
         self.register("content_strategy_agent", self._handle_agent_tool)
         self.register("marketing_strategy_agent", self._handle_agent_tool)
         self.register("content_writer_agent", self._handle_agent_tool)
+        self.register("research_agent", self._handle_agent_tool)
+        self.register("trend_analysis_agent", self._handle_agent_tool)
+        self.register("opportunity_scoring_agent", self._handle_agent_tool)
+        self.register("market_intelligence_agent", self._handle_agent_tool)
+        self.register("platform_audit_agent", self._handle_agent_tool)
+        self.register("thinking_agent", self._handle_agent_tool)
+        self.register("decision_enforcer_agent", self._handle_agent_tool)
+
+        # Strategy & Content agents
+        self.register("brand_identity_agent", self._handle_agent_tool)
+        self.register("seo_optimizer_agent", self._handle_agent_tool)
+        self.register("social_media_agent", self._handle_agent_tool)
+        self.register("editor_agent", self._handle_agent_tool)
+        self.register("content_audit_agent", self._handle_agent_tool)
+        self.register("prompt_engineering_agent", self._handle_agent_tool)
+        self.register("technical_document_agent", self._handle_agent_tool)
+        self.register("creative_director_agent", self._handle_agent_tool)
+
+        # Executive & Orchestration agents
+        self.register("cto_agent", self._handle_agent_tool)
+        self.register("coo_agent", self._handle_agent_tool)
+        self.register("meeting_coordinator_agent", self._handle_agent_tool)
+        self.register("campaign_orchestrator_agent", self._handle_agent_tool)
+        self.register("opportunity_pipeline_agent", self._handle_agent_tool)
+        self.register("content_executor_agent", self._handle_agent_tool)
+        self.register("ai_series_workflow_agent", self._handle_agent_tool)
+
+        # Stock & Markets agents
+        self.register("stock_audit_coordinator", self._handle_agent_tool)
+        self.register("stock_analyst_agent", self._handle_agent_tool)
+        self.register("market_movement_monitor_agent", self._handle_agent_tool)
+        self.register("institutional_watcher_agent", self._handle_agent_tool)
+        self.register("market_anomaly_detector_agent", self._handle_agent_tool)
+        self.register("bull_case_agent", self._handle_agent_tool)
+        self.register("bear_case_agent", self._handle_agent_tool)
+        self.register("signal_scanner_agent", self._handle_agent_tool)
+        self.register("market_intelligence_coordinator", self._handle_agent_tool)
+
+        # Sports & Betting agents
+        self.register("prediction_market_analyst", self._handle_agent_tool)
+        self.register("game_predictor", self._handle_agent_tool)
+        self.register("line_movement_analyzer", self._handle_agent_tool)
+        self.register("sharp_action_detector", self._handle_agent_tool)
+        self.register("bookmaker_agent", self._handle_agent_tool)
+
+        # Blockchain Audit agents
+        self.register("blockchain_audit_coordinator", self._handle_agent_tool)
+        self.register("smart_contract_auditor_agent", self._handle_agent_tool)
+        self.register("transaction_monitor_agent", self._handle_agent_tool)
+        self.register("whale_watcher_agent", self._handle_agent_tool)
+        self.register("exploit_detector_agent", self._handle_agent_tool)
+
+        # Narrative Drift agents
+        self.register("narrative_drift_coordinator", self._handle_agent_tool)
+        self.register("narrative_historian_agent", self._handle_agent_tool)
+        self.register("trend_break_detector_agent", self._handle_agent_tool)
+        self.register("cultural_impact_agent", self._handle_agent_tool)
+
+        # Content Studio agents
+        self.register("autonomous_content_studio_coordinator", self._handle_agent_tool)
+        self.register("topic_miner_agent", self._handle_agent_tool)
+        self.register("contrarian_agent", self._handle_agent_tool)
+        self.register("performance_analyst_agent", self._handle_agent_tool)
+        self.register("voice_critic_agent", self._handle_agent_tool)
+        self.register("content_diversity_orchestrator", self._handle_agent_tool)
+
+        # Podcast agents
+        self.register("podcast_coordinator_agent", self._handle_agent_tool)
+        self.register("debate_advocate_agent", self._handle_agent_tool)
+        self.register("debate_skeptic_agent", self._handle_agent_tool)
+        self.register("moderator_agent", self._handle_agent_tool)
+
+        # Training & Security agents
+        self.register("trained_creation_agent", self._handle_agent_tool)
+        self.register("memory_isolation_agent", self._handle_agent_tool)
 
         # ML Pipeline tools
         self.register("opportunity_manager_tool", self._handle_opportunity_manager)
@@ -258,6 +334,12 @@ class ToolDispatcher:
 
         # Session 1079: Intelligence tool — gateway for stocks, sports, legislation, search, KB
         self.register("intelligence_tool", self._handle_intelligence)
+
+        # Session 1100: Cockpit tool — Celery beat schedule, worker health, queue depths
+        self.register("cockpit_tool", self._handle_cockpit)
+
+        # Session 1100: Narrative tool — narrative drift, shifts, evidence, alerts
+        self.register("narrative_tool", self._handle_narrative)
 
         # Codebase, analytics, Discord, and mobile introspection tools
         self.register("repo_tool", self._handle_repo)
@@ -508,6 +590,7 @@ class ToolDispatcher:
     def _tool_to_agent_name(self, tool_name: str) -> str:
         """Map tool name to agent class name."""
         mappings = {
+            # ── Media Creation & Editing ──
             'image_generation_agent': 'ImageAgent',
             'image_editing_agent': 'ImageEditingAgent',
             'video_generation_agent': 'VideoAgent',
@@ -517,18 +600,87 @@ class ToolDispatcher:
             'three_d_generation_agent': 'ThreeDAgent',
             'character_training_agent': 'CharacterTrainingAgent',
             'talking_character_agent': 'TalkingCharacterAgent',
+            # ── Research & Analysis ──
+            'research_agent': 'ResearchAgent',
+            'trend_analysis_agent': 'TrendAnalysisAgent',
+            'opportunity_scoring_agent': 'OpportunityScoringAgent',
+            'market_intelligence_agent': 'MarketIntelligenceAgent',
+            'platform_audit_agent': 'PlatformAuditAgent',
+            'thinking_agent': 'ThinkingAgent',
+            'decision_enforcer_agent': 'DecisionEnforcerAgent',
+            # ── Strategy & Content ──
+            'brand_identity_agent': 'BrandIdentityAgent',
+            'seo_optimizer_agent': 'SEOOptimizerAgent',
+            'social_media_agent': 'SocialMediaAgent',
+            'editor_agent': 'EditorAgent',
+            'content_audit_agent': 'ContentAuditAgent',
+            'prompt_engineering_agent': 'PromptEngineeringAgent',
+            'technical_document_agent': 'TechnicalDocumentAgent',
+            'creative_director_agent': 'CreativeDirectorAgent',
+            # ── Business Research ──
             'competitor_analysis_agent': 'CompetitorAnalysisAgent',
             'customer_research_agent': 'CustomerResearchAgent',
             'brand_strategy_agent': 'BrandStrategyAgent',
             'content_strategy_agent': 'ContentStrategyAgent',
             'marketing_strategy_agent': 'MarketingStrategyAgent',
             'content_writer_agent': 'ContentWriterAgent',
+            # ── Executive & Orchestration ──
+            'cto_agent': 'CTOAgent',
+            'coo_agent': 'COOAgent',
+            'meeting_coordinator_agent': 'MeetingCoordinatorAgent',
+            'campaign_orchestrator_agent': 'CampaignOrchestratorAgent',
+            'opportunity_pipeline_agent': 'OpportunityPipelineAgent',
+            'content_executor_agent': 'ContentExecutorAgent',
+            'ai_series_workflow_agent': 'AISeriesWorkflowAgent',
             'workflow_orchestration_agent': 'WorkflowAgent',
             'create_brand_video': 'WorkflowAgent',
             'create_project_from_research': 'WorkflowAgent',
             'strategic_review': 'ContentStrategyAgent',  # Session 1068: StrategyAgent doesn't exist
-            'legal_doc_drafter_agent': 'LegalDocDrafterAgent',
             'system_intelligence_agent': 'SystemIntelligenceAgent',
+            # ── Stock & Markets ──
+            'stock_audit_coordinator': 'StockAuditCoordinator',
+            'stock_analyst_agent': 'StockAnalystAgent',
+            'market_movement_monitor_agent': 'MarketMovementMonitorAgent',
+            'institutional_watcher_agent': 'InstitutionalWatcherAgent',
+            'market_anomaly_detector_agent': 'MarketAnomalyDetectorAgent',
+            'bull_case_agent': 'BullCaseAgent',
+            'bear_case_agent': 'BearCaseAgent',
+            'signal_scanner_agent': 'SignalScannerAgent',
+            'market_intelligence_coordinator': 'MarketIntelligenceCoordinator',
+            # ── Sports & Betting ──
+            'prediction_market_analyst': 'PredictionMarketAnalyst',
+            'game_predictor': 'GamePredictor',
+            'line_movement_analyzer': 'LineMovementAnalyzer',
+            'sharp_action_detector': 'SharpActionDetector',
+            'bookmaker_agent': 'BookmakerAgent',
+            # ── Blockchain Audit ──
+            'blockchain_audit_coordinator': 'BlockchainAuditCoordinator',
+            'smart_contract_auditor_agent': 'SmartContractAuditorAgent',
+            'transaction_monitor_agent': 'TransactionMonitorAgent',
+            'whale_watcher_agent': 'WhaleWatcherAgent',
+            'exploit_detector_agent': 'ExploitDetectorAgent',
+            # ── Narrative Drift ──
+            'narrative_drift_coordinator': 'NarrativeDriftCoordinator',
+            'narrative_historian_agent': 'NarrativeHistorianAgent',
+            'trend_break_detector_agent': 'TrendBreakDetectorAgent',
+            'cultural_impact_agent': 'CulturalImpactAgent',
+            # ── Content Studio ──
+            'autonomous_content_studio_coordinator': 'AutonomousContentStudioCoordinator',
+            'topic_miner_agent': 'TopicMinerAgent',
+            'contrarian_agent': 'ContrarianAgent',
+            'performance_analyst_agent': 'PerformanceAnalystAgent',
+            'voice_critic_agent': 'VoiceCriticAgent',
+            'content_diversity_orchestrator': 'ContentDiversityOrchestrator',
+            # ── Podcast ──
+            'podcast_coordinator_agent': 'PodcastCoordinatorAgent',
+            'debate_advocate_agent': 'DebateAdvocateAgent',
+            'debate_skeptic_agent': 'DebateSkepticAgent',
+            'moderator_agent': 'ModeratorAgent',
+            # ── Training & Security ──
+            'trained_creation_agent': 'TrainedCreationAgent',
+            'memory_isolation_agent': 'MemoryIsolationAgent',
+            # ── Legal ──
+            'legal_doc_drafter_agent': 'LegalDocDrafterAgent',
         }
         return mappings.get(tool_name, tool_name.replace('_agent', '').title() + 'Agent')
 
@@ -10583,9 +10735,53 @@ RESEARCH DATA:
             'action_item_cleanup': ('cleanup_action_items', {}),
         }
 
+        # ── Session 1100: Direct data actions (not delegated to initiative_tool) ──
+        if action == 'agent_conversations':
+            try:
+                from core.models_unified_system import AgentConversation
+                limit = min(int(payload.get('limit', 10)), 30)
+                convs = AgentConversation.objects.order_by('-started_at')[:limit]
+                return {
+                    'gateway': 'work_tool', 'action': action,
+                    'count': len(convs),
+                    'conversations': [{
+                        'id': str(c.id),
+                        'topic': c.topic if hasattr(c, 'topic') else str(c),
+                        'participants': c.participants if hasattr(c, 'participants') else [],
+                        'conclusion': (c.conclusion or '')[:200] if hasattr(c, 'conclusion') else '',
+                        'started_at': c.started_at.isoformat() if c.started_at else None,
+                    } for c in convs],
+                }
+            except Exception as e:
+                return {'gateway': 'work_tool', 'action': action, 'error': str(e)}
+
+        if action == 'workflows':
+            try:
+                from core.models_unified_system import AgentExecution
+                limit = min(int(payload.get('limit', 10)), 30)
+                execs = AgentExecution.objects.filter(
+                    agent__name__in=['WorkflowAgent', 'WorkflowOrchestrationAgent',
+                                     'CampaignOrchestratorAgent', 'AISeriesWorkflowAgent']
+                ).select_related('agent').order_by('-created_at')[:limit]
+                return {
+                    'gateway': 'work_tool', 'action': action,
+                    'count': len(execs),
+                    'workflows': [{
+                        'id': str(e.id),
+                        'agent': e.agent.name if e.agent else 'unknown',
+                        'status': e.status,
+                        'task': (e.input_data or {}).get('task', '')[:150],
+                        'created_at': e.created_at.isoformat() if e.created_at else None,
+                    } for e in execs],
+                }
+            except Exception as e:
+                return {'gateway': 'work_tool', 'action': action, 'error': str(e)}
+
         mapping = ACTION_MAP.get(action)
         if not mapping:
-            return {'error': f'Unknown work_tool action: {action}. Valid: {", ".join(sorted(ACTION_MAP))}'}
+            extra_actions = ['agent_conversations', 'workflows']
+            all_acts = sorted(list(ACTION_MAP) + extra_actions)
+            return {'error': f'Unknown work_tool action: {action}. Valid: {", ".join(all_acts)}'}
 
         initiative_action, overrides = mapping
 
@@ -10720,12 +10916,77 @@ RESEARCH DATA:
         if action == 'kb_ingest':
             return _tag(self._handle_rag_query('rag_query_tool', {'action': 'ingest', 'url': payload.get('url', '')}, user_id, trace_id))
 
+        # ── Session 1100: Stock briefs ──
+        if action == 'stock_briefs':
+            try:
+                from core.models import StockBrief
+                briefs = StockBrief.objects.order_by('-created_at')[:limit]
+                return _tag({
+                    'action': 'stock_briefs',
+                    'count': len(briefs),
+                    'briefs': [{
+                        'id': str(b.id),
+                        'ticker': b.ticker if hasattr(b, 'ticker') else '',
+                        'title': b.title if hasattr(b, 'title') else str(b),
+                        'summary': (b.summary or '')[:300] if hasattr(b, 'summary') else '',
+                        'created_at': b.created_at.isoformat() if hasattr(b, 'created_at') and b.created_at else None,
+                    } for b in briefs],
+                })
+            except Exception as e:
+                return _tag({'action': 'stock_briefs', 'error': str(e)})
+
+        # ── Session 1100: ML predictions ──
+        if action == 'ml_predictions':
+            try:
+                from core.models import MLPrediction
+                limit = min(int(payload.get('limit', 10)), 30)
+                preds = MLPrediction.objects.select_related('game', 'predicted_winner').order_by('-created_at')[:limit]
+                total = MLPrediction.objects.count()
+                evaluated = MLPrediction.objects.filter(evaluated_at__isnull=False).count()
+                return _tag({
+                    'action': 'ml_predictions',
+                    'total': total,
+                    'evaluated': evaluated,
+                    'predictions': [{
+                        'id': str(p.id),
+                        'game': str(p.game) if p.game else None,
+                        'predicted_winner': str(p.predicted_winner) if p.predicted_winner else None,
+                        'confidence': p.confidence if hasattr(p, 'confidence') else None,
+                        'correct': p.correct if hasattr(p, 'correct') else None,
+                        'created_at': p.created_at.isoformat() if hasattr(p, 'created_at') and p.created_at else None,
+                    } for p in preds],
+                })
+            except Exception as e:
+                return _tag({'action': 'ml_predictions', 'error': str(e)})
+
+        # ── Session 1100: Signal clusters ──
+        if action == 'signal_clusters':
+            try:
+                from core.models import SignalCluster
+                limit = min(int(payload.get('limit', 10)), 30)
+                clusters = SignalCluster.objects.order_by('-detected_at')[:limit]
+                return _tag({
+                    'action': 'signal_clusters',
+                    'count': len(clusters),
+                    'clusters': [{
+                        'id': str(c.id),
+                        'name': c.name,
+                        'pattern_type': c.pattern_type,
+                        'signal_count': c.signal_count if hasattr(c, 'signal_count') else None,
+                        'confidence': c.confidence if hasattr(c, 'confidence') else None,
+                        'detected_at': c.detected_at.isoformat() if c.detected_at else None,
+                    } for c in clusters],
+                })
+            except Exception as e:
+                return _tag({'action': 'signal_clusters', 'error': str(e)})
+
         all_actions = [
             'overview', 'briefs', 'search',
             'stocks_alerts', 'stocks_predictions', 'stocks_sec_filings',
             'sports_predictions', 'sports_arbs', 'sports_wagers', 'sports_record_wager',
             'legislation_search', 'legislation_summary',
             'kb_ingest',
+            'stock_briefs', 'ml_predictions', 'signal_clusters',
         ]
         return {'error': f'Unknown intelligence_tool action: {action}. Valid: {", ".join(all_actions)}'}
 
@@ -10780,7 +11041,49 @@ RESEARCH DATA:
                 result['action'] = action
             return result
 
-        all_actions = sorted(list(BOARDROOM_MAP) + list(DECISIONS_MAP))
+        # ── Session 1100: Failure signatures (read-only) ──
+        if action == 'failure_signatures':
+            try:
+                from core.models_diagnostic_pipeline import FailureSignature
+                limit = min(int(payload.get('limit', 10)), 30)
+                sigs = FailureSignature.objects.order_by('-last_seen')[:limit]
+                return {
+                    'gateway': 'governance_tool', 'action': action,
+                    'count': len(sigs),
+                    'signatures': [{
+                        'id': str(s.id),
+                        'category': s.category,
+                        'signature_hash': s.signature_hash[:16] if hasattr(s, 'signature_hash') else '',
+                        'occurrence_count': s.occurrence_count if hasattr(s, 'occurrence_count') else 0,
+                        'description': (s.description or '')[:200] if hasattr(s, 'description') else '',
+                        'last_seen': s.last_seen.isoformat() if hasattr(s, 'last_seen') and s.last_seen else None,
+                    } for s in sigs],
+                }
+            except Exception as e:
+                return {'gateway': 'governance_tool', 'action': action, 'error': str(e)}
+
+        # ── Session 1100: Remediation tasks (read-only) ──
+        if action == 'remediation_tasks':
+            try:
+                from core.models_unified_system import AuditRemediationTask
+                limit = min(int(payload.get('limit', 10)), 30)
+                tasks = AuditRemediationTask.objects.select_related('finding').order_by('-id')[:limit]
+                return {
+                    'gateway': 'governance_tool', 'action': action,
+                    'count': len(tasks),
+                    'tasks': [{
+                        'id': str(t.id),
+                        'title': t.title,
+                        'status': t.status,
+                        'assigned_agent': t.assigned_agent or '',
+                        'finding': t.finding.title if t.finding else '',
+                    } for t in tasks],
+                }
+            except Exception as e:
+                return {'gateway': 'governance_tool', 'action': action, 'error': str(e)}
+
+        extra_actions = ['failure_signatures', 'remediation_tasks']
+        all_actions = sorted(list(BOARDROOM_MAP) + list(DECISIONS_MAP) + extra_actions)
         return {'error': f'Unknown governance_tool action: {action}. Valid: {", ".join(all_actions)}'}
 
     # ── Session 1079: Content Tool (gateway) ─────────────────────────────────────
@@ -10846,8 +11149,71 @@ RESEARCH DATA:
                 result['action'] = action
             return result
 
+        # ── Session 1100: Podcast episodes ──
+        if action == 'podcasts':
+            try:
+                from core.models_unified_system import AgentExecution
+                limit = min(int(payload.get('limit', 10)), 30)
+                eps = AgentExecution.objects.filter(
+                    agent__name='PodcastCoordinatorAgent', status='completed'
+                ).order_by('-created_at')[:limit]
+                return {
+                    'gateway': 'content_tool', 'action': action,
+                    'count': len(eps),
+                    'episodes': [{
+                        'id': str(e.id),
+                        'topic': (e.input_data or {}).get('task', '')[:150],
+                        'status': e.status,
+                        'created_at': e.created_at.isoformat() if e.created_at else None,
+                    } for e in eps],
+                }
+            except Exception as e:
+                return {'gateway': 'content_tool', 'action': action, 'error': str(e)}
+
+        # ── Session 1100: AI Series workflows ──
+        if action == 'series':
+            try:
+                from core.models_unified_system import AgentExecution
+                limit = min(int(payload.get('limit', 10)), 30)
+                series = AgentExecution.objects.filter(
+                    agent__name='AISeriesWorkflowAgent'
+                ).order_by('-created_at')[:limit]
+                return {
+                    'gateway': 'content_tool', 'action': action,
+                    'count': len(series),
+                    'series': [{
+                        'id': str(s.id),
+                        'topic': (s.input_data or {}).get('task', '')[:150],
+                        'status': s.status,
+                        'created_at': s.created_at.isoformat() if s.created_at else None,
+                    } for s in series],
+                }
+            except Exception as e:
+                return {'gateway': 'content_tool', 'action': action, 'error': str(e)}
+
+        # ── Session 1100: Content Studio stats ──
+        if action == 'content_studio':
+            try:
+                from core.models_unified_system import AgentExecution
+                from django.db.models import Count
+                studio_agents = [
+                    'AutonomousContentStudioCoordinator', 'TopicMinerAgent',
+                    'ContrarianAgent', 'PerformanceAnalystAgent',
+                    'VoiceCriticAgent', 'ContentDiversityOrchestrator',
+                ]
+                stats = list(AgentExecution.objects.filter(
+                    agent__name__in=studio_agents
+                ).values('agent__name', 'status').annotate(count=Count('id')))
+                return {
+                    'gateway': 'content_tool', 'action': action,
+                    'stats': stats,
+                }
+            except Exception as e:
+                return {'gateway': 'content_tool', 'action': action, 'error': str(e)}
+
         all_actions = sorted(
             list(CONTENT_REVIEW_MAP) + ['generate_blog'] + list(DELIVERABLE_MAP)
+            + ['podcasts', 'series', 'content_studio']
         )
         return {'error': f'Unknown content_tool action: {action}. Valid: {", ".join(all_actions)}'}
 
@@ -10886,6 +11252,10 @@ RESEARCH DATA:
             agent_names = payload.get('agent_names', [])
             initiative_id = payload.get('initiative_id')
             return self._ops_proof_bundle(agent_names, initiative_id, trace_id)
+
+        elif action == 'beat_schedule':
+            # Session 1100: Proxy to cockpit_tool for beat schedule
+            return self._handle_cockpit('cockpit_tool', {'action': 'beat_schedule', 'limit': payload.get('limit', 20)}, user_id, trace_id)
 
         else:
             return {'error': f'Unknown ops_tool action: {action}'}
@@ -14049,6 +14419,233 @@ RESEARCH DATA:
 
         except Exception as e:
             logger.error(f"[VIP_INVITE] Error: {e}", exc_info=True)
+            return {'error': str(e)}
+
+
+    # ── Session 1100: Cockpit Tool — Celery ops dashboard ───────────────────────
+    def _handle_cockpit(self, tool_name: str, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:
+        """Celery ops cockpit: beat schedule, task status, worker health, queue depths, failures."""
+        action = payload.get('action', 'help')
+        limit = min(int(payload.get('limit', 20)), 50)
+
+        try:
+            if action == 'help':
+                return {
+                    'tool': 'cockpit_tool',
+                    'actions': [
+                        'beat_schedule — list all Celery Beat periodic tasks',
+                        'task_status — check a specific task by ID',
+                        'worker_health — active workers, queues, concurrency',
+                        'recent_failures — failed tasks with errors',
+                        'queue_lengths — current queue depths',
+                    ],
+                }
+
+            if action == 'beat_schedule':
+                from django_celery_beat.models import PeriodicTask
+                tasks = PeriodicTask.objects.select_related(
+                    'interval', 'crontab'
+                ).order_by('name')[:limit]
+                return {
+                    'action': 'beat_schedule',
+                    'total': PeriodicTask.objects.count(),
+                    'tasks': [{
+                        'name': t.name,
+                        'task': t.task,
+                        'enabled': t.enabled,
+                        'schedule': str(t.interval or t.crontab or 'custom'),
+                        'last_run_at': t.last_run_at.isoformat() if t.last_run_at else None,
+                        'total_run_count': t.total_run_count,
+                        'queue': t.queue or 'default',
+                    } for t in tasks],
+                }
+
+            if action == 'task_status':
+                task_id = payload.get('task_id', '')
+                if not task_id:
+                    return {'error': 'Provide task_id to check status'}
+                from core.models_celery_telemetry import CeleryTaskEvent
+                event = CeleryTaskEvent.objects.filter(
+                    task_id=task_id
+                ).order_by('-started_at').first()
+                if not event:
+                    return {'error': f'No CeleryTaskEvent found for task_id {task_id}'}
+                return {
+                    'action': 'task_status',
+                    'task_id': task_id,
+                    'task_name': event.task_name,
+                    'status': event.status,
+                    'started_at': event.started_at.isoformat() if event.started_at else None,
+                    'finished_at': event.finished_at.isoformat() if event.finished_at else None,
+                    'duration_seconds': event.duration_seconds,
+                    'worker': event.worker,
+                    'queue': event.queue,
+                    'error_message': event.error_message,
+                    'rss_mb_start': event.rss_mb_start,
+                    'rss_mb_end': event.rss_mb_end,
+                }
+
+            if action == 'worker_health':
+                from core.celery_app import app as celery_app
+                inspector = celery_app.control.inspect(timeout=5)
+                active = inspector.active() or {}
+                stats = inspector.stats() or {}
+                workers = []
+                for worker_name, worker_stats in stats.items():
+                    pool = worker_stats.get('pool', {})
+                    workers.append({
+                        'name': worker_name,
+                        'active_tasks': len(active.get(worker_name, [])),
+                        'concurrency': pool.get('max-concurrency', 'unknown'),
+                        'pool': pool.get('implementation', 'unknown'),
+                        'prefetch_count': worker_stats.get('prefetch_count', 0),
+                    })
+                return {'action': 'worker_health', 'workers': workers}
+
+            if action == 'recent_failures':
+                from core.models_celery_telemetry import CeleryTaskEvent
+                qs = CeleryTaskEvent.objects.filter(status='FAILURE').order_by('-started_at')
+                queue_filter = payload.get('queue')
+                if queue_filter:
+                    qs = qs.filter(queue=queue_filter)
+                failures = qs[:limit]
+                return {
+                    'action': 'recent_failures',
+                    'count': len(failures),
+                    'failures': [{
+                        'task_name': f.task_name,
+                        'task_id': f.task_id,
+                        'started_at': f.started_at.isoformat() if f.started_at else None,
+                        'error_type': f.error_type,
+                        'error_message': (f.error_message or '')[:300],
+                        'queue': f.queue,
+                        'worker': f.worker,
+                        'duration_seconds': f.duration_seconds,
+                    } for f in failures],
+                }
+
+            if action == 'queue_lengths':
+                from core.celery_app import app as celery_app
+                inspector = celery_app.control.inspect(timeout=5)
+                active = inspector.active() or {}
+                reserved = inspector.reserved() or {}
+                queues = {}
+                for worker_name in set(list(active) + list(reserved)):
+                    for task in active.get(worker_name, []):
+                        q = task.get('delivery_info', {}).get('routing_key', 'unknown')
+                        queues.setdefault(q, {'active': 0, 'reserved': 0})
+                        queues[q]['active'] += 1
+                    for task in reserved.get(worker_name, []):
+                        q = task.get('delivery_info', {}).get('routing_key', 'unknown')
+                        queues.setdefault(q, {'active': 0, 'reserved': 0})
+                        queues[q]['reserved'] += 1
+                return {'action': 'queue_lengths', 'queues': queues}
+
+            return {'error': f'Unknown cockpit_tool action: {action}'}
+
+        except Exception as e:
+            logger.error(f"[COCKPIT] {action} error: {e}", exc_info=True)
+            return {'error': str(e)}
+
+    # ── Session 1100: Narrative Tool — drift, shifts, evidence, alerts ─────────
+    def _handle_narrative(self, tool_name: str, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:
+        """Narrative drift analysis: narratives, shifts, evidence, alerts."""
+        action = payload.get('action', 'help')
+        limit = min(int(payload.get('limit', 10)), 30)
+        category = payload.get('category')
+
+        try:
+            if action == 'help':
+                return {
+                    'tool': 'narrative_tool',
+                    'actions': [
+                        'narratives — list tracked narratives',
+                        'shifts — recent narrative shifts/drift detections',
+                        'evidence — evidence items for a specific narrative',
+                        'alerts — narrative alerts (Discord notifications)',
+                    ],
+                }
+
+            from core.models_narrative_drift import (
+                Narrative, NarrativeShift, NarrativeEvidence, NarrativeAlert,
+            )
+
+            if action == 'narratives':
+                qs = Narrative.objects.all().order_by('-updated_at')
+                if category:
+                    qs = qs.filter(category=category)
+                narratives = qs[:limit]
+                return {
+                    'action': 'narratives',
+                    'total': qs.count(),
+                    'narratives': [{
+                        'id': str(n.id),
+                        'title': n.title,
+                        'category': n.category,
+                        'status': n.status,
+                        'confidence': n.confidence,
+                        'evidence_count': n.evidence_count if hasattr(n, 'evidence_count') else NarrativeEvidence.objects.filter(narrative=n).count(),
+                        'updated_at': n.updated_at.isoformat() if hasattr(n, 'updated_at') and n.updated_at else None,
+                    } for n in narratives],
+                }
+
+            if action == 'shifts':
+                qs = NarrativeShift.objects.select_related('narrative').order_by('-detected_at')
+                if category:
+                    qs = qs.filter(narrative__category=category)
+                shifts = qs[:limit]
+                return {
+                    'action': 'shifts',
+                    'count': len(shifts),
+                    'shifts': [{
+                        'id': str(s.id),
+                        'narrative': s.narrative.title if s.narrative else 'Unknown',
+                        'shift_type': s.shift_type if hasattr(s, 'shift_type') else 'unknown',
+                        'magnitude': s.magnitude if hasattr(s, 'magnitude') else None,
+                        'trend_break_analysis': (s.trend_break_analysis or '')[:200] if hasattr(s, 'trend_break_analysis') else '',
+                        'cultural_impact_analysis': (s.cultural_impact_analysis or '')[:200] if hasattr(s, 'cultural_impact_analysis') else '',
+                        'detected_at': s.detected_at.isoformat() if hasattr(s, 'detected_at') and s.detected_at else None,
+                    } for s in shifts],
+                }
+
+            if action == 'evidence':
+                narrative_id = payload.get('narrative_id', '')
+                if not narrative_id:
+                    return {'error': 'Provide narrative_id for evidence lookup'}
+                evidence = NarrativeEvidence.objects.filter(
+                    narrative_id=narrative_id
+                ).order_by('-created_at')[:limit]
+                return {
+                    'action': 'evidence',
+                    'narrative_id': narrative_id,
+                    'count': len(evidence),
+                    'evidence': [{
+                        'id': str(e.id),
+                        'source': str(e.spider_data_id) if hasattr(e, 'spider_data_id') else 'unknown',
+                        'relevance_score': e.relevance_score if hasattr(e, 'relevance_score') else None,
+                        'excerpt': (e.excerpt or '')[:200] if hasattr(e, 'excerpt') else '',
+                        'created_at': e.created_at.isoformat() if hasattr(e, 'created_at') and e.created_at else None,
+                    } for e in evidence],
+                }
+
+            if action == 'alerts':
+                alerts = NarrativeAlert.objects.order_by('-created_at')[:limit]
+                return {
+                    'action': 'alerts',
+                    'count': len(alerts),
+                    'alerts': [{
+                        'id': str(a.id),
+                        'title': a.title if hasattr(a, 'title') else str(a),
+                        'severity': a.severity if hasattr(a, 'severity') else 'unknown',
+                        'sent_to_discord': a.sent_to_discord if hasattr(a, 'sent_to_discord') else False,
+                        'created_at': a.created_at.isoformat() if hasattr(a, 'created_at') and a.created_at else None,
+                    } for a in alerts],
+                }
+
+            return {'error': f'Unknown narrative_tool action: {action}'}
+
+        except Exception as e:
+            logger.error(f"[NARRATIVE] {action} error: {e}", exc_info=True)
             return {'error': str(e)}
 
 

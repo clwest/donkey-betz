@@ -827,12 +827,11 @@ PA_TOOL_SCHEMAS = [
         "name": "run_agent",
         "description": (
             "Delegate a task to a specialized agent. Use when the user asks to "
-            "generate images, create videos, edit videos (trim/effects/speed/concat), "
-            "render or color-grade videos via DaVinci Resolve, generate audio, "
-            "create 3D models, train characters, do competitor analysis, customer "
-            "research, brand strategy, content strategy, marketing strategy, "
-            "content writing, workflow orchestration, or system intelligence "
-            "(platform health reports, attention items, anomaly detection)."
+            "Run any of 72 specialized agents across 12 domains: "
+            "media creation/editing, research & analysis, strategy & content, "
+            "executive & orchestration, stock & markets, sports & betting, "
+            "blockchain audit, narrative drift, content studio, podcast, "
+            "training & security, and system intelligence."
         ),
         "parameters": {
             "type": "object",
@@ -840,24 +839,82 @@ PA_TOOL_SCHEMAS = [
                 "agent_name": {
                     "type": "string",
                     "enum": [
+                        # ── Media Creation & Editing ──
                         "image_generation_agent", "image_editing_agent",
                         "video_generation_agent", "video_editing_agent",
                         "resolve_agent",
                         "audio_generation_agent", "three_d_generation_agent",
                         "character_training_agent", "talking_character_agent",
+                        # ── Research & Analysis ──
+                        "research_agent",
+                        "trend_analysis_agent", "opportunity_scoring_agent",
+                        "market_intelligence_agent", "platform_audit_agent",
+                        "thinking_agent", "decision_enforcer_agent",
+                        # ── Strategy & Content ──
+                        "brand_identity_agent", "seo_optimizer_agent",
+                        "social_media_agent", "editor_agent",
+                        "content_audit_agent", "prompt_engineering_agent",
+                        "technical_document_agent", "creative_director_agent",
+                        # ── Business Research ──
                         "competitor_analysis_agent", "customer_research_agent",
                         "brand_strategy_agent", "content_strategy_agent",
                         "marketing_strategy_agent", "content_writer_agent",
+                        # ── Executive & Orchestration ──
+                        "cto_agent", "coo_agent",
+                        "meeting_coordinator_agent",
+                        "campaign_orchestrator_agent",
+                        "opportunity_pipeline_agent", "content_executor_agent",
+                        "ai_series_workflow_agent",
                         "workflow_orchestration_agent",
                         "system_intelligence_agent",
                         "strategic_review",
                         "create_brand_video", "create_project_from_research",
+                        # ── Stock & Markets ──
+                        "stock_audit_coordinator", "stock_analyst_agent",
+                        "market_movement_monitor_agent",
+                        "institutional_watcher_agent",
+                        "market_anomaly_detector_agent",
+                        "bull_case_agent", "bear_case_agent",
+                        "signal_scanner_agent",
+                        "market_intelligence_coordinator",
+                        # ── Sports & Betting ──
+                        "prediction_market_analyst",
+                        "game_predictor", "line_movement_analyzer",
+                        "sharp_action_detector", "bookmaker_agent",
+                        # ── Blockchain Audit ──
+                        "blockchain_audit_coordinator",
+                        "smart_contract_auditor_agent",
+                        "transaction_monitor_agent",
+                        "whale_watcher_agent", "exploit_detector_agent",
+                        # ── Narrative Drift ──
+                        "narrative_drift_coordinator",
+                        "narrative_historian_agent",
+                        "trend_break_detector_agent",
+                        "cultural_impact_agent",
+                        # ── Content Studio ──
+                        "autonomous_content_studio_coordinator",
+                        "topic_miner_agent", "contrarian_agent",
+                        "performance_analyst_agent", "voice_critic_agent",
+                        "content_diversity_orchestrator",
+                        # ── Podcast ──
+                        "podcast_coordinator_agent",
+                        "debate_advocate_agent", "debate_skeptic_agent",
+                        "moderator_agent",
+                        # ── Training & Security ──
+                        "trained_creation_agent", "memory_isolation_agent",
                     ],
                     "description": (
-                        "Which agent to run. resolve_agent = DaVinci Resolve rendering & color grading. "
-                        "video_editing_agent = ffmpeg trim/effects/speed/concat. "
-                        "video_generation_agent = Runway ML text/image-to-video. "
-                        "system_intelligence_agent = platform health reports, attention items, anomaly detection, system status."
+                        "Which agent to run. 72 agents across 12 domains. "
+                        "Media: image/video/audio/3D generation & editing, resolve (DaVinci). "
+                        "Research: research, trend analysis, opportunity scoring, thinking. "
+                        "Strategy: brand identity, SEO, social media, content audit, prompt engineering. "
+                        "Markets: stock analyst, bull/bear case, signal scanner, market anomaly. "
+                        "Sports: game predictor, line movement, sharp action, bookmaker. "
+                        "Blockchain: smart contract auditor, transaction monitor, whale watcher. "
+                        "Narrative: drift coordinator, historian, trend break, cultural impact. "
+                        "Studio: topic miner, contrarian, performance analyst, voice critic. "
+                        "Podcast: coordinator, debate advocate/skeptic, moderator. "
+                        "system_intelligence_agent = platform health reports."
                     ),
                 },
                 "task": {"type": "string", "description": "Task description for the agent"},
@@ -1839,7 +1896,8 @@ PA_TOOL_SCHEMAS = [
                         "initiative_list", "initiative_detail", "initiative_create",
                         "initiative_promote",
                         "action_item_list", "action_item_start", "action_item_complete",
-                        "action_item_cleanup"
+                        "action_item_cleanup",
+                        "agent_conversations", "workflows",
                     ],
                     "description": (
                         "initiative_list: list initiatives (filters: status, owner, stage). "
@@ -1849,7 +1907,9 @@ PA_TOOL_SCHEMAS = [
                         "action_item_list: list action items (filters: status, priority, initiative_id). "
                         "action_item_start: mark an action item as in_progress. "
                         "action_item_complete: mark an action item as completed. "
-                        "action_item_cleanup: find/cancel junk action items (dry_run default true)."
+                        "action_item_cleanup: find/cancel junk action items (dry_run default true). "
+                        "agent_conversations: browse multi-agent conversations. "
+                        "workflows: recent workflow/orchestration executions."
                     ),
                 },
                 "id": {
@@ -2385,6 +2445,7 @@ PA_TOOL_SCHEMAS = [
                         "decision_list", "decision_promote", "decision_reject",
                         "decisions_list", "decisions_stats", "decision_create", "decision_decide",
                         "triage_batch",
+                        "failure_signatures", "remediation_tasks",
                     ],
                     "description": (
                         "inbox: combined overview with counts + top items. "
@@ -2399,7 +2460,9 @@ PA_TOOL_SCHEMAS = [
                         "decisions_stats: decision statistics. "
                         "decision_create: create a new decision request. "
                         "decision_decide: make a decision (approve/reject/defer/watch). "
-                        "triage_batch: get items for batch triage."
+                        "triage_batch: get items for batch triage. "
+                        "failure_signatures: FailureSignature patterns (read-only). "
+                        "remediation_tasks: AuditRemediationTask status (read-only)."
                     ),
                 },
                 "id": {"type": "string", "description": "UUID of attention item or decision"},
@@ -2443,12 +2506,16 @@ PA_TOOL_SCHEMAS = [
                         "sports_predictions", "sports_arbs", "sports_wagers", "sports_record_wager",
                         "legislation_search", "legislation_summary",
                         "kb_ingest",
+                        "stock_briefs", "ml_predictions", "signal_clusters",
                     ],
                     "description": (
                         "overview: combined dashboard from all 3 desks. "
                         "briefs: desk-specific briefings (use desk param). "
                         "search: unified search (use source param: kb/spider/web). "
                         "stocks_*: stock alerts, predictions, SEC filings. "
+                        "stock_briefs: latest stock brief summaries. "
+                        "ml_predictions: ML model predictions with accuracy. "
+                        "signal_clusters: signal aggregation patterns. "
                         "sports_*: predictions, arbs, wagers, record_wager. "
                         "legislation_*: search bills, get summaries. "
                         "kb_ingest: ingest a URL into the knowledge base."
@@ -2498,6 +2565,7 @@ PA_TOOL_SCHEMAS = [
                         "deliverable_search", "deliverable_save",
                         "deliverable_create", "deliverable_stats",
                         "deliverable_export_pdf",
+                        "podcasts", "series", "content_studio",
                     ],
                     "description": (
                         "content_stats: pipeline overview (blogs + deliverables counts). "
@@ -2514,7 +2582,10 @@ PA_TOOL_SCHEMAS = [
                         "deliverable_save: bookmark a deliverable. "
                         "deliverable_create: create a new deliverable. "
                         "deliverable_stats: aggregate counts by type/category/agent. "
-                        "deliverable_export_pdf: generate a downloadable PDF from a deliverable (returns CDN URL)."
+                        "deliverable_export_pdf: generate a downloadable PDF from a deliverable (returns CDN URL). "
+                        "podcasts: list completed podcast episodes. "
+                        "series: AI Series workflow history. "
+                        "content_studio: autonomous content studio execution stats."
                     ),
                 },
                 "id": {"type": "string", "description": "UUID of deliverable or blog"},
@@ -2695,6 +2766,100 @@ PA_TOOL_SCHEMAS = [
                 "id": {
                     "type": "string",
                     "description": "Invite UUID to revoke. Used with revoke action.",
+                },
+            },
+            "required": ["action"],
+        },
+    },
+
+    # ── Session 1100: Cockpit Tool — Celery ops dashboard ─────────────────────
+    {
+        "type": "function",
+        "name": "cockpit_tool",
+        "description": (
+            "System operations cockpit for Celery infrastructure. "
+            "View beat schedule (all periodic tasks), check task status by ID, "
+            "inspect worker health and queue depths, review recent failures. "
+            "Use when Chris asks about scheduled tasks, worker status, queue backlogs, "
+            "or task failures."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "beat_schedule", "task_status", "worker_health",
+                        "recent_failures", "queue_lengths", "help",
+                    ],
+                    "description": (
+                        "beat_schedule: list all periodic tasks with intervals and last run. "
+                        "task_status: check a specific Celery task by ID. "
+                        "worker_health: active workers, queues, concurrency. "
+                        "recent_failures: failed tasks with error messages. "
+                        "queue_lengths: current depth of all queues. "
+                        "help: list all actions."
+                    ),
+                },
+                "task_id": {
+                    "type": "string",
+                    "description": "Celery task ID (for task_status action)",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max results to return (default 20)",
+                },
+                "queue": {
+                    "type": "string",
+                    "description": "Filter by queue name (for recent_failures)",
+                },
+            },
+            "required": ["action"],
+        },
+    },
+
+    # ── Session 1100: Narrative Tool — Narrative drift & cultural analysis ────
+    {
+        "type": "function",
+        "name": "narrative_tool",
+        "description": (
+            "Access narrative drift analysis, trend break detection, and cultural "
+            "impact assessments. Browse tracked narratives, view shifts and evidence, "
+            "check alerts. Use when Chris asks about narratives, cultural shifts, "
+            "trend breaks, or second-order effects of world events."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "narratives", "shifts", "evidence",
+                        "alerts", "help",
+                    ],
+                    "description": (
+                        "narratives: list tracked narratives with status. "
+                        "shifts: recent narrative shifts/drift detections. "
+                        "evidence: evidence items for a narrative. "
+                        "alerts: narrative alerts sent to Discord. "
+                        "help: list all actions."
+                    ),
+                },
+                "narrative_id": {
+                    "type": "string",
+                    "description": "Narrative UUID (for evidence action)",
+                },
+                "category": {
+                    "type": "string",
+                    "enum": [
+                        "politics", "markets", "tech", "culture",
+                        "geopolitics", "crypto", "climate", "health",
+                    ],
+                    "description": "Filter narratives by category",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max results (default 10)",
                 },
             },
             "required": ["action"],

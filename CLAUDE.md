@@ -21,7 +21,7 @@ open http://localhost:8000/ai-studio/
 |-----------|-------|---------|
 | **Agents** | 218 | 82 AGENT_MAP (72 enabled, 8 rerouted, 2 blocked) + ~139 DB persona agents (via DynamicPersonaAgent), 26 provenance-tracked |
 | **Spiders** | 79 | 74 working, 5 need API keys |
-| **PA Tools** | 104 | GPT-5.2 function calling, 59 tool handlers, 41 schemas, 8 enrichment services |
+| **PA Tools** | 120+ | GPT-5.2 function calling, 120+ tool handlers, 75+ schemas, 8 enrichment services |
 | **LLM Providers** | 6 | OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini |
 | **Database Models** | 397+ | PostgreSQL + pgvector |
 | **Celery Tasks** | 269 | 7 workers, dedicated PA queue |

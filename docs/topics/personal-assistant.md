@@ -1,12 +1,12 @@
 # Personal Assistant (PA) System
 
-The PA is the platform's conversational interface — a single `UnifiedPAEntrypoint` that handles all user queries. **Session 1036: Replaced keyword routing with GPT-5.2 function calling.** The LLM now sees all 50+ tool schemas and decides what to call, enabling multi-tool turns and natural follow-ups. Session 1035: Added DB timeout resilience, disjoint agent taxonomy, tool call metadata capture.
+The PA is the platform's conversational interface — a single `UnifiedPAEntrypoint` that handles all user queries. **Session 1036: Replaced keyword routing with GPT-5.2 function calling.** The LLM now sees 75+ tool schemas (Session 1100: expanded from 50+) and decides what to call, enabling multi-tool turns and natural follow-ups. Session 1100: `run_agent` expanded to 77 agents across 12 domains; added `cockpit_tool` (Celery ops) and `narrative_tool` (drift analysis); expanded intelligence/work/content/governance gateways.
 
 ## Architecture
 
 Three files handle everything:
 - `core/services/unified_pa_entrypoint.py` — Agentic loop, context building, enrichment orchestration
-- `core/services/tool_dispatcher.py` — 53 tool handlers with guaranteed structured responses (ToolResult)
+- `core/services/tool_dispatcher.py` — 120+ tool handlers with guaranteed structured responses (ToolResult)
 - `core/services/pa_tool_schemas.py` — OpenAI function-calling schemas for all tools + enrichment map
 
 ### Flow (Function Calling — Active)
@@ -14,7 +14,7 @@ Three files handle everything:
 ```
 message -> _build_context() [profile, knowledge, stats, docs — each with 5s timeout]
         -> _build_messages_array() [system prompt + conversation history + user msg]
-        -> GPT-5.2 Responses API with 50+ tool schemas
+        -> GPT-5.2 Responses API with 75+ tool schemas
            -> if tool_call(s): execute via ToolDispatcher -> feed result back -> loop (max 5 iterations)
            -> if text response: done
         -> enrichment (intent inferred from tool names via TOOL_TO_INTENT_MAP)
