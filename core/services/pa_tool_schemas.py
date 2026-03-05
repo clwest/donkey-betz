@@ -1932,21 +1932,30 @@ PA_TOOL_SCHEMAS = [
         "description": (
             "Production operations surface: check deployment version/build info, "
             "monitor SLO compliance (task success rates, timeout rates, publish conversion), "
-            "and view top failure signatures. Use when asked about SLOs, ops health, "
-            "deployment version, what's failing, or production reliability."
+            "view top failure signatures, read agent timeout config/overrides, and run "
+            "verification proof bundles (config + audit in one call). Use when asked about "
+            "SLOs, ops health, deployment version, what's failing, production reliability, "
+            "agent timeout config, timeout overrides, or verification/audit of agent settings."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["version", "slo_status", "failure_signatures", "tool_migration_report"],
+                    "enum": [
+                        "version", "slo_status", "failure_signatures",
+                        "tool_migration_report", "timeout_config_read", "proof_bundle",
+                    ],
                     "description": (
                         "version: build/deploy metadata (git SHA, branch, Railway deployment, uptime). "
                         "slo_status: compute 8 SLOs with breach detection (task success, agent timeouts, "
                         "deliberation failures, publish conversion, PA tool success, HTTP errors). "
                         "failure_signatures: top error signatures by frequency with samples. "
-                        "tool_migration_report: legacy vs gateway tool usage, deprecation readiness."
+                        "tool_migration_report: legacy vs gateway tool usage, deprecation readiness. "
+                        "timeout_config_read: read agent wall-clock timeout config (code defaults + DB overrides). "
+                        "proof_bundle: verification mode — returns timeout config + agent control audit log "
+                        "+ initiative details in ONE read-only call. Use when user asks to verify or audit "
+                        "agent config, timeout overrides, or initiative state."
                     ),
                 },
                 "window": {
@@ -1965,6 +1974,15 @@ PA_TOOL_SCHEMAS = [
                 "limit": {
                     "type": "integer",
                     "description": "For failure_signatures: max signatures to return (default 10, max 25).",
+                },
+                "agent_names": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "For timeout_config_read/proof_bundle: agent names to query (e.g. ['ResearchAgent', 'CustomerResearchAgent']). Omit for all.",
+                },
+                "initiative_id": {
+                    "type": "string",
+                    "description": "For proof_bundle: UUID of initiative to include in audit (optional).",
                 },
             },
             "required": ["action"],

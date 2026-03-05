@@ -814,6 +814,7 @@ class UnifiedPAEntrypoint:
             'scheduled_tasks_tool', 'db_health_tool', 'http_smoke_test',
             'cost_telemetry_tool', 'check_resource_budget',
             'get_body_vitals', 'get_system_alerts',
+            'agent_control_tool', 'autopilot_tool',  # Session 1098: audit/config/timeout queries
         },
         'content': {
             'content_tool', 'content_writer_agent', 'content_strategy_agent',
@@ -839,7 +840,9 @@ class UnifiedPAEntrypoint:
         ('governance', ['governance', 'inbox', 'attention', 'pending decision',
                         'approve', 'reject', 'ignore', 'clear noise']),
         ('ops', ['ops', 'slo', 'celery', 'workers', 'queue', 'tasks running',
-                 'costs', 'spend', 'budget', 'cost spike']),
+                 'costs', 'spend', 'budget', 'cost spike',
+                 'timeout', 'override', 'config', 'audit', 'proof bundle',
+                 'verification', 'scan', 'security', 'compliance']),
         ('media', ['video', 'image', 'audio', 'obs', 'davinci', 'render',
                    'media', 'upload', 'edit video', 'edit image']),
         ('content', ['blog', 'article', 'write', 'draft', 'publish',

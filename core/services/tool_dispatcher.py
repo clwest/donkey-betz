@@ -10866,6 +10866,19 @@ RESEARCH DATA:
         elif action == 'tool_migration_report':
             window = payload.get('window', '7d')
             return self._ops_tool_migration_report(window, trace_id)
+
+        elif action == 'timeout_config_read':
+            # Session 1098: Read agent wall-clock timeout config (code defaults + DB overrides)
+            agent_names = payload.get('agent_names', [])
+            return self._ops_timeout_config_read(agent_names, trace_id)
+
+        elif action == 'proof_bundle':
+            # Session 1098: Verification mode — returns timeout config + audit log
+            # for specified agents in a single call. Read-only, no mutations.
+            agent_names = payload.get('agent_names', [])
+            initiative_id = payload.get('initiative_id')
+            return self._ops_proof_bundle(agent_names, initiative_id, trace_id)
+
         else:
             return {'error': f'Unknown ops_tool action: {action}'}
 
@@ -13256,6 +13269,132 @@ RESEARCH DATA:
             }
 
         return {'error': f'Unknown action: {action}'}
+
+    def _ops_timeout_config_read(self, agent_names: list, trace_id: str) -> Dict[str, Any]:
+        """
+        Session 1098: Read agent wall-clock timeout config.
+        Returns code defaults from _AGENT_TIMEOUT_SECONDS + any DB overrides
+        from SystemConfiguration(key='agent_timeout_override:{name}').
+        Strictly read-only.
+        """
+        from core.models.system import SystemConfiguration
+
+        # Code defaults from tasks.py
+        code_defaults = {
+            'AudioAgent': 300, 'ImageAgent': 300, 'VideoAgent': 600,
+            'ThreeDAgent': 300, 'ImageEditingAgent': 300, 'VideoEditingAgent': 600,
+            'TalkingCharacterAgent': 600, 'ResolveAgent': 600,
+            'ResearchAgent': 1500, 'SystemIntelligenceAgent': 600,
+            'MarketingStrategyAgent': 600, 'CustomerResearchAgent': 1500,
+            'CharacterTrainingAgent': 600, 'ContentWriterAgent': 600,
+            'CompetitorAnalysisAgent': 600, 'BrandStrategyAgent': 600,
+            'ContentStrategyAgent': 600, 'WhaleWatcherAgent': 1500,
+            'StockAuditCoordinator': 900, 'WorkflowOrchestrationAgent': 900,
+        }
+        global_default = 1200  # 20 min fallback
+
+        # Filter to requested agents (or show all if none specified)
+        if agent_names:
+            names = agent_names
+        else:
+            names = sorted(code_defaults.keys())
+
+        # DB overrides
+        override_keys = [f'agent_timeout_override:{n}' for n in names]
+        db_overrides = dict(
+            SystemConfiguration.objects.filter(
+                key__in=override_keys,
+            ).values_list('key', 'value')
+        )
+
+        agents = []
+        for name in names:
+            override_key = f'agent_timeout_override:{name}'
+            db_val = db_overrides.get(override_key)
+            code_val = code_defaults.get(name, global_default)
+            effective = int(db_val) if db_val is not None else code_val
+            agents.append({
+                'agent_name': name,
+                'code_default_seconds': code_val,
+                'db_override_seconds': int(db_val) if db_val is not None else None,
+                'effective_seconds': effective,
+                'source': 'db_override' if db_val is not None else 'code_default',
+            })
+
+        return {
+            'action': 'timeout_config_read',
+            'agents': agents,
+            'global_default_seconds': global_default,
+            'watchdog_threshold_minutes': 35,
+        }
+
+    def _ops_proof_bundle(self, agent_names: list, initiative_id: str, trace_id: str) -> Dict[str, Any]:
+        """
+        Session 1098: Verification proof bundle — returns timeout config +
+        agent control audit + initiative audit in one read-only call.
+        Designed for "verification mode" where the user asks to confirm
+        what changed and what's configured.
+        """
+        # Part A: Timeout config
+        timeout_config = self._ops_timeout_config_read(agent_names, trace_id)
+
+        # Part B: Agent control audit log (block/unblock history)
+        audit_entries = []
+        try:
+            from core.models_unified_system import AgentControlEntry
+            qs = AgentControlEntry.objects.all().order_by('-updated_at')
+            if agent_names:
+                qs = qs.filter(agent_name__in=agent_names)
+            entries = list(qs[:30].values(
+                'agent_name', 'status', 'reason', 'blocked_at',
+                'blocked_by', 'ttl_hours', 'updated_at',
+            ))
+            for e in entries:
+                for k in ('blocked_at', 'updated_at'):
+                    if e.get(k):
+                        e[k] = e[k].isoformat()
+            audit_entries = entries
+        except Exception as exc:
+            audit_entries = [{'error': str(exc)}]
+
+        # Part C: Initiative audit (if initiative_id provided)
+        initiative_info = None
+        if initiative_id:
+            try:
+                from core.models import Initiative
+                from core.models_document_registry import InitiativeStage
+                ini = Initiative.objects.filter(id=initiative_id).values(
+                    'id', 'name', 'status', 'current_stage', 'created_at', 'updated_at',
+                ).first()
+                if ini:
+                    for k in ('created_at', 'updated_at'):
+                        if ini.get(k):
+                            ini[k] = ini[k].isoformat()
+                    ini['id'] = str(ini['id'])
+                    stages = list(InitiativeStage.objects.filter(
+                        initiative_id=initiative_id,
+                    ).values(
+                        'stage_number', 'stage_type', 'status', 'created_at',
+                    ).order_by('stage_number'))
+                    for s in stages:
+                        if s.get('created_at'):
+                            s['created_at'] = s['created_at'].isoformat()
+                    ini['stages'] = stages
+                    initiative_info = ini
+                else:
+                    initiative_info = {'error': f'Initiative {initiative_id} not found'}
+            except Exception as exc:
+                initiative_info = {'error': str(exc)}
+
+        return {
+            'action': 'proof_bundle',
+            'timeout_config': timeout_config['agents'],
+            'global_default_seconds': timeout_config['global_default_seconds'],
+            'watchdog_threshold_minutes': timeout_config['watchdog_threshold_minutes'],
+            'agent_control_audit': audit_entries,
+            'initiative': initiative_info,
+            'note': 'Read-only verification bundle. No mutations performed.',
+        }
 
     def _ops_tool_migration_report(self, window: str, trace_id: str) -> Dict[str, Any]:
         """
