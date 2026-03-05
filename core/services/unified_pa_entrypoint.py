@@ -598,10 +598,13 @@ class UnifiedPAEntrypoint:
                     # Session 1035: legal_assistance — agent does spider queries + OpenAI LLM calls
                     # Session 1035: agent_execution — 60s for agents that do LLM calls (30s default too tight)
                     # Session 1076: studio — external API calls (RunwayML, ElevenLabs) take 40-90s
+                    # Session 1098: system_health_check/error_summary — security/compliance scans
+                    #   load 200+ deliverables with regex, easily exceeds 30s default
                     if intent in ('research_and_create', 'legal_assistance',
                                    'image_creation', 'video_creation', 'studio'):
                         tool_timeout = 120
-                    elif intent == 'agent_execution':
+                    elif intent in ('agent_execution', 'system_health_check',
+                                     'error_summary'):
                         tool_timeout = 60
                     else:
                         tool_timeout = None
@@ -1160,7 +1163,9 @@ class UnifiedPAEntrypoint:
                                        'video_editing_agent', 'studio_tool',
                                        'talking_character_agent', 'http_smoke_test'):
                     tool_timeout = 120
-                elif actual_tool_name in ('universal_agent_tool',) or actual_tool_name.endswith('_agent'):
+                elif actual_tool_name in ('universal_agent_tool', 'ops_tool') or actual_tool_name.endswith('_agent'):
+                    # Session 1098: ops_tool added — security/compliance scans
+                    # load 200+ records with regex, need 60s not 30s default
                     tool_timeout = 60
                 else:
                     tool_timeout = None
