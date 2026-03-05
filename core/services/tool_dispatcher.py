@@ -10740,15 +10740,18 @@ RESEARCH DATA:
             try:
                 from core.models_unified_system import AgentConversation
                 limit = min(int(payload.get('limit', 10)), 30)
-                convs = AgentConversation.objects.order_by('-started_at')[:limit]
+                convs = AgentConversation.objects.select_related('initiator').prefetch_related('participants').order_by('-started_at')[:limit]
                 return {
                     'gateway': 'work_tool', 'action': action,
                     'count': len(convs),
                     'conversations': [{
                         'id': str(c.id),
-                        'topic': c.topic if hasattr(c, 'topic') else str(c),
-                        'participants': c.participants if hasattr(c, 'participants') else [],
-                        'conclusion': (c.conclusion or '')[:200] if hasattr(c, 'conclusion') else '',
+                        'topic': c.topic,
+                        'initiator': c.initiator.name if c.initiator else 'unknown',
+                        'participants': [p.name for p in c.participants.all()[:5]],
+                        'status': c.status,
+                        'message_count': c.message_count,
+                        'conclusion': (c.conclusion or '')[:200],
                         'started_at': c.started_at.isoformat() if c.started_at else None,
                     } for c in convs],
                 }
@@ -11047,7 +11050,7 @@ RESEARCH DATA:
             try:
                 from core.models_diagnostic_pipeline import FailureSignature
                 limit = min(int(payload.get('limit', 10)), 30)
-                sigs = FailureSignature.objects.order_by('-last_seen')[:limit]
+                sigs = FailureSignature.objects.order_by('-last_seen_at')[:limit]
                 return {
                     'gateway': 'governance_tool', 'action': action,
                     'count': len(sigs),
@@ -11057,7 +11060,7 @@ RESEARCH DATA:
                         'signature_hash': s.signature_hash[:16] if hasattr(s, 'signature_hash') else '',
                         'occurrence_count': s.occurrence_count if hasattr(s, 'occurrence_count') else 0,
                         'description': (s.description or '')[:200] if hasattr(s, 'description') else '',
-                        'last_seen': s.last_seen.isoformat() if hasattr(s, 'last_seen') and s.last_seen else None,
+                        'last_seen_at': s.last_seen_at.isoformat() if s.last_seen_at else None,
                     } for s in sigs],
                 }
             except Exception as e:
