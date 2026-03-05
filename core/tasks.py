@@ -428,11 +428,11 @@ def reap_zombie_work(
     pilot_stale_days: int = 7,
 ):
     """
-    Session 1075: Close zombie deliberation sessions and stale pilot executions.
+    Session 1075: Close zombie deliberation sessions, stale pilots, and zero-message conversations.
 
-    Deliberation sessions that are 'active' with 0 turns after the threshold
-    are clearly stalled — mark them 'failed'. Pilot executions stuck in
-    'running' for over a week are completed as 'partial'.
+    - Deliberation sessions 'active' with 0 turns after threshold → 'failed' (ZOMBIE_REAPED)
+    - Pilot executions stuck 'running' > 7 days → 'completed' (partial)
+    - Agent conversations 'active'/'pending' with 0 messages > 30 min → 'concluded'
 
     Args:
         deliberation_stale_minutes: Close active sessions older than this (default 60)
@@ -479,7 +479,27 @@ def reap_zombie_work(
     except Exception as e:
         logger.error(f"🧹 [ZOMBIE-REAPER] Pilot cleanup error: {e}")
 
-    total = stats['deliberations_reaped'] + stats['pilots_reaped']
+    # --- Agent conversations with 0 messages ---
+    try:
+        from core.models_unified_system import AgentConversation
+        conv_cutoff = now - timedelta(minutes=30)
+        zombie_convs = AgentConversation.objects.filter(
+            status__in=['active', 'pending'],
+            message_count=0,
+            started_at__lt=conv_cutoff,
+        )
+        count = zombie_convs.update(
+            status='concluded',
+            conclusion='[Auto-closed] Zero messages after 30+ minutes — zombie conversation reaped.',
+            ended_at=now,
+        )
+        stats['conversations_reaped'] = count
+        if count:
+            logger.info(f"🧹 [ZOMBIE-REAPER] Closed {count} zero-message agent conversations")
+    except Exception as e:
+        logger.error(f"🧹 [ZOMBIE-REAPER] Conversation cleanup error: {e}")
+
+    total = sum(stats.values())
     if total == 0:
         logger.info("🧹 [ZOMBIE-REAPER] No zombies found")
     return stats
