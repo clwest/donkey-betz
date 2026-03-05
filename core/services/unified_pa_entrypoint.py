@@ -806,6 +806,7 @@ class UnifiedPAEntrypoint:
             'cost_telemetry_tool', 'check_resource_budget',
             'intelligence_tool', 'ml_analysis',
             'cockpit_tool',  # Session 1100
+            'proactive_tool', 'self_awareness_tool',  # Session 1035-W2
         },
         'governance': {
             'governance_tool', 'status_snapshot_tool', 'autopilot_tool',
@@ -824,6 +825,7 @@ class UnifiedPAEntrypoint:
             'discord_tool', 'mobile_tool', 'vip_invite_tool',
             'learning_tool',
             'cockpit_tool',  # Session 1100
+            'audit_tool', 'self_awareness_tool',  # Session 1035-W2
         },
         'content': {
             'content_tool', 'content_writer_agent', 'content_strategy_agent',
@@ -831,6 +833,8 @@ class UnifiedPAEntrypoint:
             'intelligence_tool', 'legal_doc_drafter_agent',
             'persona_tool', 'brainstorm_tool', 'competitor_comparison_tool',
             'strategic_review',
+            'calendar_tool', 'podcast_tool', 'campaign_tool',  # Session 1035-W2
+            'distribution_tool', 'conceptforge_tool',  # Session 1035-W2
         },
         'media': {
             'media_tool', 'davinci_tool', 'obs_tool', 'video_history_tool',
@@ -846,6 +850,7 @@ class UnifiedPAEntrypoint:
             'opportunity_manager_tool', 'revenue_tracker_tool',
             'persona_tool', 'workflow_run_tool',
             'workflow_orchestration_agent',
+            'profile_tool',  # Session 1035-W2
         },
         'research': {
             'web_search', 'intelligence_tool', 'research_and_create_tool',
@@ -855,6 +860,7 @@ class UnifiedPAEntrypoint:
             'competitor_comparison_tool', 'strategic_review',
             'create_project_from_research',
             'narrative_tool',  # Session 1100
+            'experiment_tool', 'ats_tool',  # Session 1035-W2
         },
     }
 
