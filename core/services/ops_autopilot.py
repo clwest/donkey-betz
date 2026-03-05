@@ -297,13 +297,13 @@ class AutopilotConfig:
 
     # Policy 10: Budget controller
     BUDGET_DAILY_CAP_USD = 100.0          # Global daily spend cap
-    BUDGET_HOURLY_CAP_USD = 3.0           # Global hourly spend cap
+    BUDGET_HOURLY_CAP_USD = 5.0           # Session 1098: raised from 3.0 — was triggering at 108%
     BUDGET_SOFT_LIMIT_PCT = 0.7           # Trigger downgrade at 70% of cap
     BUDGET_HARD_LIMIT_PCT = 0.95          # Hard freeze at 95% of cap
     BUDGET_CHECK_INTERVAL_MINUTES = 10    # Check spend every N minutes
     BUDGET_DOWNGRADE_MODEL = 'gpt-5-mini' # Cheap model for downgrade
     BUDGET_CRITICAL_PURPOSES = {          # Never freeze these
-        'governance', 'auth', 'incident_response',
+        'governance', 'auth', 'incident_response', 'pa_chat',
     }
     TUNING_LOOKBACK_DAYS = 7              # Analyse this much history
     TUNING_ROLLBACK_RATE_THRESHOLD = 0.3  # >30% rollbacks → go more conservative
@@ -6037,7 +6037,8 @@ class ROIEnforcer:
 
     # task_types that are always considered productive (no throttle)
     PROTECTED_PURPOSES = frozenset({
-        'pa_chat', 'governance', 'auth', 'incident_response',
+        'pa_chat', 'personalassistant', 'unifiedpa',
+        'governance', 'auth', 'incident_response',
     })
 
     # Cooldown tiers: ROI score → cooldown minutes between calls
@@ -6115,6 +6116,25 @@ class ROIEnforcer:
             for c in content_outcomes:
                 if c['agent_name']:
                     content_map[c['agent_name']] = c['published']
+        except Exception:
+            pass
+
+        # Session 1098: ImpactEvent outcomes — captures PA tool completions
+        # and other impact-tracked events (wager profit, revenue, content actions)
+        impact_map = {}
+        try:
+            from core.models_impact_events import ImpactEvent
+            impact_outcomes = list(
+                ImpactEvent.objects.filter(
+                    created_at__gte=window_start,
+                    agent_name__in=agent_names,
+                ).values('agent_name').annotate(
+                    impacts=Count('id'),
+                )
+            )
+            for ie in impact_outcomes:
+                if ie['agent_name']:
+                    impact_map[ie['agent_name']] = ie['impacts']
         except Exception:
             pass
 
@@ -6214,7 +6234,8 @@ class ROIEnforcer:
 
             outcomes = outcome_map.get(name, 0)
             content = content_map.get(name, 0)
-            combined_outcomes = outcomes + content
+            impacts = impact_map.get(name, 0)
+            combined_outcomes = outcomes + content + impacts
             total_outcomes += combined_outcomes
 
             # ROI = outcome-to-call ratio (0..1+)
@@ -6224,6 +6245,7 @@ class ROIEnforcer:
             # quality_weight combines:
             # - deliverable quality score (if available)
             # - content pipeline quality (if this agent produces content)
+            # - impact event history (PA tool completions, wager profits, etc.)
             # - execution success rate as fallback
             quality_weight = 0.5  # neutral default
             if name in deliverable_quality:
@@ -6231,6 +6253,9 @@ class ROIEnforcer:
             elif content > 0:
                 # Content-producing agent — use pipeline quality
                 quality_weight = quality_map.get('_content_avg', 0.5)
+            elif impacts > 0:
+                # Impact-tracked agent (e.g. PA) — quality = impact rate
+                quality_weight = min(impacts / max(calls, 1), 1.0)
             elif outcomes > 0:
                 # Non-content agent — quality = success rate
                 quality_weight = min(outcomes / max(calls, 1), 1.0)
@@ -6245,6 +6270,7 @@ class ROIEnforcer:
                 'outcome_detail': {
                     'executions': outcomes,
                     'content': content,
+                    'impacts': impacts,
                 },
                 'roi': round(roi, 4),
                 'quality_weight': round(quality_weight, 3),

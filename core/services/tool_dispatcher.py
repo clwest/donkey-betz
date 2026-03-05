@@ -349,6 +349,12 @@ class ToolDispatcher:
 
             logger.info(f"[{trace_id}] Tool {tool_name} completed in {latency_ms}ms")
 
+            # Session 1098: Emit ImpactEvent for PA tool completions.
+            # This gives PersonalAssistant measurable outcomes for ROI
+            # attribution — without this, PA shows 0 outcomes and gets
+            # flagged as low-QROI despite being user-facing.
+            self._emit_pa_impact_event(tool_name, payload, user_id, trace_id)
+
             return ToolResult(
                 ok=True,
                 tool=tool_name,
@@ -384,6 +390,63 @@ class ToolDispatcher:
                 trace_id=trace_id,
                 result=None
             )
+
+    # ── PA Impact Event Emission ───────────────────────────────────────────
+    # Session 1098: Record successful PA tool calls as ImpactEvents so the
+    # ROI engine can attribute outcomes to PersonalAssistant.
+
+    # Tools that represent meaningful user-facing outcomes (not internal plumbing)
+    _IMPACT_WORTHY_TOOLS = frozenset({
+        # Gateway tools — each successful call is a user-requested action
+        'ops_tool', 'work_tool', 'content_tool',
+        'governance_tool', 'intelligence_tool', 'studio_tool',
+        # Agent dispatch tools — user-requested creative/research work
+        'image_generation_agent', 'video_generation_agent',
+        'audio_generation_agent', 'resolve_agent',
+        'research_agent', 'customer_research_agent',
+        'run_agent',
+    })
+
+    # Map tool names to ImpactEvent desk
+    _TOOL_DESK_MAP = {
+        'intelligence_tool': 'research',
+        'content_tool': 'content',
+        'studio_tool': 'content',
+        'work_tool': 'career',
+        'ops_tool': 'general',
+        'governance_tool': 'general',
+    }
+
+    def _emit_pa_impact_event(
+        self, tool_name: str, payload: dict,
+        user_id: Optional[int], trace_id: str,
+    ):
+        """Emit an ImpactEvent for a successful PA tool completion."""
+        if tool_name not in self._IMPACT_WORTHY_TOOLS:
+            return
+        try:
+            from core.models_impact_events import ImpactEvent
+            import uuid
+
+            action = payload.get('action', '') if isinstance(payload, dict) else ''
+            desk = self._TOOL_DESK_MAP.get(tool_name, 'general')
+
+            ImpactEvent.objects.create(
+                impact_type='content_action',
+                desk=desk,
+                value_usd=0,
+                impact_points=ImpactEvent.points_for_type('content_action'),
+                agent_name='PersonalAssistant',
+                source_object_type=f'pa_tool:{tool_name}',
+                trace_id=uuid.UUID(trace_id) if trace_id and len(trace_id) == 36 else None,
+                user_id=user_id,
+                metadata={
+                    'tool_name': tool_name,
+                    'action': action,
+                },
+            )
+        except Exception as e:
+            logger.debug(f"[PA ImpactEvent] Skipped for {tool_name}: {e}")
 
     def execute_sync(
         self,
@@ -11867,7 +11930,8 @@ RESEARCH DATA:
                         f'${a["cost"]:.4f} / {a["calls"]} calls → '
                         f'{a["outcomes"]} outcomes '
                         f'(exec: {detail.get("executions", 0)}, '
-                        f'content: {detail.get("content", 0)})'
+                        f'content: {detail.get("content", 0)}, '
+                        f'impacts: {detail.get("impacts", 0)})'
                     )
 
             if report.get('throttle_recommendations'):
