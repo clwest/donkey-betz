@@ -2311,18 +2311,64 @@ def execute_initiative_stage_task(
     )
 
     try:
-        # Execute the agent task
+        # Execute the agent task with wall-clock timeout guard
+        # Session 1075: Same pattern as execute_agent_task — prevents 35min watchdog hangs
         router = AgentRouter()
-        result = router.route(
-            agent_name=agent_name,
-            task=task,
-            context={
-                'source': 'initiative_stage_task',
-                'initiative_id': initiative_id,
-                'stage_num': stage_num,
-                **context
-            }
-        )
+        from concurrent.futures import ThreadPoolExecutor as _TPE2, TimeoutError as _FuturesTimeout2
+
+        _STAGE_TIMEOUTS = {
+            'CompetitorAnalysisAgent': 600,
+            'ContentWriterAgent': 600,
+            'ContentDistributionAgent': 300,
+            'ResearchAgent': 900,
+            'CustomerResearchAgent': 900,
+            'TrendAnalysisAgent': 600,
+        }
+        _stage_timeout = _STAGE_TIMEOUTS.get(agent_name, 1200)
+
+        def _run_stage_route():
+            from django.db import close_old_connections
+            close_old_connections()
+            try:
+                return router.route(
+                    agent_name=agent_name,
+                    task=task,
+                    context={
+                        'source': 'initiative_stage_task',
+                        'initiative_id': initiative_id,
+                        'stage_num': stage_num,
+                        **context
+                    }
+                )
+            finally:
+                close_old_connections()
+
+        try:
+            _pool2 = _TPE2(max_workers=1)
+            _future2 = _pool2.submit(_run_stage_route)
+            try:
+                result = _future2.result(timeout=_stage_timeout)
+            finally:
+                _pool2.shutdown(wait=False)
+        except _FuturesTimeout2:
+            _elapsed = time.time() - execution_start
+            logger.error(
+                f"[execute_initiative_stage_task] WALL-CLOCK TIMEOUT: {agent_name} exceeded "
+                f"{_stage_timeout}s limit for Initiative {initiative_id[:8]} Stage {stage_num}"
+            )
+            _record_timeout_signature(
+                agent_name=agent_name,
+                timeout_source='initiative_wall_clock',
+                elapsed_seconds=_elapsed,
+                task_name='core.tasks.execute_initiative_stage_task',
+            )
+            from core.agents.base_agent import AgentResult
+            result = AgentResult(
+                success=False,
+                error=f'{agent_name} exceeded {_stage_timeout}s wall-clock timeout (initiative stage task)',
+                agent_name=agent_name,
+                execution_time_ms=int(_elapsed * 1000),
+            )
 
         execution_time_ms = int((time.time() - execution_start) * 1000)
 
