@@ -452,7 +452,12 @@ def reap_zombie_work(
             status='active',
             created_at__lt=cutoff,
         )
-        count = zombies.update(status='failed')
+        count = zombies.update(
+            status='failed',
+            failure_reason_code='ZOMBIE_REAPED',
+            failure_detail=f'Stale active session reaped after {deliberation_stale_minutes}min',
+            completed_at=now,
+        )
         stats['deliberations_reaped'] = count
         if count:
             logger.info(f"🧹 [ZOMBIE-REAPER] Closed {count} stalled deliberation sessions")
@@ -1629,7 +1634,7 @@ def execute_agent_task(
         context = auto_repair_context(context)
     else:
         context = context or {}
-    conversation_id = context.get('conversation_id', 'unknown')
+    conversation_id = str(context.get('conversation_id', 'unknown'))
     execution_start = time.time()
 
     # Session 1031: Hard-block agents that can't do useful work on Railway
@@ -36645,7 +36650,10 @@ def process_pa_chat_task(self, user_id, message, context=None, generate_audio=Fa
     except Exception as persist_err:
         logger.warning(f"Failed to persist PA conversation: {persist_err}")
 
-    return {
+    # Session 1076+: Sanitize entire return dict — tool_runs may contain
+    # non-JSON-serializable objects (ManyRelatedManager, UUID, ProjectWorkspace)
+    # that cause EncodeError in Celery's JSON serializer.
+    raw_return = {
         'success': True,
         'content': response.content,
         'trace_id': response.trace_id,
@@ -36659,6 +36667,7 @@ def process_pa_chat_task(self, user_id, message, context=None, generate_audio=Fa
         'conversation_id': conversation_id,
         'source': source,
     }
+    return json.loads(json.dumps(raw_return, default=str))
 
 
 # =============================================================================
