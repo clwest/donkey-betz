@@ -2598,12 +2598,14 @@ def _run_spider_adapter(spider, spider_name: str) -> dict:
 
 
 @shared_task(bind=True)
-def run_spider_by_category(self, category: str):
+def run_spider_by_category(self, category: str, execution_mode: str = 'interactive'):
     """
     Run spiders for a specific category.
 
     Session 265 Phase 6: Used by autonomy engine for spider dispatch.
     Session 484: Added SpiderExecutionLog for tracking.
+    Session 1076: execution_mode='scheduled' raises on total failure (visible to SLO/signatures).
+                  execution_mode='interactive' returns error dicts (UI-safe).
     """
     from ai_core.spiders.spider_registry import SpiderRegistry
     from core.models_unified_system import SpiderExecutionLog
@@ -2614,13 +2616,14 @@ def run_spider_by_category(self, category: str):
         spiders = registry.get_spiders_by_category(category)
 
         results = []
+        failures = []
         spider_names = list(spiders.keys())[:3] if isinstance(spiders, dict) else list(spiders)[:3]
         for spider_name in spider_names:  # Limit to 3 spiders per category
             # Session 484: Create execution log
             execution_log = SpiderExecutionLog.start_execution(
                 spider_name=spider_name,
                 category=category,
-                triggered_by='on_demand',
+                triggered_by='scheduled' if execution_mode == 'scheduled' else 'on_demand',
                 celery_task_id=self.request.id if self.request else None
             )
             spider_start_time = time.time()
@@ -2643,6 +2646,7 @@ def run_spider_by_category(self, category: str):
                     )
             except Exception as spider_error:
                 logger.warning(f"Spider {spider_name} failed: {spider_error}")
+                failures.append({'spider': spider_name, 'error': str(spider_error)})
                 # Session 484: Mark error
                 execution_log.complete_error(
                     error_message=str(spider_error),
@@ -2651,11 +2655,23 @@ def run_spider_by_category(self, category: str):
                     duration_seconds=time.time() - spider_start_time
                 )
 
-        logger.info(f"Ran {len(results)} spiders for category {category}")
-        return {'category': category, 'results': results}
+        logger.info(f"Ran {len(results)} spiders for category {category} ({len(failures)} failed)")
 
+        # Session 1076: If ALL spiders failed in scheduled mode, raise so Celery marks FAILURE
+        if execution_mode == 'scheduled' and failures and not results:
+            error_summary = '; '.join(f['error'][:80] for f in failures[:3])
+            raise RuntimeError(
+                f"All {len(failures)} spiders failed for category '{category}': {error_summary}"
+            )
+
+        return {'category': category, 'results': results, 'failures': failures}
+
+    except RuntimeError:
+        raise  # Re-raise the explicit failure from above
     except Exception as e:
         logger.error(f"Spider dispatch failed for {category}: {e}")
+        if execution_mode == 'scheduled':
+            raise  # Fail loudly — visible to SLO/failure signatures
         return {'error': str(e)}
 
 
