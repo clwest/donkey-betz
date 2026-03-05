@@ -213,6 +213,17 @@ export function DeliverablesTab() {
 
   const exportMutation = useMutation({
     mutationFn: ({ id, format }: { id: string; format: string }) => deliverablesApi.export(id, format),
+    onSuccess: (response, { format }) => {
+      const blob = new Blob([response.data])
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${detail?.slug || 'export'}.${format === 'markdown' ? 'md' : format}`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    },
   })
 
   const eventMutation = useMutation({
@@ -369,7 +380,7 @@ export function DeliverablesTab() {
                   {detail.is_template ? 'Is Template' : 'Make Template'}
                 </button>
                 <div className="flex gap-2">
-                  {['markdown', 'html', 'json'].map(fmt => (
+                  {['pdf', 'markdown', 'html', 'json'].map(fmt => (
                     <button
                       key={fmt}
                       onClick={() => exportMutation.mutate({ id: detail.id, format: fmt })}
