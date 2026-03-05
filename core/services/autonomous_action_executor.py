@@ -1571,6 +1571,15 @@ The document should:
                 'message': 'Could not find suitable agents for conversation'
             }
 
+        # Session 1076: Spawn gate — dedup check before creating
+        from core.tasks import _conversation_spawn_allowed
+        full_topic = f"[Auto] {topic}"
+        if not _conversation_spawn_allowed(full_topic, hours=6, log_prefix='[AUTO-ACTION]'):
+            return {
+                'success': False,
+                'message': f'Spawn gate blocked: similar conversation exists for "{topic[:60]}"'
+            }
+
         # Create conversation record using correct AgentConversation fields
         conversation = AgentConversation.objects.create(
             id=uuid.uuid4(),
