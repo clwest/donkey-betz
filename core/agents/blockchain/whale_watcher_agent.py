@@ -441,6 +441,11 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
     # Prevents unbounded hangs when multiple tool calls run sequentially.
     _LLM_TIMEOUT = 60
 
+    def _get_llm_client(self):
+        """Get an OpenAI client with proper connection-level timeout."""
+        from openai import OpenAI
+        return OpenAI(timeout=self._LLM_TIMEOUT)
+
     def _monitor_large_transfers(
         self,
         token: str,
@@ -449,9 +454,7 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
         exclude_contracts: bool = False
     ) -> Dict[str, Any]:
         """Monitor for large transfers."""
-        from openai import OpenAI
-
-        client = OpenAI()
+        client = self._get_llm_client()
 
         # Get token-specific threshold
         token_threshold = WHALE_THRESHOLDS.get(token.upper(), WHALE_THRESHOLDS['default'])
@@ -511,9 +514,7 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
         include_holdings: bool = True
     ) -> Dict[str, Any]:
         """Deep analysis of a whale wallet."""
-        from openai import OpenAI
-
-        client = OpenAI()
+        client = self._get_llm_client()
 
         prompt = f"""Analyze this whale wallet address:
 
@@ -565,9 +566,7 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
         time_window_hours: int = 24
     ) -> Dict[str, Any]:
         """Track exchange deposit/withdrawal flows."""
-        from openai import OpenAI
-
-        client = OpenAI()
+        client = self._get_llm_client()
 
         prompt = f"""Analyze exchange flows for {token}:
 
@@ -628,9 +627,7 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
         time_window_days: int = 7
     ) -> Dict[str, Any]:
         """Detect accumulation or distribution patterns."""
-        from openai import OpenAI
-
-        client = OpenAI()
+        client = self._get_llm_client()
 
         target = address if address else "top holders"
 
