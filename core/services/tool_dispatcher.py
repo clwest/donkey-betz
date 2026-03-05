@@ -215,6 +215,7 @@ class ToolDispatcher:
         # Training & Security agents
         self.register("trained_creation_agent", self._handle_agent_tool)
         self.register("memory_isolation_agent", self._handle_agent_tool)
+        self.register("security_agent", self._handle_agent_tool)
 
         # ML Pipeline tools
         self.register("opportunity_manager_tool", self._handle_opportunity_manager)
@@ -679,6 +680,7 @@ class ToolDispatcher:
             # ── Training & Security ──
             'trained_creation_agent': 'TrainedCreationAgent',
             'memory_isolation_agent': 'MemoryIsolationAgent',
+            'security_agent': 'MemoryIsolationAgent',
             # ── Legal ──
             'legal_doc_drafter_agent': 'LegalDocDrafterAgent',
         }
@@ -10942,7 +10944,7 @@ RESEARCH DATA:
         # ── Session 1100: ML predictions ──
         if action == 'ml_predictions':
             try:
-                from core.models import MLPrediction
+                from sports.models import MLPrediction
                 limit = min(int(payload.get('limit', 10)), 30)
                 preds = MLPrediction.objects.select_related('game', 'predicted_winner').order_by('-created_at')[:limit]
                 total = MLPrediction.objects.count()
@@ -11069,7 +11071,7 @@ RESEARCH DATA:
         # ── Session 1100: Remediation tasks (read-only) ──
         if action == 'remediation_tasks':
             try:
-                from core.models_unified_system import AuditRemediationTask
+                from core.models_audit_tracking import AuditRemediationTask
                 limit = min(int(payload.get('limit', 10)), 30)
                 tasks = AuditRemediationTask.objects.select_related('finding').order_by('-id')[:limit]
                 return {
