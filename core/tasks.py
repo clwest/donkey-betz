@@ -1864,9 +1864,15 @@ def execute_agent_task(
                 close_old_connections()
 
         try:
-            with _TPE(max_workers=1) as _pool:
-                _future = _pool.submit(_run_route)
+            _pool = _TPE(max_workers=1)
+            _future = _pool.submit(_run_route)
+            try:
                 result = _future.result(timeout=_wall_timeout)
+            finally:
+                # Session 1075: shutdown(wait=False) to avoid blocking on hung threads.
+                # The `with` statement calls shutdown(wait=True) which blocks until the
+                # thread finishes — defeating the timeout if the LLM call is truly hung.
+                _pool.shutdown(wait=False)
         except _FuturesTimeout:
             _elapsed = time.time() - execution_start
             logger.error(
