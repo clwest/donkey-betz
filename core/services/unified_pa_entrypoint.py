@@ -846,7 +846,8 @@ class UnifiedPAEntrypoint:
         ('media', ['video', 'image', 'audio', 'obs', 'davinci', 'render',
                    'media', 'upload', 'edit video', 'edit image']),
         ('content', ['blog', 'article', 'write', 'draft', 'publish',
-                     'content pipeline', 'deliberation']),
+                     'content pipeline', 'deliberation',
+                     'pdf', 'export', 'download']),
         ('work', ['initiative', 'dream', 'project', 'pipeline', 'stage',
                   'action item', 'task breakdown']),
     ]

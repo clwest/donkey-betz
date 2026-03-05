@@ -1687,6 +1687,14 @@ class ToolDispatcher:
                 'message': f'Permanently deleted "{title}" from your Deliverables library.',
             }
 
+        elif action == 'export_pdf':
+            obj, disambiguation = _resolve_deliverable(base_qs, payload, 'export_pdf')
+            if disambiguation:
+                return disambiguation
+            from core.services.pdf_export_service import export_deliverable_to_pdf
+            result = export_deliverable_to_pdf(str(obj.id), user_id)
+            return result
+
         elif action == 'stats':
             total = base_qs.count()
             saved = base_qs.filter(is_saved=True).count()
@@ -10827,6 +10835,7 @@ RESEARCH DATA:
             'deliverable_save': 'save',
             'deliverable_create': 'create',
             'deliverable_stats': 'stats',
+            'deliverable_export_pdf': 'export_pdf',
         }
 
         if action in DELIVERABLE_MAP:

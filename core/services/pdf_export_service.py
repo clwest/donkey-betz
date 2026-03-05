@@ -701,6 +701,198 @@ def generate_pdf_from_agent_result(
     )
 
 
+# ── Deliverable PDF Export (reportlab-based, no WeasyPrint needed) ────────────
+
+def generate_deliverable_pdf_bytes(title: str, content: str, content_format: str = 'markdown') -> bytes:
+    """Convert markdown/text deliverable content to PDF bytes using reportlab."""
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.lib.enums import TA_LEFT, TA_CENTER
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=letter,
+        leftMargin=1 * inch, rightMargin=1 * inch,
+        topMargin=1 * inch, bottomMargin=0.75 * inch,
+    )
+
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'DocTitle', parent=styles['Title'], fontName='Helvetica-Bold',
+        fontSize=18, leading=22, spaceAfter=4, alignment=TA_CENTER,
+    )
+    subtitle_style = ParagraphStyle(
+        'DocSubtitle', parent=styles['Normal'], fontName='Helvetica',
+        fontSize=10, leading=12, spaceAfter=16, alignment=TA_CENTER,
+        textColor='#666666',
+    )
+    h1_style = ParagraphStyle(
+        'H1', parent=styles['Heading1'], fontName='Helvetica-Bold',
+        fontSize=16, leading=20, spaceBefore=16, spaceAfter=8,
+    )
+    h2_style = ParagraphStyle(
+        'H2', parent=styles['Heading2'], fontName='Helvetica-Bold',
+        fontSize=14, leading=17, spaceBefore=12, spaceAfter=6,
+    )
+    h3_style = ParagraphStyle(
+        'H3', parent=styles['Heading3'], fontName='Helvetica-Bold',
+        fontSize=12, leading=15, spaceBefore=10, spaceAfter=4,
+    )
+    body_style = ParagraphStyle(
+        'Body', parent=styles['Normal'], fontName='Helvetica',
+        fontSize=11, leading=14, spaceAfter=6, alignment=TA_LEFT,
+    )
+    bullet_style = ParagraphStyle(
+        'Bullet', parent=body_style, leftIndent=24, bulletIndent=12,
+        spaceAfter=3,
+    )
+    code_style = ParagraphStyle(
+        'Code', parent=styles['Normal'], fontName='Courier',
+        fontSize=9, leading=11, spaceAfter=6, leftIndent=18,
+        backColor='#f5f5f5',
+    )
+
+    def _escape(text: str) -> str:
+        return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+    def _apply_inline(text: str) -> str:
+        text = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', text)
+        text = re.sub(r'__(.+?)__', r'<b>\1</b>', text)
+        text = re.sub(r'\*(.+?)\*', r'<i>\1</i>', text)
+        text = re.sub(r'_(.+?)_', r'<i>\1</i>', text)
+        text = re.sub(r'`(.+?)`', r'<font face="Courier" size="9">\1</font>', text)
+        return text
+
+    story = []
+    story.append(Paragraph(_escape(title), title_style))
+    story.append(Paragraph(
+        _escape(f"Generated {datetime.now().strftime('%B %d, %Y at %I:%M %p')}"),
+        subtitle_style,
+    ))
+    story.append(Spacer(1, 8))
+
+    in_code_block = False
+    code_lines: list = []
+
+    for line in content.split('\n'):
+        stripped = line.strip()
+
+        if stripped.startswith('```'):
+            if in_code_block:
+                if code_lines:
+                    code_text = '<br/>'.join(_escape(cl) for cl in code_lines)
+                    story.append(Paragraph(code_text, code_style))
+                code_lines = []
+                in_code_block = False
+            else:
+                in_code_block = True
+            continue
+
+        if in_code_block:
+            code_lines.append(line)
+            continue
+
+        if not stripped:
+            story.append(Spacer(1, 6))
+            continue
+
+        if stripped.startswith('### '):
+            story.append(Paragraph(_escape(stripped[4:]), h3_style))
+        elif stripped.startswith('## '):
+            story.append(Paragraph(_escape(stripped[3:]), h2_style))
+        elif stripped.startswith('# '):
+            story.append(Paragraph(_escape(stripped[2:]), h1_style))
+        elif stripped.startswith('- ') or stripped.startswith('* '):
+            text = _apply_inline(_escape(stripped[2:]))
+            story.append(Paragraph(f'\u2022 {text}', bullet_style))
+        elif re.match(r'^\d+\.\s', stripped):
+            text = _apply_inline(_escape(stripped))
+            story.append(Paragraph(text, bullet_style))
+        elif re.match(r'^-{3,}$|^\*{3,}$|^_{3,}$', stripped):
+            story.append(Spacer(1, 12))
+        else:
+            text = _apply_inline(_escape(stripped))
+            story.append(Paragraph(text, body_style))
+
+    # Flush unclosed code block
+    if code_lines:
+        code_text = '<br/>'.join(_escape(cl) for cl in code_lines)
+        story.append(Paragraph(code_text, code_style))
+
+    def _add_page_number(canvas, doc):
+        canvas.saveState()
+        canvas.setFont('Helvetica', 8)
+        canvas.drawCentredString(letter[0] / 2, 0.5 * inch,
+                                 f"Page {canvas.getPageNumber()}")
+        canvas.restoreState()
+
+    doc.build(story, onFirstPage=_add_page_number, onLaterPages=_add_page_number)
+    buf.seek(0)
+    return buf.getvalue()
+
+
+def export_deliverable_to_pdf(deliverable_id: str, user_id) -> dict:
+    """
+    Full pipeline: load deliverable -> generate PDF -> upload to storage -> record export.
+
+    Returns dict with export_id, file_url, file_size_bytes, title.
+    """
+    import uuid as _uuid
+    from django.contrib.auth import get_user_model
+    from django.core.files.base import ContentFile
+    from django.core.files.storage import default_storage
+    from django.utils.text import slugify
+    from core.models_deliverables import Deliverable, DeliverableExport, DeliverableEvent
+
+    User = get_user_model()
+    deliverable = Deliverable.objects.get(id=deliverable_id)
+
+    user = None
+    if user_id:
+        user = User.objects.filter(id=user_id).first()
+
+    pdf_bytes = generate_deliverable_pdf_bytes(
+        title=deliverable.title,
+        content=deliverable.content or '',
+        content_format=deliverable.content_format or 'markdown',
+    )
+
+    slug = slugify(deliverable.title)[:60]
+    short_id = _uuid.uuid4().hex[:8]
+    storage_path = f'exports/pdf/{slug}-{short_id}.pdf'
+    saved_path = default_storage.save(storage_path, ContentFile(pdf_bytes))
+    file_url = default_storage.url(saved_path)
+
+    export = DeliverableExport.objects.create(
+        deliverable=deliverable,
+        user=user,
+        export_format='pdf',
+        file_path=saved_path,
+        file_url=file_url,
+        file_size_bytes=len(pdf_bytes),
+    )
+
+    DeliverableEvent.objects.create(
+        deliverable=deliverable,
+        event_type='deliverable_exported',
+        user=user,
+        source='pa_tool',
+        metadata={'export_id': str(export.id), 'format': 'pdf', 'file_size_bytes': len(pdf_bytes)},
+    )
+
+    logger.info("PDF export created: %s (%d bytes) -> %s", deliverable.title, len(pdf_bytes), file_url)
+
+    return {
+        'export_id': str(export.id),
+        'file_url': file_url,
+        'file_size_bytes': len(pdf_bytes),
+        'title': deliverable.title,
+        'message': f'PDF exported: "{deliverable.title}" ({len(pdf_bytes):,} bytes). Download: {file_url}',
+    }
+
+
 # Singleton accessor
 _pdf_service = None
 

@@ -2523,6 +2523,7 @@ PA_TOOL_SCHEMAS = [
                         "deliverable_list", "deliverable_detail",
                         "deliverable_search", "deliverable_save",
                         "deliverable_create", "deliverable_stats",
+                        "deliverable_export_pdf",
                     ],
                     "description": (
                         "content_stats: pipeline overview (blogs + deliverables counts). "
@@ -2538,7 +2539,8 @@ PA_TOOL_SCHEMAS = [
                         "deliverable_search: search deliverables by title. "
                         "deliverable_save: bookmark a deliverable. "
                         "deliverable_create: create a new deliverable. "
-                        "deliverable_stats: aggregate counts by type/category/agent."
+                        "deliverable_stats: aggregate counts by type/category/agent. "
+                        "deliverable_export_pdf: generate a downloadable PDF from a deliverable (returns CDN URL)."
                     ),
                 },
                 "id": {"type": "string", "description": "UUID of deliverable or blog"},
