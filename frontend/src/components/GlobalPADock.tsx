@@ -94,12 +94,13 @@ export default function GlobalPADock() {
       if (!activeConversationId) return null
       const response = await assistantApi.getConversation(activeConversationId)
       const data = response.data
-      if (data.success && data.messages.length > messages.length) {
+      const currentCount = usePAStore.getState().messages.length
+      if (data.success && data.messages.length > currentCount) {
         setActiveConversation(activeConversationId)
       }
       return data
     },
-    enabled: !!activeConversationId && isDockOpen && !isPolling,
+    enabled: !!activeConversationId && isDockOpen && !isPolling && !location.pathname.startsWith('/command-center'),
     refetchInterval: 5000,
     refetchIntervalInBackground: false,
   })

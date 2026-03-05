@@ -703,7 +703,8 @@ export default function CommandCenterPage() {
       if (!activeConversationId) return null
       const response = await assistantApi.getConversation(activeConversationId)
       const data = response.data
-      if (data.success && data.messages.length > paMessages.length) {
+      const currentCount = usePAStore.getState().messages.length
+      if (data.success && data.messages.length > currentCount) {
         // Server has more messages — sync them in
         setActiveConversation(activeConversationId)
       }

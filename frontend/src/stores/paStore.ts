@@ -82,6 +82,9 @@ interface PAState {
   setActiveConversationId: (id: string | null) => void
 }
 
+// Guard against concurrent setActiveConversation calls (two sync queries racing)
+let _syncInFlight = false
+
 export const usePAStore = create<PAState>()(
   persist(
     (set, get) => ({
@@ -132,6 +135,8 @@ export const usePAStore = create<PAState>()(
       setActiveConversationId: (id) => set({ activeConversationId: id }),
 
       setActiveConversation: async (id: string) => {
+        if (_syncInFlight) return
+        _syncInFlight = true
         try {
           const response = await assistantApi.getConversation(id)
           const data = response.data
@@ -150,6 +155,8 @@ export const usePAStore = create<PAState>()(
           }
         } catch (err) {
           console.error('Failed to load conversation:', err)
+        } finally {
+          _syncInFlight = false
         }
       },
 
