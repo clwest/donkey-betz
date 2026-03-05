@@ -572,8 +572,8 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "stats", "details", "capabilities"],
-                    "description": "Introspection action: list/stats for overview, details/capabilities for a specific agent",
+                    "enum": ["list", "stats", "details", "capabilities", "tools"],
+                    "description": "Introspection action: list/stats for agent overview, details/capabilities for a specific agent, tools to list all PA tool schemas",
                 },
                 "agent_name": {"type": "string", "description": "Specific agent name"},
                 "limit": {"type": "integer", "description": "Max agents (default 20)"},

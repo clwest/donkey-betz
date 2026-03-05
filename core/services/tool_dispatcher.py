@@ -7643,6 +7643,29 @@ class ToolDispatcher:
         action = ACTION_ALIASES.get(action, action)
         agent_query = payload.get('agent_name', '').strip().lower()
 
+        # Session 1035-W2: List all PA tool schemas
+        if action == 'tools':
+            from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
+            tools_list = []
+            for schema in PA_TOOL_SCHEMAS:
+                if not isinstance(schema, dict):
+                    continue
+                name = schema.get('name', '')
+                desc = schema.get('description', '')[:120]
+                params = schema.get('parameters', {}).get('properties', {})
+                actions_enum = params.get('action', {}).get('enum', [])
+                tools_list.append({
+                    'name': name,
+                    'description': desc,
+                    'actions': actions_enum,
+                    'param_count': len(params),
+                })
+            return {
+                'action': 'tools',
+                'total_tool_schemas': len(tools_list),
+                'tools': tools_list,
+            }
+
         # Session 1036+: Support list/stats actions without requiring agent_name
         if action in ('list', 'stats') or (not agent_query and action not in ('details', 'capabilities')):
             all_agents = Agent.objects.filter(is_active=True)
