@@ -13,7 +13,7 @@ import logging
 import time
 from datetime import datetime, timedelta
 from django.db import transaction
-from django.db.models import F, Count
+from django.db.models import F, Count, Q
 from django.utils import timezone
 from typing import Dict, Any
 import os
@@ -7932,6 +7932,62 @@ TEMPORAL AWARENESS:
 
 
 # =============================================================================
+# Session 1076: Conversation spawn gate — dedup + preflight check
+# =============================================================================
+
+def _conversation_spawn_allowed(topic: str, hours: int = 6, log_prefix: str = '[SPAWN-GATE]') -> bool:
+    """
+    Check whether a new conversation on this topic should be created.
+
+    Returns True if allowed, False if blocked by:
+    1. Fuzzy dedup: similar topic exists in last `hours` hours
+    2. Preflight: topic starts with "Research needed" but no spider data backs it
+
+    Lightweight guard for automated paths that lack the full dedup pipeline.
+    """
+    if not topic:
+        return False
+
+    try:
+        from core.services.deduplication_service import get_deduplication_service
+        dedup_svc = get_deduplication_service()
+
+        # Gate 1: Fuzzy dedup — similar topic in recent window
+        prior = dedup_svc.find_similar_conversation(topic=topic, hours=hours)
+        if prior:
+            logger.info(f"{log_prefix} Dedup blocked (fuzzy match in {hours}h): {topic[:60]}")
+            return False
+
+        # Gate 2: "Research needed" preflight — only spawn if there's backing data
+        if 'research needed' in topic.lower():
+            from core.models_unified_system import SpiderData
+            # Extract project/topic keywords (strip prefix)
+            search_terms = topic.lower().replace('research needed for', '').replace('research needed', '').strip()
+            search_terms = search_terms.split(':')[0].strip()[:50]
+            if search_terms:
+                recent_data = SpiderData.objects.filter(
+                    created_at__gte=timezone.now() - timedelta(hours=24),
+                ).filter(
+                    Q(spider_name__icontains=search_terms[:20]) |
+                    Q(embedding_text__icontains=search_terms[:30])
+                ).exists()
+                if not recent_data:
+                    logger.info(f"{log_prefix} Preflight blocked (no backing data): {topic[:60]}")
+                    return False
+
+        # Gate 3: Outcome gate — skip if repeated no-data conclusions
+        _no_data_skip, _no_data_count = dedup_svc.has_repeated_no_data_conclusions(topic=topic)
+        if _no_data_skip:
+            logger.info(f"{log_prefix} Outcome gate blocked ({_no_data_count} no-data in 7d): {topic[:60]}")
+            return False
+
+    except Exception as e:
+        logger.debug(f"{log_prefix} Spawn gate check failed (allowing): {e}")
+
+    return True
+
+
+# =============================================================================
 # Session 1019: Pre-flight agent data gathering for conversations
 # =============================================================================
 
@@ -10245,6 +10301,10 @@ def trigger_spider_conversations(self, min_relevance: int = 70, max_conversation
 
             topic = f"New {spider_data.spider_name} Intelligence: {spider_summary[:80]}"
 
+            # Session 1076: Spawn gate — dedup + outcome check
+            if not _conversation_spawn_allowed(topic, hours=6, log_prefix='[SPIDER-TRIGGER]'):
+                continue
+
             # Create the conversation
             conversation = AgentConversation.objects.create(
                 topic=topic,
@@ -10461,8 +10521,14 @@ def trigger_project_research(self, max_projects: int = 3, max_spiders_per_projec
                     agents = list(Agent.objects.filter(is_active=True)[:3])
                     if len(agents) >= 2:
                         topic_summary = ", ".join(watch_topics[:3]) if watch_topics else project.project_name
+                        research_topic = f"Research needed for {project.project_name}: {topic_summary[:50]}"
+
+                        # Session 1076: Spawn gate — dedup + preflight (blocks "Research needed" without backing data)
+                        if not _conversation_spawn_allowed(research_topic, hours=6, log_prefix='[PROJECT-RESEARCH]'):
+                            continue
+
                         conversation = AgentConversation.objects.create(
-                            topic=f"Research needed for {project.project_name}: {topic_summary[:50]}",
+                            topic=research_topic,
                             conversation_type='brainstorm',
                             initiator=agents[0],
                             trigger_type='project_need',
