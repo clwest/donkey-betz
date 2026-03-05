@@ -176,6 +176,14 @@ from ..models_mobile import MobilePushToken
 
 from ..models_cockpit_audit import CockpitAuditLog
 
+# Import agent memory models (Session 729 - Agent Execution Memory)
+# Required for post_save signal in models_feedback_processing.py
+from ..models_agent_memory import (
+    AgentExecutionMemory,
+    AgentRecommendation,
+    AgentPerformanceStats,
+)
+
 # Import cockpit agent state (Session P12 - Agent Fleet Management)
 from ..models_cockpit_agent_state import CockpitAgentState
 
