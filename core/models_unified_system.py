@@ -4111,7 +4111,7 @@ class SpiderExecutionLog(models.Model):
 
     @classmethod
     def start_execution(cls, spider_name: str, category: str = 'general',
-                        triggered_by: str = 'scheduled', celery_task_id: str = None):
+                        triggered_by: str = 'scheduled', celery_task_id: 'str | None' = None):
         """Create a new execution log entry when spider starts."""
         return cls.objects.create(
             spider_name=spider_name,

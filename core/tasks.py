@@ -2524,6 +2524,79 @@ def produce_content_package(
         }
 
 
+# =============================================================================
+# Session 1076: Spider adapter helpers — unified constructor + method dispatch
+# =============================================================================
+
+def _create_spider_instance(spider_class, spider_name: str):
+    """Create a spider instance, trying both constructor patterns."""
+    try:
+        return spider_class()
+    except TypeError:
+        return spider_class(
+            spider_id=spider_name,
+            targets=[],
+            subscribers=[],
+            redis_config={'host': 'localhost', 'port': 6379, 'db': 0}
+        )
+
+
+def _run_spider_adapter(spider, spider_name: str) -> dict:
+    """
+    Run a spider using whichever method it supports (fetch/scrape/fetch_data).
+    Returns a dict with 'items' key.
+    """
+    import asyncio
+    import inspect
+
+    if hasattr(spider, 'fetch'):
+        return spider.fetch()
+    elif hasattr(spider, 'scrape'):
+        return asyncio.run(spider.scrape())
+    elif hasattr(spider, 'collect_data'):
+        return asyncio.run(spider.collect_data())
+    elif hasattr(spider, 'fetch_data'):
+        from ai_core.spiders.base_spider import SpiderTarget
+
+        async def _run_fetch():
+            fetch_method = spider.fetch_data
+            sig = inspect.signature(fetch_method)
+            params = list(sig.parameters.keys())
+
+            first_param = params[0] if params else None
+            if first_param and first_param in ('target', 'url'):
+                target = SpiderTarget(url='internal://spider-execution')
+                raw = await spider.fetch_data(target)
+            else:
+                if asyncio.iscoroutinefunction(fetch_method):
+                    raw = await spider.fetch_data()
+                else:
+                    raw = spider.fetch_data()
+
+            if raw and hasattr(spider, 'process_data'):
+                target = SpiderTarget(url='internal://spider-execution')
+                if asyncio.iscoroutinefunction(spider.process_data):
+                    result = await spider.process_data(raw, target)
+                else:
+                    result = spider.process_data(raw, target)
+                if result:
+                    content = result.content if hasattr(result, 'content') else {}
+                    return {'items': [content] if content else [], 'raw_data': raw}
+            if raw:
+                if isinstance(raw, list):
+                    return {'items': raw, 'source': spider_name}
+                elif isinstance(raw, dict):
+                    return raw
+                else:
+                    return {'items': [raw], 'source': spider_name}
+            return {'items': []}
+
+        data = asyncio.run(_run_fetch())
+        return data if isinstance(data, dict) else {'items': []}
+    else:
+        return {'items': [], 'message': f'Spider {spider_name} has no fetch/scrape/fetch_data method'}
+
+
 @shared_task(bind=True)
 def run_spider_by_category(self, category: str):
     """
@@ -2541,7 +2614,8 @@ def run_spider_by_category(self, category: str):
         spiders = registry.get_spiders_by_category(category)
 
         results = []
-        for spider_name in spiders[:3]:  # Limit to 3 spiders per category
+        spider_names = list(spiders.keys())[:3] if isinstance(spiders, dict) else list(spiders)[:3]
+        for spider_name in spider_names:  # Limit to 3 spiders per category
             # Session 484: Create execution log
             execution_log = SpiderExecutionLog.start_execution(
                 spider_name=spider_name,
@@ -2554,58 +2628,8 @@ def run_spider_by_category(self, category: str):
             try:
                 spider_class = registry.get_spider_class(spider_name)
                 if spider_class:
-                    # Session 503: Try both constructor patterns
-                    try:
-                        spider = spider_class()
-                    except TypeError:
-                        spider = spider_class(
-                            spider_id=spider_name,
-                            targets=[],
-                            subscribers=[],
-                            redis_config={'host': 'localhost', 'port': 6379, 'db': 0}
-                        )
-
-                    # Session 503: Support multiple method patterns
-                    if hasattr(spider, 'fetch'):
-                        data = spider.fetch()
-                    elif hasattr(spider, 'fetch_data'):
-                        import asyncio
-                        import inspect
-                        from ai_core.spiders.base_spider import SpiderTarget
-
-                        async def run_fetch():
-                            # Session 503: Detect method signature - some spiders use fetch_data(target),
-                            # others use fetch_data(max_results=100)
-                            fetch_method = spider.fetch_data
-                            sig = inspect.signature(fetch_method)
-                            params = list(sig.parameters.keys())
-
-                            # Check first param type hint or name
-                            first_param = params[0] if params else None
-                            if first_param and first_param in ('target', 'url'):
-                                # Standard BaseIntelligenceSpider pattern
-                                target = SpiderTarget(url='internal://spider-execution')
-                                raw = await spider.fetch_data(target)
-                            else:
-                                # Legal spiders pattern: fetch_data(max_results=100)
-                                if asyncio.iscoroutinefunction(fetch_method):
-                                    raw = await spider.fetch_data()
-                                else:
-                                    raw = spider.fetch_data()
-
-                            if raw and hasattr(spider, 'process_data'):
-                                target = SpiderTarget(url='internal://spider-execution')
-                                if asyncio.iscoroutinefunction(spider.process_data):
-                                    result = await spider.process_data(raw, target)
-                                else:
-                                    result = spider.process_data(raw, target)
-                                if result:
-                                    return {'items': [result.content] if hasattr(result, 'content') else [], 'raw_data': raw}
-                            return raw if raw else {'items': []}
-
-                        data = asyncio.run(run_fetch())
-                    else:
-                        data = {'items': []}
+                    spider = _create_spider_instance(spider_class, spider_name)
+                    data = _run_spider_adapter(spider, spider_name)
 
                     item_count = len(data) if isinstance(data, list) else len(data.get('items', []) if isinstance(data, dict) else [])
                     results.append({
@@ -2688,68 +2712,8 @@ def execute_single_spider(self, spider_name: str, execution_log_id: str = None):
         else:
             spider_class = registry.get_spider_class(spider_name)
             if spider_class:
-                # Session 503: Try both constructor patterns
-                try:
-                    spider = spider_class()
-                except TypeError:
-                    # Spider requires full constructor args
-                    spider = spider_class(
-                        spider_id=spider_name,
-                        targets=[],
-                        subscribers=[],
-                        redis_config={'host': 'localhost', 'port': 6379, 'db': 0}
-                    )
-
-                if hasattr(spider, 'fetch'):
-                    data = spider.fetch()
-                elif hasattr(spider, 'scrape'):
-                    import asyncio
-                    data = asyncio.run(spider.scrape())
-                elif hasattr(spider, 'fetch_data'):
-                    # Session 503: Support for spiders using fetch_data(target) or fetch_data(max_results) pattern
-                    import asyncio
-                    import inspect
-                    from ai_core.spiders.base_spider import SpiderTarget
-
-                    async def run_fetch():
-                        # Detect method signature
-                        fetch_method = spider.fetch_data
-                        sig = inspect.signature(fetch_method)
-                        params = list(sig.parameters.keys())
-
-                        first_param = params[0] if params else None
-                        if first_param and first_param in ('target', 'url'):
-                            # Standard BaseIntelligenceSpider pattern
-                            target = SpiderTarget(url='internal://spider-execution')
-                            raw = await spider.fetch_data(target)
-                        else:
-                            # Legal spiders pattern: fetch_data(max_results=100)
-                            if asyncio.iscoroutinefunction(fetch_method):
-                                raw = await spider.fetch_data()
-                            else:
-                                raw = spider.fetch_data()
-
-                        if raw and hasattr(spider, 'process_data'):
-                            target = SpiderTarget(url='internal://spider-execution')
-                            if asyncio.iscoroutinefunction(spider.process_data):
-                                result = await spider.process_data(raw, target)
-                            else:
-                                result = spider.process_data(raw, target)
-                            if result:
-                                return {'items': [result.content] if hasattr(result, 'content') else [], 'raw_data': raw}
-                        # Normalize return value to dict format
-                        if raw:
-                            if isinstance(raw, list):
-                                return {'items': raw, 'source': spider_name}
-                            elif isinstance(raw, dict):
-                                return raw
-                            else:
-                                return {'items': [raw], 'source': spider_name}
-                        return {'items': []}
-
-                    data = asyncio.run(run_fetch())
-                else:
-                    data = {'items': [], 'message': 'Spider has no fetch/scrape/fetch_data method'}
+                spider = _create_spider_instance(spider_class, spider_name)
+                data = _run_spider_adapter(spider, spider_name)
                 # Handle both list and dict formats
                 if isinstance(data, list):
                     item_count = len(data)
@@ -3269,83 +3233,8 @@ def run_spider_network(self):
                 spider_class = registry.get_spider_class(spider_name)
                 if spider_class:
                     try:
-                        # Session 603: Try simple constructor first (TheOdds, Kalshi, etc.)
-                        # then fall back to full constructor for BaseIntelligenceSpider
-                        try:
-                            spider = spider_class()
-                        except TypeError:
-                            spider = spider_class(
-                                spider_id=spider_name,
-                                targets=[],
-                                subscribers=[],
-                                redis_config={'host': 'localhost', 'port': 6379, 'db': 0}
-                            )
-                        # Try spider methods - Session 503: Added fetch_data support
-                        if hasattr(spider, 'scrape'):
-                            import asyncio
-                            data = asyncio.run(spider.scrape())
-                        elif hasattr(spider, 'collect_data'):
-                            import asyncio
-                            data = asyncio.run(spider.collect_data())
-                        elif hasattr(spider, 'fetch_data'):
-                            # Session 503: Support for spiders using fetch_data(target) or fetch_data(max_results)
-                            import asyncio
-                            import inspect
-                            from ai_core.spiders.base_spider import SpiderTarget
-
-                            async def run_fetch_data():
-                                # Session 503: Detect method signature - some spiders use fetch_data(target),
-                                # others use fetch_data(max_results=100)
-                                fetch_method = spider.fetch_data
-                                sig = inspect.signature(fetch_method)
-                                params = list(sig.parameters.keys())
-
-                                # Check first param type hint or name
-                                first_param = params[0] if params else None
-                                if first_param and first_param in ('target', 'url'):
-                                    # Standard BaseIntelligenceSpider pattern
-                                    target = SpiderTarget(url='internal://spider-execution')
-                                    raw_data = await spider.fetch_data(target)
-                                else:
-                                    # Legal spiders pattern: fetch_data(max_results=100)
-                                    if asyncio.iscoroutinefunction(fetch_method):
-                                        raw_data = await spider.fetch_data()
-                                    else:
-                                        raw_data = spider.fetch_data()
-
-                                if raw_data and hasattr(spider, 'process_data'):
-                                    target = SpiderTarget(url='internal://spider-execution')
-                                    if asyncio.iscoroutinefunction(spider.process_data):
-                                        result = await spider.process_data(raw_data, target)
-                                    else:
-                                        result = spider.process_data(raw_data, target)
-                                    if result:
-                                        return {
-                                            'source': spider_name,
-                                            'items': [result.content] if hasattr(result, 'content') else [],
-                                            'raw_data': raw_data,
-                                            'category': spider_config.get('category', 'general'),
-                                            'timestamp': timezone.now().isoformat()
-                                        }
-                                # Normalize return value to dict format
-                                if raw_data:
-                                    if isinstance(raw_data, list):
-                                        return {'items': raw_data, 'source': spider_name}
-                                    elif isinstance(raw_data, dict):
-                                        return raw_data
-                                    else:
-                                        return {'items': [raw_data], 'source': spider_name}
-                                return {'items': []}
-
-                            data = asyncio.run(run_fetch_data())
-                        else:
-                            data = {
-                                'source': spider_name,
-                                'category': spider_config.get('category', 'general'),
-                                'items': [],
-                                'message': f'Spider {spider_name} ready (no real URLs configured)',
-                                'timestamp': timezone.now().isoformat()
-                            }
+                        spider = _create_spider_instance(spider_class, spider_name)
+                        data = _run_spider_adapter(spider, spider_name)
                     except Exception as spider_error:
                         logger.warning(f"Spider {spider_name} method failed: {spider_error}")
                         data = {
