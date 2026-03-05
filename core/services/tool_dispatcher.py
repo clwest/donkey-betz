@@ -13374,8 +13374,8 @@ RESEARCH DATA:
                     stages = list(InitiativeStage.objects.filter(
                         initiative_id=initiative_id,
                     ).values(
-                        'stage_number', 'stage_type', 'status', 'created_at',
-                    ).order_by('stage_number'))
+                        'stage', 'status', 'created_at',
+                    ).order_by('stage'))
                     for s in stages:
                         if s.get('created_at'):
                             s['created_at'] = s['created_at'].isoformat()
