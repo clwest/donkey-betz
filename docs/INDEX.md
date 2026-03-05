@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-03-05 07:17
+**Generated:** 2026-03-05 11:25
 **Current Session:** 1075
 **Total Documentation:** 1819 files | 622,221 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/capabilities/02_Content_Creation/README.md` | 60 | 🎨 AI CONTENT STUDIO - The Complete Creation Suite |
+| `docs/archive/experimental/super_system/README.md` | 59 | 🌐 THE SUPER SYSTEM |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -217,8 +217,8 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
+| INDEX.md | docs | 361 | 2026-03-05 07:34 |
 | personal-assistant.md | topics | 139 | 2026-03-05 07:03 |
-| INDEX.md | docs | 361 | 2026-03-05 07:03 |
 | video-upload.md | topics | 101 | 2026-03-04 13:08 |
 | OVL_CODE_RUNNER_V0.md | docs | 174 | 2026-03-04 08:20 |
 | stage3_timeline.md | initiatives | 71 | 2026-03-03 12:55 |
