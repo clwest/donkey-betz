@@ -2419,7 +2419,6 @@ class AgentRouter:
             'research_topic': 'ResearchAgent',
             'research': 'ResearchAgent',
             'character_training_agent': 'CharacterTrainingAgent',
-            'coleadership_agent': 'CoLeadershipAgent',
             'competitor_analysis_agent': 'CompetitorAnalysisAgent',
             'customer_research_agent': 'CustomerResearchAgent',
             'brand_strategy_agent': 'BrandStrategyAgent',

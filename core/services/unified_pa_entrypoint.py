@@ -804,32 +804,54 @@ class UnifiedPAEntrypoint:
             'status_snapshot_tool', 'ops_tool', 'governance_tool',
             'autopilot_tool', 'get_body_vitals', 'get_system_alerts',
             'cost_telemetry_tool', 'check_resource_budget',
+            'intelligence_tool', 'ml_analysis',
         },
         'governance': {
             'governance_tool', 'status_snapshot_tool', 'autopilot_tool',
-            'agent_control_tool',
+            'agent_control_tool', 'feedback_tool', 'reasoning_engine_tool',
+            'surgical_moves_status_tool',
         },
         'ops': {
             'ops_tool', 'ops_digest_tool', 'status_snapshot_tool',
             'scheduled_tasks_tool', 'db_health_tool', 'http_smoke_test',
             'cost_telemetry_tool', 'check_resource_budget',
             'get_body_vitals', 'get_system_alerts',
-            'agent_control_tool', 'autopilot_tool',  # Session 1098: audit/config/timeout queries
+            'agent_control_tool', 'autopilot_tool',
+            'intelligence_tool', 'repo_tool', 'analytics_tool',
+            'platform_config_tool', 'platform_awareness_tool',
+            'agent_introspection_tool',
+            'discord_tool', 'mobile_tool', 'vip_invite_tool',
+            'learning_tool',
         },
         'content': {
             'content_tool', 'content_writer_agent', 'content_strategy_agent',
             'research_and_create_tool', 'web_search', 'studio_tool',
+            'intelligence_tool', 'legal_doc_drafter_agent',
+            'persona_tool', 'brainstorm_tool', 'competitor_comparison_tool',
+            'strategic_review',
         },
         'media': {
             'media_tool', 'davinci_tool', 'obs_tool', 'video_history_tool',
             'image_editing_agent', 'video_editing_agent',
             'three_d_generation_agent', 'character_training_agent',
-            'create_brand_video', 'studio_tool',
+            'create_brand_video', 'studio_tool', 'run_agent',
         },
         'work': {
             'work_tool', 'dream_tool', 'task_manager_tool', 'task_breakdown_tool',
             'pipeline_orchestrator_tool', 'gates_tool', 'pilots_tool',
             'execution_history_tool', 'learning_patterns_tool',
+            'intelligence_tool', 'workspace_tool',
+            'opportunity_manager_tool', 'revenue_tracker_tool',
+            'persona_tool', 'workflow_run_tool',
+            'workflow_orchestration_agent',
+        },
+        'research': {
+            'web_search', 'intelligence_tool', 'research_and_create_tool',
+            'universal_agent_tool', 'run_agent',
+            'competitor_analysis_agent', 'customer_research_agent',
+            'brand_strategy_agent', 'marketing_strategy_agent',
+            'competitor_comparison_tool', 'strategic_review',
+            'create_project_from_research',
         },
     }
 
@@ -850,41 +872,38 @@ class UnifiedPAEntrypoint:
                      'pdf', 'export', 'download']),
         ('work', ['initiative', 'dream', 'project', 'pipeline', 'stage',
                   'action item', 'task breakdown']),
+        ('research', ['research', 'competitor', 'market analysis', 'customer research',
+                      'brand strategy', 'marketing strategy', 'investigate',
+                      'find out', 'look up', 'search for']),
     ]
 
     def _select_tool_schemas(self, message: str, all_schemas: list) -> list:
         """
-        Return a subset of tool schemas relevant to the detected intent.
+        Return tool schemas for the agentic loop.
 
-        Falls back to full schema set for ambiguous messages.
-        Always includes remember_tool and conversation_tool as universal tools.
+        Session 1099: Always sends ALL schemas. The previous filtering approach
+        saved ~15-25K input tokens but caused Rigby to lose access to 31+ tools
+        whenever intent keywords matched (e.g. "draft" hid legal_doc_drafter_agent,
+        "status" hid intelligence_tool). The capability loss far outweighed the
+        token savings. Intent detection is kept for logging/analytics only.
         """
         msg_lower = message.lower()
 
-        # Universal tools always included
-        universal = {'remember_tool', 'conversation_tool', 'recent_activity_tool'}
-
+        # Detect intent for logging (not filtering)
         matched_category = None
         for category, keywords in self._INTENT_KEYWORDS:
             if any(kw in msg_lower for kw in keywords):
                 matched_category = category
                 break
 
-        if not matched_category:
-            return all_schemas  # Ambiguous — send everything
+        if matched_category:
+            subset_size = len(self._SCHEMA_SUBSETS.get(matched_category, set()))
+            logger.info(
+                "[PA_SCHEMA_SUBSET] category=%s (would have sent %d/%d, now sending all)",
+                matched_category, subset_size, len(all_schemas),
+            )
 
-        allowed = self._SCHEMA_SUBSETS[matched_category] | universal
-        subset = [s for s in all_schemas if s.get('name') in allowed]
-
-        if not subset:
-            return all_schemas  # Safety fallback
-
-        logger.info(
-            "[PA_SCHEMA_SUBSET] category=%s schemas=%d/%d (saved ~%d tokens)",
-            matched_category, len(subset), len(all_schemas),
-            (len(all_schemas) - len(subset)) * 500,  # ~500 tokens per schema
-        )
-        return subset
+        return all_schemas
 
     async def _run_agentic_loop(
         self,
