@@ -848,7 +848,7 @@ PA_TOOL_SCHEMAS = [
                         "competitor_analysis_agent", "customer_research_agent",
                         "brand_strategy_agent", "content_strategy_agent",
                         "marketing_strategy_agent", "content_writer_agent",
-                        "workflow_orchestration_agent", "coleadership_agent",
+                        "workflow_orchestration_agent",
                         "system_intelligence_agent",
                         "strategic_review",
                         "create_brand_video", "create_project_from_research",
@@ -1388,32 +1388,6 @@ PA_TOOL_SCHEMAS = [
                 "context": {
                     "type": "object",
                     "description": "Additional context: steps, agents, output_format",
-                },
-            },
-            "required": ["task"],
-        },
-    },
-
-    # ── Co-Leadership Assessment ─────────────────────────────────────────────
-    {
-        "type": "function",
-        "name": "coleadership_agent",
-        "description": (
-            "Co-leadership and organizational assessment: team dynamics, "
-            "leadership evaluation, organizational health, collaboration patterns. "
-            "Use when the user asks about team leadership, organizational "
-            "assessment, team dynamics, or leadership strategy."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "task": {
-                    "type": "string",
-                    "description": "Leadership assessment task",
-                },
-                "context": {
-                    "type": "object",
-                    "description": "Additional context: team, organization, focus_area",
                 },
             },
             "required": ["task"],
@@ -2802,7 +2776,6 @@ TOOL_ENRICHMENT_MAP = {
     'marketing_strategy_agent': ['domain_context', 'spider_trends', 'strategic_memory'],
     'content_writer_agent': ['domain_context', 'spider_trends'],
     'workflow_orchestration_agent': ['intelligence_enricher'],
-    'coleadership_agent': ['intelligence_enricher', 'strategic_memory'],
     'strategic_review': ['domain_context', 'strategic_memory'],
     'create_brand_video': ['intelligence_enricher'],
     'create_project_from_research': ['domain_context', 'spider_trends'],
@@ -2884,7 +2857,6 @@ TOOL_TO_INTENT_MAP = {
     'marketing_strategy_agent': 'agent_execution',
     'content_writer_agent': 'agent_execution',
     'workflow_orchestration_agent': 'agent_execution',
-    'coleadership_agent': 'agent_execution',
     'strategic_review': 'agent_execution',
     'create_brand_video': 'agent_execution',
     'create_project_from_research': 'agent_execution',

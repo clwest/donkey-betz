@@ -162,7 +162,7 @@ class ToolDispatcher:
         self.register("cost_telemetry_tool", self._handle_cost_telemetry)
 
         # Intelligence tools
-        self.register("predictions_tool", self._handle_predictions)
+        # predictions_tool: REMOVED — AgentPrediction deprecated (Session 284), handler was a no-op
         self.register("gates_tool", self._handle_gates)
         self.register("pilots_tool", self._handle_pilots)
         self.register("reasoning_engine_tool", self._handle_reasoning_engine)
@@ -178,7 +178,7 @@ class ToolDispatcher:
         self.register("create_brand_video", self._handle_agent_tool)
         self.register("create_project_from_research", self._handle_agent_tool)
         self.register("strategic_review", self._handle_agent_tool)
-        self.register("coleadership_agent", self._handle_agent_tool)
+        # coleadership_agent: REMOVED — CoLeadershipAgent class never existed
 
         # Intelligence agents — dispatch via Celery
         self.register("system_intelligence_agent", self._handle_agent_tool)
@@ -527,7 +527,6 @@ class ToolDispatcher:
             'create_brand_video': 'WorkflowAgent',
             'create_project_from_research': 'WorkflowAgent',
             'strategic_review': 'ContentStrategyAgent',  # Session 1068: StrategyAgent doesn't exist
-            'coleadership_agent': 'CoLeadershipAgent',
             'legal_doc_drafter_agent': 'LegalDocDrafterAgent',
             'system_intelligence_agent': 'SystemIntelligenceAgent',
         }
