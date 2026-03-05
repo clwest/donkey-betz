@@ -11472,15 +11472,23 @@ RESEARCH DATA:
             slos.append({'key': 'agent_timeout_rate', 'error': str(e)})
 
         # SLO 4: Deliberation zero-turn rate (0%)
+        # Session 1075: Exclude ZOMBIE_REAPED — those are legitimate reaper cleanups
+        # (stuck sessions cleaned up by reap_zombie_work), not pipeline bugs.
         try:
             from core.models_deliberation import DeliberationSession
             total_sessions = DeliberationSession.objects.filter(created_at__gte=cutoff).count()
             zero_turn = DeliberationSession.objects.filter(
                 created_at__gte=cutoff, status='failed'
+            ).exclude(
+                failure_reason_code='ZOMBIE_REAPED'
             ).annotate(
                 turn_count=Count('turns')
             ).filter(turn_count=0).count()
             zt_rate = zero_turn / total_sessions if total_sessions > 0 else 0.0
+            zombie_reaped = DeliberationSession.objects.filter(
+                created_at__gte=cutoff, status='failed',
+                failure_reason_code='ZOMBIE_REAPED'
+            ).count()
             slo = {
                 'key': 'deliberation_zero_turn_rate',
                 'name': 'Deliberation zero-turn failure rate',
@@ -11489,6 +11497,7 @@ RESEARCH DATA:
                 'breach': zt_rate > 0.001,
                 'numerator': zero_turn,
                 'denominator': total_sessions,
+                'zombie_reaped': zombie_reaped,
             }
             # Include failure reason breakdown if any failed sessions exist
             if include_breakdowns:
