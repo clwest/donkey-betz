@@ -3317,6 +3317,7 @@ def get_ai_track_record(request):
     try:
         sport = request.GET.get('sport')
         days = int(request.GET.get('days', 30))
+        model_filter = request.GET.get('model')  # filter by model_used
 
         from sports.models import MLPrediction
         from django.utils import timezone
@@ -3327,6 +3328,8 @@ def get_ai_track_record(request):
         base_qs = MLPrediction.objects.filter(created_at__gte=cutoff)
         if sport:
             base_qs = base_qs.filter(sport_type=sport)
+        if model_filter:
+            base_qs = base_qs.filter(model_used__icontains=model_filter)
 
         # Dedup: only latest prediction per game
         # id is UUID so Max('id') doesn't give latest — use DISTINCT ON (PostgreSQL)
@@ -3429,11 +3432,21 @@ def get_ai_track_record(request):
             try:
                 matchup = f"{p.game.away_team.name} @ {p.game.home_team.name}" if p.game else ''
                 game_date = p.game.scheduled_start.date().isoformat() if p.game and p.game.scheduled_start else ''
+                home_team = p.game.home_team.name if p.game else ''
+                away_team = p.game.away_team.name if p.game else ''
+                home_score = p.game.home_score if p.game else None
+                away_score = p.game.away_score if p.game else None
+                game_status = p.game.status if p.game else ''
             except Exception:
                 matchup = ''
                 game_date = ''
+                home_team = ''
+                away_team = ''
+                home_score = None
+                away_score = None
+                game_status = ''
             entry = {
-                'id': p.id,
+                'id': str(p.id),
                 'sport_type': p.sport_type,
                 'predicted_winner': p.predicted_winner.name if p.predicted_winner else '',
                 'confidence': p.confidence,
@@ -3442,6 +3455,22 @@ def get_ai_track_record(request):
                 'matchup': matchup,
                 'odds': p.odds_at_prediction,
                 'closing_odds': p.closing_odds,
+                # Pick details drawer fields
+                'home_team': home_team,
+                'away_team': away_team,
+                'home_score': home_score,
+                'away_score': away_score,
+                'game_status': game_status,
+                'home_win_probability': round(p.home_win_probability, 1) if p.home_win_probability else None,
+                'away_win_probability': round(p.away_win_probability, 1) if p.away_win_probability else None,
+                'predicted_spread': p.predicted_spread,
+                'predicted_home_score': p.predicted_home_score,
+                'predicted_away_score': p.predicted_away_score,
+                'model_used': p.model_used or '',
+                'bookmaker_count': p.bookmaker_count,
+                'ai_reasoning': p.ai_reasoning or '',
+                'key_factors': p.key_factors or [],
+                'created_at': p.created_at.isoformat() if p.created_at else '',
             }
             if p.evaluated_at:
                 entry['evaluated_at'] = p.evaluated_at.isoformat()
@@ -3461,11 +3490,20 @@ def get_ai_track_record(request):
         for p in pending_qs:
             recent_list.append(_serialize_prediction(p, include_result=False))
 
+        # Available models for filter chips
+        available_models = list(
+            MLPrediction.objects.filter(created_at__gte=cutoff)
+            .values_list('model_used', flat=True)
+            .distinct()
+            .order_by('model_used')
+        )
+
         return Response({
             'success': True,
             'summary': summary,
             'by_sport': by_sport,
             'recent_predictions': recent_list,
+            'available_models': available_models,
         })
 
     except Exception as e:
