@@ -1707,6 +1707,26 @@ def execute_agent_task(
         )
         return _cb_block
 
+    # Session 1077: Focus Mode — block autonomous tasks with banned topics
+    # Only applies to non-manual runs (no user_id in context = autonomous)
+    if not context.get('user_id'):
+        try:
+            from core.services.focus_mode import check_autonomous_task, record_block
+            fm = check_autonomous_task(agent_name, task, context)
+            if not fm['allowed']:
+                logger.info(
+                    f"[execute_agent_task] FOCUS MODE: {agent_name} blocked — "
+                    f"{fm['reason']} (task='{task[:50]}...')"
+                )
+                record_block(fm['reason'])
+                return {
+                    'status': 'blocked',
+                    'agent': agent_name,
+                    'reason': f"focus_mode:{fm['reason']}",
+                }
+        except Exception as e:
+            logger.warning(f"[execute_agent_task] Focus Mode check failed (proceeding): {e}")
+
     logger.info(
         f"[execute_agent_task] Starting: {agent_name} <- '{task[:50]}...' "
         f"(conversation={conversation_id})"
@@ -8287,6 +8307,16 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
 
     logger.info("💬 [CONVERSATIONS] Starting agent conversation cycle...")
 
+    # Session 1077: Focus Mode — check total conversation cap before doing any work
+    try:
+        from core.services.focus_mode import check_total_conversation_cap
+        total_cap = check_total_conversation_cap()
+        if not total_cap['allowed']:
+            logger.info(f"💬 [CONVERSATIONS] Focus Mode: {total_cap['reason']} — skipping cycle")
+            return {'status': 'skipped', 'reason': f"focus_mode:{total_cap['reason']}"}
+    except Exception as e:
+        logger.warning(f"💬 [CONVERSATIONS] Focus Mode check failed (proceeding): {e}")
+
     try:
         # Session 417: Get ALL active agents, not just those with knowledge
         # Agents can converse based on their specialty/description even without
@@ -8423,6 +8453,17 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
 
             # Choose conversation type
             template = random.choice(conversation_templates)
+
+            # Session 1077: Focus Mode — block banned topics + per-agent cap
+            try:
+                from core.services.focus_mode import check_conversation_allowed, record_block
+                fm_check = check_conversation_allowed(topic, initiator.name)
+                if not fm_check['allowed']:
+                    logger.info(f"💬 [CONVERSATIONS] Focus Mode blocked: {fm_check['reason']} — topic='{topic[:60]}'")
+                    record_block(fm_check['reason'])
+                    continue
+            except Exception as e:
+                logger.warning(f"💬 [CONVERSATIONS] Focus Mode check failed (proceeding): {e}")
 
             # Session 1032: Fuzzy dedup via DeduplicationService (replaces exact-match)
             from core.services.deduplication_service import get_deduplication_service
@@ -9276,6 +9317,16 @@ def run_multi_agent_conversation(self, max_conversations: int = 2, participants_
     import os
 
     logger.info(f"👥 [MULTI-AGENT] Starting multi-agent conversation cycle (participants={participants_per_conversation}, rounds={max_rounds})...")
+
+    # Session 1077: Focus Mode — check total conversation cap
+    try:
+        from core.services.focus_mode import check_total_conversation_cap
+        total_cap = check_total_conversation_cap()
+        if not total_cap['allowed']:
+            logger.info(f"👥 [MULTI-AGENT] Focus Mode: {total_cap['reason']} — skipping cycle")
+            return {'status': 'skipped', 'reason': f"focus_mode:{total_cap['reason']}"}
+    except Exception as e:
+        logger.warning(f"👥 [MULTI-AGENT] Focus Mode check failed (proceeding): {e}")
 
     try:
         # Get agents that have knowledge
