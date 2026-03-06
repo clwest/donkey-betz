@@ -1980,6 +1980,7 @@ PA_TOOL_SCHEMAS = [
                         "version", "slo_status", "failure_signatures",
                         "tool_migration_report", "timeout_config_read", "proof_bundle",
                         "noise_metrics", "conversation_metrics",
+                        "focus_mode_status", "focus_mode_update",
                     ],
                     "description": (
                         "version: build/deploy metadata (git SHA, branch, Railway deployment, uptime). "
@@ -1993,7 +1994,10 @@ PA_TOOL_SCHEMAS = [
                         "agent config, timeout overrides, or initiative state. "
                         "noise_metrics: North Star coverage — how many runs hit revenue/content/sports paths vs noise. "
                         "Includes by-agent breakdown, trigger types, importance distribution, artifact types. "
-                        "conversation_metrics: topic clustering, zombie rate, by-agent conversation counts."
+                        "conversation_metrics: topic clustering, zombie rate, by-agent conversation counts. "
+                        "focus_mode_status: read current Focus Mode config (enabled, mode, blocked topics, caps). "
+                        "focus_mode_update: update Focus Mode config. Pass config_updates dict with keys to change "
+                        "(enabled, mode, blocked_topics_autonomous, max_conversations_per_agent_per_hour, etc.)."
                     ),
                 },
                 "window": {
@@ -2021,6 +2025,17 @@ PA_TOOL_SCHEMAS = [
                 "initiative_id": {
                     "type": "string",
                     "description": "For proof_bundle: UUID of initiative to include in audit (optional).",
+                },
+                "config_updates": {
+                    "type": "object",
+                    "description": (
+                        "For focus_mode_update: dict of config keys to change. "
+                        "Valid keys: enabled (bool), mode ('gentle'/'strict'), "
+                        "blocked_topics_autonomous (list of strings), "
+                        "max_conversations_per_agent_per_hour (int), "
+                        "max_total_conversations_per_hour (int), "
+                        "require_north_star_for_autonomous (bool)."
+                    ),
                 },
             },
             "required": ["action"],

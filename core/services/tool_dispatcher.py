@@ -11318,6 +11318,20 @@ RESEARCH DATA:
             hours = {'1h': 1, '6h': 6, '24h': 24, '7d': 168, '30d': 720}.get(window, 24)
             return compute_conversation_metrics(hours=hours)
 
+        elif action == 'focus_mode_status':
+            # Session 1077: Read Focus Mode config
+            from core.services.focus_mode import get_status
+            return {'action': 'focus_mode_status', **get_status()}
+
+        elif action == 'focus_mode_update':
+            # Session 1077: Update Focus Mode config
+            from core.services.focus_mode import set_config, get_status
+            config_updates = payload.get('config_updates', {})
+            if not config_updates:
+                return {'error': 'config_updates dict required'}
+            set_config(config_updates)
+            return {'action': 'focus_mode_update', 'applied': list(config_updates.keys()), **get_status()}
+
         else:
             return {'error': f'Unknown ops_tool action: {action}'}
 
