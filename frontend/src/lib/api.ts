@@ -1257,6 +1257,9 @@ export const bettingApi = {
   // AI Track Record
   trackRecord: (params?: { sport?: string; days?: number; model?: string }) =>
     api.get('/v1/betting/track-record/', { params }),
+
+  // Pipeline freshness
+  pipelineStatus: () => api.get('/v1/betting/pipeline-status/'),
 }
 
 // Session 998B: Sports Betting Hub Feed

@@ -494,6 +494,14 @@ Only assign high confidence (>75) when the market consensus is overwhelming."""
                 else:
                     winner_odds = pred.get('away_odds')
 
+                # Parse spread as float if present
+                spread_val = pred.get('spread')
+                if spread_val is not None:
+                    try:
+                        spread_val = float(spread_val)
+                    except (ValueError, TypeError):
+                        spread_val = None
+
                 MLPrediction.objects.create(
                     game=game,
                     predicted_winner=winner_team,
@@ -502,6 +510,7 @@ Only assign high confidence (>75) when the market consensus is overwhelming."""
                     away_win_probability=min(away_prob, 100),
                     predicted_home_score=pred.get('predicted_home_score'),
                     predicted_away_score=pred.get('predicted_away_score'),
+                    predicted_spread=spread_val,
                     model_used=model_used,
                     sport_type=sport_type,
                     key_factors=pred.get('key_factors', []),
