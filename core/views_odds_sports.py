@@ -3349,6 +3349,27 @@ def get_ai_track_record(request):
             avg_conf = evaluated_qs.aggregate(a=Avg('confidence'))['a'] or 0
             calibration = abs(accuracy - avg_conf)
 
+            # ROI calculation from odds_at_prediction
+            roi_units = 0.0
+            roi_picks = 0
+            clv_sum = 0.0
+            clv_picks = 0
+            for p in evaluated_qs.filter(odds_at_prediction__isnull=False).only(
+                'was_correct', 'odds_at_prediction', 'closing_odds'
+            ):
+                odds = p.odds_at_prediction
+                if p.was_correct:
+                    roi_units += (100.0 / abs(odds)) if odds < 0 else (odds / 100.0)
+                else:
+                    roi_units -= 1.0
+                roi_picks += 1
+                # CLV: closing implied prob - opening implied prob (positive = got better odds)
+                if p.closing_odds is not None:
+                    open_ip = abs(odds) / (abs(odds) + 100) if odds < 0 else 100 / (odds + 100)
+                    close_ip = abs(p.closing_odds) / (abs(p.closing_odds) + 100) if p.closing_odds < 0 else 100 / (p.closing_odds + 100)
+                    clv_sum += (close_ip - open_ip)
+                    clv_picks += 1
+
             summary = {
                 'sport_type': sport or 'all',
                 'days_analyzed': days,
@@ -3360,6 +3381,11 @@ def get_ai_track_record(request):
                 'average_confidence': round(avg_conf, 2),
                 'calibration_score': round(calibration, 2),
                 'is_well_calibrated': calibration < 10.0,
+                'roi_units': round(roi_units, 2) if roi_picks > 0 else None,
+                'roi_percent': round((roi_units / roi_picks) * 100, 2) if roi_picks > 0 else None,
+                'roi_picks': roi_picks,
+                'avg_clv': round((clv_sum / clv_picks) * 100, 2) if clv_picks > 0 else None,
+                'clv_picks': clv_picks,
             }
 
             # By sport (deduped)
@@ -3414,6 +3440,8 @@ def get_ai_track_record(request):
                 'was_correct': p.was_correct if include_result else None,
                 'game_date': game_date,
                 'matchup': matchup,
+                'odds': p.odds_at_prediction,
+                'closing_odds': p.closing_odds,
             }
             if p.evaluated_at:
                 entry['evaluated_at'] = p.evaluated_at.isoformat()

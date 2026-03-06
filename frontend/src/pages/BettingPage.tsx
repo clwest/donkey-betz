@@ -2628,22 +2628,23 @@ export default function BettingPage() {
                 {/* Summary Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <StatCard
-                    label="Accuracy (7d)"
+                    label="Accuracy"
                     value={`${summary.accuracy_percent ?? 0}%`}
                     icon={Target}
-                    color="bg-accent-green"
+                    color={summary.accuracy_percent >= 55 ? 'bg-accent-green' : summary.accuracy_percent >= 50 ? 'bg-accent-amber' : 'bg-accent-red'}
                   />
                   <StatCard
-                    label="Total Predictions"
-                    value={summary.total_predictions ?? 0}
+                    label="Total Picks"
+                    value={`${summary.correct_predictions ?? 0}-${summary.incorrect_predictions ?? 0}`}
                     icon={Brain}
                     color="bg-primary-600"
                   />
                   <StatCard
-                    label="Avg Confidence"
-                    value={`${summary.average_confidence ?? 0}%`}
-                    icon={Activity}
-                    color="bg-accent-purple"
+                    label="ROI"
+                    value={summary.roi_percent != null ? `${summary.roi_percent > 0 ? '+' : ''}${summary.roi_percent}%` : 'N/A'}
+                    icon={DollarSign}
+                    color={summary.roi_percent > 0 ? 'bg-accent-green' : summary.roi_percent < 0 ? 'bg-accent-red' : 'bg-primary-600'}
+                    trend={summary.roi_units != null ? { value: summary.roi_units, isPositive: summary.roi_units >= 0 } : undefined}
                   />
                   <StatCard
                     label="Calibration"
@@ -2652,6 +2653,12 @@ export default function BettingPage() {
                     color={summary.is_well_calibrated ? 'bg-accent-green' : 'bg-accent-amber'}
                   />
                 </div>
+                {summary.pending_predictions > 0 && (
+                  <p className="text-xs text-gray-500 -mt-3">
+                    {summary.pending_predictions} picks pending evaluation &middot; {summary.days_analyzed}d window
+                    {summary.avg_clv != null && <span> &middot; Avg CLV: {summary.avg_clv > 0 ? '+' : ''}{summary.avg_clv}%</span>}
+                  </p>
+                )}
 
                 {/* By Category Breakdown */}
                 {Object.keys(bySport).length > 0 && (
@@ -2701,6 +2708,7 @@ export default function BettingPage() {
                             <th className="py-3 px-4">Sport</th>
                             <th className="py-3 px-4">Matchup</th>
                             <th className="py-3 px-4">Pick</th>
+                            <th className="py-3 px-4">Odds</th>
                             <th className="py-3 px-4">Confidence</th>
                             <th className="py-3 px-4">Result</th>
                           </tr>
@@ -2712,6 +2720,15 @@ export default function BettingPage() {
                               <td className="py-3 px-4 uppercase">{pred.sport_type}</td>
                               <td className="py-3 px-4 font-medium">{pred.matchup || '\u2014'}</td>
                               <td className="py-3 px-4 font-medium">{pred.predicted_winner}</td>
+                              <td className="py-3 px-4">
+                                {pred.odds != null ? (
+                                  <span className={cn('font-mono text-sm', pred.odds > 0 ? 'text-accent-green' : 'text-accent-red')}>
+                                    {pred.odds > 0 ? '+' : ''}{pred.odds}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-500">{'\u2014'}</span>
+                                )}
+                              </td>
                               <td className="py-3 px-4">
                                 <span className={cn(
                                   'font-medium',
