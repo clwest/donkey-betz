@@ -981,7 +981,7 @@ def cockpit_inbox(request):
 def cockpit_runs_list(request):
     """
     Recent agent execution runs for Focus Cockpit.
-    Query params: status, agent, hours (default 24), limit (default 50)
+    Query params: status, agent, hours (default 24), limit (default 50), enrich (0|1)
     """
     if not (request.user and request.user.is_authenticated):
         return JsonResponse({'error': 'Authentication required'}, status=401)
@@ -991,6 +991,7 @@ def cockpit_runs_list(request):
 
     hours = int(request.GET.get('hours', 24))
     limit = min(int(request.GET.get('limit', 50)), 200)
+    enrich = request.GET.get('enrich', '0') == '1'
     cutoff = timezone.now() - timedelta(hours=hours)
 
     try:
@@ -1005,26 +1006,46 @@ def cockpit_runs_list(request):
         if agent_filter:
             qs = qs.filter(agent__name__icontains=agent_filter)
 
-        runs = list(
-            qs.order_by('-created_at')[:limit]
-            .values(
-                'id', 'agent__name', 'task', 'status',
-                'created_at', 'completed_at', 'execution_time_ms', 'tokens_used',
-            )
-        )
+        if enrich:
+            # Full ORM objects needed for enrichment (input_data, output_data, etc.)
+            records = list(qs.order_by('-created_at')[:limit])
+            from core.services.run_enrichment import enrich_run
 
-        result = []
-        for r in runs:
-            result.append({
-                'id': str(r['id']),
-                'agent_name': r['agent__name'],
-                'task': r['task'][:200] if r['task'] else '',
-                'status': r['status'],
-                'created_at': r['created_at'].isoformat() if r['created_at'] else None,
-                'completed_at': r['completed_at'].isoformat() if r['completed_at'] else None,
-                'execution_time_ms': r['execution_time_ms'],
-                'tokens_used': r['tokens_used'] or 0,
-            })
+            result = []
+            for rec in records:
+                run_dict = {
+                    'id': str(rec.id),
+                    'agent_name': rec.agent.name if rec.agent_id else '',
+                    'task': (rec.task or '')[:200],
+                    'status': rec.status,
+                    'created_at': rec.created_at.isoformat() if rec.created_at else None,
+                    'completed_at': rec.completed_at.isoformat() if rec.completed_at else None,
+                    'execution_time_ms': rec.execution_time_ms,
+                    'tokens_used': rec.tokens_used or 0,
+                }
+                enrich_run(run_dict, full_record=rec)
+                result.append(run_dict)
+        else:
+            runs = list(
+                qs.order_by('-created_at')[:limit]
+                .values(
+                    'id', 'agent__name', 'task', 'status',
+                    'created_at', 'completed_at', 'execution_time_ms', 'tokens_used',
+                )
+            )
+
+            result = []
+            for r in runs:
+                result.append({
+                    'id': str(r['id']),
+                    'agent_name': r['agent__name'],
+                    'task': r['task'][:200] if r['task'] else '',
+                    'status': r['status'],
+                    'created_at': r['created_at'].isoformat() if r['created_at'] else None,
+                    'completed_at': r['completed_at'].isoformat() if r['completed_at'] else None,
+                    'execution_time_ms': r['execution_time_ms'],
+                    'tokens_used': r['tokens_used'] or 0,
+                })
 
         return JsonResponse(result, safe=False)
     except Exception as e:
