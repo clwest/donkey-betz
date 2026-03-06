@@ -991,7 +991,9 @@ def cockpit_runs_list(request):
 
     hours = int(request.GET.get('hours', 24))
     limit = min(int(request.GET.get('limit', 50)), 200)
+    offset = max(int(request.GET.get('offset', 0)), 0)
     enrich = request.GET.get('enrich', '0') == '1'
+    include_summary = request.GET.get('include_summary', '0') == '1'
     cutoff = timezone.now() - timedelta(hours=hours)
 
     try:
@@ -1006,11 +1008,13 @@ def cockpit_runs_list(request):
         if agent_filter:
             qs = qs.filter(agent__name__icontains=agent_filter)
 
+        ordered = qs.order_by('-created_at')
+
         if enrich:
             # Full ORM objects needed for enrichment (input_data, output_data, etc.)
-            records = list(qs.order_by('-created_at')[:limit])
             from core.services.run_enrichment import enrich_run
 
+            records = list(ordered[offset:offset + limit])
             result = []
             for rec in records:
                 run_dict = {
@@ -1027,7 +1031,7 @@ def cockpit_runs_list(request):
                 result.append(run_dict)
         else:
             runs = list(
-                qs.order_by('-created_at')[:limit]
+                ordered[offset:offset + limit]
                 .values(
                     'id', 'agent__name', 'task', 'status',
                     'created_at', 'completed_at', 'execution_time_ms', 'tokens_used',
@@ -1046,6 +1050,26 @@ def cockpit_runs_list(request):
                     'execution_time_ms': r['execution_time_ms'],
                     'tokens_used': r['tokens_used'] or 0,
                 })
+
+        # Optional distribution summary (only meaningful with enrich=1)
+        if include_summary and enrich:
+            from collections import Counter
+            trigger_counts = Counter()
+            importance_counts = Counter()
+            for r in result:
+                e = r.get('enrichment', {})
+                trigger_counts[e.get('trigger', {}).get('type', 'unknown')] += 1
+                importance_counts[e.get('importance', {}).get('level', 'routine')] += 1
+            return JsonResponse({
+                'items': result,
+                'total': ordered.count(),
+                'offset': offset,
+                'limit': limit,
+                'summary': {
+                    'trigger_type_counts': dict(trigger_counts),
+                    'importance_level_counts': dict(importance_counts),
+                },
+            })
 
         return JsonResponse(result, safe=False)
     except Exception as e:

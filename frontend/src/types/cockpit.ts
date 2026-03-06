@@ -7,7 +7,7 @@ export type RunStatus = 'pending' | 'in_progress' | 'completed' | 'failed'
 
 export type TriggerType = 'scheduled' | 'manual' | 'workflow' | 'autopilot' | 'retry' | 'unknown'
 export type ImportanceLevel = 'action_required' | 'high_impact' | 'fyi' | 'routine'
-export type NextActionType = 'review_deliverable' | 'approve_content' | 'investigate_failure' | 'view_artifacts' | 'no_action'
+export type NextActionType = 'review_deliverable' | 'approve_content' | 'preview_media' | 'investigate_failure' | 'retry_timeout' | 'fix_config' | 'rate_limited' | 'view_artifacts' | 'no_action'
 
 export interface RunTrigger {
   type: TriggerType

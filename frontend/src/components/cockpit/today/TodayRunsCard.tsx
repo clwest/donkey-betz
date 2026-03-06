@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { RunSummary, ImportanceLevel, TriggerType } from '@/types/cockpit'
+import type { RunSummary, ImportanceLevel, TriggerType, NextActionType } from '@/types/cockpit'
 import StatusPill from '@/components/cockpit/shared/StatusPill'
 import SkeletonRows from '@/components/cockpit/shared/SkeletonRows'
 import { RUN_STATUS_LABEL, RUN_STATUS_TONE } from '@/components/cockpit/runs/runStatus'
@@ -16,6 +17,14 @@ import {
   ArrowUpRight,
   Info,
   Minus,
+  AlertTriangle,
+  Eye,
+  ChevronDown,
+  ChevronUp,
+  ShieldAlert,
+  Settings,
+  Timer,
+  Image,
 } from 'lucide-react'
 
 // ── Badge configs ──────────────────────────────────────────────────────────
@@ -36,7 +45,48 @@ const TRIGGER_ICON: Record<TriggerType, typeof Clock> = {
   unknown: HelpCircle,
 }
 
+const CTA_CONFIG: Partial<Record<NextActionType, { label: string; Icon: typeof Eye; tone: string }>> = {
+  investigate_failure: { label: 'Investigate', Icon: AlertTriangle, tone: 'bg-red-500/20 text-red-400 hover:bg-red-500/30' },
+  retry_timeout: { label: 'Retry', Icon: RotateCcw, tone: 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30' },
+  fix_config: { label: 'Fix configuration', Icon: Settings, tone: 'bg-red-500/20 text-red-400 hover:bg-red-500/30' },
+  rate_limited: { label: 'View rate limit', Icon: Timer, tone: 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30' },
+  review_deliverable: { label: 'Review deliverable', Icon: Eye, tone: 'bg-primary-500/20 text-primary-400 hover:bg-primary-500/30' },
+  approve_content: { label: 'Review content', Icon: Eye, tone: 'bg-primary-500/20 text-primary-400 hover:bg-primary-500/30' },
+  preview_media: { label: 'Preview media', Icon: Image, tone: 'bg-primary-500/20 text-primary-400 hover:bg-primary-500/30' },
+  view_artifacts: { label: 'View output', Icon: Eye, tone: 'bg-dark-border/50 text-gray-400 hover:text-gray-200' },
+}
+
+const SECTION_ICON: Record<string, typeof AlertCircle> = {
+  attention: ShieldAlert,
+  review: Eye,
+  routine: Minus,
+}
+
+const SECTION_ICON_TONE: Record<string, string> = {
+  attention: 'text-red-400',
+  review: 'text-primary-400',
+  routine: 'text-gray-500',
+}
+
+// ── Display title ──────────────────────────────────────────────────────────
+
+function displayTitle(run: RunSummary): string {
+  const summary = run.enrichment?.summary
+  if (summary && summary.length <= 80) return summary
+  if (summary) return summary.slice(0, 77) + '...'
+
+  const task = run.task || ''
+  if (task.length <= 80) return task
+  return task.slice(0, 77) + '...'
+}
+
+function fullTitle(run: RunSummary): string {
+  return run.enrichment?.summary || run.task || ''
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
+
+export type SectionType = 'attention' | 'review' | 'routine'
 
 interface TodayRunsCardProps {
   runs: RunSummary[]
@@ -45,6 +95,7 @@ interface TodayRunsCardProps {
   emptyMessage?: string
   compact?: boolean
   maxRows?: number
+  section?: SectionType
 }
 
 export default function TodayRunsCard({
@@ -54,10 +105,10 @@ export default function TodayRunsCard({
   emptyMessage = 'No runs yet',
   compact = false,
   maxRows = 5,
+  section = 'routine',
 }: TodayRunsCardProps) {
   const navigate = useNavigate()
 
-  // Compact mode: no header/wrapper (used inside collapsible)
   const rows = runs.slice(0, maxRows)
 
   const content = isLoading ? (
@@ -67,7 +118,7 @@ export default function TodayRunsCard({
   ) : (
     <ul className="space-y-1">
       {rows.map((run) => (
-        <RunRow key={run.id} run={run} navigate={navigate} />
+        <RunRow key={run.id} run={run} navigate={navigate} section={section} />
       ))}
     </ul>
   )
@@ -76,12 +127,18 @@ export default function TodayRunsCard({
     return <div className="px-4 pb-3">{content}</div>
   }
 
+  const SectionIcon = SECTION_ICON[section] || Play
+  const iconTone = SECTION_ICON_TONE[section] || 'text-primary-400'
+
   return (
     <div className="card flex flex-col">
       <div className="flex items-center justify-between border-b border-dark-border px-4 py-3">
         <div className="flex items-center gap-2 text-sm font-semibold text-gray-200">
-          <Play size={16} className="text-primary-400" />
+          <SectionIcon size={16} className={iconTone} />
           {title}
+          {runs.length > 0 && (
+            <span className="text-xs font-normal text-gray-500">({runs.length})</span>
+          )}
         </div>
         <button
           onClick={() => navigate('/cockpit/runs')}
@@ -97,12 +154,20 @@ export default function TodayRunsCard({
 
 // ── Run row ────────────────────────────────────────────────────────────────
 
-function RunRow({ run, navigate }: { run: RunSummary; navigate: ReturnType<typeof useNavigate> }) {
+function RunRow({
+  run,
+  navigate,
+  section,
+}: {
+  run: RunSummary
+  navigate: ReturnType<typeof useNavigate>
+  section: SectionType
+}) {
+  const [expanded, setExpanded] = useState(false)
   const enrichment = run.enrichment
   const importance = enrichment?.importance
   const trigger = enrichment?.trigger
   const nextAction = enrichment?.next_action
-  const summary = enrichment?.summary
 
   const impConfig = importance
     ? IMPORTANCE_CONFIG[importance.level]
@@ -110,24 +175,49 @@ function RunRow({ run, navigate }: { run: RunSummary; navigate: ReturnType<typeo
 
   const TriggerIcon = trigger ? TRIGGER_ICON[trigger.type] ?? HelpCircle : Clock
 
+  const title = displayTitle(run)
+  const full = fullTitle(run)
+  const isTruncated = full.length > 80
+
+  const ctaConfig = nextAction?.type ? CTA_CONFIG[nextAction.type] : undefined
+
   return (
     <li
       className="group rounded-lg px-3 py-2.5 hover:bg-dark-border/30 cursor-pointer transition-colors"
       onClick={() => navigate(`/cockpit/runs/${run.id}`)}
     >
-      {/* Top line: summary + badges */}
+      {/* Top line: title + badges */}
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">
           <p className="text-sm text-gray-200 leading-snug">
-            {summary || run.task}
+            {title}
           </p>
+          {/* Expandable full title */}
+          {isTruncated && expanded && (
+            <p className="text-xs text-gray-400 mt-1 whitespace-pre-wrap">{full}</p>
+          )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          {/* Importance badge */}
-          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${impConfig.tone}`}>
-            <impConfig.Icon size={11} />
-            {impConfig.label}
-          </span>
+          {/* Expand toggle for truncated titles */}
+          {isTruncated && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setExpanded(!expanded)
+              }}
+              className="text-gray-600 hover:text-gray-400 transition-colors"
+              title={expanded ? 'Collapse' : 'Show full details'}
+            >
+              {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            </button>
+          )}
+          {/* Importance badge (skip in routine section) */}
+          {section !== 'routine' && (
+            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${impConfig.tone}`}>
+              <impConfig.Icon size={11} />
+              {impConfig.label}
+            </span>
+          )}
           <StatusPill
             label={RUN_STATUS_LABEL[run.status]}
             tone={RUN_STATUS_TONE[run.status]}
@@ -137,7 +227,6 @@ function RunRow({ run, navigate }: { run: RunSummary; navigate: ReturnType<typeo
 
       {/* Bottom line: trigger + agent + time + CTA */}
       <div className="flex items-center gap-3 mt-1.5">
-        {/* Trigger */}
         {trigger && (
           <span className="inline-flex items-center gap-1 text-[11px] text-gray-500" title={trigger.label}>
             <TriggerIcon size={11} />
@@ -151,20 +240,17 @@ function RunRow({ run, navigate }: { run: RunSummary; navigate: ReturnType<typeo
           {run.created_at ? formatRelative(run.created_at) : ''}
         </span>
 
-        {/* CTA button */}
-        {nextAction && nextAction.type !== 'no_action' && (
+        {/* CTA button — specific to action type */}
+        {ctaConfig && nextAction && nextAction.type !== 'no_action' && (
           <button
             onClick={(e) => {
               e.stopPropagation()
               navigate(nextAction.href || `/cockpit/runs/${run.id}`)
             }}
-            className={`text-[11px] font-medium rounded px-2 py-0.5 transition-colors ${
-              nextAction.priority === 'primary'
-                ? 'bg-primary-500/20 text-primary-400 hover:bg-primary-500/30'
-                : 'bg-dark-border/50 text-gray-400 hover:text-gray-200'
-            }`}
+            className={`inline-flex items-center gap-1 text-[11px] font-medium rounded px-2 py-0.5 transition-colors ${ctaConfig.tone}`}
           >
-            {nextAction.label}
+            <ctaConfig.Icon size={11} />
+            {ctaConfig.label}
           </button>
         )}
       </div>
@@ -177,7 +263,7 @@ function RunRow({ run, navigate }: { run: RunSummary; navigate: ReturnType<typeo
 
 // ── Artifact pills ─────────────────────────────────────────────────────────
 
-function ArtifactPills({ artifacts }: { artifacts: RunSummary['enrichment'] extends undefined ? never : NonNullable<RunSummary['enrichment']>['artifacts'] }) {
+function ArtifactPills({ artifacts }: { artifacts: NonNullable<RunSummary['enrichment']>['artifacts'] }) {
   const pills: { label: string; count: number }[] = []
   if (artifacts.deliverables.length) pills.push({ label: 'Deliverable', count: artifacts.deliverables.length })
   if (artifacts.blogs.length) pills.push({ label: 'Blog', count: artifacts.blogs.length })
