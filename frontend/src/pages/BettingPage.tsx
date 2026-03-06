@@ -11,20 +11,18 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
-type BettingTab = 'hub' | 'overview' | 'games' | 'top_plays' | 'sharp' | 'arbitrage' | 'markets' | 'odds' | 'bankroll' | 'wagers' | 'watching' | 'track_record'
+type BettingTab = 'hub' | 'overview' | 'games' | 'top_plays' | 'sharp' | 'arbitrage' | 'markets' | 'odds' | 'bankroll' | 'wagers' | 'watching' | 'track_record' | 'records'
 
 const tabs = [
   { id: 'hub' as BettingTab, label: 'Hub', icon: Newspaper },
-  { id: 'overview' as BettingTab, label: 'Overview', icon: PieChart },
   { id: 'games' as BettingTab, label: "Today's Games", icon: Swords },
   { id: 'top_plays' as BettingTab, label: 'Top Plays', icon: Star },
   { id: 'sharp' as BettingTab, label: 'Sharp Action', icon: Crosshair },
   { id: 'arbitrage' as BettingTab, label: 'Arbitrage', icon: Flame },
   { id: 'watching' as BettingTab, label: 'Watching', icon: Eye },
   { id: 'odds' as BettingTab, label: 'Live Odds', icon: Activity },
-  { id: 'bankroll' as BettingTab, label: 'Bankroll', icon: DollarSign },
   { id: 'wagers' as BettingTab, label: 'My Wagers', icon: Trophy },
-  { id: 'track_record' as BettingTab, label: 'AI Record', icon: BarChart3 },
+  { id: 'records' as BettingTab, label: 'Records', icon: BarChart3 },
 ]
 
 interface StatCardProps {
@@ -606,6 +604,8 @@ function PickDetailsDrawer({ pick, onClose, onLogWager }: {
   onClose: () => void
   onLogWager: (pick: PickDetail) => void
 }) {
+  const [showExplain, setShowExplain] = useState(false)
+
   const roiUnit = pick.was_correct !== null && pick.odds != null
     ? pick.was_correct
       ? (pick.odds < 0 ? 100 / Math.abs(pick.odds) : pick.odds / 100)
@@ -620,11 +620,24 @@ function PickDetailsDrawer({ pick, onClose, onLogWager }: {
     : null
   const clv = openIp != null && closeIp != null ? ((closeIp - openIp) * 100) : null
 
+  const timeAgo = pick.created_at ? (() => {
+    const mins = Math.round((Date.now() - new Date(pick.created_at).getTime()) / 60000)
+    if (mins < 60) return `${mins}m ago`
+    const hrs = Math.round(mins / 60)
+    if (hrs < 24) return `${hrs}h ago`
+    return `${Math.round(hrs / 24)}d ago`
+  })() : null
+
+  const isFinal = pick.home_score != null && pick.away_score != null
+  const statusLabel = pick.was_correct === true ? 'W' : pick.was_correct === false ? 'L' : isFinal ? 'Final' : 'Pending'
+  const statusColor = pick.was_correct === true ? 'bg-accent-green/20 text-accent-green' :
+    pick.was_correct === false ? 'bg-accent-red/20 text-accent-red' : 'bg-accent-amber/20 text-accent-amber'
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50" />
       <div
-        className="relative w-full max-w-md bg-dark-card border-l border-dark-border h-full overflow-y-auto animate-in slide-in-from-right"
+        className="relative w-full max-w-md bg-dark-card border-l border-dark-border h-full overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -638,143 +651,180 @@ function PickDetailsDrawer({ pick, onClose, onLogWager }: {
           </button>
         </div>
 
-        <div className="p-4 space-y-5">
-          {/* Matchup + Result */}
-          <div className="card p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs px-2 py-0.5 rounded bg-primary-600/20 text-primary-400 uppercase">
-                {pick.sport_type}
-              </span>
-              {pick.was_correct === true && <span className="text-xs px-2 py-0.5 rounded bg-accent-green/20 text-accent-green font-bold">W</span>}
-              {pick.was_correct === false && <span className="text-xs px-2 py-0.5 rounded bg-accent-red/20 text-accent-red font-bold">L</span>}
-              {pick.was_correct === null && <span className="text-xs px-2 py-0.5 rounded bg-accent-amber/20 text-accent-amber">Pending</span>}
-            </div>
-            <h4 className="text-lg font-medium mb-1">{pick.matchup || `${pick.away_team} @ ${pick.home_team}`}</h4>
-            <p className="text-sm text-gray-400">{pick.game_date}</p>
-            {pick.home_score != null && pick.away_score != null && (
-              <p className="text-sm mt-1">
-                Final: <span className="font-bold">{pick.away_score} - {pick.home_score}</span>
-              </p>
-            )}
-          </div>
-
-          {/* AI Pick */}
-          <div className="card p-4 border-l-4 border-l-accent-purple">
-            <h5 className="text-sm font-semibold text-gray-400 mb-2">AI Selection</h5>
+        <div className="p-4 space-y-4">
+          {/* ═══ LAYER 1: PROOF STRIP (always visible, above the fold) ═══ */}
+          <div className="card p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-lg font-bold text-accent-purple">{pick.predicted_winner}</span>
-              <span className="text-2xl font-bold text-accent-purple">{pick.confidence}%</span>
+              <span className="text-[10px] font-semibold tracking-wider text-gray-500 uppercase">Proof</span>
+              <span className="text-[10px] text-gray-600" title="Odds captured at prediction time. Grading is deterministic from final scores. CLV uses closing line.">
+                Market + Time + Result
+              </span>
             </div>
-            {(pick.home_win_probability != null || pick.away_win_probability != null) && (
-              <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
-                <span>{pick.away_team}: {pick.away_win_probability}%</span>
-                <span>{pick.home_team}: {pick.home_win_probability}%</span>
-              </div>
-            )}
-            {pick.predicted_spread != null && (
-              <p className="text-sm text-gray-400 mt-1">Predicted spread: {pick.predicted_spread > 0 ? '+' : ''}{pick.predicted_spread}</p>
-            )}
-            {pick.predicted_home_score != null && pick.predicted_away_score != null && (
-              <p className="text-sm text-gray-400 mt-1">
-                Predicted score: {pick.predicted_away_score} - {pick.predicted_home_score}
-              </p>
-            )}
-          </div>
 
-          {/* Odds & Value */}
-          <div className="card p-4">
-            <h5 className="text-sm font-semibold text-gray-400 mb-3">Odds & Value</h5>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">Opening Odds</span>
+            {/* Bet Definition */}
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs px-2 py-0.5 rounded bg-primary-600/20 text-primary-400 uppercase font-medium">
+                  {pick.sport_type}
+                </span>
+                <span className="text-xs text-gray-500">ML</span>
+                <span className={cn('text-xs px-2 py-0.5 rounded font-bold', statusColor)}>
+                  {statusLabel}
+                </span>
+              </div>
+              <h4 className="text-base font-medium">{pick.matchup || `${pick.away_team} @ ${pick.home_team}`}</h4>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-sm font-semibold text-accent-purple">{pick.predicted_winner}</span>
+                <span className="text-sm text-accent-purple">{pick.confidence}%</span>
+              </div>
+            </div>
+
+            {/* Price at recommendation */}
+            <div className="flex items-center gap-4 text-sm">
+              <div>
+                <span className="text-gray-500">Odds: </span>
                 {pick.odds != null ? (
-                  <span className={cn('font-mono font-medium', pick.odds > 0 ? 'text-accent-green' : 'text-accent-red')}>
+                  <span className={cn('font-mono font-medium', pick.odds > 0 ? 'text-accent-green' : 'text-white')}>
                     {pick.odds > 0 ? '+' : ''}{pick.odds}
                   </span>
-                ) : <span className="text-gray-500">Not captured</span>}
+                ) : <span className="text-gray-600 italic">not captured</span>}
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">Closing Odds</span>
-                {pick.closing_odds != null ? (
-                  <span className={cn('font-mono font-medium', pick.closing_odds > 0 ? 'text-accent-green' : 'text-accent-red')}>
+              {timeAgo && (
+                <div>
+                  <span className="text-gray-500">Predicted: </span>
+                  <span className="text-gray-300">{timeAgo}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Settlement anchor */}
+            {isFinal && (
+              <div className="flex items-center gap-4 text-sm">
+                <div>
+                  <span className="text-gray-500">Final: </span>
+                  <span className="font-bold">{pick.away_score} - {pick.home_score}</span>
+                </div>
+                {pick.was_correct === true && <span className="text-accent-green font-bold">Correct</span>}
+                {pick.was_correct === false && <span className="text-accent-red font-bold">Incorrect</span>}
+              </div>
+            )}
+
+            {/* CLV headline */}
+            <div className="flex items-center gap-4 text-sm">
+              {clv != null ? (
+                <div>
+                  <span className="text-gray-500">CLV: </span>
+                  <span className={cn('font-mono font-medium', clv > 0 ? 'text-accent-green' : clv < 0 ? 'text-accent-red' : 'text-gray-400')}>
+                    {clv > 0 ? '+' : ''}{clv.toFixed(2)}%
+                  </span>
+                </div>
+              ) : pick.closing_odds != null ? (
+                <div>
+                  <span className="text-gray-500">Closing: </span>
+                  <span className={cn('font-mono', pick.closing_odds > 0 ? 'text-accent-green' : 'text-white')}>
                     {pick.closing_odds > 0 ? '+' : ''}{pick.closing_odds}
                   </span>
-                ) : <span className="text-gray-500">Not yet</span>}
-              </div>
+                </div>
+              ) : (
+                <span className="text-gray-600 text-xs italic">CLV: pending (needs closing line)</span>
+              )}
+            </div>
+          </div>
+
+          {/* ═══ LAYER 2: CONTEXT (one scroll) ═══ */}
+          <div className="card p-4">
+            <h5 className="text-[10px] font-semibold tracking-wider text-gray-500 uppercase mb-3">Context</h5>
+            <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-gray-400">Bookmakers</span>
                 <span className="font-medium">{pick.bookmaker_count || 'N/A'}</span>
               </div>
+              {(pick.home_win_probability != null || pick.away_win_probability != null) && (
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">Win Probability</span>
+                  <span className="text-gray-300">
+                    {pick.away_team?.split(' ').pop()} {pick.away_win_probability}% / {pick.home_team?.split(' ').pop()} {pick.home_win_probability}%
+                  </span>
+                </div>
+              )}
               {roiUnit != null && (
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400">ROI (1u)</span>
+                  <span className="text-gray-400">ROI (1u flat)</span>
                   <span className={cn('font-mono font-medium', roiUnit >= 0 ? 'text-accent-green' : 'text-accent-red')}>
                     {roiUnit >= 0 ? '+' : ''}{roiUnit.toFixed(2)}u
                   </span>
                 </div>
               )}
-              {clv != null && (
+              {pick.closing_odds != null && clv != null && (
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400">CLV</span>
-                  <span className={cn('font-mono font-medium', clv > 0 ? 'text-accent-green' : clv < 0 ? 'text-accent-red' : 'text-gray-400')}>
-                    {clv > 0 ? '+' : ''}{clv.toFixed(2)}%
+                  <span className="text-gray-400">Closing Odds</span>
+                  <span className={cn('font-mono', pick.closing_odds > 0 ? 'text-accent-green' : 'text-gray-300')}>
+                    {pick.closing_odds > 0 ? '+' : ''}{pick.closing_odds}
                   </span>
                 </div>
               )}
+              {pick.evaluated_at && (
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">Evaluated at</span>
+                  <span className="text-gray-300">{new Date(pick.evaluated_at).toLocaleString()}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400">Model</span>
+                <span className="font-mono text-gray-300 text-xs">{pick.model_used || 'odds_consensus'}</span>
+              </div>
             </div>
           </div>
 
-          {/* AI Reasoning */}
-          {pick.ai_reasoning && (
-            <div className="card p-4">
-              <h5 className="text-sm font-semibold text-gray-400 mb-2">AI Reasoning</h5>
-              <p className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">{pick.ai_reasoning}</p>
-            </div>
-          )}
-
-          {/* Key Factors */}
-          {pick.key_factors && pick.key_factors.length > 0 && (
-            <div className="card p-4">
-              <h5 className="text-sm font-semibold text-gray-400 mb-2">Key Factors</h5>
-              <ul className="space-y-1">
-                {pick.key_factors.map((factor, i) => (
-                  <li key={i} className="text-sm text-gray-300 flex items-start gap-2">
-                    <span className="text-primary-400 mt-0.5">&#x2022;</span>
-                    <span>{typeof factor === 'string' ? factor : JSON.stringify(factor)}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Data Sources */}
-          <div className="card p-4">
-            <h5 className="text-sm font-semibold text-gray-400 mb-2">Data Sources</h5>
-            <div className="space-y-1 text-xs text-gray-500">
-              <div className="flex items-center justify-between">
-                <span>Model</span>
-                <span className="font-mono text-gray-400">{pick.model_used || 'odds_consensus'}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Odds</span>
-                <span className="text-gray-400">TheOddsSpider</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Scores</span>
-                <span className="text-gray-400">update_game_scores</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Predicted at</span>
-                <span className="text-gray-400">{pick.created_at ? new Date(pick.created_at).toLocaleString() : 'N/A'}</span>
-              </div>
-              {pick.evaluated_at && (
-                <div className="flex items-center justify-between">
-                  <span>Evaluated at</span>
-                  <span className="text-gray-400">{new Date(pick.evaluated_at).toLocaleString()}</span>
+          {/* ═══ LAYER 3: EXPLAINABILITY (expandable) ═══ */}
+          {(pick.ai_reasoning || (pick.key_factors && pick.key_factors.length > 0) || pick.predicted_spread != null) && (
+            <div className="card">
+              <button
+                onClick={() => setShowExplain(!showExplain)}
+                className="w-full p-4 flex items-center justify-between text-sm font-medium text-gray-400 hover:text-white transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  <Brain size={14} />
+                  Why this pick?
+                </span>
+                {showExplain ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </button>
+              {showExplain && (
+                <div className="px-4 pb-4 space-y-3">
+                  {pick.ai_reasoning && (
+                    <div>
+                      <h6 className="text-xs font-semibold text-gray-500 mb-1">AI Reasoning</h6>
+                      <p className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">{pick.ai_reasoning}</p>
+                    </div>
+                  )}
+                  {pick.key_factors && pick.key_factors.length > 0 && (
+                    <div>
+                      <h6 className="text-xs font-semibold text-gray-500 mb-1">Key Factors</h6>
+                      <ul className="space-y-1">
+                        {pick.key_factors.map((factor, i) => (
+                          <li key={i} className="text-sm text-gray-300 flex items-start gap-2">
+                            <span className="text-primary-400 mt-0.5">&#x2022;</span>
+                            <span>{typeof factor === 'string' ? factor : JSON.stringify(factor)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {pick.predicted_spread != null && (
+                    <div className="text-sm text-gray-400">
+                      Predicted spread: {pick.predicted_spread > 0 ? '+' : ''}{pick.predicted_spread}
+                      {pick.predicted_home_score != null && pick.predicted_away_score != null && (
+                        <span> | Score: {pick.predicted_away_score} - {pick.predicted_home_score}</span>
+                      )}
+                    </div>
+                  )}
+                  <div className="text-[10px] text-gray-600 pt-2 border-t border-dark-border">
+                    Sources: odds via TheOddsSpider, scores via update_game_scores, eval via evaluate_completed_predictions
+                  </div>
                 </div>
               )}
             </div>
-          </div>
+          )}
 
           {/* Log as Wager button */}
           {pick.was_correct === null && (
@@ -804,6 +854,7 @@ export default function BettingPage() {
   const [arbStake, setArbStake] = useState('100')
   const [selectedPick, setSelectedPick] = useState<PickDetail | null>(null)
   const [modelFilter, setModelFilter] = useState('')
+  const [recordsView, setRecordsView] = useState<'ai' | 'user'>('ai')
   const queryClient = useQueryClient()
 
   const toggleWagerExpand = (wagerId: string) => {
@@ -969,7 +1020,7 @@ export default function BettingPage() {
   const { data: trackRecordData, isLoading: trackRecordLoading } = useQuery({
     queryKey: ['betting-track-record', modelFilter],
     queryFn: () => bettingApi.trackRecord(modelFilter ? { model: modelFilter } : undefined),
-    enabled: activeTab === 'track_record',
+    enabled: activeTab === 'track_record' || (activeTab === 'records' && recordsView === 'ai'),
   })
 
   const stats: Partial<BettingStatsData> = statsData?.data?.stats || statsData?.data || {}
@@ -3037,6 +3088,365 @@ export default function BettingPage() {
               </>
             )
           })()}
+        </div>
+      )}
+
+      {/* ═══ Combined Records Tab ═══ */}
+      {activeTab === 'records' && (
+        <div className="space-y-6">
+          {/* AI / User Toggle */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setRecordsView('ai')}
+              className={cn(
+                'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                recordsView === 'ai' ? 'bg-primary-600 text-white' : 'bg-dark-bg text-gray-400 hover:text-white'
+              )}
+            >
+              <Brain size={14} className="inline mr-2" />
+              AI Predictions
+            </button>
+            <button
+              onClick={() => setRecordsView('user')}
+              className={cn(
+                'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                recordsView === 'user' ? 'bg-primary-600 text-white' : 'bg-dark-bg text-gray-400 hover:text-white'
+              )}
+            >
+              <Trophy size={14} className="inline mr-2" />
+              My Betting
+            </button>
+          </div>
+
+          {/* ── AI Predictions View ── */}
+          {recordsView === 'ai' && (
+            <>
+              {/* Model Filter Chips */}
+              {(() => {
+                const availableModels: string[] = trackRecordData?.data?.available_models || []
+                return availableModels.length > 0 ? (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm text-gray-400">Model:</span>
+                    <button
+                      onClick={() => setModelFilter('')}
+                      className={cn(
+                        'text-xs px-3 py-1.5 rounded-lg font-medium transition-colors',
+                        !modelFilter ? 'bg-primary-600 text-white' : 'bg-dark-bg text-gray-400 hover:text-white'
+                      )}
+                    >
+                      All
+                    </button>
+                    {availableModels.map((model: string) => (
+                      <button
+                        key={model}
+                        onClick={() => setModelFilter(modelFilter === model ? '' : model)}
+                        className={cn(
+                          'text-xs px-3 py-1.5 rounded-lg font-medium transition-colors',
+                          modelFilter === model ? 'bg-primary-600 text-white' : 'bg-dark-bg text-gray-400 hover:text-white'
+                        )}
+                      >
+                        {model.replace(/_/g, ' ')}
+                      </button>
+                    ))}
+                  </div>
+                ) : null
+              })()}
+
+              {trackRecordLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 size={32} className="animate-spin text-primary-400" />
+                </div>
+              ) : (() => {
+                const summary = trackRecordData?.data?.summary || {}
+                const bySport = trackRecordData?.data?.by_sport || {}
+                const recentPreds = trackRecordData?.data?.recent_predictions || []
+
+                return (
+                  <>
+                    {/* Summary Stats */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <StatCard
+                        label="Accuracy"
+                        value={`${summary.accuracy_percent ?? 0}%`}
+                        icon={Target}
+                        color={summary.accuracy_percent >= 55 ? 'bg-accent-green' : summary.accuracy_percent >= 50 ? 'bg-accent-amber' : 'bg-accent-red'}
+                      />
+                      <StatCard
+                        label="Total Picks"
+                        value={`${summary.correct_predictions ?? 0}-${summary.incorrect_predictions ?? 0}`}
+                        icon={Brain}
+                        color="bg-primary-600"
+                      />
+                      <StatCard
+                        label="ROI"
+                        value={summary.roi_percent != null ? `${summary.roi_percent > 0 ? '+' : ''}${summary.roi_percent}%` : 'N/A'}
+                        icon={DollarSign}
+                        color={summary.roi_percent > 0 ? 'bg-accent-green' : summary.roi_percent < 0 ? 'bg-accent-red' : 'bg-primary-600'}
+                      />
+                      <StatCard
+                        label="Calibration"
+                        value={`${summary.calibration_score ?? 0}%`}
+                        icon={BarChart3}
+                        color={summary.is_well_calibrated ? 'bg-accent-green' : 'bg-accent-amber'}
+                      />
+                    </div>
+                    {summary.pending_predictions > 0 && (
+                      <p className="text-xs text-gray-500 -mt-3">
+                        {summary.pending_predictions} picks pending evaluation &middot; {summary.days_analyzed}d window
+                        {summary.avg_clv != null && <span> &middot; Avg CLV: {summary.avg_clv > 0 ? '+' : ''}{summary.avg_clv}%</span>}
+                      </p>
+                    )}
+
+                    {/* Sport x Bet Type Breakdown */}
+                    {Object.keys(bySport).length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-semibold mb-3">By Sport</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {Object.entries(bySport).map(([sport, data]: [string, any]) => (
+                            <div key={sport} className="card p-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="font-medium uppercase text-sm">{sport}</span>
+                                <span className={cn(
+                                  'text-lg font-bold',
+                                  data.accuracy >= 60 ? 'text-accent-green' :
+                                  data.accuracy >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                                )}>{data.accuracy}%</span>
+                              </div>
+                              <div className="flex items-center gap-3 text-sm text-gray-400 mb-2">
+                                <span className="text-accent-green">{data.correct}W</span>
+                                <span className="text-accent-red">{data.incorrect}L</span>
+                                <span>{data.total} total</span>
+                              </div>
+                              <div className="w-full bg-dark-border rounded-full h-2">
+                                <div
+                                  className={cn(
+                                    'h-2 rounded-full',
+                                    data.accuracy >= 60 ? 'bg-accent-green' :
+                                    data.accuracy >= 50 ? 'bg-accent-amber' : 'bg-accent-red'
+                                  )}
+                                  style={{ width: `${Math.min(data.accuracy, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Recent Predictions Table */}
+                    {recentPreds.length > 0 ? (
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-lg font-semibold">Recent Predictions</h3>
+                          <span className="text-xs text-gray-500">Click a row for details</span>
+                        </div>
+                        <div className="card overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-dark-border text-gray-400 text-left">
+                                <th className="py-3 px-4">Date</th>
+                                <th className="py-3 px-4">Sport</th>
+                                <th className="py-3 px-4">Matchup</th>
+                                <th className="py-3 px-4">Pick</th>
+                                <th className="py-3 px-4">Odds</th>
+                                <th className="py-3 px-4">Conf</th>
+                                <th className="py-3 px-4">Result</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {recentPreds.map((pred: any) => (
+                                <tr
+                                  key={pred.id}
+                                  className="border-b border-dark-border hover:bg-dark-bg/50 cursor-pointer"
+                                  onClick={() => setSelectedPick(pred as PickDetail)}
+                                >
+                                  <td className="py-3 px-4 text-gray-400">{pred.game_date || '\u2014'}</td>
+                                  <td className="py-3 px-4 uppercase text-xs">{pred.sport_type}</td>
+                                  <td className="py-3 px-4 font-medium">{pred.matchup || '\u2014'}</td>
+                                  <td className="py-3 px-4 font-medium">{pred.predicted_winner}</td>
+                                  <td className="py-3 px-4">
+                                    {pred.odds != null ? (
+                                      <span className={cn('font-mono text-sm', pred.odds > 0 ? 'text-accent-green' : 'text-accent-red')}>
+                                        {pred.odds > 0 ? '+' : ''}{pred.odds}
+                                      </span>
+                                    ) : <span className="text-gray-500">{'\u2014'}</span>}
+                                  </td>
+                                  <td className="py-3 px-4">
+                                    <span className={cn(
+                                      'font-medium',
+                                      pred.confidence >= 75 ? 'text-accent-green' :
+                                      pred.confidence >= 60 ? 'text-accent-amber' : 'text-gray-400'
+                                    )}>{pred.confidence}%</span>
+                                  </td>
+                                  <td className="py-3 px-4">
+                                    {pred.was_correct === null ? (
+                                      <span className="text-xs text-gray-500">Pending</span>
+                                    ) : pred.was_correct ? (
+                                      <CheckCircle size={18} className="text-accent-green" />
+                                    ) : (
+                                      <XCircle size={18} className="text-accent-red" />
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="card p-12 text-center">
+                        <BarChart3 size={48} className="mx-auto mb-4 text-gray-500" />
+                        <h3 className="text-lg font-medium mb-2">No Evaluated Predictions Yet</h3>
+                        <p className="text-gray-400">Predictions will appear here after outcomes are evaluated</p>
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
+            </>
+          )}
+
+          {/* ── User Betting View ── */}
+          {recordsView === 'user' && (
+            <>
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <StatCard
+                  label="Total P/L"
+                  value={`$${(stats.total_profit_loss || 0).toFixed(2)}`}
+                  icon={DollarSign}
+                  color="bg-primary-600"
+                  trend={{ value: stats.roi || 0, isPositive: (stats.roi || 0) >= 0 }}
+                />
+                <StatCard label="Win Rate" value={`${(stats.win_rate || 0).toFixed(1)}%`} icon={Target} color="bg-accent-green" />
+                <StatCard label="Total Wagers" value={stats.total_wagers || 0} icon={Trophy} color="bg-accent-amber" />
+                <StatCard label="Pending" value={stats.pending || 0} icon={Activity} color="bg-accent-purple" />
+              </div>
+
+              {/* Streaks */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <StatCard
+                  label="Current Streak"
+                  value={`${Math.abs(stats.current_streak || 0)}${(stats.current_streak || 0) >= 0 ? 'W' : 'L'}`}
+                  icon={Flame}
+                  color={(stats.current_streak || 0) >= 0 ? "bg-accent-green" : "bg-accent-red"}
+                />
+                <StatCard label="Best Win Streak" value={stats.longest_win_streak || 0} icon={Award} color="bg-accent-green" />
+                <StatCard label="Worst Loss Streak" value={stats.longest_loss_streak || 0} icon={TrendingDown} color="bg-accent-red" />
+                <StatCard label="ROI" value={`${(stats.roi || 0) >= 0 ? '+' : ''}${(stats.roi || 0).toFixed(1)}%`} icon={TrendingUp} color="bg-primary-600" />
+              </div>
+
+              {/* Singles vs Parlays + Per-Sport */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="card">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Layers size={18} className="text-primary-400" />
+                    Singles vs Parlays
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="p-3 rounded-lg bg-primary-600/10 border border-primary-600/20">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium text-primary-400">Singles</span>
+                        <span className={cn('font-bold', singlesRecord.profit >= 0 ? 'text-accent-green' : 'text-accent-red')}>
+                          {singlesRecord.profit >= 0 ? '+' : ''}${(singlesRecord.profit ?? 0).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className="text-accent-green">{singlesRecord.wins}W</span>
+                        <span className="text-accent-red">{singlesRecord.losses}L</span>
+                      </div>
+                    </div>
+                    <div className="p-3 rounded-lg bg-accent-purple/10 border border-accent-purple/20">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium text-accent-purple">Parlays</span>
+                        <span className={cn('font-bold', parlaysRecord.profit >= 0 ? 'text-accent-green' : 'text-accent-red')}>
+                          {parlaysRecord.profit >= 0 ? '+' : ''}${(parlaysRecord.profit ?? 0).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className="text-accent-green">{parlaysRecord.wins}W</span>
+                        <span className="text-accent-red">{parlaysRecord.losses}L</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="card">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <BarChart3 size={18} className="text-accent-amber" />
+                    By Sport
+                  </h3>
+                  {Object.keys(statsBySport).length > 0 ? (
+                    <div className="space-y-3 max-h-[280px] overflow-y-auto">
+                      {Object.entries(statsBySport).map(([sport, sportStats]) => {
+                        const totalGames = sportStats.wins + sportStats.losses + (sportStats.pushes || 0)
+                        const winRate = totalGames > 0 ? (sportStats.wins / totalGames) * 100 : 0
+                        return (
+                          <div key={sport} className="p-3 rounded-lg bg-dark-bg">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-medium text-sm">{sport.split('_').slice(1).join(' ').toUpperCase() || sport}</span>
+                              <span className={cn('font-bold text-sm', sportStats.profit >= 0 ? 'text-accent-green' : 'text-accent-red')}>
+                                {sportStats.profit >= 0 ? '+' : ''}${(sportStats.profit ?? 0).toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs">
+                              <span className="text-accent-green">{sportStats.wins}W</span>
+                              <span className="text-accent-red">{sportStats.losses}L</span>
+                              <span className="text-gray-400">{(winRate ?? 0).toFixed(1)}%</span>
+                            </div>
+                            <div className="mt-2 h-1 rounded bg-dark-border overflow-hidden">
+                              <div className="h-full bg-accent-green" style={{ width: `${winRate}%` }} />
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-400">
+                      <BarChart3 size={32} className="mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No sport data yet</p>
+                      <p className="text-xs text-gray-500 mt-1">Place wagers to see per-sport performance</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Recent Wagers */}
+              {wagers.length > 0 && (
+                <div className="card">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <History size={18} className="text-primary-400" />
+                    Recent Wagers
+                    <span className="text-xs px-2 py-0.5 rounded bg-primary-600/20 text-primary-400 ml-auto">{wagers.length}</span>
+                  </h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-gray-400 border-b border-dark-border">
+                          <th className="pb-2 px-2">Type</th>
+                          <th className="pb-2 px-2">Pick</th>
+                          <th className="pb-2 px-2">Odds</th>
+                          <th className="pb-2 px-2">Stake</th>
+                          <th className="pb-2 px-2">Status</th>
+                          <th className="pb-2 px-2">P/L</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {wagers.slice(0, 10).map((wager: WagerRowProps['wager']) => (
+                          <WagerRow
+                            key={wager.id}
+                            wager={wager}
+                            onExpand={toggleWagerExpand}
+                            isExpanded={expandedWagers.has(wager.id)}
+                          />
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
 
