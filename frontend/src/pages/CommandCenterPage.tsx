@@ -856,10 +856,18 @@ export default function CommandCenterPage() {
       const taskId = response.data.task_id
       setIsPolling(true)
 
+      // Guard against overlapping async callbacks in setInterval —
+      // if the status API takes >2s, multiple callbacks can all see
+      // 'completed' and each would call addPAMessage, causing 3-5x dupes.
+      let resolved = false
+
       pollRef.current = setInterval(async () => {
+        if (resolved) return
         try {
           const status = await assistantApi.paChatStatus(taskId)
+          if (resolved) return // re-check after await
           if (status.data.status === 'completed') {
+            resolved = true
             if (pollRef.current) clearInterval(pollRef.current)
             pollRef.current = null
             setIsPolling(false)
@@ -894,6 +902,7 @@ export default function CommandCenterPage() {
               ttsMutation.mutate(content)
             }
           } else if (status.data.status === 'failed') {
+            resolved = true
             if (pollRef.current) clearInterval(pollRef.current)
             pollRef.current = null
             setIsPolling(false)
@@ -903,6 +912,7 @@ export default function CommandCenterPage() {
             })
           }
         } catch {
+          resolved = true
           if (pollRef.current) clearInterval(pollRef.current)
           pollRef.current = null
           setIsPolling(false)

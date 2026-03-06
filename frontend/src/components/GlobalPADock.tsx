@@ -117,10 +117,16 @@ export default function GlobalPADock() {
       const taskId = response.data.task_id
       setIsPolling(true)
 
+      // Guard against overlapping async callbacks (same fix as CommandCenterPage)
+      let resolved = false
+
       pollRef.current = setInterval(async () => {
+        if (resolved) return
         try {
           const status = await assistantApi.paChatStatus(taskId)
+          if (resolved) return
           if (status.data.status === 'completed') {
+            resolved = true
             if (pollRef.current) clearInterval(pollRef.current)
             pollRef.current = null
             setIsPolling(false)
@@ -135,6 +141,7 @@ export default function GlobalPADock() {
             }
             fetchConversations()
           } else if (status.data.status === 'failed') {
+            resolved = true
             if (pollRef.current) clearInterval(pollRef.current)
             pollRef.current = null
             setIsPolling(false)
@@ -144,6 +151,7 @@ export default function GlobalPADock() {
             })
           }
         } catch {
+          resolved = true
           if (pollRef.current) clearInterval(pollRef.current)
           pollRef.current = null
           setIsPolling(false)
