@@ -4520,10 +4520,20 @@ urlpatterns += [
 # =========================================================================
 # Session 1015: Government & Legislation Hub
 # =========================================================================
-from core.views_government import government_hub
+from core.views_government import (
+    government_hub, bills_list, bill_detail, bill_search,
+    members_list, member_detail, states_list, districts_list,
+)
 
 urlpatterns += [
     path('api/government/hub/', government_hub, name='government-hub'),
+    path('api/government/bills/', bills_list, name='government-bills'),
+    path('api/government/bills/search/', bill_search, name='government-bill-search'),
+    path('api/government/bills/<str:bill_uid>/', bill_detail, name='government-bill-detail'),
+    path('api/government/members/', members_list, name='government-members'),
+    path('api/government/members/<str:bioguide_id>/', member_detail, name='government-member-detail'),
+    path('api/government/states/', states_list, name='government-states'),
+    path('api/government/states/<str:state>/districts/', districts_list, name='government-districts'),
 ]
 
 # =========================================================================
