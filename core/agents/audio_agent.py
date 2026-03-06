@@ -432,11 +432,31 @@ If asked to do something outside audio generation, politely explain you can only
             return _execute_generate_voice(self.user, parameters, session=None)
 
         elif tool_name == "generate_sfx":
-            # Sound effects generation — ElevenLabs sound generation API
-            # Session 990: Proper error with context instead of bare placeholder
+            # Sound effects generation — ElevenLabs Sound Generation API
+            from content.elevenlabs_provider import elevenlabs_provider
+
+            prompt = arguments.get('description', arguments.get('text', ''))
+            if not prompt:
+                return {'success': False, 'error': 'description is required for sound effect generation'}
+
+            duration = float(arguments.get('duration', 5.0))
+            prompt_influence = float(arguments.get('prompt_influence', 0.3))
+
+            result = elevenlabs_provider.text_to_sound(
+                prompt=prompt,
+                duration=duration,
+                prompt_influence=prompt_influence,
+            )
+            if result.get('success'):
+                return {
+                    'success': True,
+                    'audio_url': result.get('audio_url', ''),
+                    'duration': duration,
+                    'prompt': prompt,
+                }
             return {
                 'success': False,
-                'error': 'Sound effects generation requires ElevenLabs Sound Generation API (not yet configured). Voice generation (generate_voice) is available.',
+                'error': result.get('error_message', 'Sound generation failed'),
             }
 
         elif tool_name == "add_voiceover":
