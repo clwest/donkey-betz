@@ -107,7 +107,7 @@ def enrich_run(run_dict: dict, full_record: Any = None) -> dict:
     artifacts = _extract_artifacts(output_data)
     importance = _compute_importance(status, cost, artifacts, output_data)
     summary = _build_summary(agent_name, task, status, output_data, artifacts)
-    next_action = _compute_next_action(status, artifacts, run_dict.get('id', ''))
+    next_action = _compute_next_action(status, artifacts, run_dict.get('id', ''), output_data)
 
     run_dict['enrichment'] = {
         'trigger': trigger,
@@ -325,8 +325,34 @@ def _build_summary(agent_name: str, task: str, status: str, output_data: dict, a
 
 # ── Next action CTA ────────────────────────────────────────────────────────
 
-def _compute_next_action(status: str, artifacts: dict, run_id: str) -> dict:
+def _compute_next_action(status: str, artifacts: dict, run_id: str, output_data: dict | None = None) -> dict:
     if status == 'failed':
+        # Classify failure type for specific CTAs
+        error_text = ''
+        if isinstance(output_data, dict):
+            error_text = str(output_data.get('error', '') or output_data.get('message', '') or '').lower()
+
+        if 'timeout' in error_text or 'timed out' in error_text:
+            return {
+                'type': 'retry_timeout',
+                'label': 'Retry',
+                'href': f'/cockpit/runs/{run_id}',
+                'priority': 'primary',
+            }
+        if any(k in error_text for k in ('api_key', 'api key', 'credential', 'auth', '401', '403', 'permission')):
+            return {
+                'type': 'fix_config',
+                'label': 'Fix configuration',
+                'href': f'/cockpit/runs/{run_id}',
+                'priority': 'primary',
+            }
+        if any(k in error_text for k in ('rate_limit', 'rate limit', '429', 'quota')):
+            return {
+                'type': 'rate_limited',
+                'label': 'View rate limit',
+                'href': f'/cockpit/runs/{run_id}',
+                'priority': 'secondary',
+            }
         return {
             'type': 'investigate_failure',
             'label': 'Investigate',
@@ -346,6 +372,14 @@ def _compute_next_action(status: str, artifacts: dict, run_id: str) -> dict:
         return {
             'type': 'approve_content',
             'label': 'Review content',
+            'href': f'/cockpit/runs/{run_id}',
+            'priority': 'primary',
+        }
+
+    if artifacts.get('media'):
+        return {
+            'type': 'preview_media',
+            'label': 'Preview media',
             'href': f'/cockpit/runs/{run_id}',
             'priority': 'primary',
         }
