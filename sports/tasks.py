@@ -258,6 +258,24 @@ def update_game_scores():
                 f"{game.away_team_id} {game.away_score} FINAL"
             )
 
+            # Snapshot closing odds on predictions for CLV calculation
+            try:
+                from sports.models import MLPrediction
+                preds = MLPrediction.objects.filter(
+                    game=game, closing_odds__isnull=True
+                )
+                for pred in preds:
+                    # Use the last known odds from the event data
+                    if pred.predicted_winner_id == game.home_team_id:
+                        closing = score_data.get('home_odds')
+                    else:
+                        closing = score_data.get('away_odds')
+                    if closing is not None:
+                        pred.closing_odds = int(closing)
+                        pred.save(update_fields=['closing_odds', 'updated_at'])
+            except Exception as e:
+                logger.warning(f"Could not snapshot closing odds for {game.external_id}: {e}")
+
     logger.info(
         f"Score update complete: {total_checked} checked, "
         f"{total_updated} updated, {api_calls} API calls"

@@ -954,7 +954,7 @@ REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', '')
 CELERY_TASK_ROUTES = {
     # Existing module-based routing
     'agents.*': {'queue': 'agents'},
-    'sports.*': {'queue': 'sports'},
+    'sports.*': {'queue': 'default'},
     'content.*': {'queue': 'content'},
     'ml.*': {'queue': 'ml'},
     # Session 1066: Route to long_running — loads torch/transformers via AIIncomeBuilder→MLEngine

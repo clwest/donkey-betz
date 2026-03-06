@@ -1835,6 +1835,24 @@ class MLPrediction(UnifiedBaseModel):
         help_text="Human-readable AI reasoning"
     )
 
+    # Odds snapshot at prediction time (for ROI/CLV calculation)
+    odds_at_prediction = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="American odds on predicted winner at time of prediction (e.g. -110, +150)"
+    )
+
+    closing_odds = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Closing odds on predicted winner (captured when game goes FINAL)"
+    )
+
+    bookmaker_count = models.IntegerField(
+        default=0,
+        help_text="Number of bookmakers in consensus at prediction time"
+    )
+
     # Evaluation and accuracy
     was_correct = models.BooleanField(
         null=True,

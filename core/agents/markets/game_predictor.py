@@ -488,6 +488,12 @@ Only assign high confidence (>75) when the market consensus is overwhelming."""
                     stored += 1  # count as stored (already there)
                     continue
 
+                # Determine odds on predicted winner
+                if winner_name == home_name:
+                    winner_odds = pred.get('home_odds')
+                else:
+                    winner_odds = pred.get('away_odds')
+
                 MLPrediction.objects.create(
                     game=game,
                     predicted_winner=winner_team,
@@ -500,6 +506,8 @@ Only assign high confidence (>75) when the market consensus is overwhelming."""
                     sport_type=sport_type,
                     key_factors=pred.get('key_factors', []),
                     ai_reasoning=f"Market consensus from {pred.get('bookmaker_count', 0)} bookmakers",
+                    odds_at_prediction=int(winner_odds) if winner_odds is not None else None,
+                    bookmaker_count=pred.get('bookmaker_count', 0),
                 )
                 stored += 1
             except Exception as e:
