@@ -5,6 +5,43 @@ export type ISODateString = string
 
 export type RunStatus = 'pending' | 'in_progress' | 'completed' | 'failed'
 
+export type TriggerType = 'scheduled' | 'manual' | 'workflow' | 'autopilot' | 'retry' | 'unknown'
+export type ImportanceLevel = 'action_required' | 'high_impact' | 'fyi' | 'routine'
+export type NextActionType = 'review_deliverable' | 'approve_content' | 'investigate_failure' | 'view_artifacts' | 'no_action'
+
+export interface RunTrigger {
+  type: TriggerType
+  label: string
+}
+
+export interface RunImportance {
+  level: ImportanceLevel
+  reasons: string[]
+}
+
+export interface RunNextAction {
+  type: NextActionType
+  label: string
+  href: string
+  priority: 'primary' | 'secondary'
+}
+
+export interface RunArtifacts {
+  deliverables: { id?: string; title?: string }[]
+  blogs: { id?: string; title?: string }[]
+  media: { id?: string; url?: string; media_type?: string }[]
+  wagers: { id?: string }[]
+  initiatives: { id?: string; name?: string }[]
+}
+
+export interface RunEnrichment {
+  trigger: RunTrigger
+  importance: RunImportance
+  summary: string
+  artifacts: RunArtifacts
+  next_action: RunNextAction
+}
+
 export interface RunSummary {
   id: UUID
   agent_name: string
@@ -14,14 +51,15 @@ export interface RunSummary {
   completed_at: ISODateString | null
   execution_time_ms: number | null
   tokens_used: number
+  enrichment?: RunEnrichment
+  cost?: number | string
+  trace_id?: UUID | null
 }
 
 export interface RunDetail extends RunSummary {
   input_data: Record<string, unknown>
   output_data: Record<string, unknown>
   error_message: string
-  cost: string
-  trace_id: UUID | null
 }
 
 // --- Errors ---

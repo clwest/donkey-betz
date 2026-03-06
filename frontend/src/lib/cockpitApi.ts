@@ -47,6 +47,7 @@ export interface RunsParams {
   agent?: string
   hours?: number
   limit?: number
+  enrich?: 0 | 1
 }
 
 export async function getRuns(params?: RunsParams) {
