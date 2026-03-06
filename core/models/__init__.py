@@ -218,6 +218,15 @@ from ..models_decision_ledger import DecisionLedgerEntry
 # Import impact credit model (Autonomy #17 - Multi-Touch Attribution)
 from ..models_impact_credit import ImpactCredit
 
+# Import government/legislation models (Session 1076 - Government RAG)
+from ..models_government import (
+    CongressMember,
+    Bill,
+    BillChunk,
+    RollCallVote,
+    VotePosition,
+)
+
 # Import learning journey models (Session 773 - Learning Journeys)
 from ..models_learning_journey import (
     LearningJourneyTemplate,
