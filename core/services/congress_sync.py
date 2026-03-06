@@ -28,6 +28,24 @@ logger = logging.getLogger(__name__)
 CONGRESS_BASE = "https://api.congress.gov/v3/"
 CURRENT_CONGRESS = 119  # 2025-2027
 
+STATE_ABBREV = {
+    'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR',
+    'California': 'CA', 'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE',
+    'Florida': 'FL', 'Georgia': 'GA', 'Hawaii': 'HI', 'Idaho': 'ID',
+    'Illinois': 'IL', 'Indiana': 'IN', 'Iowa': 'IA', 'Kansas': 'KS',
+    'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', 'Maryland': 'MD',
+    'Massachusetts': 'MA', 'Michigan': 'MI', 'Minnesota': 'MN', 'Mississippi': 'MS',
+    'Missouri': 'MO', 'Montana': 'MT', 'Nebraska': 'NE', 'Nevada': 'NV',
+    'New Hampshire': 'NH', 'New Jersey': 'NJ', 'New Mexico': 'NM', 'New York': 'NY',
+    'North Carolina': 'NC', 'North Dakota': 'ND', 'Ohio': 'OH', 'Oklahoma': 'OK',
+    'Oregon': 'OR', 'Pennsylvania': 'PA', 'Rhode Island': 'RI', 'South Carolina': 'SC',
+    'South Dakota': 'SD', 'Tennessee': 'TN', 'Texas': 'TX', 'Utah': 'UT',
+    'Vermont': 'VT', 'Virginia': 'VA', 'Washington': 'WA', 'West Virginia': 'WV',
+    'Wisconsin': 'WI', 'Wyoming': 'WY', 'District of Columbia': 'DC',
+    'American Samoa': 'AS', 'Guam': 'GU', 'Northern Mariana Islands': 'MP',
+    'Puerto Rico': 'PR', 'Virgin Islands': 'VI',
+}
+
 
 class CongressSyncService:
     """Sync Congress.gov data into government models."""
@@ -95,26 +113,40 @@ class CongressSyncService:
                     if not bioguide:
                         continue
 
-                    # Determine chamber and district from terms
+                    # Parse name (format: "Last, First" or "Last, First M.")
+                    full_name = m.get('name', '')
+                    if ', ' in full_name:
+                        last_name = full_name.split(', ')[0].strip()
+                        first_name = full_name.split(', ')[1].split()[0].strip()
+                    elif full_name:
+                        parts = full_name.split()
+                        first_name = parts[0]
+                        last_name = parts[-1]
+                    else:
+                        first_name = last_name = ''
+
+                    # State: API returns full name, convert to abbreviation
+                    state_code = STATE_ABBREV.get(m.get('state', ''), m.get('state', '')[:2])
+
+                    # Chamber from terms
                     terms = m.get('terms', {}).get('item', [])
                     chamber = 'house'
-                    district = None
-                    state_code = m.get('state', '')
-
                     if terms:
                         latest = terms[0] if isinstance(terms, list) else terms
-                        chamber = latest.get('chamber', 'House')
-                        chamber = 'senate' if 'Senate' in chamber else 'house'
-                        district = latest.get('district')
-                        if district:
-                            try:
-                                district = int(district)
-                            except (ValueError, TypeError):
-                                district = None
+                        ch = latest.get('chamber', '')
+                        chamber = 'senate' if 'Senate' in ch else 'house'
+
+                    # District is at top level (null for senators)
+                    district = m.get('district')
+                    if district is not None:
+                        try:
+                            district = int(district)
+                        except (ValueError, TypeError):
+                            district = None
 
                     defaults = {
-                        'first_name': m.get('name', '').split(', ')[-1].split()[0] if ', ' in m.get('name', '') else m.get('name', '').split()[0] if m.get('name') else '',
-                        'last_name': m.get('name', '').split(', ')[0] if ', ' in m.get('name', '') else m.get('name', '').split()[-1] if m.get('name') else '',
+                        'first_name': first_name,
+                        'last_name': last_name,
                         'party': m.get('partyName', ''),
                         'chamber': chamber,
                         'state': state_code,
@@ -141,6 +173,178 @@ class CongressSyncService:
                 break
 
         logger.info(f"Members sync: {stats}")
+        return stats
+
+    # ─── Bills (from Congress.gov API) ──────────────────────
+
+    def sync_bills(self, congress: int = CURRENT_CONGRESS, limit_pages: int = 20) -> Dict:
+        """Fetch bills from Congress.gov v3 API and upsert into Bill model."""
+        from core.models_government import Bill, CongressMember
+
+        stats = {'created': 0, 'updated': 0, 'skipped': 0, 'errors': 0}
+        offset = 0
+        page_limit = 250
+
+        for _ in range(limit_pages):
+            data = self._get(f'bill/{congress}', {
+                'limit': page_limit,
+                'offset': offset,
+                'sort': 'updateDate+desc',
+            })
+            if not data:
+                break
+
+            bills = data.get('bills', [])
+            if not bills:
+                break
+
+            for b in bills:
+                try:
+                    bill_type = (b.get('type') or '').upper()
+                    bill_number = b.get('number')
+                    if not bill_type or not bill_number:
+                        stats['skipped'] += 1
+                        continue
+
+                    bill_uid = f"BILL:{congress}:{bill_type}:{bill_number}"
+
+                    # Determine chamber
+                    origin = b.get('originChamber', '')
+                    if origin:
+                        chamber = 'senate' if 'Senate' in origin else 'house'
+                    else:
+                        chamber = 'senate' if bill_type.startswith('S') else 'house'
+
+                    title = b.get('title', '')
+                    short_title = (b.get('shortTitle') or title)[:500]
+                    latest_action = b.get('latestAction', {})
+
+                    defaults = {
+                        'jurisdiction': 'federal',
+                        'state': '',
+                        'congress': congress,
+                        'bill_type': bill_type,
+                        'bill_number': int(bill_number),
+                        'title': title,
+                        'short_title': short_title,
+                        'chamber': chamber,
+                        'source': 'congressgov',
+                        'congress_gov_url': b.get('url', ''),
+                        'last_action': latest_action.get('text', ''),
+                        'last_action_date': self._parse_date(latest_action.get('actionDate')),
+                        'introduced_date': self._parse_date(b.get('introducedDate')),
+                        'last_fetched_at': timezone.now(),
+                    }
+
+                    bill_obj, created = Bill.objects.update_or_create(
+                        bill_uid=bill_uid,
+                        defaults=defaults,
+                    )
+
+                    # Build embedding text and content hash
+                    bill_obj.build_embedding_text()
+                    bill_obj.compute_content_hash()
+                    bill_obj.save(update_fields=['embedding_text', 'content_hash'])
+
+                    stats['created' if created else 'updated'] += 1
+
+                except Exception as e:
+                    logger.warning(f"Error syncing bill {b.get('type')}{b.get('number')}: {e}")
+                    stats['errors'] += 1
+
+            offset += page_limit
+            total = data.get('pagination', {}).get('count', 0)
+            if offset >= total:
+                break
+            logger.info(f"Bills page {offset}/{total} — {stats}")
+
+        logger.info(f"Bill sync: {stats}")
+        return stats
+
+    def enrich_bill_details(self, batch_size: int = 50) -> Dict:
+        """Fetch summaries, subjects, and sponsors for bills missing them."""
+        from core.models_government import Bill, CongressMember
+
+        stats = {'enriched': 0, 'errors': 0}
+
+        # Bills with no summary and no description
+        bills = Bill.objects.filter(
+            jurisdiction='federal',
+            plain_summary='',
+            description='',
+        ).exclude(bill_type='').order_by('-updated_at')[:batch_size]
+
+        for bill in bills:
+            try:
+                # Fetch bill detail
+                path = f'bill/{bill.congress}/{bill.bill_type.lower()}/{bill.bill_number}'
+                detail = self._get(path)
+                if not detail:
+                    continue
+
+                bill_detail = detail.get('bill', {})
+
+                # Subjects/topics
+                subjects = []
+                policy_area = bill_detail.get('policyArea', {})
+                if policy_area:
+                    subjects.append(policy_area.get('name', ''))
+                if subjects:
+                    bill.topics = subjects
+
+                # Sponsors
+                sponsor_list = []
+                for s in bill_detail.get('sponsors', []):
+                    name = s.get('fullName', '') or f"{s.get('firstName', '')} {s.get('lastName', '')}"
+                    sponsor_list.append({
+                        'name': name.strip(),
+                        'bioguideId': s.get('bioguideId', ''),
+                        'party': s.get('party', ''),
+                        'state': s.get('state', ''),
+                    })
+                    # Link M2M if member exists
+                    if s.get('bioguideId'):
+                        member = CongressMember.objects.filter(
+                            bioguide_id=s['bioguideId']
+                        ).first()
+                        if member:
+                            bill.sponsors.add(member)
+
+                if sponsor_list:
+                    bill.sponsor_names = sponsor_list
+
+                # Cosponsors count
+                cosponsors = bill_detail.get('cosponsors', {})
+                if isinstance(cosponsors, dict) and cosponsors.get('count'):
+                    bill.description = f"Cosponsors: {cosponsors['count']}"
+
+                # Fetch summary
+                summary_data = self._get(f'{path}/summaries')
+                if summary_data:
+                    summaries = summary_data.get('summaries', [])
+                    if summaries:
+                        # Use the most recent summary
+                        best = summaries[-1]
+                        text = best.get('text', '')
+                        # Strip HTML tags
+                        import re
+                        clean = re.sub(r'<[^>]+>', '', text).strip()
+                        if clean:
+                            bill.plain_summary = clean[:5000]
+                            bill.summary_source = 'congressgov'
+
+                # Rebuild embedding text with new data
+                bill.build_embedding_text()
+                bill.compute_content_hash()
+                bill.save()
+
+                stats['enriched'] += 1
+
+            except Exception as e:
+                logger.warning(f"Error enriching bill {bill.bill_uid}: {e}")
+                stats['errors'] += 1
+
+        logger.info(f"Bill enrichment: {stats}")
         return stats
 
     # ─── Bills (from existing SpiderData → Bill model) ───────
@@ -523,11 +727,19 @@ class CongressSyncService:
         results['members'] = self.sync_members()
         logger.info(f"Members: {results['members']}")
 
-        # 2. Migrate existing bills from SpiderData
-        results['bills'] = self.migrate_spider_bills()
-        logger.info(f"Bills: {results['bills']}")
+        # 2. Fetch federal bills from Congress.gov
+        results['bills_congressgov'] = self.sync_bills()
+        logger.info(f"Bills (Congress.gov): {results['bills_congressgov']}")
 
-        # 3. Embed bills
+        # 3. Migrate any additional bills from SpiderData
+        results['bills_spider'] = self.migrate_spider_bills()
+        logger.info(f"Bills (SpiderData): {results['bills_spider']}")
+
+        # 4. Enrich bills with summaries and sponsors
+        results['enrichment'] = self.enrich_bill_details(batch_size=100)
+        logger.info(f"Enrichment: {results['enrichment']}")
+
+        # 5. Embed bills
         results['embeddings'] = self.embed_bills()
         logger.info(f"Embeddings: {results['embeddings']}")
 
