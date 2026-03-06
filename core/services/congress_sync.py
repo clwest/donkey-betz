@@ -217,7 +217,7 @@ class CongressSyncService:
 
                     title = b.get('title', '')
                     short_title = (b.get('shortTitle') or title)[:500]
-                    latest_action = b.get('latestAction', {})
+                    latest_action = b.get('latestAction') or {}
 
                     defaults = {
                         'jurisdiction': 'federal',

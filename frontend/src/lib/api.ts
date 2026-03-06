@@ -1382,24 +1382,57 @@ export interface TickerLookupResult {
   spider_data: { results: Array<{ id: string; spider_name: string; source_url: string; data_type: string; summary: string; relevance_score: number; created_at: string | null }>; total: number }
 }
 
-// Session 1015: Government & Legislation Hub
+// Government & Legislation
 export interface GovernmentBill {
-  id: string
+  id: number
+  bill_uid: string
   bill_number: string
   title: string
+  short_title: string
   description: string
-  plain_summary: string
+  plain_summary?: string
   status: string
-  state: string
+  chamber: string
+  introduced_date: string | null
   last_action: string
-  last_action_date: string
-  sponsors: Array<{ name: string; party: string }>
-  sponsor_count: number
-  committee: string
+  last_action_date: string | null
   topics: string[]
-  url: string
+  sponsor_names: Array<{ name: string; bioguideId?: string; party?: string; state?: string }>
   congress_gov_url: string
-  created_at: string | null
+  source: string
+  updated_at: string | null
+  // Detail-only fields
+  committee?: string
+  legiscan_url?: string
+  full_text_url?: string
+  sponsors_linked?: GovernmentMember[]
+  roll_calls?: Array<{
+    id: number; roll_number: number; date: string | null
+    question: string; result: string; yea_count: number; nay_count: number; chamber: string
+  }>
+  relevance?: number
+}
+
+export interface GovernmentMember {
+  bioguide_id: string
+  first_name: string
+  last_name: string
+  full_name: string
+  party: string
+  chamber: string
+  state: string
+  district: number | null
+  photo_url: string
+  profile_url: string
+  leadership_role: string
+  committees: string[]
+  // Detail-only fields
+  sponsored_bills?: GovernmentBill[]
+  votes?: Array<{
+    position: string; date: string | null; question: string; result: string
+    roll_number: number; chamber: string; bill_uid: string | null; bill_title: string
+  }>
+  vote_count?: number
 }
 
 export interface GovernmentHubData {
@@ -1408,6 +1441,7 @@ export interface GovernmentHubData {
     total_bills: number
     house_count: number
     senate_count: number
+    members_count: number
     status_breakdown: Record<string, number>
   }
   top_topics: Array<{ topic: string; count: number }>
@@ -1416,6 +1450,13 @@ export interface GovernmentHubData {
 
 export const governmentApi = {
   hub: () => api.get<GovernmentHubData>('/government/hub/'),
+  bills: (params?: Record<string, string | number>) => api.get('/government/bills/', { params }),
+  billDetail: (uid: string) => api.get<GovernmentBill>(`/government/bills/${uid}/`),
+  billSearch: (q: string, limit?: number) => api.get('/government/bills/search/', { params: { q, limit } }),
+  members: (params?: Record<string, string | number>) => api.get<{ members: GovernmentMember[]; total: number }>('/government/members/', { params }),
+  memberDetail: (id: string) => api.get<GovernmentMember>(`/government/members/${id}/`),
+  states: () => api.get<{ states: Array<{ code: string; count: number }> }>('/government/states/'),
+  districts: (state: string) => api.get<{ state: string; districts: number[] }>(`/government/states/${state}/districts/`),
 }
 
 export const stockApi = {
