@@ -11304,6 +11304,20 @@ RESEARCH DATA:
             # Session 1100: Proxy to cockpit_tool for beat schedule
             return self._handle_cockpit('cockpit_tool', {'action': 'beat_schedule', 'limit': payload.get('limit', 20)}, user_id, trace_id)
 
+        elif action == 'noise_metrics':
+            # Session 1077: North Star coverage + run noise breakdown
+            from core.services.noise_metrics import compute_runs_metrics
+            window = payload.get('window', '24h')
+            hours = {'1h': 1, '6h': 6, '24h': 24, '7d': 168, '30d': 720}.get(window, 24)
+            return compute_runs_metrics(hours=hours)
+
+        elif action == 'conversation_metrics':
+            # Session 1077: Topic clustering + zombie rate
+            from core.services.noise_metrics import compute_conversation_metrics
+            window = payload.get('window', '24h')
+            hours = {'1h': 1, '6h': 6, '24h': 24, '7d': 168, '30d': 720}.get(window, 24)
+            return compute_conversation_metrics(hours=hours)
+
         else:
             return {'error': f'Unknown ops_tool action: {action}'}
 
