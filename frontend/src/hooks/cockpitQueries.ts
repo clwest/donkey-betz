@@ -53,7 +53,12 @@ import {
   getOpsRunDetail,
   type OpsRunsParams,
   type IncidentsParams,
+  getRunsMetrics,
+  getConversationMetrics,
+  getFocusModeStatus,
+  updateFocusMode,
 } from '@/lib/cockpitApi'
+import type { FocusModeStatus } from '@/types/cockpit'
 
 export function useRuns(params?: RunsParams) {
   return useQuery({
@@ -439,6 +444,42 @@ export function useAddIncidentEvent() {
       qc.invalidateQueries({ queryKey: ['cockpit-incident'] })
       qc.invalidateQueries({ queryKey: ['cockpit-incidents'] })
       qc.invalidateQueries({ queryKey: ['cockpit-audit'] })
+    },
+  })
+}
+
+// --- Noise / North Star Metrics ---
+
+export function useRunsMetrics(hours = 24) {
+  return useQuery({
+    queryKey: ['cockpit-runs-metrics', hours],
+    queryFn: () => getRunsMetrics(hours),
+    refetchInterval: 30_000,
+  })
+}
+
+export function useConversationMetrics(hours = 24) {
+  return useQuery({
+    queryKey: ['cockpit-conversation-metrics', hours],
+    queryFn: () => getConversationMetrics(hours),
+    refetchInterval: 30_000,
+  })
+}
+
+export function useFocusModeStatus() {
+  return useQuery({
+    queryKey: ['cockpit-focus-mode'],
+    queryFn: () => getFocusModeStatus(),
+    refetchInterval: 30_000,
+  })
+}
+
+export function useUpdateFocusMode() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (updates: Partial<FocusModeStatus>) => updateFocusMode(updates),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cockpit-focus-mode'] })
     },
   })
 }

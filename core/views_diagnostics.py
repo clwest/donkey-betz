@@ -1121,6 +1121,35 @@ def cockpit_conversations_metrics(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+@require_http_methods(["GET"])
+def cockpit_focus_mode_status(request):
+    """Focus Mode status for cockpit cards. GET /api/cockpit/focus-mode/status/"""
+    if not (request.user and request.user.is_authenticated):
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    try:
+        from core.services.focus_mode import get_status
+        return JsonResponse(get_status())
+    except Exception as e:
+        logger.exception("cockpit_focus_mode_status error")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+def cockpit_focus_mode_update(request):
+    """Update Focus Mode config. POST /api/cockpit/focus-mode/update/"""
+    if not (request.user and request.user.is_authenticated):
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    try:
+        import json
+        body = json.loads(request.body) if request.body else {}
+        from core.services.focus_mode import set_config, get_status
+        set_config(body)
+        return JsonResponse(get_status())
+    except Exception as e:
+        logger.exception("cockpit_focus_mode_update error")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
 # ── Focus Cockpit Create endpoints ───────────────────────────────────────────
 
 @csrf_exempt

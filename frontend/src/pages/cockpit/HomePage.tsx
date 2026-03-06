@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import TodayRunsCard from '@/components/cockpit/today/TodayRunsCard'
 import TodayErrorsCard from '@/components/cockpit/today/TodayErrorsCard'
+import NorthStarCard from '@/components/cockpit/today/NorthStarCard'
+import NoiseLeaderboardCard from '@/components/cockpit/today/NoiseLeaderboardCard'
+import FocusModeCard from '@/components/cockpit/today/FocusModeCard'
 import { useRuns, useErrorSummary } from '@/hooks/cockpitQueries'
 import type { RunSummary, NextActionType } from '@/types/cockpit'
 
@@ -110,7 +113,12 @@ export default function CockpitHomePage() {
             </div>
           )}
         </div>
-        <TodayErrorsCard data={errors} isLoading={errorsLoading} />
+        <div className="space-y-4">
+          <TodayErrorsCard data={errors} isLoading={errorsLoading} />
+          <NorthStarCard />
+          <NoiseLeaderboardCard />
+          <FocusModeCard />
+        </div>
       </div>
     </div>
   )

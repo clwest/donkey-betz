@@ -38,6 +38,9 @@ import type {
   IncidentAddEventResponse,
   OpsRunListResponse,
   OpsRunDetailResponse,
+  RunsMetricsResponse,
+  ConversationMetricsResponse,
+  FocusModeStatus,
 } from '@/types/cockpit'
 
 // --- Runs ---
@@ -423,6 +426,28 @@ export async function getOpsOverview(params?: OpsParams) {
 
 export async function getPlatformConfig() {
   const { data } = await api.get<PlatformConfigResponse>('/internal/config-snapshot/')
+  return data
+}
+
+// --- Noise / North Star Metrics ---
+
+export async function getRunsMetrics(hours = 24) {
+  const { data } = await api.get<RunsMetricsResponse>('/cockpit/runs/metrics/', { params: { hours } })
+  return data
+}
+
+export async function getConversationMetrics(hours = 24) {
+  const { data } = await api.get<ConversationMetricsResponse>('/cockpit/conversations/metrics/', { params: { hours } })
+  return data
+}
+
+export async function getFocusModeStatus() {
+  const { data } = await api.get<FocusModeStatus>('/cockpit/focus-mode/status/')
+  return data
+}
+
+export async function updateFocusMode(updates: Partial<FocusModeStatus>) {
+  const { data } = await api.post<FocusModeStatus>('/cockpit/focus-mode/update/', updates)
   return data
 }
 
