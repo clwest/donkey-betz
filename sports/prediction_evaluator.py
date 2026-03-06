@@ -184,6 +184,10 @@ class PredictionEvaluator:
             prediction.was_correct = was_correct
             prediction.evaluated_at = timezone.now()
 
+            # Closing odds fallback: use odds_at_prediction if no closing snapshot
+            if prediction.closing_odds is None and prediction.odds_at_prediction is not None:
+                prediction.closing_odds = prediction.odds_at_prediction
+
             # Store evaluation details in inherited metadata JSONField
             prediction.metadata = {
                 'outcome_type': outcome_type,

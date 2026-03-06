@@ -1325,6 +1325,7 @@ from core.views_odds_sports import (
     get_bookmaker_analysis, get_game_spider_insights, scan_arbitrage_opportunities, get_futures_odds,
     log_wager, get_line_movement, get_games_with_movement,
     get_todays_games, get_betting_brief, get_sharp_action, get_ai_track_record,
+    get_pipeline_status,
 )
 # Session 562: Push Notification APIs
 from core.views_push_notifications import (
@@ -2993,6 +2994,7 @@ urlpatterns = [
     path('api/v1/betting/brief/', get_betting_brief, name='betting-brief'),
     path('api/v1/betting/sharp-action/', get_sharp_action, name='betting-sharp-action'),
     path('api/v1/betting/track-record/', get_ai_track_record, name='betting-track-record'),
+    path('api/v1/betting/pipeline-status/', get_pipeline_status, name='betting-pipeline-status'),
 
     # Session 562: Push Notifications for Arb Alerts
     path('api/v1/push/vapid-key/', get_vapid_public_key, name='push-vapid-key'),

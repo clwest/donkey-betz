@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
-type BettingTab = 'hub' | 'overview' | 'games' | 'top_plays' | 'sharp' | 'arbitrage' | 'markets' | 'odds' | 'bankroll' | 'wagers' | 'watching' | 'track_record' | 'records'
+type BettingTab = 'hub' | 'games' | 'top_plays' | 'sharp' | 'arbitrage' | 'markets' | 'odds' | 'bankroll' | 'wagers' | 'watching' | 'records'
 
 const tabs = [
   { id: 'hub' as BettingTab, label: 'Hub', icon: Newspaper },
@@ -618,7 +618,9 @@ function PickDetailsDrawer({ pick, onClose, onLogWager }: {
   const closeIp = pick.closing_odds != null
     ? (pick.closing_odds < 0 ? Math.abs(pick.closing_odds) / (Math.abs(pick.closing_odds) + 100) : 100 / (pick.closing_odds + 100))
     : null
-  const clv = openIp != null && closeIp != null ? ((closeIp - openIp) * 100) : null
+  // CLV is only meaningful if closing_odds differs from odds_at_prediction
+  const hasRealClosing = pick.closing_odds != null && pick.odds != null && pick.closing_odds !== pick.odds
+  const clv = openIp != null && closeIp != null && hasRealClosing ? ((closeIp - openIp) * 100) : null
 
   const timeAgo = pick.created_at ? (() => {
     const mins = Math.round((Date.now() - new Date(pick.created_at).getTime()) / 60000)
@@ -847,7 +849,6 @@ export default function BettingPage() {
   const [sportFilter, setSportFilter] = useState('all')
   const [watchingFilter, setWatchingFilter] = useState<'all' | 'pending' | 'verified'>('all')
   const [expandedWagers, setExpandedWagers] = useState<Set<string>>(new Set())
-  const [showDetailedStats, setShowDetailedStats] = useState(false)
   const [expandedBookmakers, setExpandedBookmakers] = useState<Set<string>>(new Set())
   const [showWagerForm, setShowWagerForm] = useState(false)
   const [wagerForm, setWagerForm] = useState({ matchup: '', pick: '', odds: '-110', stake: '10', sport: '', bookmaker: '', market_type: 'h2h' })
@@ -1020,7 +1021,15 @@ export default function BettingPage() {
   const { data: trackRecordData, isLoading: trackRecordLoading } = useQuery({
     queryKey: ['betting-track-record', modelFilter],
     queryFn: () => bettingApi.trackRecord(modelFilter ? { model: modelFilter } : undefined),
-    enabled: activeTab === 'track_record' || (activeTab === 'records' && recordsView === 'ai'),
+    enabled: activeTab === 'records' && recordsView === 'ai',
+  })
+
+  // Pipeline freshness
+  const { data: pipelineData } = useQuery({
+    queryKey: ['betting-pipeline-status'],
+    queryFn: () => bettingApi.pipelineStatus(),
+    enabled: activeTab === 'records' || activeTab === 'games',
+    refetchInterval: 60000,
   })
 
   const stats: Partial<BettingStatsData> = statsData?.data?.stats || statsData?.data || {}
@@ -1213,295 +1222,6 @@ export default function BettingPage() {
         </div>
       )}
 
-      {/* Overview Tab */}
-      {activeTab === 'overview' && (
-        <div className="space-y-6">
-          {/* Stats Grid - Primary Row */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatCard
-              label="Total P/L"
-              value={`$${(stats.total_profit_loss || 0).toFixed(2)}`}
-              icon={DollarSign}
-              color="bg-primary-600"
-              trend={{ value: stats.roi || 0, isPositive: (stats.roi || 0) >= 0 }}
-            />
-            <StatCard
-              label="Win Rate"
-              value={`${(stats.win_rate || 0).toFixed(1)}%`}
-              icon={Target}
-              color="bg-accent-green"
-            />
-            <StatCard
-              label="Total Wagers"
-              value={stats.total_wagers || 0}
-              icon={Trophy}
-              color="bg-accent-amber"
-            />
-            <StatCard
-              label="Pending"
-              value={stats.pending || 0}
-              icon={Activity}
-              color="bg-accent-purple"
-            />
-          </div>
-
-          {/* Stats Grid - Secondary Row (Streak Stats) */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatCard
-              label="Current Streak"
-              value={`${stats.current_streak || 0}${(stats.current_streak || 0) >= 0 ? 'W' : 'L'}`}
-              icon={Flame}
-              color={(stats.current_streak || 0) >= 0 ? "bg-accent-green" : "bg-accent-red"}
-            />
-            <StatCard
-              label="Best Win Streak"
-              value={stats.longest_win_streak || 0}
-              icon={Award}
-              color="bg-accent-green"
-            />
-            <StatCard
-              label="Worst Loss Streak"
-              value={stats.longest_loss_streak || 0}
-              icon={TrendingDown}
-              color="bg-accent-red"
-            />
-            <StatCard
-              label="Pushes"
-              value={stats.pushes || 0}
-              icon={CircleDot}
-              color="bg-gray-600"
-            />
-          </div>
-
-          {/* Detailed Stats Toggle */}
-          <button
-            onClick={() => setShowDetailedStats(!showDetailedStats)}
-            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
-          >
-            {showDetailedStats ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            {showDetailedStats ? 'Hide' : 'Show'} Detailed Breakdown
-          </button>
-
-          {/* Detailed Stats Panel */}
-          {showDetailedStats && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Singles vs Parlays */}
-              <div className="card">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Layers size={18} className="text-primary-400" />
-                  Singles vs Parlays
-                </h3>
-                <div className="space-y-4">
-                  {/* Singles */}
-                  <div className="p-3 rounded-lg bg-primary-600/10 border border-primary-600/20">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-primary-400">Singles</span>
-                      <span className={cn(
-                        'font-bold',
-                        singlesRecord.profit >= 0 ? 'text-accent-green' : 'text-accent-red'
-                      )}>
-                        {singlesRecord.profit >= 0 ? '+' : ''}${(singlesRecord.profit ?? 0).toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm">
-                      <span className="text-accent-green">{singlesRecord.wins}W</span>
-                      <span className="text-accent-red">{singlesRecord.losses}L</span>
-                      <span className="text-gray-400">
-                        {singlesRecord.wins + singlesRecord.losses > 0
-                          ? `${((singlesRecord.wins / (singlesRecord.wins + singlesRecord.losses)) * 100).toFixed(1)}%`
-                          : '0%'
-                        } win rate
-                      </span>
-                    </div>
-                  </div>
-                  {/* Parlays */}
-                  <div className="p-3 rounded-lg bg-accent-purple/10 border border-accent-purple/20">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-accent-purple">Parlays</span>
-                      <span className={cn(
-                        'font-bold',
-                        parlaysRecord.profit >= 0 ? 'text-accent-green' : 'text-accent-red'
-                      )}>
-                        {parlaysRecord.profit >= 0 ? '+' : ''}${(parlaysRecord.profit ?? 0).toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm">
-                      <span className="text-accent-green">{parlaysRecord.wins}W</span>
-                      <span className="text-accent-red">{parlaysRecord.losses}L</span>
-                      <span className="text-gray-400">
-                        {parlaysRecord.wins + parlaysRecord.losses > 0
-                          ? `${((parlaysRecord.wins / (parlaysRecord.wins + parlaysRecord.losses)) * 100).toFixed(1)}%`
-                          : '0%'
-                        } win rate
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Per-Sport Breakdown */}
-              <div className="card">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <BarChart3 size={18} className="text-accent-amber" />
-                  Performance by Sport
-                </h3>
-                {Object.keys(statsBySport).length > 0 ? (
-                  <div className="space-y-3 max-h-[280px] overflow-y-auto">
-                    {Object.entries(statsBySport).map(([sport, sportStats]) => {
-                      const totalGames = sportStats.wins + sportStats.losses + (sportStats.pushes || 0)
-                      const winRate = totalGames > 0 ? (sportStats.wins / totalGames) * 100 : 0
-                      return (
-                        <div key={sport} className="p-3 rounded-lg bg-dark-bg">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium text-sm">
-                              {sport.split('_').slice(1).join(' ').toUpperCase() || sport}
-                            </span>
-                            <span className={cn(
-                              'font-bold text-sm',
-                              sportStats.profit >= 0 ? 'text-accent-green' : 'text-accent-red'
-                            )}>
-                              {sportStats.profit >= 0 ? '+' : ''}${(sportStats.profit ?? 0).toFixed(2)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3 text-xs">
-                            <span className="text-accent-green">{sportStats.wins}W</span>
-                            <span className="text-accent-red">{sportStats.losses}L</span>
-                            {sportStats.pushes && sportStats.pushes > 0 && (
-                              <span className="text-gray-400">{sportStats.pushes}P</span>
-                            )}
-                            <span className="text-gray-500">|</span>
-                            <span className="text-gray-400">{(winRate ?? 0).toFixed(1)}% win rate</span>
-                            {sportStats.wagers && (
-                              <span className="text-gray-500">{sportStats.wagers} wagers</span>
-                            )}
-                          </div>
-                          {/* Mini progress bar */}
-                          <div className="mt-2 h-1 rounded bg-dark-border overflow-hidden">
-                            <div
-                              className="h-full bg-accent-green"
-                              style={{ width: `${winRate}%` }}
-                            />
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-400">
-                    <BarChart3 size={32} className="mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No sport-specific data yet</p>
-                    <p className="text-xs text-gray-500 mt-1">Place wagers to see per-sport performance</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Two Column Layout */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Recent Wagers */}
-            <div className="card">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <History size={18} className="text-primary-400" />
-                  Recent Wagers
-                </h3>
-                <span className="text-xs px-2 py-0.5 rounded bg-primary-600/20 text-primary-400">
-                  {wagers.length} total
-                </span>
-              </div>
-              {wagersLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 size={24} className="animate-spin text-primary-400" />
-                </div>
-              ) : wagers.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-left text-gray-400 border-b border-dark-border">
-                        <th className="pb-2 px-2">Type</th>
-                        <th className="pb-2 px-2">Pick</th>
-                        <th className="pb-2 px-2">Odds</th>
-                        <th className="pb-2 px-2">Stake</th>
-                        <th className="pb-2 px-2">Status</th>
-                        <th className="pb-2 px-2">P/L</th>
-                        <th className="pb-2 px-2">Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {wagers.slice(0, 5).map((wager: WagerRowProps['wager']) => (
-                        <WagerRow
-                          key={wager.id}
-                          wager={wager}
-                          onExpand={toggleWagerExpand}
-                          isExpanded={expandedWagers.has(wager.id)}
-                        />
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-400">
-                  <Trophy size={32} className="mx-auto mb-2 opacity-50" />
-                  <p>No wagers yet</p>
-                </div>
-              )}
-            </div>
-
-            {/* Performance */}
-            <div className="card">
-              <h3 className="text-lg font-semibold mb-4">Performance</h3>
-              <div className="grid grid-cols-4 gap-3 mb-4">
-                <div className="text-center p-2 rounded-lg bg-accent-green/10">
-                  <p className="text-xl font-bold text-accent-green">{stats.wins || 0}</p>
-                  <p className="text-xs text-gray-400">Wins</p>
-                </div>
-                <div className="text-center p-2 rounded-lg bg-accent-red/10">
-                  <p className="text-xl font-bold text-accent-red">{stats.losses || 0}</p>
-                  <p className="text-xs text-gray-400">Losses</p>
-                </div>
-                <div className="text-center p-2 rounded-lg bg-accent-purple/10">
-                  <p className="text-xl font-bold text-accent-purple">{stats.pushes || 0}</p>
-                  <p className="text-xs text-gray-400">Pushes</p>
-                </div>
-                <div className="text-center p-2 rounded-lg bg-accent-amber/10">
-                  <p className="text-xl font-bold text-accent-amber">{stats.pending || 0}</p>
-                  <p className="text-xs text-gray-400">Pending</p>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400">ROI</span>
-                  <span className={cn('font-medium', (stats.roi || 0) >= 0 ? 'text-accent-green' : 'text-accent-red')}>
-                    {(stats.roi || 0) >= 0 ? '+' : ''}{(stats.roi || 0).toFixed(2)}%
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Total Staked</span>
-                  <span className="font-medium">${(stats.total_stake || 0).toFixed(2)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Current Streak</span>
-                  <span className={cn('font-medium', (stats.current_streak || 0) >= 0 ? 'text-accent-green' : 'text-accent-red')}>
-                    {Math.abs(stats.current_streak || 0)} {(stats.current_streak || 0) >= 0 ? 'W' : 'L'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Best Streak</span>
-                  <span className="font-medium text-accent-green">{stats.longest_win_streak || 0}W</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Last Updated</span>
-                  <span className="text-xs text-gray-500">
-                    {stats.last_updated ? new Date(stats.last_updated).toLocaleString() : '-'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Session 995B: Today's Games Tab */}
       {activeTab === 'games' && (
         <div className="space-y-6">
@@ -1524,6 +1244,16 @@ export default function BettingPage() {
               Refresh
             </button>
             <span className="text-sm text-gray-400">{todaysGames.length} games</span>
+            {/* Pipeline freshness */}
+            {(() => {
+              const p = pipelineData?.data?.pipeline
+              if (!p) return null
+              return (
+                <span className="ml-auto text-xs text-gray-500" title={p.scores_updated?.timestamp || ''}>
+                  Scores: {p.scores_updated?.ago || '—'} · Odds: {p.odds_updated?.ago || '—'}
+                </span>
+              )
+            })()}
           </div>
 
           {/* Stats Row */}
@@ -2900,197 +2630,6 @@ export default function BettingPage() {
         </div>
       )}
 
-      {/* AI Track Record Tab */}
-      {activeTab === 'track_record' && (
-        <div className="space-y-6">
-          {/* Model Filter Chips */}
-          {(() => {
-            const availableModels: string[] = trackRecordData?.data?.available_models || []
-            return availableModels.length > 0 ? (
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm text-gray-400">Filter:</span>
-                <button
-                  onClick={() => setModelFilter('')}
-                  className={cn(
-                    'text-xs px-3 py-1.5 rounded-lg font-medium transition-colors',
-                    !modelFilter ? 'bg-primary-600 text-white' : 'bg-dark-bg text-gray-400 hover:text-white'
-                  )}
-                >
-                  All Models
-                </button>
-                {availableModels.map((model: string) => (
-                  <button
-                    key={model}
-                    onClick={() => setModelFilter(modelFilter === model ? '' : model)}
-                    className={cn(
-                      'text-xs px-3 py-1.5 rounded-lg font-medium transition-colors',
-                      modelFilter === model ? 'bg-primary-600 text-white' : 'bg-dark-bg text-gray-400 hover:text-white'
-                    )}
-                  >
-                    {model.replace(/_/g, ' ')}
-                  </button>
-                ))}
-              </div>
-            ) : null
-          })()}
-
-          {trackRecordLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 size={32} className="animate-spin text-primary-400" />
-            </div>
-          ) : (() => {
-            const summary = trackRecordData?.data?.summary || {}
-            const bySport = trackRecordData?.data?.by_sport || {}
-            const recentPreds = trackRecordData?.data?.recent_predictions || []
-
-            return (
-              <>
-                {/* Summary Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <StatCard
-                    label="Accuracy"
-                    value={`${summary.accuracy_percent ?? 0}%`}
-                    icon={Target}
-                    color={summary.accuracy_percent >= 55 ? 'bg-accent-green' : summary.accuracy_percent >= 50 ? 'bg-accent-amber' : 'bg-accent-red'}
-                  />
-                  <StatCard
-                    label="Total Picks"
-                    value={`${summary.correct_predictions ?? 0}-${summary.incorrect_predictions ?? 0}`}
-                    icon={Brain}
-                    color="bg-primary-600"
-                  />
-                  <StatCard
-                    label="ROI"
-                    value={summary.roi_percent != null ? `${summary.roi_percent > 0 ? '+' : ''}${summary.roi_percent}%` : 'N/A'}
-                    icon={DollarSign}
-                    color={summary.roi_percent > 0 ? 'bg-accent-green' : summary.roi_percent < 0 ? 'bg-accent-red' : 'bg-primary-600'}
-                    trend={summary.roi_units != null ? { value: summary.roi_units, isPositive: summary.roi_units >= 0 } : undefined}
-                  />
-                  <StatCard
-                    label="Calibration"
-                    value={`${summary.calibration_score ?? 0}%`}
-                    icon={BarChart3}
-                    color={summary.is_well_calibrated ? 'bg-accent-green' : 'bg-accent-amber'}
-                  />
-                </div>
-                {summary.pending_predictions > 0 && (
-                  <p className="text-xs text-gray-500 -mt-3">
-                    {summary.pending_predictions} picks pending evaluation &middot; {summary.days_analyzed}d window
-                    {summary.avg_clv != null && <span> &middot; Avg CLV: {summary.avg_clv > 0 ? '+' : ''}{summary.avg_clv}%</span>}
-                  </p>
-                )}
-
-                {/* By Category Breakdown */}
-                {Object.keys(bySport).length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3">By Sport</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {Object.entries(bySport).map(([sport, data]: [string, any]) => (
-                        <div key={sport} className="card p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium uppercase text-sm">{sport}</span>
-                            <span className={cn(
-                              'text-lg font-bold',
-                              data.accuracy >= 60 ? 'text-accent-green' :
-                              data.accuracy >= 50 ? 'text-accent-amber' : 'text-accent-red'
-                            )}>{data.accuracy}%</span>
-                          </div>
-                          <div className="flex items-center gap-3 text-sm text-gray-400 mb-2">
-                            <span className="text-accent-green">{data.correct}W</span>
-                            <span className="text-accent-red">{data.incorrect}L</span>
-                            <span>{data.total} total</span>
-                          </div>
-                          <div className="w-full bg-dark-border rounded-full h-2">
-                            <div
-                              className={cn(
-                                'h-2 rounded-full',
-                                data.accuracy >= 60 ? 'bg-accent-green' :
-                                data.accuracy >= 50 ? 'bg-accent-amber' : 'bg-accent-red'
-                              )}
-                              style={{ width: `${Math.min(data.accuracy, 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Recent Predictions Table */}
-                {recentPreds.length > 0 ? (
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-lg font-semibold">Recent Predictions</h3>
-                      <span className="text-xs text-gray-500">Click a row for details</span>
-                    </div>
-                    <div className="card overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-dark-border text-gray-400 text-left">
-                            <th className="py-3 px-4">Date</th>
-                            <th className="py-3 px-4">Sport</th>
-                            <th className="py-3 px-4">Matchup</th>
-                            <th className="py-3 px-4">Pick</th>
-                            <th className="py-3 px-4">Odds</th>
-                            <th className="py-3 px-4">Confidence</th>
-                            <th className="py-3 px-4">Result</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {recentPreds.map((pred: any) => (
-                            <tr
-                              key={pred.id}
-                              className="border-b border-dark-border hover:bg-dark-bg/50 cursor-pointer"
-                              onClick={() => setSelectedPick(pred as PickDetail)}
-                            >
-                              <td className="py-3 px-4 text-gray-400">{pred.game_date || '\u2014'}</td>
-                              <td className="py-3 px-4 uppercase">{pred.sport_type}</td>
-                              <td className="py-3 px-4 font-medium">{pred.matchup || '\u2014'}</td>
-                              <td className="py-3 px-4 font-medium">{pred.predicted_winner}</td>
-                              <td className="py-3 px-4">
-                                {pred.odds != null ? (
-                                  <span className={cn('font-mono text-sm', pred.odds > 0 ? 'text-accent-green' : 'text-accent-red')}>
-                                    {pred.odds > 0 ? '+' : ''}{pred.odds}
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-500">{'\u2014'}</span>
-                                )}
-                              </td>
-                              <td className="py-3 px-4">
-                                <span className={cn(
-                                  'font-medium',
-                                  pred.confidence >= 75 ? 'text-accent-green' :
-                                  pred.confidence >= 60 ? 'text-accent-amber' : 'text-gray-400'
-                                )}>{pred.confidence}%</span>
-                              </td>
-                              <td className="py-3 px-4">
-                                {pred.was_correct === null ? (
-                                  <span className="text-xs text-gray-500">Pending</span>
-                                ) : pred.was_correct ? (
-                                  <CheckCircle size={18} className="text-accent-green" />
-                                ) : (
-                                  <XCircle size={18} className="text-accent-red" />
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="card p-12 text-center">
-                    <BarChart3 size={48} className="mx-auto mb-4 text-gray-500" />
-                    <h3 className="text-lg font-medium mb-2">No Evaluated Predictions Yet</h3>
-                    <p className="text-gray-400">Predictions will appear here after outcomes are evaluated</p>
-                  </div>
-                )}
-              </>
-            )
-          })()}
-        </div>
-      )}
-
       {/* ═══ Combined Records Tab ═══ */}
       {activeTab === 'records' && (
         <div className="space-y-6">
@@ -3117,6 +2656,27 @@ export default function BettingPage() {
               My Betting
             </button>
           </div>
+
+          {/* Pipeline Freshness Strip */}
+          {(() => {
+            const p = pipelineData?.data?.pipeline
+            if (!p) return null
+            const items = [
+              { label: 'Odds', ...p.odds_updated },
+              { label: 'Predictions', ...p.predictions_updated },
+              { label: 'Scores', ...p.scores_updated },
+              { label: 'Evaluations', ...p.evaluations_updated },
+            ]
+            return (
+              <div className="flex items-center gap-4 text-xs text-gray-500 flex-wrap">
+                {items.map(item => (
+                  <span key={item.label} title={item.timestamp || 'Not available'}>
+                    {item.label}: <span className="text-gray-400">{item.ago || '—'}</span>
+                  </span>
+                ))}
+              </div>
+            )
+          })()}
 
           {/* ── AI Predictions View ── */}
           {recordsView === 'ai' && (

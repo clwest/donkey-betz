@@ -3509,3 +3509,71 @@ def get_ai_track_record(request):
     except Exception as e:
         logger.error(f"Error getting AI track record: {e}", exc_info=True)
         return Response({'success': False, 'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_pipeline_status(request):
+    """Sports pipeline freshness timestamps for trust UX.
+
+    Returns the latest successful run time for each pipeline step:
+    - odds_updated: last MLPrediction created (predictions carry fresh odds)
+    - predictions_updated: last MLPrediction created
+    - scores_updated: last Game marked FINAL
+    - evaluations_updated: last MLPrediction evaluated
+    """
+    try:
+        from sports.models import MLPrediction, Game, GameStatus
+
+        now = timezone.now()
+
+        # Latest prediction (carries odds + prediction timestamps)
+        latest_pred = (
+            MLPrediction.objects.order_by('-created_at')
+            .values_list('created_at', flat=True)
+            .first()
+        )
+
+        # Latest game marked FINAL
+        latest_score = (
+            Game.objects.filter(status=GameStatus.FINAL)
+            .order_by('-updated_at')
+            .values_list('updated_at', flat=True)
+            .first()
+        )
+
+        # Latest evaluation
+        latest_eval = (
+            MLPrediction.objects.filter(evaluated_at__isnull=False)
+            .order_by('-evaluated_at')
+            .values_list('evaluated_at', flat=True)
+            .first()
+        )
+
+        def fmt(dt):
+            if dt is None:
+                return {'timestamp': None, 'ago': None}
+            delta = now - dt
+            minutes = int(delta.total_seconds() / 60)
+            if minutes < 1:
+                ago = 'just now'
+            elif minutes < 60:
+                ago = f'{minutes}m ago'
+            elif minutes < 1440:
+                ago = f'{minutes // 60}h ago'
+            else:
+                ago = f'{minutes // 1440}d ago'
+            return {'timestamp': dt.isoformat(), 'ago': ago}
+
+        return Response({
+            'success': True,
+            'pipeline': {
+                'odds_updated': fmt(latest_pred),
+                'predictions_updated': fmt(latest_pred),
+                'scores_updated': fmt(latest_score),
+                'evaluations_updated': fmt(latest_eval),
+            },
+        })
+    except Exception as e:
+        logger.error(f"Error getting pipeline status: {e}", exc_info=True)
+        return Response({'success': False, 'error': str(e)}, status=500)

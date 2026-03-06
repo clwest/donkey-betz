@@ -1,12 +1,35 @@
 """
 Mock Intelligence API endpoints for testing
+
+QUARANTINED: These endpoints return synthetic data and are disabled in production.
+Enable with INTELLIGENCE_VIEWS_ENABLED=true env var (or DEBUG=True).
 """
 
-from django.http import JsonResponse
+from django.conf import settings
+from django.http import Http404, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 import json
+import logging
+import os
 import random
+
+logger = logging.getLogger(__name__)
+
+_ENABLED = getattr(settings, 'DEBUG', False) or os.environ.get('INTELLIGENCE_VIEWS_ENABLED', '').lower() == 'true'
+
+
+def _gate(request):
+    """Block mock intelligence endpoints in production."""
+    if not _ENABLED:
+        logger.warning(
+            "intelligence_views_disabled_hit route=%s user=%s referer=%s",
+            request.path,
+            getattr(request, 'user', 'anon'),
+            request.META.get('HTTP_REFERER', '-'),
+        )
+        raise Http404
+
 
 @csrf_exempt
 @require_POST
@@ -15,6 +38,7 @@ def analyze_intelligence(request):
     Mock endpoint for Universal Intelligence analysis
     Returns simulated intelligence data for testing
     """
+    _gate(request)
     try:
         # Parse request body
         if request.body:
@@ -101,6 +125,7 @@ def search_memory(request):
     """
     Mock endpoint for memory search
     """
+    _gate(request)
     try:
         # Generate mock memory search results
         response = {
@@ -139,6 +164,7 @@ def get_patterns(request):
     """
     Mock endpoint for pattern library
     """
+    _gate(request)
     try:
         # Generate mock patterns
         patterns = [
@@ -183,6 +209,7 @@ def submit_feedback(request):
     """
     Mock endpoint for intelligence feedback
     """
+    _gate(request)
     try:
         # Just acknowledge the feedback
         return JsonResponse({
