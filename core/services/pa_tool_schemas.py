@@ -1645,6 +1645,14 @@ PA_TOOL_SCHEMAS = [
                     "type": "boolean",
                     "description": "Stop on first failure (default true)",
                 },
+                "return_body": {
+                    "type": "boolean",
+                    "description": "Include full JSON response body in results (default false). Use for debugging endpoint responses.",
+                },
+                "max_body_bytes": {
+                    "type": "integer",
+                    "description": "Max response body size in bytes when return_body=true (default 50000, max 250000)",
+                },
             },
         },
     },

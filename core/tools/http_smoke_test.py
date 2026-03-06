@@ -135,6 +135,8 @@ def _run_step(
     base_url: str,
     auth_headers: dict[str, str],
     timeout_ms: int,
+    return_body: bool = False,
+    max_body_bytes: int = 50_000,
 ) -> dict:
     """Execute one HTTP step, run assertions and captures, return result."""
     name = step.get('name', 'unnamed')
@@ -199,6 +201,15 @@ def _run_step(
             except (json.JSONDecodeError, UnicodeDecodeError):
                 data = raw.decode('utf-8', errors='replace')[:2000]
             result['response_preview'] = _preview(data)
+            if return_body and isinstance(data, (dict, list)):
+                body_str = json.dumps(data, default=str)
+                if len(body_str) <= max_body_bytes:
+                    result['response_json'] = data
+                else:
+                    # Too large — include preview + size info
+                    result['response_json'] = _preview(data, max_len=2000)
+                    result['response_truncated'] = True
+                    result['response_bytes'] = len(body_str)
     except urllib.error.HTTPError as e:
         status = e.code
         result['status'] = status
@@ -811,6 +822,8 @@ def run_smoke_test(payload: dict) -> dict:
     suite_name = payload.get('suite')
     environment = payload.get('environment', 'railway_prod')
     fail_fast = payload.get('fail_fast', True)
+    return_body = payload.get('return_body', False)
+    max_body_bytes = min(payload.get('max_body_bytes', 50_000), 250_000)
 
     # Resolve steps
     if suite_name:
@@ -868,7 +881,10 @@ def run_smoke_test(payload: dict) -> dict:
             continue
 
         timeout_ms = step.get('timeout_ms', DEFAULT_TIMEOUT_MS)
-        step_result = _run_step(step, variables, base_url, auth_headers, timeout_ms)
+        step_result = _run_step(
+            step, variables, base_url, auth_headers, timeout_ms,
+            return_body=return_body, max_body_bytes=max_body_bytes,
+        )
         results.append(step_result)
 
         if step_result.get('ok'):
