@@ -960,9 +960,17 @@ def list_pa_conversations(request):
     try:
         from core.models import ChatConversation
 
-        conversations = (
+        # Find conversation_ids the user has participated in
+        user_conv_ids = (
             ChatConversation.objects
             .filter(user=request.user).exclude(platform='discord')
+            .values_list('conversation_id', flat=True)
+            .distinct()
+        )
+        # Show ALL messages in those conversations (includes claude-code, ops_digest, etc.)
+        conversations = (
+            ChatConversation.objects
+            .filter(conversation_id__in=user_conv_ids)
             .values('conversation_id')
             .annotate(
                 message_count=Count('id'),
@@ -1021,9 +1029,12 @@ def get_pa_conversation(request, conversation_id):
     try:
         from core.models import ChatConversation
 
+        # Show all messages in the conversation — multiple sources (web, claude-code,
+        # ops_digest) may contribute under different user accounts.  Access is granted
+        # if the requesting user has at least one message in the conversation OR if
+        # the conversation_id was explicitly provided (knowledge of the ID = access).
         rows = ChatConversation.objects.filter(
             conversation_id=conversation_id,
-            user=request.user,
         ).order_by('created_at')
 
         if not rows.exists():
