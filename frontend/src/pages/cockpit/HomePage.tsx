@@ -24,7 +24,7 @@ const REVIEW_ACTIONS: NextActionType[] = [
 ]
 
 function classifyRun(r: RunSummary): 'attention' | 'review' | 'routine' {
-  if (r.status === 'failed') return 'attention'
+  if (r.status === 'failed' && !(r as any).superseded) return 'attention'
 
   const actionType = r.enrichment?.next_action?.type
   const importance = r.enrichment?.importance?.level

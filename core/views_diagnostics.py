@@ -1081,6 +1081,28 @@ def cockpit_runs_list(request):
                 },
             })
 
+        # Annotate failed runs as superseded if the same agent has a newer success
+        if result:
+            from django.db.models import Exists as _Exists, OuterRef as _OuterRef
+            failed_ids = [r['id'] for r in result if r['status'] == 'failed']
+            if failed_ids:
+                superseded_ids = set(
+                    str(eid) for eid in AgentExecution.objects.filter(
+                        id__in=failed_ids,
+                    ).filter(
+                        _Exists(
+                            AgentExecution.objects.filter(
+                                status='completed',
+                                agent=_OuterRef('agent'),
+                                created_at__gt=_OuterRef('created_at'),
+                            )
+                        )
+                    ).values_list('id', flat=True)
+                )
+                for r in result:
+                    if r['id'] in superseded_ids:
+                        r['superseded'] = True
+
         return JsonResponse(result, safe=False)
     except Exception as e:
         logger.exception("cockpit_runs_list error")
