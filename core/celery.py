@@ -2515,6 +2515,15 @@ app.conf.beat_schedule = {
             'expires': 1800,
         },
     },
+    # Congress data sync — members, bills, embeddings (every 6 hours)
+    'sync-congress-data': {
+        'task': 'core.tasks.sync_congress_data',
+        'schedule': 21600.0,  # 6 hours
+        'options': {
+            'queue': 'long_running',
+            'expires': 21600,
+        },
+    },
 }
 
 # Task routing configuration

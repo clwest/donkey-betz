@@ -38704,3 +38704,38 @@ def post_ops_digest():
         raise ScheduledTaskError(
             f"SCHEDULED_FAIL_LOUD::post_ops_digest::{type(e).__name__}: {e}"
         ) from e
+
+
+# =========================================================================
+# Congress Sync — periodic federal data refresh
+# =========================================================================
+
+@shared_task(
+    name='core.tasks.sync_congress_data',
+    ignore_result=True,
+    queue='long_running',
+    soft_time_limit=1800,
+    time_limit=2400,
+)
+def sync_congress_data():
+    """Periodic sync of congress members, bills, and embeddings."""
+    try:
+        from core.services.congress_sync import CongressSyncService
+        svc = CongressSyncService()
+
+        # Members (fast, ~2 API pages)
+        members = svc.sync_members()
+        logger.info(f"[CongressSync] Members: {members}")
+
+        # Bills (capped at 5 pages per run to stay within rate limits)
+        bills = svc.sync_bills(limit_pages=5)
+        logger.info(f"[CongressSync] Bills: {bills}")
+
+        # Embed any un-embedded bills
+        embeds = svc.embed_bills(batch_size=100)
+        logger.info(f"[CongressSync] Embeddings: {embeds}")
+
+        return {'members': members, 'bills': bills, 'embeddings': embeds}
+    except Exception as e:
+        logger.exception(f"[CongressSync] Failed: {e}")
+        return {'error': str(e)}
