@@ -767,6 +767,47 @@ export interface OpsRunDetailResponse {
   events: OpsRunEvent[]
 }
 
+// --- Noise / North Star Metrics ---
+
+export type NorthStarPath = 'revenue' | 'content' | 'sports' | 'none'
+
+export interface NorthStarBucket {
+  count: number
+  pct: number
+}
+
+export interface RunsMetricsResponse {
+  window_hours: number
+  total_runs: number
+  sampled: number
+  by_agent: { agent_name: string; count: number }[]
+  by_trigger_type: { trigger_type: string; count: number }[]
+  by_importance_level: { level: string; count: number }[]
+  by_next_action_type: { type: string; count: number }[]
+  by_artifact_type: { type: string; count: number }[]
+  north_star_coverage: Record<NorthStarPath, NorthStarBucket>
+}
+
+export interface ConversationMetricsResponse {
+  window_hours: number
+  total_conversations: number
+  by_agent: { agent_name: string; count: number }[]
+  by_type: { conversation_type: string; count: number }[]
+  top_topics: { topic: string; count: number }[]
+  zombie_rate: { zombies: number; total: number; pct: number }
+}
+
+export interface FocusModeStatus {
+  enabled: boolean
+  mode: 'gentle' | 'strict'
+  objective_weights: Record<string, number>
+  blocked_topics: string[]
+  max_conversations_per_agent_per_hour: number
+  max_total_conversations_per_hour: number
+  require_north_star: boolean
+  blocks_24h: number
+}
+
 // --- Ops ---
 
 export interface PlatformConfigResponse {

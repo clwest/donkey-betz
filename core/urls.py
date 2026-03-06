@@ -1447,6 +1447,8 @@ from core.views_diagnostics import (
     cockpit_runs_list,      # Focus Cockpit: agent execution runs
     cockpit_runs_metrics,   # Session 1077: noise metrics — North Star coverage
     cockpit_conversations_metrics,  # Session 1077: conversation metrics — topic clusters, zombie rate
+    cockpit_focus_mode_status,  # Session 1077: Focus Mode status for cockpit
+    cockpit_focus_mode_update,  # Session 1077: Focus Mode config update
     cockpit_inbox,          # Focus Cockpit: read-only inbox aggregation
     cockpit_create_blog,    # Focus Cockpit: create blog post
     cockpit_create_talking_video,  # Focus Cockpit: create talking video
@@ -1669,6 +1671,8 @@ urlpatterns = [
     path('api/cockpit/runs/', cockpit_runs_list, name='cockpit-runs-list'),
     path('api/cockpit/runs/metrics/', cockpit_runs_metrics, name='cockpit-runs-metrics'),
     path('api/cockpit/conversations/metrics/', cockpit_conversations_metrics, name='cockpit-conversations-metrics'),
+    path('api/cockpit/focus-mode/status/', cockpit_focus_mode_status, name='cockpit-focus-mode-status'),
+    path('api/cockpit/focus-mode/update/', cockpit_focus_mode_update, name='cockpit-focus-mode-update'),
     path('api/cockpit/inbox/', cockpit_inbox, name='cockpit-inbox'),
     path('api/cockpit/create/blog/', cockpit_create_blog, name='cockpit-create-blog'),
     path('api/cockpit/create/talking-video/', cockpit_create_talking_video, name='cockpit-create-talking-video'),
