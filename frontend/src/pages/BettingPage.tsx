@@ -7,7 +7,7 @@ import {
   Clock, CheckCircle, Flame, Search, Eye, XCircle, CircleDot,
   Award, Layers, ChevronDown, ChevronUp, History, Crosshair,
   Star, Swords, Brain, Newspaper, HeartPulse, Calendar, Plus,
-  Calculator, ChevronRight
+  Calculator, ChevronRight, X, Info, FileText
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -572,6 +572,226 @@ function WatchedItemCard({ item, onVerify, isVerifying }: WatchedItemCardProps) 
   )
 }
 
+// Pick Details Drawer — shows full prediction provenance
+interface PickDetail {
+  id: string
+  sport_type: string
+  predicted_winner: string
+  confidence: number
+  was_correct: boolean | null
+  game_date: string
+  matchup: string
+  odds: number | null
+  closing_odds: number | null
+  home_team: string
+  away_team: string
+  home_score: number | null
+  away_score: number | null
+  game_status: string
+  home_win_probability: number | null
+  away_win_probability: number | null
+  predicted_spread: number | null
+  predicted_home_score: number | null
+  predicted_away_score: number | null
+  model_used: string
+  bookmaker_count: number
+  ai_reasoning: string
+  key_factors: string[]
+  created_at: string
+  evaluated_at?: string
+}
+
+function PickDetailsDrawer({ pick, onClose, onLogWager }: {
+  pick: PickDetail
+  onClose: () => void
+  onLogWager: (pick: PickDetail) => void
+}) {
+  const roiUnit = pick.was_correct !== null && pick.odds != null
+    ? pick.was_correct
+      ? (pick.odds < 0 ? 100 / Math.abs(pick.odds) : pick.odds / 100)
+      : -1
+    : null
+
+  const openIp = pick.odds != null
+    ? (pick.odds < 0 ? Math.abs(pick.odds) / (Math.abs(pick.odds) + 100) : 100 / (pick.odds + 100))
+    : null
+  const closeIp = pick.closing_odds != null
+    ? (pick.closing_odds < 0 ? Math.abs(pick.closing_odds) / (Math.abs(pick.closing_odds) + 100) : 100 / (pick.closing_odds + 100))
+    : null
+  const clv = openIp != null && closeIp != null ? ((closeIp - openIp) * 100) : null
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/50" />
+      <div
+        className="relative w-full max-w-md bg-dark-card border-l border-dark-border h-full overflow-y-auto animate-in slide-in-from-right"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="sticky top-0 bg-dark-card border-b border-dark-border p-4 flex items-center justify-between z-10">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Info size={18} className="text-primary-400" />
+            Pick Details
+          </h3>
+          <button onClick={onClose} className="p-1 hover:bg-dark-bg rounded">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-5">
+          {/* Matchup + Result */}
+          <div className="card p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs px-2 py-0.5 rounded bg-primary-600/20 text-primary-400 uppercase">
+                {pick.sport_type}
+              </span>
+              {pick.was_correct === true && <span className="text-xs px-2 py-0.5 rounded bg-accent-green/20 text-accent-green font-bold">W</span>}
+              {pick.was_correct === false && <span className="text-xs px-2 py-0.5 rounded bg-accent-red/20 text-accent-red font-bold">L</span>}
+              {pick.was_correct === null && <span className="text-xs px-2 py-0.5 rounded bg-accent-amber/20 text-accent-amber">Pending</span>}
+            </div>
+            <h4 className="text-lg font-medium mb-1">{pick.matchup || `${pick.away_team} @ ${pick.home_team}`}</h4>
+            <p className="text-sm text-gray-400">{pick.game_date}</p>
+            {pick.home_score != null && pick.away_score != null && (
+              <p className="text-sm mt-1">
+                Final: <span className="font-bold">{pick.away_score} - {pick.home_score}</span>
+              </p>
+            )}
+          </div>
+
+          {/* AI Pick */}
+          <div className="card p-4 border-l-4 border-l-accent-purple">
+            <h5 className="text-sm font-semibold text-gray-400 mb-2">AI Selection</h5>
+            <div className="flex items-center justify-between">
+              <span className="text-lg font-bold text-accent-purple">{pick.predicted_winner}</span>
+              <span className="text-2xl font-bold text-accent-purple">{pick.confidence}%</span>
+            </div>
+            {(pick.home_win_probability != null || pick.away_win_probability != null) && (
+              <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
+                <span>{pick.away_team}: {pick.away_win_probability}%</span>
+                <span>{pick.home_team}: {pick.home_win_probability}%</span>
+              </div>
+            )}
+            {pick.predicted_spread != null && (
+              <p className="text-sm text-gray-400 mt-1">Predicted spread: {pick.predicted_spread > 0 ? '+' : ''}{pick.predicted_spread}</p>
+            )}
+            {pick.predicted_home_score != null && pick.predicted_away_score != null && (
+              <p className="text-sm text-gray-400 mt-1">
+                Predicted score: {pick.predicted_away_score} - {pick.predicted_home_score}
+              </p>
+            )}
+          </div>
+
+          {/* Odds & Value */}
+          <div className="card p-4">
+            <h5 className="text-sm font-semibold text-gray-400 mb-3">Odds & Value</h5>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400">Opening Odds</span>
+                {pick.odds != null ? (
+                  <span className={cn('font-mono font-medium', pick.odds > 0 ? 'text-accent-green' : 'text-accent-red')}>
+                    {pick.odds > 0 ? '+' : ''}{pick.odds}
+                  </span>
+                ) : <span className="text-gray-500">Not captured</span>}
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400">Closing Odds</span>
+                {pick.closing_odds != null ? (
+                  <span className={cn('font-mono font-medium', pick.closing_odds > 0 ? 'text-accent-green' : 'text-accent-red')}>
+                    {pick.closing_odds > 0 ? '+' : ''}{pick.closing_odds}
+                  </span>
+                ) : <span className="text-gray-500">Not yet</span>}
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400">Bookmakers</span>
+                <span className="font-medium">{pick.bookmaker_count || 'N/A'}</span>
+              </div>
+              {roiUnit != null && (
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">ROI (1u)</span>
+                  <span className={cn('font-mono font-medium', roiUnit >= 0 ? 'text-accent-green' : 'text-accent-red')}>
+                    {roiUnit >= 0 ? '+' : ''}{roiUnit.toFixed(2)}u
+                  </span>
+                </div>
+              )}
+              {clv != null && (
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">CLV</span>
+                  <span className={cn('font-mono font-medium', clv > 0 ? 'text-accent-green' : clv < 0 ? 'text-accent-red' : 'text-gray-400')}>
+                    {clv > 0 ? '+' : ''}{clv.toFixed(2)}%
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* AI Reasoning */}
+          {pick.ai_reasoning && (
+            <div className="card p-4">
+              <h5 className="text-sm font-semibold text-gray-400 mb-2">AI Reasoning</h5>
+              <p className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">{pick.ai_reasoning}</p>
+            </div>
+          )}
+
+          {/* Key Factors */}
+          {pick.key_factors && pick.key_factors.length > 0 && (
+            <div className="card p-4">
+              <h5 className="text-sm font-semibold text-gray-400 mb-2">Key Factors</h5>
+              <ul className="space-y-1">
+                {pick.key_factors.map((factor, i) => (
+                  <li key={i} className="text-sm text-gray-300 flex items-start gap-2">
+                    <span className="text-primary-400 mt-0.5">&#x2022;</span>
+                    <span>{typeof factor === 'string' ? factor : JSON.stringify(factor)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Data Sources */}
+          <div className="card p-4">
+            <h5 className="text-sm font-semibold text-gray-400 mb-2">Data Sources</h5>
+            <div className="space-y-1 text-xs text-gray-500">
+              <div className="flex items-center justify-between">
+                <span>Model</span>
+                <span className="font-mono text-gray-400">{pick.model_used || 'odds_consensus'}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Odds</span>
+                <span className="text-gray-400">TheOddsSpider</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Scores</span>
+                <span className="text-gray-400">update_game_scores</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Predicted at</span>
+                <span className="text-gray-400">{pick.created_at ? new Date(pick.created_at).toLocaleString() : 'N/A'}</span>
+              </div>
+              {pick.evaluated_at && (
+                <div className="flex items-center justify-between">
+                  <span>Evaluated at</span>
+                  <span className="text-gray-400">{new Date(pick.evaluated_at).toLocaleString()}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Log as Wager button */}
+          {pick.was_correct === null && (
+            <button
+              onClick={() => onLogWager(pick)}
+              className="btn btn-primary w-full flex items-center justify-center gap-2"
+            >
+              <FileText size={16} />
+              Log as Wager
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function BettingPage() {
   const [activeTab, setActiveTab] = useState<BettingTab>('hub')
   const [sportFilter, setSportFilter] = useState('all')
@@ -582,6 +802,8 @@ export default function BettingPage() {
   const [showWagerForm, setShowWagerForm] = useState(false)
   const [wagerForm, setWagerForm] = useState({ matchup: '', pick: '', odds: '-110', stake: '10', sport: '', bookmaker: '', market_type: 'h2h' })
   const [arbStake, setArbStake] = useState('100')
+  const [selectedPick, setSelectedPick] = useState<PickDetail | null>(null)
+  const [modelFilter, setModelFilter] = useState('')
   const queryClient = useQueryClient()
 
   const toggleWagerExpand = (wagerId: string) => {
@@ -638,6 +860,22 @@ export default function BettingPage() {
       setWagerForm({ matchup: '', pick: '', odds: '-110', stake: '10', sport: '', bookmaker: '', market_type: 'h2h' })
     },
   })
+
+  // Log as Wager — prefill from pick details
+  const handleLogWager = (pick: PickDetail) => {
+    setWagerForm({
+      matchup: pick.matchup || `${pick.away_team} @ ${pick.home_team}`,
+      pick: pick.predicted_winner,
+      odds: pick.odds != null ? String(pick.odds) : '-110',
+      stake: '10',
+      sport: pick.sport_type,
+      bookmaker: '',
+      market_type: 'h2h',
+    })
+    setSelectedPick(null)
+    setShowWagerForm(true)
+    setActiveTab('wagers')
+  }
 
   const watchedItems: WatchedItem[] = (watchedData?.data?.items || []).filter(
     (item: WatchedItem) => item.item_type === 'arbitrage'
@@ -729,8 +967,8 @@ export default function BettingPage() {
 
   // AI Track Record
   const { data: trackRecordData, isLoading: trackRecordLoading } = useQuery({
-    queryKey: ['betting-track-record'],
-    queryFn: () => bettingApi.trackRecord(),
+    queryKey: ['betting-track-record', modelFilter],
+    queryFn: () => bettingApi.trackRecord(modelFilter ? { model: modelFilter } : undefined),
     enabled: activeTab === 'track_record',
   })
 
@@ -2614,6 +2852,37 @@ export default function BettingPage() {
       {/* AI Track Record Tab */}
       {activeTab === 'track_record' && (
         <div className="space-y-6">
+          {/* Model Filter Chips */}
+          {(() => {
+            const availableModels: string[] = trackRecordData?.data?.available_models || []
+            return availableModels.length > 0 ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-gray-400">Filter:</span>
+                <button
+                  onClick={() => setModelFilter('')}
+                  className={cn(
+                    'text-xs px-3 py-1.5 rounded-lg font-medium transition-colors',
+                    !modelFilter ? 'bg-primary-600 text-white' : 'bg-dark-bg text-gray-400 hover:text-white'
+                  )}
+                >
+                  All Models
+                </button>
+                {availableModels.map((model: string) => (
+                  <button
+                    key={model}
+                    onClick={() => setModelFilter(modelFilter === model ? '' : model)}
+                    className={cn(
+                      'text-xs px-3 py-1.5 rounded-lg font-medium transition-colors',
+                      modelFilter === model ? 'bg-primary-600 text-white' : 'bg-dark-bg text-gray-400 hover:text-white'
+                    )}
+                  >
+                    {model.replace(/_/g, ' ')}
+                  </button>
+                ))}
+              </div>
+            ) : null
+          })()}
+
           {trackRecordLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 size={32} className="animate-spin text-primary-400" />
@@ -2699,7 +2968,10 @@ export default function BettingPage() {
                 {/* Recent Predictions Table */}
                 {recentPreds.length > 0 ? (
                   <div>
-                    <h3 className="text-lg font-semibold mb-3">Recent Predictions</h3>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-semibold">Recent Predictions</h3>
+                      <span className="text-xs text-gray-500">Click a row for details</span>
+                    </div>
                     <div className="card overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
@@ -2715,7 +2987,11 @@ export default function BettingPage() {
                         </thead>
                         <tbody>
                           {recentPreds.map((pred: any) => (
-                            <tr key={pred.id} className="border-b border-dark-border hover:bg-dark-bg/50">
+                            <tr
+                              key={pred.id}
+                              className="border-b border-dark-border hover:bg-dark-bg/50 cursor-pointer"
+                              onClick={() => setSelectedPick(pred as PickDetail)}
+                            >
                               <td className="py-3 px-4 text-gray-400">{pred.game_date || '\u2014'}</td>
                               <td className="py-3 px-4 uppercase">{pred.sport_type}</td>
                               <td className="py-3 px-4 font-medium">{pred.matchup || '\u2014'}</td>
@@ -2762,6 +3038,15 @@ export default function BettingPage() {
             )
           })()}
         </div>
+      )}
+
+      {/* Pick Details Drawer */}
+      {selectedPick && (
+        <PickDetailsDrawer
+          pick={selectedPick}
+          onClose={() => setSelectedPick(null)}
+          onLogWager={handleLogWager}
+        />
       )}
     </div>
   )

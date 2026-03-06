@@ -1255,7 +1255,7 @@ export const bettingApi = {
   quickPick: (data: Record<string, unknown>) => api.post('/v1/betting/quick-pick/', data),
 
   // AI Track Record
-  trackRecord: (params?: { sport?: string; days?: number }) =>
+  trackRecord: (params?: { sport?: string; days?: number; model?: string }) =>
     api.get('/v1/betting/track-record/', { params }),
 }
 
