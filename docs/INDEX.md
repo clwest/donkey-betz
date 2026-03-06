@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-03-06 14:19
+**Generated:** 2026-03-06 14:36
 **Current Session:** 1077
 **Total Documentation:** 1819 files | 622,093 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/SYSTEM_CAPABILITIES-original/01_Core_Intelligence/README.md` | 60 | 🧠 CONSCIOUSNESS SYSTEM - Self-Aware AI Intelligenc |
+| `docs/archive/old-structure/capabilities/04_Agent_Orchestra/README.md` | 60 | 🤖 AI AGENT ORCHESTRA - 149 Specialized Intelligenc |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -217,7 +217,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 361 | 2026-03-06 13:49 |
+| INDEX.md | docs | 361 | 2026-03-06 14:20 |
 | personal-assistant.md | topics | 139 | 2026-03-05 07:03 |
 | video-upload.md | topics | 101 | 2026-03-04 13:08 |
 | OVL_CODE_RUNNER_V0.md | docs | 174 | 2026-03-04 08:20 |
