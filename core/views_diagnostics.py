@@ -926,11 +926,21 @@ def cockpit_inbox(request):
     except Exception as e:
         logger.debug("Inbox error signatures error: %s", e)
 
-    # 4. Failed runs
+    # 4. Failed runs — suppress when a newer successful run exists for the same agent
     try:
         from core.models_unified_system import AgentExecution
+        from django.db.models import Exists, OuterRef
+
+        has_newer_success = AgentExecution.objects.filter(
+            status='completed',
+            agent=OuterRef('agent'),
+            created_at__gt=OuterRef('created_at'),
+        )
+
         failed = AgentExecution.objects.filter(
             status='failed', created_at__gte=cutoff,
+        ).filter(
+            ~Exists(has_newer_success)
         ).select_related('agent').order_by('-created_at')[:15]
 
         for run in failed:
