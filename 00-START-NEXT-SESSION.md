@@ -1,178 +1,89 @@
-# Session 1075 - Start Here
+# Session 1077 - Start Here
 
-**Previous Sessions:** 1074 (API deps deployed, pa_tools_smoke suite, pipeline health fix, blog backlog cleared), 1073 (Docs vs reality reconciliation, PA tool verification), 1072 (PA apiDependencies manifest)
-**Date:** February 27, 2026
-**Status:** 218 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2, 45 tool schemas, 67 handlers)** | 0 ACTIVE initiatives | 59 COMPLETED
-
----
-
-## Session 1075 — What Happened
-
-### Boardroom Fully Cleared
-- **83 pending items** reduced to **0** (was 20 gate_stuck, 12 draft decisions, 51 attention items)
-- 20 gate_stuck items: all auto-generated `GateProgressionPipeline` noise — ignored
-- 12 draft product decisions: all auto-generated panels/conversations — rejected
-- 51 attention items: spider/news/blog-ready/dream noise, ML-recommended ignore — ignored
-
-### All Unclassified Artifacts Classified
-- **2,339 unclassified artifacts** classified in one pass (was documented as 50 — actual count was 2,339)
-- All classified using heuristic rules: risk→risk_flag, insight→informational, etc.
-- **0 unclassified remaining**
-- Added `classify_apply` and `classify_apply_batch` actions to boardroom_tool
-
-### Content Pipeline Fully Triaged
-- **7,503 ready deliverables** processed on Railway prod
-- 5,796 approved (quality ≥ 0.7), 1,707 archived (quality < 0.7)
-- **0 ready_for_review remaining**
-
-### Gate-Stuck Regeneration Fixed
-- `GateProgressionPipeline` was regenerating gate_stuck items after they were ignored (status='acted')
-- Fixed: check now uses `status__in=['pending', 'acted']` to prevent re-creation
-
-### TRIAGE Initiatives Cleaned Up
-- 8 auto-generated noise initiatives archived (ThinkingAgent, DecisionExtractor, ConversationInitiativePipeline outputs)
-- 1 promoted to ACTIVE: "Capitalizing on manager, position, developer opportunity"
-- **0 TRIAGE remaining**, 1 ACTIVE
-
-### PA Tools Verified (7 of 8 remaining)
-- `content_review_tool`: stats, list, recent, get — all working
-- `media_tool`: stats, list — 9 assets (3 images, 5 videos, 1 audio)
-- `opportunity_manager_tool`: stats, list — 297 opportunities (all expired)
-- `davinci_tool`: health check — healthy, 0 queued
-- `pilots_tool`: stats — 1,540 experiments (528 completed, 1,012 running)
-- `legislation_tool`: overview — 680 bills tracked (topic/status aggregates empty)
-- `reasoning_engine_tool`: status — operational (ThinkingAgent engine)
-- Only `legal_doc_drafter_agent` remains untested (creates deliverables)
-
-### Zombie Work Cleanup
-- **132 zombie deliberation sessions** closed (active with 0 turns, >1h old → failed)
-- **923 stale PilotExecutions** completed as partial (running >1 week → completed:partial)
-- Remaining: 0 active deliberations, 89 running pilots (<1 week old)
-
-### Zombie Work Reaper Added (Celery Beat)
-- New `reap_zombie_work` task runs every 30 minutes
-- Closes deliberation sessions stuck in 'active' with 0 progress (>1h old)
-- Completes pilot executions stuck in 'running' (>7 days) as partial
-- Prevents manual cleanup needed this session (132 zombies + 923 stale pilots)
-
-### content_review_tool Action Mismatch Fixed
-- GPT-5.2 consistently called `approve/reject` but handler only accepted `publish/archive`
-- Caused 9 tool failures in 72h
-- Added `ACTION_ALIASES` mapping: `approve→publish`, `reject→archive`
-
-### PA Chat Retry Fix
-- `pa_chat.py` now retries on "task not found" during celery-pa deploys instead of failing
-- Previously, tasks dispatched during worker restart were immediately marked as failed
-
-### Smoke Suite Expanded to 20 Checks
-- Added 6 new endpoint checks: deliverables stats/list, opportunities stats, pilot gates, Redis queue depths, media library
-- Added suite integrity unit tests (41 total, all passing) verifying check counts, no duplicates, required fields
-- Awaiting Railway celery-pa deploy to verify on prod (builds take 25+ min)
-
-### Legislation Tool Empty Aggregates Fixed
-- `_bill_data()` assumed each SpiderData row = 1 bill, but actual format is `{'items': [...], 'source': ..., 'dedup_stats': ...}`
-- Replaced with `_bills_from_row()` that unwraps the `items` array envelope
-- Fixed all 5 actions: overview, trending, status, summary/ask (RAG search), and keyword search
-- Overview now returns `total_bills` count (actual bills across all rows)
-
-### Deliberation 0-Turn Crash Fixed
-- `generate_conversation()` crashed with `IndexError` on `messages[-1]` when turn loop produced 0 messages
-- Session left as `status='active'` with 0 turns (3 of 5 sessions in last 24h)
-- Added early return guard: if no messages, marks session as `failed` and returns clean error
-- Combined with zombie reaper: 0-turn sessions now get properly tracked
-
-### Tool Contract Hardening (3 fixes)
-- **boardroom_tool ignore_attention**: now idempotent — returns `no_op: true` for already-acted items
-- **initiative_tool details**: catches invalid UUID strings like "pipeline_health", suggests correct tool, falls back to name search
-- **debug-raise-500 endpoint**: gated behind `DEBUG=True` to stop 7 noise errors/day on Railway prod
-
-### Spider Scan TimeLimitExceeded Fixed
-- `scan_spider_opportunities` consistently hit 960s hard limit (2 failures/24h)
-- Root cause: `SoftTimeLimitExceeded` can't interrupt `asyncio.run()` — signal not processed inside event loop
-- Added `asyncio.wait_for(timeout=780)` inside the async function (13 min, before 15 min soft limit)
-- Scan now self-terminates cleanly with empty result instead of being killed
-
-### Smoke Suite Assertions Fixed
-- `deliverables_stats` and `opportunities_stats` endpoints return `{success, stats}` not `{total, by_status}`
-- Fixed `has_key` assertions to check for `stats` key instead of `total`
-- 15/20 checks now visible on Railway (partial deploy), all passing after fix
-
-### PA Smoke Tests 14/14 Green (pre-expansion)
-- Verified after Railway celery-pa redeployed with initiative query fix
-- `http_smoke_test(suite='pa_tools_smoke')` — all 14 checks passing on Railway prod
-
-### Sports Betting Tool Timeout Fix
-- `sharp_action` and `line_movements` actions were executing agents synchronously (SharpActionDetector, LineMovementAnalyzer)
-- Both exceeded the 30s PA tool timeout, causing 2 failures in 48h
-- Dispatched both to Celery async (same pattern as `brief`/`live_odds`)
-- Returns `task_id` immediately, PA can check progress via `job_status`
-
-### PA Agentic Loop Iterations Raised (5→8)
-- `max_iterations` in `_run_agentic_loop` raised from 5 to 8
-- Enables PA to handle batch operations (e.g., ignoring 15+ boardroom items) in a single conversation turn
-
-### Celery Heartbeat/Health Tasks Throttled (5min→10min)
-- `run_heartbeat` (81s avg), `check_celery_health` (81s avg), `broadcast_evolution_status` (34s avg) — all reduced from every 5 min to every 10 min
-- Saves ~8 hours of Celery compute per day
-- Added `ignore_result=True` to heartbeat, celery health, broadcast evolution, check_circulation
-
-### Smoke Suite Status: 20/20 Checks, 18/20 Passing
-- 2 failures (`deliverables_stats`, `opportunities_stats`) are stale assertions on old celery-pa deploy
-- Local code already fixed — awaiting Railway celery-pa redeploy to propagate assertion fix
-- `cockpit_health` suite: 18/18 passing
-
-### Event Bus Workers Non-Blocking (5s→0ms idle)
-- `create_scoring_worker`, `create_validation_worker`, `create_analytics_worker` had `block_ms=5000`
-- Caused every event bus poll to take ~5s even when idle (just blocking on empty Redis stream)
-- Changed to `block_ms=0` — Celery Beat handles scheduling, workers don't need to block-wait
-- Drops idle runtime from ~5s to <100ms per run (~150 runs/hour × 5s = 12.5 min/hour saved)
-
-### Cockpit Run Detail Click-Through Fixed
-- `getRunDetail()` in `cockpitApi.ts` called `/v1/agents/execution/${id}/`
-- Backend returns `{success, data: {execution: {...}}}` — nested wrapper
-- Frontend expected flat `RunDetail` shape (`run.task`, `run.agent_name`, etc.)
-- All fields showed as undefined/blank when clicking a run in the Runs tab
-- Fixed: `getRunDetail` now unwraps `data.data.execution` to flat `RunDetail`
-
-### Media Tool URL Fix
-- `media_tool` list and detail actions returned raw `file_path` (e.g., `media/generated_images/...`)
-- On Railway, images are stored in Cloudinary — `file_path` is NOT a viewable URL
-- PA gave users blank links because it had no actual URL to share
-- Fixed: added `url` field using `obj.get_full_url()` which resolves to Cloudinary CDN URL
-
-### AsyncJobTracker Media URLs
-- `cockpit_job_status` endpoint now returns media URLs (`image_url`, `video_url`, etc.) when jobs complete
-- Looks up `AgentExecution.output_data.metadata` by matching `celery_task_id` in `input_data`
-- Handles both scalar URL fields and ImageAgent's `images` list format
-- `AsyncJobTracker.tsx` shows clickable "View" link to generated media when job completes
-- Added `TalkingCharacterAgent`, `VideoAgent`, `AudioAgent`, `ResolveAgent` to agent labels
-
-### Cockpit Config Tab Fixed (previous sub-session)
-- `LLMProvider` and `LLMModel` DB tables empty — never seeded
-- Added fallback to `LLMProviderRegistry` service (6 providers configured)
-- Config tab now shows providers and models from registry
+**Previous Sessions:** 1076 (Government section MVP — 5,000 bills synced + embedded, member lookup, bill browser, Ask chat), 1075 (Reliability initiative — zombie cleanup, spawn gates, spider adapter consolidation)
+**Date:** March 6, 2026
+**Status:** 218 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2, 84 tool schemas, 130+ handlers)** | Government section LIVE | 2 ACTIVE initiatives | 59 COMPLETED
 
 ---
 
-## Session 1074 — What Happened
+## Session 1076 — What Happened
 
-### API Dependencies Deployed to Railway
-- `frontend/dist/__manifest.json` was gitignored — Railway backend always used the empty fallback
-- Fixed: un-ignored `__manifest.json` and committed it to git (30 routes, 235 endpoints)
-- PA now sees all API dependencies on Railway (verified via `platform_awareness_tool`)
+### Government Section MVP Built (Full Stack)
+Designed with Rigby (PA conversation `pa-c20a79117938`).
 
-### PA Tools Smoke Test Suite Added
-- New built-in suite `pa_tools_smoke` (14 checks) added to `http_smoke_test.py`
-- PA can now run `http_smoke_test(suite='pa_tools_smoke')` to verify platform health after deploys
-- Verified 14/14 green on Railway prod
+**Data Pipeline:**
+- 548 congress members synced (Congress.gov v3 API, 119th Congress)
+- 4,989 federal bills synced from Congress.gov `/v3/bill/119` (20 pages × 250)
+- 30 state bills from LegiScan SpiderData migration
+- 4,991 bills embedded via pgvector (text-embedding-3-small, batch 50)
+- Celery beat: `sync_congress_data` every 6 hours (long_running queue)
+- 11 errors from null `latestAction` — fixed in code, will self-heal on next beat run
 
-### Pipeline Health Fixed
-- `stale_threshold_hours` raised from 48 to 168 (1 week)
-- Critical now requires stale AND (blocked stages OR zero weekly transitions)
-- Archived 11 stuck ACTIVE initiatives
+**Models (migration 0300):**
+- `CongressMember` (bioguide_id PK, state, district, party, chamber, committees, terms)
+- `Bill` (bill_uid unique, pgvector embedding, content_hash, jurisdiction, M2M sponsors)
+- `BillChunk` (future full-text RAG chunking)
+- `RollCallVote` (congress, chamber, roll_number, session — unique_together)
+- `VotePosition` (roll_call FK, member FK, position)
 
-### Blog Backlog Cleared
-- **202 pending_review blogs** cleared → 0 pending_review remaining
+**Backend (8 endpoints, AllowAny):**
+- `GET /api/government/hub/` — stats, top topics, recent bills
+- `GET /api/government/bills/` — paginated, filterable (chamber, status, q, topic)
+- `GET /api/government/bills/<bill_uid>/` — detail with sponsors, roll calls
+- `GET /api/government/bills/search/` — semantic search via pgvector CosineDistance
+- `GET /api/government/members/` — filterable (state, chamber, party, district, q)
+- `GET /api/government/members/<bioguide_id>/` — detail with votes, sponsored bills
+- `GET /api/government/states/` — state picker data
+- `GET /api/government/states/<state>/districts/` — district picker
+
+**Frontend (GovernmentPage.tsx — 3 tabs):**
+- **My Reps:** State → Chamber → District picker → member cards → detail with voting record + sponsored bills
+- **Bills:** search, chamber filter, pagination, bill detail with sponsors/topics/roll calls, "Ask about this bill" button
+- **Ask:** context-aware chat with context pills (bill or member), suggested questions
+
+**Services:**
+- `CongressSyncService` (`core/services/congress_sync.py`): sync_members, sync_bills, migrate_spider_bills, enrich_bill_details, embed_bills, sync_votes, full_sync
+- Congress.gov API rate limited (0.5s between calls), handles 429 retry
+
+### Betting Section Improvements (Earlier in Session)
+- Predicted spread now populated in MLPrediction (was 100% null)
+- Closing odds fallback: evaluator sets `closing_odds = odds_at_prediction` when missing
+- Pipeline freshness endpoint + UI strips on Records/Games tabs
+- Intelligence mock views quarantined (Http404 + logging in production)
+- 481 lines of dead code removed from BettingPage.tsx
+
+---
+
+## Priority 1: Stocks Section MVP (Tomorrow)
+
+Rigby mapped this out (conversation `pa-c20a79117938`). Stocks already has more infrastructure than Government did.
+
+### What Already Exists
+- **8 API endpoints** live: hub, dashboard, briefs, briefs/{id}, alerts, predictions, sec-filings, ticker/{symbol}
+- **Models:** MarketIntelligenceBrief (43+), StockMarketAlert, PredictionOutcome
+- **Data:** polygon_finance, finnhub, financial, sec_edgar spiders feeding SpiderData
+- **Mobile:** StocksScreen.tsx already implemented
+- **Desk:** daily market intelligence briefs operational (7 stocks/day)
+
+### Rigby's Recommended Build Order
+1. **Verify current behavior** — confirm endpoints work end-to-end, decide auth (keep IsAuthenticated vs AllowAny)
+2. **Add Watchlist model** — `WatchlistItem` (user + symbol), endpoints: list/add/remove
+3. **Beef up ticker detail** — aggregate alerts, predictions, SEC filings, news per symbol
+4. **Upgrade frontend** — 3 tabs: Watchlist | Market | Ask (parallel to Government structure)
+5. **Add semantic search** — embed briefs/alerts for pgvector search (MVP+)
+
+### Key Difference from Government
+Government was greenfield — Stocks already has a pipeline + endpoints. The work is product-izing it into a cohesive section, not building from scratch.
+
+---
+
+## Priority 2: Government Section Polish
+
+### Still Pending
+1. **Vote sync** (`sync_votes`) — needs LegiScan roll call data, ~50 bills per run
+2. **Bill enrichment** (`enrich_bill_details`) — summaries, subjects, sponsors M2M linking from Congress.gov
+3. **Congress.gov roll call parsing** — for direct House/Senate vote data without LegiScan
+4. **Remaining 8,886 bills** — currently capped at 5,000 (20 pages). Beat schedule will incrementally catch up.
 
 ---
 
@@ -181,65 +92,26 @@
 | Metric | Value |
 |--------|-------|
 | PA routing | **GPT-5.2 function calling** (`PA_USE_FUNCTION_CALLING=true`) |
-| PA tools | **45 schemas, 67 handlers** |
-| PA API coverage | **235 endpoints mapped** across 30 routes |
-| Decision gates | **ACTIVE** — 0 unclassified artifacts (down from 2,339) |
-| Boardroom | **0 pending** (attention 0, draft decisions 0) |
+| PA tools | **84 schemas, 130+ handlers** (Wave 2: +11 gateway tools) |
+| Government | **548 members, 5,019 bills, 4,991 embedded** |
+| Decision gates | **ACTIVE** — 0 unclassified artifacts |
+| Boardroom | **0 pending** |
 | Platform health score | **100** (7/7 components healthy) |
 | Celery throughput | **~1,177 tasks/hour, 99.5% success** |
-| Agents routable | **All 218** |
-| Initiatives | **1 ACTIVE**, 59 COMPLETED, 0 TRIAGE, 31 ARCHIVED |
-| Content pipeline | **6,374 published**, 0 pending_review, 0 ready_for_review |
-| Action items | **0 pending** |
-
----
-
-## Known Issues / Open Items
-
-### Data Layer Gaps
-1. **Revenue tracker**: $0 — deferred until user base grows beyond single-user dev
-2. **Stock intelligence**: no watchlist concept — ticker-addressed only
-
-### Remaining Untested PA Tools
-Still need verification: `legal_doc_drafter_agent` (creates deliverables — test with care)
-Verified this session: `content_review_tool`, `opportunity_manager_tool`, `pilots_tool`, `reasoning_engine_tool`, `legislation_tool`, `media_tool`, `davinci_tool`
-
-### Deliverables User Scoping Fixed
-- `deliverables_tool` and `content_review_tool` filtered by `user_id` — excluded agent-created deliverables (user=NULL)
-- Root cause: `_save_to_deliverable()` in BaseAgent defaulted `user=None` instead of using `self.user`
-- Fix 1: `_save_to_deliverable` now falls back to `self.user` — new deliverables get the real user
-- Fix 2: Both tool queries now use `Q(user_id=id) | Q(user__isnull=True)` — existing NULL-user deliverables still visible
-
-### Other Open Items
-- API dependency routes: 30/31 populated (235 endpoints) — only `/how-it-works` empty (static page)
-- Railway cost: ~$1,500/month limit
-- 3 contaminated Stage 4 docs (ThinkingAgent diagnostics instead of real content)
-- generate_blog_tool timeout (exceeds 30s PA tool timeout, works as Celery task)
-- CompetitorAnalysisAgent data-starved (4 timeouts/24h, no competitive intelligence spiders)
-- Tenant Phases 2-3, Profile consolidation Phase 4
-- Real DaVinci integration when hardware available (currently mock mode only)
 
 ---
 
 ## Critical Patterns & Gotchas
 
-**API Dependencies (Sessions 1072-1073):**
-- `API_DEPENDENCIES` in `appManifest.ts` is the source of truth — 30/31 routes populated, 235 endpoints (152 reads, 83 writes)
-- `list_api_dependencies` supports `path` (single route) and `writes_only` (mutation filter)
-- Only `/how-it-works` is empty (static page, no API calls)
-
-**Platform Awareness (Session 1071, updated 1074):**
-- `__manifest.json` is now tracked in git (`frontend/dist/__manifest.json`) — Railway gets it on deploy
-- Regenerate after manifest changes: `cd frontend && node scripts/generate-manifest.mjs`
-- `deploy_verify` calls the platform's OWN endpoints via `requests` — the server must be fully up
-- `setup_pa_service_account` runs in Procfile release — check Railway logs for token
-
-**Decision Gates (Session 1070, updated 1075):**
-- Classification is decoupled from approval — `classify()` and `approve()` are separate
-- `classify_apply` and `classify_apply_batch` actions now available on boardroom_tool
-- Grandfather clause: artifacts approved before 2026-02-24 skip classification gate
-- Noise threshold (< 0.3) auto-rejects; >= 0.4 shown in classification UI
+**Government Models:**
+- `CongressMember.bioguide_id` is PK (NOT auto UUID)
+- `Bill.bill_uid` is canonical key: `BILL:119:HR:1234` (federal), `LEGISCAN:{id}` (LegiScan)
+- `Bill.embedding` is pgvector VectorField(1536) — needs `HAS_PGVECTOR` guard
+- `Bill.content_hash` is sha256 of normalized embedding_text — used for incremental re-embedding
+- Congress.gov API returns `state: "Florida"` (full name) — use `STATE_ABBREV` dict in congress_sync.py
+- Congress.gov API returns `name: "Last, First"` format — parse carefully
+- `sync_bills(limit_pages=20)` caps at 5,000 bills per run — beat schedule fills incrementally
 
 **PA async flow:** POST `/api/pa/chat/` → `{task_id}`. Poll GET `/api/pa/chat/status/<task_id>/`.
-
+**PA conversation:** `pa-c20a79117938` (active with Rigby, has stocks roadmap context)
 **Railway:** `railway run python manage.py run_smoke_tests --token <token>` for CLI deploy checks.
