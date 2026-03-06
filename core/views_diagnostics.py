@@ -1712,21 +1712,23 @@ def cockpit_library_media(request):
     if media_type in ('all', 'image'):
         try:
             from content.models import ImageHistory
-            images = list(
+            images = (
                 ImageHistory.objects.filter(created_at__gte=cutoff)
+                .exclude(file_path__startswith='data:')
                 .order_by('-created_at')[:500]
-                .values('id', 'filename', 'file_path', 'thumbnail', 'image_type', 'prompt', 'created_at')
             )
             for img in images:
+                url = img.get_full_url()
+                thumb = img.get_thumbnail_url()
                 items.append({
-                    'id': str(img['id']),
+                    'id': str(img.id),
                     'kind': 'image',
-                    'title': img['filename'] or 'Untitled',
-                    'url': img['file_path'] or '',
-                    'thumbnail_url': img['thumbnail'] or '',
-                    'sub_type': img['image_type'] or '',
-                    'prompt': (img['prompt'] or '')[:200],
-                    'created_at': img['created_at'].isoformat() if img['created_at'] else None,
+                    'title': img.filename or 'Untitled',
+                    'url': url or '',
+                    'thumbnail_url': thumb or '',
+                    'sub_type': img.image_type or '',
+                    'prompt': (img.prompt or '')[:200],
+                    'created_at': img.created_at.isoformat() if img.created_at else None,
                 })
         except Exception as e:
             logger.debug("Library media images error: %s", e)
