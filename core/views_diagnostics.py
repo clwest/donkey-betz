@@ -1077,6 +1077,50 @@ def cockpit_runs_list(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+# ── Noise Metrics endpoints (Session 1077) ────────────────────────────────────
+
+@require_http_methods(["GET"])
+def cockpit_runs_metrics(request):
+    """
+    Aggregated run metrics with North Star coverage.
+    GET /api/cockpit/runs/metrics/?hours=24
+    """
+    if not (request.user and request.user.is_authenticated):
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    try:
+        hours = int(request.GET.get('hours', 24))
+        hours = max(1, min(hours, 168))  # cap at 7 days
+
+        from core.services.noise_metrics import compute_runs_metrics
+        result = compute_runs_metrics(hours=hours)
+        return JsonResponse(result)
+    except Exception as e:
+        logger.exception("cockpit_runs_metrics error")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def cockpit_conversations_metrics(request):
+    """
+    Aggregated conversation metrics with topic clustering and zombie rate.
+    GET /api/cockpit/conversations/metrics/?hours=24
+    """
+    if not (request.user and request.user.is_authenticated):
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    try:
+        hours = int(request.GET.get('hours', 24))
+        hours = max(1, min(hours, 168))
+
+        from core.services.noise_metrics import compute_conversation_metrics
+        result = compute_conversation_metrics(hours=hours)
+        return JsonResponse(result)
+    except Exception as e:
+        logger.exception("cockpit_conversations_metrics error")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
 # ── Focus Cockpit Create endpoints ───────────────────────────────────────────
 
 @csrf_exempt

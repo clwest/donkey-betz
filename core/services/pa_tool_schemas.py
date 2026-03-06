@@ -1979,6 +1979,7 @@ PA_TOOL_SCHEMAS = [
                     "enum": [
                         "version", "slo_status", "failure_signatures",
                         "tool_migration_report", "timeout_config_read", "proof_bundle",
+                        "noise_metrics", "conversation_metrics",
                     ],
                     "description": (
                         "version: build/deploy metadata (git SHA, branch, Railway deployment, uptime). "
@@ -1989,7 +1990,10 @@ PA_TOOL_SCHEMAS = [
                         "timeout_config_read: read agent wall-clock timeout config (code defaults + DB overrides). "
                         "proof_bundle: verification mode — returns timeout config + agent control audit log "
                         "+ initiative details in ONE read-only call. Use when user asks to verify or audit "
-                        "agent config, timeout overrides, or initiative state."
+                        "agent config, timeout overrides, or initiative state. "
+                        "noise_metrics: North Star coverage — how many runs hit revenue/content/sports paths vs noise. "
+                        "Includes by-agent breakdown, trigger types, importance distribution, artifact types. "
+                        "conversation_metrics: topic clustering, zombie rate, by-agent conversation counts."
                     ),
                 },
                 "window": {
