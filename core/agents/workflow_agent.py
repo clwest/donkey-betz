@@ -75,6 +75,14 @@ class WorkflowAgent(BaseAgent):
     name = "WorkflowAgent"
     llm_timeout = 180.0  # Session 1074: Multi-step orchestration needs 3 min
 
+    # Agents whose failure should NOT fail the entire workflow.
+    # If these fail, the workflow continues and surfaces a warning.
+    _NON_BLOCKING_AGENTS = frozenset({
+        'AudioAgent',           # SFX/music beds are enhancement, not core
+        'ThreeDAgent',          # 3D is optional enrichment
+        'CreativeDirectorAgent',  # Advisory — timeout shouldn't block deliverables
+    })
+
     # Session 856: Content review configuration
     actionable_config = ActionableOutputConfig(
         actions=['approve', 'revise', 'reject'],
@@ -474,7 +482,8 @@ You orchestrate. You don't create content directly."""
                                 'task': subtask,
                                 'success': False,
                                 'summary': f"Error: {str(e)}",
-                                'data': None
+                                'data': None,
+                                'non_blocking': agent_name in self._NON_BLOCKING_AGENTS,
                             })
 
                     # Add assistant response to history for next iteration
@@ -489,17 +498,31 @@ You orchestrate. You don't create content directly."""
                 # Compile workflow results
                 successful_steps = [wr for wr in workflow_results if wr['success']]
                 failed_steps = [wr for wr in workflow_results if not wr['success']]
+                # Blocking failures are steps that MUST succeed for the workflow
+                blocking_failures = [
+                    wr for wr in failed_steps
+                    if not wr.get('non_blocking') and wr['agent'] not in self._NON_BLOCKING_AGENTS
+                ]
 
                 if successful_steps:
                     # Session 856: Build descriptive message with agent details
                     agents_used = list(set([wr['agent'] for wr in workflow_results]))
+                    non_blocking_failures = [wr for wr in failed_steps if wr not in blocking_failures]
                     if len(failed_steps) == 0:
                         descriptive_msg = f"Workflow completed successfully: {len(successful_steps)} steps across {len(agents_used)} agents ({', '.join(agents_used[:3])}{'...' if len(agents_used) > 3 else ''})"
+                    elif len(blocking_failures) == 0:
+                        # Only non-blocking agents failed — treat as success with warnings
+                        warn_names = ', '.join(wr['agent'] for wr in non_blocking_failures)
+                        descriptive_msg = (
+                            f"Workflow completed with warnings: {len(successful_steps)} steps succeeded, "
+                            f"{len(non_blocking_failures)} optional step(s) skipped ({warn_names})"
+                        )
                     else:
                         descriptive_msg = f"Workflow partially completed: {len(successful_steps)} successful, {len(failed_steps)} failed using {', '.join(agents_used[:3])}"
 
+                    # Workflow succeeds if no blocking failures
                     result = AgentResult(
-                        success=len(failed_steps) == 0,
+                        success=len(blocking_failures) == 0,
                         message=descriptive_msg,
                         data={
                             'workflow_results': workflow_results,
@@ -517,7 +540,8 @@ You orchestrate. You don't create content directly."""
 
                     # === Session 304: Learning Infrastructure ===
                     self._record_learning_outcome(result, task, context, bool(spider_context), bool(scifi_context))
-                    self._create_execution_memory(result, task, "success" if len(failed_steps) == 0 else "partial", 0.7)
+                    memory_type = "success" if len(failed_steps) == 0 else ("partial" if len(blocking_failures) == 0 else "partial_failure")
+                    self._create_execution_memory(result, task, memory_type, 0.7)
                     agents_used = [wr['agent'] for wr in workflow_results]
                     self._share_knowledge(
                         knowledge_type='technique',
