@@ -1653,6 +1653,11 @@ class UnifiedPAEntrypoint:
             "If the user refers to items from a previous response (e.g. '#2', 'the first one'), "
             "use your conversation history to resolve the reference.",
             "",
+            "TIME FORMAT:",
+            "- ALWAYS report times in Mountain Time (MST/MDT), 12-hour format with AM/PM.",
+            "- Example: '2:35 PM MST' — NEVER use UTC or 24-hour format unless the user explicitly asks.",
+            "- When converting timestamps from tools/APIs (which return UTC), subtract 7 hours for MST (or 6 for MDT during daylight saving).",
+            "",
             "USER PROFILE:",
             f"- Skills: {skills}",
             f"- Goals: {goals}",
