@@ -454,6 +454,84 @@ def cleanup_stale_agent_executions(self, minutes_threshold: int = 60):
         raise
 
 
+@shared_task(bind=True, ignore_result=True)
+def cleanup_stale_content(
+    self,
+    cutoff_days: int = 7,
+    statuses: list = None,
+    protected_types: list = None,
+    cap: int = 500,
+):
+    """
+    Session 1101: Archive stale deliverables older than cutoff_days.
+
+    - Targets 'ready' and 'draft' statuses by default (never touches published/archived)
+    - Skips saved/pinned items
+    - Produces a breakdown report by type/category/agent
+    - Can be triggered manually or scheduled via Celery Beat
+    """
+    from core.models_deliverables import Deliverable
+    from django.db.models import Count, Q
+    from django.utils import timezone
+    from datetime import timedelta
+
+    task_id = self.request.id if self.request else 'unknown'
+    if statuses is None:
+        statuses = ['ready', 'draft']
+    if protected_types is None:
+        protected_types = []
+
+    # Safety: never touch published or archived
+    safe_statuses = [s for s in statuses if s not in ('published', 'archived')]
+    if not safe_statuses:
+        logger.warning(f"[CONTENT_CLEANUP] {task_id} No valid statuses to clean")
+        return {'error': 'no_valid_statuses', 'task_id': task_id}
+
+    cutoff = timezone.now() - timedelta(days=cutoff_days)
+
+    qs = Deliverable.objects.filter(
+        status__in=safe_statuses,
+        created_at__lt=cutoff,
+        is_saved=False,
+    )
+    if protected_types:
+        qs = qs.exclude(deliverable_type__in=protected_types)
+    if hasattr(Deliverable, 'is_pinned'):
+        qs = qs.filter(is_pinned=False)
+
+    total = qs.count()
+    logger.info(f"[CONTENT_CLEANUP] {task_id} Found {total} stale items (>{cutoff_days}d, statuses={safe_statuses})")
+
+    if total == 0:
+        return {'cleaned': 0, 'total_found': 0, 'task_id': task_id}
+
+    # Build report before archiving
+    by_type = list(qs.values('deliverable_type').annotate(count=Count('id')).order_by('-count'))
+    by_category = list(qs.values('category').annotate(count=Count('id')).order_by('-count')[:15])
+    by_agent = list(qs.values('agent_name').annotate(count=Count('id')).order_by('-count')[:15])
+
+    # Archive with cap
+    to_archive_ids = list(qs.order_by('created_at').values_list('id', flat=True)[:cap])
+    archived = Deliverable.objects.filter(id__in=to_archive_ids).update(
+        status='archived',
+        updated_at=timezone.now(),
+    )
+
+    report = {
+        'task_id': task_id,
+        'cleaned': archived,
+        'total_found': total,
+        'cutoff_days': cutoff_days,
+        'statuses': safe_statuses,
+        'cap': cap,
+        'by_type': by_type,
+        'by_category': by_category,
+        'by_agent': by_agent,
+    }
+    logger.info(f"[CONTENT_CLEANUP] {task_id} Archived {archived}/{total} items")
+    return report
+
+
 @shared_task
 def reap_zombie_work(
     deliberation_stale_minutes: int = 60,
