@@ -691,10 +691,10 @@ class AgentExecution(models.Model):
         app_label = 'core'
 
     def touch_heartbeat(self):
-        """Update heartbeat timestamp to signal this execution is still alive."""
+        """Update heartbeat timestamp to signal this execution is still alive.
+        Uses queryset update() for thread safety — avoids ORM instance state issues."""
         from django.utils import timezone
-        self.last_heartbeat_at = timezone.now()
-        self.save(update_fields=['last_heartbeat_at'])
+        AgentExecution.objects.filter(id=self.id).update(last_heartbeat_at=timezone.now())
 
     def __str__(self):
         return f"{self.agent.name} - {self.task[:50]}"
