@@ -395,24 +395,38 @@ def cleanup_stale_agent_executions(self, minutes_threshold: int = 60):
         # Session 1100: Use last_heartbeat_at when available — agents that touch
         # their heartbeat periodically are still alive. Fall back to created_at
         # for older executions that predate the heartbeat field.
-        stale_tasks = AgentExecution.objects.filter(
-            status__in=running_statuses,
-        ).annotate(
-            alive_at=Coalesce('last_heartbeat_at', 'created_at'),
-        ).filter(
-            alive_at__lt=cutoff_time,
-        )
+        try:
+            stale_tasks = AgentExecution.objects.filter(
+                status__in=running_statuses,
+            ).annotate(
+                alive_at=Coalesce('last_heartbeat_at', 'created_at'),
+            ).filter(
+                alive_at__lt=cutoff_time,
+            )
+            count = stale_tasks.count()
+            _has_heartbeat = True
+        except Exception:
+            # Migration 0301 not yet applied — fall back to created_at only
+            logger.info("🧹 [CLEANUP] last_heartbeat_at column not yet available, using created_at fallback")
+            stale_tasks = AgentExecution.objects.filter(
+                status__in=running_statuses,
+                created_at__lt=cutoff_time,
+            )
+            count = stale_tasks.count()
+            _has_heartbeat = False
 
-        count = stale_tasks.count()
         logger.info(f"🧹 [CLEANUP] Stale executions (>{minutes_threshold}min since last heartbeat): {count}")
 
         if count > 0:
             # Log details + emit timeout signatures for each stale task
-            sample_tasks = list(stale_tasks.values('id', 'agent__name', 'created_at', 'last_heartbeat_at')[:20])
+            _fields = ['id', 'agent__name', 'created_at']
+            if _has_heartbeat:
+                _fields.append('last_heartbeat_at')
+            sample_tasks = list(stale_tasks.values(*_fields)[:20])
             for task in sample_tasks:
-                ref_time = task['last_heartbeat_at'] or task['created_at']
+                ref_time = task.get('last_heartbeat_at') or task['created_at']
                 age_min = (now - ref_time).total_seconds() / 60
-                hb_status = 'heartbeat' if task['last_heartbeat_at'] else 'no heartbeat'
+                hb_status = 'heartbeat' if task.get('last_heartbeat_at') else 'no heartbeat'
                 logger.info(f"🧹 [CLEANUP] Marking stale: {task['agent__name']} - {age_min:.0f}min since {hb_status} - ID: {task['id']}")
                 # Session 1080: Emit structured timeout signature
                 _record_timeout_signature(
@@ -1773,14 +1787,20 @@ def execute_agent_task(
                 input_data = {'task': task, 'source': 'conversation_action_dispatch',
                               'celery_task_id': str(self.request.id)}
 
-            execution_record = AgentExecution.objects.create(
+            _create_kwargs = dict(
                 agent=agent_obj,
                 task=task[:500],  # Truncate for DB field
                 status='in_progress',
                 input_data=input_data,
                 experiment=experiment,  # Session 841: Link to experiment for scoped metrics
-                last_heartbeat_at=timezone.now(),  # Session 1100: Initial heartbeat
             )
+            # Session 1100: Set initial heartbeat (graceful if migration not yet applied)
+            try:
+                _create_kwargs['last_heartbeat_at'] = timezone.now()
+                execution_record = AgentExecution.objects.create(**_create_kwargs)
+            except Exception:
+                _create_kwargs.pop('last_heartbeat_at', None)
+                execution_record = AgentExecution.objects.create(**_create_kwargs)
 
         # Session 1031: Routing override — reroute specialist tasks away from
         # non-specialist agents.  E.g. "competitor audit" should never go to
