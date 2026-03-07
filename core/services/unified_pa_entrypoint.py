@@ -82,6 +82,8 @@ class PAResponse:
     tool_call_metadata: Optional[List[Dict]] = None
     tool_result_data: Optional[List[Dict]] = None
     response_id: Optional[str] = None
+    # Session 1100: Conversation lane
+    lane: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -234,6 +236,10 @@ class UnifiedPAEntrypoint:
         # Session 997: Mythology validation services
         self._mythology_prevention_service = None
         self._hallucination_flagging_service = None
+
+        # Session 1100: Conversation Lane Router
+        self._lane = None        # Current lane key (dbz/platform/biz/low_ret)
+        self._lane_policy = None  # LanePolicy for current message
 
         # Session 940: Triage mode state
         self._triage_mode = False
@@ -460,6 +466,13 @@ class UnifiedPAEntrypoint:
             )
 
         try:
+            # Session 1100: Conversation Lane Router — resolve lane before anything else
+            from core.services.conversation_lane_router import resolve_lane, get_lane_policy
+            self._lane, message, _lane_source = resolve_lane(message, self.conversation_id or '')
+            self._lane_policy = get_lane_policy(self._lane, message)
+            if _lane_source == 'tag':
+                logger.info(f"[{trace_id}] Lane switched to '{self._lane}' via tag")
+
             # Session 940: Check for triage mode first
             if self._triage_mode:
                 # Handle triage responses
@@ -736,6 +749,7 @@ class UnifiedPAEntrypoint:
                 tool_call_metadata=tool_call_metadata,
                 tool_result_data=tool_result_data,
                 response_id=response_id,
+                lane=self._lane,
             )
 
         except Exception as e:
@@ -895,7 +909,15 @@ class UnifiedPAEntrypoint:
         whenever intent keywords matched (e.g. "draft" hid legal_doc_drafter_agent,
         "status" hid intelligence_tool). The capability loss far outweighed the
         token savings. Intent detection is kept for logging/analytics only.
+
+        Session 1100: Low-retention lane blocks all tools unless user explicitly
+        requested them (tool_override=True).
         """
+        # Session 1100: Low-retention gate — no tools unless override
+        if self._lane_policy and self._lane_policy.lane == 'low_ret' and not self._lane_policy.tools_allowed:
+            logger.info("[PA_SCHEMA_SUBSET] LOW_RET lane — tools blocked (no override phrase)")
+            return []
+
         msg_lower = message.lower()
 
         # Detect intent for logging (not filtering)
@@ -1665,6 +1687,13 @@ class UnifiedPAEntrypoint:
             "PLATFORM STATS:",
             f"- {agent_count} Agents | {spider_count} Spiders | 25 Advisors",
         ]
+
+        # Session 1100: Inject conversation lane context
+        if self._lane_policy:
+            from core.services.conversation_lane_router import get_lane_system_prompt
+            lane_prompt = get_lane_system_prompt(self._lane_policy)
+            if lane_prompt:
+                prompt_parts.append(lane_prompt)
 
         # Inject persistent memory context
         try:
