@@ -1989,6 +1989,7 @@ PA_TOOL_SCHEMAS = [
                         "tool_migration_report", "timeout_config_read", "proof_bundle",
                         "noise_metrics", "conversation_metrics",
                         "focus_mode_status", "focus_mode_update",
+                        "celery_task_history", "execution_detail", "execution_search",
                     ],
                     "description": (
                         "version: build/deploy metadata (git SHA, branch, Railway deployment, uptime). "
@@ -2005,7 +2006,13 @@ PA_TOOL_SCHEMAS = [
                         "conversation_metrics: topic clustering, zombie rate, by-agent conversation counts. "
                         "focus_mode_status: read current Focus Mode config (enabled, mode, blocked topics, caps). "
                         "focus_mode_update: update Focus Mode config. Pass config_updates dict with keys to change "
-                        "(enabled, mode, blocked_topics_autonomous, max_conversations_per_agent_per_hour, etc.)."
+                        "(enabled, mode, blocked_topics_autonomous, max_conversations_per_agent_per_hour, etc.). "
+                        "celery_task_history: recent Celery task runs (success + failure) for a task name. "
+                        "Pass task_name to filter (e.g. 'cleanup_stale'), window, limit, status. "
+                        "execution_detail: look up a single AgentExecution by ID, includes last_heartbeat_at "
+                        "and seconds_since_heartbeat. Pass execution_id. "
+                        "execution_search: search recent AgentExecutions by agent_name/status/window. "
+                        "Returns list with heartbeat info."
                     ),
                 },
                 "window": {
@@ -2023,7 +2030,23 @@ PA_TOOL_SCHEMAS = [
                 },
                 "limit": {
                     "type": "integer",
-                    "description": "For failure_signatures: max signatures to return (default 10, max 25).",
+                    "description": "For failure_signatures (max 25), celery_task_history (max 100), execution_search (max 50): max results to return.",
+                },
+                "task_name": {
+                    "type": "string",
+                    "description": "For celery_task_history: filter by task name (substring match, e.g. 'cleanup_stale'). Omit for all tasks.",
+                },
+                "execution_id": {
+                    "type": "string",
+                    "description": "For execution_detail: UUID of the AgentExecution to look up.",
+                },
+                "agent_name": {
+                    "type": "string",
+                    "description": "For execution_search: filter by agent name (substring match, e.g. 'WorkflowAgent').",
+                },
+                "status": {
+                    "type": "string",
+                    "description": "For celery_task_history: filter by status (SUCCESS/FAILURE). For execution_search: filter by status (in_progress/completed/failed).",
                 },
                 "agent_names": {
                     "type": "array",
