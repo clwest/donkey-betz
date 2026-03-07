@@ -379,6 +379,9 @@ def cleanup_stale_agent_executions(self, minutes_threshold: int = 60):
     logger.info(f"🧹 [CLEANUP] Task {task_id} STARTED - threshold: {minutes_threshold} minutes")
 
     try:
+        from django.db.models import Q
+        from django.db.models.functions import Coalesce
+
         now = timezone.now()
         cutoff_time = now - timedelta(minutes=minutes_threshold)
         logger.info(f"🧹 [CLEANUP] Current time: {now.isoformat()}, cutoff: {cutoff_time.isoformat()}")
@@ -389,21 +392,28 @@ def cleanup_stale_agent_executions(self, minutes_threshold: int = 60):
         all_running = AgentExecution.objects.filter(status__in=running_statuses).count()
         logger.info(f"🧹 [CLEANUP] Total running/in_progress executions: {all_running}")
 
-        # Find stale tasks (either running or in_progress)
+        # Session 1100: Use last_heartbeat_at when available — agents that touch
+        # their heartbeat periodically are still alive. Fall back to created_at
+        # for older executions that predate the heartbeat field.
         stale_tasks = AgentExecution.objects.filter(
             status__in=running_statuses,
-            created_at__lt=cutoff_time
+        ).annotate(
+            alive_at=Coalesce('last_heartbeat_at', 'created_at'),
+        ).filter(
+            alive_at__lt=cutoff_time,
         )
 
         count = stale_tasks.count()
-        logger.info(f"🧹 [CLEANUP] Stale executions (>{minutes_threshold}min old): {count}")
+        logger.info(f"🧹 [CLEANUP] Stale executions (>{minutes_threshold}min since last heartbeat): {count}")
 
         if count > 0:
             # Log details + emit timeout signatures for each stale task
-            sample_tasks = list(stale_tasks.values('id', 'agent__name', 'created_at')[:20])
+            sample_tasks = list(stale_tasks.values('id', 'agent__name', 'created_at', 'last_heartbeat_at')[:20])
             for task in sample_tasks:
-                age_min = (now - task['created_at']).total_seconds() / 60
-                logger.info(f"🧹 [CLEANUP] Marking stale: {task['agent__name']} - {age_min:.0f}min old - ID: {task['id']}")
+                ref_time = task['last_heartbeat_at'] or task['created_at']
+                age_min = (now - ref_time).total_seconds() / 60
+                hb_status = 'heartbeat' if task['last_heartbeat_at'] else 'no heartbeat'
+                logger.info(f"🧹 [CLEANUP] Marking stale: {task['agent__name']} - {age_min:.0f}min since {hb_status} - ID: {task['id']}")
                 # Session 1080: Emit structured timeout signature
                 _record_timeout_signature(
                     agent_name=task['agent__name'],
@@ -415,7 +425,7 @@ def cleanup_stale_agent_executions(self, minutes_threshold: int = 60):
             # Perform the cleanup
             updated = stale_tasks.update(
                 status='failed',
-                error_message=f'Task timed out after {minutes_threshold} minutes - marked as failed by cleanup',
+                error_message=f'Task timed out after {minutes_threshold} minutes (no heartbeat) - marked as failed by cleanup',
                 completed_at=now
             )
             logger.info(f"🧹 [CLEANUP] SUCCESS - Cleaned up {updated} stale agent executions")
@@ -1769,6 +1779,7 @@ def execute_agent_task(
                 status='in_progress',
                 input_data=input_data,
                 experiment=experiment,  # Session 841: Link to experiment for scoped metrics
+                last_heartbeat_at=timezone.now(),  # Session 1100: Initial heartbeat
             )
 
         # Session 1031: Routing override — reroute specialist tasks away from
@@ -1883,6 +1894,25 @@ def execute_agent_task(
             finally:
                 close_old_connections()
 
+        # Session 1100: Heartbeat thread — touch execution record every 2 min
+        # so the cleanup watchdog knows this agent is still alive.
+        import threading
+        _hb_stop = threading.Event()
+        def _heartbeat_loop():
+            while not _hb_stop.wait(timeout=120):  # every 2 min
+                if execution_record:
+                    try:
+                        from django.db import close_old_connections
+                        close_old_connections()
+                        execution_record.touch_heartbeat()
+                    except Exception:
+                        pass  # best-effort — don't crash on DB hiccups
+
+        _hb_thread = None
+        if execution_record:
+            _hb_thread = threading.Thread(target=_heartbeat_loop, daemon=True)
+            _hb_thread.start()
+
         try:
             _pool = _TPE(max_workers=1)
             _future = _pool.submit(_run_route)
@@ -1893,6 +1923,8 @@ def execute_agent_task(
                 # The `with` statement calls shutdown(wait=True) which blocks until the
                 # thread finishes — defeating the timeout if the LLM call is truly hung.
                 _pool.shutdown(wait=False)
+                # Session 1100: Stop heartbeat thread
+                _hb_stop.set()
         except _FuturesTimeout:
             _elapsed = time.time() - execution_start
             logger.error(

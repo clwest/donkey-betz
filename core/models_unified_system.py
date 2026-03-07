@@ -683,8 +683,18 @@ class AgentExecution(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
 
+    # Session 1100: Heartbeat field — long-running agents touch this periodically
+    # so the cleanup watchdog can distinguish "still alive" from "truly stuck".
+    last_heartbeat_at = models.DateTimeField(null=True, blank=True, db_index=True)
+
     class Meta:
         app_label = 'core'
+
+    def touch_heartbeat(self):
+        """Update heartbeat timestamp to signal this execution is still alive."""
+        from django.utils import timezone
+        self.last_heartbeat_at = timezone.now()
+        self.save(update_fields=['last_heartbeat_at'])
 
     def __str__(self):
         return f"{self.agent.name} - {self.task[:50]}"
