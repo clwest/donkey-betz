@@ -11332,6 +11332,18 @@ RESEARCH DATA:
             set_config(config_updates)
             return {'action': 'focus_mode_update', 'applied': list(config_updates.keys()), **get_status()}
 
+        elif action == 'celery_task_history':
+            # Session 1100: Query recent Celery task runs (success + failure)
+            return self._ops_celery_task_history(payload, trace_id)
+
+        elif action == 'execution_detail':
+            # Session 1100: Look up a single AgentExecution by ID (includes heartbeat)
+            return self._ops_execution_detail(payload, trace_id)
+
+        elif action == 'execution_search':
+            # Session 1100: Search recent executions by agent name / status
+            return self._ops_execution_search(payload, trace_id)
+
         else:
             return {'error': f'Unknown ops_tool action: {action}'}
 
@@ -11742,6 +11754,131 @@ RESEARCH DATA:
             'total_signatures': len(signatures),
         }
 
+
+    # ── Session 1100: Ops observability helpers ─────────────────────────────
+
+    def _ops_celery_task_history(self, payload: Dict[str, Any], trace_id: str) -> Dict[str, Any]:
+        """Recent Celery task runs (success + failure) for a given task name."""
+        from django.utils import timezone
+        from datetime import timedelta
+        try:
+            from core.models_celery_telemetry import CeleryTaskEvent
+        except ImportError:
+            return {'error': 'CeleryTaskEvent model not available'}
+
+        task_name = payload.get('task_name', '')
+        limit = min(int(payload.get('limit', 20)), 100)
+        window = payload.get('window', '6h')
+        status_filter = payload.get('status')
+        hours = {'1h': 1, '6h': 6, '24h': 24, '7d': 168, '30d': 720}.get(window, 6)
+        cutoff = timezone.now() - timedelta(hours=hours)
+
+        qs = CeleryTaskEvent.objects.filter(started_at__gte=cutoff)
+        if task_name:
+            qs = qs.filter(task_name__icontains=task_name)
+        if status_filter:
+            qs = qs.filter(status=status_filter.upper())
+
+        events = list(qs.order_by('-started_at').values(
+            'task_id', 'task_name', 'status', 'queue', 'worker',
+            'started_at', 'finished_at', 'duration_seconds',
+            'error_type', 'error_message',
+            'rss_mb_start', 'rss_mb_end', 'rss_delta_mb',
+        )[:limit])
+
+        for e in events:
+            e['started_at'] = e['started_at'].isoformat() if e['started_at'] else None
+            e['finished_at'] = e['finished_at'].isoformat() if e['finished_at'] else None
+            if e.get('duration_seconds') is not None:
+                e['duration_ms'] = int(e['duration_seconds'] * 1000)
+
+        return {
+            'action': 'celery_task_history',
+            'task_name_filter': task_name or '(all)',
+            'window': window,
+            'count': len(events),
+            'events': events,
+        }
+
+    def _ops_execution_detail(self, payload: Dict[str, Any], trace_id: str) -> Dict[str, Any]:
+        """Look up a single AgentExecution by ID, including heartbeat."""
+        from core.models_unified_system import AgentExecution
+        from django.utils import timezone
+
+        execution_id = payload.get('execution_id', '')
+        if not execution_id:
+            return {'error': 'execution_id required'}
+
+        try:
+            ex = AgentExecution.objects.select_related('agent').get(id=execution_id)
+        except AgentExecution.DoesNotExist:
+            return {'error': f'Execution {execution_id} not found'}
+
+        now = timezone.now()
+        hb = getattr(ex, 'last_heartbeat_at', None)
+
+        return {
+            'action': 'execution_detail',
+            'execution': {
+                'id': str(ex.id),
+                'agent_name': ex.agent.name if ex.agent else 'Unknown',
+                'task': ex.task[:500] if ex.task else '',
+                'status': ex.status,
+                'created_at': ex.created_at.isoformat(),
+                'completed_at': ex.completed_at.isoformat() if ex.completed_at else None,
+                'last_heartbeat_at': hb.isoformat() if hb else None,
+                'seconds_since_heartbeat': int((now - hb).total_seconds()) if hb else None,
+                'execution_time_ms': ex.execution_time_ms,
+                'error_message': ex.error_message,
+                'tokens_used': ex.tokens_used,
+                'cost': float(ex.cost) if ex.cost else 0,
+            },
+        }
+
+    def _ops_execution_search(self, payload: Dict[str, Any], trace_id: str) -> Dict[str, Any]:
+        """Search recent AgentExecutions by agent name / status."""
+        from core.models_unified_system import AgentExecution
+        from django.utils import timezone
+        from datetime import timedelta
+
+        agent_name = payload.get('agent_name', '')
+        status_filter = payload.get('status')
+        limit = min(int(payload.get('limit', 10)), 50)
+        window = payload.get('window', '6h')
+        hours = {'1h': 1, '6h': 6, '24h': 24, '7d': 168, '30d': 720}.get(window, 6)
+        cutoff = timezone.now() - timedelta(hours=hours)
+
+        qs = AgentExecution.objects.filter(created_at__gte=cutoff).select_related('agent')
+        if agent_name:
+            qs = qs.filter(agent__name__icontains=agent_name)
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+
+        executions = list(qs.order_by('-created_at')[:limit])
+        now = timezone.now()
+
+        return {
+            'action': 'execution_search',
+            'agent_name_filter': agent_name or '(all)',
+            'status_filter': status_filter or '(all)',
+            'window': window,
+            'count': len(executions),
+            'executions': [
+                {
+                    'id': str(ex.id),
+                    'agent_name': ex.agent.name if ex.agent else 'Unknown',
+                    'task': ex.task[:200] if ex.task else '',
+                    'status': ex.status,
+                    'created_at': ex.created_at.isoformat(),
+                    'completed_at': ex.completed_at.isoformat() if ex.completed_at else None,
+                    'last_heartbeat_at': ex.last_heartbeat_at.isoformat() if getattr(ex, 'last_heartbeat_at', None) else None,
+                    'seconds_since_heartbeat': int((now - ex.last_heartbeat_at).total_seconds()) if getattr(ex, 'last_heartbeat_at', None) else None,
+                    'execution_time_ms': ex.execution_time_ms,
+                    'error_message': ex.error_message[:200] if ex.error_message else '',
+                }
+                for ex in executions
+            ],
+        }
 
     # ── Session 1080: Agent Control Tool ────────────────────────────────────
 

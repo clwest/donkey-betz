@@ -445,6 +445,7 @@ def unified_execution_history(request):
                         'execution_time_ms': ex.execution_time_ms,
                         'created_at': ex.created_at.isoformat(),
                         'completed_at': ex.completed_at.isoformat() if ex.completed_at else None,
+                        'last_heartbeat_at': ex.last_heartbeat_at.isoformat() if getattr(ex, 'last_heartbeat_at', None) else None,
                     }
                     for ex in executions
                 ],
@@ -514,6 +515,7 @@ def execution_detail(request, execution_id):
                     'execution_time_ms': execution.execution_time_ms,
                     'created_at': execution.created_at.isoformat(),
                     'completed_at': execution.completed_at.isoformat() if execution.completed_at else None,
+                    'last_heartbeat_at': execution.last_heartbeat_at.isoformat() if getattr(execution, 'last_heartbeat_at', None) else None,
                 },
                 'related_memory': related_memory
             }
