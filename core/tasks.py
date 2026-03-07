@@ -38765,7 +38765,11 @@ def run_ops_autopilot():
 
 @shared_task(ignore_result=True)
 def post_ops_digest():
-    """Every 30 min: generate and post an ops digest into the active PA conversation."""
+    """
+    Every 30 min: generate an ops digest and post ONLY if there are actual
+    issues (task failures, SLO breaches, blocked agents, etc.).
+    Session 1100: Suppresses noise-only digests — Chris requested errors-only.
+    """
     import os
     from core.services.tool_dispatcher import get_tool_dispatcher
 
@@ -38794,13 +38798,39 @@ def post_ops_digest():
             return {'skipped': True, 'reason': 'no_active_conversation'}
 
         td = get_tool_dispatcher()
+
+        # Session 1100: Generate first, check for real issues before posting
+        digest = td._handle_ops_digest(
+            'ops_digest_tool',
+            {'action': 'generate', 'window': '1h'},
+            None,
+            'celery-beat-digest',
+        )
+
+        # Check if there's anything worth reporting
+        activity = digest.get('activity', {})
+        task_failures = activity.get('task_failures', 0)
+        top_failures = digest.get('top_failures', [])
+        blocked = digest.get('blocked_agents', [])
+
+        has_issues = (
+            task_failures > 0
+            or len(top_failures) > 0
+            or len(blocked) > 0
+        )
+
+        if not has_issues:
+            logger.info("[OpsDigest] All clear — no failures or issues, skipping post")
+            return {'skipped': True, 'reason': 'no_issues'}
+
+        # Post only when there are actual issues
         result = td._handle_ops_digest(
             'ops_digest_tool',
             {'action': 'post', 'conversation_id': target_cid, 'window': '1h'},
             None,
             'celery-beat-digest',
         )
-        logger.info(f"[OpsDigest] Posted to {target_cid}")
+        logger.info(f"[OpsDigest] Issues found ({task_failures} failures) — posted to {target_cid}")
         return result
     except Exception as e:
         logger.exception(f"[OpsDigest] Failed: {e}")
