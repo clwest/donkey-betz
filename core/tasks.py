@@ -36792,6 +36792,9 @@ def process_pa_chat_task(self, user_id, message, context=None, generate_audio=Fa
             'response_id': response.response_id,
             'source': source,
         }
+        # Session 1100: Persist conversation lane in metadata
+        if getattr(response, 'lane', None):
+            raw_metadata['lane'] = response.lane
         metadata = json.loads(json.dumps(raw_metadata, default=str))
 
         chat_row = ChatConversation.objects.create(
