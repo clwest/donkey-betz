@@ -11211,6 +11211,27 @@ RESEARCH DATA:
         if action == 'bulk_archive':
             return self._handle_bulk_archive(payload, user_id, trace_id)
 
+        # ── Session 1101: Manual cleanup trigger ──
+        if action == 'run_cleanup':
+            from core.tasks import cleanup_stale_content
+            cutoff_days = int(payload.get('cutoff_days', 7))
+            statuses = payload.get('statuses', ['ready', 'draft'])
+            cap = min(int(payload.get('cap', 500)), 2000)
+            protected_types = payload.get('protected_types', [])
+            task = cleanup_stale_content.delay(
+                cutoff_days=cutoff_days,
+                statuses=statuses,
+                protected_types=protected_types,
+                cap=cap,
+            )
+            return {
+                'gateway': 'content_tool',
+                'action': 'run_cleanup',
+                'task_id': str(task.id),
+                'mode': 'async',
+                'message': f'Cleanup task dispatched (cutoff={cutoff_days}d, statuses={statuses}, cap={cap}). Poll task_id for results.',
+            }
+
         # ── generate_blog_tool ──
         if action == 'generate_blog':
             blog_payload = dict(payload)
@@ -11304,7 +11325,7 @@ RESEARCH DATA:
                 return {'gateway': 'content_tool', 'action': action, 'error': str(e)}
 
         all_actions = sorted(
-            list(CONTENT_REVIEW_MAP) + ['generate_blog', 'bulk_archive'] + list(DELIVERABLE_MAP)
+            list(CONTENT_REVIEW_MAP) + ['generate_blog', 'bulk_archive', 'run_cleanup'] + list(DELIVERABLE_MAP)
             + ['podcasts', 'series', 'content_studio']
         )
         return {'error': f'Unknown content_tool action: {action}. Valid: {", ".join(all_actions)}'}
