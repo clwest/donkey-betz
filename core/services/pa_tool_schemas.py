@@ -2610,7 +2610,7 @@ PA_TOOL_SCHEMAS = [
                         "content_stats", "content_list", "content_detail",
                         "content_search", "content_recent",
                         "content_approve", "content_reject",
-                        "generate_blog", "bulk_archive",
+                        "generate_blog", "bulk_archive", "run_cleanup",
                         "deliverable_list", "deliverable_detail",
                         "deliverable_search", "deliverable_save",
                         "deliverable_create", "deliverable_stats",
@@ -2627,6 +2627,7 @@ PA_TOOL_SCHEMAS = [
                         "content_reject: archive a deliverable with feedback. "
                         "generate_blog: create a new blog post via deliberation pipeline. "
                         "bulk_archive: archive multiple deliverables by filter (dry_run preview by default). "
+                        "run_cleanup: trigger cleanup_stale_content Celery task (async, returns task_id). "
                         "deliverable_list: browse deliverables library (supports status/type/category/date filters). "
                         "deliverable_detail: full content of a deliverable. "
                         "deliverable_search: search deliverables by title. "
@@ -2649,6 +2650,9 @@ PA_TOOL_SCHEMAS = [
                 "created_before": {"type": "string", "description": "ISO-8601 datetime. Only items created before this date (e.g. '2026-02-28T00:00:00Z')."},
                 "created_after": {"type": "string", "description": "ISO-8601 datetime. Only items created after this date."},
                 "dry_run": {"type": "boolean", "description": "For bulk_archive: preview without executing (default: true). Set false to actually archive."},
+                "cutoff_days": {"type": "integer", "description": "For run_cleanup: archive items older than N days (default: 7)"},
+                "cap": {"type": "integer", "description": "For run_cleanup/bulk_archive: max items per run (default: 500, max: 2000)"},
+                "protected_types": {"type": "array", "items": {"type": "string"}, "description": "For run_cleanup: deliverable_types to skip"},
                 "topic": {"type": "string", "description": "Blog topic for generate_blog action"},
                 "tone": {"type": "string", "description": "Tone for generate_blog action (default: enthusiastic)"},
                 "title": {"type": "string", "description": "Title for deliverable_create"},

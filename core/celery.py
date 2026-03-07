@@ -2364,6 +2364,18 @@ app.conf.beat_schedule = {
         }
     },
 
+    # Session 1101: Nightly stale content cleanup
+    # Archives ready/draft deliverables older than 7 days (skips saved/pinned/published)
+    'cleanup-stale-content': {
+        'task': 'core.tasks.cleanup_stale_content',
+        'schedule': crontab(hour=10, minute=5),  # 3:05 AM MST (UTC-7)
+        'kwargs': {'cutoff_days': 7, 'statuses': ['ready', 'draft'], 'cap': 500},
+        'options': {
+            'expires': 3600,  # 1 hour
+            'queue': 'default',
+        }
+    },
+
     # Session 926: Junk Initiative Cleanup to prevent pipeline backlogs
     # Archives initiatives with bad names or stale without Stage 1 docs
     'cleanup-junk-initiatives': {
