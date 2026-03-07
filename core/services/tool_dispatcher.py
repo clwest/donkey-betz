@@ -1573,7 +1573,7 @@ class ToolDispatcher:
             base_qs = base_qs.filter(Q(user_id=user_id) | Q(user__isnull=True))
 
         def _apply_common_filters(qs):
-            """Apply category/agent/type/saved filters."""
+            """Apply category/agent/type/saved/status/date filters."""
             dtype = payload.get('type')
             if dtype:
                 qs = qs.filter(deliverable_type=dtype)
@@ -1585,6 +1585,25 @@ class ToolDispatcher:
                 qs = qs.filter(agent_name__iexact=agent)
             if payload.get('saved'):
                 qs = qs.filter(is_saved=True)
+            # Session 1101: Status filter (with aliases for LLM confusion)
+            _STATUS_ALIASES = {'approved': 'ready', 'pending_review': 'ready', 'rejected': 'archived'}
+            status = payload.get('status')
+            if status:
+                status = _STATUS_ALIASES.get(status, status)
+                qs = qs.filter(status=status)
+            # Session 1101: Date range filters
+            created_before = payload.get('created_before')
+            created_after = payload.get('created_after')
+            if created_before:
+                from django.utils.dateparse import parse_datetime
+                dt = parse_datetime(created_before)
+                if dt:
+                    qs = qs.filter(created_at__lt=dt)
+            if created_after:
+                from django.utils.dateparse import parse_datetime
+                dt = parse_datetime(created_after)
+                if dt:
+                    qs = qs.filter(created_at__gte=dt)
             return qs
 
         _LIST_FIELDS = (
@@ -4009,16 +4028,35 @@ class ToolDispatcher:
             base_qs = base_qs.filter(_Qcr(user_id=user_id) | _Qcr(user__isnull=True))
 
         if action == 'list':
-            # List content in 'ready' status awaiting review
-            qs = base_qs.filter(status='ready')
+            # Session 1101: Honor status filter from payload (default: ready)
+            _STATUS_ALIASES = {'approved': 'ready', 'pending_review': 'ready', 'rejected': 'archived'}
+            status_filter = payload.get('status', 'ready')
+            status_filter = _STATUS_ALIASES.get(status_filter, status_filter)
+            qs = base_qs.filter(status=status_filter)
 
             if content_type:
                 qs = qs.filter(deliverable_type=content_type)
             if category:
                 qs = qs.filter(category__icontains=category)
 
+            # Session 1101: Date range filters
+            created_before = payload.get('created_before')
+            created_after = payload.get('created_after')
+            if created_before:
+                from django.utils.dateparse import parse_datetime
+                dt = parse_datetime(created_before)
+                if dt:
+                    qs = qs.filter(created_at__lt=dt)
+            if created_after:
+                from django.utils.dateparse import parse_datetime
+                dt = parse_datetime(created_after)
+                if dt:
+                    qs = qs.filter(created_at__gte=dt)
+
+            total = qs.count()
+            offset = max(payload.get('offset', 0), 0)
             items = list(
-                qs.order_by('-created_at')[:limit].values(
+                qs.order_by('-created_at')[offset:offset + limit].values(
                     'id', 'title', 'deliverable_type', 'category',
                     'agent_name', 'quality_score', 'created_at', 'status'
                 )
@@ -4026,12 +4064,15 @@ class ToolDispatcher:
 
             return {
                 'action': 'list',
+                'total': total,
                 'count': len(items),
                 'items': items,
                 'filters_applied': {
                     'type': content_type,
                     'category': category,
-                    'status': 'ready',
+                    'status': status_filter,
+                    'created_before': created_before,
+                    'created_after': created_after,
                 }
             }
 
@@ -11166,6 +11207,10 @@ RESEARCH DATA:
                 result['action'] = action
             return result
 
+        # ── Session 1101: Bulk archive ──
+        if action == 'bulk_archive':
+            return self._handle_bulk_archive(payload, user_id, trace_id)
+
         # ── generate_blog_tool ──
         if action == 'generate_blog':
             blog_payload = dict(payload)
@@ -11259,10 +11304,126 @@ RESEARCH DATA:
                 return {'gateway': 'content_tool', 'action': action, 'error': str(e)}
 
         all_actions = sorted(
-            list(CONTENT_REVIEW_MAP) + ['generate_blog'] + list(DELIVERABLE_MAP)
+            list(CONTENT_REVIEW_MAP) + ['generate_blog', 'bulk_archive'] + list(DELIVERABLE_MAP)
             + ['podcasts', 'series', 'content_studio']
         )
         return {'error': f'Unknown content_tool action: {action}. Valid: {", ".join(all_actions)}'}
+
+    # ── Session 1101: Bulk Archive ─────────────────────────────────────────────
+    def _handle_bulk_archive(self, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:
+        """
+        Session 1101: Bulk archive deliverables by filter criteria.
+        Supports dry_run (default) for preview before execution.
+        """
+        from core.models_deliverables import Deliverable
+        from django.db.models import Q
+        from django.utils import timezone
+
+        dry_run = payload.get('dry_run', True)
+        cap = min(int(payload.get('limit', 500)), 2000)
+
+        # Build filter queryset
+        base_qs = Deliverable.objects.all()
+        if user_id:
+            base_qs = base_qs.filter(Q(user_id=user_id) | Q(user__isnull=True))
+
+        # Never archive published or already-archived items
+        statuses = payload.get('statuses', ['ready', 'draft'])
+        safe_statuses = [s for s in statuses if s not in ('published', 'archived')]
+        if not safe_statuses:
+            return {'error': 'Cannot bulk archive published/archived items. Valid statuses: ready, draft, approved'}
+
+        qs = base_qs.filter(status__in=safe_statuses)
+
+        # Optional filters
+        dtype = payload.get('type')
+        if dtype:
+            qs = qs.filter(deliverable_type=dtype)
+        category = payload.get('category')
+        if category:
+            qs = qs.filter(category__iexact=category)
+        agent = payload.get('agent')
+        if agent:
+            qs = qs.filter(agent_name__iexact=agent)
+
+        # Date range — created_before is the key filter for "older than X days"
+        created_before = payload.get('created_before')
+        created_after = payload.get('created_after')
+        if created_before:
+            from django.utils.dateparse import parse_datetime
+            dt = parse_datetime(created_before)
+            if dt:
+                qs = qs.filter(created_at__lt=dt)
+        if created_after:
+            from django.utils.dateparse import parse_datetime
+            dt = parse_datetime(created_after)
+            if dt:
+                qs = qs.filter(created_at__gte=dt)
+
+        # Exclude pinned/saved items
+        qs = qs.filter(is_saved=False)
+        if hasattr(Deliverable, 'is_pinned'):
+            qs = qs.filter(is_pinned=False)
+
+        total_matching = qs.count()
+
+        # Build summary by type/category/agent
+        from django.db.models import Count
+        by_type = list(qs.values('deliverable_type').annotate(count=Count('id')).order_by('-count')[:10])
+        by_category = list(qs.values('category').annotate(count=Count('id')).order_by('-count')[:10])
+        by_agent = list(qs.values('agent_name').annotate(count=Count('id')).order_by('-count')[:10])
+        by_status = list(qs.values('status').annotate(count=Count('id')).order_by('-count'))
+
+        # Sample items for preview
+        sample = list(
+            qs.order_by('created_at')[:20].values(
+                'id', 'title', 'deliverable_type', 'category',
+                'agent_name', 'status', 'created_at'
+            )
+        )
+
+        result = {
+            'action': 'bulk_archive',
+            'dry_run': dry_run,
+            'total_matching': total_matching,
+            'cap': cap,
+            'will_archive': min(total_matching, cap),
+            'filters': {
+                'statuses': safe_statuses,
+                'type': dtype,
+                'category': category,
+                'agent': agent,
+                'created_before': created_before,
+                'created_after': created_after,
+            },
+            'breakdown': {
+                'by_type': by_type,
+                'by_category': by_category,
+                'by_agent': by_agent,
+                'by_status': by_status,
+            },
+            'sample_items': sample,
+        }
+
+        if dry_run:
+            result['message'] = f'DRY RUN: {min(total_matching, cap)} items would be archived. Set dry_run=false to execute.'
+            return result
+
+        # Execute archive
+        to_archive = qs.order_by('created_at')[:cap]
+        archived_ids = list(to_archive.values_list('id', flat=True))
+        archived_count = Deliverable.objects.filter(id__in=archived_ids).update(
+            status='archived',
+            updated_at=timezone.now(),
+        )
+
+        logger.info(f"[BULK_ARCHIVE] {trace_id} Archived {archived_count} deliverables "
+                     f"(filters: statuses={safe_statuses}, type={dtype}, category={category}, "
+                     f"agent={agent}, created_before={created_before})")
+
+        result['archived_count'] = archived_count
+        result['message'] = f'Archived {archived_count} deliverables.'
+        return result
 
     # ── Session 1078: Ops Tool ─────────────────────────────────────────────────
     def _handle_ops(self, tool_name: str, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:

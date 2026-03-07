@@ -2610,7 +2610,7 @@ PA_TOOL_SCHEMAS = [
                         "content_stats", "content_list", "content_detail",
                         "content_search", "content_recent",
                         "content_approve", "content_reject",
-                        "generate_blog",
+                        "generate_blog", "bulk_archive",
                         "deliverable_list", "deliverable_detail",
                         "deliverable_search", "deliverable_save",
                         "deliverable_create", "deliverable_stats",
@@ -2619,14 +2619,15 @@ PA_TOOL_SCHEMAS = [
                     ],
                     "description": (
                         "content_stats: pipeline overview (blogs + deliverables counts). "
-                        "content_list: list content awaiting review. "
+                        "content_list: list content by status (default: ready). Use status param to filter. "
                         "content_detail: full details of a deliverable/blog by id. "
                         "content_search: search by title keyword across blogs + deliverables. "
                         "content_recent: recently created content (any status). "
                         "content_approve: publish a ready deliverable. "
                         "content_reject: archive a deliverable with feedback. "
                         "generate_blog: create a new blog post via deliberation pipeline. "
-                        "deliverable_list: browse deliverables library. "
+                        "bulk_archive: archive multiple deliverables by filter (dry_run preview by default). "
+                        "deliverable_list: browse deliverables library (supports status/type/category/date filters). "
                         "deliverable_detail: full content of a deliverable. "
                         "deliverable_search: search deliverables by title. "
                         "deliverable_save: bookmark a deliverable. "
@@ -2640,16 +2641,21 @@ PA_TOOL_SCHEMAS = [
                 },
                 "id": {"type": "string", "description": "UUID of deliverable or blog"},
                 "query": {"type": "string", "description": "Title search term for search actions"},
-                "type": {"type": "string", "description": "Content type filter. Use 'blog' for blog posts."},
-                "category": {"type": "string", "description": "Category filter (e.g. 'Finance', 'Research')"},
-                "status": {"type": "string", "description": "Filter by status (draft, pending_review, approved, published)"},
+                "type": {"type": "string", "description": "Content type filter (e.g. 'edited_content', 'blog', 'document')"},
+                "category": {"type": "string", "description": "Category filter (e.g. 'Finance', 'Research', 'Content Editing')"},
+                "agent": {"type": "string", "description": "Filter by agent_name (e.g. 'EditorAgent', 'ContentWriterAgent')"},
+                "status": {"type": "string", "description": "Filter by status: draft, ready, published, archived. Default varies by action."},
+                "statuses": {"type": "array", "items": {"type": "string"}, "description": "For bulk_archive: list of statuses to target (default: ['ready', 'draft']). Cannot include published/archived."},
+                "created_before": {"type": "string", "description": "ISO-8601 datetime. Only items created before this date (e.g. '2026-02-28T00:00:00Z')."},
+                "created_after": {"type": "string", "description": "ISO-8601 datetime. Only items created after this date."},
+                "dry_run": {"type": "boolean", "description": "For bulk_archive: preview without executing (default: true). Set false to actually archive."},
                 "topic": {"type": "string", "description": "Blog topic for generate_blog action"},
                 "tone": {"type": "string", "description": "Tone for generate_blog action (default: enthusiastic)"},
                 "title": {"type": "string", "description": "Title for deliverable_create"},
                 "content": {"type": "string", "description": "Content for deliverable_create"},
                 "feedback": {"type": "string", "description": "Feedback when rejecting content"},
                 "days": {"type": "integer", "description": "Lookback days for content_recent (default 30)"},
-                "limit": {"type": "integer", "description": "Max items (default 10)"},
+                "limit": {"type": "integer", "description": "Max items (default 10, for bulk_archive: max items to archive, default 500)"},
                 "offset": {"type": "integer", "description": "Pagination offset (default 0)"},
             },
             "required": ["action"],
