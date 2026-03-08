@@ -719,7 +719,10 @@ For this {content_type}, ensure:
             context = {}
 
         # Session 858: Extract user context for personalization
+        # Session 1102: Guard against stringified context values
         user_context = context.get('user', {})
+        if not isinstance(user_context, dict):
+            user_context = {}
         self._user_context = user_context  # Store for use in prompt building
 
         # Session 529: Build intelligent prompt with full context

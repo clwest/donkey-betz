@@ -160,7 +160,10 @@ Remember: Sharp money moves lines. Look for where the line went AGAINST public b
         spider_context = spider_context or {}
 
         # Session 858: Extract user context for personalized betting analysis
+        # Session 1102: Guard against stringified context values
         user_context = context.get('user', {})
+        if not isinstance(user_context, dict):
+            user_context = {}
         self._user_context = user_context
 
         # Session 858: Enhance task with user's betting preferences
