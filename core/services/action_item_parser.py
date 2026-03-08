@@ -209,6 +209,21 @@ class ActionItemParser:
         stripped = re.sub(r'^[\-\*•\d.)\s]+', '', t)
         if len(stripped) < 10:
             return True
+        # Session 1102: Catch markdown heading patterns that leaked from stage docs
+        # e.g. "*Ongoing Evaluation**: Establish a timeline..."
+        if re.match(r'^\*+[A-Z].*\*\*:', t):
+            return True
+        # Generic template headings (not actionable engineering work)
+        _TEMPLATE_PHRASES = [
+            'ongoing evaluation', 'training and support', 'broader rollout',
+            'monitoring and alerts', 'slo targets', 'infrastructure improvements',
+            'documentation updates', 'stakeholder communication',
+            'risk mitigation', 'change management',
+        ]
+        t_lower = t.lower()
+        if any(t_lower.startswith(f'*{phrase}') or t_lower.startswith(phrase)
+               for phrase in _TEMPLATE_PHRASES):
+            return True
         return False
 
     def _create_item_dict(self, title: str, agent: str, timeline: str, source_text: str) -> Dict:
