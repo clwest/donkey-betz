@@ -4387,6 +4387,15 @@ class ToolDispatcher:
             since = timezone.now() - timedelta(days=period_days)
 
             qs = base_qs.filter(created_at__gte=since)
+            # Session 1102: Honor status filter for content_recent
+            status_filter = payload.get('status', '')
+            if status_filter:
+                _BLOG_STATUS_ALIASES = {
+                    'ready': 'approved', 'pending': 'pending_review',
+                    'rejected': 'needs_enhancement',
+                }
+                status_filter = _BLOG_STATUS_ALIASES.get(status_filter, status_filter)
+                qs = qs.filter(status=status_filter)
             items = list(
                 qs.order_by('-created_at')[:limit].values(
                     'id', 'title', 'author', 'category', 'status', 'created_at',
