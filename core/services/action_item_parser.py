@@ -14,7 +14,7 @@ Into structured InitiativeActionItem records.
 
 import re
 import logging
-from datetime import timedelta
+from datetime import date, timedelta
 from typing import List, Dict, Optional, Tuple
 from django.utils import timezone
 
@@ -258,7 +258,7 @@ class ActionItemParser:
             'source_text': source_text[:500] if source_text else '',
         }
 
-    def _parse_timeline_to_date(self, timeline: str) -> Optional['date']:
+    def _parse_timeline_to_date(self, timeline: str) -> Optional[date]:
         """Convert timeline text to a due date."""
         if not timeline:
             return None
