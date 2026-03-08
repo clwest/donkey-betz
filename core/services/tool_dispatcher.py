@@ -4216,6 +4216,7 @@ class ToolDispatcher:
                 }
 
             # Session 1101: Fallback to SelfBlog if not found in Deliverables
+            # SelfBlog uses UUID PK — direct lookup
             try:
                 from core.models_unified_system import SelfBlog
                 blog = SelfBlog.objects.filter(id=deliverable_id).first()
@@ -4235,8 +4236,8 @@ class ToolDispatcher:
                         'content': (blog.content or '')[:3000],
                         'created_at': blog.created_at.isoformat() if blog.created_at else None,
                     }
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"[CONTENT_DETAIL] SelfBlog fallback failed for {deliverable_id}: {e}")
 
             return {
                 'action': 'details',
