@@ -400,7 +400,7 @@ class SpiderPriorityEngine:
         Returns:
             Dict with recalculation statistics
         """
-        from core.models_unified_system import PartnershipProject
+        from core.models_partnership import PartnershipProject
 
         active_projects = PartnershipProject.objects.filter(
             status__in=['active', 'in_progress', 'research']
