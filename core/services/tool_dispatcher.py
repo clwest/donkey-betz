@@ -4233,7 +4233,7 @@ class ToolDispatcher:
                         'word_count': getattr(blog, 'word_count', None),
                         'quality_score': getattr(blog, 'quality_score', None),
                         'publish_ready': getattr(blog, 'publish_ready', False),
-                        'content': (blog.content or '')[:3000],
+                        'content': (blog.full_text or '')[:3000],
                         'created_at': blog.created_at.isoformat() if blog.created_at else None,
                     }
             except Exception as e:
