@@ -1902,7 +1902,7 @@ PA_TOOL_SCHEMAS = [
                     "type": "string",
                     "enum": [
                         "initiative_list", "initiative_detail", "initiative_create",
-                        "initiative_promote",
+                        "initiative_promote", "initiative_update_status",
                         "action_item_list", "action_item_start", "action_item_complete",
                         "action_item_cleanup",
                         "agent_conversations", "workflows",
@@ -1912,6 +1912,7 @@ PA_TOOL_SCHEMAS = [
                         "initiative_detail: full details of one initiative (by id, human_id, seq_id, or name). "
                         "initiative_create: create a new initiative (name, description). "
                         "initiative_promote: move TRIAGE/ON_HOLD → ACTIVE. "
+                        "initiative_update_status: change initiative status (id + status: ACTIVE/TRIAGE/ON_HOLD/COMPLETED/ARCHIVED). Auto-cancels pending action items on COMPLETED/ARCHIVED. "
                         "action_item_list: list action items (filters: status, priority, initiative_id). "
                         "action_item_start: mark an action item as in_progress. "
                         "action_item_complete: mark an action item as completed. "
