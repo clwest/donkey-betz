@@ -11472,7 +11472,7 @@ def generate_agent_dreams(self, max_dreamers: int = 5, dreams_per_agent: int = 2
                             except (json.JSONDecodeError, TypeError):
                                 topic = knowledge.summary[:80]
                     if not is_valid_topic(topic):
-                        topic = knowledge.source_type or f"{knowledge.knowledge_type.replace('_', ' ').title()}"
+                        topic = knowledge.knowledge_type.replace('_', ' ').title() if knowledge.knowledge_type else f"{agent.name}'s expertise"
                     if not is_valid_topic(topic):
                         # Ultimate fallback: use agent's specialty
                         topic = agent.specialization or agent.description or f"{agent.name}'s expertise"
@@ -11917,7 +11917,7 @@ Example: 0.8|AI Content Studio"""
                 # Step 4: Link to matched project
                 if matched_project_id and relevance >= 0.5:
                     try:
-                        from core.models import PartnershipProject
+                        from core.models_partnership import PartnershipProject
                         project = PartnershipProject.objects.get(id=matched_project_id)
                         dream.project = project
                         stats['dreams_linked_to_projects'] += 1
@@ -14334,7 +14334,7 @@ def update_project_spider_priorities(project_id: str):
     Session 326: Project-Agent Learning Bridge
     """
     from core.services.spider_priority_engine import get_spider_priority_engine
-    from core.models_unified_system import PartnershipProject
+    from core.models_partnership import PartnershipProject
 
     logger.info(f"🎯 [SESSION 326] Updating spider priorities for project {project_id}...")
 
