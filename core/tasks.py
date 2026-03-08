@@ -29758,8 +29758,10 @@ def reevaluate_enhanced_blogs(limit: int = 50):
     from core.services.publish_gate import PublishGate
 
     # Session 1003: Score ALL blogs that need evaluation, not just needs_enhancement
+    # Session 1102: Include needs_enhancement with quality_score=None — EditorAgent
+    # doesn't set quality_score, so enhanced blogs were invisible to this task.
     blogs = SelfBlog.objects.filter(
-        Q(status='needs_enhancement', quality_score__isnull=False) |  # Re-evaluate enhanced
+        Q(status='needs_enhancement') |  # All needs_enhancement (scored or not)
         Q(status='pending_review', quality_score__isnull=True) |  # Never scored
         Q(status='pending_review', quality_score__isnull=False) |  # Scored but not promoted
         Q(status='draft', quality_score__isnull=True)  # Draft, never scored
