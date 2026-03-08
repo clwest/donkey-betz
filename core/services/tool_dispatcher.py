@@ -4153,12 +4153,19 @@ class ToolDispatcher:
             # Session 1030: Also include SelfBlog counts for complete picture
             try:
                 from core.models_unified_system import SelfBlog
-                blog_total = SelfBlog.objects.filter(category='blog').count()
-                blog_published = SelfBlog.objects.filter(category='blog', status='published').count()
-                blog_ready = SelfBlog.objects.filter(category='blog', publish_ready=True, status__in=['approved', 'pending_review']).count()
-                blog_draft = SelfBlog.objects.filter(category='blog', status='draft').count()
+                blog_qs = SelfBlog.objects.filter(category='blog')
+                blog_total = blog_qs.count()
+                blog_published = blog_qs.filter(status='published').count()
+                blog_ready = blog_qs.filter(publish_ready=True, status__in=['approved', 'pending_review']).count()
+                blog_draft = blog_qs.filter(status='draft').count()
+                # Session 1102: Full status breakdown for pipeline auditability
+                blog_by_status = dict(
+                    blog_qs.values('status').annotate(count=Count('id'))
+                    .values_list('status', 'count')
+                )
             except Exception:
                 blog_total = blog_published = blog_ready = blog_draft = 0
+                blog_by_status = {}
 
             by_type = dict(
                 base_qs.filter(status='ready')
@@ -4189,6 +4196,7 @@ class ToolDispatcher:
                     'published': blog_published,
                     'publish_ready': blog_ready,
                     'drafts': blog_draft,
+                    'by_status': blog_by_status,
                 },
             }
 
@@ -4340,8 +4348,17 @@ class ToolDispatcher:
         base_qs = SelfBlog.objects.filter(category='blog')
 
         if action == 'list':
-            # List blogs ready for review
-            qs = base_qs.filter(status__in=['pending_review', 'approved'])
+            # Session 1102: Honor caller's status filter (was hardcoded to pending_review/approved)
+            _BLOG_STATUS_ALIASES = {
+                'ready': 'approved', 'pending_review': 'approved', 'rejected': 'needs_enhancement',
+            }
+            status_filter = payload.get('status', '')
+            if status_filter:
+                status_filter = _BLOG_STATUS_ALIASES.get(status_filter, status_filter)
+                qs = base_qs.filter(status=status_filter)
+            else:
+                # Default: show review-worthy blogs
+                qs = base_qs.filter(status__in=['pending_review', 'approved'])
             items = list(
                 qs.order_by('-created_at')[:limit].values(
                     'id', 'title', 'author', 'category', 'status', 'created_at',
@@ -4357,7 +4374,7 @@ class ToolDispatcher:
                 'items': items,
                 'filters_applied': {
                     'type': 'blog',
-                    'status': 'pending_review or approved',
+                    'status': status_filter or 'pending_review or approved',
                 }
             }
 
