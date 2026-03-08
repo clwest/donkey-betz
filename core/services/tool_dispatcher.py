@@ -11211,6 +11211,10 @@ RESEARCH DATA:
         if action == 'bulk_archive':
             return self._handle_bulk_archive(payload, user_id, trace_id)
 
+        # ── Session 1101: Bulk archive published (admin-only, category-scoped) ──
+        if action == 'bulk_archive_published':
+            return self._handle_bulk_archive_published(payload, user_id, trace_id)
+
         # ── Session 1101: Manual cleanup trigger ──
         if action == 'run_cleanup':
             from core.tasks import cleanup_stale_content
@@ -11325,7 +11329,7 @@ RESEARCH DATA:
                 return {'gateway': 'content_tool', 'action': action, 'error': str(e)}
 
         all_actions = sorted(
-            list(CONTENT_REVIEW_MAP) + ['generate_blog', 'bulk_archive', 'run_cleanup'] + list(DELIVERABLE_MAP)
+            list(CONTENT_REVIEW_MAP) + ['generate_blog', 'bulk_archive', 'bulk_archive_published', 'run_cleanup'] + list(DELIVERABLE_MAP)
             + ['podcasts', 'series', 'content_studio']
         )
         return {'error': f'Unknown content_tool action: {action}. Valid: {", ".join(all_actions)}'}
@@ -11444,6 +11448,132 @@ RESEARCH DATA:
 
         result['archived_count'] = archived_count
         result['message'] = f'Archived {archived_count} deliverables.'
+        return result
+
+    # ── Session 1101: Bulk Archive Published (admin-only) ────────────────────
+    def _handle_bulk_archive_published(self, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:
+        """
+        Session 1101: Archive published deliverables by category.
+        Admin-only. Requires created_before + categories. confirm=true to execute.
+        Blogs are explicitly blocked.
+        """
+        from core.models_deliverables import Deliverable
+        from django.db.models import Count, Q
+        from django.utils import timezone
+        from django.utils.dateparse import parse_datetime
+
+        # ── Permission gate ──
+        is_admin = False
+        if user_id:
+            try:
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                user = User.objects.filter(id=user_id).first()
+                if user and (user.is_superuser or user.is_staff):
+                    is_admin = True
+            except Exception:
+                pass
+        if not is_admin:
+            return {'error': 'Permission denied. bulk_archive_published requires admin/staff.', 'status': 403}
+
+        # ── Hard block on blogs ──
+        types_filter = payload.get('types', [])
+        if types_filter and 'blog' in [t.lower() for t in types_filter]:
+            return {'error': 'Blogs are not supported by bulk_archive_published. Use content_reject for individual blog archival.'}
+
+        # ── Required params ──
+        categories = payload.get('categories')
+        if not categories or not isinstance(categories, list):
+            return {'error': 'categories (list of strings) is required. Example: ["initiative_completion"]'}
+
+        created_before = payload.get('created_before')
+        if not created_before:
+            return {'error': 'created_before (ISO-8601 datetime) is required for safety.'}
+
+        dt_before = parse_datetime(created_before)
+        if not dt_before:
+            return {'error': f'Invalid created_before datetime: {created_before}. Use ISO-8601 format.'}
+
+        dry_run = payload.get('dry_run', True)
+        confirm = payload.get('confirm', False)
+        cap = min(int(payload.get('cap', 500)), 2000)
+        agent_filter = payload.get('agent')
+
+        # ── Build queryset ──
+        qs = Deliverable.objects.filter(
+            status='published',
+            category__in=categories,
+            created_at__lt=dt_before,
+        )
+        # Scope to user if not superuser-level
+        if user_id:
+            qs = qs.filter(Q(user_id=user_id) | Q(user__isnull=True))
+        if agent_filter:
+            qs = qs.filter(agent_name__iexact=agent_filter)
+        # Exclude blogs at the queryset level
+        qs = qs.exclude(deliverable_type__iexact='blog')
+
+        total_matching = qs.count()
+
+        # ── Breakdown ──
+        by_type = list(qs.values('deliverable_type').annotate(count=Count('id')).order_by('-count')[:10])
+        by_category = list(qs.values('category').annotate(count=Count('id')).order_by('-count')[:10])
+        by_agent = list(qs.values('agent_name').annotate(count=Count('id')).order_by('-count')[:10])
+
+        # ── Sample ──
+        sample = list(
+            qs.order_by('created_at')[:25].values(
+                'id', 'title', 'deliverable_type', 'category',
+                'agent_name', 'status', 'created_at'
+            )
+        )
+
+        result = {
+            'action': 'bulk_archive_published',
+            'dry_run': dry_run,
+            'total_matching': total_matching,
+            'cap': cap,
+            'will_archive': min(total_matching, cap),
+            'filters': {
+                'status': 'published',
+                'categories': categories,
+                'created_before': created_before,
+                'agent': agent_filter,
+            },
+            'breakdown': {
+                'by_type': by_type,
+                'by_category': by_category,
+                'by_agent': by_agent,
+            },
+            'sample_items': sample,
+        }
+
+        if dry_run:
+            result['message'] = f'DRY RUN: {min(total_matching, cap)} published items would be archived. Set dry_run=false and confirm=true to execute.'
+            return result
+
+        # ── Execute requires confirm ──
+        if not confirm:
+            return {'error': 'Execute requires confirm=true. Run with dry_run=true first to preview.', **result}
+
+        to_archive_ids = list(qs.order_by('created_at').values_list('id', flat=True)[:cap])
+        archived_count = Deliverable.objects.filter(id__in=to_archive_ids).update(
+            status='archived',
+            updated_at=timezone.now(),
+        )
+
+        # ── Audit log ──
+        logger.info(
+            f"[BULK_ARCHIVE_PUBLISHED] {trace_id} user={user_id} archived={archived_count} "
+            f"categories={categories} created_before={created_before} agent={agent_filter} cap={cap}"
+        )
+
+        # Remaining count under same filters
+        remaining = qs.count()
+
+        result['archived_count'] = archived_count
+        result['remaining_count'] = remaining
+        result['message'] = f'Archived {archived_count} published deliverables. {remaining} remaining under same filters.'
         return result
 
     # ── Session 1078: Ops Tool ─────────────────────────────────────────────────

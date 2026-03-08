@@ -2610,7 +2610,7 @@ PA_TOOL_SCHEMAS = [
                         "content_stats", "content_list", "content_detail",
                         "content_search", "content_recent",
                         "content_approve", "content_reject",
-                        "generate_blog", "bulk_archive", "run_cleanup",
+                        "generate_blog", "bulk_archive", "bulk_archive_published", "run_cleanup",
                         "deliverable_list", "deliverable_detail",
                         "deliverable_search", "deliverable_save",
                         "deliverable_create", "deliverable_stats",
@@ -2627,6 +2627,7 @@ PA_TOOL_SCHEMAS = [
                         "content_reject: archive a deliverable with feedback. "
                         "generate_blog: create a new blog post via deliberation pipeline. "
                         "bulk_archive: archive multiple deliverables by filter (dry_run preview by default). "
+                        "bulk_archive_published: admin-only — archive published deliverables by category (requires categories + created_before + confirm). "
                         "run_cleanup: trigger cleanup_stale_content Celery task (async, returns task_id). "
                         "deliverable_list: browse deliverables library (supports status/type/category/date filters). "
                         "deliverable_detail: full content of a deliverable. "
@@ -2647,6 +2648,9 @@ PA_TOOL_SCHEMAS = [
                 "agent": {"type": "string", "description": "Filter by agent_name (e.g. 'EditorAgent', 'ContentWriterAgent')"},
                 "status": {"type": "string", "description": "Filter by status: draft, ready, published, archived. Default varies by action."},
                 "statuses": {"type": "array", "items": {"type": "string"}, "description": "For bulk_archive: list of statuses to target (default: ['ready', 'draft']). Cannot include published/archived."},
+                "categories": {"type": "array", "items": {"type": "string"}, "description": "For bulk_archive_published: required list of categories to target (e.g. ['initiative_completion', 'PA Created'])."},
+                "confirm": {"type": "boolean", "description": "For bulk_archive_published: must be true when dry_run=false to actually execute."},
+                "types": {"type": "array", "items": {"type": "string"}, "description": "For bulk_archive_published: optional deliverable_type filter. 'blog' is blocked."},
                 "created_before": {"type": "string", "description": "ISO-8601 datetime. Only items created before this date (e.g. '2026-02-28T00:00:00Z')."},
                 "created_after": {"type": "string", "description": "ISO-8601 datetime. Only items created after this date."},
                 "dry_run": {"type": "boolean", "description": "For bulk_archive: preview without executing (default: true). Set false to actually archive."},
