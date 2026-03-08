@@ -395,16 +395,21 @@ def cleanup_stale_agent_executions(self, minutes_threshold: int = 60):
         # Session 1100: Use last_heartbeat_at when available — agents that touch
         # their heartbeat periodically are still alive. Fall back to created_at
         # for older executions that predate the heartbeat field.
+        # Session 1102: Wrapped in atomic() — ProgrammingError poisons the PG
+        # transaction, so the fallback query in except would also fail without
+        # a savepoint rollback.
+        _has_heartbeat = False
         try:
-            stale_tasks = AgentExecution.objects.filter(
-                status__in=running_statuses,
-            ).annotate(
-                alive_at=Coalesce('last_heartbeat_at', 'created_at'),
-            ).filter(
-                alive_at__lt=cutoff_time,
-            )
-            count = stale_tasks.count()
-            _has_heartbeat = True
+            with transaction.atomic():
+                stale_tasks = AgentExecution.objects.filter(
+                    status__in=running_statuses,
+                ).annotate(
+                    alive_at=Coalesce('last_heartbeat_at', 'created_at'),
+                ).filter(
+                    alive_at__lt=cutoff_time,
+                )
+                count = stale_tasks.count()
+                _has_heartbeat = True
         except Exception:
             # Migration 0301 not yet applied — fall back to created_at only
             logger.info("🧹 [CLEANUP] last_heartbeat_at column not yet available, using created_at fallback")
@@ -413,7 +418,6 @@ def cleanup_stale_agent_executions(self, minutes_threshold: int = 60):
                 created_at__lt=cutoff_time,
             )
             count = stale_tasks.count()
-            _has_heartbeat = False
 
         logger.info(f"🧹 [CLEANUP] Stale executions (>{minutes_threshold}min since last heartbeat): {count}")
 
