@@ -11345,7 +11345,7 @@ RESEARCH DATA:
         from django.utils import timezone
 
         dry_run = payload.get('dry_run', True)
-        cap = min(int(payload.get('limit', 500)), 2000)
+        cap = min(int(payload.get('cap', payload.get('limit', 500))), 2000)
 
         # Build filter queryset
         base_qs = Deliverable.objects.all()
