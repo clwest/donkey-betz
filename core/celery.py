@@ -236,6 +236,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=2, minute=30),  # Daily at 2:30 AM
         'options': {
             'expires': 7200,
+            'queue': 'long_running',  # Session 1102: batch aggregation, moved off default
         },
     },
     # Sports Prediction Evaluation & Bet Settlement
@@ -561,6 +562,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/30'),  # Every 30 minutes - agents synthesize insights
         'options': {
             'expires': 1800,
+            'queue': 'long_running',  # Session 1102: LLM-heavy, moved off default
         }
     },
     'update-agent-effectiveness': {
@@ -1674,6 +1676,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0, hour=1),  # Daily 1 AM
         'options': {
             'expires': 3600,  # 1 hour
+            'queue': 'long_running',  # Session 1102: batch DB aggregation, moved off default
         }
     },
 
