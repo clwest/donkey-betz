@@ -4198,26 +4198,50 @@ class ToolDispatcher:
                 raise ValueError("id is required for details action")
 
             deliverable = base_qs.filter(id=deliverable_id).first()
-            if not deliverable:
+            if deliverable:
                 return {
                     'action': 'details',
-                    'error': f'Deliverable {deliverable_id} not found — it may have been deleted',
-                    'status': 'gone',
+                    'content_kind': 'deliverable',
+                    'id': str(deliverable.id),
+                    'title': deliverable.title,
+                    'type': deliverable.deliverable_type,
+                    'category': deliverable.category,
+                    'status': deliverable.status,
+                    'agent_name': deliverable.agent_name,
+                    'quality_score': deliverable.quality_score,
+                    'confidence_score': deliverable.confidence_score,
+                    'content_preview': (deliverable.content or '')[:1000],
+                    'tags': deliverable.tags or [],
+                    'created_at': deliverable.created_at.isoformat() if deliverable.created_at else None,
                 }
+
+            # Session 1101: Fallback to SelfBlog if not found in Deliverables
+            try:
+                from core.models_unified_system import SelfBlog
+                blog = SelfBlog.objects.filter(id=deliverable_id).first()
+                if blog:
+                    return {
+                        'action': 'details',
+                        'content_kind': 'blog',
+                        'id': str(blog.id),
+                        'title': blog.title,
+                        'author': blog.author,
+                        'category': blog.category,
+                        'status': blog.status,
+                        'tone': getattr(blog, 'tone', None),
+                        'word_count': getattr(blog, 'word_count', None),
+                        'quality_score': getattr(blog, 'quality_score', None),
+                        'publish_ready': getattr(blog, 'publish_ready', False),
+                        'content': (blog.content or '')[:3000],
+                        'created_at': blog.created_at.isoformat() if blog.created_at else None,
+                    }
+            except Exception:
+                pass
 
             return {
                 'action': 'details',
-                'id': str(deliverable.id),
-                'title': deliverable.title,
-                'type': deliverable.deliverable_type,
-                'category': deliverable.category,
-                'status': deliverable.status,
-                'agent_name': deliverable.agent_name,
-                'quality_score': deliverable.quality_score,
-                'confidence_score': deliverable.confidence_score,
-                'content_preview': (deliverable.content or '')[:1000],
-                'tags': deliverable.tags or [],
-                'created_at': deliverable.created_at.isoformat() if deliverable.created_at else None,
+                'error': f'Content {deliverable_id} not found in deliverables or blogs — it may have been deleted',
+                'status': 'gone',
             }
 
         elif action == 'publish':
