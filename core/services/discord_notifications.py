@@ -1121,6 +1121,44 @@ class DiscordNotificationService:
 
         return self._send_message(channel_id, "", embed=embed)
 
+    # Channel name → ID map (shared with send_embed)
+    _CHANNEL_MAP = {
+        'dreams': 'CHANNEL_DREAMS',
+        'agent-dreams': 'CHANNEL_DREAMS',
+        'conversations': 'CHANNEL_CONVERSATIONS',
+        'agent-conversations': 'CHANNEL_CONVERSATIONS',
+        'status': 'CHANNEL_STATUS',
+        'system-status': 'CHANNEL_STATUS',
+        'learning': 'CHANNEL_LEARNING',
+        'boardroom': 'CHANNEL_BOARDROOM',
+        'opportunities': 'CHANNEL_OPPORTUNITIES',
+        'gallery': 'CHANNEL_GALLERY',
+        'profile': 'CHANNEL_PROFILE',
+        'market-alerts': 'CHANNEL_MARKET_ALERTS',
+        'market-intelligence': 'CHANNEL_MARKET_ALERTS',
+        'stock-alerts': 'CHANNEL_STOCK_ALERTS',
+        'blockchain-alerts': 'CHANNEL_BLOCKCHAIN_ALERTS',
+        'podcast-library': 'CHANNEL_PODCAST_LIBRARY',
+    }
+
+    def send_to_channel(self, channel_name: str, message: str) -> bool:
+        """
+        Send a plain-text message to a Discord channel by name.
+
+        Args:
+            channel_name: Channel name like 'system-status', 'boardroom', etc.
+            message: Message content (max 2000 chars, truncated automatically)
+
+        Returns:
+            True if sent successfully
+        """
+        attr = self._CHANNEL_MAP.get(channel_name.lower())
+        if not attr:
+            logger.warning(f"Unknown Discord channel: {channel_name}")
+            return False
+        channel_id = getattr(self, attr)
+        return self._send_message(channel_id, message)
+
     def test_connection(self) -> dict:
         """
         Test the Discord connection by sending test messages to all channels.
@@ -2271,3 +2309,8 @@ def send_whale_alert_notification(alert: dict) -> bool:
 def send_exploit_alert_notification(alert: dict) -> bool:
     """Send exploit detection alert to Discord."""
     return discord_notify.send_exploit_alert(alert)
+
+
+def send_to_channel(channel_name: str, message: str) -> bool:
+    """Send a plain-text message to a Discord channel by name."""
+    return discord_notify.send_to_channel(channel_name, message)
