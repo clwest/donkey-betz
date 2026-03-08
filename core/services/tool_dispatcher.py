@@ -806,7 +806,7 @@ class ToolDispatcher:
             # --- Image history fallback ---
             if not extras.get('image_url'):
                 try:
-                    from core.models import ImageHistory
+                    from content.models import ImageHistory
                     recent_img = ImageHistory.objects.filter(
                         created_at__gte=execution.created_at,
                     ).order_by('-created_at').first()
@@ -9148,7 +9148,7 @@ RESEARCH DATA:
             limit = min(int(payload.get('limit', 10)), 50)
             jobs = []
             try:
-                from core.models import ImageHistory
+                from content.models import ImageHistory
                 for img in ImageHistory.objects.order_by('-created_at')[:limit]:
                     jobs.append({
                         'id': str(img.id),
@@ -9159,7 +9159,7 @@ RESEARCH DATA:
             except Exception:
                 pass
             try:
-                from core.models import VideoHistory
+                from content.models import VideoHistory
                 for vid in VideoHistory.objects.order_by('-created_at')[:limit]:
                     jobs.append({
                         'id': str(vid.id),
@@ -9170,7 +9170,7 @@ RESEARCH DATA:
             except Exception:
                 pass
             try:
-                from core.models import AudioHistory
+                from content.models import AudioHistory
                 for aud in AudioHistory.objects.order_by('-created_at')[:limit]:
                     jobs.append({
                         'id': str(aud.id),
@@ -11059,6 +11059,7 @@ RESEARCH DATA:
         if action == 'stock_briefs':
             try:
                 from core.models_unified_system import MarketIntelligenceBrief
+                limit = min(int(payload.get('limit', 10)), 50)
                 briefs = MarketIntelligenceBrief.objects.order_by('-brief_date')[:limit]
                 return _tag({
                     'action': 'stock_briefs',

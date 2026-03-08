@@ -248,8 +248,8 @@ class SpiderPriorityEngine:
         # Get spider's category
         try:
             registry = SpiderRegistry()
-            spider_info = registry.get_spider_info(spider_name)
-            category = spider_info.get('category', 'general') if spider_info else 'general'
+            spider_config = registry.get_spider_config(spider_name)
+            category = spider_config.get('category', 'general') if spider_config else 'general'
         except Exception:
             category = 'general'
 
