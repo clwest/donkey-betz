@@ -584,7 +584,11 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
             context = {}
 
         # Session 858: Extract user context for personalized research
+        # Session 1102: Guard against stringified context values (JSON default=str
+        # can turn non-serializable objects into strings)
         user_context = context.get('user', {})
+        if not isinstance(user_context, dict):
+            user_context = {}
         self._user_context = user_context
 
         # Session 858: Enhance task with user context for personalized research
