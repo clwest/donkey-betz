@@ -213,6 +213,9 @@ class ActionItemParser:
         # e.g. "*Ongoing Evaluation**: Establish a timeline..."
         if re.match(r'^\*+[A-Z].*\*\*:', t):
             return True
+        # Bare markdown bold headings e.g. "Scale Plan**", "Recommendations**"
+        if t.endswith('**') and len(re.sub(r'\*+', '', t).strip()) < 30:
+            return True
         # Generic template headings (not actionable engineering work)
         _TEMPLATE_PHRASES = [
             'ongoing evaluation', 'training and support', 'broader rollout',
