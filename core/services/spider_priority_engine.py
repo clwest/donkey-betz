@@ -130,10 +130,8 @@ class SpiderPriorityEngine:
         Returns:
             Dict mapping category slug to priority weight
         """
-        from core.models_unified_system import (
-            PartnershipProject,
-            SpiderCategory,
-        )
+        from core.models_unified_system import SpiderCategory
+        from core.models_partnership import PartnershipProject
 
         # Get all active projects
         active_projects = PartnershipProject.objects.filter(
