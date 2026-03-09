@@ -16326,7 +16326,7 @@ RESEARCH DATA:
             plan_json__version='code_worker_v1',
         ).select_related('repo').order_by('-created_at')
         status = payload.get('status') or payload.get('status_filter')
-        if status:
+        if status and status not in ('all', '*'):
             qs = qs.filter(status=status)
         limit = min(int(payload.get('limit', 10)), 50)
         runs = qs[:limit]

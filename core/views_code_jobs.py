@@ -213,7 +213,7 @@ def list_code_jobs(request):
     ).select_related('repo').order_by('-created_at')
 
     status = request.query_params.get('status')
-    if status:
+    if status and status not in ('all', '*'):
         qs = qs.filter(status=status)
 
     repo_filter = request.query_params.get('repo')
