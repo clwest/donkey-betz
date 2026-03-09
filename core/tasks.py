@@ -1959,6 +1959,8 @@ def execute_agent_task(
             'ContentStrategyAgent': 600,      # 10 min
             # Blockchain agents: whale tracking involves multi-chain scanning
             'WhaleWatcherAgent': 1500,        # 25 min (was default 20 — hitting watchdog at 25)
+            # Thinking/brainstorm: usually completes in <2min, hang = dead
+            'ThinkingAgent': 300,             # 5 min (was default 20 — successful runs finish in ~75s)
             # Orchestrators: may coordinate multiple agents
             'StockAuditCoordinator': 900,     # 15 min
             'WorkflowOrchestrationAgent': 900,  # 15 min
@@ -2012,6 +2014,11 @@ def execute_agent_task(
 
         _hb_thread = None
         if execution_record:
+            # Immediate heartbeat so last_heartbeat_at is never null for live executions
+            try:
+                execution_record.touch_heartbeat()
+            except Exception:
+                pass
             _hb_thread = threading.Thread(target=_heartbeat_loop, daemon=True)
             _hb_thread.start()
 
