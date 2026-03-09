@@ -39243,8 +39243,10 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
             tool_choice={'type': 'tool', 'name': 'apply_file_changes'},
         )
 
+        tool_use_id = None
         for block in response.content:
             if block.type == 'tool_use' and block.name == 'apply_file_changes':
+                tool_use_id = block.id
                 raw = block.input
                 # SDK may return a dict, a JSON string, or a Pydantic-like object
                 if isinstance(raw, str):
@@ -39256,14 +39258,28 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
                 break
 
         log_fn('implement', f'Tool response type: {type(tool_input).__name__}, keys: {list(tool_input.keys()) if isinstance(tool_input, dict) else "N/A"}')
+
+        def _append_retry(error_text: str) -> None:
+            """Append assistant + tool_result retry messages for Anthropic tool_use protocol."""
+            messages.append({'role': 'assistant', 'content': response.content})  # type: ignore[dict-item]
+            # Anthropic requires a tool_result block after every tool_use
+            user_content: list = []
+            if tool_use_id:
+                user_content.append({
+                    'type': 'tool_result',
+                    'tool_use_id': tool_use_id,
+                    'is_error': True,
+                    'content': error_text[:500],
+                })
+            user_content.append({'type': 'text', 'text': error_text})
+            messages.append({'role': 'user', 'content': user_content})
+
         if not tool_input or not tool_input.get('changes'):
             if attempts < max_attempts:
                 log_fn('implement', 'No file changes returned, retrying...', level='warning')
-                messages.append({'role': 'assistant', 'content': response.content})  # type: ignore[dict-item]
-                messages.append({
-                    'role': 'user',
-                    'content': 'You returned no file changes. Please call apply_file_changes with the changes needed to implement the task.',
-                })
+                _append_retry(
+                    'You returned no file changes. Please call apply_file_changes with the changes needed to implement the task.'
+                )
                 tool_input = None
                 continue
             raise RuntimeError('Claude returned no file changes (LLM_NO_OUTPUT)')
@@ -39276,13 +39292,11 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
         if isinstance(changes, str):
             log_fn('implement', f'INVALID_CHANGES_SCHEMA: "changes" is a string ({len(changes)} chars), expected list[dict]. Preview: {changes[:200]}', level='warning')
             if attempts < max_attempts:
-                messages.append({'role': 'assistant', 'content': response.content})  # type: ignore[dict-item]
-                messages.append({
-                    'role': 'user',
-                    'content': '"changes" must be a JSON array of objects, not a string. '
-                               'Each object needs: {"path": "...", "action": "create|patch|delete", "content": "..."}. '
-                               'Please call apply_file_changes again with the correct schema.',
-                })
+                _append_retry(
+                    '"changes" must be a JSON array of objects, not a string. '
+                    'Each object needs: {"path": "...", "action": "create|patch|delete", "content": "..."}. '
+                    'Please call apply_file_changes again with the correct schema.'
+                )
                 tool_input = None
                 continue
             raise RuntimeError(
@@ -39306,13 +39320,11 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
             detail = '; '.join(f'[{i}] type={t} val={v}' for i, t, v in bad_items[:5])
             log_fn('implement', f'INVALID_CHANGE_ITEM: {len(bad_items)} non-dict item(s) in changes: {detail}', level='warning')
             if attempts < max_attempts:
-                messages.append({'role': 'assistant', 'content': response.content})  # type: ignore[dict-item]
-                messages.append({
-                    'role': 'user',
-                    'content': f'Each element in "changes" must be an object with path/action/content keys. '
-                               f'Found {len(bad_items)} invalid item(s): {detail}. '
-                               f'Please call apply_file_changes again with the correct schema.',
-                })
+                _append_retry(
+                    f'Each element in "changes" must be an object with path/action/content keys. '
+                    f'Found {len(bad_items)} invalid item(s): {detail}. '
+                    f'Please call apply_file_changes again with the correct schema.'
+                )
                 tool_input = None
                 continue
             raise RuntimeError(
@@ -39335,12 +39347,10 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
 
         if validation_errors and attempts < max_attempts:
             log_fn('implement', f'Validation errors: {validation_errors}, retrying...', level='warning')
-            messages.append({'role': 'assistant', 'content': response.content})  # type: ignore[dict-item]
-            messages.append({
-                'role': 'user',
-                'content': f'Validation errors:\n' + '\n'.join(f'- {e}' for e in validation_errors)
-                           + '\n\nPlease fix these issues and call apply_file_changes again.',
-            })
+            _append_retry(
+                'Validation errors:\n' + '\n'.join(f'- {e}' for e in validation_errors)
+                + '\n\nPlease fix these issues and call apply_file_changes again.'
+            )
             tool_input = None
             continue
         elif validation_errors:

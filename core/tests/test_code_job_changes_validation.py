@@ -35,11 +35,12 @@ def _make_log_fn():
     return _log
 
 
-def _make_claude_response(tool_input):
+def _make_claude_response(tool_input, tool_use_id='toolu_test_001'):
     """Build a mock Anthropic response with a tool_use block."""
     block = MagicMock()
     block.type = 'tool_use'
     block.name = 'apply_file_changes'
+    block.id = tool_use_id
     block.input = tool_input
 
     response = MagicMock()
@@ -133,7 +134,7 @@ class TestChangesSchemaValidation:
         bad_response = _make_claude_response({
             'changes': 'wrong format',
             'commit_message': 'fix',
-        })
+        }, tool_use_id='toolu_bad_001')
 
         # Second response: valid
         target_file = os.path.join(self.workdir, 'fix.py')
@@ -147,7 +148,7 @@ class TestChangesSchemaValidation:
                  'content': json.dumps([{'search': 'old code', 'replace': 'new code'}])}
             ],
             'commit_message': 'fix: correct it',
-        })
+        }, tool_use_id='toolu_good_002')
 
         self.shell.return_value = MagicMock(returncode=0, stdout='', stderr='')
 
@@ -164,6 +165,19 @@ class TestChangesSchemaValidation:
         assert 'fix.py' in result
         # Verify retry happened (2 API calls)
         assert client.messages.create.call_count == 2
+        # Verify retry messages include tool_result block (Anthropic protocol)
+        retry_call_kwargs = client.messages.create.call_args_list[1]
+        retry_messages = retry_call_kwargs.kwargs.get('messages', retry_call_kwargs[1].get('messages', []))
+        # The user retry message should contain a tool_result block
+        user_retry_msg = [m for m in retry_messages if m.get('role') == 'user' and isinstance(m.get('content'), list)]
+        assert len(user_retry_msg) >= 1, 'Retry should include structured user message with tool_result'
+        tool_results = [
+            block for msg in user_retry_msg
+            for block in msg['content']
+            if isinstance(block, dict) and block.get('type') == 'tool_result'
+        ]
+        assert len(tool_results) >= 1, 'Retry user message must include tool_result block'
+        assert tool_results[0]['tool_use_id'] == 'toolu_bad_001'
 
     def test_changes_missing_raises(self):
         """Missing changes key — should raise (existing behavior)."""
