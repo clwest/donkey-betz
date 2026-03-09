@@ -38988,6 +38988,353 @@ def _inject_github_token(repo_url: str, token: str) -> str:
     return repo_url
 
 
+# ── Phase 5.1: Claude API code generation helpers ──────────────────────────
+
+
+def _gather_repo_context(workdir, task_prompt, path_filters, log_fn):
+    """Gather bounded repo context for Claude: file tree + relevant files.
+
+    Budget (approx):
+      - Tree:     10K chars
+      - Markers:  10K chars
+      - Files:    70K chars
+      - Total:    100K hard cap
+    """
+    import os
+    import subprocess
+
+    context_parts = []
+    budget_used = 0
+    TREE_BUDGET = 10_000
+    MARKER_BUDGET = 10_000
+    FILE_BUDGET = 70_000
+
+    # 1. File tree (exclude heavy dirs)
+    exclude_dirs = [
+        '.git', 'node_modules', '__pycache__', '.venv', 'venv',
+        '.tox', '.mypy_cache', '.pytest_cache', 'dist', 'build',
+        '.next', 'coverage', '.eggs', 'migrations',
+    ]
+    prune_args = ' '.join(f'-name "{d}" -prune -o' for d in exclude_dirs)
+    tree_result = subprocess.run(
+        f'find . {prune_args} -type f -print | sort | head -500',
+        shell=True, cwd=workdir, capture_output=True, text=True, timeout=15,
+    )
+    file_tree = tree_result.stdout.strip()[:TREE_BUDGET]
+    context_parts.append(f'## File Tree\n```\n{file_tree}\n```\n')
+    budget_used += len(context_parts[-1])
+
+    # 2. Project marker files (README, pyproject.toml, etc.)
+    marker_text = ''
+    for marker in ['README.md', 'pyproject.toml', 'setup.py', 'package.json',
+                    'Cargo.toml', 'go.mod', 'requirements.txt']:
+        marker_path = os.path.join(workdir, marker)
+        if os.path.isfile(marker_path):
+            try:
+                with open(marker_path, 'r', errors='replace') as f:
+                    content = f.read(3000)  # first 3KB
+                chunk = f'## {marker}\n```\n{content}\n```\n'
+                if len(marker_text) + len(chunk) <= MARKER_BUDGET:
+                    marker_text += chunk
+            except Exception:
+                pass
+    if marker_text:
+        context_parts.append(marker_text)
+        budget_used += len(marker_text)
+
+    # 3. Find relevant files via grep on task keywords
+    keywords = [w for w in task_prompt.split() if len(w) > 4 and w.isalpha()][:5]
+    relevant_files = set()
+    for kw in keywords:
+        try:
+            grep_result = subprocess.run(
+                f'grep -rl --include="*.py" --include="*.ts" --include="*.js" '
+                f'--include="*.tsx" --include="*.jsx" --include="*.rs" --include="*.go" '
+                f'-m 1 "{kw}" . 2>/dev/null | head -5',
+                shell=True, cwd=workdir, capture_output=True, text=True, timeout=10,
+            )
+            for f in grep_result.stdout.strip().splitlines():
+                if f.strip():
+                    relevant_files.add(f.strip())
+        except Exception:
+            pass
+
+    # Apply path_filters if set
+    if path_filters:
+        relevant_files = {
+            f for f in relevant_files
+            if any(f.startswith(f'./{pf}') or f.startswith(pf) for pf in path_filters)
+        }
+
+    # 4. Read up to 10 relevant files, staying within FILE_BUDGET
+    files_budget_used = 0
+    files_read = 0
+    for rel_path in sorted(relevant_files)[:10]:
+        abs_path = os.path.join(workdir, rel_path.lstrip('./'))
+        if not os.path.isfile(abs_path):
+            continue
+        try:
+            with open(abs_path, 'r', errors='replace') as f:
+                lines = f.readlines()[:300]
+            chunk = f'## {rel_path} ({len(lines)} lines)\n```\n{"".join(lines)}\n```\n'
+            if files_budget_used + len(chunk) > FILE_BUDGET:
+                break
+            context_parts.append(chunk)
+            files_budget_used += len(chunk)
+            files_read += 1
+        except Exception:
+            pass
+
+    log_fn('implement', f'Context: {len(file_tree.splitlines())} files in tree, {files_read} files read, {budget_used + files_budget_used} chars')
+
+    return '\n'.join(context_parts)
+
+
+# Security constants for _implement_with_claude
+_PROTECTED_PATHS = frozenset([
+    '.env', '.env.local', '.env.production', '.env.staging',
+    'secrets.yaml', 'secrets.yml', 'secrets.json',
+    '.github/workflows', 'Procfile', 'Dockerfile',
+    'docker-compose.yml', 'docker-compose.yaml',
+])
+_BINARY_EXTENSIONS = frozenset([
+    '.png', '.jpg', '.jpeg', '.gif', '.ico', '.webp', '.svg',
+    '.woff', '.woff2', '.ttf', '.eot', '.otf',
+    '.zip', '.tar', '.gz', '.pdf', '.pyc', '.pyo',
+    '.so', '.dylib', '.dll', '.exe',
+])
+_MAX_FILE_SIZE = 200_000     # 200KB per file
+_MAX_TOTAL_SIZE = 2_000_000  # 2MB total
+
+
+def _implement_with_claude(workdir, run, plan, log_fn, shell):
+    """Use Claude API to generate code changes and apply them to workdir."""
+    import os
+    import json as json_mod
+
+    task_prompt = plan.get('task_prompt', '') or run.plan_summary
+    acceptance_criteria = plan.get('acceptance_criteria', [])
+    max_patch_files = plan.get('max_patch_files', 50)
+    path_filters = plan.get('path_filters', [])
+
+    # 1. Gather context
+    log_fn('implement', 'Gathering repo context...')
+    repo_context = _gather_repo_context(workdir, task_prompt, path_filters, log_fn)
+
+    # 2. Build prompt
+    criteria_text = ''
+    if acceptance_criteria:
+        criteria_text = '\n\nAcceptance Criteria:\n' + '\n'.join(
+            f'- {c}' for c in acceptance_criteria
+        )
+
+    system_prompt = (
+        'You are a senior software engineer implementing code changes in a repository. '
+        'You MUST respond with exactly one tool call to `apply_file_changes` and no other text. '
+        'Output complete file contents for any file you create or modify — no diffs, no patches. '
+        'Be precise, minimal, and production-ready. Do not add unnecessary comments or TODOs. '
+        f'You may modify at most {max_patch_files} files. '
+        'Keep commit messages under 72 characters.'
+    )
+    if path_filters:
+        system_prompt += f'\n\nScope: Only modify files under these paths: {path_filters}'
+
+    user_message = (
+        f'## Task\n{task_prompt}\n'
+        f'{criteria_text}\n\n'
+        f'## Repository Context\n{repo_context}'
+    )
+
+    # 3. Define tool
+    file_changes_tool = {
+        'name': 'apply_file_changes',
+        'description': 'Apply file changes to implement the task. Provide complete file contents for create/overwrite.',
+        'input_schema': {
+            'type': 'object',
+            'required': ['changes', 'commit_message'],
+            'properties': {
+                'changes': {
+                    'type': 'array',
+                    'items': {
+                        'type': 'object',
+                        'required': ['path', 'action'],
+                        'properties': {
+                            'path': {
+                                'type': 'string',
+                                'description': 'File path relative to repo root (e.g. src/utils.py)',
+                            },
+                            'action': {
+                                'type': 'string',
+                                'enum': ['create', 'overwrite', 'delete'],
+                            },
+                            'content': {
+                                'type': 'string',
+                                'description': 'Complete file content (required for create/overwrite)',
+                            },
+                        },
+                    },
+                },
+                'commit_message': {
+                    'type': 'string',
+                    'description': 'Concise git commit message (max 72 chars)',
+                },
+            },
+        },
+    }
+
+    # 4. Call Claude (with one retry on schema validation failure)
+    log_fn('implement', 'Calling Claude (claude-sonnet-4-6) for code generation...')
+    from anthropic import Anthropic
+    client = Anthropic()  # reads ANTHROPIC_API_KEY from env
+
+    messages: list = [{'role': 'user', 'content': user_message}]
+    tool_input: dict | None = None
+    attempts = 0
+    max_attempts = 2
+
+    while attempts < max_attempts:
+        attempts += 1
+        response = client.messages.create(
+            model='claude-sonnet-4-6',
+            max_tokens=16384,
+            system=system_prompt,
+            messages=messages,  # type: ignore[arg-type]
+            tools=[file_changes_tool],  # type: ignore[arg-type]
+            tool_choice={'type': 'tool', 'name': 'apply_file_changes'},
+        )
+
+        for block in response.content:
+            if block.type == 'tool_use' and block.name == 'apply_file_changes':
+                tool_input = dict(block.input)  # type: ignore[arg-type]
+                break
+
+        if not tool_input or not tool_input.get('changes'):
+            if attempts < max_attempts:
+                log_fn('implement', 'No file changes returned, retrying...', level='warning')
+                messages.append({'role': 'assistant', 'content': response.content})  # type: ignore[dict-item]
+                messages.append({
+                    'role': 'user',
+                    'content': 'You returned no file changes. Please call apply_file_changes with the changes needed to implement the task.',
+                })
+                tool_input = None
+                continue
+            raise RuntimeError('Claude returned no file changes (LLM_NO_OUTPUT)')
+
+        # Validate changes
+        validation_errors = []
+        changes = tool_input['changes']
+
+        if len(changes) > max_patch_files:
+            validation_errors.append(f'Too many files: {len(changes)} > {max_patch_files}')
+
+        for change in changes:
+            path = change.get('path', '')
+            action = change.get('action', '')
+            if '..' in path or path.startswith('/'):
+                validation_errors.append(f'Invalid path (traversal): {path}')
+            if action in ('create', 'overwrite') and not change.get('content'):
+                validation_errors.append(f'Missing content for {action} on {path}')
+            ext = os.path.splitext(path)[1].lower()
+            if ext in _BINARY_EXTENSIONS:
+                validation_errors.append(f'Binary file not allowed: {path}')
+
+        if validation_errors and attempts < max_attempts:
+            log_fn('implement', f'Validation errors: {validation_errors}, retrying...', level='warning')
+            messages.append({'role': 'assistant', 'content': response.content})  # type: ignore[dict-item]
+            messages.append({
+                'role': 'user',
+                'content': f'Validation errors:\n' + '\n'.join(f'- {e}' for e in validation_errors)
+                           + '\n\nPlease fix these issues and call apply_file_changes again.',
+            })
+            tool_input = None
+            continue
+        elif validation_errors:
+            raise RuntimeError(f'Invalid changes after {attempts} attempts: {validation_errors}')
+
+        break  # valid tool_input
+
+    changes = tool_input['changes']
+    commit_message = (tool_input.get('commit_message') or 'feat: implement code changes')[:72]
+
+    log_fn('implement', f'Claude proposed {len(changes)} file change(s)')
+
+    # 5. Apply changes with security checks
+    workdir_real = os.path.realpath(workdir)
+    files_changed = []
+    total_written = 0
+
+    for change in changes:
+        path = change['path']
+        action = change['action']
+        abs_path = os.path.realpath(os.path.join(workdir, path))
+
+        # Symlink escape check: resolved path must stay inside workdir
+        if not abs_path.startswith(workdir_real + os.sep) and abs_path != workdir_real:
+            log_fn('implement', f'  BLOCKED (path escape): {path}', level='warning')
+            continue
+
+        # Protected path check
+        if any(path == p or path.startswith(p + '/') for p in _PROTECTED_PATHS):
+            log_fn('implement', f'  BLOCKED (protected path): {path}', level='warning')
+            continue
+
+        if action == 'delete':
+            if os.path.exists(abs_path):
+                os.remove(abs_path)
+                log_fn('implement', f'  Deleted: {path}')
+                files_changed.append(path)
+        elif action in ('create', 'overwrite'):
+            content = change.get('content', '')
+            if len(content) > _MAX_FILE_SIZE:
+                log_fn('implement', f'  BLOCKED (too large: {len(content)} bytes): {path}', level='warning')
+                continue
+            if total_written + len(content) > _MAX_TOTAL_SIZE:
+                log_fn('implement', f'  BLOCKED (total write budget exceeded): {path}', level='warning')
+                continue
+
+            os.makedirs(os.path.dirname(abs_path) or workdir, exist_ok=True)
+            with open(abs_path, 'w') as f:
+                f.write(content)
+            total_written += len(content)
+            verb = 'Created' if action == 'create' else 'Modified'
+            log_fn('implement', f'  {verb}: {path}')
+            files_changed.append(path)
+
+    if not files_changed:
+        raise RuntimeError('No files were actually changed after applying Claude output')
+
+    log_fn('implement', f'{len(files_changed)} file(s) changed, {total_written} bytes written')
+
+    # 6. Quick sanity check: verify no syntax errors in .py files
+    py_changed = [f for f in files_changed if f.endswith('.py')]
+    if py_changed:
+        check_result = shell(
+            'python -m py_compile ' + ' '.join(
+                os.path.join('.', f) for f in py_changed[:20]
+            ),
+            cwd=workdir,
+        )
+        if check_result.returncode != 0:
+            log_fn('implement', 'Python syntax check FAILED — changes may have errors', level='warning')
+
+    # 7. Git add + commit
+    shell('git add -A', cwd=workdir)
+
+    # Log what git sees
+    shell('git status --porcelain', cwd=workdir)
+
+    commit_result = shell(
+        f'git commit -m "{commit_message}"'
+        ' --author="Code Worker <codeworker@donkeybetz.com>"',
+        cwd=workdir,
+    )
+    if commit_result.returncode != 0:
+        raise RuntimeError(f'Git commit failed: {commit_result.stderr[:300]}')
+
+    log_fn('implement', f'Committed: {commit_message}')
+    return files_changed
+
+
 @shared_task(
     bind=True,
     name='core.tasks.execute_code_job',
@@ -39152,27 +39499,16 @@ def execute_code_job(self, run_id: str):
         if is_dry_run:
             log('implement', f'[DRY RUN] Task: {run.plan_summary[:200]} — skipping')
         else:
-            # Phase 5.0: Stub implementation — create a smoke test file
-            # Phase 5.1 will replace this with Claude API code generation
+            # Phase 5.1: Claude API code generation
             log('implement', f'Task: {run.plan_summary[:200]}')
             assert workdir is not None, 'workdir must be set after clone'
-            smoke_file = os.path.join(workdir, 'executor_smoke.md')
-            with open(smoke_file, 'w') as f:
-                f.write(f'# Code Job Smoke Test\n\n')
-                f.write(f'- **Job ID:** {run.id}\n')
-                f.write(f'- **Task:** {run.plan_summary[:500]}\n')
-                f.write(f'- **Branch:** {run.working_branch}\n')
-                f.write(f'- **Created:** {run.created_at}\n')
-                f.write(f'\nThis file was auto-generated by the Remote Code Worker pipeline.\n')
-                f.write(f'Phase 5.0 — stub implementation for git plumbing validation.\n')
-
-            shell('git add executor_smoke.md', cwd=workdir)
-            shell(
-                'git commit -m "chore: code worker smoke test (Phase 5.0 validation)"'
-                ' --author="Code Worker <codeworker@donkeybetz.com>"',
-                cwd=workdir,
-            )
-            log('implement', 'Stub implementation committed (executor_smoke.md)')
+            try:
+                changed_files = _implement_with_claude(workdir, run, plan, log, shell)
+                run.changed_files = changed_files
+                run.save(update_fields=['changed_files'])
+            except Exception as impl_err:
+                reason = 'LLM_NO_OUTPUT' if 'LLM_NO_OUTPUT' in str(impl_err) else 'IMPLEMENT_FAILED'
+                raise RuntimeError(f'Implementation failed ({reason}): {impl_err}') from impl_err
 
         run.steps_completed = 2
 
