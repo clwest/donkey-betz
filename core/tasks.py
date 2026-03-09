@@ -39969,3 +39969,108 @@ def execute_code_job(self, run_id: str):
                     log('cleanup', f'Removed workspace: {cleanup_dir}')
             except Exception:
                 pass
+
+
+# ==================== RAG RETRIEVAL CANARY ====================
+
+
+@shared_task(name='core.rag_retrieval_canary', ignore_result=True)
+def rag_retrieval_canary():
+    """
+    Daily canary: verify RAG retrieval returns real /docs/ content,
+    not orphan agent-activity chunks.
+
+    Checks:
+      C1  - "CLAUDE.md" query returns CLAUDE.md in top-3 with similarity >= 0.50
+      C2  - A broad docs query returns at least one hit with non-empty file_path
+    """
+    import json as _json
+    from django.utils import timezone
+
+    checks = []
+    overall_pass = True
+
+    try:
+        from content.models import DocumentEmbedding
+        from core.services.embedding_service import get_embedding_service
+        from pgvector.django import CosineDistance
+
+        service = get_embedding_service()
+
+        def _top_hits(query, top_k=5):
+            vec = service.get_embedding_sync(query[:500])
+            qs = (
+                DocumentEmbedding.objects
+                .filter(document__file_path__isnull=False)
+                .exclude(document__file_path='')
+                .annotate(distance=CosineDistance('embedding_vector', vec))
+                .select_related('document')
+                .order_by('distance')[:top_k]
+            )
+            return [
+                {
+                    'score': round(1 - r.distance, 4),
+                    'file_path': r.document.file_path,
+                    'title': r.document.title,
+                }
+                for r in qs
+            ]
+
+        # C1: CLAUDE.md exact filename
+        hits1 = _top_hits('CLAUDE.md', top_k=3)
+        c1_pass = any(
+            h['file_path'] == 'CLAUDE.md' and h['score'] >= 0.50
+            for h in hits1
+        )
+        checks.append({
+            'id': 'C1', 'query': 'CLAUDE.md',
+            'passed': c1_pass, 'hits': hits1,
+        })
+        if not c1_pass:
+            overall_pass = False
+
+        # C2: Broad docs query
+        hits2 = _top_hits(
+            'platform architecture agents spiders documentation overview',
+            top_k=5,
+        )
+        c2_pass = any(h['file_path'] and h['score'] >= 0.40 for h in hits2)
+        checks.append({
+            'id': 'C2', 'query': 'platform architecture overview',
+            'passed': c2_pass, 'hits': hits2,
+        })
+        if not c2_pass:
+            overall_pass = False
+
+    except Exception as e:
+        logger.error(f"RAG canary error: {e}")
+        checks.append({'id': 'ERROR', 'error': str(e)})
+        overall_pass = False
+
+    result = {
+        'timestamp': timezone.now().isoformat(),
+        'overall_pass': overall_pass,
+        'checks': checks,
+    }
+
+    if overall_pass:
+        logger.info(f"[RAG-CANARY] PASS — {_json.dumps(result)}")
+    else:
+        logger.error(f"[RAG-CANARY] FAIL — {_json.dumps(result)}")
+        try:
+            from core.models_unified_system import HumanAttentionItem
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            user = User.objects.first()
+            if user:
+                HumanAttentionItem.objects.create(
+                    user=user,
+                    title='RAG Retrieval Canary FAILED',
+                    description=_json.dumps(result, indent=2),
+                    priority='high',
+                    source='rag_canary',
+                )
+        except Exception:
+            pass
+
+    return result
