@@ -378,9 +378,9 @@ class LLMEnforcer:
             'content': 'low',          # Quick content generation
             'analysis': 'medium',      # Balanced analysis
             'code': 'high',            # Complex coding tasks
-            'general': 'none'          # Default fast mode
+            'general': 'minimal'       # Default fast mode (gpt-5-mini requires minimal, not none)
         }
-        reasoning_effort = reasoning_effort_map.get(task_type, 'none')
+        reasoning_effort = reasoning_effort_map.get(task_type, 'minimal')
 
         # Build Responses API parameters
         # Session 1036: GPT-5.2 pricing: $1.75/1M input, $14/1M output
