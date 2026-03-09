@@ -38971,3 +38971,128 @@ def sync_congress_data():
     except Exception as e:
         logger.exception(f"[CongressSync] Failed: {e}")
         return {'error': str(e)}
+
+
+# =========================================================================
+# Remote Code Worker — execute code jobs
+# =========================================================================
+
+@shared_task(
+    bind=True,
+    name='core.tasks.execute_code_job',
+    queue='code_jobs',
+    time_limit=1800,
+    soft_time_limit=1500,
+    max_retries=0,
+)
+def execute_code_job(self, run_id: str):
+    """Execute a code job: clone repo, implement changes, test, push, open PR.
+
+    This is the main Celery task for the Remote Code Worker pipeline.
+    Runs on the dedicated 'code_jobs' queue with concurrency=1.
+
+    See: docs/designs/remote-code-worker-contract.md
+    """
+    from core.models import ExecutionRun, CodeJobLog
+
+    try:
+        run = ExecutionRun.objects.select_related('repo').get(id=run_id)
+    except ExecutionRun.DoesNotExist:
+        logger.error('[CodeWorker] Run %s not found', run_id)
+        return {'error': 'Run not found'}
+
+    if run.is_terminal:
+        logger.info('[CodeWorker] Run %s already terminal: %s', run_id, run.status)
+        return {'status': run.status}
+
+    def log(step, message, level='info'):
+        seq = CodeJobLog.objects.filter(run=run).count()
+        CodeJobLog.objects.create(
+            run=run, sequence=seq, step=step,
+            level=level, message=message,
+        )
+        getattr(logger, level, logger.info)(
+            '[CodeWorker:%s] [%s] %s', str(run.id)[:8], step, message
+        )
+
+    try:
+        run.start()
+        log('start', f'Starting code job for {run.repo_url} @ {run.base_branch}')
+
+        # Step 1: Clone
+        run.set_step('cloning', 0.1)
+        log('clone', f'Cloning {run.repo_url} (shallow, branch={run.base_branch})')
+        # TODO: Implement actual git clone via subprocess
+        # Requires the Railway code-worker service with git + GitHub App credentials.
+        log('clone', 'Clone step placeholder — awaiting code-worker service deployment')
+
+        # Step 2: Implement
+        run.set_step('implementing', 0.3)
+        log('implement', f'Task: {run.plan_summary[:200]}')
+        log('implement', 'Implementation step placeholder — LLM code generation pending')
+
+        # Step 3: Test
+        run.set_step('testing', 0.5)
+        test_cmd = run.plan_json.get('test_command', '') or 'auto-detect'
+        log('test', f'Running tests: {test_cmd}')
+        log('test', 'Test step placeholder — awaiting code-worker service')
+
+        # Step 4: Lint
+        run.set_step('linting', 0.7)
+        log('lint', 'Lint step placeholder')
+
+        # Step 5: Push
+        run.set_step('pushing', 0.85)
+        log('push', f'Would push branch: {run.working_branch}')
+
+        # Step 6: PR
+        log('pr', 'PR creation placeholder — requires GitHub App credentials')
+
+        # Mark as succeeded with placeholder results
+        run.test_summary = {
+            'command': test_cmd,
+            'exit_code': None,
+            'note': 'Pipeline skeleton — code-worker service not yet deployed',
+        }
+        run.steps_completed = 6
+        run.succeed(
+            diff='# Placeholder — no actual changes made yet',
+            changed=[],
+            log='Pipeline skeleton executed successfully.',
+        )
+        run.progress = 1.0
+        run.save(update_fields=['progress', 'test_summary'])
+
+        log('complete', 'Pipeline skeleton completed. Deploy code-worker service for real execution.')
+
+        # Post result to conversation if specified
+        if run.conversation_id:
+            try:
+                from core.services.collaboration_protocol import post_structured_message
+                post_structured_message(
+                    user=run.created_by,
+                    conversation_id=run.conversation_id,
+                    msg_type='RESULT',
+                    title=f'Code Job {str(run.id)[:8]}: Pipeline skeleton complete',
+                    body=(
+                        f'**Task:** {run.plan_summary[:200]}\n'
+                        f'**Branch:** {run.working_branch}\n'
+                        f'**Status:** Skeleton complete — deploy code-worker for real execution'
+                    ),
+                    source='code-worker',
+                )
+            except Exception as e:
+                log('notify', f'Could not post to conversation: {e}', level='warning')
+
+        return {'status': 'succeeded', 'run_id': str(run.id)}
+
+    except Exception as e:
+        logger.exception('[CodeWorker] Run %s failed: %s', run_id, e)
+        log('error', f'Job failed: {e}', level='error')
+        run.fail(
+            error=str(e),
+            reason_code='INTERNAL_EXCEPTION',
+            error_type=type(e).__name__,
+            is_infra=True,
+        )
+        return {'status': 'error', 'error': str(e)}

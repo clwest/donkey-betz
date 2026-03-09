@@ -4617,6 +4617,22 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Remote Code Worker — code job submission and monitoring
+# =========================================================================
+from core.views_code_jobs import (
+    create_code_job, list_code_jobs, code_job_detail,
+    code_job_logs, cancel_code_job,
+)
+
+urlpatterns += [
+    path('api/code-jobs/', create_code_job, name='code-job-create'),
+    path('api/code-jobs/list/', list_code_jobs, name='code-job-list'),
+    path('api/code-jobs/<uuid:job_id>/', code_job_detail, name='code-job-detail'),
+    path('api/code-jobs/<uuid:job_id>/logs/', code_job_logs, name='code-job-logs'),
+    path('api/code-jobs/<uuid:job_id>/cancel/', cancel_code_job, name='code-job-cancel'),
+]
+
+# =========================================================================
 # Development-only endpoints — never exposed in production
 # =========================================================================
 if settings.DEBUG:

@@ -45,8 +45,48 @@ class Repo(models.Model):
     )
     is_active = models.BooleanField(default=True)
 
+    # ── Code Worker config (Remote Code Worker contract v0.2) ─────────
+    test_command = models.CharField(
+        max_length=500, blank=True,
+        help_text='Override test command (e.g. "pytest"). Empty = auto-detect.',
+    )
+    lint_command = models.CharField(
+        max_length=500, blank=True,
+        help_text='Override lint command (e.g. "ruff check ."). Empty = auto-detect.',
+    )
+    install_command = models.CharField(
+        max_length=500, blank=True,
+        help_text='Override install command (e.g. "pip install -r requirements.txt").',
+    )
+    max_runtime_seconds = models.IntegerField(
+        default=600,
+        help_text='Default wall-clock timeout for code jobs on this repo.',
+    )
+    max_patch_files = models.IntegerField(
+        default=50,
+        help_text='Max files a single job can modify.',
+    )
+    github_installation_id = models.CharField(
+        max_length=100, blank=True,
+        help_text='GitHub App installation ID for this repo.',
+    )
+    path_filters = models.JSONField(
+        default=list, blank=True,
+        help_text='Allowed subdirs for monorepo scope.',
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # ── Allowed test/lint commands (security allowlist) ────────────────
+    ALLOWED_TEST_COMMANDS = frozenset([
+        'pytest', 'python manage.py test', 'pnpm test', 'npm test',
+        'yarn test', 'cargo test', 'go test ./...',
+    ])
+    ALLOWED_LINT_COMMANDS = frozenset([
+        'ruff check', 'ruff check .', 'ruff format --check',
+        'eslint', 'eslint .', 'prettier --check', 'prettier --check .',
+    ])
 
     class Meta:
         app_label = 'core'
@@ -55,6 +95,32 @@ class Repo(models.Model):
 
     def __str__(self) -> str:
         return f'{self.name} ({self.repo_url})'
+
+    def clean(self):
+        """Validate test/lint commands against allowlist."""
+        from django.core.exceptions import ValidationError
+        if self.test_command:
+            base_cmd = self.test_command.split()[0] if self.test_command.strip() else ''
+            if self.test_command not in self.ALLOWED_TEST_COMMANDS and base_cmd not in {
+                'pytest', 'python', 'pnpm', 'npm', 'yarn', 'cargo', 'go',
+            }:
+                raise ValidationError({'test_command': f'Command not in allowlist: {self.test_command}'})
+        if self.lint_command:
+            base_cmd = self.lint_command.split()[0] if self.lint_command.strip() else ''
+            if self.lint_command not in self.ALLOWED_LINT_COMMANDS and base_cmd not in {
+                'ruff', 'eslint', 'prettier',
+            }:
+                raise ValidationError({'lint_command': f'Command not in allowlist: {self.lint_command}'})
+
+    def get_repo_slug(self) -> str:
+        """Extract owner/repo from repo_url."""
+        url = self.repo_url.rstrip('/')
+        if url.endswith('.git'):
+            url = url[:-4]
+        parts = url.split('/')
+        if len(parts) >= 2:
+            return f'{parts[-2]}/{parts[-1]}'
+        return self.name
 
 
 class ExecutionRun(models.Model):
@@ -66,9 +132,15 @@ class ExecutionRun(models.Model):
     STATUS_CHOICES = [
         ('queued', 'Queued'),
         ('running', 'Running'),
+        ('cloning', 'Cloning'),
+        ('implementing', 'Implementing'),
+        ('testing', 'Testing'),
+        ('linting', 'Linting'),
+        ('pushing', 'Pushing'),
         ('awaiting_approval', 'Awaiting Approval'),
         ('succeeded', 'Succeeded'),
         ('failed', 'Failed'),
+        ('error', 'Error'),
         ('canceled', 'Canceled'),
     ]
     status = models.CharField(
@@ -156,12 +228,44 @@ class ExecutionRun(models.Model):
         help_text='Optional: parsed test results',
     )
 
+    # ── PR tracking (Remote Code Worker) ─────────────────────────────────
+    pr_url = models.URLField(
+        blank=True,
+        help_text='GitHub PR URL if one was created',
+    )
+    pr_number = models.IntegerField(
+        null=True, blank=True,
+        help_text='GitHub PR number',
+    )
+    commit_sha = models.CharField(
+        max_length=40, blank=True,
+        help_text='Final commit SHA on the working branch',
+    )
+
     # ── Execution metadata ───────────────────────────────────────────────
     steps_completed = models.IntegerField(default=0)
     steps_total = models.IntegerField(default=0)
     current_step = models.CharField(max_length=500, blank=True)
+    progress = models.FloatField(
+        default=0.0,
+        help_text='Execution progress 0.0 to 1.0',
+    )
     error_message = models.TextField(blank=True)
+    error_type = models.CharField(
+        max_length=100, blank=True,
+        help_text='Error classification (e.g. TimeoutError, CloneError)',
+    )
+    failure_reason_code = models.CharField(
+        max_length=50, blank=True,
+        help_text='Structured failure code: TESTS_FAILED, CLONE_AUTH, TIMEOUT, OOM, etc.',
+    )
     execution_time_seconds = models.FloatField(null=True, blank=True)
+
+    # ── Celery tracking ───────────────────────────────────────────────────
+    celery_task_id = models.CharField(
+        max_length=100, blank=True, db_index=True,
+        help_text='Celery task ID for the code worker job',
+    )
 
     # ── Conversation linkage ─────────────────────────────────────────────
     conversation_id = models.CharField(
@@ -214,13 +318,16 @@ class ExecutionRun(models.Model):
         self.log_text = log
         self.save()
 
-    def fail(self, error: str, log: str = '') -> None:
+    def fail(self, error: str, log: str = '', reason_code: str = '',
+             error_type: str = '', is_infra: bool = False) -> None:
         from django.utils import timezone
-        self.status = 'failed'
+        self.status = 'error' if is_infra else 'failed'
         self.completed_at = timezone.now()
         if self.started_at:
             self.execution_time_seconds = (self.completed_at - self.started_at).total_seconds()
         self.error_message = error
+        self.error_type = error_type
+        self.failure_reason_code = reason_code
         self.log_text = log
         self.save()
 
@@ -268,3 +375,52 @@ class ExecutionRun(models.Model):
         self.working_branch = branch
         self.save(update_fields=['working_branch'])
         return branch
+
+    def set_step(self, step_name: str, progress: float = 0.0) -> None:
+        """Update current step and status for code worker pipeline."""
+        self.current_step = step_name
+        self.status = step_name if step_name in dict(self.STATUS_CHOICES) else 'running'
+        self.progress = min(max(progress, 0.0), 1.0)
+        self.save(update_fields=['current_step', 'status', 'progress'])
+
+    @property
+    def is_terminal(self) -> bool:
+        return self.status in ('succeeded', 'failed', 'error', 'canceled')
+
+
+class CodeJobLog(models.Model):
+    """Chunked log output from an ExecutionRun, for streaming retrieval."""
+
+    id = models.BigAutoField(primary_key=True)
+    run = models.ForeignKey(
+        ExecutionRun,
+        on_delete=models.CASCADE,
+        related_name='job_logs',
+    )
+    sequence = models.IntegerField(
+        help_text='Monotonically increasing log line number within this run',
+    )
+    timestamp = models.DateTimeField(auto_now_add=True)
+    level = models.CharField(max_length=10, default='info')
+    step = models.CharField(
+        max_length=30,
+        help_text='Pipeline step (clone, implement, test, lint, push, pr)',
+    )
+    message = models.TextField()
+
+    class Meta:
+        app_label = 'core'
+        db_table = 'executor_job_logs'
+        ordering = ['sequence']
+        indexes = [
+            models.Index(fields=['run', 'sequence']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['run', 'sequence'],
+                name='unique_run_log_sequence',
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f'Log #{self.sequence} [{self.step}] {self.message[:60]}'

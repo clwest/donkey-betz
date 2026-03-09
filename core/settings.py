@@ -952,6 +952,8 @@ REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', '')
 # - broadcast: High-frequency status broadcast tasks (every 60-180s)
 # - default: Everything else (quick tasks)
 CELERY_TASK_ROUTES = {
+    # Remote Code Worker
+    'core.tasks.execute_code_job': {'queue': 'code_jobs'},
     # Existing module-based routing
     'agents.*': {'queue': 'agents'},
     'sports.*': {'queue': 'default'},
