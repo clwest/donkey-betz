@@ -38977,6 +38977,17 @@ def sync_congress_data():
 # Remote Code Worker — execute code jobs
 # =========================================================================
 
+
+def _inject_github_token(repo_url: str, token: str) -> str:
+    """Inject a GitHub token into a clone URL for authentication."""
+    from urllib.parse import urlparse, urlunparse
+    parsed = urlparse(repo_url)
+    if parsed.hostname == 'github.com' and parsed.scheme == 'https':
+        authed = parsed._replace(netloc=f'x-access-token:{token}' + chr(64) + parsed.hostname + (f':{parsed.port}' if parsed.port else ''))
+        return urlunparse(authed)
+    return repo_url
+
+
 @shared_task(
     bind=True,
     name='core.tasks.execute_code_job',
@@ -39015,84 +39026,319 @@ def execute_code_job(self, run_id: str):
             '[CodeWorker:%s] [%s] %s', str(run.id)[:8], step, message
         )
 
+    plan = run.plan_json or {}
+    mode = plan.get('mode', 'dry_run')
+    is_dry_run = (mode == 'dry_run')
+
+    import os
+    import shutil
+    import subprocess
+    import tempfile
+    import urllib.request
+    import json as json_mod
+
+    github_token = os.environ.get('GITHUB_TOKEN', '')
+
+    def shell(cmd, cwd=None, timeout=300):
+        """Run a shell command, log output, return CompletedProcess."""
+        result = subprocess.run(
+            cmd, shell=True, cwd=cwd,
+            capture_output=True, text=True, timeout=timeout,
+            env={**os.environ, 'GIT_TERMINAL_PROMPT': '0'},
+        )
+        for line in (result.stdout or '').strip().splitlines()[:30]:
+            log(run.current_step or 'shell', f'  {line}')
+        for line in (result.stderr or '').strip().splitlines()[:15]:
+            log(run.current_step or 'shell', f'  [stderr] {line}')
+        return result
+
+    workdir = None
+
     try:
         run.start()
-        log('start', f'Starting code job for {run.repo_url} @ {run.base_branch}')
+        log('start', f'Starting code job for {run.repo_url} @ {run.base_branch} (mode={mode})')
 
-        # Step 1: Clone
+        # ── Step 1: Clone ────────────────────────────────────────────────
         run.set_step('cloning', 0.1)
-        log('clone', f'Cloning {run.repo_url} (shallow, branch={run.base_branch})')
-        # TODO: Implement actual git clone via subprocess
-        # Requires the Railway code-worker service with git + GitHub App credentials.
-        log('clone', 'Clone step placeholder — awaiting code-worker service deployment')
 
-        # Step 2: Implement
+        if is_dry_run:
+            log('clone', f'[DRY RUN] Would clone {run.repo_url} — skipping')
+        else:
+            if not github_token:
+                raise RuntimeError('GITHUB_TOKEN not configured — cannot clone')
+
+            # Build authenticated clone URL (token injected at runtime)
+            repo_url = run.repo_url
+            auth_url = _inject_github_token(repo_url, github_token)
+
+            workdir = tempfile.mkdtemp(prefix=f'codejob-{str(run.id)[:8]}-')
+            log('clone', f'Cloning {run.repo_url} (branch={run.base_branch}) into temp workspace')
+
+            result = shell(
+                f'git clone --depth 50 --branch {run.base_branch} {auth_url} repo',
+                cwd=workdir, timeout=120,
+            )
+            if result.returncode != 0:
+                raise RuntimeError(f'Clone failed (exit {result.returncode}): {result.stderr[:500]}')
+
+            workdir = os.path.join(workdir, 'repo')
+            log('clone', 'Clone successful')
+
+            # Create working branch
+            branch = run.working_branch or run.generate_working_branch()
+            result = shell(f'git checkout -b {branch}', cwd=workdir)
+            if result.returncode != 0:
+                raise RuntimeError(f'Branch creation failed: {result.stderr[:300]}')
+            log('clone', f'Created branch: {branch}')
+
+        run.steps_completed = 1
+
+        # ── Step 2: Implement ────────────────────────────────────────────
         run.set_step('implementing', 0.3)
-        log('implement', f'Task: {run.plan_summary[:200]}')
-        log('implement', 'Implementation step placeholder — LLM code generation pending')
 
-        # Step 3: Test
+        if is_dry_run:
+            log('implement', f'[DRY RUN] Task: {run.plan_summary[:200]} — skipping')
+        else:
+            # Phase 5.0: Stub implementation — create a smoke test file
+            # Phase 5.1 will replace this with Claude API code generation
+            log('implement', f'Task: {run.plan_summary[:200]}')
+            smoke_file = os.path.join(workdir, 'executor_smoke.md')
+            with open(smoke_file, 'w') as f:
+                f.write(f'# Code Job Smoke Test\n\n')
+                f.write(f'- **Job ID:** {run.id}\n')
+                f.write(f'- **Task:** {run.plan_summary[:500]}\n')
+                f.write(f'- **Branch:** {run.working_branch}\n')
+                f.write(f'- **Created:** {run.created_at}\n')
+                f.write(f'\nThis file was auto-generated by the Remote Code Worker pipeline.\n')
+                f.write(f'Phase 5.0 — stub implementation for git plumbing validation.\n')
+
+            shell('git add executor_smoke.md', cwd=workdir)
+            shell(
+                'git commit -m "chore: code worker smoke test (Phase 5.0 validation)"'
+                ' --author="Code Worker <codeworker@donkeybetz.com>"',
+                cwd=workdir,
+            )
+            log('implement', 'Stub implementation committed (executor_smoke.md)')
+
+        run.steps_completed = 2
+
+        # ── Step 3: Test ─────────────────────────────────────────────────
         run.set_step('testing', 0.5)
-        test_cmd = run.plan_json.get('test_command', '') or 'auto-detect'
-        log('test', f'Running tests: {test_cmd}')
-        log('test', 'Test step placeholder — awaiting code-worker service')
+        test_cmd = plan.get('test_command', '') or ''
 
-        # Step 4: Lint
+        if is_dry_run:
+            log('test', f'[DRY RUN] Would run tests: {test_cmd or "auto-detect"} — skipping')
+            run.test_summary = {'command': test_cmd or 'skipped', 'exit_code': 0, 'note': 'dry_run'}
+        elif test_cmd:
+            # Validate against allowlist
+            from core.models import Repo
+            if test_cmd not in Repo.ALLOWED_TEST_COMMANDS:
+                log('test', f'Test command not in allowlist: {test_cmd}', level='warning')
+                run.test_summary = {'command': test_cmd, 'exit_code': -1, 'note': 'not in allowlist — skipped'}
+            else:
+                log('test', f'Running: {test_cmd}')
+                result = shell(test_cmd, cwd=workdir, timeout=300)
+                run.test_summary = {
+                    'command': test_cmd,
+                    'exit_code': result.returncode,
+                    'stdout_tail': (result.stdout or '')[-2000:],
+                    'stderr_tail': (result.stderr or '')[-1000:],
+                }
+                if result.returncode != 0:
+                    log('test', f'Tests FAILED (exit {result.returncode})', level='warning')
+                else:
+                    log('test', 'Tests passed')
+        else:
+            log('test', 'No test command configured — skipping')
+            run.test_summary = {'command': 'none', 'exit_code': 0, 'note': 'no test command'}
+
+        run.steps_completed = 3
+        run.save(update_fields=['test_summary'])
+
+        # ── Step 4: Lint ─────────────────────────────────────────────────
         run.set_step('linting', 0.7)
-        log('lint', 'Lint step placeholder')
+        lint_cmd = plan.get('lint_command', '') or ''
 
-        # Step 5: Push
+        if is_dry_run:
+            log('lint', f'[DRY RUN] Would lint: {lint_cmd or "none"} — skipping')
+        elif lint_cmd:
+            from core.models import Repo
+            if lint_cmd not in Repo.ALLOWED_LINT_COMMANDS:
+                log('lint', f'Lint command not in allowlist: {lint_cmd}', level='warning')
+            else:
+                log('lint', f'Running: {lint_cmd}')
+                result = shell(lint_cmd, cwd=workdir, timeout=120)
+                if result.returncode != 0:
+                    log('lint', f'Lint warnings/errors (exit {result.returncode})', level='warning')
+                else:
+                    log('lint', 'Lint passed')
+        else:
+            log('lint', 'No lint command configured — skipping')
+
+        run.steps_completed = 4
+
+        # ── Step 5: Push ─────────────────────────────────────────────────
         run.set_step('pushing', 0.85)
-        log('push', f'Would push branch: {run.working_branch}')
 
-        # Step 6: PR
-        log('pr', 'PR creation placeholder — requires GitHub App credentials')
+        if is_dry_run:
+            log('push', f'[DRY RUN] Would push branch: {run.working_branch} — skipping')
+        else:
+            log('push', f'Pushing branch: {run.working_branch}')
+            result = shell(
+                f'git push origin {run.working_branch}',
+                cwd=workdir, timeout=60,
+            )
+            if result.returncode != 0:
+                raise RuntimeError(f'Push failed (exit {result.returncode}): {result.stderr[:500]}')
 
-        # Mark as succeeded with placeholder results
-        run.test_summary = {
-            'command': test_cmd,
-            'exit_code': None,
-            'note': 'Pipeline skeleton — code-worker service not yet deployed',
-        }
+            # Capture commit SHA
+            sha_result = shell('git rev-parse HEAD', cwd=workdir)
+            if sha_result.returncode == 0:
+                run.commit_sha = sha_result.stdout.strip()[:40]
+                run.save(update_fields=['commit_sha'])
+
+            log('push', f'Push successful (sha: {run.commit_sha[:8]})')
+
+        run.steps_completed = 5
+
+        # ── Step 6: Create PR ────────────────────────────────────────────
+        run.set_step('pushing', 0.95)  # reuse pushing state for PR
+
+        if is_dry_run:
+            log('pr', '[DRY RUN] Would create PR — skipping')
+        else:
+            if not github_token:
+                log('pr', 'No GITHUB_TOKEN — skipping PR creation', level='warning')
+            else:
+                # Extract owner/repo from URL
+                # https://github.com/clwest/donkey-betz-platform → clwest/donkey-betz-platform
+                repo_slug = run.repo.get_repo_slug() if run.repo else ''
+                if not repo_slug and run.repo_url:
+                    repo_slug = run.repo_url.rstrip('/').split('github.com/')[-1].replace('.git', '')
+
+                log('pr', f'Creating PR: {run.working_branch} → {run.base_branch} on {repo_slug}')
+
+                pr_body = (
+                    f'## Code Job: {str(run.id)[:8]}\n\n'
+                    f'**Task:** {run.plan_summary[:500]}\n\n'
+                )
+                acceptance = plan.get('acceptance_criteria', [])
+                if acceptance:
+                    pr_body += '**Acceptance Criteria:**\n'
+                    for criterion in acceptance:
+                        pr_body += f'- [ ] {criterion}\n'
+                    pr_body += '\n'
+
+                test_info = run.test_summary or {}
+                if test_info.get('exit_code') is not None:
+                    status = 'passed' if test_info['exit_code'] == 0 else 'FAILED'
+                    pr_body += f'**Tests:** {status} (`{test_info.get("command", "")}`)\n\n'
+
+                pr_body += f'---\n*Auto-generated by Remote Code Worker*\n'
+
+                pr_title = f'[CodeWorker] {run.plan_summary[:80]}'
+
+                pr_data = json_mod.dumps({
+                    'title': pr_title,
+                    'head': run.working_branch,
+                    'base': run.base_branch,
+                    'body': pr_body,
+                }).encode()
+
+                req = urllib.request.Request(
+                    f'https://api.github.com/repos/{repo_slug}/pulls',
+                    data=pr_data,
+                    headers={
+                        'Authorization': f'token {github_token}',
+                        'Accept': 'application/vnd.github+json',
+                        'Content-Type': 'application/json',
+                    },
+                    method='POST',
+                )
+                try:
+                    with urllib.request.urlopen(req, timeout=30) as resp:
+                        pr_resp = json_mod.loads(resp.read())
+                        run.pr_url = pr_resp.get('html_url', '')
+                        run.pr_number = pr_resp.get('number')
+                        run.save(update_fields=['pr_url', 'pr_number'])
+                        log('pr', f'PR created: {run.pr_url}')
+                except urllib.error.HTTPError as e:
+                    error_body = e.read().decode()[:500]
+                    log('pr', f'PR creation failed (HTTP {e.code}): {error_body}', level='error')
+                    # Don't fail the whole job — push succeeded
+                except Exception as e:
+                    log('pr', f'PR creation error: {e}', level='error')
+
         run.steps_completed = 6
+
+        # ── Capture diff and mark success ────────────────────────────────
+        diff_text = ''
+        changed_files = []
+        if workdir and not is_dry_run:
+            diff_result = shell('git diff HEAD~1..HEAD', cwd=workdir)
+            diff_text = (diff_result.stdout or '')[:500_000]
+
+            status_result = shell('git diff --name-only HEAD~1..HEAD', cwd=workdir)
+            changed_files = [f.strip() for f in (status_result.stdout or '').splitlines() if f.strip()]
+
         run.succeed(
-            diff='# Placeholder — no actual changes made yet',
-            changed=[],
-            log='Pipeline skeleton executed successfully.',
+            diff=diff_text or f'# {"Dry run" if is_dry_run else "No diff"} — mode={mode}',
+            changed=changed_files,
+            log=f'Pipeline completed successfully (mode={mode}).',
         )
         run.progress = 1.0
-        run.save(update_fields=['progress', 'test_summary'])
+        run.save(update_fields=['progress'])
 
-        log('complete', 'Pipeline skeleton completed. Deploy code-worker service for real execution.')
+        log('complete', f'Pipeline completed (mode={mode}, steps=6/6)')
 
         # Post result to conversation if specified
         if run.conversation_id:
             try:
                 from core.services.collaboration_protocol import post_structured_message
+                pr_info = f'\n**PR:** {run.pr_url}' if run.pr_url else ''
                 post_structured_message(
                     user=run.created_by,
                     conversation_id=run.conversation_id,
                     msg_type='RESULT',
-                    title=f'Code Job {str(run.id)[:8]}: Pipeline skeleton complete',
+                    title=f'Code Job {str(run.id)[:8]}: {"Succeeded" if not is_dry_run else "Dry run complete"}',
                     body=(
                         f'**Task:** {run.plan_summary[:200]}\n'
                         f'**Branch:** {run.working_branch}\n'
-                        f'**Status:** Skeleton complete — deploy code-worker for real execution'
+                        f'**Mode:** {mode}\n'
+                        f'**Files changed:** {len(changed_files)}{pr_info}'
                     ),
                     source='code-worker',
                 )
             except Exception as e:
                 log('notify', f'Could not post to conversation: {e}', level='warning')
 
-        return {'status': 'succeeded', 'run_id': str(run.id)}
+        return {'status': 'succeeded', 'run_id': str(run.id), 'pr_url': run.pr_url or ''}
 
     except Exception as e:
         logger.exception('[CodeWorker] Run %s failed: %s', run_id, e)
         log('error', f'Job failed: {e}', level='error')
+        is_infra = isinstance(e, (RuntimeError, OSError, subprocess.TimeoutExpired))
+        reason = 'TIMEOUT' if isinstance(e, subprocess.TimeoutExpired) else 'INTERNAL_EXCEPTION'
+        if 'Clone failed' in str(e):
+            reason = 'CLONE_FAILED'
+        elif 'Push failed' in str(e):
+            reason = 'PUSH_FAILED'
         run.fail(
             error=str(e),
-            reason_code='INTERNAL_EXCEPTION',
+            reason_code=reason,
             error_type=type(e).__name__,
-            is_infra=True,
+            is_infra=is_infra,
         )
         return {'status': 'error', 'error': str(e)}
+    finally:
+        # Clean up temp workspace
+        if workdir:
+            try:
+                parent = os.path.dirname(workdir)
+                # workdir might be /tmp/codejob-xxx/repo — clean the parent
+                cleanup_dir = parent if parent.startswith(tempfile.gettempdir()) else workdir
+                if os.path.exists(cleanup_dir):
+                    shutil.rmtree(cleanup_dir)
+                    log('cleanup', f'Removed workspace: {cleanup_dir}')
+            except Exception:
+                pass
