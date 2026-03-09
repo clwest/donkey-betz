@@ -39725,6 +39725,8 @@ def execute_code_job(self, run_id: str):
                 changed_files = _implement_with_claude(workdir, run, plan, log, shell)
                 run.changed_files = changed_files
                 run.save(update_fields=['changed_files'])
+            except CodeJobError:
+                raise  # typed exceptions pass through with their error code
             except Exception as impl_err:
                 reason = 'LLM_NO_OUTPUT' if 'LLM_NO_OUTPUT' in str(impl_err) else 'IMPLEMENT_FAILED'
                 raise RuntimeError(f'Implementation failed ({reason}): {impl_err}') from impl_err
