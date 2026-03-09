@@ -39460,24 +39460,22 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
                     file_text = file_text.replace(search, replace, 1)
                     edit_count += 1
 
-            # If ALL edits failed for this file, raise anchor error
-            if anchor_failures and edit_count == 0:
+            # If ANY edits failed for this file, raise anchor error
+            # (fail deterministically — no partial patch application)
+            if anchor_failures:
                 detail = '; '.join(
                     f'edit #{f["edit_index"]+1}: "{f["search_preview"]}"'
                     for f in anchor_failures[:3]
                 )
                 raise CodeJobAnchorNotFoundError(
-                    f'All {len(anchor_failures)} edit(s) failed for {path} ({file_size:,} bytes). '
+                    f'{len(anchor_failures)}/{len(edits)} edit(s) failed for {path} ({file_size:,} bytes). '
                     f'Search text not found: {detail}',
                     path=path, file_size=file_size,
                     failed_edits=anchor_failures,
+                    edits_succeeded=edit_count,
                 )
 
             if file_text != original_text and edit_count > 0:
-                # Log partial anchor failures as warnings (some edits succeeded)
-                if anchor_failures:
-                    log_fn('implement', f'  WARN: {len(anchor_failures)}/{len(edits)} edit(s) had missing anchors in {path}', level='warning')
-
                 size_delta = len(file_text) - len(original_text)
                 if size_delta > _MAX_FILE_SIZE:
                     log_fn('implement', f'  BLOCKED (patch adds too much: +{size_delta} bytes): {path}', level='warning')

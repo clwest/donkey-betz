@@ -253,10 +253,11 @@ class TestAnchorNotFound:
         assert exc_info.value.context['path'] == 'service.py'
         assert len(exc_info.value.context['failed_edits']) == 1
 
-    def test_partial_anchor_failure_succeeds(self, tmp_path):
-        """When SOME edits succeed and others fail, file is patched (no error)."""
+    def test_partial_anchor_failure_raises(self, tmp_path):
+        """When ANY edit has a missing anchor, raise even if others match."""
         target = tmp_path / 'mixed.py'
-        target.write_text('line_one = 1\nline_two = 2\n')
+        original = 'line_one = 1\nline_two = 2\n'
+        target.write_text(original)
         self.workdir = str(tmp_path)
 
         tool_input = {
@@ -271,9 +272,14 @@ class TestAnchorNotFound:
             'commit_message': 'fix: partial',
         }
 
-        result = self._call_implement(tool_input)
-        assert 'mixed.py' in result
-        assert target.read_text() == 'line_one = 99\nline_two = 2\n'
+        with pytest.raises(CodeJobAnchorNotFoundError) as exc_info:
+            self._call_implement(tool_input)
+
+        # Context should show 1 failed, 1 succeeded
+        assert exc_info.value.context['edits_succeeded'] == 1
+        assert len(exc_info.value.context['failed_edits']) == 1
+        # File must NOT be modified (no partial writes)
+        assert target.read_text() == original
 
     def test_file_not_modified_on_anchor_failure(self, tmp_path):
         """File contents must NOT change when all anchors fail."""
