@@ -39097,6 +39097,28 @@ def _gather_repo_context(workdir, task_prompt, path_filters, log_fn):
     return '\n'.join(context_parts)
 
 
+# ── CodeJob typed exceptions ────────────────────────────────────────────────
+
+
+class CodeJobError(RuntimeError):
+    """Base exception for CodeJob pipeline failures with structured error codes."""
+    code: str = 'CODEJOB_ERROR'
+
+    def __init__(self, message: str, **context):
+        self.context = context
+        super().__init__(f'{self.code}: {message}')
+
+
+class CodeJobAnchorNotFoundError(CodeJobError):
+    """Raised when a patch search string is not found in the target file."""
+    code = 'CODEJOB_ANCHOR_NOT_FOUND'
+
+
+class CodeJobFileTooLargeError(CodeJobError):
+    """Raised when a target file exceeds the size limit for safe editing."""
+    code = 'CODEJOB_FILE_TOO_LARGE'
+
+
 # Security constants for _implement_with_claude
 _PROTECTED_PATHS = frozenset([
     '.env', '.env.local', '.env.production', '.env.staging',
@@ -39110,8 +39132,9 @@ _BINARY_EXTENSIONS = frozenset([
     '.zip', '.tar', '.gz', '.pdf', '.pyc', '.pyo',
     '.so', '.dylib', '.dll', '.exe',
 ])
-_MAX_FILE_SIZE = 200_000     # 200KB per file
-_MAX_TOTAL_SIZE = 2_000_000  # 2MB total
+_MAX_FILE_SIZE = 200_000       # 200KB per file (output)
+_MAX_TOTAL_SIZE = 2_000_000    # 2MB total (output)
+_MAX_EDIT_FILE_SIZE = 500_000  # 500KB — files larger than this are too big for safe patch editing
 
 
 def _implement_with_claude(workdir, run, plan, log_fn, shell):
@@ -39387,12 +39410,22 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
                 log_fn('implement', f'  SKIPPED (patch target does not exist): {path}', level='warning')
                 continue
 
+            # Pre-read size check: fail fast for oversized files
+            file_size = os.path.getsize(abs_path)
+            if file_size > _MAX_EDIT_FILE_SIZE:
+                raise CodeJobFileTooLargeError(
+                    f'{path} is {file_size:,} bytes (limit: {_MAX_EDIT_FILE_SIZE:,}). '
+                    f'Split the file or target a smaller module.',
+                    path=path, size=file_size, limit=_MAX_EDIT_FILE_SIZE,
+                )
+
             with open(abs_path, 'r') as f:
                 file_text = f.read()
 
             original_text = file_text
             edit_count = 0
-            for edit in edits:
+            anchor_failures = []
+            for edit_idx, edit in enumerate(edits):
                 search = edit.get('search', '')
                 replace = edit.get('replace', '')
                 if not search:
@@ -39413,14 +39446,34 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
                         file_text = file_text.replace(orig_section, replace, 1)
                         edit_count += 1
                     else:
-                        log_fn('implement', f'  WARN: search text not found in {path} (edit #{edit_count + 1})', level='warning')
-                        log_fn('implement', f'  Search preview: {search[:100]}', level='warning')
+                        anchor_failures.append({
+                            'edit_index': edit_idx,
+                            'search_preview': search[:120],
+                            'path': path,
+                            'file_size': file_size,
+                        })
+                        log_fn('implement', f'  ANCHOR NOT FOUND in {path} (edit #{edit_idx + 1}): {search[:100]}', level='warning')
                 else:
                     occurrences = file_text.count(search)
                     if occurrences > 1:
                         log_fn('implement', f'  WARN: search text matches {occurrences}x in {path}, replacing first', level='warning')
                     file_text = file_text.replace(search, replace, 1)
                     edit_count += 1
+
+            # If ANY edits failed for this file, raise anchor error
+            # (fail deterministically — no partial patch application)
+            if anchor_failures:
+                detail = '; '.join(
+                    f'edit #{f["edit_index"]+1}: "{f["search_preview"]}"'
+                    for f in anchor_failures[:3]
+                )
+                raise CodeJobAnchorNotFoundError(
+                    f'{len(anchor_failures)}/{len(edits)} edit(s) failed for {path} ({file_size:,} bytes). '
+                    f'Search text not found: {detail}',
+                    path=path, file_size=file_size,
+                    failed_edits=anchor_failures,
+                    edits_succeeded=edit_count,
+                )
 
             if file_text != original_text and edit_count > 0:
                 size_delta = len(file_text) - len(original_text)
@@ -39438,8 +39491,11 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
         elif action in ('create', 'overwrite'):
             content = change.get('content', '')
             if len(content) > _MAX_FILE_SIZE:
-                log_fn('implement', f'  BLOCKED (too large: {len(content)} bytes): {path}', level='warning')
-                continue
+                raise CodeJobFileTooLargeError(
+                    f'Content for {path} is {len(content):,} bytes (limit: {_MAX_FILE_SIZE:,}). '
+                    f'Split into smaller files.',
+                    path=path, size=len(content), limit=_MAX_FILE_SIZE,
+                )
             if total_written + len(content) > _MAX_TOTAL_SIZE:
                 log_fn('implement', f'  BLOCKED (total write budget exceeded): {path}', level='warning')
                 continue
@@ -39862,8 +39918,13 @@ def execute_code_job(self, run_id: str):
         log('error', f'Job failed: {e}', level='error')
         is_infra = isinstance(e, (RuntimeError, OSError, subprocess.TimeoutExpired))
         err_str = str(e)
-        reason = 'TIMEOUT' if isinstance(e, subprocess.TimeoutExpired) else 'INTERNAL_EXCEPTION'
-        if 'Clone failed' in err_str:
+
+        # Map typed CodeJob exceptions directly to their error code
+        if isinstance(e, CodeJobError):
+            reason = e.code
+        elif isinstance(e, subprocess.TimeoutExpired):
+            reason = 'TIMEOUT'
+        elif 'Clone failed' in err_str:
             reason = 'CLONE_FAILED'
         elif 'Push failed' in err_str:
             reason = 'PUSH_FAILED'
@@ -39875,6 +39936,8 @@ def execute_code_job(self, run_id: str):
             reason = 'IMPLEMENT_FAILED'
         elif 'LLM_NO_OUTPUT' in err_str:
             reason = 'LLM_NO_OUTPUT'
+        else:
+            reason = 'INTERNAL_EXCEPTION'
         run.fail(
             error=str(e),
             reason_code=reason,
