@@ -14314,7 +14314,8 @@ def process_research_feedback(feedback_id: str):
 
     try:
         bridge = get_project_research_bridge()
-        result = bridge.apply_feedback(feedback_id)
+        from uuid import UUID as _UUID
+        result = bridge.apply_feedback(_UUID(feedback_id) if isinstance(feedback_id, str) else feedback_id)
 
         if result.get('status') == 'applied':
             logger.info(
@@ -14459,8 +14460,8 @@ def run_single_project_learning(project_id: str):
         for topic in topics[:3]:  # Limit to 3 topics
             try:
                 search_service.refresh_spiders_for_query(topic)
-                results = search_service.unified_search(topic, limit=10)
-                spider_data.extend(results.get('results', []))
+                results = search_service.unified_search(topic, spider_limit=10, research_limit=5)
+                spider_data.extend(results)
             except Exception as e:
                 logger.warning(f"🧠 [SESSION 354] Spider refresh failed for '{topic}': {e}")
 
@@ -18123,10 +18124,10 @@ def _send_narrative_alerts_to_discord(alerts: list):
         service = DiscordNotificationService()
 
         for alert in alerts:
-            service.send_notification(
-                channel='narrative-alerts',
+            service.send_embed(
+                channel_name='narrative-alerts',
                 title=alert.get('title', 'Narrative Alert'),
-                message=alert.get('summary', 'A narrative event was detected'),
+                description=alert.get('summary', 'A narrative event was detected'),
                 color=0x9B59B6  # Purple for narrative alerts
             )
 
@@ -18166,10 +18167,10 @@ def _send_narrative_digest_to_discord(stats: dict):
             for shift in stats['recent_shifts']:
                 message_parts.append(f"  • {shift['old']} → {shift['new']}")
 
-        service.send_notification(
-            channel='narrative-alerts',
+        service.send_embed(
+            channel_name='narrative-alerts',
             title="📰 Daily Narrative Digest",
-            message="\n".join(message_parts),
+            description="\n".join(message_parts),
             color=0x3498DB  # Blue for digest
         )
 
@@ -22637,16 +22638,16 @@ def scan_concerns_for_human_action():
 
             # Optionally notify via Discord for urgent concerns
             try:
-                from core.services.discord_notifications import get_discord_service
-                discord = get_discord_service()
+                from core.services.discord_notifications import DiscordNotificationService
+                discord = DiscordNotificationService()
 
                 for concern in result.get('concerns', []):
                     if concern.get('severity') in ['critical', 'high']:
-                        discord.send_notification(
-                            channel='system-status',
+                        discord.send_embed(
+                            channel_name='system-status',
                             title='⚠️ Human Action Required',
-                            message=f"**{concern['severity'].upper()}**: {concern['text'][:100]}...\n\n"
-                                   f"[Review in AI Studio](http://localhost:8000/ai-studio/#research-concerns)",
+                            description=f"**{concern['severity'].upper()}**: {concern['text'][:100]}...\n\n"
+                                       f"[Review in AI Studio](http://localhost:8000/ai-studio/#research-concerns)",
                             color='#dc2626'  # Red
                         )
             except Exception as e:
