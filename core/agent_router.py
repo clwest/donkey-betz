@@ -1759,7 +1759,11 @@ class AgentRouter:
             query_vec = service.get_embedding_sync(task[:500])
 
             from pgvector.django import CosineDistance
-            results = DocumentEmbedding.objects.annotate(
+            results = DocumentEmbedding.objects.filter(
+                document__file_path__isnull=False,
+            ).exclude(
+                document__file_path='',
+            ).annotate(
                 distance=CosineDistance('embedding_vector', query_vec)
             ).filter(
                 document__owner=self.user,
