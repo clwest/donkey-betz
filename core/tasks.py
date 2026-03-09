@@ -16726,7 +16726,7 @@ def check_market_events_and_rerun():
         # 1. Check for large price movements
         for ticker in watchlist:
             try:
-                current_price = market_service.get_current_price(ticker)
+                current_price = market_service.get_stock_details(ticker)
                 if current_price:
                     price_change_pct = current_price.get('change_percent', 0)
                     if abs(price_change_pct) >= 5.0:
