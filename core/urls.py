@@ -1549,6 +1549,7 @@ from core.views_project_intelligence import (
 )
 
 urlpatterns = [
+    path('health/', lambda request: __import__('django.http', fromlist=['JsonResponse']).JsonResponse({'status': 'ok', 'sha': 'a932294d', 'mode': 'search-replace-v2'}), name='health-check'),
     # UNIFIED FRONTEND - Primary routing (Session 31: Consolidated to root routes)
     # Removed duplicate /v2/ namespace - see docs/debugging-sessions/SESSION_31_URL_CONSOLIDATION_PLAN.md
     path('', include('core.urls_unified')),  # Unified platform URLs
