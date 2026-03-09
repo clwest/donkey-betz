@@ -39245,9 +39245,56 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
                 continue
             raise RuntimeError('Claude returned no file changes (LLM_NO_OUTPUT)')
 
-        # Validate changes
+        # Validate changes schema
         validation_errors = []
         changes = tool_input['changes']
+
+        # Guard: changes must be a list of dicts
+        if isinstance(changes, str):
+            log_fn('implement', f'INVALID_CHANGES_SCHEMA: "changes" is a string ({len(changes)} chars), expected list[dict]. Preview: {changes[:200]}', level='warning')
+            if attempts < max_attempts:
+                messages.append({'role': 'assistant', 'content': response.content})  # type: ignore[dict-item]
+                messages.append({
+                    'role': 'user',
+                    'content': '"changes" must be a JSON array of objects, not a string. '
+                               'Each object needs: {"path": "...", "action": "create|patch|delete", "content": "..."}. '
+                               'Please call apply_file_changes again with the correct schema.',
+                })
+                tool_input = None
+                continue
+            raise RuntimeError(
+                f'INVALID_CHANGES_SCHEMA: "changes" is a string after {attempts} attempts. '
+                f'Preview: {changes[:200]}'
+            )
+
+        if not isinstance(changes, list):
+            raise RuntimeError(
+                f'INVALID_CHANGES_SCHEMA: "changes" is {type(changes).__name__}, expected list. '
+                f'Value: {str(changes)[:200]}'
+            )
+
+        # Validate every element is a dict
+        bad_items = [
+            (i, type(c).__name__, str(c)[:80])
+            for i, c in enumerate(changes)
+            if not isinstance(c, dict)
+        ]
+        if bad_items:
+            detail = '; '.join(f'[{i}] type={t} val={v}' for i, t, v in bad_items[:5])
+            log_fn('implement', f'INVALID_CHANGE_ITEM: {len(bad_items)} non-dict item(s) in changes: {detail}', level='warning')
+            if attempts < max_attempts:
+                messages.append({'role': 'assistant', 'content': response.content})  # type: ignore[dict-item]
+                messages.append({
+                    'role': 'user',
+                    'content': f'Each element in "changes" must be an object with path/action/content keys. '
+                               f'Found {len(bad_items)} invalid item(s): {detail}. '
+                               f'Please call apply_file_changes again with the correct schema.',
+                })
+                tool_input = None
+                continue
+            raise RuntimeError(
+                f'INVALID_CHANGE_ITEM: {len(bad_items)} non-dict item(s) after {attempts} attempts: {detail}'
+            )
 
         if len(changes) > max_patch_files:
             validation_errors.append(f'Too many files: {len(changes)} > {max_patch_files}')
@@ -39814,11 +39861,20 @@ def execute_code_job(self, run_id: str):
         logger.exception('[CodeWorker] Run %s failed: %s', run_id, e)
         log('error', f'Job failed: {e}', level='error')
         is_infra = isinstance(e, (RuntimeError, OSError, subprocess.TimeoutExpired))
+        err_str = str(e)
         reason = 'TIMEOUT' if isinstance(e, subprocess.TimeoutExpired) else 'INTERNAL_EXCEPTION'
-        if 'Clone failed' in str(e):
+        if 'Clone failed' in err_str:
             reason = 'CLONE_FAILED'
-        elif 'Push failed' in str(e):
+        elif 'Push failed' in err_str:
             reason = 'PUSH_FAILED'
+        elif 'INVALID_CHANGES_SCHEMA' in err_str:
+            reason = 'INVALID_CHANGES_SCHEMA'
+        elif 'INVALID_CHANGE_ITEM' in err_str:
+            reason = 'INVALID_CHANGE_ITEM'
+        elif 'IMPLEMENT_FAILED' in err_str:
+            reason = 'IMPLEMENT_FAILED'
+        elif 'LLM_NO_OUTPUT' in err_str:
+            reason = 'LLM_NO_OUTPUT'
         run.fail(
             error=str(e),
             reason_code=reason,
