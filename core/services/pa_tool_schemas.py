@@ -3248,6 +3248,82 @@ PA_TOOL_SCHEMAS = [
             "required": ["action"],
         },
     },
+
+    # ── Remote Code Worker ────────────────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "code_job_tool",
+        "description": (
+            "Submit, monitor, and manage remote code jobs. "
+            "A code job clones a repo, implements changes via AI, runs tests, "
+            "pushes a branch, and opens a PR. Supports dry_run mode (no git ops). "
+            "Use when Chris asks to submit a coding task, check job progress, "
+            "view job logs, cancel a job, or list past code jobs."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["submit", "status", "logs", "cancel", "list"],
+                    "description": (
+                        "submit: create a new code job for a repo. "
+                        "status: check progress and results of a job. "
+                        "logs: stream log lines from a running or completed job. "
+                        "cancel: cancel a running job. "
+                        "list: list recent code jobs with optional filters."
+                    ),
+                },
+                "repo_slug": {
+                    "type": "string",
+                    "description": "Repository slug (e.g. 'donkeyking/unified-donkey-betz'). Required for submit.",
+                },
+                "task_prompt": {
+                    "type": "string",
+                    "description": "Description of the coding task to implement. Required for submit.",
+                },
+                "mode": {
+                    "type": "string",
+                    "enum": ["dry_run", "real"],
+                    "description": "Execution mode: dry_run (no git ops, default) or real (full pipeline with push+PR).",
+                },
+                "ref": {
+                    "type": "string",
+                    "description": "Branch to clone from (default: repo default branch). Used with submit.",
+                },
+                "base_branch": {
+                    "type": "string",
+                    "description": "Branch to target for PR (default: repo default branch). Used with submit.",
+                },
+                "acceptance_criteria": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of acceptance criteria the implementation must meet. Used with submit.",
+                },
+                "test_command": {
+                    "type": "string",
+                    "description": "Override test command (must be in allowlist). Used with submit.",
+                },
+                "job_id": {
+                    "type": "string",
+                    "description": "Job UUID. Required for status, logs, cancel.",
+                },
+                "after_sequence": {
+                    "type": "integer",
+                    "description": "Return log lines after this sequence number (cursor pagination). Used with logs.",
+                },
+                "status_filter": {
+                    "type": "string",
+                    "description": "Filter jobs by status (e.g. 'running', 'succeeded'). Used with list.",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max results to return (default 20). Used with list and logs.",
+                },
+            },
+            "required": ["action"],
+        },
+    },
 ]
 
 # ── Startup validation: every tool must have name, description, parameters ──
@@ -3354,6 +3430,7 @@ TOOL_ENRICHMENT_MAP = {
     'profile_tool': [],
     'self_awareness_tool': [],
     'ats_tool': [],
+    'code_job_tool': [],
 }
 
 # Reverse map: tool name -> canonical intent name for enrichment pipeline
@@ -3451,6 +3528,7 @@ TOOL_TO_INTENT_MAP = {
     'profile_tool': 'user_profile',
     'self_awareness_tool': 'system_overview',
     'ats_tool': 'opportunities',
+    'code_job_tool': 'codebase',
 }
 
 

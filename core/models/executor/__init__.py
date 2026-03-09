@@ -1,1 +1,1 @@
-from .models import ExecutionRun, Repo  # noqa: F401
+from .models import ExecutionRun, Repo, CodeJobLog  # noqa: F401

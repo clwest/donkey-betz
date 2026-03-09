@@ -18,4 +18,5 @@ celery-content: celery -A core worker -l info --pool=prefork -c 1 --max-tasks-pe
 celery-long-running: celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=3 --max-memory-per-child=250000 -Q long_running,ml
 celery-broadcast: celery -A core worker -l info --pool=threads -c 3 --max-tasks-per-child=50 --max-memory-per-child=200000 -Q broadcast
 celery-beat: celery -A core beat -l info
+code-worker: celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=1 --max-memory-per-child=400000 -Q code_jobs
 resolve-node: cd resolve_node && MOCK_MODE=true uvicorn app:app --host 0.0.0.0 --port ${PORT:-5001}
