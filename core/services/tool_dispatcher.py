@@ -16241,10 +16241,16 @@ RESEARCH DATA:
             run.save(update_fields=['celery_task_id'])
         except Exception as e:
             logger.warning('Could not dispatch code job: %s', e)
+        job_id = str(run.id)
         return {
-            'submitted': True, 'job_id': str(run.id), 'status': 'queued',
+            'submitted': True, 'job_id': job_id, 'status': 'queued',
             'mode': mode, 'working_branch': run.working_branch,
             'repo': repo_slug, 'task_prompt': task_prompt[:200],
+            'next_commands': [
+                f'code_job_tool(action="status", job_id="{job_id}")',
+                f'code_job_tool(action="logs", job_id="{job_id}", after_sequence=0)',
+                f'code_job_tool(action="cancel", job_id="{job_id}")',
+            ],
         }
 
     def _code_job_status(self, payload, user_id):
@@ -16319,7 +16325,7 @@ RESEARCH DATA:
         qs = ExecutionRun.objects.filter(
             plan_json__version='code_worker_v1',
         ).select_related('repo').order_by('-created_at')
-        status = payload.get('status')
+        status = payload.get('status') or payload.get('status_filter')
         if status:
             qs = qs.filter(status=status)
         limit = min(int(payload.get('limit', 10)), 50)
@@ -16327,7 +16333,7 @@ RESEARCH DATA:
         return {
             'total': qs.count(),
             'jobs': [{
-                'id': str(r.id), 'status': r.status,
+                'job_id': str(r.id), 'status': r.status,
                 'task': r.plan_summary[:80] if r.plan_summary else '',
                 'branch': r.working_branch, 'pr_url': r.pr_url or None,
                 'created': r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '',
