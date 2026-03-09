@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-03-09 00:02
+**Generated:** 2026-03-09 09:41
 **Current Session:** 1077
 **Total Documentation:** 1820 files | 622,504 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,202 |
+| Total cross-references | 2,200 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/SYSTEM_CAPABILITIES-original/06_Decision_Systems/README.md` | 60 | 🎯 DECISION COMMAND SYSTEMS - AI-Powered Decision I |
+| `docs/archive/SYSTEM_CAPABILITIES-original/README.md` | 59 | 🚀 UNIFIED DONKEY BETZ - SYSTEM CAPABILITIES DOCUME |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -155,7 +155,7 @@
 | [FRONTEND_BACKEND_DATA_FLOW_AUDIT.md](FRONTEND_BACKEND_DATA_FLOW_AUDIT.md) | 402 | 2026-02-15 |
 | [FRONTEND_INTEGRATION_NOTE.md](FRONTEND_INTEGRATION_NOTE.md) | 128 | 2026-01-21 |
 | [GOLDEN_GOOSE_STRATEGY.md](GOLDEN_GOOSE_STRATEGY.md) | 751 | 2026-01-21 |
-| [INDEX.md](INDEX.md) | 361 | 2026-03-08 |
+| [INDEX.md](INDEX.md) | 361 | 2026-03-09 |
 | [INTELLIGENCE_SYSTEMS.md](INTELLIGENCE_SYSTEMS.md) | 530 | 2026-01-21 |
 | [KNOWLEDGE_PIPELINE.md](KNOWLEDGE_PIPELINE.md) | 475 | 2026-01-21 |
 | [LEGAL_ASSISTANT.md](LEGAL_ASSISTANT.md) | 442 | 2026-01-21 |
@@ -217,7 +217,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 361 | 2026-03-08 21:33 |
+| INDEX.md | docs | 361 | 2026-03-09 07:19 |
 | remote-code-worker-contract.md | designs | 411 | 2026-03-08 21:33 |
 | personal-assistant.md | topics | 139 | 2026-03-05 07:03 |
 | video-upload.md | topics | 101 | 2026-03-04 13:08 |
