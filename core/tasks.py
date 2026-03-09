@@ -39035,6 +39035,7 @@ def execute_code_job(self, run_id: str):
     import subprocess
     import tempfile
     import urllib.request
+    import urllib.error
     import json as json_mod
 
     github_token = os.environ.get('GITHUB_TOKEN', '')
