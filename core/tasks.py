@@ -34790,7 +34790,7 @@ def poll_processing_videos():
     logger.info("🎬 [VIDEO POLL] Checking processing videos...")
 
     # Get videos stuck in processing (older than 1 minute to avoid race conditions)
-    cutoff_time = timezone.now() - timezone.timedelta(minutes=1)
+    cutoff_time = timezone.now() - timedelta(minutes=1)
     stuck_videos = VideoHistory.objects.filter(
         status='processing',
         created_at__lt=cutoff_time
@@ -35676,7 +35676,7 @@ def cleanup_expired_signals(self):
     # Also decay old 'detecting' clusters that never became active
     stale_clusters = SignalCluster.objects.filter(
         status='detecting',
-        detected_at__lt=now - timezone.timedelta(days=2)
+        detected_at__lt=now - timedelta(days=2)
     )
     stale_count = stale_clusters.update(status='decayed')
 
@@ -37688,7 +37688,7 @@ def enforce_data_retention():
     stats = {'deliverables_archived': 0, 'documents_archived': 0}
 
     for sensitivity, max_days in _RETENTION_DAYS.items():
-        cutoff = now - timezone.timedelta(days=max_days)
+        cutoff = now - timedelta(days=max_days)
 
         # Archive old deliverables (skip pinned)
         d_count = Deliverable.objects.filter(
