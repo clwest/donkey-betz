@@ -1038,6 +1038,16 @@ def get_pa_conversation(request, conversation_id):
         ).order_by('created_at')
 
         if not rows.exists():
+            # Session 1089: New conversations have no DB rows until first message.
+            # Frontend polling hits this immediately after create — return empty
+            # conversation instead of 404 to avoid console errors.
+            if conversation_id.startswith('pa-'):
+                return Response({
+                    'success': True,
+                    'conversation_id': conversation_id,
+                    'title': 'New Conversation',
+                    'messages': [],
+                })
             return Response({
                 'success': False,
                 'error': 'Conversation not found',
