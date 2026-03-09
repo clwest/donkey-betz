@@ -16139,10 +16139,14 @@ def generate_ai_series(self, series_id: str):
                         f"🎬 [SESSION 452] A/B test style '{ab_test_style['style_preset']}' "
                         f"assigned to series {series_id}"
                     )
-                    # Store experiment info on series for feedback tracking
-                    series.ab_experiment_id = ab_test_style['experiment_id']
-                    series.ab_variant_id = ab_test_style['variant_id']
-                    series.save(update_fields=['ab_experiment_id', 'ab_variant_id'] if hasattr(series, 'ab_experiment_id') else [])
+                    # Store experiment info in style_config (AISeries has no ab_ fields)
+                    series.style_config = {
+                        **series.style_config,
+                        'ab_experiment_id': ab_test_style['experiment_id'],
+                        'ab_variant_id': ab_test_style['variant_id'],
+                        'style_preset': ab_test_style['style_preset'],
+                    }
+                    series.save(update_fields=['style_config'])
         except Exception as ab_err:
             logger.warning(f"A/B test lookup skipped: {ab_err}")
 
@@ -16193,7 +16197,10 @@ Each episode should have: title, synopsis, images, script, voiceover, and video.
                 if 'character_config' in result.data:
                     series.character_config = result.data['character_config']
                 if 'episodes' in result.data:
-                    series.episode_data = result.data.get('episodes', [])
+                    series.story_arc = {
+                        **series.story_arc,
+                        'generated_episodes': result.data.get('episodes', []),
+                    }
                 series.save()
 
             # Complete the series
@@ -17336,7 +17343,7 @@ Make it conversational and engaging. Use natural speech patterns."""
                 messages=[{"role": "user", "content": script_prompt}],
                 max_tokens=2000
             )
-            actual_script = response.choices[0].message.content
+            actual_script = response.choices[0].message.content or ''
             logger.info(f"🎥 [SESSION 636] Generated podcast script: {len(actual_script)} chars")
 
         except Exception as script_error:
@@ -17484,7 +17491,7 @@ def track_content_performance():
                 # etc.
 
                 # For MVP, we'll just mark as updated
-                episode.last_metrics_update = timezone.now()
+                episode.updated_at = timezone.now()
 
                 # Calculate performance score (0-100 based on views, retention, engagement)
                 # Higher views = better, higher retention = better
@@ -18340,7 +18347,7 @@ def trigger_content_from_narrative_shift(shift_id: str):
                 metadata={
                     'old_narrative': old_title,
                     'new_narrative': new_title,
-                    'shift_type': shift.shift_type,
+                    'shift_type': shift.domain,
                 }
             )
 
@@ -21681,12 +21688,10 @@ What does it reveal about the nature of intelligence, creativity, or technology?
                 blog_topic = picked.topic or 'AI Collaboration and Discovery'
                 initiator = picked.initiator.name if picked.initiator else 'AI Agent'
 
-                # Get conversation messages if available
+                # Get conversation conclusion if available
                 messages_preview = ""
-                if picked.messages:
-                    for msg in picked.messages[:3]:
-                        if isinstance(msg, dict):
-                            messages_preview += f"- {msg.get('agent', 'Agent')}: {msg.get('content', '')[:100]}...\n"
+                if picked.conclusion:
+                    messages_preview = f"- Conclusion: {picked.conclusion[:300]}...\n"
 
                 blog_research = f"""
 # Topic: {blog_topic}
@@ -22648,7 +22653,7 @@ def scan_concerns_for_human_action():
                             title='⚠️ Human Action Required',
                             description=f"**{concern['severity'].upper()}**: {concern['text'][:100]}...\n\n"
                                        f"[Review in AI Studio](http://localhost:8000/ai-studio/#research-concerns)",
-                            color='#dc2626'  # Red
+                            color=0xdc2626  # Red
                         )
             except Exception as e:
                 logger.warning(f"Discord notification failed: {e}")
@@ -27476,7 +27481,7 @@ def daily_cost_forecast():
         try:
             from core.services.discord_notifications import DiscordNotificationService
             service = DiscordNotificationService()
-            service.send_system_status('\n'.join(forecast_message), color=0x3498DB)
+            service.send_to_channel('system-status', '\n'.join(forecast_message))
         except Exception as discord_error:
             logger.warning(f"🫁 [LUNGS] Discord post failed: {discord_error}")
 
