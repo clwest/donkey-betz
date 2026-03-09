@@ -1705,7 +1705,7 @@ def run_autonomy_cycle(user_id: int = None):
 # ==================== SESSION 811: CONVERSATION ACTION EXECUTION ====================
 
 
-@shared_task(bind=True, max_retries=2, default_retry_delay=60, soft_time_limit=3600, time_limit=3900)
+@shared_task(bind=True, max_retries=0, default_retry_delay=60, soft_time_limit=3600, time_limit=3900)
 def execute_agent_task(
     self,
     agent_name: str,
@@ -2431,7 +2431,7 @@ def create_talking_video_task(
 # ==================== SESSION 884: INITIATIVE STAGE EXECUTION ====================
 
 
-@shared_task(bind=True, max_retries=2, default_retry_delay=60, soft_time_limit=3600, time_limit=3900)
+@shared_task(bind=True, max_retries=0, default_retry_delay=60, soft_time_limit=3600, time_limit=3900)
 def execute_initiative_stage_task(
     self,
     initiative_id: str,
