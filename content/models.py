@@ -874,7 +874,13 @@ class DocumentEmbedding(UnifiedBaseModel):
         from pgvector.django import CosineDistance
 
         # Calculate cosine distance (1 - similarity) and filter/order
-        return cls.objects.annotate(
+        # Exclude orphan chunks whose parent Document has no file_path
+        # (e.g. "Agent Activity Knowledge Base" entries that pollute results)
+        return cls.objects.filter(
+            document__file_path__isnull=False,
+        ).exclude(
+            document__file_path='',
+        ).annotate(
             distance=CosineDistance('embedding_vector', query_vector)
         ).filter(
             distance__lt=(1 - min_similarity)  # Convert similarity to distance threshold
@@ -898,7 +904,11 @@ class DocumentEmbedding(UnifiedBaseModel):
 
         from pgvector.django import L2Distance
 
-        qs = cls.objects.annotate(
+        qs = cls.objects.filter(
+            document__file_path__isnull=False,
+        ).exclude(
+            document__file_path='',
+        ).annotate(
             distance=L2Distance('embedding_vector', query_vector)
         ).order_by('distance')
 
