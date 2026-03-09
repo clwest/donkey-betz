@@ -141,7 +141,7 @@ class AgentModelRouter:
                     'custom_params': config.custom_params or {},
                     'use_fallback': config.use_fallback,
                     'fallback_model': config.fallback_model,
-                    'config_id': config.id,
+                    'config_id': str(config.id),
                 }
                 self._config_cache[agent_name] = result
                 self._cache_time[agent_name] = now
