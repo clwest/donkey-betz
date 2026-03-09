@@ -39131,10 +39131,23 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
     system_prompt = (
         'You are a senior software engineer implementing code changes in a repository. '
         'You MUST respond with exactly one tool call to `apply_file_changes` and no other text. '
-        'Output complete file contents for any file you create or modify — no diffs, no patches. '
         'Be precise, minimal, and production-ready. Do not add unnecessary comments or TODOs. '
         f'You may modify at most {max_patch_files} files. '
-        'Keep commit messages under 72 characters.'
+        'Keep commit messages under 72 characters.\n\n'
+        'CRITICAL rules for file changes:\n'
+        '- Use "create" ONLY for brand new files. Provide complete file content.\n'
+        '- Use "patch" for modifying EXISTING files. Provide a unified diff format:\n'
+        '  --- a/path/to/file\n'
+        '  +++ b/path/to/file\n'
+        '  @@ -line,count +line,count @@\n'
+        '   context line\n'
+        '  -removed line\n'
+        '  +added line\n'
+        '  Include at least 3 lines of unchanged context around each change. '
+        'This is MANDATORY for existing files — NEVER use "create" on files already in the repo, '
+        'as that replaces the ENTIRE file, destroying existing code.\n'
+        '- Use "delete" to remove files.\n'
+        '- Minimize changes. Only modify what is strictly necessary for the task.'
     )
     if path_filters:
         system_prompt += f'\n\nScope: Only modify files under these paths: {path_filters}'
@@ -39148,7 +39161,7 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
     # 3. Define tool
     file_changes_tool = {
         'name': 'apply_file_changes',
-        'description': 'Apply file changes to implement the task. Provide complete file contents for create/overwrite.',
+        'description': 'Apply file changes to implement the task.',
         'input_schema': {
             'type': 'object',
             'required': ['changes', 'commit_message'],
@@ -39165,11 +39178,12 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
                             },
                             'action': {
                                 'type': 'string',
-                                'enum': ['create', 'overwrite', 'delete'],
+                                'enum': ['create', 'patch', 'delete'],
+                                'description': 'create=new file (full content), patch=edit existing file (unified diff), delete=remove file',
                             },
                             'content': {
                                 'type': 'string',
-                                'description': 'Complete file content (required for create/overwrite)',
+                                'description': 'For create: complete file content. For patch: unified diff (git diff format with @@ hunks and context lines).',
                             },
                         },
                     },
@@ -39291,6 +39305,50 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
                 os.remove(abs_path)
                 log_fn('implement', f'  Deleted: {path}')
                 files_changed.append(path)
+        elif action == 'patch':
+            # Apply a unified diff to an existing file via git apply
+            diff_content = change.get('content', '')
+            if not diff_content.strip():
+                log_fn('implement', f'  SKIPPED (empty patch): {path}', level='warning')
+                continue
+            if not os.path.exists(abs_path):
+                log_fn('implement', f'  SKIPPED (patch target does not exist): {path}', level='warning')
+                continue
+
+            import tempfile as _tempfile
+            with _tempfile.NamedTemporaryFile(
+                mode='w', suffix='.patch', dir=workdir, delete=False
+            ) as pf:
+                pf.write(diff_content)
+                patch_path = pf.name
+
+            try:
+                # Try git apply first (handles unified diffs well)
+                result = shell(
+                    f'git apply --check "{patch_path}"',
+                    cwd=workdir,
+                )
+                if result.returncode != 0:
+                    # Try with --3way for fuzzy matching
+                    result = shell(
+                        f'git apply --3way "{patch_path}"',
+                        cwd=workdir,
+                    )
+                    if result.returncode != 0:
+                        log_fn('implement', f'  FAILED to apply patch: {path}', level='warning')
+                        log_fn('implement', f'  stderr: {result.stderr[:500]}', level='warning')
+                        continue
+                    else:
+                        log_fn('implement', f'  Patched (3way): {path}')
+                        files_changed.append(path)
+                else:
+                    # Check passed, now actually apply
+                    shell(f'git apply "{patch_path}"', cwd=workdir)
+                    log_fn('implement', f'  Patched: {path}')
+                    files_changed.append(path)
+            finally:
+                os.unlink(patch_path)
+
         elif action in ('create', 'overwrite'):
             content = change.get('content', '')
             if len(content) > _MAX_FILE_SIZE:
