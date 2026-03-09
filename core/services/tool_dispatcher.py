@@ -11093,7 +11093,7 @@ RESEARCH DATA:
                         'game': str(p.game) if p.game else None,
                         'predicted_winner': str(p.predicted_winner) if p.predicted_winner else None,
                         'confidence': p.confidence if hasattr(p, 'confidence') else None,
-                        'correct': p.correct if hasattr(p, 'correct') else None,
+                        'correct': p.was_correct if hasattr(p, 'was_correct') else None,
                         'created_at': p.created_at.isoformat() if hasattr(p, 'created_at') and p.created_at else None,
                     } for p in preds],
                 })
@@ -11113,7 +11113,7 @@ RESEARCH DATA:
                         'id': str(c.id),
                         'name': c.name,
                         'pattern_type': c.pattern_type,
-                        'signal_count': c.signal_count if hasattr(c, 'signal_count') else None,
+                        'signal_count': len(c.spider_data_ids) if c.spider_data_ids else 0,
                         'confidence': c.confidence if hasattr(c, 'confidence') else None,
                         'detected_at': c.detected_at.isoformat() if c.detected_at else None,
                     } for c in clusters],
@@ -12085,9 +12085,8 @@ RESEARCH DATA:
                     'category': sig.category,
                     'provider': sig.provider or '',
                     'description': sig.description[:200] if sig.description else '',
-                    'window_count': sig.window_count,
                     'total_count': sig.occurrence_count,
-                    'last_seen': sig.last_detection.isoformat() if sig.last_detection else '',
+                    'last_seen': sig.last_seen_at.isoformat() if sig.last_seen_at else '',
                     'status': sig.status,
                     'samples': samples,
                 })
