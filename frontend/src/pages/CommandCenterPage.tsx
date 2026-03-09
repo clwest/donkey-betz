@@ -7,7 +7,7 @@
  * - Sidebar: 4 tabs - Context, Attention, Controls, Learning (30%)
  */
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
@@ -619,10 +619,11 @@ export default function CommandCenterPage() {
   const fetchConversations = usePAStore((s) => s.fetchConversations)
 
   // Adapt store messages to local Message type (timestamps are ISO strings in store)
-  const messages: Message[] = paMessages.map((m) => ({
-    ...m,
-    timestamp: new Date(m.timestamp),
-  }))
+  // Memoized to avoid creating new array + Date objects on every keystroke
+  const messages: Message[] = useMemo(
+    () => paMessages.map((m) => ({ ...m, timestamp: new Date(m.timestamp) })),
+    [paMessages],
+  )
 
   // Chat state
   const [input, setInput] = useState(initialMessage)
