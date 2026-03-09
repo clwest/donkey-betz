@@ -39304,21 +39304,33 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
         elif action == 'patch':
             # Apply search-replace edits to an existing file
             raw_content = change.get('content', '')
-            if not raw_content.strip():
-                log_fn('implement', f'  SKIPPED (empty patch): {path}', level='warning')
+
+            # Claude may return content as a list (parsed JSON) or a string
+            if isinstance(raw_content, list):
+                edits = raw_content
+            elif isinstance(raw_content, dict):
+                edits = [raw_content]
+            elif isinstance(raw_content, str):
+                if not raw_content.strip():
+                    log_fn('implement', f'  SKIPPED (empty patch): {path}', level='warning')
+                    continue
+                try:
+                    edits = json_mod.loads(raw_content)
+                    if not isinstance(edits, list):
+                        edits = [edits]
+                except (json_mod.JSONDecodeError, TypeError):
+                    log_fn('implement', f'  FAILED (content is not valid JSON): {path}', level='warning')
+                    log_fn('implement', f'  Raw content preview: {raw_content[:200]}', level='warning')
+                    continue
+            else:
+                log_fn('implement', f'  FAILED (unexpected content type {type(raw_content).__name__}): {path}', level='warning')
+                continue
+
+            if not edits:
+                log_fn('implement', f'  SKIPPED (no edits): {path}', level='warning')
                 continue
             if not os.path.exists(abs_path):
                 log_fn('implement', f'  SKIPPED (patch target does not exist): {path}', level='warning')
-                continue
-
-            # Parse the search-replace edits
-            try:
-                edits = json_mod.loads(raw_content)
-                if not isinstance(edits, list):
-                    edits = [edits]
-            except (json_mod.JSONDecodeError, TypeError):
-                log_fn('implement', f'  FAILED (content is not valid JSON): {path}', level='warning')
-                log_fn('implement', f'  Raw content preview: {raw_content[:200]}', level='warning')
                 continue
 
             with open(abs_path, 'r') as f:
