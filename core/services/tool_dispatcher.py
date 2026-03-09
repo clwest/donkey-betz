@@ -10799,7 +10799,7 @@ RESEARCH DATA:
                 'count': UserMemoryContext.objects.filter(user=user).count(),
                 'memories': [
                     {
-                        'id': m.id,
+                        'id': str(m.id),
                         'type': m.memory_type,
                         'content': m.content[:200],
                         'importance': m.importance,
@@ -10838,7 +10838,7 @@ RESEARCH DATA:
                 'count': len(results),
                 'memories': [
                     {
-                        'id': m.id,
+                        'id': str(m.id),
                         'type': m.memory_type,
                         'content': m.content[:200],
                         'importance': m.importance,

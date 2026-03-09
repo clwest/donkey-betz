@@ -331,9 +331,9 @@ class AdvisorContextBuilder:
             for domain in domains:
                 domain_advisors = self.advisor_registry.list_advisors()
                 for advisor in domain_advisors:
-                    if advisor.domain.value == domain and advisor.id not in [a['id'] for a in advisors_to_use]:
+                    if str(advisor.id) not in [a['id'] for a in advisors_to_use] and advisor.domain.value == domain:
                         advisors_to_use.append({
-                            'id': advisor.id,
+                            'id': str(advisor.id),
                             'advisor': advisor,
                             'source': 'domain_match',
                             'relevance': 1.0
@@ -473,7 +473,7 @@ class AdvisorContextBuilder:
             if best:
                 wisdom = self.ADVISOR_WISDOM.get(best.id, {})
                 return {
-                    'id': best.id,
+                    'id': str(best.id),
                     'name': best.name,
                     'title': best.title,
                     'key_principles': wisdom.get('key_principles', [])[:3],
