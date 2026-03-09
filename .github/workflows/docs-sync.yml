@@ -1,0 +1,41 @@
+name: docs-index-sync
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'CLAUDE.md'
+      - '00-START-NEXT-SESSION.md'
+
+jobs:
+  sync-docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build docs index
+        run: python manage.py build_docs_index
+
+      - name: Sync docs to DB with embeddings
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DJANGO_SETTINGS_MODULE: core.settings
+        run: python manage.py sync_docs_index_to_documents --embed
+
+      - name: Summary
+        run: echo "Docs index synced. $(wc -l < docs/_index.json) lines in index."

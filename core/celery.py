@@ -2539,6 +2539,15 @@ app.conf.beat_schedule = {
             'expires': 21600,
         },
     },
+    # RAG retrieval canary — daily at 5 AM MST (12:00 UTC)
+    'rag-retrieval-canary': {
+        'task': 'core.rag_retrieval_canary',
+        'schedule': crontab(hour=12, minute=0),
+        'options': {
+            'queue': 'default',
+            'expires': 3600,
+        },
+    },
 }
 
 # Task routing configuration
