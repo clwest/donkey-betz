@@ -1446,29 +1446,31 @@ class ConversationOrchestrator:
             except Exception as e:
                 logger.warning(f"Failed to process conversation through Initiative pipeline: {e}")
 
-                # Fallback to old dispatcher ONLY if no tasks were already dispatched.
-                # Session 1080: Prevents double-dispatch — if the pipeline succeeded in
-                # dispatching stage tasks but failed later (e.g. metadata update), the
-                # fallback would re-dispatch the same agents via execute_agent_task.
-                tasks_already_dispatched = initiative_pipeline_result.get('tasks_dispatched', 0)
-                if tasks_already_dispatched > 0:
-                    logger.info(
-                        f"Skipping fallback dispatcher — pipeline already dispatched "
-                        f"{tasks_already_dispatched} tasks before failure"
+            # Session 1105: Fallback dispatcher — moved OUTSIDE exception handler.
+            # Previously this was inside `except`, so it only ran on pipeline failure.
+            # But the guard check also needs to run on success (to skip fallback when
+            # the pipeline already dispatched tasks). Now: always check, only fallback
+            # if zero tasks were dispatched by the initiative pipeline.
+            tasks_already_dispatched = initiative_pipeline_result.get('tasks_dispatched', 0)
+            if tasks_already_dispatched > 0:
+                logger.info(
+                    f"Skipping fallback dispatcher — initiative pipeline already dispatched "
+                    f"{tasks_already_dispatched} task(s)"
+                )
+            elif not initiative_pipeline_result.get('initiative_id'):
+                # No initiative was created — use fallback dispatcher
+                try:
+                    from core.services.conversation_action_dispatcher import dispatch_conversation_actions
+                    dispatch_result = dispatch_conversation_actions(
+                        conversation_id=conversation_id,
+                        decision_summary=decision_summary,
+                        participants=[agent1['name'], agent2['name']],
+                        context={'topic': topic, 'conversation_type': conversation_type}
                     )
-                else:
-                    try:
-                        from core.services.conversation_action_dispatcher import dispatch_conversation_actions
-                        dispatch_result = dispatch_conversation_actions(
-                            conversation_id=conversation_id,
-                            decision_summary=decision_summary,
-                            participants=[agent1['name'], agent2['name']],
-                            context={'topic': topic, 'conversation_type': conversation_type}
-                        )
-                        ai_world_metadata['actions_dispatched'] = dispatch_result.get('dispatched_count', 0)
-                        ai_world_metadata['actions_failed'] = dispatch_result.get('failed_count', 0)
-                    except Exception as e2:
-                        logger.warning(f"Fallback action dispatch also failed: {e2}")
+                    ai_world_metadata['actions_dispatched'] = dispatch_result.get('dispatched_count', 0)
+                    ai_world_metadata['actions_failed'] = dispatch_result.get('failed_count', 0)
+                except Exception as e2:
+                    logger.warning(f"Fallback action dispatch also failed: {e2}")
 
         # Session 963 Phase 3: Finalize evidence pack and trace
         if deliberation_session:
