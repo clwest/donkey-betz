@@ -39089,11 +39089,22 @@ def execute_code_job(self, run_id: str):
                     with urllib.request.urlopen(req, timeout=10) as resp:
                         repo_info = json_mod.loads(resp.read())
                         perms = repo_info.get('permissions', {})
+
+                        # Check token scopes from response header
+                        scopes_header = resp.getheader('X-OAuth-Scopes', '')
+                        scopes = [s.strip() for s in scopes_header.split(',') if s.strip()]
+                        log('clone', f'Token scopes: {scopes or "(fine-grained PAT — no X-OAuth-Scopes)"}')
+
                         if not perms.get('push'):
                             raise RuntimeError(
                                 f'GITHUB_TOKEN lacks write access to {repo_slug}. '
                                 f'Permissions: {perms}. Update the PAT to include repo scope.'
                             )
+
+                        # Classic PATs: verify 'repo' scope is present
+                        if scopes and 'repo' not in scopes:
+                            log('clone', f'WARNING: Token missing "repo" scope (has: {scopes}). Push may fail.', level='warning')
+
                         log('clone', f'Token verified: push={perms.get("push")}, admin={perms.get("admin")}')
                 except urllib.error.HTTPError as e:
                     raise RuntimeError(f'GitHub API preflight failed (HTTP {e.code}): token may be invalid')
@@ -39119,6 +39130,13 @@ def execute_code_job(self, run_id: str):
             workdir = os.path.join(workdir, 'repo')
             log('clone', 'Clone successful')
 
+            # Set git identity (container has no global config)
+            shell('git config user.name "Code Worker"', cwd=workdir)
+            shell('git config user.email "codeworker@donkeybetz.com"', cwd=workdir)
+
+            # Ensure origin remote uses authenticated URL for push
+            shell(f'git remote set-url origin {auth_url}', cwd=workdir)
+
             # Create working branch
             branch = run.working_branch or run.generate_working_branch()
             result = shell(f'git checkout -b {branch}', cwd=workdir)
@@ -39137,6 +39155,7 @@ def execute_code_job(self, run_id: str):
             # Phase 5.0: Stub implementation — create a smoke test file
             # Phase 5.1 will replace this with Claude API code generation
             log('implement', f'Task: {run.plan_summary[:200]}')
+            assert workdir is not None, 'workdir must be set after clone'
             smoke_file = os.path.join(workdir, 'executor_smoke.md')
             with open(smoke_file, 'w') as f:
                 f.write(f'# Code Job Smoke Test\n\n')
