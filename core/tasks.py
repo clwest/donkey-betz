@@ -39055,6 +39055,11 @@ def execute_code_job(self, run_id: str):
 
     workdir = None
 
+    # Ensure base_branch is never empty
+    if not run.base_branch:
+        run.base_branch = (run.repo.default_base_branch if run.repo else '') or 'main'
+        run.save(update_fields=['base_branch'])
+
     try:
         run.start()
         log('start', f'Starting code job for {run.repo_url} @ {run.base_branch} (mode={mode})')
@@ -39067,6 +39072,35 @@ def execute_code_job(self, run_id: str):
         else:
             if not github_token:
                 raise RuntimeError('GITHUB_TOKEN not configured — cannot clone')
+
+            # Preflight: check token has write access
+            repo_slug = run.repo.get_repo_slug() if run.repo else ''
+            if not repo_slug and run.repo_url:
+                repo_slug = run.repo_url.rstrip('/').split('github.com/')[-1].replace('.git', '')
+            if repo_slug:
+                try:
+                    req = urllib.request.Request(
+                        f'https://api.github.com/repos/{repo_slug}',
+                        headers={
+                            'Authorization': f'token {github_token}',
+                            'Accept': 'application/vnd.github+json',
+                        },
+                    )
+                    with urllib.request.urlopen(req, timeout=10) as resp:
+                        repo_info = json_mod.loads(resp.read())
+                        perms = repo_info.get('permissions', {})
+                        if not perms.get('push'):
+                            raise RuntimeError(
+                                f'GITHUB_TOKEN lacks write access to {repo_slug}. '
+                                f'Permissions: {perms}. Update the PAT to include repo scope.'
+                            )
+                        log('clone', f'Token verified: push={perms.get("push")}, admin={perms.get("admin")}')
+                except urllib.error.HTTPError as e:
+                    raise RuntimeError(f'GitHub API preflight failed (HTTP {e.code}): token may be invalid')
+                except RuntimeError:
+                    raise
+                except Exception as e:
+                    log('clone', f'Preflight check skipped: {e}', level='warning')
 
             # Build authenticated clone URL (token injected at runtime)
             repo_url = run.repo_url
