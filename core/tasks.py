@@ -39205,9 +39205,17 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
 
         for block in response.content:
             if block.type == 'tool_use' and block.name == 'apply_file_changes':
-                tool_input = dict(block.input)  # type: ignore[arg-type]
+                raw = block.input
+                # SDK may return a dict, a JSON string, or a Pydantic-like object
+                if isinstance(raw, str):
+                    tool_input = json_mod.loads(raw)
+                elif isinstance(raw, dict):
+                    tool_input = raw
+                else:
+                    tool_input = dict(raw)  # type: ignore[arg-type]
                 break
 
+        log_fn('implement', f'Tool response type: {type(tool_input).__name__}, keys: {list(tool_input.keys()) if isinstance(tool_input, dict) else "N/A"}')
         if not tool_input or not tool_input.get('changes'):
             if attempts < max_attempts:
                 log_fn('implement', 'No file changes returned, retrying...', level='warning')
