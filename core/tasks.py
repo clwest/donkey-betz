@@ -39500,6 +39500,7 @@ def execute_code_job(self, run_id: str):
             log('implement', f'[DRY RUN] Task: {run.plan_summary[:200]} — skipping')
         else:
             # Phase 5.1: Claude API code generation
+            log('implement', 'Phase 5.1 codegen path enabled (sha=95563a96)')
             log('implement', f'Task: {run.plan_summary[:200]}')
             assert workdir is not None, 'workdir must be set after clone'
             try:
