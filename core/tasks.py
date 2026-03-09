@@ -39136,14 +39136,10 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
         'Keep commit messages under 72 characters.\n\n'
         'CRITICAL rules for file changes:\n'
         '- Use "create" ONLY for brand new files. Provide complete file content.\n'
-        '- Use "patch" for modifying EXISTING files. Provide a unified diff format:\n'
-        '  --- a/path/to/file\n'
-        '  +++ b/path/to/file\n'
-        '  @@ -line,count +line,count @@\n'
-        '   context line\n'
-        '  -removed line\n'
-        '  +added line\n'
-        '  Include at least 3 lines of unchanged context around each change. '
+        '- Use "patch" for modifying EXISTING files. Provide a JSON array of search-replace edits '
+        'in the "content" field. Each edit is an object with "search" (exact existing text to find) '
+        'and "replace" (text to replace it with). Include enough context lines in "search" to be unique. '
+        'Example content: [{"search": "def old_func():\\n    return 1", "replace": "def old_func():\\n    return 2"}]\n'
         'This is MANDATORY for existing files — NEVER use "create" on files already in the repo, '
         'as that replaces the ENTIRE file, destroying existing code.\n'
         '- Use "delete" to remove files.\n'
@@ -39179,11 +39175,11 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
                             'action': {
                                 'type': 'string',
                                 'enum': ['create', 'patch', 'delete'],
-                                'description': 'create=new file (full content), patch=edit existing file (unified diff), delete=remove file',
+                                'description': 'create=new file (full content), patch=edit existing file (search-replace edits), delete=remove file',
                             },
                             'content': {
                                 'type': 'string',
-                                'description': 'For create: complete file content. For patch: unified diff (git diff format with @@ hunks and context lines).',
+                                'description': 'For create: complete file content. For patch: JSON array of search-replace edits, e.g. [{"search": "old text", "replace": "new text"}]. Each "search" must be an exact substring of the existing file, unique enough to match only once.',
                             },
                         },
                     },
@@ -39306,48 +39302,71 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
                 log_fn('implement', f'  Deleted: {path}')
                 files_changed.append(path)
         elif action == 'patch':
-            # Apply a unified diff to an existing file via git apply
-            diff_content = change.get('content', '')
-            if not diff_content.strip():
+            # Apply search-replace edits to an existing file
+            raw_content = change.get('content', '')
+            if not raw_content.strip():
                 log_fn('implement', f'  SKIPPED (empty patch): {path}', level='warning')
                 continue
             if not os.path.exists(abs_path):
                 log_fn('implement', f'  SKIPPED (patch target does not exist): {path}', level='warning')
                 continue
 
-            import tempfile as _tempfile
-            with _tempfile.NamedTemporaryFile(
-                mode='w', suffix='.patch', dir=workdir, delete=False
-            ) as pf:
-                pf.write(diff_content)
-                patch_path = pf.name
-
+            # Parse the search-replace edits
             try:
-                # Try git apply first (handles unified diffs well)
-                result = shell(
-                    f'git apply --check "{patch_path}"',
-                    cwd=workdir,
-                )
-                if result.returncode != 0:
-                    # Try with --3way for fuzzy matching
-                    result = shell(
-                        f'git apply --3way "{patch_path}"',
-                        cwd=workdir,
-                    )
-                    if result.returncode != 0:
-                        log_fn('implement', f'  FAILED to apply patch: {path}', level='warning')
-                        log_fn('implement', f'  stderr: {result.stderr[:500]}', level='warning')
-                        continue
+                edits = json_mod.loads(raw_content)
+                if not isinstance(edits, list):
+                    edits = [edits]
+            except (json_mod.JSONDecodeError, TypeError):
+                log_fn('implement', f'  FAILED (content is not valid JSON): {path}', level='warning')
+                log_fn('implement', f'  Raw content preview: {raw_content[:200]}', level='warning')
+                continue
+
+            with open(abs_path, 'r') as f:
+                file_text = f.read()
+
+            original_text = file_text
+            edit_count = 0
+            for edit in edits:
+                search = edit.get('search', '')
+                replace = edit.get('replace', '')
+                if not search:
+                    log_fn('implement', f'  SKIPPED empty search in edit for {path}', level='warning')
+                    continue
+                if search not in file_text:
+                    # Try with normalized whitespace (strip trailing spaces per line)
+                    search_normalized = '\n'.join(l.rstrip() for l in search.split('\n'))
+                    file_text_normalized = '\n'.join(l.rstrip() for l in file_text.split('\n'))
+                    if search_normalized in file_text_normalized:
+                        # Find position in normalized text and replace in original
+                        idx = file_text_normalized.index(search_normalized)
+                        # Map back: count newlines to find the matching original section
+                        lines_before = file_text_normalized[:idx].count('\n')
+                        search_line_count = search_normalized.count('\n') + 1
+                        orig_lines = file_text.split('\n')
+                        orig_section = '\n'.join(orig_lines[lines_before:lines_before + search_line_count])
+                        file_text = file_text.replace(orig_section, replace, 1)
+                        edit_count += 1
                     else:
-                        log_fn('implement', f'  Patched (3way): {path}')
-                        files_changed.append(path)
+                        log_fn('implement', f'  WARN: search text not found in {path} (edit #{edit_count + 1})', level='warning')
+                        log_fn('implement', f'  Search preview: {search[:100]}', level='warning')
                 else:
-                    # Check passed, now actually apply
-                    shell(f'git apply "{patch_path}"', cwd=workdir)
-                    log_fn('implement', f'  Patched: {path}')
-                    files_changed.append(path)
-            finally:
-                os.unlink(patch_path)
+                    occurrences = file_text.count(search)
+                    if occurrences > 1:
+                        log_fn('implement', f'  WARN: search text matches {occurrences}x in {path}, replacing first', level='warning')
+                    file_text = file_text.replace(search, replace, 1)
+                    edit_count += 1
+
+            if file_text != original_text and edit_count > 0:
+                if len(file_text) > _MAX_FILE_SIZE:
+                    log_fn('implement', f'  BLOCKED (result too large: {len(file_text)} bytes): {path}', level='warning')
+                    continue
+                with open(abs_path, 'w') as f:
+                    f.write(file_text)
+                total_written += len(file_text)
+                log_fn('implement', f'  Patched: {path} ({edit_count} edit(s))')
+                files_changed.append(path)
+            else:
+                log_fn('implement', f'  FAILED: no edits applied to {path}', level='warning')
 
         elif action in ('create', 'overwrite'):
             content = change.get('content', '')
