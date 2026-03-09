@@ -4767,7 +4767,13 @@ def sync_workflow_schedules():
         }
 
 
-@shared_task
+@shared_task(
+    autoretry_for=(ConnectionError, OSError),
+    retry_backoff=10,
+    retry_backoff_max=60,
+    retry_jitter=True,
+    max_retries=2,
+)
 def check_workflow_schedules():
     """
     Check and execute any workflows that are due to run.
@@ -25200,7 +25206,7 @@ def collect_pilot_metrics(decision, pilot) -> Dict[str, Any]:
     
     try:
         # Check agent activity during pilot
-        from core.models_agent_memory import AgentMemory
+        from core.models_unified_system import AgentMemory
         memories = AgentMemory.objects.filter(
             created_at__gte=pilot.started_at
         ).defer('embedding').count()
