@@ -39369,8 +39369,9 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
                     edit_count += 1
 
             if file_text != original_text and edit_count > 0:
-                if len(file_text) > _MAX_FILE_SIZE:
-                    log_fn('implement', f'  BLOCKED (result too large: {len(file_text)} bytes): {path}', level='warning')
+                size_delta = len(file_text) - len(original_text)
+                if size_delta > _MAX_FILE_SIZE:
+                    log_fn('implement', f'  BLOCKED (patch adds too much: +{size_delta} bytes): {path}', level='warning')
                     continue
                 with open(abs_path, 'w') as f:
                     f.write(file_text)
@@ -39597,7 +39598,7 @@ def execute_code_job(self, run_id: str):
             log('implement', f'[DRY RUN] Task: {run.plan_summary[:200]} — skipping')
         else:
             # Phase 5.1: Claude API code generation
-            log('implement', 'Phase 5.1 codegen path enabled (sha=7b60df83, mode=search-replace)')
+            log('implement', 'Phase 5.1 codegen path enabled (sha=a932294d, mode=search-replace-v2)')
             log('implement', f'Task: {run.plan_summary[:200]}')
             assert workdir is not None, 'workdir must be set after clone'
             try:
