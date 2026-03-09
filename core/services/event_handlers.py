@@ -213,9 +213,9 @@ def handle_validation_queued_event(event: Event):
     # For example, Discord notification for high-priority items
     if priority <= 2:  # High priority
         try:
-            from core.services.discord_notifications import send_notification
-            send_notification(
-                channel='system-status',
+            from core.services.discord_notifications import send_to_channel
+            send_to_channel(
+                channel_name='system-status',
                 message=f"High priority validation needed for opportunity (confidence: {confidence:.1f}%)"
             )
         except ImportError:
@@ -316,9 +316,9 @@ def handle_model_trained_event(event: Event):
 
     # Notify about new model
     try:
-        from core.services.discord_notifications import send_notification
-        send_notification(
-            channel='system-status',
+        from core.services.discord_notifications import send_to_channel
+        send_to_channel(
+            channel_name='system-status',
             message=f"ML Scoring Model v{model_version} trained on {training_samples} samples. "
                     f"Test R2: {metrics.get('test_r2', 'N/A')}"
         )
@@ -353,9 +353,9 @@ def handle_system_alert_event(event: Event):
     # Send notification for errors and critical
     if severity in ('error', 'critical'):
         try:
-            from core.services.discord_notifications import send_notification
-            send_notification(
-                channel='system-status',
+            from core.services.discord_notifications import send_to_channel
+            send_to_channel(
+                channel_name='system-status',
                 message=f"[{severity.upper()}] {message}"
             )
         except ImportError:
