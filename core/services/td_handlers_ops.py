@@ -3205,11 +3205,21 @@ class OpsHandlersMixin:
 
             return result
 
-        # Search by name (fuzzy)
-        agents = Agent.objects.filter(name__icontains=agent_query, is_active=True)
+        # Gap 3 fix: Canonicalize agent name (snake_case → PascalCase, common aliases)
+        # Convert snake_case like "thinking_agent" → "ThinkingAgent"
+        canonical_query = agent_query
+        if '_' in agent_query:
+            canonical_query = ''.join(w.capitalize() for w in agent_query.split('_'))
+
+        # Search by name (fuzzy) — try canonical first, then original, then partial
+        agents = Agent.objects.filter(name__iexact=canonical_query, is_active=True)
+        if not agents.exists():
+            agents = Agent.objects.filter(name__icontains=canonical_query, is_active=True)
+        if not agents.exists():
+            agents = Agent.objects.filter(name__icontains=agent_query, is_active=True)
         if not agents.exists():
             # Try without "agent" suffix
-            clean_query = agent_query.replace('agent', '').strip()
+            clean_query = agent_query.replace('agent', '').replace('_', '').strip()
             if clean_query:
                 agents = Agent.objects.filter(name__icontains=clean_query, is_active=True)
 
@@ -3681,6 +3691,492 @@ class OpsHandlersMixin:
                 'total': len(items),
             }
 
+
+    # =========================================================================
+    # Session 1077: Gap Fixes — spider_status, agent_memory, heartbeat_history,
+    # redis_health, db_perf, dependency_matrix, runtime_metrics
+    # =========================================================================
+
+    def _handle_spider_status(self, tool_name, payload, user_id, trace_id):
+        """Gap 1: Per-spider run history, status, and item counts."""
+        from django.utils import timezone
+        from datetime import timedelta
+        from django.db.models import Count, Max, Min
+
+        action = payload.get('action', 'list')
+        limit = min(int(payload.get('limit', 30)), 100)
+
+        try:
+            from core.models_unified_system import SpiderData
+
+            if action == 'list':
+                now = timezone.now()
+                cutoff_24h = now - timedelta(hours=24)
+                cutoff_7d = now - timedelta(days=7)
+
+                spider_stats = (
+                    SpiderData.objects
+                    .values('spider_name')
+                    .annotate(
+                        total_items=Count('id'),
+                        last_run_at=Max('created_at'),
+                        first_seen=Min('created_at'),
+                        items_24h=Count('id', filter=__import__('django.db.models', fromlist=['Q']).Q(created_at__gte=cutoff_24h)),
+                        items_7d=Count('id', filter=__import__('django.db.models', fromlist=['Q']).Q(created_at__gte=cutoff_7d)),
+                    )
+                    .order_by('-last_run_at')[:limit]
+                )
+
+                items = []
+                for s in spider_stats:
+                    last_run = s['last_run_at']
+                    age_hours = (now - last_run).total_seconds() / 3600 if last_run else None
+                    items.append({
+                        'spider_name': s['spider_name'],
+                        'total_items': s['total_items'],
+                        'items_24h': s['items_24h'],
+                        'items_7d': s['items_7d'],
+                        'last_run_at': last_run.isoformat() if last_run else None,
+                        'first_seen': s['first_seen'].isoformat() if s['first_seen'] else None,
+                        'age_hours': round(age_hours, 1) if age_hours is not None else None,
+                        'status': 'active' if age_hours and age_hours < 48 else 'stale' if age_hours else 'unknown',
+                    })
+
+                return {
+                    'action': 'list',
+                    'total_spiders': len(items),
+                    'active': sum(1 for i in items if i['status'] == 'active'),
+                    'stale': sum(1 for i in items if i['status'] == 'stale'),
+                    'spiders': items,
+                }
+
+            elif action == 'history':
+                spider_name = payload.get('spider_name', '')
+                if not spider_name:
+                    return {'error': 'spider_name required for history action'}
+
+                runs = (
+                    SpiderData.objects
+                    .filter(spider_name__iexact=spider_name)
+                    .values('created_at', 'data_type', 'source_url')
+                    .order_by('-created_at')[:limit]
+                )
+                items = [{
+                    'created_at': r['created_at'].isoformat(),
+                    'data_type': r['data_type'],
+                    'source_url': r['source_url'][:100],
+                } for r in runs]
+
+                return {
+                    'action': 'history',
+                    'spider_name': spider_name,
+                    'count': len(items),
+                    'runs': items,
+                }
+
+            return {'error': f'Unknown spider_status action: {action}. Valid: list, history'}
+
+        except Exception as e:
+            logger.error(f"[SPIDER_STATUS] {action} error: {e}", exc_info=True)
+            return {'error': str(e)}
+
+    def _handle_agent_memory(self, tool_name, payload, user_id, trace_id):
+        """Gap 2: Agent-scoped memory and knowledge inspection."""
+        from django.utils import timezone
+        from datetime import timedelta
+
+        action = payload.get('action', 'list')
+        agent_name = payload.get('agent_name', '').strip()
+        limit = min(int(payload.get('limit', 20)), 50)
+        query = payload.get('query', '').strip()
+
+        try:
+            from core.models_unified_system import Agent, AgentMemory, AgentKnowledgeSource
+
+            # Resolve agent — support snake_case
+            if '_' in agent_name:
+                canonical = ''.join(w.capitalize() for w in agent_name.split('_'))
+            else:
+                canonical = agent_name
+
+            agent = Agent.objects.filter(name__iexact=canonical, is_active=True).first()
+            if not agent and canonical != agent_name:
+                agent = Agent.objects.filter(name__icontains=agent_name, is_active=True).first()
+            if not agent:
+                clean = agent_name.replace('agent', '').replace('_', '').strip()
+                if clean:
+                    agent = Agent.objects.filter(name__icontains=clean, is_active=True).first()
+
+            if not agent:
+                return {'error': f'Agent not found: {agent_name}', 'action': action}
+
+            if action == 'list':
+                memories = AgentMemory.objects.filter(agent=agent).order_by('-created_at')
+                if query:
+                    memories = memories.filter(content__icontains=query)
+                total = memories.count()
+                items = [{
+                    'id': str(m.id),
+                    'title': m.title[:100] if m.title else '',
+                    'memory_type': m.memory_type,
+                    'valence': m.valence,
+                    'importance_score': m.importance_score,
+                    'safety_class': m.safety_class,
+                    'source_type': m.source_type,
+                    'tags': m.tags or [],
+                    'access_count': m.access_count,
+                    'created_at': m.created_at.isoformat() if m.created_at else None,
+                } for m in memories[:limit]]
+
+                return {
+                    'action': 'list',
+                    'agent_name': agent.name,
+                    'total_memories': total,
+                    'count': len(items),
+                    'memories': items,
+                }
+
+            elif action == 'knowledge':
+                kb = AgentKnowledgeSource.objects.filter(agent=agent).order_by('-last_updated_at')
+                total = kb.count()
+                items = [{
+                    'id': str(k.id),
+                    'title': k.title[:100],
+                    'knowledge_type': k.knowledge_type,
+                    'confidence_score': k.confidence_score,
+                    'relevance_score': k.relevance_score,
+                    'freshness_score': k.freshness_score,
+                    'data_points_count': k.data_points_count,
+                    'source_spiders': k.source_spider_names or [],
+                    'last_updated_at': k.last_updated_at.isoformat() if k.last_updated_at else None,
+                } for k in kb[:limit]]
+
+                return {
+                    'action': 'knowledge',
+                    'agent_name': agent.name,
+                    'total_knowledge': total,
+                    'count': len(items),
+                    'knowledge_sources': items,
+                }
+
+            elif action == 'stats':
+                mem_count = AgentMemory.objects.filter(agent=agent).count()
+                kb_count = AgentKnowledgeSource.objects.filter(agent=agent).count()
+                from django.db.models import Avg, Count
+                type_dist = dict(
+                    AgentMemory.objects.filter(agent=agent)
+                    .values_list('memory_type')
+                    .annotate(c=Count('id'))
+                    .values_list('memory_type', 'c')
+                )
+                avg_importance = AgentMemory.objects.filter(agent=agent).aggregate(
+                    avg=Avg('importance_score')
+                )['avg']
+
+                return {
+                    'action': 'stats',
+                    'agent_name': agent.name,
+                    'total_memories': mem_count,
+                    'total_knowledge_sources': kb_count,
+                    'memory_by_type': type_dist,
+                    'avg_importance': round(float(avg_importance or 0), 3),
+                }
+
+            return {'error': f'Unknown agent_memory action: {action}. Valid: list, knowledge, stats'}
+
+        except Exception as e:
+            logger.error(f"[AGENT_MEMORY] {action} error: {e}", exc_info=True)
+            return {'error': str(e)}
+
+    def _handle_heartbeat_history(self, tool_name, payload, user_id, trace_id):
+        """Gap 8: Heartbeat time-series and historical vitals."""
+        action = payload.get('action', 'recent')
+        limit = min(int(payload.get('limit', 24)), 100)
+
+        try:
+            from core.models_heart import HeartBeat
+
+            if action == 'recent':
+                heartbeats = HeartBeat.objects.order_by('-recorded_at')[:limit]
+                items = [{
+                    'id': str(hb.id),
+                    'health_score': hb.health_score,
+                    'overall_status': hb.overall_status,
+                    'is_alive': hb.is_alive,
+                    'components_checked': hb.components_checked,
+                    'components_healthy': hb.components_healthy,
+                    'components_degraded': hb.components_degraded,
+                    'check_duration_ms': hb.check_duration_ms,
+                    'recorded_at': hb.recorded_at.isoformat() if hb.recorded_at else None,
+                } for hb in heartbeats]
+
+                return {
+                    'action': 'recent',
+                    'count': len(items),
+                    'heartbeats': items,
+                }
+
+            elif action == 'trends':
+                from django.db.models import Avg, Min, Max, Count
+                from django.utils import timezone
+                from datetime import timedelta
+
+                hours = int(payload.get('hours', 24))
+                cutoff = timezone.now() - timedelta(hours=hours)
+                qs = HeartBeat.objects.filter(recorded_at__gte=cutoff)
+
+                agg = qs.aggregate(
+                    avg_score=Avg('health_score'),
+                    min_score=Min('health_score'),
+                    max_score=Max('health_score'),
+                    total_checks=Count('id'),
+                    avg_duration=Avg('check_duration_ms'),
+                )
+
+                # Status distribution
+                status_counts = dict(
+                    qs.values_list('overall_status')
+                    .annotate(c=Count('id'))
+                    .values_list('overall_status', 'c')
+                )
+
+                return {
+                    'action': 'trends',
+                    'hours': hours,
+                    'total_heartbeats': agg['total_checks'] or 0,
+                    'avg_health_score': round(float(agg['avg_score'] or 0), 2),
+                    'min_health_score': round(float(agg['min_score'] or 0), 2),
+                    'max_health_score': round(float(agg['max_score'] or 0), 2),
+                    'avg_check_duration_ms': round(float(agg['avg_duration'] or 0), 1),
+                    'status_distribution': status_counts,
+                }
+
+            return {'error': f'Unknown heartbeat_history action: {action}. Valid: recent, trends'}
+
+        except Exception as e:
+            logger.error(f"[HEARTBEAT] {action} error: {e}", exc_info=True)
+            return {'error': str(e)}
+
+    def _handle_infra_health(self, tool_name, payload, user_id, trace_id):
+        """Gaps 11-14: Redis health, DB perf, dependency matrix, runtime metrics."""
+        action = payload.get('action', 'dependency_matrix')
+
+        try:
+            if action == 'redis_health':
+                import redis as redis_lib
+                from django.conf import settings
+
+                redis_url = getattr(settings, 'REDIS_URL', 'redis://localhost:6379/1')
+                r = redis_lib.from_url(redis_url, socket_timeout=5)
+                info = r.info(section='memory')
+                clients_info = r.info(section='clients')
+                stats_info = r.info(section='stats')
+                ping_start = time.time()
+                r.ping()
+                ping_ms = round((time.time() - ping_start) * 1000, 2)
+
+                return {
+                    'action': 'redis_health',
+                    'ping_ms': ping_ms,
+                    'connected': True,
+                    'used_memory_human': info.get('used_memory_human', ''),
+                    'used_memory_peak_human': info.get('used_memory_peak_human', ''),
+                    'maxmemory_human': info.get('maxmemory_human', '0'),
+                    'maxmemory_policy': info.get('maxmemory_policy', ''),
+                    'connected_clients': clients_info.get('connected_clients', 0),
+                    'blocked_clients': clients_info.get('blocked_clients', 0),
+                    'evicted_keys': stats_info.get('evicted_keys', 0),
+                    'keyspace_hits': stats_info.get('keyspace_hits', 0),
+                    'keyspace_misses': stats_info.get('keyspace_misses', 0),
+                    'hit_rate_pct': round(
+                        stats_info.get('keyspace_hits', 0) /
+                        max(stats_info.get('keyspace_hits', 0) + stats_info.get('keyspace_misses', 0), 1) * 100, 2
+                    ),
+                    'total_commands_processed': stats_info.get('total_commands_processed', 0),
+                    'uptime_seconds': info.get('uptime_in_seconds', 0),
+                }
+
+            elif action == 'db_perf':
+                from django.db import connection
+
+                with connection.cursor() as cursor:
+                    # Connection pool info
+                    cursor.execute("""
+                        SELECT count(*) as total,
+                               count(*) FILTER (WHERE state = 'active') as active,
+                               count(*) FILTER (WHERE state = 'idle') as idle,
+                               count(*) FILTER (WHERE state = 'idle in transaction') as idle_in_tx,
+                               max(EXTRACT(EPOCH FROM (now() - query_start)))::int as longest_query_secs
+                        FROM pg_stat_activity
+                        WHERE datname = current_database()
+                    """)
+                    pool = dict(zip(
+                        ['total_connections', 'active', 'idle', 'idle_in_transaction', 'longest_query_secs'],
+                        cursor.fetchone()
+                    ))
+
+                    # Database stats
+                    cursor.execute("""
+                        SELECT xact_commit, xact_rollback, blks_read, blks_hit,
+                               tup_returned, tup_fetched, tup_inserted, tup_updated, tup_deleted,
+                               deadlocks, conflicts
+                        FROM pg_stat_database
+                        WHERE datname = current_database()
+                    """)
+                    cols = ['xact_commit', 'xact_rollback', 'blks_read', 'blks_hit',
+                            'tup_returned', 'tup_fetched', 'tup_inserted', 'tup_updated', 'tup_deleted',
+                            'deadlocks', 'conflicts']
+                    row = cursor.fetchone()
+                    db_stats = dict(zip(cols, row)) if row else {}
+
+                    # Cache hit ratio
+                    blks_hit = db_stats.get('blks_hit', 0)
+                    blks_read = db_stats.get('blks_read', 0)
+                    cache_hit_ratio = round(blks_hit / max(blks_hit + blks_read, 1) * 100, 2)
+
+                return {
+                    'action': 'db_perf',
+                    'connections': pool,
+                    'cache_hit_ratio_pct': cache_hit_ratio,
+                    'transactions': {
+                        'committed': db_stats.get('xact_commit', 0),
+                        'rolled_back': db_stats.get('xact_rollback', 0),
+                    },
+                    'tuples': {
+                        'returned': db_stats.get('tup_returned', 0),
+                        'fetched': db_stats.get('tup_fetched', 0),
+                        'inserted': db_stats.get('tup_inserted', 0),
+                        'updated': db_stats.get('tup_updated', 0),
+                        'deleted': db_stats.get('tup_deleted', 0),
+                    },
+                    'deadlocks': db_stats.get('deadlocks', 0),
+                    'conflicts': db_stats.get('conflicts', 0),
+                }
+
+            elif action == 'dependency_matrix':
+                components = {}
+
+                # 1. Web app (self)
+                components['web'] = {'status': 'ok', 'detail': 'responding (this request succeeded)'}
+
+                # 2. Database
+                try:
+                    from django.db import connection
+                    with connection.cursor() as cursor:
+                        cursor.execute("SELECT 1")
+                    components['postgres'] = {'status': 'ok'}
+                except Exception as e:
+                    components['postgres'] = {'status': 'error', 'detail': str(e)[:100]}
+
+                # 3. Redis
+                try:
+                    import redis as redis_lib
+                    from django.conf import settings
+                    r = redis_lib.from_url(getattr(settings, 'REDIS_URL', 'redis://localhost:6379/1'), socket_timeout=3)
+                    r.ping()
+                    components['redis'] = {'status': 'ok'}
+                except Exception as e:
+                    components['redis'] = {'status': 'error', 'detail': str(e)[:100]}
+
+                # 4. Celery workers
+                try:
+                    from core.celery import app as celery_app
+                    inspector = celery_app.control.inspect(timeout=5)
+                    pong = inspector.ping() or {}
+                    worker_count = len(pong)
+                    components['celery'] = {'status': 'ok' if worker_count > 0 else 'warning', 'workers': worker_count}
+                except Exception as e:
+                    components['celery'] = {'status': 'error', 'detail': str(e)[:100]}
+
+                # 5. pgvector
+                try:
+                    from django.db import connection
+                    with connection.cursor() as cursor:
+                        cursor.execute("SELECT extversion FROM pg_extension WHERE extname = 'vector'")
+                        row = cursor.fetchone()
+                    components['pgvector'] = {'status': 'ok', 'version': row[0] if row else 'not installed'}
+                except Exception as e:
+                    components['pgvector'] = {'status': 'error', 'detail': str(e)[:100]}
+
+                # 6. Spiders (recent data check)
+                try:
+                    from core.models_unified_system import SpiderData
+                    from django.utils import timezone
+                    from datetime import timedelta
+                    recent = SpiderData.objects.filter(created_at__gte=timezone.now() - timedelta(hours=2)).count()
+                    components['spiders'] = {'status': 'ok' if recent > 0 else 'warning', 'items_last_2h': recent}
+                except Exception as e:
+                    components['spiders'] = {'status': 'error', 'detail': str(e)[:100]}
+
+                # 7. Storage (Cloudinary check)
+                try:
+                    from django.core.files.storage import default_storage
+                    backend = type(default_storage).__name__
+                    components['storage'] = {'status': 'ok', 'backend': backend}
+                except Exception as e:
+                    components['storage'] = {'status': 'error', 'detail': str(e)[:100]}
+
+                all_ok = all(c.get('status') == 'ok' for c in components.values())
+                has_error = any(c.get('status') == 'error' for c in components.values())
+
+                return {
+                    'action': 'dependency_matrix',
+                    'overall': 'healthy' if all_ok else 'degraded' if not has_error else 'critical',
+                    'components': components,
+                    'total': len(components),
+                    'healthy': sum(1 for c in components.values() if c.get('status') == 'ok'),
+                    'warnings': sum(1 for c in components.values() if c.get('status') == 'warning'),
+                    'errors': sum(1 for c in components.values() if c.get('status') == 'error'),
+                }
+
+            elif action == 'runtime_metrics':
+                import os
+                import platform
+                import psutil
+
+                process = psutil.Process(os.getpid())
+                mem = process.memory_info()
+                uptime_secs = time.time() - process.create_time()
+
+                # System-wide
+                vm = psutil.virtual_memory()
+                disk = psutil.disk_usage('/')
+
+                return {
+                    'action': 'runtime_metrics',
+                    'process': {
+                        'pid': os.getpid(),
+                        'rss_mb': round(mem.rss / 1024 / 1024, 1),
+                        'vms_mb': round(mem.vms / 1024 / 1024, 1),
+                        'cpu_percent': process.cpu_percent(interval=0.1),
+                        'threads': process.num_threads(),
+                        'uptime_seconds': round(uptime_secs),
+                        'uptime_human': f"{int(uptime_secs // 3600)}h {int((uptime_secs % 3600) // 60)}m",
+                    },
+                    'system': {
+                        'total_ram_mb': round(vm.total / 1024 / 1024, 1),
+                        'available_ram_mb': round(vm.available / 1024 / 1024, 1),
+                        'ram_percent': vm.percent,
+                        'disk_total_gb': round(disk.total / 1024 / 1024 / 1024, 1),
+                        'disk_used_gb': round(disk.used / 1024 / 1024 / 1024, 1),
+                        'disk_percent': disk.percent,
+                        'cpu_count': os.cpu_count(),
+                        'platform': platform.platform(),
+                    },
+                    'railway': {
+                        'environment': os.environ.get('RAILWAY_ENVIRONMENT', ''),
+                        'service': os.environ.get('RAILWAY_SERVICE_NAME', ''),
+                        'deployment_id': os.environ.get('RAILWAY_DEPLOYMENT_ID', ''),
+                        'replica_id': os.environ.get('RAILWAY_REPLICA_ID', ''),
+                    },
+                }
+
+            all_actions = ['redis_health', 'db_perf', 'dependency_matrix', 'runtime_metrics']
+            return {'error': f'Unknown infra_health action: {action}. Valid: {", ".join(all_actions)}'}
+
+        except Exception as e:
+            logger.error(f"[INFRA_HEALTH] {action} error: {e}", exc_info=True)
+            return {'error': str(e)}
 
     # =========================================================================
     # Session 1031: Dream Tool — browse, approve, dismiss dreams via PA

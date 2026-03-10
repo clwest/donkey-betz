@@ -379,6 +379,12 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         # Remote Code Worker
         self.register("code_job_tool", self._handle_code_job)
 
+        # Session 1035-Audit: Platform access gap tools
+        self.register("spider_status_tool", self._handle_spider_status)
+        self.register("agent_memory_tool", self._handle_agent_memory)
+        self.register("heartbeat_history_tool", self._handle_heartbeat_history)
+        self.register("infra_health_tool", self._handle_infra_health)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):
