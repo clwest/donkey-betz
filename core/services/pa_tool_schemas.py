@@ -3478,6 +3478,7 @@ PA_TOOL_SCHEMAS = [
     },
     # ── R2-6: KB / Embedding browsing tool ──────────────────────────────────
     {
+        "type": "function",
         "name": "kb_tool",
         "description": (
             "Browse the knowledge base — documents, embedding collections, chunk counts, "
