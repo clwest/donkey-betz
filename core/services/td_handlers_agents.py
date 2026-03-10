@@ -2687,11 +2687,52 @@ class AgentHandlersMixin:
                 'top_items': top_items,
             }
 
-        # Session 1000B: Lookup item by title (for "tell me more about" clicks)
+        # Session 1000B: Lookup item by title or ID
         elif action == 'lookup':
+            item_id = payload.get('id', '')
             title_query = payload.get('title_query', '')
+
+            # Session 1097: Direct ID lookup — fast path
+            if item_id:
+                item = HumanAttentionItem.objects.filter(id=item_id).first()
+                if item:
+                    return {
+                        'action': 'lookup',
+                        'found': True,
+                        'item_type': 'attention',
+                        'id': str(item.id),
+                        'title': item.title,
+                        'summary': item.summary or '',
+                        'urgency': item.urgency or 'medium',
+                        'status': item.status,
+                        'source_agent': item.source_agent or '',
+                        'item_category': item.item_type or '',
+                        'created_at': item.created_at.isoformat() if item.created_at else '',
+                        'priority_score': item.priority_score,
+                        'ml_recommendation': getattr(item, 'ml_recommendation', '') or '',
+                        'impact_estimate': getattr(item, 'impact_estimate', '') or '',
+                        'payload': item.payload if isinstance(item.payload, dict) else {},
+                    }
+                # Try decisions by ID
+                decision = AgentDecisionSummary.objects.filter(id=item_id).first()
+                if decision:
+                    return {
+                        'action': 'lookup',
+                        'found': True,
+                        'item_type': 'decision',
+                        'id': str(decision.id),
+                        'title': decision.topic,
+                        'summary': decision.key_insights or '',
+                        'decision_type': decision.decision_type or '',
+                        'recommended_stance': decision.recommended_stance or '',
+                        'impact_area': decision.impact_area or '',
+                        'status': decision.status,
+                        'created_at': decision.created_at.isoformat() if decision.created_at else '',
+                    }
+                return {'action': 'lookup', 'found': False, 'id': item_id, 'error': 'Item not found'}
+
             if not title_query:
-                return {'action': 'lookup', 'found': False, 'error': 'No title provided'}
+                return {'action': 'lookup', 'found': False, 'error': 'Provide id or title_query'}
 
             # Search attention items first (most common source of "tell me more")
             item = (
