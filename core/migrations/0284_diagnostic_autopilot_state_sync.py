@@ -30,10 +30,12 @@ def create_or_update_autopilot_table(apps, schema_editor):
                 "ALTER TABLE core_autopilotaction ADD COLUMN IF NOT EXISTS rolled_back_at timestamp with time zone NULL",
                 "ALTER TABLE core_autopilotaction ADD COLUMN IF NOT EXISTS rollback_reason varchar(255) DEFAULT '' NOT NULL",
             ]:
+                cursor.execute("SAVEPOINT col_sp")
                 try:
                     cursor.execute(col_sql)
+                    cursor.execute("RELEASE SAVEPOINT col_sp")
                 except Exception:
-                    pass
+                    cursor.execute("ROLLBACK TO SAVEPOINT col_sp")
         else:
             cursor.execute("""
                 CREATE TABLE core_autopilotaction (
@@ -61,10 +63,99 @@ def create_or_update_autopilot_table(apps, schema_editor):
             ('core_autopilotaction_created_at_idx', 'created_at DESC'),
             ('core_autopilotaction_verif_idx', 'verification_state'),
         ]:
+            cursor.execute("SAVEPOINT idx_sp")
             try:
                 cursor.execute(f'CREATE INDEX IF NOT EXISTS "{idx_name}" ON core_autopilotaction ({col_sql})')
+                cursor.execute("RELEASE SAVEPOINT idx_sp")
             except Exception:
-                pass
+                cursor.execute("ROLLBACK TO SAVEPOINT idx_sp")
+
+
+def create_diagnostic_tables_if_missing(apps, schema_editor):
+    """On fresh databases (e.g. test), the diagnostic tables don't exist yet.
+    The state_operations above register them in Django state only. We need
+    to actually create the tables so later migrations/FKs work."""
+    connection = schema_editor.connection
+    with connection.cursor() as cursor:
+        tables = {
+            'core_failure_signature': """
+                CREATE TABLE core_failure_signature (
+                    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+                    signature varchar(255) NOT NULL UNIQUE,
+                    signature_hash varchar(32) NOT NULL UNIQUE,
+                    category varchar(30) NOT NULL DEFAULT 'unknown',
+                    provider varchar(50) NOT NULL DEFAULT '',
+                    error_code varchar(50) NOT NULL DEFAULT '',
+                    occurrence_count integer NOT NULL DEFAULT 0,
+                    first_seen_at timestamp with time zone NOT NULL DEFAULT NOW(),
+                    last_seen_at timestamp with time zone NOT NULL DEFAULT NOW(),
+                    last_diagnosed_at timestamp with time zone NULL,
+                    status varchar(20) NOT NULL DEFAULT 'active',
+                    description text NOT NULL DEFAULT '',
+                    metadata jsonb NOT NULL DEFAULT '{}'
+                )""",
+            'core_failure_diagnosis': """
+                CREATE TABLE core_failure_diagnosis (
+                    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+                    root_cause text NOT NULL,
+                    root_cause_confidence double precision NOT NULL DEFAULT 0.0,
+                    evidence_sources jsonb NOT NULL DEFAULT '[]',
+                    evidence_details jsonb NOT NULL DEFAULT '{}',
+                    blast_radius varchar(20) NOT NULL DEFAULT 'isolated',
+                    affected_components jsonb NOT NULL DEFAULT '[]',
+                    sample_count integer NOT NULL DEFAULT 0,
+                    sample_time_range jsonb NOT NULL DEFAULT '{}',
+                    diagnosed_at timestamp with time zone NOT NULL DEFAULT NOW(),
+                    updated_at timestamp with time zone NOT NULL DEFAULT NOW(),
+                    signature_id uuid NOT NULL UNIQUE REFERENCES core_failure_signature(id) ON DELETE CASCADE
+                )""",
+            'core_failure_prescription': """
+                CREATE TABLE core_failure_prescription (
+                    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+                    title varchar(255) NOT NULL,
+                    description text NOT NULL,
+                    scope varchar(20) NOT NULL DEFAULT 'immediate',
+                    expected_impact varchar(10) NOT NULL DEFAULT 'medium',
+                    effort varchar(10) NOT NULL DEFAULT 'small',
+                    confidence double precision NOT NULL DEFAULT 0.0,
+                    priority_score double precision NOT NULL DEFAULT 0.0,
+                    technical_steps jsonb NOT NULL DEFAULT '[]',
+                    files_to_modify jsonb NOT NULL DEFAULT '[]',
+                    commands_to_run jsonb NOT NULL DEFAULT '[]',
+                    success_criteria text NOT NULL DEFAULT '',
+                    verification_steps jsonb NOT NULL DEFAULT '[]',
+                    status varchar(20) NOT NULL DEFAULT 'proposed',
+                    created_at timestamp with time zone NOT NULL DEFAULT NOW(),
+                    updated_at timestamp with time zone NOT NULL DEFAULT NOW(),
+                    completed_at timestamp with time zone NULL,
+                    verified_at timestamp with time zone NULL,
+                    diagnosis_id uuid NOT NULL REFERENCES core_failure_diagnosis(id) ON DELETE CASCADE,
+                    initiative_id uuid NULL
+                )""",
+            'core_failure_detection': """
+                CREATE TABLE core_failure_detection (
+                    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+                    source_type varchar(30) NOT NULL,
+                    source_id uuid NULL,
+                    source_name varchar(255) NOT NULL DEFAULT '',
+                    error_message text NOT NULL,
+                    error_code varchar(50) NOT NULL DEFAULT '',
+                    stack_trace text NOT NULL DEFAULT '',
+                    context_snapshot jsonb NOT NULL DEFAULT '{}',
+                    is_diagnosed boolean NOT NULL DEFAULT false,
+                    detected_at timestamp with time zone NOT NULL DEFAULT NOW(),
+                    diagnosed_at timestamp with time zone NULL,
+                    signature_id uuid NOT NULL REFERENCES core_failure_signature(id) ON DELETE CASCADE
+                )""",
+        }
+        for table_name, create_sql in tables.items():
+            cursor.execute(
+                "SELECT 1 FROM information_schema.tables "
+                "WHERE table_name = %s LIMIT 1",
+                [table_name],
+            )
+            if not cursor.fetchone():
+                cursor.execute(create_sql)
 
 
 def create_diagnostic_indexes(apps, schema_editor):
@@ -85,10 +176,12 @@ def create_diagnostic_indexes(apps, schema_editor):
             ('core_failur_signatu_617706_idx', 'core_failure_detection', 'signature_id, is_diagnosed'),
         ]
         for idx_name, table, cols in indexes:
+            cursor.execute("SAVEPOINT diag_sp")
             try:
                 cursor.execute(f'CREATE INDEX IF NOT EXISTS "{idx_name}" ON "{table}" ({cols})')
+                cursor.execute("RELEASE SAVEPOINT diag_sp")
             except Exception:
-                pass
+                cursor.execute("ROLLBACK TO SAVEPOINT diag_sp")
 
 
 def noop(apps, schema_editor):
@@ -228,7 +321,9 @@ class Migration(migrations.Migration):
             ],
             database_operations=[],
         ),
-        # DB operations: create/update AutopilotAction table and add all indexes
+        # DB operations: create/update AutopilotAction table, create diagnostic
+        # tables on fresh DBs, and add all indexes
         migrations.RunPython(create_or_update_autopilot_table, noop),
+        migrations.RunPython(create_diagnostic_tables_if_missing, noop),
         migrations.RunPython(create_diagnostic_indexes, noop),
     ]

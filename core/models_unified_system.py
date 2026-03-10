@@ -18233,6 +18233,30 @@ class PredictionOutcome(models.Model):
         self.save()
 
 
+class UserWatchlistItem(models.Model):
+    """A single ticker on a user's stock watchlist."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='watchlist_items',
+    )
+    symbol = models.CharField(max_length=10, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'symbol'],
+                name='unique_watchlist_user_symbol',
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.user} → {self.symbol}"
+
+
 class UserBriefFeedback(models.Model):
     """
     DEPRECATED - Session 528: This model has 0 records and is not used.

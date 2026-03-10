@@ -4511,6 +4511,9 @@ from core.views_stock_intelligence import (
     stock_sec_filings,
     stock_market_news,
     ticker_lookup,
+    watchlist_list,
+    watchlist_add,
+    watchlist_remove,
 )
 
 urlpatterns += [
@@ -4523,6 +4526,9 @@ urlpatterns += [
     path('api/stocks/sec-filings/', stock_sec_filings, name='stock-sec-filings'),
     path('api/stocks/market-news/', stock_market_news, name='stock-market-news'),
     path('api/stocks/ticker/<str:symbol>/', ticker_lookup, name='stock-ticker-lookup'),
+    path('api/stocks/watchlist/', watchlist_list, name='stock-watchlist-list'),
+    path('api/stocks/watchlist/add/', watchlist_add, name='stock-watchlist-add'),
+    path('api/stocks/watchlist/<str:symbol>/', watchlist_remove, name='stock-watchlist-remove'),
 ]
 
 # =========================================================================
