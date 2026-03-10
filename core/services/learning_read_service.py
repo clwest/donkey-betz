@@ -30,6 +30,37 @@ MIN_SAMPLES_FOR_OVERRIDE = 3
 # Maximum number of learning records to consult per decision
 MAX_RECORDS_PER_QUERY = 10
 
+# FC tool name → agent_name mapping for learning record lookups.
+# In the FC path, routed_to is a tool name (e.g. 'brainstorm_tool') but
+# UserAgentLearning.agent_name stores agent class names (e.g. 'BoardroomAgent').
+# This map bridges the gap so learning records can actually be matched.
+_TOOL_TO_AGENT_NAME = {
+    'brainstorm_tool': 'BoardroomAgent',
+    'initiative_tool': 'InitiativeManagerAgent',
+    'content_review_tool': 'ContentReviewAgent',
+    'generate_blog_tool': 'ContentWriterAgent',
+    'stock_intelligence_tool': 'StockIntelligenceAgent',
+    'opportunity_manager_tool': 'OpportunityPipelineAgent',
+    'research_and_create_tool': 'ResearchAgent',
+    'governance_tool': 'GovernanceAgent',
+    'dream_tool': 'DreamAgent',
+    'spider_data_tool': 'SpiderAgent',
+    'ml_analysis': 'MLPredictionAgent',
+    'reasoning_engine_tool': 'ThinkingAgent',
+    'run_agent': None,  # dynamic — skip
+}
+
+
+def _normalize_routed_to(routed_to: str | None) -> str | None:
+    """Normalize FC tool names to agent names for learning record matching."""
+    if not routed_to:
+        return routed_to
+    if routed_to in _TOOL_TO_AGENT_NAME:
+        return _TOOL_TO_AGENT_NAME[routed_to]  # may be None for dynamic tools
+    # Already an agent name or unknown tool — return as-is
+    return routed_to
+
+
 # Intent → learning_domain mapping
 _INTENT_TO_DOMAINS = {
     'image_creation': ['agent_execution_performance', 'task_type_content_creation'],
@@ -52,6 +83,9 @@ def get_learning_recommendation(
     """
     Query UserAgentLearning for routing recommendations.
 
+    routed_to may be a PA tool name (FC path) or an agent name (legacy path).
+    We normalize tool names → agent names so records actually match.
+
     Returns:
         {
             'consulted': True/False,
@@ -71,6 +105,9 @@ def get_learning_recommendation(
             'score_delta': 0.0,
             'preferred_tool': None,
         }
+
+    # Normalize tool names → agent names so FC path can match learning records
+    routed_to = _normalize_routed_to(routed_to)
 
     try:
         from core.models import UserAgentLearning
