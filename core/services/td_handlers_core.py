@@ -3028,12 +3028,18 @@ RESEARCH DATA:
                     qs = qs.filter(party__icontains=party)
                 if q:
                     from django.db.models import Q as DQ
-                    qs = qs.filter(
+                    # Resolve full state name to 2-letter code
+                    from core.services.congress_sync import STATE_ABBREV
+                    state_code = STATE_ABBREV.get(q.title(), '')
+                    q_filter = (
                         DQ(first_name__icontains=q) |
                         DQ(last_name__icontains=q) |
                         DQ(state__iexact=q) |
                         DQ(party__icontains=q)
                     )
+                    if state_code:
+                        q_filter = q_filter | DQ(state__iexact=state_code)
+                    qs = qs.filter(q_filter)
 
                 total = qs.count()
                 members = []
