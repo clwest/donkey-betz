@@ -3131,6 +3131,7 @@ RESEARCH DATA:
             'attention_list': 'list_attention',
             'attention_approve': 'approve_attention',
             'attention_ignore': 'ignore_attention',
+            'attention_detail': 'lookup',  # Session 1097: ID-based detail
             'attention_lookup': 'lookup',
             'decision_list': 'list_decisions',
             'decision_promote': 'promote_decision',
