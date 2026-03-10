@@ -2968,7 +2968,7 @@ RESEARCH DATA:
         # ── Gap 4: Sharp action signals feed ──
         if action == 'sports_sharp_signals':
             try:
-                from core.models_unified_system import Deliverable
+                from core.models_deliverables import Deliverable
                 from django.utils import timezone as tz
                 from datetime import timedelta
 
