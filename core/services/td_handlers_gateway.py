@@ -654,21 +654,34 @@ class GatewayHandlersMixin:
                 event = CeleryTaskEvent.objects.filter(
                     task_id=task_id
                 ).order_by('-started_at').first()
-                if not event:
-                    return {'error': f'No CeleryTaskEvent found for task_id {task_id}'}
+                if event:
+                    return {
+                        'action': 'task_status',
+                        'source': 'celery_event',
+                        'task_id': task_id,
+                        'task_name': event.task_name,
+                        'status': event.status,
+                        'started_at': event.started_at.isoformat() if event.started_at else None,
+                        'finished_at': event.finished_at.isoformat() if event.finished_at else None,
+                        'duration_seconds': event.duration_seconds,
+                        'worker': event.worker,
+                        'queue': event.queue,
+                        'error_message': event.error_message,
+                        'rss_mb_start': event.rss_mb_start,
+                        'rss_mb_end': event.rss_mb_end,
+                    }
+                # Fallback: check via Celery AsyncResult (works for freshly dispatched tasks)
+                from core.celery import app as celery_app
+                result = celery_app.AsyncResult(task_id)
                 return {
                     'action': 'task_status',
+                    'source': 'async_result',
                     'task_id': task_id,
-                    'task_name': event.task_name,
-                    'status': event.status,
-                    'started_at': event.started_at.isoformat() if event.started_at else None,
-                    'finished_at': event.finished_at.isoformat() if event.finished_at else None,
-                    'duration_seconds': event.duration_seconds,
-                    'worker': event.worker,
-                    'queue': event.queue,
-                    'error_message': event.error_message,
-                    'rss_mb_start': event.rss_mb_start,
-                    'rss_mb_end': event.rss_mb_end,
+                    'status': result.status,
+                    'ready': result.ready(),
+                    'successful': result.successful() if result.ready() else None,
+                    'result_preview': str(result.result)[:500] if result.ready() else None,
+                    'note': 'CeleryTaskEvent not yet recorded — task may still be queued or starting',
                 }
 
             if action == 'worker_health':
