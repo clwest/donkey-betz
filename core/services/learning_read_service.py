@@ -17,11 +17,15 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
-# Feature flag — allows gradual rollout
-LEARNING_ROUTING_ENABLED = getattr(settings, 'LEARNING_ROUTING_ENABLED', True)
+# Feature flags — default OFF until intentionally enabled in production
+LEARNING_ROUTING_ENABLED = getattr(settings, 'LEARNING_ROUTING_ENABLED', False)
+LEARNING_PROMPT_INJECTION_ENABLED = getattr(settings, 'LEARNING_PROMPT_INJECTION_ENABLED', False)
 
 # Minimum confidence to consider a learning record relevant
 MIN_CONFIDENCE = 0.5
+
+# Minimum usage_count before an agent's performance can trigger a routing override
+MIN_SAMPLES_FOR_OVERRIDE = 3
 
 # Maximum number of learning records to consult per decision
 MAX_RECORDS_PER_QUERY = 10
@@ -131,13 +135,33 @@ def get_learning_recommendation(
                         f"{routed_to} has {current['success_rate']:.0%} success rate "
                         f"(confidence={current['confidence']:.2f}, used {current['usage_count']}x)"
                     )
-                elif current['combined'] < 0.3 and best_score['combined'] > 0.6:
-                    score_delta = -0.1
-                    preferred_tool = best_agent
-                    explanation_parts.append(
-                        f"{routed_to} has low performance ({current['success_rate']:.0%}); "
-                        f"consider {best_agent} ({best_score['success_rate']:.0%} success)"
-                    )
+                elif (
+                    current['combined'] < 0.3
+                    and best_score['combined'] > 0.6
+                    and current['usage_count'] >= MIN_SAMPLES_FOR_OVERRIDE
+                    and best_score['usage_count'] >= MIN_SAMPLES_FOR_OVERRIDE
+                ):
+                    # Verify best_agent is not blocked before recommending
+                    try:
+                        from core.models_unified_system import AgentControlEntry
+                        if AgentControlEntry.is_blocked(best_agent):
+                            explanation_parts.append(
+                                f"{routed_to} low performance but {best_agent} is blocked"
+                            )
+                        else:
+                            score_delta = -0.1
+                            preferred_tool = best_agent
+                            explanation_parts.append(
+                                f"{routed_to} has low performance ({current['success_rate']:.0%}); "
+                                f"consider {best_agent} ({best_score['success_rate']:.0%} success)"
+                            )
+                    except Exception:
+                        score_delta = -0.1
+                        preferred_tool = best_agent
+                        explanation_parts.append(
+                            f"{routed_to} has low performance ({current['success_rate']:.0%}); "
+                            f"consider {best_agent} ({best_score['success_rate']:.0%} success)"
+                        )
 
             # Check for learned preferences (chat_preferences domain)
             pref_records = [r for r in records if r.learning_domain == 'chat_preferences']
@@ -191,7 +215,7 @@ def get_learned_preferences_for_prompt(user_id, agent_name: str | None = None) -
 
     Returns a human-readable string (empty if nothing found).
     """
-    if not LEARNING_ROUTING_ENABLED:
+    if not LEARNING_PROMPT_INJECTION_ENABLED:
         return ''
 
     try:
@@ -261,7 +285,9 @@ def get_learned_preferences_for_prompt(user_id, agent_name: str | None = None) -
                 seen.add(p)
                 unique.append(p)
 
-        return 'User preferences (from learning): ' + '; '.join(unique[:6])
+        result = 'User preferences (from learning): ' + '; '.join(unique[:6])
+        # Hard cap to prevent prompt bloat (max ~300 chars)
+        return result[:300]
 
     except Exception as e:
         logger.debug(f"Learned preferences lookup failed: {e}")
