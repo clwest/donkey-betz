@@ -2401,6 +2401,12 @@ app.conf.beat_schedule = {
         }
     },
 
+    # Learning readback telemetry — track feedback loop closure
+    'summarize-learning-readback': {
+        'task': 'core.tasks.summarize_learning_readback',
+        'schedule': crontab(hour='*/6', minute=30),
+    },
+
     # Session 945: Learning Loop - Extract patterns from execution data
     # Runs every 6 hours to keep learning patterns fresh
     'run-learning-loop': {

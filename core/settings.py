@@ -1079,6 +1079,7 @@ CELERY_TASK_ROUTES = {
 
     # Session 573: High-frequency broadcast tasks (60-180s) - separate worker
     'core.tasks.broadcast_learning_status': {'queue': 'broadcast'},
+    'core.tasks.summarize_learning_readback': {'queue': 'broadcast'},
     'core.tasks.broadcast_conversation_status': {'queue': 'broadcast'},
     'core.tasks.broadcast_dream_journal': {'queue': 'broadcast'},
     'core.tasks.broadcast_relationship_status': {'queue': 'broadcast'},

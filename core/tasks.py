@@ -425,6 +425,29 @@ def run_learning_loop_cycle(lookback_days: int = 7):
         raise
 
 
+@shared_task(ignore_result=True)
+def summarize_learning_readback():
+    """Summarize learning readback telemetry — logs how often the feedback loop is closing."""
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models.learning_readback import LearningReadbackEvent
+
+    cutoff = timezone.now() - timedelta(hours=24)
+    qs = LearningReadbackEvent.objects.filter(created_at__gte=cutoff)
+    total = qs.count()
+    consulted = qs.filter(learning_consulted=True).count()
+    used = qs.filter(learning_used=True).count()
+    tool_ok_count = qs.filter(tool_ok=True).count()
+
+    logger.info(
+        f"[LEARNING-READBACK] 24h summary: {total} routing decisions, "
+        f"{consulted} consulted learning ({consulted*100//max(total,1)}%), "
+        f"{used} influenced by learning ({used*100//max(total,1)}%), "
+        f"{tool_ok_count} tool successes"
+    )
+    return {'total': total, 'consulted': consulted, 'used': used, 'tool_ok': tool_ok_count}
+
+
 @shared_task
 def cleanup_boardroom_junk(spider_action_hours: int = 6):
     from core.tasks_ops import _impl_cleanup_boardroom_junk
