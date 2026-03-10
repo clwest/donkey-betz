@@ -3879,6 +3879,33 @@ class OpsHandlersMixin:
         try:
             from core.models_unified_system import Agent, AgentMemory, AgentKnowledgeSource
 
+            # Global stats when no agent_name specified
+            if action == 'stats' and not agent_name:
+                from django.db.models import Count
+                total_memories = AgentMemory.objects.count()
+                total_kb = AgentKnowledgeSource.objects.count()
+                top_agents = list(
+                    AgentMemory.objects.values('agent__name')
+                    .annotate(count=Count('id'))
+                    .order_by('-count')[:10]
+                )
+                type_dist = dict(
+                    AgentMemory.objects.values_list('memory_type')
+                    .annotate(c=Count('id'))
+                    .values_list('memory_type', 'c')
+                )
+                return {
+                    'action': 'stats',
+                    'scope': 'global',
+                    'total_memories': total_memories,
+                    'total_knowledge_sources': total_kb,
+                    'memory_by_type': type_dist,
+                    'top_agents': [{'agent': a['agent__name'], 'count': a['count']} for a in top_agents],
+                }
+
+            if not agent_name:
+                return {'error': 'agent_name is required. Use stats action without agent_name for global stats.', 'action': action}
+
             # Resolve agent — support snake_case
             if '_' in agent_name:
                 canonical = ''.join(w.capitalize() for w in agent_name.split('_'))
