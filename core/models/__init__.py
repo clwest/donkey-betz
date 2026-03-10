@@ -255,6 +255,9 @@ from ..models_governance import GovernanceState, KillSwitch
 # Import VIP invite model (OVL - Magic Link Invites)
 from ..models_vip_invite import VIPInvite
 
+# Learning readback telemetry
+from .learning_readback import LearningReadbackEvent
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -524,5 +527,8 @@ __all__ = [
 
     # VIP Invite (OVL - Magic Link)
     'VIPInvite',
+
+    # Learning readback telemetry
+    'LearningReadbackEvent',
 
 ]

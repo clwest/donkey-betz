@@ -533,6 +533,9 @@ class UnifiedPAEntrypoint:
             tool_result_data = None
             response_id = None
 
+            # Learning readback tracker (initialized here, populated in keyword routing path)
+            learning_rec = {'consulted': False, 'used': False, 'record_ids': [], 'explanation': ''}
+
             if getattr(settings, 'PA_USE_FUNCTION_CALLING', False):
                 # ── New path: GPT-5.2 function calling ──────────────────────
                 content, tool_runs_raw, fc_meta, response_id = await self._run_agentic_loop(
@@ -596,11 +599,29 @@ class UnifiedPAEntrypoint:
                         enrichment_sections = scrub_enrichment_context(enrichment_sections)
                     logger.info(f"[{trace_id}] FC enrichment: {int((time.time()-t2)*1000)}ms sections={list(enrichment_sections.keys())}")
             else:
-                # ── Existing path: keyword routing (unchanged) ──────────────
+                # ── Existing path: keyword routing ──────────────
                 # 2. Detect intent and route
                 detected_intent, routed_to = self._detect_intent_and_route(message)
                 intent = detected_intent or 'general'
                 logger.info(f"[{trace_id}] Step 2 intent={intent} routed_to={routed_to}")
+
+                # 2b. Consult learning signals (Phase 2 — closed feedback loop)
+                try:
+                    from core.services.learning_read_service import get_learning_recommendation
+                    learning_rec = get_learning_recommendation(
+                        user_id=self.user.id,
+                        intent=intent,
+                        routed_to=routed_to,
+                    )
+                    if learning_rec.get('used') and learning_rec.get('preferred_tool'):
+                        original = routed_to
+                        routed_to = learning_rec['preferred_tool']
+                        logger.info(
+                            f"[{trace_id}] Learning override: {original} → {routed_to} "
+                            f"({learning_rec['explanation']})"
+                        )
+                except Exception as e:
+                    logger.debug(f"[{trace_id}] Learning read skipped: {e}")
 
                 # 3. Execute (tool or direct response)
                 tool_runs = []
@@ -735,6 +756,28 @@ class UnifiedPAEntrypoint:
                 len(tool_names), ','.join(tool_names) or 'none',
                 len(self._conversation_history), intent,
             )
+
+            # Record learning readback event (Phase 1 telemetry)
+            try:
+                from core.models.learning_readback import LearningReadbackEvent
+                tool_ok = None
+                if tool_runs:
+                    tool_ok = any(r.get('ok') for r in tool_runs)
+                LearningReadbackEvent.objects.create(
+                    user=self.user,
+                    trace_id=trace_id,
+                    message_snippet=message[:200],
+                    intent=intent,
+                    routed_to=routed_to,
+                    learning_consulted=learning_rec.get('consulted', False),
+                    learning_used=learning_rec.get('used', False),
+                    learning_record_ids=learning_rec.get('record_ids', []),
+                    learning_explanation=learning_rec.get('explanation', ''),
+                    tool_ok=tool_ok,
+                    latency_ms=latency_ms,
+                )
+            except Exception as e:
+                logger.debug(f"[{trace_id}] Readback event skipped: {e}")
 
             return PAResponse(
                 content=content,
