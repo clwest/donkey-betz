@@ -4,11 +4,15 @@ Contains _inject_github_token, _gather_repo_context,
 _implement_with_claude and related constants.
 """
 
+import logging
+
 from core.codejobs.errors import (
     CodeJobError,
     CodeJobAnchorNotFoundError,
     CodeJobFileTooLargeError,
 )
+
+logger = logging.getLogger(__name__)
 
 def _inject_github_token(repo_url: str, token: str) -> str:
     """Inject a GitHub token into a clone URL for authentication."""
