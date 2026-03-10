@@ -1854,6 +1854,7 @@ RESEARCH DATA:
                 return {'error': 'content is required for save action'}
 
             # Secret redaction
+            from core.services.tool_dispatcher import _redact_secrets
             content = _redact_secrets(content)
 
             memory_type = payload.get('memory_type', 'preference')
