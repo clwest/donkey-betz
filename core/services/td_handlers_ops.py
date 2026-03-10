@@ -3172,7 +3172,21 @@ class OpsHandlersMixin:
                 })
                 # Make disjoint: rerouted = non_specialist minus blocked
                 blocked_agents = sorted(_BLOCKED)
-                rerouted_agents = sorted(_NON_SPECIALIST - _BLOCKED)
+                _REROUTE_REASON = {
+                    'WorkflowAgent': 'Generic orchestrator — tasks rerouted to specialist agents',
+                    'VideoAgent': 'Media agent — tasks rerouted to content specialists',
+                    'DevOpsAgent': 'Infra agent — tasks rerouted to relevant domain agent',
+                    'FullStackDeveloperAgent': 'Dev agent — tasks rerouted to specialist',
+                    'CodeReviewAgent': 'Code agent — tasks rerouted to specialist',
+                    'ContentDistributionAgent': 'Distribution agent — tasks rerouted to content pipeline',
+                    'COOAgent': 'Executive agent — tasks rerouted to operational agents',
+                    'CTOAgent': 'Executive agent — tasks rerouted to technical agents',
+                    'AudioAgent': 'Media agent — tasks rerouted to content specialists',
+                }
+                rerouted_agents = sorted([
+                    {'name': name, 'reason': _REROUTE_REASON.get(name, 'Non-specialist — rerouted to best-fit agent')}
+                    for name in (_NON_SPECIALIST - _BLOCKED)
+                ], key=lambda x: x['name'])
             except Exception:
                 pass
 
