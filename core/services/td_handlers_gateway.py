@@ -984,7 +984,44 @@ class GatewayHandlersMixin:
                     'active_automations': AutomatedAction.objects.filter(is_active=True).count(),
                 }
 
-            return {'error': f'Unknown proactive_tool action: {action}'}
+            if action == 'mark_read':
+                notif_id = payload.get('notification_id', '') or payload.get('id', '')
+                if not notif_id:
+                    return {'error': 'notification_id required for mark_read'}
+                updated = ProactiveNotification.objects.filter(id=notif_id, is_read=False).update(is_read=True)
+                return {'action': 'mark_read', 'notification_id': notif_id, 'updated': updated > 0}
+
+            if action == 'bulk_ack':
+                # Mark multiple notifications as read by filter
+                priority = payload.get('priority', '')
+                notification_type = payload.get('notification_type', '')
+                max_items = min(int(payload.get('max_items', 50)), 200)
+                qs = ProactiveNotification.objects.filter(is_read=False)
+                if user_id:
+                    qs = qs.filter(user_id=user_id)
+                if priority:
+                    qs = qs.filter(priority=priority)
+                if notification_type:
+                    qs = qs.filter(notification_type=notification_type)
+                # Order by oldest first
+                ids_to_ack = list(qs.order_by('created_at').values_list('id', flat=True)[:max_items])
+                updated = ProactiveNotification.objects.filter(id__in=ids_to_ack).update(is_read=True)
+                return {
+                    'action': 'bulk_ack',
+                    'acknowledged': updated,
+                    'filters': {'priority': priority or 'all', 'notification_type': notification_type or 'all'},
+                }
+
+            if action == 'dismiss':
+                notif_id = payload.get('notification_id', '') or payload.get('id', '')
+                if not notif_id:
+                    return {'error': 'notification_id required for dismiss'}
+                updated = ProactiveNotification.objects.filter(id=notif_id).update(
+                    is_read=True, delivery_status='dismissed'
+                )
+                return {'action': 'dismiss', 'notification_id': notif_id, 'dismissed': updated > 0}
+
+            return {'error': f'Unknown proactive_tool action: {action}. Valid: dashboard, alerts, notifications, suggestions, automations, mark_read, bulk_ack, dismiss'}
 
         except Exception as e:
             logger.error(f"[PROACTIVE] {action} error: {e}", exc_info=True)
