@@ -3763,7 +3763,7 @@ class OpsHandlersMixin:
                         items_24h=Count('id', filter=__import__('django.db.models', fromlist=['Q']).Q(created_at__gte=cutoff_24h)),
                         items_7d=Count('id', filter=__import__('django.db.models', fromlist=['Q']).Q(created_at__gte=cutoff_7d)),
                     )
-                    .order_by('-last_run_at')[:limit]
+                    .order_by('-last_run_at')
                 )
 
                 items = []
