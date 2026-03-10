@@ -20,6 +20,7 @@ from core.api_helpers import smart_truncate  # noqa: F401
 
 logger = logging.getLogger(__name__)
 from core.tasks import (  # noqa: F401 — private helpers from tasks.py
+    ScheduledTaskError,
     _auto_research_competitor,
     _gather_live_system_metrics,
     _process_single_gate,
@@ -1393,6 +1394,7 @@ def _impl_apply_mood_trigger_rules(agent_id: str = None):
 
                 # Apply trigger if condition met
                 if condition_met:
+                    from core.tasks import update_agent_mood
                     update_agent_mood.delay(
                         agent_id=str(agent.id),
                         mood=rule.target_mood,
@@ -1682,6 +1684,7 @@ def _impl_process_document_async(self, document_id: int, generate_embeddings: bo
 
             # Generate embeddings if requested
             if generate_embeddings:
+                from core.tasks import generate_document_embeddings
                 generate_document_embeddings.delay(document_id, embedding_model)
 
             return {
@@ -4066,6 +4069,7 @@ def _impl_backfill_voice_scores(limit: int = 50, min_content_length: int = 100):
     for episode in unscored_episodes:
         try:
             # Call the scoring task synchronously for backfill
+            from core.tasks import score_episode_voice
             score_result = score_episode_voice(str(episode.id))
             if score_result.get('success'):
                 results['scored'] += 1
@@ -4401,6 +4405,7 @@ def _impl_process_pending_auto_topics(self, max_topics: int = 3):
         for topic in pending_topics:
             try:
                 # Trigger conversation synchronously to track results
+                from core.tasks import trigger_signal_driven_conversation
                 result = trigger_signal_driven_conversation(str(topic.id))
 
                 if result.get('status') == 'success':
@@ -4528,6 +4533,7 @@ def _impl_backfill_stage_documents(self, stage_num: int = 1, limit: int = 50):
         for initiative in initiatives_to_backfill:
             try:
                 # Trigger document generation for this initiative
+                from core.tasks import generate_initiative_stage_document
                 generate_initiative_stage_document.delay(str(initiative.id), stage_num)
                 triggered += 1
                 logger.info(f"[Session 915] 🚀 Triggered: {initiative.name[:50]}...")
