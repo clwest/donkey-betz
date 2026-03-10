@@ -598,6 +598,7 @@ def _impl_check_workflow_schedules():
             logger.info(f"🚀 [WORKFLOW CHECK] Executing due workflow: {schedule.custom_workflow.name}")
 
             # Queue the execution task
+            from core.tasks import execute_scheduled_workflow
             execute_scheduled_workflow.delay(str(schedule.id))
             executed += 1
 
@@ -3966,12 +3967,17 @@ def _impl_agent_category_rotation(category: str):
 
     This task runs all agents in a given category sequentially.
 
+    Lazy imports AGENT_WORKSPACE_REGISTRY and universal_agent_workspace_output
+    from core.tasks to avoid circular import at module load time.
+
     Args:
         category: The agent category to execute (research, financial, etc.)
 
     Returns:
         Summary of all agent executions
     """
+    from core.tasks import AGENT_WORKSPACE_REGISTRY, universal_agent_workspace_output
+
     logger.info(f"🔄 [SKIN LAYER] Starting category rotation: {category}")
 
     agents_in_category = [
