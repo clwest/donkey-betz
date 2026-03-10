@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-03-10 00:17
+**Generated:** 2026-03-10 00:20
 **Current Session:** 1077
 **Total Documentation:** 1820 files | 622,504 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/capabilities/06_Decision_Systems/README.md` | 60 | 🎯 DECISION COMMAND SYSTEMS - AI-Powered Decision I |
+| `docs/archive/old-structure/capabilities/09_Self_Awareness/README.md` | 60 | 🔮 SELF-AWARENESS SYSTEMS - The AI That Knows Itsel |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -217,7 +217,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 361 | 2026-03-10 00:15 |
+| INDEX.md | docs | 361 | 2026-03-10 00:18 |
 | remote-code-worker-contract.md | designs | 411 | 2026-03-08 21:33 |
 | personal-assistant.md | topics | 139 | 2026-03-05 07:03 |
 | video-upload.md | topics | 101 | 2026-03-04 13:08 |

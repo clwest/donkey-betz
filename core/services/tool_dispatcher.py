@@ -385,6 +385,9 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         self.register("heartbeat_history_tool", self._handle_heartbeat_history)
         self.register("infra_health_tool", self._handle_infra_health)
 
+        # R2-6: KB / embedding browsing
+        self.register("kb_tool", self._handle_kb_browse)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):

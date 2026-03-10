@@ -3476,6 +3476,35 @@ PA_TOOL_SCHEMAS = [
             "required": ["action"],
         },
     },
+    # ── R2-6: KB / Embedding browsing tool ──────────────────────────────────
+    {
+        "name": "kb_tool",
+        "description": (
+            "Browse the knowledge base — documents, embedding collections, chunk counts, "
+            "and text search across all embedded content. Use when the user asks about "
+            "KB content, embeddings, document chunks, what's been embedded, or RAG sources."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["stats", "documents", "chunks", "search_embeddings"],
+                    "description": (
+                        "stats: overall KB metrics (doc count, embedding counts by type). "
+                        "documents: list documents with chunk counts. "
+                        "chunks: view chunks for a specific document. "
+                        "search_embeddings: text search across unified embeddings."
+                    ),
+                },
+                "document_id": {"type": "string", "description": "Document UUID (for chunks action)"},
+                "query": {"type": "string", "description": "Search term for documents or embeddings"},
+                "content_type": {"type": "string", "description": "Filter unified embeddings by content_type (e.g. agent_knowledge, spider_data, document_chunk)"},
+                "limit": {"type": "integer", "description": "Max results (default 20, max 50)"},
+            },
+            "required": ["action"],
+        },
+    },
 ]
 
 # ── Startup validation: every tool must have name, description, parameters ──
@@ -3588,6 +3617,7 @@ TOOL_ENRICHMENT_MAP = {
     'agent_memory_tool': [],
     'heartbeat_history_tool': [],
     'infra_health_tool': [],
+    'kb_tool': [],
 }
 
 # Reverse map: tool name -> canonical intent name for enrichment pipeline
@@ -3691,6 +3721,7 @@ TOOL_TO_INTENT_MAP = {
     'agent_memory_tool': 'agent_introspection',
     'heartbeat_history_tool': 'system_health',
     'infra_health_tool': 'system_health',
+    'kb_tool': 'knowledge_base',
 }
 
 
