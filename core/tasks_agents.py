@@ -589,16 +589,46 @@ Your task as {agent_name}: Build on the above and contribute your expertise."""
                 )
 
                 # REAL AGENT EXECUTION via AgentRouter
+                # Session 1108: Wall-clock timeout — prevents hung LLM calls
+                # from blocking the orchestration indefinitely. Without this,
+                # the only safety net is the 35-min cleanup reaper.
+                _ORCH_AGENT_TIMEOUT = 600  # 10 min per agent step
                 try:
-                    agent_result = router.route(
-                        agent_name=agent_name,
-                        task=task,
-                        context={
-                            **accumulated_context,
-                            'previous_result': previous_result,
-                            'step': i + 1,
-                        }
-                    )
+                    from concurrent.futures import ThreadPoolExecutor as _OTPE, TimeoutError as _OFTimeout
+                    def _orch_route():
+                        from django.db import close_old_connections
+                        close_old_connections()
+                        try:
+                            return router.route(
+                                agent_name=agent_name,
+                                task=task,
+                                context={
+                                    **accumulated_context,
+                                    'previous_result': previous_result,
+                                    'step': i + 1,
+                                }
+                            )
+                        finally:
+                            close_old_connections()
+
+                    _opool = _OTPE(max_workers=1)
+                    _ofuture = _opool.submit(_orch_route)
+                    try:
+                        agent_result = _ofuture.result(timeout=_ORCH_AGENT_TIMEOUT)
+                    except _OFTimeout:
+                        logger.error(
+                            f"[Orchestration] WALL-CLOCK TIMEOUT: {agent_name} exceeded "
+                            f"{_ORCH_AGENT_TIMEOUT}s — marking failed"
+                        )
+                        _record_timeout_signature(
+                            agent_name=agent_name,
+                            timeout_source='orchestration_wall_clock',
+                            elapsed_seconds=_ORCH_AGENT_TIMEOUT,
+                            execution_id=execution.id,
+                        )
+                        raise TimeoutError(f"{agent_name} exceeded {_ORCH_AGENT_TIMEOUT}s wall-clock timeout")
+                    finally:
+                        _opool.shutdown(wait=False)
 
                     # Extract result data - Session 735: Include cost and tokens
                     agent_cost = getattr(agent_result, 'cost', 0.0) or 0.0
@@ -712,15 +742,19 @@ Your task as {agent_name}: Build on the above and contribute your expertise."""
                 except Exception as e:
                     return {'success': False, 'error': str(e)}
 
-            with ThreadPoolExecutor(max_workers=min(4, len(executions))) as executor:
+            # Session 1108: Use shutdown(wait=False) + per-future timeout
+            # to prevent hung agents from blocking the entire orchestration.
+            _PARALLEL_AGENT_TIMEOUT = 600  # 10 min per agent
+            executor = ThreadPoolExecutor(max_workers=min(4, len(executions)))
+            try:
                 for execution, agent_name, i in executions:
                     future = executor.submit(execute_agent_task, execution, agent_name, base_prompt)
                     futures_map[future] = (execution, agent_name, i)
 
-                for future in as_completed(futures_map):
+                for future in as_completed(futures_map, timeout=_PARALLEL_AGENT_TIMEOUT):
                     execution, agent_name, i = futures_map[future]
                     try:
-                        result_data = future.result()
+                        result_data = future.result(timeout=_PARALLEL_AGENT_TIMEOUT)
                         execution.result = result_data
                         execution.status = AgentStatus.COMPLETED if result_data.get('success') else AgentStatus.FAILED
                         execution.completed_at = timezone.now()
@@ -744,6 +778,25 @@ Your task as {agent_name}: Build on the above and contribute your expertise."""
                         execution.status = AgentStatus.FAILED
                         execution.save()
                         logger.error(f"❌ [Parallel] {agent_name} failed: {e}")
+
+            except TimeoutError:
+                # Session 1108: Some agents exceeded the parallel timeout.
+                # Mark any still-running executions as failed.
+                for _exec, _aname, _ in executions:
+                    if _exec.status == AgentStatus.RUNNING:
+                        _exec.status = AgentStatus.FAILED
+                        _exec.result = {'success': False, 'error': f'{_aname} exceeded {_PARALLEL_AGENT_TIMEOUT}s timeout'}
+                        _exec.completed_at = timezone.now()
+                        _exec.save()
+                        logger.error(f"[Orchestration] PARALLEL TIMEOUT: {_aname} exceeded {_PARALLEL_AGENT_TIMEOUT}s")
+                        _record_timeout_signature(
+                            agent_name=_aname,
+                            timeout_source='orchestration_parallel_wall_clock',
+                            elapsed_seconds=_PARALLEL_AGENT_TIMEOUT,
+                            execution_id=_exec.id,
+                        )
+            finally:
+                executor.shutdown(wait=False)
 
             orchestration.save()
 
