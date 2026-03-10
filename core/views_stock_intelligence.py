@@ -12,10 +12,13 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from django.db import IntegrityError
+
 from core.models_unified_system import (
     MarketIntelligenceBrief,
     PredictionOutcome,
     SpiderData,
+    UserWatchlistItem,
 )
 from core.models_autonomous_alerts import StockMarketAlert
 
@@ -337,6 +340,14 @@ def stock_alerts(request):
         if bookmarked == 'true':
             qs = qs.filter(bookmarked=True)
 
+        # Watchlist filter: only show alerts for user's watched symbols
+        watchlist = request.GET.get('watchlist')
+        if watchlist == 'true':
+            watched = UserWatchlistItem.objects.filter(
+                user=request.user,
+            ).values_list('symbol', flat=True)
+            qs = qs.filter(symbol__in=watched)
+
         total = qs.count()
         alerts = qs[offset:offset + limit]
 
@@ -388,6 +399,14 @@ def stock_predictions(request):
         ticker = request.GET.get('ticker')
         if ticker:
             qs = qs.filter(ticker__iexact=ticker)
+
+        # Watchlist filter
+        watchlist = request.GET.get('watchlist')
+        if watchlist == 'true':
+            watched = UserWatchlistItem.objects.filter(
+                user=request.user,
+            ).values_list('symbol', flat=True)
+            qs = qs.filter(ticker__in=watched)
 
         total = qs.count()
         predictions = qs[offset:offset + limit]
@@ -712,3 +731,53 @@ def ticker_lookup(request, symbol):
         logger.warning(f"Ticker lookup spider data error for {symbol}: {e}")
 
     return Response(result)
+
+
+# ── Watchlist ────────────────────────────────────────────────────────────────
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def watchlist_list(request):
+    """List the authenticated user's watchlist symbols."""
+    items = UserWatchlistItem.objects.filter(user=request.user)
+    return Response({
+        'success': True,
+        'symbols': [
+            {'symbol': w.symbol, 'added_at': w.created_at.isoformat()}
+            for w in items
+        ],
+        'count': items.count(),
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def watchlist_add(request):
+    """Add a symbol to the user's watchlist."""
+    symbol = (request.data.get('symbol') or '').upper().strip()
+    if not symbol or len(symbol) > 10:
+        return Response({'error': 'Valid symbol is required'}, status=400)
+
+    try:
+        item = UserWatchlistItem.objects.create(user=request.user, symbol=symbol)
+        return Response({
+            'success': True,
+            'symbol': item.symbol,
+            'added_at': item.created_at.isoformat(),
+        }, status=201)
+    except IntegrityError:
+        return Response({'success': True, 'symbol': symbol, 'already_exists': True})
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def watchlist_remove(request, symbol):
+    """Remove a symbol from the user's watchlist."""
+    symbol = symbol.upper().strip()
+    deleted, _ = UserWatchlistItem.objects.filter(
+        user=request.user, symbol=symbol,
+    ).delete()
+    if not deleted:
+        return Response({'error': f'{symbol} not in watchlist'}, status=404)
+    return Response({'success': True, 'symbol': symbol, 'removed': True})
