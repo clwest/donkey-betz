@@ -623,6 +623,7 @@ class GatewayHandlersMixin:
                         'worker_health — active workers, queues, concurrency',
                         'recent_failures — failed tasks with errors',
                         'queue_lengths — current queue depths',
+                        'trigger_task — manually dispatch an allowlisted Celery task',
                     ],
                 }
 
@@ -725,6 +726,40 @@ class GatewayHandlersMixin:
                         queues.setdefault(q, {'active': 0, 'reserved': 0})
                         queues[q]['reserved'] += 1
                 return {'action': 'queue_lengths', 'queues': queues}
+
+            if action == 'trigger_task':
+                task_name = payload.get('task_name', '').strip()
+                if not task_name:
+                    return {'error': 'Provide task_name to trigger'}
+
+                # Whitelist of safe tasks the PA can trigger on demand
+                ALLOWED_TASKS = {
+                    'core.tasks.sync_congress_data',
+                    'core.tasks.run_all_spiders',
+                    'core.tasks.check_system_health',
+                    'core.tasks.run_signal_aggregation',
+                    'core.tasks.generate_self_blog_deliberation_task',
+                    'core.tasks.backfill_spider_embeddings',
+                    'core.tasks.check_content_diversity',
+                    'core.tasks.run_body_system_check',
+                }
+
+                if task_name not in ALLOWED_TASKS:
+                    return {
+                        'error': f'Task not in allowlist: {task_name}',
+                        'allowed_tasks': sorted(ALLOWED_TASKS),
+                    }
+
+                from core.celery import app as celery_app
+                queue = payload.get('queue', 'long_running')
+                result = celery_app.send_task(task_name, queue=queue)
+                return {
+                    'action': 'trigger_task',
+                    'task_name': task_name,
+                    'task_id': str(result.id),
+                    'queue': queue,
+                    'status': 'dispatched',
+                }
 
             return {'error': f'Unknown cockpit_tool action: {action}'}
 
