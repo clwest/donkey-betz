@@ -496,9 +496,28 @@ class AgentHandlersMixin:
                 'success': True,
             }
 
+        elif action == 'delete':
+            opp_id = payload.get('id', '') or payload.get('opportunity_id', '')
+            if not opp_id:
+                raise ValueError("'id' is required for delete action")
+            opp = base_qs.filter(id=opp_id).first()
+            if not opp:
+                return {'action': 'delete', 'success': False, 'error': f'Opportunity {opp_id} not found'}
+            title = opp.title
+            # Count linked tasks before CASCADE deletes them
+            from core.models_unified_system import OpportunityTask as _OT
+            task_count = _OT.objects.filter(opportunity=opp).count()
+            opp.delete()
+            return {
+                'action': 'delete', 'success': True,
+                'id': str(opp_id), 'title': title,
+                'tasks_deleted': task_count,
+                'message': f"Deleted opportunity '{title}' and {task_count} linked task(s)",
+            }
+
         else:
             raise ValueError(
-                f"Unknown action: {action}. Valid actions: list, get, stats, update_status, create"
+                f"Unknown action: {action}. Valid actions: list, get, stats, update_status, create, delete"
             )
 
     def _handle_task_manager(
@@ -656,8 +675,19 @@ class AgentHandlersMixin:
                 'success': True,
             }
 
+        elif action == 'delete':
+            task_id = payload.get('id', '').strip()
+            if not task_id:
+                raise ValueError("'id' is required for delete action")
+            task = base_qs.filter(id=task_id).first()
+            if not task:
+                return {'action': 'delete', 'success': False, 'error': f'Task {task_id} not found'}
+            title = task.title
+            task.delete()
+            return {'action': 'delete', 'success': True, 'id': task_id, 'title': title, 'message': f"Deleted task '{title}'"}
+
         else:
-            raise ValueError(f"Unknown action: {action}. Valid: list, stats, create, update, complete")
+            raise ValueError(f"Unknown action: {action}. Valid: list, stats, create, update, complete, delete")
 
     def _handle_pipeline_orchestrator(
         self,
