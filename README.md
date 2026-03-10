@@ -1,4 +1,5 @@
 # Unified Donkey Betz Platform
+<!-- test branch: tests/rigby/full-suite-real-1 -->
 
 **AI-Powered Intelligence, Execution, and Revenue Generation System**
 
