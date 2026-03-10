@@ -2499,6 +2499,7 @@ class ContentHandlersMixin:
         limit = payload.get('limit', 20)
         agent_name = payload.get('agent_name')
         hours = payload.get('hours', 24)
+        status_filter = payload.get('status')  # Session 1097: honour status filter
 
         cutoff = timezone.now() - timedelta(hours=hours)
 
@@ -2510,6 +2511,8 @@ class ContentHandlersMixin:
 
             if agent_name:
                 qs = qs.filter(agent__name__icontains=agent_name)
+            if status_filter:
+                qs = qs.filter(status=status_filter)
 
             items = list(
                 qs.order_by('-created_at')[:limit].values(
@@ -2552,11 +2555,15 @@ class ContentHandlersMixin:
                     'message': 'Specify agent_name to see executions for a specific agent'
                 }
 
+            qs = AgentExecution.objects.filter(
+                agent__name__icontains=agent_name,
+                created_at__gte=cutoff
+            )
+            if status_filter:
+                qs = qs.filter(status=status_filter)
+
             items = list(
-                AgentExecution.objects.filter(
-                    agent__name__icontains=agent_name,
-                    created_at__gte=cutoff
-                ).order_by('-created_at')[:limit].values(
+                qs.order_by('-created_at')[:limit].values(
                     'id', 'agent__name', 'task', 'status',
                     'execution_time_ms', 'error_message', 'created_at'
                 )
