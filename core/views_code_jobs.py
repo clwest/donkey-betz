@@ -86,7 +86,7 @@ def create_code_job(request):
 
     Request body:
     {
-        "repo_slug": "donkeyking/unified-donkey-betz",
+        "repo_slug": "clwest/donkey-betz-platform",
         "ref": "dev",
         "base_branch": "main",
         "task_prompt": "Add endpoint /api/v1/health/extended",
