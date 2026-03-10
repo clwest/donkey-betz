@@ -577,6 +577,19 @@ class UnifiedPAEntrypoint:
                 intent = self._infer_intent_from_tools(tool_names)
                 routed_to = tool_names[0] if tool_names else None
 
+                # Post-FC learning consultation — record what learning would recommend
+                # for this intent/tool combo (consult-only, no override in FC path)
+                try:
+                    from core.services.learning_read_service import get_learning_recommendation
+                    from asgiref.sync import sync_to_async
+                    learning_rec = await sync_to_async(get_learning_recommendation)(
+                        user_id=self.user.id,
+                        intent=intent,
+                        routed_to=routed_to,
+                    )
+                except Exception as e:
+                    logger.debug(f"[{trace_id}] FC learning consult skipped: {e}")
+
                 # Use GPT function call metadata (has name, arguments, call_id, ok)
                 tool_call_metadata = fc_meta
                 tool_result_data = tool_runs_raw
@@ -1759,6 +1772,16 @@ class UnifiedPAEntrypoint:
                     })
         except Exception as e:
             logger.debug(f"[PA] Memory context injection skipped: {e}")
+
+        # Inject learned preferences from UserAgentLearning
+        try:
+            from core.services.learning_read_service import get_learned_preferences_for_prompt
+            learned_prefs = get_learned_preferences_for_prompt(self.user.id)
+            if learned_prefs:
+                prompt_parts.append("")
+                prompt_parts.append(learned_prefs)
+        except Exception as e:
+            logger.debug(f"[PA] Learned preferences injection skipped: {e}")
 
         # Add docs context summary if available
         if docs_ctx.get('has_docs'):
