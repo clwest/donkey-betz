@@ -608,7 +608,8 @@ class UnifiedPAEntrypoint:
                 # 2b. Consult learning signals (Phase 2 — closed feedback loop)
                 try:
                     from core.services.learning_read_service import get_learning_recommendation
-                    learning_rec = get_learning_recommendation(
+                    from asgiref.sync import sync_to_async
+                    learning_rec = await sync_to_async(get_learning_recommendation)(
                         user_id=self.user.id,
                         intent=intent,
                         routed_to=routed_to,
@@ -760,10 +761,11 @@ class UnifiedPAEntrypoint:
             # Record learning readback event (Phase 1 telemetry)
             try:
                 from core.models.learning_readback import LearningReadbackEvent
+                from asgiref.sync import sync_to_async
                 tool_ok = None
                 if tool_runs:
                     tool_ok = any(r.get('ok') for r in tool_runs)
-                LearningReadbackEvent.objects.create(
+                await sync_to_async(LearningReadbackEvent.objects.create)(
                     user=self.user,
                     trace_id=trace_id,
                     message_snippet=message[:200],
