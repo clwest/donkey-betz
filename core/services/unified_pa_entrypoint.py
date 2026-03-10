@@ -621,7 +621,7 @@ class UnifiedPAEntrypoint:
                             f"({learning_rec['explanation']})"
                         )
                 except Exception as e:
-                    logger.debug(f"[{trace_id}] Learning read skipped: {e}")
+                    logger.warning(f"[{trace_id}] Learning read skipped: {e}")
 
                 # 3. Execute (tool or direct response)
                 tool_runs = []
@@ -777,7 +777,7 @@ class UnifiedPAEntrypoint:
                     latency_ms=latency_ms,
                 )
             except Exception as e:
-                logger.debug(f"[{trace_id}] Readback event skipped: {e}")
+                logger.warning(f"[{trace_id}] Readback event skipped: {e}")
 
             return PAResponse(
                 content=content,
