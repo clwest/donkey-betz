@@ -448,6 +448,19 @@ def summarize_learning_readback():
     return {'total': total, 'consulted': consulted, 'used': used, 'tool_ok': tool_ok_count}
 
 
+@shared_task(ignore_result=True)
+def cleanup_learning_readback_events(retention_days: int = 30):
+    """Delete LearningReadbackEvent rows older than retention_days."""
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models.learning_readback import LearningReadbackEvent
+
+    cutoff = timezone.now() - timedelta(days=retention_days)
+    deleted, _ = LearningReadbackEvent.objects.filter(created_at__lt=cutoff).delete()
+    logger.info(f"[LEARNING-READBACK] Cleanup: deleted {deleted} events older than {retention_days}d")
+    return {'deleted': deleted}
+
+
 @shared_task
 def cleanup_boardroom_junk(spider_action_hours: int = 6):
     from core.tasks_ops import _impl_cleanup_boardroom_junk

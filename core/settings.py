@@ -1080,6 +1080,7 @@ CELERY_TASK_ROUTES = {
     # Session 573: High-frequency broadcast tasks (60-180s) - separate worker
     'core.tasks.broadcast_learning_status': {'queue': 'broadcast'},
     'core.tasks.summarize_learning_readback': {'queue': 'broadcast'},
+    'core.tasks.cleanup_learning_readback_events': {'queue': 'broadcast'},
     'core.tasks.broadcast_conversation_status': {'queue': 'broadcast'},
     'core.tasks.broadcast_dream_journal': {'queue': 'broadcast'},
     'core.tasks.broadcast_relationship_status': {'queue': 'broadcast'},
@@ -1392,6 +1393,10 @@ USE_CLEAN_AGENT_ARCHITECTURE = os.environ.get('USE_CLEAN_AGENT_ARCHITECTURE', 'T
 # When True, PA uses GPT-5.2 function calling to route messages instead of
 # the 506-line _detect_intent_and_route() keyword matching chain.
 PA_USE_FUNCTION_CALLING = os.environ.get('PA_USE_FUNCTION_CALLING', 'false').lower() == 'true'
+
+# Learning feedback loop flags (default OFF — flip via Railway env vars)
+LEARNING_ROUTING_ENABLED = os.environ.get('LEARNING_ROUTING_ENABLED', 'false').lower() == 'true'
+LEARNING_PROMPT_INJECTION_ENABLED = os.environ.get('LEARNING_PROMPT_INJECTION_ENABLED', 'false').lower() == 'true'
 
 # Session G2: Recording Mode — controls artifact persistence and log verbosity
 # off: don't auto-save intermediate outputs; minimize payload logging
