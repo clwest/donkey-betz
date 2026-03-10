@@ -3322,7 +3322,7 @@ PA_TOOL_SCHEMAS = [
                 },
                 "repo_slug": {
                     "type": "string",
-                    "description": "Repository slug (e.g. 'donkeyking/unified-donkey-betz'). Required for submit.",
+                    "description": "Repository slug (e.g. 'clwest/donkey-betz-platform'). Required for submit.",
                 },
                 "task_prompt": {
                     "type": "string",

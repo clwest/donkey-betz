@@ -17,7 +17,7 @@ The Remote Code Worker is an ephemeral Railway service that executes code tasks 
 
 ```json
 {
-  "repo_slug": "donkeyking/unified-donkey-betz",
+  "repo_slug": "clwest/donkey-betz-platform",
   "ref": "dev",
   "task_prompt": "Add endpoint /api/v1/health/extended returning version + db connectivity",
   "acceptance_criteria": [
@@ -56,7 +56,7 @@ The Remote Code Worker is an ephemeral Railway service that executes code tasks 
   "job_id": "uuid",
   "status": "succeeded",
   "branch": "ccw/abc123-health-extended",
-  "pr_url": "https://github.com/donkeyking/unified-donkey-betz/pull/1450",
+  "pr_url": "https://github.com/clwest/donkey-betz-platform/pull/1450",
   "pr_number": 1450,
   "diff_stats": {
     "files_changed": 3,
@@ -114,7 +114,7 @@ Authorization: Token <pa_token>
 Content-Type: application/json
 
 {
-  "repo_slug": "donkeyking/unified-donkey-betz",
+  "repo_slug": "clwest/donkey-betz-platform",
   "task_prompt": "Add health/extended endpoint",
   ...
 }
@@ -153,7 +153,7 @@ Response 200:
 {
   "job_id": "uuid",
   "log_lines": [
-    {"ts": "...", "level": "info", "step": "clone", "msg": "Cloning donkeyking/unified-donkey-betz@dev..."},
+    {"ts": "...", "level": "info", "step": "clone", "msg": "Cloning clwest/donkey-betz-platform@dev..."},
     {"ts": "...", "level": "info", "step": "clone", "msg": "Clone complete (shallow, 2.1s)"},
     ...
   ],
