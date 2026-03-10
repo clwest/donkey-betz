@@ -651,8 +651,8 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "status", "create"],
-                    "description": "Workspace action. Use 'create' to create a new workspace.",
+                    "enum": ["list", "status", "create", "delete"],
+                    "description": "Workspace action. Use 'create' to make a new workspace, 'delete' to remove a sandbox workspace by id.",
                 },
                 "id": {"type": "string", "description": "UUID of workspace to act on"},
                 "name": {"type": "string", "description": "Name for new workspace (for create action)"},

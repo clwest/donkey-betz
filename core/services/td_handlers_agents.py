@@ -1016,8 +1016,29 @@ class AgentHandlersMixin:
                 'message': f"Created workspace '{name}'",
             }
 
+        elif action == 'delete':
+            from core.models_skin_layer import ProjectWorkspace
+
+            ws_id = payload.get('id', '').strip()
+            if not ws_id:
+                raise ValueError("'id' is required for delete action")
+
+            ws = ProjectWorkspace.objects.filter(id=ws_id).first()
+            if not ws:
+                return {'action': 'delete', 'success': False, 'error': f'Workspace {ws_id} not found'}
+
+            # Safety: only allow deleting sandbox workspaces owned by user
+            if ws.workspace_type != 'sandbox':
+                return {'action': 'delete', 'success': False, 'error': 'Only sandbox workspaces can be deleted'}
+            if user_id and ws.user_id and ws.user_id != user_id:
+                return {'action': 'delete', 'success': False, 'error': 'Cannot delete another user\'s workspace'}
+
+            name = ws.name
+            ws.delete()
+            return {'action': 'delete', 'success': True, 'name': name, 'message': f"Deleted workspace '{name}'"}
+
         else:
-            raise ValueError(f"Unknown action: {action}. Valid actions: list, status, create")
+            raise ValueError(f"Unknown action: {action}. Valid actions: list, status, create, delete")
 
     def _handle_deliverables(
         self,
