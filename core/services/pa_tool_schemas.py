@@ -99,8 +99,8 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "get", "stats", "update_status", "create"],
-                    "description": "Opportunity action. Use 'create' to add a new opportunity.",
+                    "enum": ["list", "get", "stats", "update_status", "create", "delete"],
+                    "description": "Opportunity action. Use 'create' to add, 'delete' to remove (also deletes linked tasks).",
                 },
                 "id": {"type": "string", "description": "UUID of opportunity"},
                 "title": {"type": "string", "description": "Title for new opportunity (for create)"},
@@ -129,8 +129,8 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "stats", "create", "update", "complete"],
-                    "description": "Task action: list, stats, create new task, update existing, or mark complete",
+                    "enum": ["list", "stats", "create", "update", "complete", "delete"],
+                    "description": "Task action: list, stats, create new task, update existing, mark complete, or delete",
                 },
                 "status": {"type": "string", "description": "Filter by task status or new status for update"},
                 "priority": {"type": "string", "description": "Filter by priority (low/medium/high/urgent) or set priority for create/update"},
