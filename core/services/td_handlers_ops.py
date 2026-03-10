@@ -4251,6 +4251,117 @@ class OpsHandlersMixin:
             return {'error': str(e)}
 
     # =========================================================================
+    # R2-6: KB / Embedding browsing tool
+    # =========================================================================
+
+    def _handle_kb_browse(self, tool_name, payload, user_id, trace_id):
+        """R2-6: Browse KB documents, embedding collections, and chunk counts."""
+        action = payload.get('action', 'stats')
+        limit = min(int(payload.get('limit', 20)), 50)
+
+        try:
+            if action == 'stats':
+                from content.models import Document, DocumentEmbedding
+                from persistence.models import UnifiedEmbedding
+                from core.models_unified_system import SpiderData
+                from django.db.models import Count
+
+                doc_count = Document.objects.count()
+                doc_with_embeddings = Document.objects.filter(embeddings__isnull=False).distinct().count()
+                doc_embedding_count = DocumentEmbedding.objects.count()
+                unified_count = UnifiedEmbedding.objects.count()
+                spider_with_embedding = SpiderData.objects.filter(embedding__isnull=False).count()
+
+                # Breakdown by content_type
+                unified_by_type = list(
+                    UnifiedEmbedding.objects.values('content_type')
+                    .annotate(count=Count('id'))
+                    .order_by('-count')
+                )
+
+                return {
+                    'action': 'stats',
+                    'documents': {'total': doc_count, 'with_embeddings': doc_with_embeddings},
+                    'document_embeddings': doc_embedding_count,
+                    'unified_embeddings': unified_count,
+                    'unified_by_type': unified_by_type,
+                    'spider_data_with_embedding': spider_with_embedding,
+                }
+
+            elif action == 'documents':
+                from content.models import Document
+                from django.db.models import Count
+
+                query = payload.get('query', '').strip()
+                qs = Document.objects.annotate(chunk_count=Count('embeddings')).order_by('-created_at')
+                if query:
+                    qs = qs.filter(title__icontains=query)
+                docs = qs[:limit]
+                return {
+                    'action': 'documents',
+                    'count': len(docs),
+                    'documents': [{
+                        'id': str(d.id),
+                        'title': d.title,
+                        'doc_type': getattr(d, 'doc_type', ''),
+                        'chunk_count': d.chunk_count,
+                        'created_at': d.created_at.isoformat() if hasattr(d, 'created_at') and d.created_at else None,
+                    } for d in docs],
+                }
+
+            elif action == 'chunks':
+                doc_id = payload.get('document_id', '') or payload.get('id', '')
+                if not doc_id:
+                    return {'error': 'document_id required for chunks action'}
+                from content.models import DocumentEmbedding
+                chunks = DocumentEmbedding.objects.filter(document_id=doc_id).order_by('chunk_index')[:limit]
+                return {
+                    'action': 'chunks',
+                    'document_id': doc_id,
+                    'count': len(chunks),
+                    'chunks': [{
+                        'chunk_index': c.chunk_index,
+                        'chunk_size': c.chunk_size,
+                        'text_preview': c.chunk_text[:300],
+                        'has_embedding': c.embedding is not None if hasattr(c, 'embedding') else None,
+                    } for c in chunks],
+                }
+
+            elif action == 'search_embeddings':
+                query = payload.get('query', '').strip()
+                content_type = payload.get('content_type', '').strip()
+                if not query and not content_type:
+                    return {'error': 'query or content_type required for search_embeddings'}
+                from persistence.models import UnifiedEmbedding
+                qs = UnifiedEmbedding.objects.all()
+                if content_type:
+                    qs = qs.filter(content_type=content_type)
+                if query:
+                    from django.db.models import Q as DQ
+                    qs = qs.filter(
+                        DQ(content_text__icontains=query) | DQ(content_title__icontains=query)
+                    )
+                qs = qs.order_by('-created_at')[:limit]
+                return {
+                    'action': 'search_embeddings',
+                    'count': len(qs),
+                    'results': [{
+                        'id': str(e.id),
+                        'content_type': e.content_type,
+                        'title': e.content_title[:200],
+                        'text_preview': e.content_text[:300],
+                        'source_system': e.source_system,
+                        'created_at': e.created_at.isoformat() if hasattr(e, 'created_at') and e.created_at else None,
+                    } for e in qs],
+                }
+
+            return {'error': f'Unknown kb_tool action: {action}. Valid: stats, documents, chunks, search_embeddings'}
+
+        except Exception as e:
+            logger.error(f"[KB_BROWSE] {action} error: {e}", exc_info=True)
+            return {'error': str(e)}
+
+    # =========================================================================
     # Session 1031: Dream Tool — browse, approve, dismiss dreams via PA
     # =========================================================================
 
