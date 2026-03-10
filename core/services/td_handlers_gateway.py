@@ -764,7 +764,7 @@ class GatewayHandlersMixin:
                     }
 
                 from core.celery import app as celery_app
-                queue = payload.get('queue', 'long_running')
+                queue = payload.get('queue', '') or 'long_running'
                 result = celery_app.send_task(task_name, queue=queue)
                 return {
                     'action': 'trigger_task',
