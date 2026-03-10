@@ -3251,12 +3251,13 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["metrics", "reports", "evolution", "stats"],
+                    "enum": ["metrics", "reports", "evolution", "stats", "collect"],
                     "description": (
                         "metrics: latest system metrics snapshot. "
                         "reports: recent self-analysis reports. "
                         "evolution: system evolution history. "
-                        "stats: aggregate self-awareness stats."
+                        "stats: aggregate self-awareness stats. "
+                        "collect: gather live metrics from agents/tasks and record a new snapshot."
                     ),
                 },
                 "limit": {"type": "integer", "description": "Max results (default 10)"},
