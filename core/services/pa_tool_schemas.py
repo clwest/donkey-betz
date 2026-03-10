@@ -3311,13 +3311,15 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["submit", "status", "logs", "cancel", "list"],
+                    "enum": ["submit", "status", "logs", "cancel", "list", "list_repos", "add_repo"],
                     "description": (
                         "submit: create a new code job for a repo. "
                         "status: check progress and results of a job. "
                         "logs: stream log lines from a running or completed job. "
                         "cancel: cancel a running job. "
-                        "list: list recent code jobs with optional filters."
+                        "list: list recent code jobs with optional filters. "
+                        "list_repos: list all registered repos in the allowlist. "
+                        "add_repo: add a new GitHub repo to the allowlist (requires repo_url)."
                     ),
                 },
                 "repo_slug": {
@@ -3365,6 +3367,18 @@ PA_TOOL_SCHEMAS = [
                 "limit": {
                     "type": "integer",
                     "description": "Max results to return (default 20). Used with list and logs.",
+                },
+                "repo_url": {
+                    "type": "string",
+                    "description": "GitHub repo URL (e.g. 'https://github.com/owner/repo'). Required for add_repo.",
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Human-readable repo name. Auto-derived from URL if omitted. Used with add_repo.",
+                },
+                "default_branch": {
+                    "type": "string",
+                    "description": "Default base branch (default: 'main'). Used with add_repo.",
                 },
             },
             "required": ["action"],
