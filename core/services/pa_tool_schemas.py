@@ -2504,7 +2504,7 @@ PA_TOOL_SCHEMAS = [
                     "type": "string",
                     "enum": [
                         "inbox",
-                        "attention_list", "attention_approve", "attention_ignore", "attention_lookup",
+                        "attention_list", "attention_detail", "attention_approve", "attention_ignore", "attention_lookup",
                         "decision_list", "decision_promote", "decision_reject",
                         "decisions_list", "decisions_stats", "decision_create", "decision_decide",
                         "triage_batch",
@@ -2513,9 +2513,10 @@ PA_TOOL_SCHEMAS = [
                     "description": (
                         "inbox: combined overview with counts + top items. "
                         "attention_list: list pending attention items. "
+                        "attention_detail: get full detail for an item by id. "
                         "attention_approve: approve an attention item by id. "
                         "attention_ignore: ignore an attention item by id. "
-                        "attention_lookup: find an item by title. "
+                        "attention_lookup: find an item by title or id. "
                         "decision_list: list draft decision summaries. "
                         "decision_promote: promote a draft decision to canonical. "
                         "decision_reject: reject a draft decision. "
