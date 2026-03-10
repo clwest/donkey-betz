@@ -4469,16 +4469,27 @@ def _impl_cleanup_expired_signals(self):
     )
     stale_count = stale_clusters.update(status='decayed')
 
+    # Session 1108: Archive active clusters not re-detected in 48h.
+    # These trigger the "Stale Signal Clusters" critical alert in SIA
+    # (system_state_aggregator.py) but had no cleanup path to resolve them.
+    stale_active = SignalCluster.objects.filter(
+        status='active',
+        detected_at__lt=now - timedelta(hours=48)
+    )
+    stale_active_count = stale_active.update(status='archived')
+
     logger.info(
         f"🧹 [SIGNAL-CLEANUP] Complete: "
         f"{cluster_count} clusters archived, {topic_count} topics expired, "
-        f"{stale_count} stale clusters decayed"
+        f"{stale_count} stale clusters decayed, "
+        f"{stale_active_count} stale active clusters archived"
     )
 
     return {
         'clusters_archived': cluster_count,
         'topics_expired': topic_count,
         'clusters_decayed': stale_count,
+        'stale_active_archived': stale_active_count,
     }
 
 
