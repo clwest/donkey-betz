@@ -3299,12 +3299,36 @@ class OpsHandlersMixin:
         from django_celery_beat.models import PeriodicTask
         from django.db.models import Q
 
+        action = payload.get('action', 'list')
+
+        # ── Enable/disable a beat entry ──
+        if action in ('enable', 'disable'):
+            task_id = payload.get('task_id', '') or payload.get('name', '')
+            if not task_id:
+                return {'error': 'task_id or name required for enable/disable'}
+            try:
+                task_obj = PeriodicTask.objects.get(name=task_id)
+            except PeriodicTask.DoesNotExist:
+                try:
+                    task_obj = PeriodicTask.objects.get(id=int(task_id))
+                except (PeriodicTask.DoesNotExist, ValueError):
+                    return {'error': f'Scheduled task not found: {task_id}'}
+            new_state = action == 'enable'
+            if task_obj.enabled == new_state:
+                return {'action': action, 'name': task_obj.name, 'already': True, 'enabled': new_state}
+            task_obj.enabled = new_state
+            task_obj.save()
+            return {'action': action, 'name': task_obj.name, 'enabled': new_state, 'success': True}
+
+        # ── List (default) ──
         filter_keyword = payload.get('filter', '') or payload.get('search', '')
         limit = min(payload.get('limit', 50), 100)
         offset = payload.get('offset', 0)
+        show_disabled = payload.get('show_disabled', False)
 
-        tasks = PeriodicTask.objects.filter(enabled=True).order_by('name')
-        total_enabled = tasks.count()
+        tasks = PeriodicTask.objects.all() if show_disabled else PeriodicTask.objects.filter(enabled=True)
+        tasks = tasks.order_by('name')
+        total_enabled = PeriodicTask.objects.filter(enabled=True).count()
 
         if filter_keyword:
             tasks = tasks.filter(
@@ -3329,6 +3353,7 @@ class OpsHandlersMixin:
                 'task': task.task,
                 'schedule': schedule_info,
                 'queue': task.queue or 'default',
+                'enabled': task.enabled,
                 'last_run': task.last_run_at.isoformat() if task.last_run_at else None,
                 'total_runs': task.total_run_count,
             })
@@ -3774,7 +3799,54 @@ class OpsHandlersMixin:
                     'runs': items,
                 }
 
-            return {'error': f'Unknown spider_status action: {action}. Valid: list, history'}
+            elif action == 'detail':
+                item_id = payload.get('item_id', '') or payload.get('id', '')
+                if not item_id:
+                    return {'error': 'item_id required for detail action'}
+                try:
+                    item = SpiderData.objects.get(id=item_id)
+                except SpiderData.DoesNotExist:
+                    return {'error': f'SpiderData {item_id} not found'}
+                return {
+                    'action': 'detail',
+                    'id': str(item.id),
+                    'spider_name': item.spider_name,
+                    'data_type': item.data_type,
+                    'source_url': item.source_url or '',
+                    'created_at': item.created_at.isoformat(),
+                    'embedding_text': (item.embedding_text or '')[:500],
+                    'raw_data': item.raw_data if isinstance(item.raw_data, (dict, list)) else str(item.raw_data)[:2000],
+                    'processed_data': item.processed_data if isinstance(item.processed_data, (dict, list)) else str(item.processed_data)[:2000],
+                }
+
+            elif action == 'search':
+                query = payload.get('query', '').strip()
+                data_type = payload.get('data_type', '').strip()
+                spider_name = payload.get('spider_name', '').strip()
+                if not query and not data_type and not spider_name:
+                    return {'error': 'At least one of query, data_type, or spider_name required'}
+
+                qs = SpiderData.objects.all()
+                if spider_name:
+                    qs = qs.filter(spider_name__icontains=spider_name)
+                if data_type:
+                    qs = qs.filter(data_type__iexact=data_type)
+                if query:
+                    from django.db.models import Q as DQ
+                    qs = qs.filter(DQ(embedding_text__icontains=query) | DQ(source_url__icontains=query))
+
+                qs = qs.order_by('-created_at')[:limit]
+                items = [{
+                    'id': str(r.id),
+                    'spider_name': r.spider_name,
+                    'data_type': r.data_type,
+                    'source_url': (r.source_url or '')[:120],
+                    'created_at': r.created_at.isoformat(),
+                    'preview': (r.embedding_text or '')[:200],
+                } for r in qs]
+                return {'action': 'search', 'count': len(items), 'items': items}
+
+            return {'error': f'Unknown spider_status action: {action}. Valid: list, history, detail, search'}
 
         except Exception as e:
             logger.error(f"[SPIDER_STATUS] {action} error: {e}", exc_info=True)

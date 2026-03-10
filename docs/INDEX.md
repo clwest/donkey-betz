@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-03-09 23:58
+**Generated:** 2026-03-10 00:14
 **Current Session:** 1077
 **Total Documentation:** 1820 files | 622,504 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/superseded-docs/README.md` | 60 | 📚 Unified Donkey Betz - Documentation Index |
+| `docs/archive/old-structure/capabilities/10_Integration_APIs/README.md` | 60 | 🔌 INTEGRATION APIS - The Nervous System of AI |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -217,7 +217,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 361 | 2026-03-09 23:36 |
+| INDEX.md | docs | 361 | 2026-03-09 23:59 |
 | remote-code-worker-contract.md | designs | 411 | 2026-03-08 21:33 |
 | personal-assistant.md | topics | 139 | 2026-03-05 07:03 |
 | video-upload.md | topics | 101 | 2026-03-04 13:08 |
