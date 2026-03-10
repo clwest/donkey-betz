@@ -1598,7 +1598,116 @@ class GatewayHandlersMixin:
                     'by_category': category_counts,
                 }
 
-            return {'error': f'Unknown profile_tool action: {action}'}
+            # Gap 9: User preferences CRUD
+            if action == 'preferences':
+                from core.models import EnhancedUserProfile
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+
+                user = User.objects.filter(id=user_id).first() if user_id else None
+                if not user:
+                    return {'action': 'preferences', 'error': 'No user context'}
+
+                enhanced, _ = EnhancedUserProfile.objects.get_or_create(user=user)
+
+                return {
+                    'action': 'preferences',
+                    'preferences': {
+                        'goals': enhanced.goals or [],
+                        'routines': enhanced.routines or [],
+                        'learning_style': enhanced.learning_style or '',
+                        'communication_style': enhanced.communication_style or '',
+                        'risk_tolerance': enhanced.risk_tolerance or '',
+                        'interests': enhanced.interests or [],
+                        'preferred_topics': enhanced.preferred_topics or [],
+                        'automation_level': enhanced.automation_level or '',
+                    },
+                }
+
+            if action == 'update_preferences':
+                from core.models import EnhancedUserProfile
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+
+                user = User.objects.filter(id=user_id).first() if user_id else None
+                if not user:
+                    return {'action': 'update_preferences', 'error': 'No user context'}
+
+                enhanced, _ = EnhancedUserProfile.objects.get_or_create(user=user)
+
+                updates = payload.get('updates', {})
+                ALLOWED_FIELDS = {
+                    'goals', 'routines', 'learning_style', 'communication_style',
+                    'risk_tolerance', 'interests', 'preferred_topics', 'automation_level',
+                }
+                applied = {}
+                for field, value in updates.items():
+                    if field in ALLOWED_FIELDS:
+                        setattr(enhanced, field, value)
+                        applied[field] = value
+
+                if applied:
+                    enhanced.save()
+
+                return {
+                    'action': 'update_preferences',
+                    'updated_fields': list(applied.keys()),
+                    'count': len(applied),
+                    'success': len(applied) > 0,
+                }
+
+            # Gap 10: Scoped preference views by desk/module
+            if action == 'desk_preferences':
+                from core.models import EnhancedUserProfile, ExtendedUserProfile
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+
+                desk = payload.get('desk', 'general').strip().lower()
+                user = User.objects.filter(id=user_id).first() if user_id else None
+                if not user:
+                    return {'action': 'desk_preferences', 'error': 'No user context'}
+
+                enhanced = EnhancedUserProfile.objects.filter(user=user).first()
+                extended = ExtendedUserProfile.objects.filter(user=user).first()
+
+                base = {
+                    'desk': desk,
+                    'communication_style': getattr(enhanced, 'communication_style', '') if enhanced else '',
+                    'goals': getattr(enhanced, 'goals', []) if enhanced else [],
+                }
+
+                DESK_PROJECTIONS = {
+                    'sports': {
+                        'fields': ['risk_tolerance', 'interests'],
+                        'context': 'Sports betting preferences and risk tolerance',
+                    },
+                    'stocks': {
+                        'fields': ['risk_tolerance', 'interests', 'preferred_topics'],
+                        'context': 'Investment preferences and market interests',
+                    },
+                    'content': {
+                        'fields': ['learning_style', 'communication_style', 'preferred_topics'],
+                        'context': 'Content tone, style, and topic preferences',
+                    },
+                    'general': {
+                        'fields': ['goals', 'routines', 'interests', 'automation_level'],
+                        'context': 'General platform preferences',
+                    },
+                }
+
+                projection = DESK_PROJECTIONS.get(desk, DESK_PROJECTIONS['general'])
+                for field in projection['fields']:
+                    val = getattr(enhanced, field, None) if enhanced else None
+                    if val is None and extended:
+                        val = getattr(extended, field, None)
+                    base[field] = val or ([] if field in ('interests', 'preferred_topics', 'goals', 'routines') else '')
+
+                base['context'] = projection['context']
+                base['available_desks'] = list(DESK_PROJECTIONS.keys())
+
+                return {'action': 'desk_preferences', **base}
+
+            return {'error': f'Unknown profile_tool action: {action}. Valid: profile, skills, learning_summary, preferences, update_preferences, desk_preferences'}
 
         except Exception as e:
             logger.error(f"[PROFILE] {action} error: {e}", exc_info=True)
