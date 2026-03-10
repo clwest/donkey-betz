@@ -1938,6 +1938,15 @@ class AgentRouter:
             if adaptive_text:
                 user_context['agent_learned_preferences'] = adaptive_text
 
+            # Phase 3: Inject UserAgentLearning preferences into prompt
+            try:
+                from core.services.learning_read_service import get_learned_preferences_for_prompt
+                learned_prefs = get_learned_preferences_for_prompt(self.user.id, agent_name)
+                if learned_prefs:
+                    user_context['learned_user_preferences'] = learned_prefs
+            except Exception:
+                pass
+
             user_context['has_user_context'] = True
 
             logger.debug(

@@ -182,6 +182,92 @@ def get_learning_recommendation(
         }
 
 
+# ── Phase 3: Prompt preference injection ──────────────────────────────
+
+def get_learned_preferences_for_prompt(user_id, agent_name: str | None = None) -> str:
+    """
+    Build a short preference summary from UserAgentLearning records
+    suitable for injection into agent system prompts.
+
+    Returns a human-readable string (empty if nothing found).
+    """
+    if not LEARNING_ROUTING_ENABLED:
+        return ''
+
+    try:
+        from core.models import UserAgentLearning
+
+        # Gather chat_preferences + general_intelligence records
+        records = list(
+            UserAgentLearning.objects.filter(
+                user_id=user_id,
+                learning_domain__in=['chat_preferences', 'general_intelligence'],
+                confidence_score__gte=MIN_CONFIDENCE,
+                is_active=True,
+            )
+            .order_by('-confidence_score')
+            [:5]
+        )
+
+        if not records:
+            return ''
+
+        parts = []
+        for r in records:
+            content = r.learning_content or {}
+
+            if r.learning_domain == 'chat_preferences':
+                # Extract structured preferences
+                skills = content.get('skills', [])
+                industry = content.get('industry', '')
+                work_style = content.get('work_style', '')
+                experience = content.get('experience_level', '')
+
+                if skills:
+                    if isinstance(skills, dict):
+                        skill_str = ', '.join(sorted(skills.keys())[:8])
+                    elif isinstance(skills, list):
+                        skill_str = ', '.join(str(s) for s in skills[:8])
+                    else:
+                        skill_str = str(skills)
+                    parts.append(f"User skills: {skill_str}")
+                if industry:
+                    if isinstance(industry, dict):
+                        parts.append(f"Industry: {', '.join(sorted(industry.keys())[:4])}")
+                    else:
+                        parts.append(f"Industry: {industry}")
+                if work_style:
+                    if isinstance(work_style, dict):
+                        parts.append(f"Work style: {', '.join(sorted(work_style.keys())[:4])}")
+                    else:
+                        parts.append(f"Work style: {work_style}")
+                if experience:
+                    parts.append(f"Experience level: {experience}")
+
+            elif r.learning_domain == 'general_intelligence':
+                # Extract any learned patterns
+                insight = content.get('insight', content.get('pattern', ''))
+                if insight and len(str(insight)) < 200:
+                    parts.append(f"Learned: {insight}")
+
+        if not parts:
+            return ''
+
+        # Deduplicate and cap
+        seen = set()
+        unique = []
+        for p in parts:
+            if p not in seen:
+                seen.add(p)
+                unique.append(p)
+
+        return 'User preferences (from learning): ' + '; '.join(unique[:6])
+
+    except Exception as e:
+        logger.debug(f"Learned preferences lookup failed: {e}")
+        return ''
+
+
 # Avoid circular import
 def models_F(field):
     from django.db.models import F
