@@ -587,18 +587,29 @@ PA_TOOL_SCHEMAS = [
         "type": "function",
         "name": "scheduled_tasks_tool",
         "description": (
-            "View scheduled Celery tasks: cron schedules, beat entries, "
-            "next run times. Use when the user asks about scheduled tasks, "
-            "cron jobs, what runs automatically, or Celery beat. "
-            "Supports search by name/task and pagination."
+            "View and manage scheduled Celery tasks: list beat entries, enable/disable schedules. "
+            "Use when the user asks about scheduled tasks, cron jobs, what runs automatically, "
+            "or Celery beat. Supports search, pagination, and enable/disable management."
         ),
         "parameters": {
             "type": "object",
             "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list", "enable", "disable"],
+                    "description": (
+                        "list: view scheduled tasks (default). "
+                        "enable: enable a disabled beat entry. "
+                        "disable: disable a beat entry."
+                    ),
+                },
+                "name": {"type": "string", "description": "Beat entry name (for enable/disable actions)"},
+                "task_id": {"type": "string", "description": "Numeric ID or exact name of beat entry (for enable/disable)"},
                 "search": {
                     "type": "string",
                     "description": "Filter tasks by name or task path (case-insensitive substring match)",
                 },
+                "show_disabled": {"type": "boolean", "description": "Include disabled tasks in list (default false)"},
                 "limit": {"type": "integer", "description": "Max items per page (default 50, max 100)"},
                 "offset": {"type": "integer", "description": "Skip N items for pagination (default 0)"},
             },
@@ -3360,13 +3371,18 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "history"],
+                    "enum": ["list", "history", "detail", "search"],
                     "description": (
                         "list: per-spider stats (items_24h, items_7d, age_hours, active/stale). "
-                        "history: item history for a specific spider."
+                        "history: item history for a specific spider. "
+                        "detail: fetch full raw_data/processed_data for a SpiderData item by ID. "
+                        "search: search spider data by query, data_type, or spider_name."
                     ),
                 },
-                "spider_name": {"type": "string", "description": "Spider name filter (for history or list)"},
+                "spider_name": {"type": "string", "description": "Spider name filter (for history, list, or search)"},
+                "item_id": {"type": "string", "description": "SpiderData UUID (for detail action)"},
+                "query": {"type": "string", "description": "Text search in embedding_text/source_url (for search action)"},
+                "data_type": {"type": "string", "description": "Filter by data_type (for search action)"},
                 "limit": {"type": "integer", "description": "Max results (default 20)"},
             },
             "required": ["action"],
