@@ -2556,7 +2556,9 @@ PA_TOOL_SCHEMAS = [
                         "overview", "briefs", "search",
                         "stocks_alerts", "stocks_predictions", "stocks_sec_filings",
                         "sports_predictions", "sports_arbs", "sports_wagers", "sports_record_wager",
+                        "sports_sharp_signals",
                         "legislation_search", "legislation_summary",
+                        "congress_members", "legislation_tracked",
                         "kb_ingest",
                         "stock_briefs", "ml_predictions", "signal_clusters",
                     ],
@@ -2569,7 +2571,10 @@ PA_TOOL_SCHEMAS = [
                         "ml_predictions: ML model predictions with accuracy. "
                         "signal_clusters: signal aggregation patterns. "
                         "sports_*: predictions, arbs, wagers, record_wager. "
+                        "sports_sharp_signals: sharp money/line movement signals. "
                         "legislation_*: search bills, get summaries. "
+                        "congress_members: list/search congress members. "
+                        "legislation_tracked: tracked bills with embedding status. "
                         "kb_ingest: ingest a URL into the knowledge base."
                     ),
                 },
@@ -3181,13 +3186,19 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["profile", "skills", "learning_summary"],
+                    "enum": ["profile", "skills", "learning_summary", "preferences", "update_preferences", "desk_preferences"],
                     "description": (
                         "profile: extended user profile. "
                         "skills: tracked skills with proficiency. "
-                        "learning_summary: skill aggregates."
+                        "learning_summary: skill aggregates. "
+                        "preferences: structured user preferences (goals, routines, risk_tolerance, interests). "
+                        "update_preferences: update a preference field (use field + value params). "
+                        "desk_preferences: scoped preferences for a desk (use desk param: sports/stocks/content/general)."
                     ),
                 },
+                "field": {"type": "string", "description": "Preference field to update (for update_preferences). Allowed: goals, routines, learning_style, communication_style, risk_tolerance, interests, preferred_topics, automation_level"},
+                "value": {"type": "string", "description": "New value for the preference field (for update_preferences)"},
+                "desk": {"type": "string", "enum": ["sports", "stocks", "content", "general"], "description": "Desk scope for desk_preferences action"},
             },
             "required": ["action"],
         },
@@ -3325,6 +3336,116 @@ PA_TOOL_SCHEMAS = [
             "required": ["action"],
         },
     },
+
+    # ── Session 1035-Audit: Spider Status Tool ─────────────────────────────────
+    {
+        "type": "function",
+        "name": "spider_status_tool",
+        "description": (
+            "View individual spider health and activity. Use when the user asks "
+            "about spider status, which spiders are active/stale, spider item counts, "
+            "or spider data history."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list", "history"],
+                    "description": (
+                        "list: per-spider stats (items_24h, items_7d, age_hours, active/stale). "
+                        "history: item history for a specific spider."
+                    ),
+                },
+                "spider_name": {"type": "string", "description": "Spider name filter (for history or list)"},
+                "limit": {"type": "integer", "description": "Max results (default 20)"},
+            },
+            "required": ["action"],
+        },
+    },
+
+    # ── Session 1035-Audit: Agent Memory Tool ──────────────────────────────────
+    {
+        "type": "function",
+        "name": "agent_memory_tool",
+        "description": (
+            "Browse agent memories and knowledge sources. Use when the user asks "
+            "about what agents remember, agent knowledge, memory entries, or agent "
+            "learning history."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list", "knowledge", "stats"],
+                    "description": (
+                        "list: agent memories with optional search query. "
+                        "knowledge: knowledge sources for a specific agent. "
+                        "stats: aggregate memory stats (counts, types, avg importance)."
+                    ),
+                },
+                "agent_name": {"type": "string", "description": "Agent name filter (supports snake_case)"},
+                "query": {"type": "string", "description": "Search query for list action"},
+                "limit": {"type": "integer", "description": "Max results (default 20)"},
+            },
+            "required": ["action"],
+        },
+    },
+
+    # ── Session 1035-Audit: Heartbeat History Tool ─────────────────────────────
+    {
+        "type": "function",
+        "name": "heartbeat_history_tool",
+        "description": (
+            "View heartbeat history and trends. Use when the user asks about "
+            "system heartbeat history, health trends over time, uptime, or "
+            "historical system status."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["recent", "trends"],
+                    "description": (
+                        "recent: last N heartbeats with scores. "
+                        "trends: aggregate stats over N hours (status distribution, avg score)."
+                    ),
+                },
+                "limit": {"type": "integer", "description": "Max heartbeats for recent (default 20)"},
+                "hours": {"type": "integer", "description": "Hours back for trends (default 24)"},
+            },
+            "required": ["action"],
+        },
+    },
+
+    # ── Session 1035-Audit: Infra Health Tool ──────────────────────────────────
+    {
+        "type": "function",
+        "name": "infra_health_tool",
+        "description": (
+            "Deep infrastructure health checks — Redis, PostgreSQL, dependencies, "
+            "and runtime metrics. Use when the user asks about Redis health, database "
+            "performance, dependency status, memory usage, or infrastructure diagnostics."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["redis_health", "db_perf", "dependency_matrix", "runtime_metrics"],
+                    "description": (
+                        "redis_health: Redis ping, memory, clients, evictions, hit rate. "
+                        "db_perf: PostgreSQL connections, cache hit ratio, tuple stats, deadlocks. "
+                        "dependency_matrix: checks web/postgres/redis/celery/pgvector/spiders/storage. "
+                        "runtime_metrics: process RSS/VMS/CPU/threads, system RAM/disk, Railway env."
+                    ),
+                },
+            },
+            "required": ["action"],
+        },
+    },
 ]
 
 # ── Startup validation: every tool must have name, description, parameters ──
@@ -3432,6 +3553,11 @@ TOOL_ENRICHMENT_MAP = {
     'self_awareness_tool': [],
     'ats_tool': [],
     'code_job_tool': [],
+    # Session 1035-Audit: 4 new tools
+    'spider_status_tool': [],
+    'agent_memory_tool': [],
+    'heartbeat_history_tool': [],
+    'infra_health_tool': [],
 }
 
 # Reverse map: tool name -> canonical intent name for enrichment pipeline
@@ -3530,6 +3656,11 @@ TOOL_TO_INTENT_MAP = {
     'self_awareness_tool': 'system_overview',
     'ats_tool': 'opportunities',
     'code_job_tool': 'codebase',
+    # Session 1035-Audit: 4 new tools
+    'spider_status_tool': 'system_overview',
+    'agent_memory_tool': 'agent_introspection',
+    'heartbeat_history_tool': 'system_health',
+    'infra_health_tool': 'system_health',
 }
 
 
