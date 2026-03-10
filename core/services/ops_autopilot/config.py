@@ -218,14 +218,7 @@ are persisted via SystemConfiguration and always changelog-documented.
 """
 
 import logging
-import time
-import uuid as _uuid
-from datetime import timedelta
 from typing import Any
-
-from django.utils import timezone
-
-from core.models_diagnostic_pipeline import AutopilotAction, RemediationPlaybook
 
 logger = logging.getLogger(__name__)
 
@@ -369,6 +362,3 @@ class AutopilotConfig:
                     pass  # Fall through to raw value
             return raw
         return getattr(cls, param_name, None)
-
-
-# ── Autopilot engine ─────────────────────────────────────────────────────────
