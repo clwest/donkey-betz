@@ -216,7 +216,10 @@ class BrainstormSearchService:
                 'id': str(conv.id),
                 'topic': conv.topic.replace('Discussion:', '').replace('Panel:', '').strip()[:100],
                 'date': conv.started_at.strftime('%Y-%m-%d %H:%M'),
-                'participants': conv.messages.values('agent__name').distinct().count(),
+                'participants': list(
+                    conv.messages.exclude(agent__isnull=True)
+                    .values_list('agent__name', flat=True).distinct()
+                ),
                 'messages': conv.messages.count(),
                 'preview': first_msg.content[:200] if first_msg else '',
             }
