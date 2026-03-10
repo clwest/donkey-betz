@@ -3468,6 +3468,10 @@ class ContentHandlersMixin:
             try:
                 from sports.models import MLPrediction
                 qs = MLPrediction.objects.order_by('-created_at')
+                # Gap 5 fix: Apply sport filter if provided
+                sport = payload.get('sport', '').strip().lower()
+                if sport:
+                    qs = qs.filter(sport_type__icontains=sport)
                 total = qs.count()
                 items = []
                 for p in qs[:limit]:

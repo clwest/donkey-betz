@@ -2965,6 +2965,137 @@ RESEARCH DATA:
             except Exception as e:
                 return _tag({'action': 'signal_clusters', 'error': str(e)})
 
+        # ── Gap 4: Sharp action signals feed ──
+        if action == 'sports_sharp_signals':
+            try:
+                from core.models_unified_system import Deliverable
+                from django.utils import timezone as tz
+                from datetime import timedelta
+
+                limit = min(int(payload.get('limit', 10)), 30)
+                sport = payload.get('sport', '').strip().lower()
+                hours = int(payload.get('hours', 48))
+                cutoff = tz.now() - timedelta(hours=hours)
+
+                qs = Deliverable.objects.filter(
+                    category='Sharp Action Detection',
+                    created_at__gte=cutoff,
+                ).order_by('-created_at')
+
+                if sport:
+                    qs = qs.filter(tags__icontains=sport)
+
+                items = []
+                for d in qs[:limit]:
+                    content = d.content or ''
+                    items.append({
+                        'id': str(d.id),
+                        'title': d.title,
+                        'agent_name': d.agent_name,
+                        'content_preview': content[:500],
+                        'quality_score': d.quality_score,
+                        'tags': d.tags or [],
+                        'created_at': d.created_at.isoformat() if d.created_at else None,
+                    })
+
+                return _tag({
+                    'action': 'sports_sharp_signals',
+                    'count': len(items),
+                    'total_in_window': qs.count(),
+                    'hours': hours,
+                    'items': items,
+                })
+            except Exception as e:
+                return _tag({'action': 'sports_sharp_signals', 'error': str(e)})
+
+        # ── Gap 6: Congress member lookup ──
+        if action == 'congress_members':
+            try:
+                from core.models_government import CongressMember
+
+                limit = min(int(payload.get('limit', 20)), 50)
+                state = payload.get('state', '').strip().upper()
+                chamber = payload.get('chamber', '').strip().lower()
+                party = payload.get('party', '').strip()
+                q = payload.get('query', '').strip()
+
+                qs = CongressMember.objects.filter(in_office=True)
+                if state:
+                    qs = qs.filter(state=state)
+                if chamber:
+                    qs = qs.filter(chamber=chamber)
+                if party:
+                    qs = qs.filter(party__icontains=party)
+                if q:
+                    from django.db.models import Q as DQ
+                    qs = qs.filter(
+                        DQ(first_name__icontains=q) | DQ(last_name__icontains=q)
+                    )
+
+                total = qs.count()
+                members = []
+                for m in qs.order_by('state', 'last_name')[:limit]:
+                    members.append({
+                        'bioguide_id': m.bioguide_id,
+                        'name': m.full_name,
+                        'party': m.party,
+                        'state': m.state,
+                        'district': m.district,
+                        'chamber': getattr(m, 'chamber', ''),
+                        'leadership_role': m.leadership_role or '',
+                        'committees': (m.committees or [])[:5],
+                    })
+
+                return _tag({
+                    'action': 'congress_members',
+                    'total': total,
+                    'count': len(members),
+                    'members': members,
+                })
+            except Exception as e:
+                return _tag({'action': 'congress_members', 'error': str(e)})
+
+        # ── Gap 7: Tracked legislation list ──
+        if action == 'legislation_tracked':
+            try:
+                from core.models_government import Bill
+
+                limit = min(int(payload.get('limit', 20)), 50)
+                status = payload.get('status', '').strip()
+                chamber = payload.get('chamber', '').strip().lower()
+                q = payload.get('query', '').strip()
+
+                qs = Bill.objects.all()
+                if status:
+                    qs = qs.filter(status__icontains=status)
+                if chamber:
+                    qs = qs.filter(chamber=chamber)
+                if q:
+                    qs = qs.filter(title__icontains=q)
+
+                total = qs.count()
+                bills = []
+                for b in qs.order_by('-updated_at')[:limit]:
+                    bills.append({
+                        'bill_uid': b.bill_uid,
+                        'title': (b.title or '')[:150],
+                        'status': getattr(b, 'status', ''),
+                        'chamber': getattr(b, 'chamber', ''),
+                        'jurisdiction': getattr(b, 'jurisdiction', ''),
+                        'topics': (b.topics or [])[:5] if hasattr(b, 'topics') else [],
+                        'has_embedding': b.embedding is not None if hasattr(b, 'embedding') else False,
+                        'updated_at': b.updated_at.isoformat() if hasattr(b, 'updated_at') and b.updated_at else None,
+                    })
+
+                return _tag({
+                    'action': 'legislation_tracked',
+                    'total': total,
+                    'count': len(bills),
+                    'bills': bills,
+                })
+            except Exception as e:
+                return _tag({'action': 'legislation_tracked', 'error': str(e)})
+
         all_actions = [
             'overview', 'briefs', 'search',
             'stocks_alerts', 'stocks_predictions', 'stocks_sec_filings',
@@ -2972,6 +3103,7 @@ RESEARCH DATA:
             'legislation_search', 'legislation_summary',
             'kb_ingest',
             'stock_briefs', 'ml_predictions', 'signal_clusters',
+            'sports_sharp_signals', 'congress_members', 'legislation_tracked',
         ]
         return {'error': f'Unknown intelligence_tool action: {action}. Valid: {", ".join(all_actions)}'}
 
