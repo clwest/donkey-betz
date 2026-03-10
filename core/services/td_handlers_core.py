@@ -3029,7 +3029,10 @@ RESEARCH DATA:
                 if q:
                     from django.db.models import Q as DQ
                     qs = qs.filter(
-                        DQ(first_name__icontains=q) | DQ(last_name__icontains=q)
+                        DQ(first_name__icontains=q) |
+                        DQ(last_name__icontains=q) |
+                        DQ(state__iexact=q) |
+                        DQ(party__icontains=q)
                     )
 
                 total = qs.count()
