@@ -226,6 +226,8 @@ from typing import Any
 from django.utils import timezone
 
 from core.models_diagnostic_pipeline import AutopilotAction, RemediationPlaybook
+from core.services.ops_autopilot.config import AutopilotConfig
+from core.services.ops_autopilot.verification import ActionVerifier
 
 
 logger = logging.getLogger(__name__)
