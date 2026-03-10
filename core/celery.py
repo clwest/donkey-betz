@@ -2406,6 +2406,11 @@ app.conf.beat_schedule = {
         'task': 'core.tasks.summarize_learning_readback',
         'schedule': crontab(hour='*/6', minute=30),
     },
+    # Learning readback retention — delete events older than 30 days
+    'cleanup-learning-readback': {
+        'task': 'core.tasks.cleanup_learning_readback_events',
+        'schedule': crontab(hour=4, minute=0),  # Daily at 4am UTC
+    },
 
     # Session 945: Learning Loop - Extract patterns from execution data
     # Runs every 6 hours to keep learning patterns fresh
