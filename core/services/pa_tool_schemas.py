@@ -2976,15 +2976,22 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["alerts", "notifications", "suggestions", "automations", "dashboard"],
+                    "enum": ["alerts", "notifications", "suggestions", "automations", "dashboard", "mark_read", "bulk_ack", "dismiss"],
                     "description": (
                         "alerts: active system alerts. "
                         "notifications: recent/unread notifications. "
                         "suggestions: pending smart suggestions. "
                         "automations: active automated actions. "
-                        "dashboard: aggregate counts."
+                        "dashboard: aggregate counts. "
+                        "mark_read: mark a single notification as read (requires notification_id). "
+                        "bulk_ack: mark multiple notifications as read (optional priority/notification_type filter). "
+                        "dismiss: permanently dismiss a notification (requires notification_id)."
                     ),
                 },
+                "notification_id": {"type": "string", "description": "UUID of notification (for mark_read/dismiss)"},
+                "priority": {"type": "string", "description": "Filter by priority for bulk_ack (e.g. 'low', 'medium', 'high')"},
+                "notification_type": {"type": "string", "description": "Filter by type for bulk_ack (e.g. 'action_required', 'info')"},
+                "max_items": {"type": "integer", "description": "Max notifications to ack in bulk_ack (default 50, max 200)"},
                 "limit": {"type": "integer", "description": "Max results (default 20)"},
             },
             "required": ["action"],
