@@ -3196,7 +3196,7 @@ PA_TOOL_SCHEMAS = [
                         "desk_preferences: scoped preferences for a desk (use desk param: sports/stocks/content/general)."
                     ),
                 },
-                "field": {"type": "string", "description": "Preference field to update (for update_preferences). Allowed: goals, routines, learning_style, communication_style, risk_tolerance, interests, preferred_topics, automation_level"},
+                "field": {"type": "string", "description": "Preference field to update (for update_preferences). Allowed: long_term_goals, current_projects, quarterly_objectives, learning_style, communication_style, decision_framework, current_learning_goals, personal_values, delegation_preferences, work_schedule, time_zone, privacy_level"},
                 "value": {"type": "string", "description": "New value for the preference field (for update_preferences)"},
                 "desk": {"type": "string", "enum": ["sports", "stocks", "content", "general"], "description": "Desk scope for desk_preferences action"},
             },
