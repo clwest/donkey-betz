@@ -1574,14 +1574,15 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["overview", "migrations", "tables", "pgvector", "verify_table", "search_tables"],
+                    "enum": ["overview", "migrations", "tables", "pgvector", "verify_table", "search_tables", "learning_stats"],
                     "description": (
                         "overview=connection + migration summary (default), "
                         "migrations=list unapplied migrations, "
                         "tables=row counts for key tables, "
                         "pgvector=vector extension status and embedding counts, "
                         "verify_table=check if a specific table exists with columns and row count, "
-                        "search_tables=find tables by prefix (default core_)"
+                        "search_tables=find tables by prefix (default core_), "
+                        "learning_stats=learning feedback loop metrics (readback events, consultation rates, UserAgentLearning counts)"
                     ),
                 },
                 "table_name": {

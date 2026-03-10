@@ -1438,6 +1438,82 @@ RESEARCH DATA:
                 result['error'] = str(e)
             return result
 
+        elif action == 'learning_stats':
+            result = {'action': 'learning_stats'}
+            try:
+                with connection.cursor() as cursor:
+                    # Readback event totals
+                    cursor.execute(
+                        "SELECT COUNT(*), "
+                        "COUNT(*) FILTER (WHERE learning_consulted = true), "
+                        "COUNT(*) FILTER (WHERE learning_used = true), "
+                        "MIN(created_at), MAX(created_at) "
+                        "FROM core_learningreadbackevent"
+                    )
+                    row = cursor.fetchone()
+                    result['readback_events'] = {
+                        'total': row[0],
+                        'consulted_true': row[1],
+                        'used_true': row[2],
+                        'oldest': str(row[3]) if row[3] else None,
+                        'newest': str(row[4]) if row[4] else None,
+                    }
+                    if row[0] > 0:
+                        result['readback_events']['consultation_rate'] = round(row[1] / row[0] * 100, 1)
+                        result['readback_events']['usage_rate'] = round(row[2] / row[0] * 100, 1)
+
+                    # Last 24h breakdown
+                    cursor.execute(
+                        "SELECT COUNT(*), "
+                        "COUNT(*) FILTER (WHERE learning_consulted = true), "
+                        "COUNT(*) FILTER (WHERE learning_used = true) "
+                        "FROM core_learningreadbackevent "
+                        "WHERE created_at > NOW() - INTERVAL '24 hours'"
+                    )
+                    row = cursor.fetchone()
+                    result['last_24h'] = {
+                        'total': row[0],
+                        'consulted_true': row[1],
+                        'used_true': row[2],
+                    }
+
+                    # UserAgentLearning record counts (the source data)
+                    cursor.execute(
+                        "SELECT COUNT(*), "
+                        "COUNT(DISTINCT learning_domain), "
+                        "COUNT(DISTINCT agent_name) "
+                        "FROM core_useragentlearning "
+                        "WHERE is_active = true"
+                    )
+                    row = cursor.fetchone()
+                    result['learning_records'] = {
+                        'active_total': row[0],
+                        'distinct_domains': row[1],
+                        'distinct_agents': row[2],
+                    }
+
+                    # Top 5 routed_to agents in readback events
+                    cursor.execute(
+                        "SELECT routed_to, COUNT(*) "
+                        "FROM core_learningreadbackevent "
+                        "WHERE routed_to IS NOT NULL "
+                        "GROUP BY routed_to ORDER BY COUNT(*) DESC LIMIT 5"
+                    )
+                    result['top_routed_agents'] = [
+                        {'agent': r[0], 'count': r[1]} for r in cursor.fetchall()
+                    ]
+
+                    # Feature flags
+                    from django.conf import settings
+                    result['flags'] = {
+                        'LEARNING_ROUTING_ENABLED': getattr(settings, 'LEARNING_ROUTING_ENABLED', False),
+                        'LEARNING_PROMPT_INJECTION_ENABLED': getattr(settings, 'LEARNING_PROMPT_INJECTION_ENABLED', False),
+                    }
+
+            except Exception as e:
+                result['error'] = str(e)
+            return result
+
         return {'error': f'Unknown db_health action: {action}'}
 
     def _handle_http_smoke_test(
