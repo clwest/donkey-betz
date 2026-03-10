@@ -2638,6 +2638,7 @@ PA_TOOL_SCHEMAS = [
                         "deliverable_create", "deliverable_stats",
                         "deliverable_export_pdf",
                         "podcasts", "series", "content_studio",
+                        "initiative_doc",
                     ],
                     "description": (
                         "content_stats: pipeline overview (blogs + deliverables counts). "
@@ -2660,7 +2661,8 @@ PA_TOOL_SCHEMAS = [
                         "deliverable_export_pdf: generate a downloadable PDF from a deliverable (returns CDN URL). "
                         "podcasts: list completed podcast episodes. "
                         "series: AI Series workflow history. "
-                        "content_studio: autonomous content studio execution stats."
+                        "content_studio: autonomous content studio execution stats. "
+                        "initiative_doc: fetch initiative stage documents by document_id, stage_id, or initiative name."
                     ),
                 },
                 "id": {"type": "string", "description": "UUID of deliverable or blog"},
@@ -2683,6 +2685,9 @@ PA_TOOL_SCHEMAS = [
                 "tone": {"type": "string", "description": "Tone for generate_blog action (default: enthusiastic)"},
                 "title": {"type": "string", "description": "Title for deliverable_create"},
                 "content": {"type": "string", "description": "Content for deliverable_create"},
+                "document_id": {"type": "string", "description": "UUID of a document (SelfBlog) for initiative_doc action"},
+                "stage_id": {"type": "string", "description": "UUID of an InitiativeStage for initiative_doc action"},
+                "initiative": {"type": "string", "description": "Initiative name to list all stage documents (for initiative_doc action)"},
                 "feedback": {"type": "string", "description": "Feedback when rejecting content"},
                 "days": {"type": "integer", "description": "Lookback days for content_recent (default 30)"},
                 "limit": {"type": "integer", "description": "Max items (default 10, for bulk_archive: max items to archive, default 500)"},
