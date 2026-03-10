@@ -1878,7 +1878,50 @@ class GatewayHandlersMixin:
                     'latest_self_analysis_score': float(latest_metrics.self_analysis_score) if latest_metrics and latest_metrics.self_analysis_score else None,
                 }
 
-            return {'error': f'Unknown self_awareness_tool action: {action}'}
+            if action == 'collect':
+                # Gather live metrics from existing models and write a SystemMetrics snapshot
+                from django.utils import timezone as tz
+                from datetime import timedelta
+                now = tz.now()
+                one_hour = now - timedelta(hours=1)
+
+                from core.models import AgentExecution
+                from core.models_celery_telemetry import CeleryTaskEvent
+
+                active_agents = AgentExecution.objects.filter(
+                    status='running', created_at__gte=one_hour
+                ).count()
+                completed_1h = CeleryTaskEvent.objects.filter(
+                    status='SUCCESS', finished_at__gte=one_hour
+                ).count()
+                failed_1h = CeleryTaskEvent.objects.filter(
+                    status='FAILURE', finished_at__gte=one_hour
+                ).count()
+                pending = CeleryTaskEvent.objects.filter(
+                    status='STARTED', finished_at__isnull=True, started_at__gte=one_hour
+                ).count()
+
+                snapshot = SystemMetrics.objects.create(
+                    cpu_usage=0.0,       # not measurable on Railway
+                    memory_usage=0.0,    # not measurable on Railway
+                    disk_usage=0.0,      # not measurable on Railway
+                    active_agents=active_agents,
+                    pending_tasks=pending,
+                    completed_tasks=completed_1h,
+                    error_count=failed_1h,
+                )
+                return {
+                    'action': 'collect',
+                    'snapshot_id': str(snapshot.pk),
+                    'timestamp': snapshot.timestamp.isoformat(),
+                    'active_agents': active_agents,
+                    'pending_tasks': pending,
+                    'completed_tasks_1h': completed_1h,
+                    'errors_1h': failed_1h,
+                    'message': 'Metrics snapshot recorded',
+                }
+
+            return {'error': f'Unknown self_awareness_tool action: {action}. Valid: metrics, reports, evolution, stats, collect'}
 
         except Exception as e:
             logger.error(f"[SELF_AWARENESS] {action} error: {e}", exc_info=True)
