@@ -79,8 +79,9 @@ class CodeJobHandlersMixin:
     """Mixin providing handler methods for ToolDispatcher."""
 
     def _handle_code_job(self, tool_name, payload, user_id, trace_id):
-        """Submit and manage remote code jobs. Actions: submit, status, logs, cancel, list"""
+        """Submit and manage remote code jobs. Actions: submit, status, logs, cancel, list, list_repos, add_repo"""
         action = payload.get('action', 'status')
+        logger.info(f"[{trace_id}] code_job_tool action={action!r} keys={list(payload.keys())}")
         if action == 'submit':
             return self._code_job_submit(payload, user_id, trace_id)
         elif action == 'status':
