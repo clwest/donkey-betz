@@ -3851,9 +3851,76 @@ class ContentHandlersMixin:
             except Exception as e:
                 return {'gateway': 'content_tool', 'action': action, 'error': str(e)}
 
+        # ── Session R2-5: Initiative stage document fetch ──
+        if action == 'initiative_doc':
+            try:
+                doc_id = payload.get('document_id', '') or payload.get('id', '')
+                stage_id = payload.get('stage_id', '')
+                initiative_name = payload.get('initiative', '').strip()
+
+                from core.models_document_registry import InitiativeStage
+                from core.models_unified_system import SelfBlog
+
+                stage = None
+                if stage_id:
+                    stage = InitiativeStage.objects.select_related('document', 'initiative').filter(id=stage_id).first()
+                elif doc_id:
+                    # Fetch document directly
+                    doc = SelfBlog.objects.filter(id=doc_id).first()
+                    if not doc:
+                        return {'gateway': 'content_tool', 'action': action, 'error': f'Document {doc_id} not found'}
+                    stage = InitiativeStage.objects.select_related('initiative').filter(document=doc).first()
+                    return {
+                        'gateway': 'content_tool', 'action': action,
+                        'document_id': str(doc.id),
+                        'title': doc.title,
+                        'content': doc.full_text[:5000],
+                        'content_type': doc.content_type,
+                        'created_at': doc.created_at.isoformat(),
+                        'initiative': stage.initiative.name if stage else None,
+                        'stage': stage.stage if stage else None,
+                        'stage_status': stage.status if stage else None,
+                    }
+                elif initiative_name:
+                    from core.models import Initiative
+                    init = Initiative.objects.filter(name__icontains=initiative_name).first()
+                    if not init:
+                        return {'gateway': 'content_tool', 'action': action, 'error': f'Initiative "{initiative_name}" not found'}
+                    stages = InitiativeStage.objects.filter(initiative=init).select_related('document').order_by('stage')
+                    return {
+                        'gateway': 'content_tool', 'action': action,
+                        'initiative': init.name,
+                        'stages': [{
+                            'stage': s.stage,
+                            'status': s.status,
+                            'document_id': str(s.document.id) if s.document else None,
+                            'document_title': s.document.title if s.document else None,
+                            'document_preview': (s.document.full_text[:300] if s.document else ''),
+                        } for s in stages],
+                    }
+                else:
+                    return {'gateway': 'content_tool', 'action': action, 'error': 'Provide document_id, stage_id, or initiative name'}
+
+                if not stage:
+                    return {'gateway': 'content_tool', 'action': action, 'error': f'Stage {stage_id} not found'}
+                doc = stage.document
+                return {
+                    'gateway': 'content_tool', 'action': action,
+                    'stage_id': str(stage.id),
+                    'stage': stage.stage,
+                    'status': stage.status,
+                    'initiative': stage.initiative.name,
+                    'document_id': str(doc.id) if doc else None,
+                    'title': doc.title if doc else None,
+                    'content': (doc.full_text[:5000] if doc else ''),
+                    'content_type': doc.content_type if doc else None,
+                }
+            except Exception as e:
+                return {'gateway': 'content_tool', 'action': action, 'error': str(e)}
+
         all_actions = sorted(
             list(CONTENT_REVIEW_MAP) + ['generate_blog', 'bulk_archive', 'bulk_archive_published', 'run_cleanup'] + list(DELIVERABLE_MAP)
-            + ['podcasts', 'series', 'content_studio']
+            + ['podcasts', 'series', 'content_studio', 'initiative_doc']
         )
         return {'error': f'Unknown content_tool action: {action}. Valid: {", ".join(all_actions)}'}
 
