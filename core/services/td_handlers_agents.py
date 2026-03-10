@@ -3420,9 +3420,9 @@ class AgentHandlersMixin:
             return {'action': 'recent', **result}
 
         elif action == 'details':
-            conversation_id = payload.get('conversation_id')
+            conversation_id = payload.get('conversation_id') or payload.get('id')
             if not conversation_id:
-                raise ValueError("conversation_id is required for details action")
+                raise ValueError("conversation_id (or id) is required for details action")
 
             include_full = payload.get('include_full_content', False)
 
