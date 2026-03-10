@@ -1613,14 +1613,18 @@ class GatewayHandlersMixin:
                 return {
                     'action': 'preferences',
                     'preferences': {
-                        'goals': enhanced.goals or [],
-                        'routines': enhanced.routines or [],
+                        'long_term_goals': enhanced.long_term_goals or [],
+                        'current_projects': enhanced.current_projects or [],
+                        'quarterly_objectives': enhanced.quarterly_objectives or {},
                         'learning_style': enhanced.learning_style or '',
                         'communication_style': enhanced.communication_style or '',
-                        'risk_tolerance': enhanced.risk_tolerance or '',
-                        'interests': enhanced.interests or [],
-                        'preferred_topics': enhanced.preferred_topics or [],
-                        'automation_level': enhanced.automation_level or '',
+                        'decision_framework': enhanced.decision_framework or '',
+                        'current_learning_goals': enhanced.current_learning_goals or [],
+                        'personal_values': enhanced.personal_values or [],
+                        'delegation_preferences': enhanced.delegation_preferences or {},
+                        'work_schedule': enhanced.work_schedule or {},
+                        'time_zone': enhanced.time_zone or '',
+                        'privacy_level': enhanced.privacy_level or '',
                     },
                 }
 
@@ -1637,9 +1641,16 @@ class GatewayHandlersMixin:
 
                 updates = payload.get('updates', {})
                 ALLOWED_FIELDS = {
-                    'goals', 'routines', 'learning_style', 'communication_style',
-                    'risk_tolerance', 'interests', 'preferred_topics', 'automation_level',
+                    'long_term_goals', 'current_projects', 'quarterly_objectives',
+                    'learning_style', 'communication_style', 'decision_framework',
+                    'current_learning_goals', 'personal_values', 'delegation_preferences',
+                    'work_schedule', 'time_zone', 'privacy_level',
                 }
+
+                # Support both single field+value and bulk updates dict
+                if not updates and payload.get('field') and payload.get('value') is not None:
+                    updates = {payload['field']: payload['value']}
+
                 applied = {}
                 for field, value in updates.items():
                     if field in ALLOWED_FIELDS:
@@ -1673,24 +1684,24 @@ class GatewayHandlersMixin:
                 base = {
                     'desk': desk,
                     'communication_style': getattr(enhanced, 'communication_style', '') if enhanced else '',
-                    'goals': getattr(enhanced, 'goals', []) if enhanced else [],
+                    'long_term_goals': getattr(enhanced, 'long_term_goals', []) if enhanced else [],
                 }
 
                 DESK_PROJECTIONS = {
                     'sports': {
-                        'fields': ['risk_tolerance', 'interests'],
+                        'fields': ['decision_framework', 'current_learning_goals'],
                         'context': 'Sports betting preferences and risk tolerance',
                     },
                     'stocks': {
-                        'fields': ['risk_tolerance', 'interests', 'preferred_topics'],
+                        'fields': ['decision_framework', 'current_learning_goals', 'current_projects'],
                         'context': 'Investment preferences and market interests',
                     },
                     'content': {
-                        'fields': ['learning_style', 'communication_style', 'preferred_topics'],
+                        'fields': ['learning_style', 'communication_style', 'current_projects'],
                         'context': 'Content tone, style, and topic preferences',
                     },
                     'general': {
-                        'fields': ['goals', 'routines', 'interests', 'automation_level'],
+                        'fields': ['long_term_goals', 'work_schedule', 'current_learning_goals', 'delegation_preferences'],
                         'context': 'General platform preferences',
                     },
                 }
@@ -1700,7 +1711,7 @@ class GatewayHandlersMixin:
                     val = getattr(enhanced, field, None) if enhanced else None
                     if val is None and extended:
                         val = getattr(extended, field, None)
-                    base[field] = val or ([] if field in ('interests', 'preferred_topics', 'goals', 'routines') else '')
+                    base[field] = val or ([] if field in ('current_learning_goals', 'current_projects', 'long_term_goals', 'personal_values') else ({} if field in ('work_schedule', 'delegation_preferences', 'quarterly_objectives') else ''))
 
                 base['context'] = projection['context']
                 base['available_desks'] = list(DESK_PROJECTIONS.keys())
