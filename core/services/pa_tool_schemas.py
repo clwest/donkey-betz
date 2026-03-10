@@ -2861,7 +2861,7 @@ PA_TOOL_SCHEMAS = [
                     "type": "string",
                     "enum": [
                         "beat_schedule", "task_status", "worker_health",
-                        "recent_failures", "queue_lengths", "help",
+                        "recent_failures", "queue_lengths", "trigger_task", "help",
                     ],
                     "description": (
                         "beat_schedule: list all periodic tasks with intervals and last run. "
@@ -2869,6 +2869,7 @@ PA_TOOL_SCHEMAS = [
                         "worker_health: active workers, queues, concurrency. "
                         "recent_failures: failed tasks with error messages. "
                         "queue_lengths: current depth of all queues. "
+                        "trigger_task: manually dispatch an allowlisted Celery task (use task_name param). "
                         "help: list all actions."
                     ),
                 },
@@ -2882,7 +2883,11 @@ PA_TOOL_SCHEMAS = [
                 },
                 "queue": {
                     "type": "string",
-                    "description": "Filter by queue name (for recent_failures)",
+                    "description": "Filter by queue name (for recent_failures) or target queue (for trigger_task, default: long_running)",
+                },
+                "task_name": {
+                    "type": "string",
+                    "description": "Fully-qualified Celery task name for trigger_task (e.g. core.tasks.sync_congress_data)",
                 },
             },
             "required": ["action"],
