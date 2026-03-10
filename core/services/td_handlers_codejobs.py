@@ -91,6 +91,10 @@ class CodeJobHandlersMixin:
             return self._code_job_cancel(payload, user_id)
         elif action == 'list':
             return self._code_job_list(payload, user_id)
+        elif action == 'list_repos':
+            return self._code_job_list_repos(payload, user_id)
+        elif action == 'add_repo':
+            return self._code_job_add_repo(payload, user_id)
         return {'error': f'Unknown code_job_tool action: {action}'}
 
     def _code_job_submit(self, payload, user_id, trace_id):
@@ -239,6 +243,67 @@ class CodeJobHandlersMixin:
                 'branch': r.working_branch, 'pr_url': r.pr_url or None,
                 'created': r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '',
             } for r in runs],
+        }
+
+    def _code_job_list_repos(self, payload, user_id):
+        from core.models import Repo
+        repos = Repo.objects.all().order_by('name')
+        return {
+            'repos': [{
+                'id': str(r.id),
+                'name': r.name,
+                'slug': r.get_repo_slug(),
+                'repo_url': r.repo_url,
+                'default_branch': r.default_base_branch,
+                'is_active': r.is_active,
+                'test_command': r.test_command or '(auto-detect)',
+                'lint_command': r.lint_command or '(auto-detect)',
+                'max_runtime_seconds': r.max_runtime_seconds,
+            } for r in repos],
+            'total': repos.count(),
+        }
+
+    def _code_job_add_repo(self, payload, user_id):
+        from core.models import Repo
+        repo_url = payload.get('repo_url', '').strip()
+        name = payload.get('name', '').strip()
+        if not repo_url:
+            return {'error': 'repo_url is required (e.g. https://github.com/owner/repo)'}
+        if not repo_url.startswith('https://github.com/'):
+            return {'error': 'Only GitHub repos are supported (must start with https://github.com/)'}
+        # Auto-derive name from URL if not provided
+        if not name:
+            name = repo_url.rstrip('/').split('/')[-1].replace('.git', '')
+        # Check if already exists
+        existing = Repo.objects.filter(repo_url=repo_url).first()
+        if existing:
+            if not existing.is_active:
+                existing.is_active = True
+                existing.save(update_fields=['is_active'])
+                return {
+                    'reactivated': True,
+                    'id': str(existing.id),
+                    'name': existing.name,
+                    'slug': existing.get_repo_slug(),
+                }
+            return {'error': f'Repo already exists and is active: {existing.name} ({existing.get_repo_slug()})'}
+        repo = Repo.objects.create(
+            name=name,
+            repo_url=repo_url.rstrip('/'),
+            default_base_branch=payload.get('default_branch', 'main'),
+            test_command=payload.get('test_command', ''),
+            lint_command=payload.get('lint_command', ''),
+            max_runtime_seconds=int(payload.get('max_runtime_seconds', 600)),
+            is_active=True,
+        )
+        return {
+            'created': True,
+            'id': str(repo.id),
+            'name': repo.name,
+            'slug': repo.get_repo_slug(),
+            'repo_url': repo.repo_url,
+            'default_branch': repo.default_base_branch,
+            'is_active': True,
         }
 
 
