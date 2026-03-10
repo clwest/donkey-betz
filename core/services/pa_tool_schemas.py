@@ -130,9 +130,9 @@ PA_TOOL_SCHEMAS = [
                 "action": {
                     "type": "string",
                     "enum": ["list", "stats", "create", "update", "complete", "delete"],
-                    "description": "Task action: list, stats, create new task, update existing, mark complete, or delete",
+                    "description": "Task action: list, stats, create new task, update existing, mark complete (sets status='won' which means accepted/done), or delete",
                 },
-                "status": {"type": "string", "description": "Filter by task status or new status for update"},
+                "status": {"type": "string", "description": "Filter by task status or new status for update. Values: pending, accepted, in_progress, applied, waiting, won (=completed), lost, expired, cancelled"},
                 "priority": {"type": "string", "description": "Filter by priority (low/medium/high/urgent) or set priority for create/update"},
                 "limit": {"type": "integer", "description": "Max items (default 20)"},
                 "id": {"type": "string", "description": "Task UUID (required for update/complete)"},
