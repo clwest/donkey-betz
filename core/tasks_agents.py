@@ -6,15 +6,22 @@ Session 728: Migrated from agents/tasks.py to core/tasks_agents.py
 
 import logging
 import json
+import os  # noqa: F401
+import time  # noqa: F401
 import traceback
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Dict, Any
+from typing import Any, Dict, List, Optional, Tuple, Union  # noqa: F401
 
 from celery import shared_task, Task
+from celery.exceptions import SoftTimeLimitExceeded  # noqa: F401
+from django.db import transaction  # noqa: F401
+from django.db.models import F, Count, Q  # noqa: F401
 from django.utils import timezone
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+
+from core.api_helpers import smart_truncate  # noqa: F401
 
 from core.models.agents_registry import (
     AgentExecution,
@@ -25,6 +32,26 @@ from core.models.agents_registry import (
 from content.ai_providers import AIProviderManager
 
 logger = logging.getLogger(__name__)
+from core.tasks import (  # noqa: F401 — private helpers from tasks.py
+    _apply_task_routing_override,
+    _circuit_breaker_check,
+    _circuit_breaker_record_timeout,
+    _circuit_breaker_release,
+    _extract_agent_output_content,
+    _format_metrics_for_audit,
+    _gather_live_system_metrics,
+    _get_agent_class,
+    _get_next_task_for_agent,
+    _get_workspace_for_skin_layer,
+    _is_media_task_blocked,
+    _preflight_check_agent_data,
+    _record_timeout_signature,
+    _run_agent_warmup,
+    _summarize_diff,
+    _summarize_params,
+    _upsert_insight,
+)
+
 
 
 class AgentExecutionTask(Task):
@@ -1060,6 +1087,18 @@ def update_agent_performance():
     return result
 from typing import Tuple, Union  # noqa: F401 — needed by extracted _impl_ functions
 
+
+# Late imports from core.tasks — these helpers live in the main module
+# and can't be imported at module level without circular import risk,
+# but are safe here because core.tasks is always loaded first.
+from core.tasks import (  # noqa: F401
+    _record_timeout_signature,
+    _is_media_task_blocked,
+    _circuit_breaker_check,
+    _circuit_breaker_record_timeout,
+    _circuit_breaker_release,
+    _apply_task_routing_override,
+)
 
 # ============================================================
 # Extracted task implementations (from core/tasks.py via do_extract.py)
