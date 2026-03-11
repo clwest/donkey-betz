@@ -618,6 +618,11 @@ class ProjectWorkspaceViewSet(viewsets.ModelViewSet):
                 'message': f'Scanned {context.total_files} files in {context.total_directories} directories',
                 'context': WorkspaceContextSerializer(context).data
             })
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         except Exception as e:
             logger.exception(f"Error scanning workspace: {e}")
             return Response(
