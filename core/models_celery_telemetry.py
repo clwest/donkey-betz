@@ -23,6 +23,7 @@ class CeleryTaskEvent(models.Model):
     """
 
     STATUS_CHOICES = [
+        ('QUEUED', 'Queued'),
         ('STARTED', 'Started'),
         ('SUCCESS', 'Success'),
         ('FAILURE', 'Failure'),

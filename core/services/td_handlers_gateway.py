@@ -772,10 +772,25 @@ class GatewayHandlersMixin:
                 from core.celery import app as celery_app
                 queue = payload.get('queue', '') or 'long_running'
                 result = celery_app.send_task(task_name, queue=queue)
+                task_id = str(result.id)
+
+                # Create CeleryTaskEvent immediately so task_status doesn't
+                # fall through to AsyncResult (which always returns PENDING)
+                try:
+                    from core.models_celery_telemetry import CeleryTaskEvent
+                    CeleryTaskEvent.objects.create(
+                        task_id=task_id,
+                        task_name=task_name,
+                        queue=queue,
+                        status='QUEUED',
+                    )
+                except Exception:
+                    pass  # non-critical — telemetry signal will create on worker pickup
+
                 return {
                     'action': 'trigger_task',
                     'task_name': task_name,
-                    'task_id': str(result.id),
+                    'task_id': task_id,
                     'queue': queue,
                     'status': 'dispatched',
                 }
