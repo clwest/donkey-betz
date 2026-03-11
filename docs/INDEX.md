@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-03-11 12:44
+**Generated:** 2026-03-11 13:27
 **Current Session:** 1077
 **Total Documentation:** 1820 files | 622,504 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/plans/README.md` | 60 | 📋 Strategic Plans & Roadmaps |
+| `docs/architecture/README.md` | 60 | Architecture Documentation |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -217,7 +217,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 361 | 2026-03-11 12:27 |
+| INDEX.md | docs | 361 | 2026-03-11 12:45 |
 | remote-code-worker-contract.md | designs | 411 | 2026-03-10 16:25 |
 | personal-assistant.md | topics | 139 | 2026-03-05 07:03 |
 | video-upload.md | topics | 101 | 2026-03-04 13:08 |
