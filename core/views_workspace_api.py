@@ -612,6 +612,23 @@ class ProjectWorkspaceViewSet(viewsets.ModelViewSet):
         manager = get_workspace_manager(request.user)
 
         try:
+            # For git_remote workspaces, wait for clone or return 202
+            result = manager.scanner.ensure_repo_present_or_wait(
+                workspace, wait_seconds=20, poll_interval=0.5,
+            )
+            if not result['ready']:
+                return Response(
+                    {
+                        'status': 'cloning',
+                        'workspace_id': str(workspace.id),
+                        'clone_started_at': result.get('clone_started_at'),
+                        'retry_after_seconds': 5,
+                        'message': 'Repository clone in progress. Retry shortly.',
+                    },
+                    status=202,
+                    headers={'Retry-After': '5'},
+                )
+
             context = manager.rescan_workspace(workspace)
             return Response({
                 'success': True,

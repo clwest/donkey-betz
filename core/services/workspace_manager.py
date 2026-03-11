@@ -559,35 +559,10 @@ class WorkspaceScanner:
     # ── Self-healing clone for git_remote workspaces ────────────────────
 
     CLONE_TIMEOUT = 120  # seconds
+    STALE_LOCK_TTL_SECONDS = 600  # 10 minutes
 
-    def ensure_repo_present(self, workspace: ProjectWorkspace) -> None:
-        """
-        Ensure a git_remote workspace has its repo on disk.
-
-        If the repo directory is missing (e.g. after a Railway deploy with
-        ephemeral filesystem), reclone from git_remote_url into the
-        canonical path: <WORKSPACE_BASE_DIR>/<workspace_uuid>/repo.
-        Updates workspace.root_path on success.
-        """
-        if workspace.workspace_type != 'git_remote':
-            return
-
-        if not workspace.git_remote_url:
-            raise ValueError(
-                "Workspace is type 'git_remote' but has no git_remote_url. "
-                "Update the workspace with a valid Git URL."
-            )
-
-        if not workspace.allow_git_operations:
-            raise ValueError(
-                "Git operations are disabled for this workspace."
-            )
-
-        root = Path(workspace.root_path)
-        if root.exists() and root.is_dir():
-            return  # repo already present
-
-        # Determine canonical clone dir
+    def _get_workspace_paths(self, workspace: ProjectWorkspace) -> tuple:
+        """Return (base_path, ws_dir, repo_dir, lock_path) for a workspace."""
         from django.conf import settings
         debug = getattr(settings, 'DEBUG', False)
 
@@ -619,9 +594,96 @@ class WorkspaceScanner:
                     "Fix volume permissions: chown appuser:appuser /app/workspaces"
                 )
 
-        repo_dir = base_path / str(workspace.id) / 'repo'
+        ws_dir = base_path / str(workspace.id)
+        repo_dir = ws_dir / 'repo'
+        lock_path = ws_dir / '.clone.lock'
+        return base_path, ws_dir, repo_dir, lock_path
 
-        if repo_dir.exists() and repo_dir.is_dir() and (repo_dir / '.git').exists():
+    def _is_repo_ready(self, repo_dir: Path, ws_dir: Path) -> bool:
+        """Check if repo is cloned and no clone is in progress."""
+        return (
+            repo_dir.exists()
+            and (repo_dir / '.git').exists()
+            and not (ws_dir / '.clone.in_progress').exists()
+        )
+
+    def _cleanup_stale_lock(self, ws_dir: Path, lock_path: Path) -> bool:
+        """Remove stale lock + in_progress if older than TTL. Returns True if cleaned."""
+        in_progress = ws_dir / '.clone.in_progress'
+        if not in_progress.exists():
+            # Lock exists but no sentinel — stale, clean it
+            logger.warning(f"🔒 Stale clone lock (no sentinel): {lock_path}")
+            try:
+                lock_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+            return True
+
+        try:
+            import json
+            data = json.loads(in_progress.read_text())
+            from datetime import datetime, timezone
+            started = datetime.fromisoformat(data['started_at'])
+            age = (datetime.now(timezone.utc) - started).total_seconds()
+            if age > self.STALE_LOCK_TTL_SECONDS:
+                logger.warning(
+                    f"🔒 Stale clone lock ({age:.0f}s old, TTL={self.STALE_LOCK_TTL_SECONDS}s): {lock_path}"
+                )
+                lock_path.unlink(missing_ok=True)
+                in_progress.unlink(missing_ok=True)
+                return True
+        except Exception:
+            # Can't parse sentinel — treat as stale
+            logger.warning(f"🔒 Unparseable clone sentinel, cleaning: {lock_path}")
+            lock_path.unlink(missing_ok=True)
+            in_progress.unlink(missing_ok=True)
+            return True
+        return False
+
+    def _write_sentinel(self, ws_dir: Path, name: str, data: dict) -> None:
+        """Write a JSON sentinel file."""
+        import json
+        path = ws_dir / name
+        path.write_text(json.dumps(data, default=str))
+
+    def _remove_sentinel(self, ws_dir: Path, name: str) -> None:
+        """Remove a sentinel file if it exists."""
+        try:
+            (ws_dir / name).unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    def ensure_repo_present(self, workspace: ProjectWorkspace) -> None:
+        """
+        Ensure a git_remote workspace has its repo on disk.
+
+        If the repo directory is missing (e.g. after a Railway deploy with
+        ephemeral filesystem), reclone from git_remote_url into the
+        canonical path: <WORKSPACE_BASE_DIR>/<workspace_uuid>/repo.
+        Updates workspace.root_path on success.
+        """
+        if workspace.workspace_type != 'git_remote':
+            return
+
+        if not workspace.git_remote_url:
+            raise ValueError(
+                "Workspace is type 'git_remote' but has no git_remote_url. "
+                "Update the workspace with a valid Git URL."
+            )
+
+        if not workspace.allow_git_operations:
+            raise ValueError(
+                "Git operations are disabled for this workspace."
+            )
+
+        root = Path(workspace.root_path)
+        if root.exists() and root.is_dir() and (root / '.git').exists():
+            return  # repo already present
+
+        _, ws_dir, repo_dir, lock_path = self._get_workspace_paths(workspace)
+        ws_dir.mkdir(parents=True, exist_ok=True)
+
+        if self._is_repo_ready(repo_dir, ws_dir):
             # Repo exists at canonical path but root_path was stale — fix it
             workspace.root_path = str(repo_dir)
             workspace.save(update_fields=['root_path'])
@@ -631,21 +693,47 @@ class WorkspaceScanner:
             )
             return
 
+        # Auto-clean invalid repo dir (exists but no .git)
+        if repo_dir.exists() and not (repo_dir / '.git').exists():
+            import shutil
+            logger.warning(f"🧹 Removing invalid repo dir (no .git): {repo_dir}")
+            shutil.rmtree(repo_dir, ignore_errors=True)
+
         # Acquire clone lock (prevent concurrent clones)
-        lock_path = base_path / str(workspace.id) / '.clone.lock'
-        lock_path.parent.mkdir(parents=True, exist_ok=True)
         lock_fd = None
         try:
             lock_fd = os.open(
                 str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY
             )
         except FileExistsError:
-            raise ValueError(
-                "A clone operation is already in progress for this workspace. "
-                "Please retry in a few minutes."
-            )
+            # Check for stale lock
+            if self._cleanup_stale_lock(ws_dir, lock_path):
+                try:
+                    lock_fd = os.open(
+                        str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY
+                    )
+                except FileExistsError:
+                    raise ValueError(
+                        "A clone operation is already in progress for this workspace. "
+                        "Please retry in a few minutes."
+                    )
+            else:
+                raise ValueError(
+                    "A clone operation is already in progress for this workspace. "
+                    "Please retry in a few minutes."
+                )
 
         try:
+            # Write clone-in-progress sentinel
+            from datetime import datetime, timezone
+            self._write_sentinel(ws_dir, '.clone.in_progress', {
+                'workspace_id': str(workspace.id),
+                'started_at': datetime.now(timezone.utc).isoformat(),
+                'repo_dir': str(repo_dir),
+                'git_remote_url': workspace.git_remote_url,
+                'pid': os.getpid(),
+            })
+
             # Inject GitHub token for private repos
             clone_url = workspace.git_remote_url
             github_token = os.environ.get('GITHUB_TOKEN', '')
@@ -683,10 +771,31 @@ class WorkspaceScanner:
                 import shutil
                 if repo_dir.exists():
                     shutil.rmtree(repo_dir, ignore_errors=True)
+                self._write_sentinel(ws_dir, '.clone.error', {
+                    'error': stderr_tail,
+                    'git_remote_url': workspace.git_remote_url,
+                })
+                self._remove_sentinel(ws_dir, '.clone.in_progress')
                 raise ValueError(
                     f"Failed to clone {workspace.git_remote_url}: "
                     f"{stderr_tail}"
                 )
+
+            # Success — write .clone.ok, remove .clone.in_progress
+            head_sha = ''
+            try:
+                head_sha = subprocess.run(
+                    ['git', '-C', str(repo_dir), 'rev-parse', 'HEAD'],
+                    capture_output=True, text=True, timeout=5,
+                ).stdout.strip()
+            except Exception:
+                pass
+
+            self._write_sentinel(ws_dir, '.clone.ok', {
+                'ok_at': datetime.now(timezone.utc).isoformat(),
+                'head_sha': head_sha,
+            })
+            self._remove_sentinel(ws_dir, '.clone.in_progress')
 
             # Update workspace root_path to canonical location
             workspace.root_path = str(repo_dir)
@@ -700,6 +809,11 @@ class WorkspaceScanner:
             import shutil
             if repo_dir.exists():
                 shutil.rmtree(repo_dir, ignore_errors=True)
+            self._write_sentinel(ws_dir, '.clone.error', {
+                'error': f'Timed out after {self.CLONE_TIMEOUT}s',
+                'git_remote_url': workspace.git_remote_url,
+            })
+            self._remove_sentinel(ws_dir, '.clone.in_progress')
             raise ValueError(
                 f"Git clone timed out after {self.CLONE_TIMEOUT}s. "
                 "The repository may be too large for shallow clone."
@@ -712,6 +826,93 @@ class WorkspaceScanner:
                 lock_path.unlink(missing_ok=True)
             except OSError:
                 pass
+
+    def ensure_repo_present_or_wait(
+        self,
+        workspace: ProjectWorkspace,
+        wait_seconds: float = 20.0,
+        poll_interval: float = 0.5,
+    ) -> dict:
+        """
+        Ensure repo is present, waiting up to wait_seconds for a concurrent clone.
+
+        Returns:
+            {'ready': True} if repo is ready to scan.
+            {'ready': False, 'clone_started_at': <str|None>} if still cloning.
+        Raises on hard clone failure or validation errors.
+        """
+        if workspace.workspace_type != 'git_remote':
+            return {'ready': True}
+
+        if not workspace.git_remote_url or not workspace.allow_git_operations:
+            # Let ensure_repo_present raise the appropriate error
+            self.ensure_repo_present(workspace)
+            return {'ready': True}
+
+        root = Path(workspace.root_path)
+        if root.exists() and root.is_dir() and (root / '.git').exists():
+            return {'ready': True}
+
+        _, ws_dir, repo_dir, lock_path = self._get_workspace_paths(workspace)
+        ws_dir.mkdir(parents=True, exist_ok=True)
+
+        if self._is_repo_ready(repo_dir, ws_dir):
+            # Fix stale root_path
+            workspace.root_path = str(repo_dir)
+            workspace.save(update_fields=['root_path'])
+            return {'ready': True}
+
+        # Try to acquire lock — if we get it, we do the clone inline
+        lock_fd = None
+        try:
+            lock_fd = os.open(
+                str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY
+            )
+        except FileExistsError:
+            # Someone else is cloning — check for stale lock
+            if self._cleanup_stale_lock(ws_dir, lock_path):
+                try:
+                    lock_fd = os.open(
+                        str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY
+                    )
+                except FileExistsError:
+                    lock_fd = None
+            else:
+                lock_fd = None
+
+        if lock_fd is not None:
+            # We own the lock — release it and let ensure_repo_present do the clone
+            os.close(lock_fd)
+            try:
+                lock_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+            self.ensure_repo_present(workspace)
+            return {'ready': True}
+
+        # Another process is cloning — poll for readiness
+        import time as _time
+        elapsed = 0.0
+        while elapsed < wait_seconds:
+            _time.sleep(poll_interval)
+            elapsed += poll_interval
+            if self._is_repo_ready(repo_dir, ws_dir):
+                # Clone finished while we waited — fix root_path
+                workspace.refresh_from_db()
+                return {'ready': True}
+
+        # Still not ready after waiting — return 202 info
+        clone_started_at = None
+        in_progress = ws_dir / '.clone.in_progress'
+        if in_progress.exists():
+            try:
+                import json
+                data = json.loads(in_progress.read_text())
+                clone_started_at = data.get('started_at')
+            except Exception:
+                pass
+
+        return {'ready': False, 'clone_started_at': clone_started_at}
 
     # ── Scan ──────────────────────────────────────────────────────────
 
