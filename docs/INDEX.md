@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-03-11 12:26
+**Generated:** 2026-03-11 12:44
 **Current Session:** 1077
 **Total Documentation:** 1820 files | 622,504 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,201 |
+| Total cross-references | 2,202 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/capabilities/04_Agent_Orchestra/README.md` | 60 | 🤖 AI AGENT ORCHESTRA - 149 Specialized Intelligenc |
+| `docs/archive/old-structure/plans/README.md` | 60 | 📋 Strategic Plans & Roadmaps |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -217,7 +217,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 361 | 2026-03-11 11:53 |
+| INDEX.md | docs | 361 | 2026-03-11 12:27 |
 | remote-code-worker-contract.md | designs | 411 | 2026-03-10 16:25 |
 | personal-assistant.md | topics | 139 | 2026-03-05 07:03 |
 | video-upload.md | topics | 101 | 2026-03-04 13:08 |
