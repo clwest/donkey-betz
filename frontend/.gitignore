@@ -3,9 +3,11 @@ node_modules
 .pnp
 .pnp.js
 
-# Build
+# Build (track dist/ for Railway deployment — no Node.js build on server)
 dist/*
+!dist/index.html
 !dist/__manifest.json
+!dist/assets/
 dist-ssr
 *.local
 
