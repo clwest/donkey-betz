@@ -37,6 +37,7 @@ Usage:
 """
 
 import logging
+import os
 import time
 import uuid
 import asyncio
@@ -572,7 +573,13 @@ class GatewayHandlersMixin:
                     return {'error': 'No admin user found to create invite'}
 
                 invite = VIPInvite.objects.create(created_by=admin_user, label=label)
-                base_url = getattr(django_settings, 'FRONTEND_URL', 'https://donkey-betz-platform-production.up.railway.app')
+                # Use VIP_ACCEPT_BASE_URL or hardcoded web host.
+                # FRONTEND_URL / BACKEND_URL on celery-pa resolve to that
+                # service's own domain, not the public web frontend.
+                base_url = os.environ.get(
+                    'VIP_ACCEPT_BASE_URL',
+                    'https://donkey-betz-platform-production.up.railway.app',
+                )
                 accept_url = f"{base_url.rstrip('/')}/vip/accept?token={invite.token}"
 
                 return {
