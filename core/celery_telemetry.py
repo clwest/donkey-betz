@@ -43,14 +43,16 @@ def on_task_prerun(sender=None, task_id=None, task=None, **kwargs):
         if hasattr(task, 'request') and hasattr(task.request, 'hostname'):
             worker = task.request.hostname or ''
 
-        CeleryTaskEvent.objects.create(
+        CeleryTaskEvent.objects.update_or_create(
             task_id=task_id,
-            task_name=task.name if task else str(sender),
-            queue=queue,
-            status='STARTED',
-            worker=worker,
-            started_at=timezone.now(),
-            rss_mb_start=_get_rss_mb(),
+            defaults={
+                'task_name': task.name if task else str(sender),
+                'queue': queue,
+                'status': 'STARTED',
+                'worker': worker,
+                'started_at': timezone.now(),
+                'rss_mb_start': _get_rss_mb(),
+            },
         )
     except Exception:
         # Telemetry must never break task execution

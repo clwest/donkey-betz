@@ -4567,7 +4567,8 @@ agent_name: str,
         logger.info(f"🔄 [WARMUP] {agent_name} - Infra check only, no content generation")
         return _run_agent_warmup(agent_name)
 
-    # Get agent config
+    # Get agent config (lazy import — defined in core.tasks)
+    from core.tasks import AGENT_WORKSPACE_REGISTRY
     config = AGENT_WORKSPACE_REGISTRY.get(agent_name)
     if not config:
         logger.warning(f"Agent {agent_name} not in registry, using defaults")
