@@ -573,6 +573,13 @@ class WorkspaceScanner:
         start_time = time.time()
         root = Path(workspace.root_path)
 
+        if not root.exists() or not root.is_dir():
+            raise ValueError(
+                f"Workspace path not found on server: {workspace.root_path}. "
+                "This workspace may have been registered with a local path; "
+                "register using a server-side clone or update root_path."
+            )
+
         file_tree = {}
         key_files = {}
         file_type_counts = {}
@@ -630,7 +637,7 @@ class WorkspaceScanner:
                         # Identify key files
                         self._identify_key_file(rel_path, key_files)
 
-            except PermissionError:
+            except (PermissionError, FileNotFoundError, NotADirectoryError):
                 pass
 
         scan_directory(root)
