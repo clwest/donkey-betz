@@ -621,7 +621,7 @@ class WorkspaceScanner:
 
         repo_dir = base_path / str(workspace.id) / 'repo'
 
-        if repo_dir.exists() and repo_dir.is_dir():
+        if repo_dir.exists() and repo_dir.is_dir() and (repo_dir / '.git').exists():
             # Repo exists at canonical path but root_path was stale — fix it
             workspace.root_path = str(repo_dir)
             workspace.save(update_fields=['root_path'])
@@ -646,15 +646,29 @@ class WorkspaceScanner:
             )
 
         try:
+            # Inject GitHub token for private repos
+            clone_url = workspace.git_remote_url
+            github_token = os.environ.get('GITHUB_TOKEN', '')
+            if github_token:
+                from urllib.parse import urlparse, urlunparse
+                parsed = urlparse(clone_url)
+                if parsed.hostname == 'github.com' and parsed.scheme == 'https':
+                    authed = parsed._replace(
+                        netloc=f'x-access-token:{github_token}@{parsed.hostname}'
+                        + (f':{parsed.port}' if parsed.port else '')
+                    )
+                    clone_url = urlunparse(authed)
+
             # Build clone command
             branch = workspace.current_branch or None
             cmd = ['git', 'clone', '--depth', '1']
             if branch:
                 cmd += ['--branch', branch, '--single-branch']
-            cmd += [workspace.git_remote_url, str(repo_dir)]
+            cmd += [clone_url, str(repo_dir)]
 
             logger.info(
                 f"📥 Cloning {workspace.git_remote_url} → {repo_dir}"
+                + (" (with GITHUB_TOKEN)" if github_token else "")
             )
             result = subprocess.run(
                 cmd,
