@@ -607,6 +607,18 @@ class WorkspaceScanner:
                         "Configure a Railway volume at /app/workspaces."
                     )
 
+        # Verify write access (Railway volumes mount as root:root)
+        if not os.access(str(base_path), os.W_OK):
+            if debug:
+                base_path = Path('/tmp/workspaces')
+                base_path.mkdir(parents=True, exist_ok=True)
+            else:
+                raise ValueError(
+                    f"WORKSPACE_BASE_DIR ({base_dir}) exists but is not writable "
+                    f"by the current process (uid={os.getuid()}). "
+                    "Fix volume permissions: chown appuser:appuser /app/workspaces"
+                )
+
         repo_dir = base_path / str(workspace.id) / 'repo'
 
         if repo_dir.exists() and repo_dir.is_dir():
