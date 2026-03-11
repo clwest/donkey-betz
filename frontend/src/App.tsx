@@ -33,6 +33,7 @@ import BoardroomPage from '@/pages/BoardroomPage'  // Session 1067: Full-page bo
 import GovernancePage from '@/pages/GovernancePage'  // Session 1067: Full-page governance
 import ExecutorPage from '@/pages/ExecutorPage'  // Session 1076: Executor runs UI
 import MediaPage from '@/pages/MediaPage'
+import VipAcceptPage from '@/pages/VipAcceptPage'
 
 // Focus Cockpit
 import CockpitLayout from '@/components/cockpit/CockpitLayout'
@@ -75,6 +76,7 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/vip/accept" element={<VipAcceptPage />} />
 
       <Route
         path="/"
