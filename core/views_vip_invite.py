@@ -35,7 +35,11 @@ def vip_invite_create(request):
         label=label,
     )
 
-    base_url = getattr(settings, 'FRONTEND_URL', request.build_absolute_uri('/'))
+    import os
+    base_url = os.environ.get(
+        'VIP_ACCEPT_BASE_URL',
+        request.build_absolute_uri('/'),
+    )
     accept_url = f"{base_url.rstrip('/')}/vip/accept?token={invite.token}"
 
     return Response({
