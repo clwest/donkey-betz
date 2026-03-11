@@ -2753,6 +2753,7 @@ PA_TOOL_SCHEMAS = [
                 "path": {"type": "string", "description": "Relative path from project root (e.g. 'core/agents/', 'mobile/src/screens/')"},
                 "depth": {"type": "integer", "description": "Directory depth for tree action (default 2, max 4)"},
                 "query": {"type": "string", "description": "Search query/regex for search action"},
+                "start_line": {"type": "integer", "description": "Line number to start reading from (0-based, default 0). Use with max_lines to read specific sections."},
                 "max_lines": {"type": "integer", "description": "Max lines to return for read_file (default 200, max 500)"},
                 "file_type": {"type": "string", "description": "File extension filter for search (e.g. 'py', 'tsx', 'ts')"},
             },

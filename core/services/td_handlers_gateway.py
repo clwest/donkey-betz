@@ -140,6 +140,7 @@ class GatewayHandlersMixin:
                 if not rel_path:
                     return {'error': 'path is required for read_file'}
                 max_lines = min(payload.get('max_lines', 200), 500)
+                start_line = max(int(payload.get('start_line', 0)), 0)
                 full_path = _safe_path(rel_path)
                 if not os.path.isfile(full_path):
                     return {'error': f'File not found: {rel_path}'}
@@ -151,17 +152,22 @@ class GatewayHandlersMixin:
                 with open(full_path, 'r', errors='replace') as f:
                     lines = []
                     for i, line in enumerate(f):
-                        if i >= max_lines:
+                        if i < start_line:
+                            continue
+                        if len(lines) >= max_lines:
                             break
-                        lines.append(line.rstrip('\n'))
+                        lines.append(f'{i + 1}: {line.rstrip(chr(10))}')
 
                 total_lines = sum(1 for _ in open(full_path, 'r', errors='replace'))
+                end_line = start_line + len(lines)
                 return {
                     'action': 'read_file',
                     'path': rel_path,
+                    'start_line': start_line,
+                    'end_line': end_line,
                     'lines': len(lines),
                     'total_lines': total_lines,
-                    'truncated': total_lines > max_lines,
+                    'truncated': end_line < total_lines,
                     'content': '\n'.join(lines),
                 }
 
