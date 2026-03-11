@@ -13,6 +13,7 @@ Session: 695
 
 import json
 import logging
+import os
 import subprocess
 import time
 from datetime import datetime
@@ -555,6 +556,139 @@ class WorkspaceScanner:
         '.sql', '.graphql', '.prisma'
     }
 
+    # ── Self-healing clone for git_remote workspaces ────────────────────
+
+    CLONE_TIMEOUT = 120  # seconds
+
+    def ensure_repo_present(self, workspace: ProjectWorkspace) -> None:
+        """
+        Ensure a git_remote workspace has its repo on disk.
+
+        If the repo directory is missing (e.g. after a Railway deploy with
+        ephemeral filesystem), reclone from git_remote_url into the
+        canonical path: <WORKSPACE_BASE_DIR>/<workspace_uuid>/repo.
+        Updates workspace.root_path on success.
+        """
+        if workspace.workspace_type != 'git_remote':
+            return
+
+        if not workspace.git_remote_url:
+            raise ValueError(
+                "Workspace is type 'git_remote' but has no git_remote_url. "
+                "Update the workspace with a valid Git URL."
+            )
+
+        if not workspace.allow_git_operations:
+            raise ValueError(
+                "Git operations are disabled for this workspace."
+            )
+
+        root = Path(workspace.root_path)
+        if root.exists() and root.is_dir():
+            return  # repo already present
+
+        # Determine canonical clone dir
+        from django.conf import settings
+        debug = getattr(settings, 'DEBUG', False)
+
+        base_dir = os.environ.get('WORKSPACE_BASE_DIR', '/app/workspaces')
+        base_path = Path(base_dir)
+
+        if not base_path.exists():
+            try:
+                base_path.mkdir(parents=True, exist_ok=True)
+            except OSError:
+                if debug:
+                    base_path = Path('/tmp/workspaces')
+                    base_path.mkdir(parents=True, exist_ok=True)
+                else:
+                    raise ValueError(
+                        f"WORKSPACE_BASE_DIR ({base_dir}) is not writable. "
+                        "Configure a Railway volume at /app/workspaces."
+                    )
+
+        repo_dir = base_path / str(workspace.id) / 'repo'
+
+        if repo_dir.exists() and repo_dir.is_dir():
+            # Repo exists at canonical path but root_path was stale — fix it
+            workspace.root_path = str(repo_dir)
+            workspace.save(update_fields=['root_path'])
+            logger.info(
+                f"📂 Workspace {workspace.name}: updated stale root_path "
+                f"to canonical {repo_dir}"
+            )
+            return
+
+        # Acquire clone lock (prevent concurrent clones)
+        lock_path = base_path / str(workspace.id) / '.clone.lock'
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        lock_fd = None
+        try:
+            lock_fd = os.open(
+                str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY
+            )
+        except FileExistsError:
+            raise ValueError(
+                "A clone operation is already in progress for this workspace. "
+                "Please retry in a few minutes."
+            )
+
+        try:
+            # Build clone command
+            branch = workspace.current_branch or None
+            cmd = ['git', 'clone', '--depth', '1']
+            if branch:
+                cmd += ['--branch', branch, '--single-branch']
+            cmd += [workspace.git_remote_url, str(repo_dir)]
+
+            logger.info(
+                f"📥 Cloning {workspace.git_remote_url} → {repo_dir}"
+            )
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=self.CLONE_TIMEOUT,
+            )
+
+            if result.returncode != 0:
+                stderr_tail = (result.stderr or '')[-2048:]
+                # Clean up partial clone
+                import shutil
+                if repo_dir.exists():
+                    shutil.rmtree(repo_dir, ignore_errors=True)
+                raise ValueError(
+                    f"Failed to clone {workspace.git_remote_url}: "
+                    f"{stderr_tail}"
+                )
+
+            # Update workspace root_path to canonical location
+            workspace.root_path = str(repo_dir)
+            workspace.save(update_fields=['root_path'])
+            logger.info(
+                f"✅ Cloned {workspace.name} to {repo_dir}, "
+                f"root_path updated"
+            )
+
+        except subprocess.TimeoutExpired:
+            import shutil
+            if repo_dir.exists():
+                shutil.rmtree(repo_dir, ignore_errors=True)
+            raise ValueError(
+                f"Git clone timed out after {self.CLONE_TIMEOUT}s. "
+                "The repository may be too large for shallow clone."
+            )
+        finally:
+            # Release lock
+            if lock_fd is not None:
+                os.close(lock_fd)
+            try:
+                lock_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+    # ── Scan ──────────────────────────────────────────────────────────
+
     def scan_workspace(
         self,
         workspace: ProjectWorkspace,
@@ -563,6 +697,8 @@ class WorkspaceScanner:
         """
         Scan workspace and create/update WorkspaceContext.
 
+        For git_remote workspaces, auto-clones the repo if missing.
+
         Args:
             workspace: The workspace to scan
             max_depth: How deep to scan directories
@@ -570,6 +706,9 @@ class WorkspaceScanner:
         Returns:
             Updated WorkspaceContext
         """
+        # Self-heal: ensure git_remote repos are cloned
+        self.ensure_repo_present(workspace)
+
         start_time = time.time()
         root = Path(workspace.root_path)
 
