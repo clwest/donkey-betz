@@ -8630,8 +8630,12 @@ def _get_next_task_for_agent(agent_name: str) -> dict | None:
 
 @shared_task(name='core.tasks.agent_category_rotation')
 def agent_category_rotation(category: str):
-    from core.tasks_misc import _impl_agent_category_rotation
-    return _impl_agent_category_rotation(category)
+    try:
+        from core.tasks_misc import _impl_agent_category_rotation
+        return _impl_agent_category_rotation(category)
+    except Exception as e:
+        logger.exception(f"[agent_category_rotation] Failed for category={category}: {e}")
+        raise
 @shared_task(name='core.tasks.full_agent_rotation')
 def full_agent_rotation():
     """
@@ -11548,9 +11552,8 @@ def check_llm_cost_spike():
 @shared_task(ignore_result=True)
 def run_ops_autopilot():
     """Every 10 min: evaluate ops policies and take allowed automatic actions."""
-    from core.services.ops_autopilot import OpsAutopilot
-
     try:
+        from core.services.ops_autopilot import OpsAutopilot
         autopilot = OpsAutopilot()
         summary = autopilot.run()
         actions = summary.get('actions_taken', 0)
@@ -11615,8 +11618,12 @@ def sync_congress_data():
     max_retries=0,
 )
 def execute_code_job(self, run_id: str):
-    from core.codejobs.implementation import _impl_execute_code_job
-    return _impl_execute_code_job(self, run_id)
+    try:
+        from core.codejobs.implementation import _impl_execute_code_job
+        return _impl_execute_code_job(self, run_id)
+    except Exception as e:
+        logger.exception(f"[execute_code_job] Failed for run_id={run_id}: {e}")
+        raise
 @shared_task(name='core.rag_retrieval_canary', ignore_result=True)
 def rag_retrieval_canary():
     from core.tasks_misc import _impl_rag_retrieval_canary
