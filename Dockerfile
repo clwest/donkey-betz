@@ -165,6 +165,9 @@ ENV PORT=8000 \
 # Create non-root user
 RUN adduser --disabled-password --gecos '' appuser
 
+# Install gosu for entrypoint privilege dropping
+RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/*
+
 # Set work directory
 WORKDIR /app
 
@@ -175,9 +178,6 @@ COPY --from=production-build /usr/local/bin/ /usr/local/bin/
 # Copy application code and static files
 COPY --from=production-build --chown=appuser:appuser /app .
 
-# Switch to non-root user
-USER appuser
-
 # Expose port (Railway uses $PORT, default 8000)
 EXPOSE 8000
 
@@ -186,8 +186,8 @@ EXPOSE 8000
 # Celery workers use 'celery inspect ping' in their specific stages
 HEALTHCHECK NONE
 
-# Copy entrypoint script
-COPY --chown=appuser:appuser entrypoint.sh /app/entrypoint.sh
+# Copy entrypoint script (runs as root, drops to appuser via gosu)
+COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 # Production command - use entrypoint script to run migrations then start Daphne
@@ -197,6 +197,7 @@ CMD ["/app/entrypoint.sh"]
 # STAGE 5: Celery Worker (Default Queue)
 # =============================================================================
 FROM production as celery-worker
+USER appuser
 
 # Celery worker health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=10s --retries=3 \
@@ -210,6 +211,7 @@ CMD ["celery", "-A", "core", "worker", "-l", "info", "--pool=threads", "-c", "4"
 # STAGE 5b: Celery Worker (Long Running Queue)
 # =============================================================================
 FROM production as celery-long-running
+USER appuser
 
 # Celery worker health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=10s --retries=3 \
@@ -222,6 +224,7 @@ CMD ["celery", "-A", "core", "worker", "-l", "info", "--pool=threads", "-c", "2"
 # STAGE 5c: Celery Worker (Broadcast Queue)
 # =============================================================================
 FROM production as celery-broadcast
+USER appuser
 
 # Celery worker health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=10s --retries=3 \
@@ -234,6 +237,7 @@ CMD ["celery", "-A", "core", "worker", "-l", "info", "--pool=threads", "-c", "2"
 # STAGE 6: Celery Beat
 # =============================================================================
 FROM production as celery-beat
+USER appuser
 
 # Celery beat health check
 HEALTHCHECK --interval=60s --timeout=30s --start-period=5s --retries=3 \
