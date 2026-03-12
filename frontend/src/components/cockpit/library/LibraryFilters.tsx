@@ -16,6 +16,7 @@ const DAYS_OPTIONS = [
   { value: 30, label: '30d' },
   { value: 90, label: '90d' },
   { value: 365, label: '1y' },
+  { value: 0, label: 'All' },
 ]
 
 export default function LibraryFilters({

@@ -28,9 +28,15 @@ const TYPE_LABELS: Record<string, string> = {
 interface DeliverablesTableProps {
   items: DeliverableItem[]
   total: number
+  offset?: number
+  limit?: number
+  onPageChange?: (offset: number) => void
 }
 
-export default function DeliverablesTable({ items, total }: DeliverablesTableProps) {
+export default function DeliverablesTable({ items, total, offset = 0, limit = 50, onPageChange }: DeliverablesTableProps) {
+  const page = Math.floor(offset / limit) + 1
+  const totalPages = Math.ceil(total / limit)
+
   if (items.length === 0) {
     return (
       <div className="card p-8 text-center text-gray-500">
@@ -71,9 +77,27 @@ export default function DeliverablesTable({ items, total }: DeliverablesTablePro
           ))}
         </tbody>
       </table>
-      {total > items.length && (
-        <div className="px-4 py-2 text-xs text-gray-500 border-t border-dark-border">
-          Showing {items.length} of {total}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-4 py-2 text-xs border-t border-dark-border">
+          <span className="text-gray-500">
+            {offset + 1}–{Math.min(offset + items.length, total)} of {total}
+          </span>
+          <div className="flex gap-1">
+            <button
+              disabled={page <= 1}
+              onClick={() => onPageChange?.(Math.max(0, offset - limit))}
+              className="px-2 py-1 rounded bg-dark-card text-gray-400 hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              Prev
+            </button>
+            <button
+              disabled={page >= totalPages}
+              onClick={() => onPageChange?.(offset + limit)}
+              className="px-2 py-1 rounded bg-dark-card text-gray-400 hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
     </div>

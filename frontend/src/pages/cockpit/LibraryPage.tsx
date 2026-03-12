@@ -34,14 +34,16 @@ export default function CockpitLibraryPage() {
   const [search, setSearch] = useState('')
   const [dType, setDType] = useState('')
   const [mType, setMType] = useState('all')
-  const [days, setDays] = useState(30)
+  const [days, setDays] = useState(0)
+  const [delOffset, setDelOffset] = useState(0)
 
   const delParams = useMemo(() => ({
     q: search || undefined,
     type: dType || undefined,
     days,
     limit: 50,
-  }), [search, dType, days])
+    offset: delOffset || undefined,
+  }), [search, dType, days, delOffset])
 
   const mediaParams = useMemo(() => ({
     media_type: mType,
@@ -88,12 +90,12 @@ export default function CockpitLibraryPage() {
       {/* Filters */}
       <LibraryFilters
         search={tab === 'deliverables' ? search : ''}
-        onSearchChange={setSearch}
+        onSearchChange={(v) => { setSearch(v); setDelOffset(0) }}
         typeFilter={tab === 'deliverables' ? dType : mType}
-        onTypeChange={tab === 'deliverables' ? setDType : setMType}
+        onTypeChange={tab === 'deliverables' ? (v) => { setDType(v); setDelOffset(0) } : setMType}
         typeOptions={tab === 'deliverables' ? DELIVERABLE_TYPE_OPTIONS : MEDIA_TYPE_OPTIONS}
         daysFilter={days}
-        onDaysChange={setDays}
+        onDaysChange={(v) => { setDays(v); setDelOffset(0) }}
       />
 
       {/* Content */}
@@ -101,7 +103,13 @@ export default function CockpitLibraryPage() {
         delLoading ? (
           <div className="card p-6"><SkeletonRows count={6} /></div>
         ) : (
-          <DeliverablesTable items={delData?.items ?? []} total={delData?.total ?? 0} />
+          <DeliverablesTable
+            items={delData?.items ?? []}
+            total={delData?.total ?? 0}
+            offset={delOffset}
+            limit={50}
+            onPageChange={setDelOffset}
+          />
         )
       )}
 
