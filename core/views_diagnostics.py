@@ -1819,8 +1819,10 @@ def cockpit_library_deliverables(request):
     limit = min(int(request.GET.get('limit', 50)), 100)
     offset = int(request.GET.get('offset', 0))
 
-    cutoff = now() - timedelta(hours=days * 24)
-    qs = Deliverable.objects.filter(created_at__gte=cutoff).order_by('-created_at')
+    qs = Deliverable.objects.all().order_by('-created_at')
+    if days > 0:
+        cutoff = now() - timedelta(hours=days * 24)
+        qs = qs.filter(created_at__gte=cutoff)
 
     if q:
         qs = qs.filter(
