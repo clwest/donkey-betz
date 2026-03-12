@@ -17,6 +17,7 @@ Uses WeasyPrint for HTML/CSS to PDF conversion.
 
 import io
 import logging
+import re
 from datetime import datetime
 from typing import Dict, Any, Optional
 from dataclasses import dataclass

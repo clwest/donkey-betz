@@ -367,23 +367,30 @@ def export_deliverable(request, deliverable_id):
             filename = f"{deliverable.slug}.json"
 
         elif export_format == 'pdf':
-            from core.services.pdf_export_service import generate_deliverable_pdf_bytes
-            pdf_bytes = generate_deliverable_pdf_bytes(
-                title=deliverable.title,
-                content=deliverable.content or '',
-                content_format=deliverable.content_format or 'markdown',
-            )
-            DeliverableExport.objects.create(
-                deliverable=deliverable,
-                user=request.user,
-                export_format='pdf',
-                file_size_bytes=len(pdf_bytes),
-            )
-            _emit_event(deliverable, 'deliverable_exported', request.user, 'frontend',
-                         {'format': 'pdf'})
-            response = HttpResponse(pdf_bytes, content_type='application/pdf')
-            response['Content-Disposition'] = f'attachment; filename="{deliverable.slug}.pdf"'
-            return response
+            try:
+                from core.services.pdf_export_service import generate_deliverable_pdf_bytes
+                pdf_bytes = generate_deliverable_pdf_bytes(
+                    title=deliverable.title,
+                    content=deliverable.content or '',
+                    content_format=deliverable.content_format or 'markdown',
+                )
+                DeliverableExport.objects.create(
+                    deliverable=deliverable,
+                    user=request.user,
+                    export_format='pdf',
+                    file_size_bytes=len(pdf_bytes),
+                )
+                _emit_event(deliverable, 'deliverable_exported', request.user, 'frontend',
+                             {'format': 'pdf'})
+                response = HttpResponse(pdf_bytes, content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename="{deliverable.slug}.pdf"'
+                return response
+            except Exception:
+                logger.exception("PDF export failed for deliverable_id=%s", deliverable_id)
+                return JsonResponse(
+                    {'success': False, 'error': 'PDF export failed', 'format': 'pdf'},
+                    status=500,
+                )
 
         else:
             return JsonResponse({
