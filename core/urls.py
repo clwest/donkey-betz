@@ -4658,5 +4658,5 @@ if settings.DEBUG:
 # React Router handles client-side routing for these paths.
 # Excludes: /api/, /admin/, /media/, /static/, /ws/, /health/
 urlpatterns.append(
-    re_path(r'^(?!api/|admin/|media/|static/|ws/|health/)(?!.*\.\w{1,10}(/|$)).*$', react_app, name='react-app')
+    re_path(r'^(?!api/|admin/|media/|static/|ws/|health/)(?!.*\.\w{1,10}(?:/|$)).*$', react_app, name='react-app')
 )
