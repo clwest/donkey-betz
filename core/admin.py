@@ -1594,3 +1594,73 @@ class MuscleStatusAdmin(admin.ModelAdmin):
             'fields': ('last_execution', 'last_success', 'last_failure', 'last_check')
         }),
     )
+
+
+# ── Preview System (Workspace Hosted Previews + Magic Links) ─────────────
+
+from .models_preview_system import (
+    WorkspaceProject, ProjectRepo, ProjectEnvVar,
+    PreviewEnvironment, PreviewDeployment, DeployJob, PreviewService,
+    MagicLink, FeedbackItem,
+)
+
+
+@admin.register(WorkspaceProject)
+class WorkspaceProjectAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug', 'workspace', 'default_preview_ttl_minutes', 'created_at')
+    search_fields = ('name', 'slug')
+    list_filter = ('workspace',)
+
+
+@admin.register(ProjectRepo)
+class ProjectRepoAdmin(admin.ModelAdmin):
+    list_display = ('name', 'project', 'type', 'build_system', 'default_ref')
+    list_filter = ('type', 'build_system', 'provider')
+
+
+@admin.register(ProjectEnvVar)
+class ProjectEnvVarAdmin(admin.ModelAdmin):
+    list_display = ('key', 'environment', 'project', 'repo', 'is_secret')
+    list_filter = ('environment', 'is_secret')
+
+
+@admin.register(PreviewEnvironment)
+class PreviewEnvironmentAdmin(admin.ModelAdmin):
+    list_display = ('name', 'project', 'status', 'ttl_expires_at', 'created_at')
+    list_filter = ('status',)
+
+
+@admin.register(PreviewDeployment)
+class PreviewDeploymentAdmin(admin.ModelAdmin):
+    list_display = ('id', 'preview_env', 'trigger', 'status', 'started_at', 'finished_at')
+    list_filter = ('status', 'trigger')
+
+
+@admin.register(DeployJob)
+class DeployJobAdmin(admin.ModelAdmin):
+    list_display = ('repo', 'deployment', 'status', 'started_at', 'finished_at')
+    list_filter = ('status',)
+
+
+@admin.register(PreviewService)
+class PreviewServiceAdmin(admin.ModelAdmin):
+    list_display = ('service_type', 'preview_env', 'repo', 'public_url', 'health_status')
+    list_filter = ('service_type', 'health_status')
+
+
+@admin.register(MagicLink)
+class MagicLinkAdmin(admin.ModelAdmin):
+    list_display = ('label', 'preview_env', 'scope', 'uses', 'max_uses', 'expires_at', 'created_at')
+    list_filter = ('scope',)
+    readonly_fields = ('token_hash', 'uses')
+
+
+@admin.register(FeedbackItem)
+class FeedbackItemAdmin(admin.ModelAdmin):
+    list_display = ('message_preview', 'severity', 'status', 'category', 'source', 'reporter_name', 'created_at')
+    list_filter = ('severity', 'status', 'category', 'source')
+    search_fields = ('message', 'reporter_name', 'reporter_email')
+
+    def message_preview(self, obj):
+        return obj.message[:80]
+    message_preview.short_description = 'Message'

@@ -448,6 +448,8 @@ REST_FRAMEWORK = {
         'user': '500000/hour',
         'rag_ingest': '20/hour',
         'video_ingest': '5/hour',
+        'review': '60/minute',
+        'review_feedback': '10/minute',
     }
 }
 

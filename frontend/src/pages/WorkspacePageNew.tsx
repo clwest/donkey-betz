@@ -41,6 +41,7 @@ import {
   OperationsTab,
   GitTab,
   TriggersTab,
+  LaunchpadTab,
 } from './workspace/tabs'
 import { Toast } from './workspace/components'
 import type { Workspace, WorkspaceTab, ActionResult } from './workspace/types'
@@ -54,6 +55,7 @@ const workspaceTabs = [
   { id: 'operations' as WorkspaceTab, label: 'Operations', icon: History },
   { id: 'git' as WorkspaceTab, label: 'Git', icon: GitBranch },
   { id: 'triggers' as WorkspaceTab, label: 'Triggers', icon: Zap },
+  { id: 'launchpad' as WorkspaceTab, label: 'Launchpad', icon: Sparkles },
 ]
 
 const validWorkspaceTabs = new Set(workspaceTabs.map(t => t.id))
@@ -867,6 +869,10 @@ export default function WorkspacePage() {
               showSuccess={showSuccess}
               showError={showError}
             />
+          )}
+
+          {activeTab === 'launchpad' && activeWorkspace && (
+            <LaunchpadTab workspaceId={activeWorkspace.id} />
           )}
         </>
       )}
