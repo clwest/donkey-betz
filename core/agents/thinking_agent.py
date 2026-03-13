@@ -625,7 +625,7 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
         from openai import OpenAI
         from django.conf import settings
 
-        client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        client = OpenAI(api_key=settings.OPENAI_API_KEY, timeout=120.0)
 
         # Session 855: Increased from 4000 to 8000 tokens to accommodate
         # detailed root cause analysis and proposed solutions in concerns
