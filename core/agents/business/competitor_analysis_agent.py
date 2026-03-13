@@ -218,36 +218,7 @@ If asked to create content, explain you can only research and suggest using the 
                 }
             }
         },
-        {
-            "type": "function",
-            "function": {
-                "name": "web_search",
-                "description": "Search the web for competitor information, features, pricing, news",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "Search query (e.g., 'AI writing assistant competitors', 'Jasper AI vs Copy.ai')"
-                        },
-                        "num_results": {
-                            "type": "integer",
-                            "description": "Number of results to return",
-                            "default": 10,
-                            "minimum": 1,
-                            "maximum": 20
-                        },
-                        "search_type": {
-                            "type": "string",
-                            "description": "Type of search",
-                            "enum": ["search", "news"],
-                            "default": "search"
-                        }
-                    },
-                    "required": ["query"]
-                }
-            }
-        },
+        # web_search tool definition removed — handled by BaseAgent fallback (Session 1090)
         {
             "type": "function",
             "function": {
@@ -1171,18 +1142,9 @@ Return a comprehensive competitive landscape analysis with DOMAIN-RELEVANT data.
         """Execute a tool call for competitive analysis."""
 
         if tool_name == "web_search":
-            try:
-                from core.tools.web_search import WebSearchTool
-                search_tool = WebSearchTool()
-                return search_tool.execute(
-                    query=arguments.get('query', ''),
-                    max_results=arguments.get('num_results', 10),
-                    search_type=arguments.get('search_type', 'search')
-                )
-            except Exception as e:
-                logger.warning(f"Web search failed: {e}, using spider data as fallback")
-                # Fallback to spider data
-                return self._spider_fallback(arguments.get('query', ''))
+            # Session 1090: Deprecated — fall through to BaseAgent universal handler
+            logger.warning(f"[{self.__class__.__name__}] web_search is deprecated — falling through to BaseAgent handler")
+            return super()._execute_tool_call(tool_name, arguments)
 
         elif tool_name == "spider_query":
             try:
