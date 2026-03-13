@@ -58,6 +58,20 @@ class LearningReadbackEvent(UnifiedBaseModel):
         help_text="Human-readable explanation of learning influence",
     )
 
+    # Session 1078: Prompt injection telemetry
+    prompt_injection_applied = models.BooleanField(
+        default=False,
+        help_text="Whether learned preferences were injected into agent prompts",
+    )
+    prompt_injection_length = models.IntegerField(
+        default=0,
+        help_text="Length of injected preference text (0 = none)",
+    )
+    used_via = models.JSONField(
+        default=list, blank=True,
+        help_text="Which mechanisms triggered learning_used: routing_override, prompt_injection",
+    )
+
     # Outcome tracking (filled in later if available)
     tool_ok = models.BooleanField(
         null=True,
