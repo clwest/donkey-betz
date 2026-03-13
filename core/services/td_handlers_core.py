@@ -1507,6 +1507,17 @@ RESEARCH DATA:
                         {'agent': r[0], 'count': r[1]} for r in cursor.fetchall()
                     ]
 
+                    # used_via breakdown (routing_override vs prompt_injection)
+                    cursor.execute(
+                        "SELECT elem, COUNT(*) "
+                        "FROM core_learningreadbackevent, "
+                        "LATERAL jsonb_array_elements_text(used_via) AS elem "
+                        "GROUP BY elem ORDER BY COUNT(*) DESC"
+                    )
+                    result['used_via_breakdown'] = {
+                        r[0]: r[1] for r in cursor.fetchall()
+                    }
+
                     # Feature flags
                     from django.conf import settings
                     result['flags'] = {
