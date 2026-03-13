@@ -1394,9 +1394,10 @@ USE_CLEAN_AGENT_ARCHITECTURE = os.environ.get('USE_CLEAN_AGENT_ARCHITECTURE', 'T
 # the 506-line _detect_intent_and_route() keyword matching chain.
 PA_USE_FUNCTION_CALLING = os.environ.get('PA_USE_FUNCTION_CALLING', 'false').lower() == 'true'
 
-# Learning feedback loop flags (default OFF — flip via Railway env vars)
-LEARNING_ROUTING_ENABLED = os.environ.get('LEARNING_ROUTING_ENABLED', 'false').lower() == 'true'
-LEARNING_PROMPT_INJECTION_ENABLED = os.environ.get('LEARNING_PROMPT_INJECTION_ENABLED', 'false').lower() == 'true'
+# Learning feedback loop flags
+# Session 1078: Both enabled by default — learning loop fully closed
+LEARNING_ROUTING_ENABLED = os.environ.get('LEARNING_ROUTING_ENABLED', 'true').lower() == 'true'
+LEARNING_PROMPT_INJECTION_ENABLED = os.environ.get('LEARNING_PROMPT_INJECTION_ENABLED', 'true').lower() == 'true'
 
 # Session G2: Recording Mode — controls artifact persistence and log verbosity
 # off: don't auto-save intermediate outputs; minimize payload logging
