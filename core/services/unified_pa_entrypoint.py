@@ -771,13 +771,40 @@ class UnifiedPAEntrypoint:
                 len(self._conversation_history), intent,
             )
 
-            # Record learning readback event (Phase 1 telemetry)
+            # Record learning readback event (Phase 1 + Phase 3 telemetry)
             try:
                 from core.models.learning_readback import LearningReadbackEvent
                 from asgiref.sync import sync_to_async
                 tool_ok = None
                 if tool_runs:
                     tool_ok = any(r.get('ok') for r in tool_runs)
+
+                # Session 1078: Check if Phase 3 prompt injection would apply.
+                # This is deterministic for (user_id, agent_name) — no randomness.
+                prompt_injection_applied = False
+                prompt_injection_length = 0
+                try:
+                    from core.services.learning_read_service import get_learned_preferences_for_prompt
+                    _inj_text = get_learned_preferences_for_prompt(
+                        self.user.id, routed_to
+                    )
+                    if _inj_text:
+                        prompt_injection_applied = True
+                        prompt_injection_length = len(_inj_text)
+                except Exception:
+                    pass
+
+                # Compute unified learning_used: routing override OR prompt injection
+                routing_used = learning_rec.get('used', False)
+                learning_used = routing_used or prompt_injection_applied
+
+                # Build used_via list for attribution
+                used_via = []
+                if routing_used:
+                    used_via.append('routing_override')
+                if prompt_injection_applied:
+                    used_via.append('prompt_injection')
+
                 await sync_to_async(LearningReadbackEvent.objects.create)(
                     user=self.user,
                     trace_id=trace_id,
@@ -785,9 +812,12 @@ class UnifiedPAEntrypoint:
                     intent=intent,
                     routed_to=routed_to,
                     learning_consulted=learning_rec.get('consulted', False),
-                    learning_used=learning_rec.get('used', False),
+                    learning_used=learning_used,
                     learning_record_ids=learning_rec.get('record_ids', []),
                     learning_explanation=learning_rec.get('explanation', ''),
+                    prompt_injection_applied=prompt_injection_applied,
+                    prompt_injection_length=prompt_injection_length,
+                    used_via=used_via,
                     tool_ok=tool_ok,
                     latency_ms=latency_ms,
                 )
