@@ -2559,6 +2559,15 @@ app.conf.beat_schedule = {
             'expires': 3600,
         },
     },
+    # Learning loop SLO check — daily at 6 AM MST (13:00 UTC)
+    'learning-loop-slo-check': {
+        'task': 'core.check_learning_loop_slo',
+        'schedule': crontab(hour=13, minute=0),
+        'options': {
+            'queue': 'default',
+            'expires': 3600,
+        },
+    },
 }
 
 # Task routing configuration
