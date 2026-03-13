@@ -119,6 +119,20 @@ export function LaunchpadTab({ workspaceId }: LaunchpadTabProps) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['preview-env-detail'] }),
   })
 
+  const destroyMut = useMutation({
+    mutationFn: (envId: string) => previewApi.destroyEnv(envId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['preview-envs'] })
+      queryClient.invalidateQueries({ queryKey: ['preview-env-detail'] })
+      setSelectedEnv(null)
+    },
+  })
+
+  const convertMut = useMutation({
+    mutationFn: (id: string) => previewApi.convertToActionItem(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['preview-env-detail'] }),
+  })
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -294,6 +308,19 @@ export function LaunchpadTab({ workspaceId }: LaunchpadTabProps) {
               >
                 <Link2 size={14} /> Magic Link
               </button>
+              {envDetail?.status !== 'destroyed' && (
+                <button
+                  onClick={() => {
+                    if (confirm('Destroy this preview environment? This will expire all magic links.')) {
+                      destroyMut.mutate(selectedEnv)
+                    }
+                  }}
+                  disabled={destroyMut.isPending}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-red-500/30 text-red-400 rounded-lg text-xs hover:bg-red-500/10 disabled:opacity-50"
+                >
+                  <Trash2 size={14} /> Destroy
+                </button>
+              )}
             </div>
           </div>
 
@@ -359,7 +386,12 @@ export function LaunchpadTab({ workspaceId }: LaunchpadTabProps) {
               <h4 className="text-sm font-medium mb-2">
                 Feedback ({envDetail.feedback_count})
               </h4>
-              <FeedbackList envId={selectedEnv} onTriage={id => triageMut.mutate(id)} onResolve={id => resolveMut.mutate(id)} />
+              <FeedbackList
+              envId={selectedEnv}
+              onTriage={id => triageMut.mutate(id)}
+              onResolve={id => resolveMut.mutate(id)}
+              onConvert={id => convertMut.mutate(id)}
+            />
             </div>
           )}
         </div>
@@ -418,7 +450,7 @@ export function LaunchpadTab({ workspaceId }: LaunchpadTabProps) {
 
 // ── Feedback List Sub-component ───────────────────────────────────────────
 
-function FeedbackList({ envId, onTriage, onResolve }: { envId: string; onTriage: (id: string) => void; onResolve: (id: string) => void }) {
+function FeedbackList({ envId, onTriage, onResolve, onConvert }: { envId: string; onTriage: (id: string) => void; onResolve: (id: string) => void; onConvert: (id: string) => void }) {
   const { data } = useQuery({
     queryKey: ['preview-feedback', envId],
     queryFn: () => previewApi.envFeedback(envId).then(r => r.data),
@@ -449,6 +481,11 @@ function FeedbackList({ envId, onTriage, onResolve }: { envId: string; onTriage:
                 {item.status === 'new' && (
                   <button onClick={() => onTriage(item.id as string)} className="p-1 hover:bg-dark-border rounded" title="Triage">
                     <AlertTriangle size={14} className="text-yellow-400" />
+                  </button>
+                )}
+                {!item.linked_action_item_id && item.status !== 'resolved' && (
+                  <button onClick={() => onConvert(item.id as string)} className="p-1 hover:bg-dark-border rounded" title="Convert to Action Item">
+                    <Rocket size={14} className="text-purple-400" />
                   </button>
                 )}
                 {item.status !== 'resolved' && (

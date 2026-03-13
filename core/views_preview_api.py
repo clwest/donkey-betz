@@ -198,14 +198,6 @@ class PreviewEnvironmentViewSet(viewsets.ModelViewSet):
             qs = qs.filter(project_id=project_id)
         return qs
 
-    def perform_create(self, serializer):
-        project = serializer.validated_data.get("project")
-        ttl = project.default_preview_ttl_minutes if project else 4320
-        serializer.save(
-            created_by=self.request.user,
-            ttl_expires_at=timezone.now() + timedelta(minutes=ttl),
-        )
-
     @action(detail=True, methods=["post"])
     def deploy(self, request, pk=None):
         """Trigger a deployment for this preview environment."""
@@ -292,6 +284,54 @@ class PreviewEnvironmentViewSet(viewsets.ModelViewSet):
 
         return Response(FeedbackItemSerializer(feedback, many=True).data)
 
+    @action(detail=True, methods=["post"])
+    def destroy_env(self, request, pk=None):
+        """Destroy a preview environment and expire its magic links."""
+        preview_env = self.get_object()
+        if preview_env.status == PreviewEnvironment.Status.DESTROYED:
+            return Response(PreviewEnvironmentSerializer(preview_env).data)
+
+        # Expire all magic links
+        preview_env.magic_links.update(expires_at=timezone.now())
+
+        # Mark as destroyed
+        preview_env.status = PreviewEnvironment.Status.DESTROYED
+        preview_env.save(update_fields=["status", "updated_at"])
+
+        logger.info("Preview environment %s destroyed by %s", preview_env.name, request.user)
+        return Response(PreviewEnvironmentSerializer(preview_env).data)
+
+    def perform_create(self, serializer):
+        """Override to enforce cost guardrails."""
+        project = serializer.validated_data.get("project")
+        if project:
+            # Cost guardrail: max 5 active preview envs per project
+            active_count = PreviewEnvironment.objects.filter(
+                project=project,
+                status__in=[
+                    PreviewEnvironment.Status.PROVISIONING,
+                    PreviewEnvironment.Status.READY,
+                ],
+            ).count()
+            max_envs = 5
+            if active_count >= max_envs:
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError(
+                    f"Maximum {max_envs} active preview environments per project. "
+                    f"Destroy an existing one to create a new one."
+                )
+
+            ttl = project.default_preview_ttl_minutes
+            serializer.save(
+                created_by=self.request.user,
+                ttl_expires_at=timezone.now() + timedelta(minutes=ttl),
+            )
+        else:
+            serializer.save(
+                created_by=self.request.user,
+                ttl_expires_at=timezone.now() + timedelta(minutes=4320),
+            )
+
 
 class FeedbackItemViewSet(viewsets.ModelViewSet):
     """Manage feedback items (internal)."""
@@ -326,6 +366,77 @@ class FeedbackItemViewSet(viewsets.ModelViewSet):
         item.resolution_note = request.data.get("resolution_note", "")
         item.save(update_fields=["status", "resolution_note", "updated_at"])
         return Response(FeedbackItemSerializer(item).data)
+
+    @action(detail=True, methods=["post"])
+    def convert_to_action_item(self, request, pk=None):
+        """Convert feedback into an InitiativeActionItem."""
+        from core.models_document_registry import InitiativeActionItem
+        from core.models import Initiative
+
+        item = self.get_object()
+
+        # Map severity to priority
+        priority_map = {
+            "blocker": InitiativeActionItem.Priority.CRITICAL,
+            "important": InitiativeActionItem.Priority.HIGH,
+            "nit": InitiativeActionItem.Priority.MEDIUM,
+        }
+        priority = priority_map.get(item.severity, InitiativeActionItem.Priority.MEDIUM)
+
+        # Find or use the preview system initiative
+        initiative_id = request.data.get("initiative_id", "2870f089-2439-4089-8d0e-b801e9ae0edf")
+        try:
+            initiative = Initiative.objects.get(id=initiative_id)
+        except Initiative.DoesNotExist:
+            return Response(
+                {"error": "Initiative not found"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Build title and description
+        severity_tag = item.severity.upper()
+        title = f"[Feedback][{severity_tag}] {item.message[:80]}"
+        description = (
+            f"**Customer Feedback**\n\n"
+            f"{item.message}\n\n"
+            f"---\n"
+            f"- **Severity:** {item.severity}\n"
+            f"- **Category:** {item.category}\n"
+            f"- **Page:** {item.page_url}\n"
+            f"- **Reporter:** {item.reporter_name or 'Anonymous'}"
+            f"{' (' + item.reporter_email + ')' if item.reporter_email else ''}\n"
+            f"- **Preview:** {item.preview_env.name}\n"
+            f"- **Submitted:** {item.created_at.isoformat()}\n"
+        )
+
+        action_item = InitiativeActionItem.objects.create(
+            initiative=initiative,
+            title=title,
+            description=description,
+            priority=priority,
+            source_text=f"Feedback #{item.id}: {item.message[:200]}",
+        )
+
+        # Link feedback to action item
+        item.linked_action_item_id = str(action_item.id)
+        item.status = FeedbackItem.Status.TRIAGED
+        item.triaged_by = request.user
+        item.triaged_at = timezone.now()
+        item.save(update_fields=[
+            "linked_action_item_id", "status", "triaged_by", "triaged_at", "updated_at",
+        ])
+
+        logger.info(
+            "Feedback %s converted to action item %s",
+            item.id, action_item.id,
+        )
+
+        return Response({
+            "action_item_id": str(action_item.id),
+            "title": title,
+            "priority": priority,
+            "feedback_status": item.status,
+        }, status=status.HTTP_201_CREATED)
 
 
 # ── Public Review Endpoints (magic link) ──────────────────────────────────

@@ -4114,6 +4114,8 @@ export const previewApi = {
     api.post(`/preview/environments/${envId}/create_magic_link/`, data),
   envFeedback: (envId: string, params?: Record<string, string>) =>
     api.get(`/preview/environments/${envId}/feedback/`, { params }),
+  destroyEnv: (envId: string) =>
+    api.post(`/preview/environments/${envId}/destroy_env/`),
 
   // Feedback
   feedback: (previewEnvId?: string) =>
@@ -4121,6 +4123,10 @@ export const previewApi = {
   triageFeedback: (id: string) => api.post(`/preview/feedback/${id}/triage/`),
   resolveFeedback: (id: string, note?: string) =>
     api.post(`/preview/feedback/${id}/resolve/`, { resolution_note: note }),
+  convertToActionItem: (id: string, initiativeId?: string) =>
+    api.post(`/preview/feedback/${id}/convert_to_action_item/`, {
+      initiative_id: initiativeId || '2870f089-2439-4089-8d0e-b801e9ae0edf',
+    }),
 }
 
 // Public review API (no auth needed)
