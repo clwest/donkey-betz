@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-03-12 22:11
+**Generated:** 2026-03-12 22:56
 **Current Session:** 1077
 **Total Documentation:** 1820 files | 622,504 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/SYSTEM_CAPABILITIES-original/07_Neural_Visualization/README.md` | 60 | 🎭 NEURAL ORCHESTRA VISUALIZATION - Living AI Symph |
+| `docs/archive/old-structure/capabilities/05_Spider_Networks/README.md` | 60 | 🕷️ SPIDER NETWORKS - Intelligent Data Gathering Ar |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -217,7 +217,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 361 | 2026-03-12 22:02 |
+| INDEX.md | docs | 361 | 2026-03-12 22:12 |
 | remote-code-worker-contract.md | designs | 411 | 2026-03-10 16:25 |
 | personal-assistant.md | topics | 139 | 2026-03-05 07:03 |
 | video-upload.md | topics | 101 | 2026-03-04 13:08 |

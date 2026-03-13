@@ -1442,12 +1442,13 @@ RESEARCH DATA:
             result = {'action': 'learning_stats'}
             try:
                 with connection.cursor() as cursor:
-                    # Readback event totals
+                    # Readback event totals (Session 1078: added prompt_injection metrics)
                     cursor.execute(
                         "SELECT COUNT(*), "
                         "COUNT(*) FILTER (WHERE learning_consulted = true), "
                         "COUNT(*) FILTER (WHERE learning_used = true), "
-                        "MIN(created_at), MAX(created_at) "
+                        "MIN(created_at), MAX(created_at), "
+                        "COUNT(*) FILTER (WHERE prompt_injection_applied = true) "
                         "FROM core_learningreadbackevent"
                     )
                     row = cursor.fetchone()
@@ -1457,6 +1458,7 @@ RESEARCH DATA:
                         'used_true': row[2],
                         'oldest': str(row[3]) if row[3] else None,
                         'newest': str(row[4]) if row[4] else None,
+                        'prompt_injection_true': row[5],
                     }
                     if row[0] > 0:
                         result['readback_events']['consultation_rate'] = round(row[1] / row[0] * 100, 1)
@@ -1466,7 +1468,8 @@ RESEARCH DATA:
                     cursor.execute(
                         "SELECT COUNT(*), "
                         "COUNT(*) FILTER (WHERE learning_consulted = true), "
-                        "COUNT(*) FILTER (WHERE learning_used = true) "
+                        "COUNT(*) FILTER (WHERE learning_used = true), "
+                        "COUNT(*) FILTER (WHERE prompt_injection_applied = true) "
                         "FROM core_learningreadbackevent "
                         "WHERE created_at > NOW() - INTERVAL '24 hours'"
                     )
@@ -1475,6 +1478,7 @@ RESEARCH DATA:
                         'total': row[0],
                         'consulted_true': row[1],
                         'used_true': row[2],
+                        'prompt_injection_true': row[3],
                     }
 
                     # UserAgentLearning record counts (the source data)
