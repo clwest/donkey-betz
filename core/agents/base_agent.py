@@ -1489,6 +1489,16 @@ Use delegation when you need expertise outside your specialty. For example:
                     total_sources=attribution.total_sources + total_sources
                 )
 
+        # Session 1078: Inject learned user preferences from learning loop
+        learned_prefs = (spider_context or {}).get('learned_user_preferences') or ''
+        agent_prefs = (spider_context or {}).get('agent_learned_preferences') or ''
+        if learned_prefs or agent_prefs:
+            parts.append("\n\n## User Preferences (from learning loop)")
+            if learned_prefs:
+                parts.append(learned_prefs)
+            if agent_prefs:
+                parts.append(agent_prefs)
+
         # Add the task
         parts.append(f"\n\n## Task")
         parts.append(task)
@@ -1679,6 +1689,16 @@ Use delegation when you need expertise outside your specialty. For example:
                     logger.debug(f"🧠 [Session 490] Injected {len(memory_context)} chars of memory context")
         except Exception as e:
             logger.debug(f"Memory context injection failed (non-fatal): {e}")
+
+        # Session 1078: Inject learned user preferences from learning loop
+        learned_prefs = (spider_context or {}).get('learned_user_preferences') or ''
+        agent_prefs = (spider_context or {}).get('agent_learned_preferences') or ''
+        if learned_prefs or agent_prefs:
+            parts.append("\n\n## User Preferences (from learning loop)")
+            if learned_prefs:
+                parts.append(learned_prefs)
+            if agent_prefs:
+                parts.append(agent_prefs)
 
         # Add the task
         parts.append(f"\n\n## Task")
@@ -1990,6 +2010,16 @@ Consider these trends when crafting the response to maximize relevance and engag
         # 10. Add Agent-specific context if provided
         if additional_context:
             prompt_parts.append(f"\n\n{additional_context}")
+
+        # 10.5 Session 1078: Inject learned user preferences from learning loop
+        learned_prefs = (spider_context or {}).get('learned_user_preferences') or ''
+        agent_prefs = (spider_context or {}).get('agent_learned_preferences') or ''
+        if learned_prefs or agent_prefs:
+            prompt_parts.append("\n\n## User Preferences (from learning loop)")
+            if learned_prefs:
+                prompt_parts.append(learned_prefs)
+            if agent_prefs:
+                prompt_parts.append(agent_prefs)
 
         # 11. Add the Task
         prompt_parts.append(f"""

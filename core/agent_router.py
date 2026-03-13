@@ -704,6 +704,10 @@ class AgentRouter:
         if user_context and user_context.get('agent_learned_preferences'):
             spider_context['agent_learned_preferences'] = user_context['agent_learned_preferences']
 
+        # Session 1078: Surface UserAgentLearning preferences for prompt injection
+        if user_context and user_context.get('learned_user_preferences'):
+            spider_context['learned_user_preferences'] = user_context['learned_user_preferences']
+
         # Session 992: Platform tools directive for router-executed agents
         if platform_tools_context:
             spider_context['platform_tools_directive'] = platform_tools_context
