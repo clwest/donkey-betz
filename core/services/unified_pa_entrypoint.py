@@ -781,18 +781,20 @@ class UnifiedPAEntrypoint:
 
                 # Session 1078: Check if Phase 3 prompt injection would apply.
                 # This is deterministic for (user_id, agent_name) — no randomness.
+                # Must use sync_to_async because this runs in async context
+                # and the function does Django ORM queries.
                 prompt_injection_applied = False
                 prompt_injection_length = 0
                 try:
                     from core.services.learning_read_service import get_learned_preferences_for_prompt
-                    _inj_text = get_learned_preferences_for_prompt(
-                        self.user.id, routed_to
-                    )
+                    _inj_text = await sync_to_async(
+                        get_learned_preferences_for_prompt
+                    )(self.user.id, routed_to)
                     if _inj_text and _inj_text.strip():
                         prompt_injection_applied = True
                         prompt_injection_length = len(_inj_text.strip())
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"[{trace_id}] Prompt injection check failed: {e}")
 
                 # Compute unified learning_used: routing override OR prompt injection
                 routing_used = learning_rec.get('used', False)
