@@ -4640,6 +4640,30 @@ urlpatterns += [
 
 # =========================================================================
 # Development-only endpoints — never exposed in production
+# =============================================================================
+# Preview System: Workspace Hosted Previews + Magic Links + Feedback
+# =============================================================================
+from rest_framework.routers import DefaultRouter as PreviewRouter
+from core.views_preview_api import (
+    WorkspaceProjectViewSet, ProjectRepoViewSet, ProjectEnvVarViewSet,
+    PreviewEnvironmentViewSet, FeedbackItemViewSet,
+    review_context, review_feedback,
+)
+
+_preview_router = PreviewRouter()
+_preview_router.register(r'preview/projects', WorkspaceProjectViewSet, basename='preview-project')
+_preview_router.register(r'preview/repos', ProjectRepoViewSet, basename='preview-repo')
+_preview_router.register(r'preview/env-vars', ProjectEnvVarViewSet, basename='preview-env-var')
+_preview_router.register(r'preview/environments', PreviewEnvironmentViewSet, basename='preview-env')
+_preview_router.register(r'preview/feedback', FeedbackItemViewSet, basename='preview-feedback')
+
+urlpatterns += [
+    path('api/', include(_preview_router.urls)),
+    # Public review endpoints (magic link)
+    path('api/review/<str:token>/context/', review_context, name='review-context'),
+    path('api/review/<str:token>/feedback/', review_feedback, name='review-feedback'),
+]
+
 # =========================================================================
 if settings.DEBUG:
     urlpatterns += [
