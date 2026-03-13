@@ -788,9 +788,9 @@ class UnifiedPAEntrypoint:
                     _inj_text = get_learned_preferences_for_prompt(
                         self.user.id, routed_to
                     )
-                    if _inj_text:
+                    if _inj_text and _inj_text.strip():
                         prompt_injection_applied = True
-                        prompt_injection_length = len(_inj_text)
+                        prompt_injection_length = len(_inj_text.strip())
                 except Exception:
                     pass
 
