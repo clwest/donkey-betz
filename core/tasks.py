@@ -11628,3 +11628,55 @@ def execute_code_job(self, run_id: str):
 def rag_retrieval_canary():
     from core.tasks_misc import _impl_rag_retrieval_canary
     return _impl_rag_retrieval_canary()
+
+
+@shared_task(name='core.check_learning_loop_slo', ignore_result=True)
+def check_learning_loop_slo():
+    """Daily SLO check: learning loop usage_rate should be >= 5% over 24h.
+
+    Logs warning if usage drops to 0 (regression catch).
+    """
+    from django.db import connection
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT COUNT(*), "
+            "COUNT(*) FILTER (WHERE learning_used = true), "
+            "COUNT(*) FILTER (WHERE prompt_injection_applied = true) "
+            "FROM core_learningreadbackevent "
+            "WHERE created_at > NOW() - INTERVAL '24 hours'"
+        )
+        row = cursor.fetchone()
+        total, used, pij = row[0], row[1], row[2]
+
+    if total == 0:
+        logger.warning("[LEARNING_SLO] No readback events in last 24h — PA may be down")
+        return {'status': 'no_events', 'total': 0}
+
+    usage_rate = round(used / total * 100, 1)
+    pij_rate = round(pij / total * 100, 1)
+
+    if used == 0:
+        logger.warning(
+            f"[LEARNING_SLO] REGRESSION: used_true=0 in last 24h "
+            f"(total={total}, prompt_injection={pij}). "
+            f"Learning loop may be broken again."
+        )
+    elif usage_rate < 5.0:
+        logger.info(
+            f"[LEARNING_SLO] Below target: usage_rate={usage_rate}% "
+            f"(target>=5%, total={total}, used={used}, pij={pij})"
+        )
+    else:
+        logger.info(
+            f"[LEARNING_SLO] OK: usage_rate={usage_rate}%, "
+            f"pij_rate={pij_rate}% (total={total})"
+        )
+
+    return {
+        'status': 'regression' if used == 0 else ('below_target' if usage_rate < 5.0 else 'ok'),
+        'total': total,
+        'used': used,
+        'prompt_injection': pij,
+        'usage_rate': usage_rate,
+    }
