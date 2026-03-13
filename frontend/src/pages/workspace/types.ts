@@ -10,6 +10,7 @@ export type WorkspaceTab =
   | 'operations'
   | 'git'
   | 'triggers'
+  | 'launchpad'
 
 // Platform tab IDs (8 tabs — moved from workspace)
 export type PlatformTab =

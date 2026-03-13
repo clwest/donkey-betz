@@ -62,3 +62,6 @@ export { GitTab } from './GitTab'
 
 // Stage 3 Evaluation Dashboard — Capitalize Opportunity pilot
 export { Stage3EvaluationTab } from './Stage3EvaluationTab'
+
+// Preview System: Workspace Hosted Previews + Magic Links
+export { LaunchpadTab } from './LaunchpadTab'
