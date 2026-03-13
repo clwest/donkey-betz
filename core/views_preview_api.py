@@ -209,6 +209,8 @@ class PreviewEnvironmentViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def deploy(self, request, pk=None):
         """Trigger a deployment for this preview environment."""
+        from .services.preview_deploy_service import deploy_preview_environment
+
         preview_env = self.get_object()
         if preview_env.is_expired:
             return Response(
@@ -228,6 +230,9 @@ class PreviewEnvironmentViewSet(viewsets.ModelViewSet):
                 deployment=deployment,
                 repo=repo,
             )
+
+        # Run deployment orchestration
+        deployment = deploy_preview_environment(preview_env, deployment)
 
         return Response(
             PreviewDeploymentSerializer(deployment).data,
