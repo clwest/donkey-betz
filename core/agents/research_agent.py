@@ -419,15 +419,16 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                 max_models=2
             )
 
+            auto_sel = result.auto_selection if isinstance(result.auto_selection, dict) else {}
             return {
                 'ml_used': True,
-                'task_type': result.auto_selection.get('task_type', 'text'),
+                'task_type': auto_sel.get('task_type', 'text'),
                 'models_used': result.models_used,
                 'confidence': round(result.confidence, 2),
                 'ml_insights': result.explanation,
                 'topics_detected': self._extract_topics_from_result(result),
                 'sentiment': self._extract_sentiment_from_result(result),
-                'selection_reason': result.auto_selection.get('selection_reason', ''),
+                'selection_reason': auto_sel.get('selection_reason', ''),
             }
 
         except Exception as e:
