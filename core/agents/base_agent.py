@@ -2732,7 +2732,9 @@ Consider these trends when crafting the response to maximize relevance and engag
             )
 
         # Session 988: Handle web_search tool for any agent that includes it
+        # Session 1090: Now the universal fallback — agents no longer define their own handlers
         if tool_name == 'web_search':
+            logger.debug(f"web_search fallback handler invoked by {self.__class__.__name__}")
             try:
                 from core.tools.web_search import WebSearchTool
                 search_tool = WebSearchTool()
