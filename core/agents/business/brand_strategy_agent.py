@@ -197,29 +197,7 @@ After your brand strategy is complete, the user can use ImageAgent to generate v
                 }
             }
         },
-        # Tool 3: Web search for brand examples
-        {
-            "type": "function",
-            "function": {
-                "name": "web_search",
-                "description": "Search the web for brand examples, visual identity case studies, and positioning strategies.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "Search query (e.g., 'best AI tool brand identities', 'podcast branding examples')"
-                        },
-                        "num_results": {
-                            "type": "integer",
-                            "description": "Number of results to return",
-                            "default": 10
-                        }
-                    },
-                    "required": ["query"]
-                }
-            }
-        },
+        # web_search tool definition removed — handled by BaseAgent fallback (Session 1090)
         # Tool 4: Synthesize brand strategy
         {
             "type": "function",
@@ -779,19 +757,9 @@ Return a comprehensive brand strategy report that builds on existing project res
                 }
 
         elif tool_name == "web_search":
-            try:
-                from core.tools.web_search import WebSearchTool
-                search_tool = WebSearchTool()
-                return search_tool.execute(
-                    query=arguments.get('query', ''),
-                    max_results=arguments.get('num_results', 10)
-                )
-            except Exception as e:
-                logger.warning(f"Web search failed: {e}")
-                return {
-                    'success': False,
-                    'error': f"Web search failed: {str(e)}"
-                }
+            # Session 1090: Deprecated — fall through to BaseAgent universal handler
+            logger.warning(f"[{self.__class__.__name__}] web_search is deprecated — falling through to BaseAgent handler")
+            return super()._execute_tool_call(tool_name, arguments)
 
         elif tool_name == "synthesize_brand_strategy":
             return self._generate_brand_strategy(

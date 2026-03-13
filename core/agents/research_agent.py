@@ -121,36 +121,7 @@ If asked to create content, images, or perform tasks outside research, use the d
 Always delegate tasks you cannot perform yourself rather than refusing."""
 
     tools = [
-        {
-            "type": "function",
-            "function": {
-                "name": "web_search",
-                "description": "Search the web for current information using Serper API",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "Search query"
-                        },
-                        "num_results": {
-                            "type": "integer",
-                            "description": "Number of results to return",
-                            "default": 10,
-                            "minimum": 1,
-                            "maximum": 20
-                        },
-                        "search_type": {
-                            "type": "string",
-                            "description": "Type of search",
-                            "enum": ["search", "news", "images"],
-                            "default": "search"
-                        }
-                    },
-                    "required": ["query"]
-                }
-            }
-        },
+        # web_search tool definition removed — handled by BaseAgent fallback (Session 1090)
         {
             "type": "function",
             "function": {
@@ -1755,22 +1726,9 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
         """Execute a tool call for research."""
 
         if tool_name == "web_search":
-            try:
-                from core.tools.web_search import WebSearchTool
-                search_tool = WebSearchTool()
-                # Session 348: Fixed - method is 'execute' not 'search'
-                results = search_tool.execute(
-                    query=arguments.get('query', ''),
-                    max_results=arguments.get('num_results', 10),
-                    search_type=arguments.get('search_type', 'text')  # 'text' not 'search'
-                )
-                # execute() returns a dict with 'success' already
-                return results
-            except Exception as e:
-                return {
-                    'success': False,
-                    'error': f"Web search failed: {str(e)}"
-                }
+            # Session 1090: Deprecated — fall through to BaseAgent universal handler
+            logger.warning(f"[{self.__class__.__name__}] web_search is deprecated — falling through to BaseAgent handler")
+            return super()._execute_tool_call(tool_name, arguments)
 
         elif tool_name == "spider_query":
             try:

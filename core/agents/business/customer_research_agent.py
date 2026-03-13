@@ -215,34 +215,7 @@ If asked to create content, explain you can only research and suggest using the 
                 }
             }
         },
-        {
-            "type": "function",
-            "function": {
-                "name": "web_search",
-                "description": "Search for customer reviews, testimonials, and feedback about existing solutions",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "Search query (e.g., 'Jasper AI reviews', 'podcast hosting complaints')"
-                        },
-                        "search_type": {
-                            "type": "string",
-                            "description": "Type of search",
-                            "enum": ["reviews", "discussions", "news"],
-                            "default": "reviews"
-                        },
-                        "num_results": {
-                            "type": "integer",
-                            "description": "Number of results",
-                            "default": 15
-                        }
-                    },
-                    "required": ["query"]
-                }
-            }
-        },
+        # web_search tool definition removed — handled by BaseAgent fallback (Session 1090)
         {
             "type": "function",
             "function": {
@@ -1196,31 +1169,16 @@ Return comprehensive customer research with personas, pain points, and real quot
             )
 
         elif tool_name == "web_search":
-            try:
-                from core.tools.web_search import WebSearchTool
-                search_tool = WebSearchTool()
-
-                # Modify query based on search type
-                search_type = arguments.get('search_type', 'reviews')
-                query = arguments.get('query', '')
-
-                if search_type == 'reviews':
-                    query = f"{query} reviews user feedback"
-                elif search_type == 'discussions':
-                    query = f"{query} forum discussion reddit"
-
-                return search_tool.execute(
-                    query=query,
-                    max_results=arguments.get('num_results', 15),
-                    search_type='search'
-                )
-            except Exception as e:
-                logger.warning(f"Web search failed: {e}, using spider fallback")
-                return self._search_customer_discussions(
-                    query=arguments.get('query', ''),
-                    hours=720,
-                    limit=20
-                )
+            # Session 1090: Deprecated — fall through to BaseAgent universal handler
+            # Preserve query modification logic for reviews/discussions search types
+            logger.warning(f"[{self.__class__.__name__}] web_search is deprecated — falling through to BaseAgent handler")
+            search_type = arguments.get('search_type', 'reviews')
+            query = arguments.get('query', '')
+            if search_type == 'reviews':
+                arguments = {**arguments, 'query': f"{query} reviews user feedback"}
+            elif search_type == 'discussions':
+                arguments = {**arguments, 'query': f"{query} forum discussion reddit"}
+            return super()._execute_tool_call(tool_name, arguments)
 
         elif tool_name == "analyze_pain_points":
             return self._analyze_pain_points(
