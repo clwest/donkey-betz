@@ -4079,3 +4079,68 @@ export const deliverablesApi = {
   recordEvent: (id: string, eventType: string, metadata?: Record<string, unknown>) =>
     api.post(`/deliverables/${id}/event/`, { event_type: eventType, metadata: metadata ?? {} }),
 }
+
+// ── Preview System API ─────────────────────────────────────────────────────
+
+export const previewApi = {
+  // Projects
+  projects: (workspaceId?: string) =>
+    api.get('/preview/projects/', { params: workspaceId ? { workspace: workspaceId } : {} }),
+  projectDetail: (id: string) => api.get(`/preview/projects/${id}/`),
+  createProject: (data: Record<string, unknown>) => api.post('/preview/projects/', data),
+  updateProject: (id: string, data: Record<string, unknown>) => api.patch(`/preview/projects/${id}/`, data),
+  deleteProject: (id: string) => api.delete(`/preview/projects/${id}/`),
+
+  // Repos
+  repos: (projectId?: string) =>
+    api.get('/preview/repos/', { params: projectId ? { project: projectId } : {} }),
+  createRepo: (data: Record<string, unknown>) => api.post('/preview/repos/', data),
+  updateRepo: (id: string, data: Record<string, unknown>) => api.patch(`/preview/repos/${id}/`, data),
+  deleteRepo: (id: string) => api.delete(`/preview/repos/${id}/`),
+
+  // Env vars
+  envVars: (projectId?: string) =>
+    api.get('/preview/env-vars/', { params: projectId ? { project: projectId } : {} }),
+  upsertEnvVar: (data: Record<string, unknown>) => api.post('/preview/env-vars/', data),
+  deleteEnvVar: (id: string) => api.delete(`/preview/env-vars/${id}/`),
+
+  // Preview environments
+  environments: (projectId?: string) =>
+    api.get('/preview/environments/', { params: projectId ? { project: projectId } : {} }),
+  environmentDetail: (id: string) => api.get(`/preview/environments/${id}/`),
+  createEnvironment: (data: Record<string, unknown>) => api.post('/preview/environments/', data),
+  deploy: (envId: string) => api.post(`/preview/environments/${envId}/deploy/`),
+  createMagicLink: (envId: string, data: { label: string; scope?: string; ttl_hours?: number; max_uses?: number | null }) =>
+    api.post(`/preview/environments/${envId}/create_magic_link/`, data),
+  envFeedback: (envId: string, params?: Record<string, string>) =>
+    api.get(`/preview/environments/${envId}/feedback/`, { params }),
+  destroyEnv: (envId: string) =>
+    api.post(`/preview/environments/${envId}/destroy_env/`),
+
+  // Feedback
+  feedback: (previewEnvId?: string) =>
+    api.get('/preview/feedback/', { params: previewEnvId ? { preview_env: previewEnvId } : {} }),
+  triageFeedback: (id: string) => api.post(`/preview/feedback/${id}/triage/`),
+  resolveFeedback: (id: string, note?: string) =>
+    api.post(`/preview/feedback/${id}/resolve/`, { resolution_note: note }),
+  convertToActionItem: (id: string, initiativeId?: string) =>
+    api.post(`/preview/feedback/${id}/convert_to_action_item/`, {
+      initiative_id: initiativeId || '2870f089-2439-4089-8d0e-b801e9ae0edf',
+    }),
+}
+
+// Public review API (no auth needed)
+export const reviewApi = {
+  context: (token: string) => api.get(`/review/${token}/context/`),
+  submitFeedback: (token: string, data: {
+    message: string;
+    page_url: string;
+    severity?: string;
+    category?: string;
+    reporter_name?: string;
+    reporter_email?: string;
+    page_path?: string;
+    page_title?: string;
+    client_context?: Record<string, unknown>;
+  }) => api.post(`/review/${token}/feedback/`, data),
+}

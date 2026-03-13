@@ -28,6 +28,7 @@ import DocumentsPage from '@/pages/DocumentsPage'
 import ImageStudioPage from '@/pages/ImageStudioPage'
 import VideoStudioPage from '@/pages/VideoStudioPage'
 import GovernmentPage from '@/pages/GovernmentPage'
+import ReviewPortalPage from '@/pages/ReviewPortalPage'  // Preview System: Public review portal
 import HowItWorksPage from '@/pages/HowItWorksPage'
 import BoardroomPage from '@/pages/BoardroomPage'  // Session 1067: Full-page boardroom
 import GovernancePage from '@/pages/GovernancePage'  // Session 1067: Full-page governance
@@ -77,6 +78,7 @@ function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/vip/accept" element={<VipAcceptPage />} />
+      <Route path="/r/:token" element={<ReviewPortalPage />} />
 
       <Route
         path="/"
