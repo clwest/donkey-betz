@@ -173,8 +173,9 @@ def get_learning_recommendation(
                         f"(confidence={current['confidence']:.2f}, used {current['usage_count']}x)"
                     )
                 elif (
-                    current['combined'] < 0.3
-                    and best_score['combined'] > 0.6
+                    # Session 1078: Relaxed thresholds (was 0.3/0.6)
+                    current['combined'] < 0.4
+                    and best_score['combined'] > 0.55
                     and current['usage_count'] >= MIN_SAMPLES_FOR_OVERRIDE
                     and best_score['usage_count'] >= MIN_SAMPLES_FOR_OVERRIDE
                 ):
@@ -198,6 +199,21 @@ def get_learning_recommendation(
                         explanation_parts.append(
                             f"{routed_to} has low performance ({current['success_rate']:.0%}); "
                             f"consider {best_agent} ({best_score['success_rate']:.0%} success)"
+                        )
+                else:
+                    # Session 1078: Shadow mode — log what WOULD have been overridden
+                    # This helps tune thresholds without risking production behavior
+                    if (
+                        current['combined'] < 0.5
+                        and best_score['combined'] > current['combined'] + 0.15
+                        and current['usage_count'] >= 2
+                    ):
+                        logger.info(
+                            f"[LEARNING_SHADOW] Would consider override: "
+                            f"{routed_to} (combined={current['combined']:.2f}, "
+                            f"sr={current['success_rate']:.0%}, n={current['usage_count']}) → "
+                            f"{best_agent} (combined={best_score['combined']:.2f}, "
+                            f"sr={best_score['success_rate']:.0%}, n={best_score['usage_count']})"
                         )
 
             # Check for learned preferences (chat_preferences domain)
