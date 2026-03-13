@@ -1881,16 +1881,16 @@ self,
                         from django.db import close_old_connections
                         close_old_connections()
                         execution_record.touch_heartbeat()
-                    except Exception:
-                        pass  # best-effort — don't crash on DB hiccups
+                    except Exception as e:
+                        logger.warning(f"[heartbeat] periodic write failed for {agent_name}: {e}")
 
         _hb_thread = None
         if execution_record:
             # Immediate heartbeat so last_heartbeat_at is never null for live executions
             try:
                 execution_record.touch_heartbeat()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"[heartbeat] initial write failed for {agent_name}: {e}")
             _hb_thread = threading.Thread(target=_heartbeat_loop, daemon=True)
             _hb_thread.start()
 
