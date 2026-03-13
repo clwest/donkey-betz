@@ -794,6 +794,29 @@ class UnifiedPAEntrypoint:
             except Exception as e:
                 logger.warning(f"[{trace_id}] Readback event skipped: {e}")
 
+            # Session 1078: Durable Memory Promotion — auto-detect project-critical
+            # operational facts (deploys, bundle IDs, service wiring) and save to memory
+            try:
+                from core.services.memory_promotion_service import check_and_promote
+                from asgiref.sync import sync_to_async
+                promo_result = await sync_to_async(check_and_promote)(
+                    user_message=message,
+                    assistant_response=content or '',
+                    tool_runs=tool_runs or [],
+                    user=self.user,
+                    trace_id=trace_id,
+                )
+                if promo_result and promo_result.get('action') == 'saved':
+                    # Append a subtle footer so user knows facts were captured
+                    promo_tags = ', '.join(promo_result.get('tags', []))
+                    content = (content or '') + (
+                        f"\n\n---\n*Ops fact saved: {promo_result.get('content', '')[:60]}*"
+                        f"{f' [{promo_tags}]' if promo_tags else ''}"
+                        f" *(tell me if any are wrong)*"
+                    )
+            except Exception as e:
+                logger.debug(f"[{trace_id}] Memory promotion skipped: {e}")
+
             return PAResponse(
                 content=content,
                 trace_id=trace_id,
