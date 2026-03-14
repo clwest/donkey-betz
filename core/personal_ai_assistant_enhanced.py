@@ -1462,6 +1462,9 @@ class EnhancedPersonalAIAssistant(EPAToolHandlersMixin, EPAAgentToolsMixin, EPAU
             # Session 695: SKIN Layer - Workspace Tool for project execution
             elif function_name == 'workspace_tool':
                 result = self._handle_workspace_tool(arguments)
+            # BPaaS: Build Packet as a Service
+            elif function_name == 'bpaas_tool':
+                result = self._handle_bpaas_tool(arguments)
             # Session 709: Body Vitals - Connect Brain to Body Systems
             elif function_name == 'get_body_vitals':
                 result = self._handle_get_body_vitals(arguments)
