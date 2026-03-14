@@ -3530,6 +3530,36 @@ PA_TOOL_SCHEMAS = [
             "required": ["action"],
         },
     },
+    # ── BPaaS: Build Packet as a Service ─────────────────────────────────
+    {
+        "type": "function",
+        "name": "bpaas_tool",
+        "description": (
+            "Build Packet as a Service — create client projects from structured build packets. "
+            "Actions: create_project (creates workspace project + repos + preview env + magic link from a build packet), "
+            "generate_close_pack (generates SOW + delivery checklist + proposal from a build packet), "
+            "get_schema (returns the build packet JSON schema), "
+            "get_example (returns the Norman Handyman MVP example packet)."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["create_project", "generate_close_pack", "get_schema", "get_example"],
+                    "description": (
+                        "create_project: create full project from build packet (needs workspace_id + packet). "
+                        "generate_close_pack: generate SOW/checklist/proposal (needs packet). "
+                        "get_schema: return the build packet JSON schema. "
+                        "get_example: return the Norman Handyman example build packet."
+                    ),
+                },
+                "workspace_id": {"type": "string", "description": "Workspace UUID (required for create_project)"},
+                "packet": {"type": "object", "description": "Build packet object (required for create_project and generate_close_pack)"},
+            },
+            "required": ["action"],
+        },
+    },
 ]
 
 # ── Startup validation: every tool must have name, description, parameters ──
@@ -3747,6 +3777,7 @@ TOOL_TO_INTENT_MAP = {
     'heartbeat_history_tool': 'system_health',
     'infra_health_tool': 'system_health',
     'kb_tool': 'knowledge_base',
+    'bpaas_tool': 'workspace',
 }
 
 

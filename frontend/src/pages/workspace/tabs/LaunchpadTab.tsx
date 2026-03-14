@@ -1,15 +1,18 @@
 // Preview System: Workspace Launchpad Tab
 // Manage project bundles, repos, preview environments, magic links, and feedback
+// BPaaS: Build Packet wizard + Close Pack viewer integrated
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Rocket, Plus, Globe, Smartphone, Server, Link2, Copy, ExternalLink,
   MessageSquare, CheckCircle2, AlertTriangle, AlertOctagon, Loader2,
-  ChevronRight, Trash2, Send, Clock, Eye,
+  ChevronRight, Trash2, Send, Clock, Eye, FileText, Wand2,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { previewApi } from '@/lib/api'
+import { BuildPacketWizard } from './BuildPacketWizard'
+import { ClosePackViewer } from './ClosePackViewer'
 
 interface LaunchpadTabProps {
   workspaceId: string
@@ -35,6 +38,9 @@ export function LaunchpadTab({ workspaceId }: LaunchpadTabProps) {
   const [showNewRepo, setShowNewRepo] = useState(false)
   const [showNewLink, setShowNewLink] = useState(false)
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
+  const [showWizard, setShowWizard] = useState(false)
+  const [closePack, setClosePack] = useState<Record<string, unknown> | null>(null)
+  const [loadingClosePack, setLoadingClosePack] = useState(false)
 
   // Queries
   const { data: projectsData, isLoading } = useQuery({
@@ -153,12 +159,20 @@ export function LaunchpadTab({ workspaceId }: LaunchpadTabProps) {
             Deploy previews, share magic links, collect feedback
           </p>
         </div>
-        <button
-          onClick={() => setShowNewProject(true)}
-          className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90"
-        >
-          <Plus size={16} /> New Project
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowWizard(true)}
+            className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700"
+          >
+            <Wand2 size={16} /> Build Packet
+          </button>
+          <button
+            onClick={() => setShowNewProject(true)}
+            className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90"
+          >
+            <Plus size={16} /> Quick Project
+          </button>
+        </div>
       </div>
 
       {/* Projects List */}
@@ -235,6 +249,29 @@ export function LaunchpadTab({ workspaceId }: LaunchpadTabProps) {
           <div className="flex items-center justify-between">
             <h3 className="font-semibold">Preview Environments</h3>
             <div className="flex gap-2">
+              <button
+                onClick={async () => {
+                  setLoadingClosePack(true)
+                  try {
+                    // Get the example packet for now — later this would use the project's actual packet
+                    const exRes = await fetch('/api/bpaas/example/')
+                    const packet = await exRes.json()
+                    const cpRes = await fetch('/api/bpaas/generate-close-pack/', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ packet }),
+                    })
+                    const cp = await cpRes.json()
+                    setClosePack(cp)
+                  } catch { /* ignore */ }
+                  finally { setLoadingClosePack(false) }
+                }}
+                disabled={loadingClosePack}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-dark-border rounded-lg text-xs hover:bg-dark-card disabled:opacity-50"
+              >
+                {loadingClosePack ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
+                Close Pack
+              </button>
               <button
                 onClick={() => setShowNewRepo(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 border border-dark-border rounded-lg text-xs hover:bg-dark-card"
@@ -442,6 +479,34 @@ export function LaunchpadTab({ workspaceId }: LaunchpadTabProps) {
           onClose={() => setShowNewLink(false)}
           loading={createMagicLinkMut.isPending}
           successMessage={copiedToken ? 'Magic link copied to clipboard!' : undefined}
+        />
+      )}
+
+      {/* BPaaS: Build Packet Wizard */}
+      {showWizard && (
+        <BuildPacketWizard
+          workspaceId={workspaceId}
+          onComplete={(result) => {
+            setShowWizard(false)
+            queryClient.invalidateQueries({ queryKey: ['preview-projects'] })
+            // Auto-select the newly created project
+            if (result.project && (result.project as Record<string, string>).id) {
+              setSelectedProject((result.project as Record<string, string>).id)
+            }
+          }}
+          onCancel={() => setShowWizard(false)}
+        />
+      )}
+
+      {/* BPaaS: Close Pack Viewer */}
+      {closePack && (
+        <ClosePackViewer
+          closePack={closePack as {
+            sow: { title: string; sections: Record<string, unknown> }
+            checklist: { title: string; items: Array<{ category: string; items: string[] }> }
+            proposal: { title: string; [key: string]: unknown }
+          }}
+          onClose={() => setClosePack(null)}
         />
       )}
     </div>
