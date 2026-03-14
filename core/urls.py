@@ -4664,6 +4664,20 @@ urlpatterns += [
     path('api/review/<str:token>/feedback/', review_feedback, name='review-feedback'),
 ]
 
+# =============================================================================
+# BPaaS: Build Packet as a Service
+# =============================================================================
+from core.views_bpaas_api import (
+    bpaas_schema, bpaas_example, create_from_packet, generate_close_pack,
+)
+
+urlpatterns += [
+    path('api/bpaas/schema/', bpaas_schema, name='bpaas-schema'),
+    path('api/bpaas/example/', bpaas_example, name='bpaas-example'),
+    path('api/bpaas/create-from-packet/', create_from_packet, name='bpaas-create-from-packet'),
+    path('api/bpaas/generate-close-pack/', generate_close_pack, name='bpaas-generate-close-pack'),
+]
+
 # =========================================================================
 if settings.DEBUG:
     urlpatterns += [
