@@ -116,6 +116,7 @@ export interface Workspace {
   tech_stack?: Record<string, string>
   root_path?: string
   workspace_type?: string
+  git_remote_url?: string
   entry_points?: string[]
   context?: WorkspaceContext
 }
