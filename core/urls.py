@@ -4665,6 +4665,16 @@ urlpatterns += [
 ]
 
 # =============================================================================
+# Revenue API (consolidated JSON endpoints for frontend)
+# =============================================================================
+from core.views_revenue import create_revenue, get_revenue_summary
+
+urlpatterns += [
+    path('api/revenue/summary/', get_revenue_summary, name='revenue-api-summary'),
+    path('api/revenue/record/', create_revenue, name='revenue-api-record'),
+]
+
+# =============================================================================
 # Status Overview API
 # =============================================================================
 from core.views_status_api import status_overview
