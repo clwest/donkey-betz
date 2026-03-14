@@ -134,8 +134,15 @@ class ContractMonitor:
             ))
 
         # Handler registered but no schema → tool exists but GPT can't call it
-        # This is usually intentional (internal-only tools), so info severity
-        for name in handler_names - schema_names:
+        # Exclude agent-delegation handlers — these are invoked via the `run_agent`
+        # meta-tool and intentionally don't have individual schemas.
+        agent_handler_names = {
+            name for name, handler in td._tool_handlers.items()
+            if getattr(handler, '__func__', handler).__name__ == '_handle_agent_tool'
+        }
+        orphan_handlers = handler_names - schema_names - agent_handler_names
+
+        for name in orphan_handlers:
             findings.append(DriftFinding(
                 check='tool_schema_handler',
                 severity='info',
