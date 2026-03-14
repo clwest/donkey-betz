@@ -4155,3 +4155,12 @@ export const revenueApi = {
   summary: (days?: number) => api.get('/revenue/summary/', { params: days ? { days } : {} }),
   record: (data: Record<string, unknown>) => api.post('/revenue/record/', data),
 }
+
+export const bpaasApi = {
+  schema: () => api.get('/bpaas/schema/'),
+  example: () => api.get('/bpaas/example/'),
+  createFromPacket: (data: { workspace_id: string; packet: Record<string, unknown> }) =>
+    api.post('/bpaas/create-from-packet/', data),
+  generateClosePack: (packet: Record<string, unknown>) =>
+    api.post('/bpaas/generate-close-pack/', { packet }),
+}
