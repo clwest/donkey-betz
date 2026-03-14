@@ -48,14 +48,14 @@ import type { Workspace, WorkspaceTab, ActionResult } from './workspace/types'
 import { PLATFORM_TABS, LEGACY_TO_PLATFORM } from './workspace/types'
 import { useWorkspaceTabTracking } from '@/hooks/usePageTracking'
 
-// Session 1035: 5 workspace-only tabs
+// Session 1035: 6 workspace tabs (Launchpad promoted to #2 for BPaaS visibility)
 const workspaceTabs = [
   { id: 'overview' as WorkspaceTab, label: 'Overview', icon: LayoutDashboard },
+  { id: 'launchpad' as WorkspaceTab, label: 'Launchpad', icon: Sparkles },
   { id: 'files' as WorkspaceTab, label: 'Files', icon: FolderTree },
   { id: 'operations' as WorkspaceTab, label: 'Operations', icon: History },
   { id: 'git' as WorkspaceTab, label: 'Git', icon: GitBranch },
   { id: 'triggers' as WorkspaceTab, label: 'Triggers', icon: Zap },
-  { id: 'launchpad' as WorkspaceTab, label: 'Launchpad', icon: Sparkles },
 ]
 
 const validWorkspaceTabs = new Set(workspaceTabs.map(t => t.id))

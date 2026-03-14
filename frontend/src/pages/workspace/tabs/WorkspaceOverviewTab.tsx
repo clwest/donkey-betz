@@ -16,6 +16,8 @@ import {
   Zap,
   FolderTree,
   Activity,
+  ExternalLink,
+  Rocket,
 } from 'lucide-react'
 import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
 import type { Workspace, WorkspaceTab } from '../types'
@@ -80,6 +82,16 @@ export function WorkspaceOverviewTab({
                   <span className="flex items-center gap-1 text-xs text-gray-400">
                     <GitBranch size={12} /> Git repo
                   </span>
+                )}
+                {(activeWorkspace as any).git_remote_url && (
+                  <a
+                    href={(activeWorkspace as any).git_remote_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-xs text-primary-400 hover:underline"
+                  >
+                    <ExternalLink size={12} /> GitHub
+                  </a>
                 )}
               </div>
             </div>
@@ -180,6 +192,13 @@ export function WorkspaceOverviewTab({
             >
               <Zap size={16} className="text-purple-400" />
               <span className="text-sm">Manage Triggers</span>
+            </button>
+            <button
+              onClick={() => onNavigateTab('launchpad')}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-green-500/10 hover:bg-green-500/20 transition-colors text-left border border-green-500/20"
+            >
+              <Rocket size={16} className="text-green-400" />
+              <span className="text-sm font-medium text-green-400">Launchpad — Deploy & Preview</span>
             </button>
           </div>
         </div>
