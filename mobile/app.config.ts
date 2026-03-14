@@ -10,7 +10,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   icon: './assets/icon.png',
   userInterfaceStyle: 'automatic',
   scheme: 'donkeybetz',
-  newArchEnabled: true,
+  // newArchEnabled disabled — was causing crashes on TestFlight builds
+  // with @sentry/react-native and other native modules.
+  // Re-enable after verifying all native deps support New Architecture.
+  newArchEnabled: false,
   runtimeVersion: {
     policy: 'appVersion',
   },
@@ -60,12 +63,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         color: '#6366f1',
       },
     ],
-    [
-      '@sentry/react-native/expo',
-      {
-        organization: process.env.SENTRY_ORG ?? '',
-        project: process.env.SENTRY_PROJECT ?? 'donkeybetz-mobile',
-      },
-    ],
+    // Sentry native plugin only included when DSN is configured.
+    // Without a DSN, the native module can crash on startup before JS runs.
+    ...(process.env.EXPO_PUBLIC_SENTRY_DSN
+      ? [
+          [
+            '@sentry/react-native/expo',
+            {
+              organization: process.env.SENTRY_ORG ?? '',
+              project: process.env.SENTRY_PROJECT ?? 'donkeybetz-mobile',
+            },
+          ] as const,
+        ]
+      : []),
   ],
 });
