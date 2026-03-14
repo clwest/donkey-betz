@@ -4665,6 +4665,15 @@ urlpatterns += [
 ]
 
 # =============================================================================
+# Status Overview API
+# =============================================================================
+from core.views_status_api import status_overview
+
+urlpatterns += [
+    path('api/status/overview/', status_overview, name='status-overview'),
+]
+
+# =============================================================================
 # BPaaS: Build Packet as a Service
 # =============================================================================
 from core.views_bpaas_api import (
