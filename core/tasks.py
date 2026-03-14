@@ -10439,6 +10439,10 @@ def _extract_agent_content(result) -> str:
     message = result.message or ''
     data = result.data or {}
 
+    # Guard: if data is a string (not a dict), treat it as the content directly
+    if isinstance(data, str):
+        return data if len(data) > len(message) else message
+
     best = message
 
     # Pattern 1: ContentWriterAgent — data['content'] is dict with 'full_text'
