@@ -244,6 +244,7 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         self.register("media_tool", self._handle_media)
         self.register("davinci_tool", self._handle_davinci)
         self.register("obs_tool", self._handle_obs)
+        self.register("bpaas_tool", self._handle_bpaas)
         self.register("video_history_tool", self._handle_video_history)
 
         # Body system tools
