@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 @api_view(["GET"])
+@permission_classes([permissions.AllowAny])
 def bpaas_schema(request):
     """Return the Build Packet JSON schema."""
     from core.services.bpaas.build_packet_schema import BUILD_PACKET_SCHEMA
@@ -25,6 +26,7 @@ def bpaas_schema(request):
 
 
 @api_view(["GET"])
+@permission_classes([permissions.AllowAny])
 def bpaas_example(request):
     """Return the Norman Handyman example build packet."""
     from core.services.bpaas.build_packet_schema import NORMAN_HANDYMAN_EXAMPLE
