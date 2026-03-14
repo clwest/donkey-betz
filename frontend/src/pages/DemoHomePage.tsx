@@ -11,12 +11,16 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { statusApi, revenueApi, previewApi, bpaasApi, workspaceApi } from '@/lib/api'
+import { ClosePackViewer } from './workspace/tabs/ClosePackViewer'
+import { FileText } from 'lucide-react'
 
 export default function DemoHomePage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [demoResult, setDemoResult] = useState<Record<string, unknown> | null>(null)
   const [copiedLink, setCopiedLink] = useState(false)
+  const [closePack, setClosePack] = useState<Record<string, unknown> | null>(null)
+  const [loadingClosePack, setLoadingClosePack] = useState(false)
 
   // Workspaces for demo project creation
   const { data: workspaces } = useQuery({
@@ -157,6 +161,22 @@ export default function DemoHomePage() {
                 </button>
               )}
               <button
+                onClick={async () => {
+                  setLoadingClosePack(true)
+                  try {
+                    const exRes = await bpaasApi.example()
+                    const cpRes = await bpaasApi.generateClosePack(exRes.data)
+                    setClosePack(cpRes.data)
+                  } catch { /* ignore */ }
+                  finally { setLoadingClosePack(false) }
+                }}
+                disabled={loadingClosePack}
+                className="flex items-center justify-center gap-2 w-full text-sm py-2 border border-dark-border text-foreground rounded-lg hover:bg-dark-bg disabled:opacity-50"
+              >
+                {loadingClosePack ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
+                {loadingClosePack ? 'Generating...' : 'Generate Close Pack'}
+              </button>
+              <button
                 onClick={() => navigate('/workspace?tab=launchpad')}
                 className="flex items-center justify-center gap-2 w-full text-sm py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
               >
@@ -257,6 +277,18 @@ export default function DemoHomePage() {
           <HealthItem label="Revenue Tracking" status={status?.revenue?.total_confirmed > 0 ? 'healthy' : 'idle'} />
         </div>
       </div>
+
+      {/* Close Pack Viewer Modal */}
+      {closePack && (
+        <ClosePackViewer
+          closePack={closePack as {
+            sow: { title: string; sections: Record<string, unknown> }
+            checklist: { title: string; items: Array<{ category: string; items: string[] }> }
+            proposal: { title: string; [key: string]: unknown }
+          }}
+          onClose={() => setClosePack(null)}
+        />
+      )}
     </div>
   )
 }
