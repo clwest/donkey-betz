@@ -4144,3 +4144,14 @@ export const reviewApi = {
     client_context?: Record<string, unknown>;
   }) => api.post(`/review/${token}/feedback/`, data),
 }
+
+// ── Status + Revenue APIs ──────────────────────────────────────────────────
+
+export const statusApi = {
+  overview: () => api.get('/status/overview/'),
+}
+
+export const revenueApi = {
+  summary: (days?: number) => api.get('/revenue/summary/', { params: days ? { days } : {} }),
+  record: (data: Record<string, unknown>) => api.post('/revenue/record/', data),
+}
