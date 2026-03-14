@@ -261,6 +261,11 @@ self,
     context = context or {}
     execution_start = time.time()
 
+    # Fix: Strip accumulated [Conversation] [Conversation] prefixes from task text
+    # These accumulate when topics cycle through ScheduledConversation → HiveMind → initiative pipeline
+    from core.services.conversation_initiative_pipeline import strip_bracket_prefixes
+    task = strip_bracket_prefixes(task)
+
     logger.info(
         f"[execute_initiative_stage_task] Starting: {agent_name} for Initiative {initiative_id[:8]} "
         f"Stage {stage_num}: '{task[:50]}...'"
