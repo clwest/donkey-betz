@@ -1,18 +1,50 @@
 // Demo Home — Platform overview + BPaaS/Preview entrypoints
 // Single-page dashboard showing platform health, revenue, and primary CTAs
 
-import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
   Rocket, Activity, DollarSign, Server, Clock, GitBranch,
   ArrowRight, Zap, Target, BarChart3, Globe, Layers,
-  CheckCircle2, AlertTriangle, Loader2,
+  CheckCircle2, AlertTriangle, Loader2, Sparkles, Copy, Check,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { statusApi, revenueApi, previewApi } from '@/lib/api'
+import { statusApi, revenueApi, previewApi, bpaasApi, workspaceApi } from '@/lib/api'
 
 export default function DemoHomePage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const [demoResult, setDemoResult] = useState<Record<string, unknown> | null>(null)
+  const [copiedLink, setCopiedLink] = useState(false)
+
+  // Workspaces for demo project creation
+  const { data: workspaces } = useQuery({
+    queryKey: ['workspaces-list'],
+    queryFn: () => workspaceApi.list().then(r => r.data),
+  })
+
+  // One-click demo project creation
+  const createDemoProject = useMutation({
+    mutationFn: async () => {
+      const wsData = workspaces?.results || workspaces || []
+      const activeWs = wsData.find((w: Record<string, unknown>) => w.is_active) || wsData[0]
+      if (!activeWs) throw new Error('No workspace found. Create a workspace first.')
+
+      const exampleRes = await bpaasApi.example()
+      const packet = exampleRes.data
+
+      const createRes = await bpaasApi.createFromPacket({
+        workspace_id: activeWs.id as string,
+        packet,
+      })
+      return createRes.data
+    },
+    onSuccess: (result) => {
+      setDemoResult(result)
+      queryClient.invalidateQueries({ queryKey: ['preview-projects-home'] })
+    },
+  })
 
   const { data: status, isLoading: statusLoading } = useQuery({
     queryKey: ['status-overview'],
@@ -90,14 +122,66 @@ export default function DemoHomePage() {
 
       {/* Primary Actions */}
       <div className="grid md:grid-cols-3 gap-4">
-        <ActionCard
-          icon={Rocket}
-          title="Create BPaaS Project"
-          description="Launch the Build Packet wizard to create a new client project with repos, preview env, and magic link."
-          buttonLabel="Build Packet"
-          onClick={() => navigate('/workspace?tab=launchpad')}
-          color="bg-green-600 hover:bg-green-700"
-        />
+        <div className="border border-dark-border rounded-xl p-5 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles size={18} className="text-green-400" />
+              <h3 className="font-semibold">One-Click Demo Project</h3>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Create a full BPaaS project from the Norman Handyman example — repos, preview env, and magic link in one click.
+            </p>
+          </div>
+
+          {demoResult ? (
+            <div className="space-y-2">
+              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 text-sm">
+                <p className="text-green-400 font-medium flex items-center gap-1">
+                  <CheckCircle2 size={14} /> Project created!
+                </p>
+                <p className="text-muted-foreground mt-1">
+                  {(demoResult.project as Record<string, string>)?.name} — {(demoResult.repos as unknown[])?.length || 0} repos
+                </p>
+              </div>
+              {(demoResult.magic_link as Record<string, string>)?.raw_token && (
+                <button
+                  onClick={() => {
+                    const url = `${window.location.origin}/r/${(demoResult.magic_link as Record<string, string>).raw_token}`
+                    navigator.clipboard.writeText(url)
+                    setCopiedLink(true)
+                    setTimeout(() => setCopiedLink(false), 3000)
+                  }}
+                  className="flex items-center justify-center gap-2 w-full text-sm py-2 border border-purple-500/30 text-purple-400 rounded-lg hover:bg-purple-500/10"
+                >
+                  {copiedLink ? <><Check size={14} /> Copied!</> : <><Copy size={14} /> Copy Magic Link</>}
+                </button>
+              )}
+              <button
+                onClick={() => navigate('/workspace?tab=launchpad')}
+                className="flex items-center justify-center gap-2 w-full text-sm py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                Open in Launchpad <ArrowRight size={14} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => createDemoProject.mutate()}
+              disabled={createDemoProject.isPending}
+              className="flex items-center justify-center gap-2 text-white font-medium py-2.5 rounded-lg text-sm bg-green-600 hover:bg-green-700 disabled:opacity-50"
+            >
+              {createDemoProject.isPending ? (
+                <><Loader2 size={14} className="animate-spin" /> Creating...</>
+              ) : (
+                <><Sparkles size={14} /> Create Demo Project</>
+              )}
+            </button>
+          )}
+          {createDemoProject.isError && (
+            <p className="text-xs text-red-400 mt-2">
+              {(createDemoProject.error as Error)?.message || 'Failed to create project'}
+            </p>
+          )}
+        </div>
         <ActionCard
           icon={Globe}
           title="View Projects & Previews"
