@@ -3498,3 +3498,57 @@ class AgentHandlersMixin:
                 f"Unknown action: {action}. Valid actions: list, search, recent, details, by_category, stats, create"
             )
 
+    # ── BPaaS Tool Handler ────────────────────────────────────────────────
+
+    def _handle_bpaas(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """Handle BPaaS tool — create projects from build packets, generate close packs."""
+        action = payload.get('action')
+        if not action:
+            return {'success': False, 'error': 'action is required'}
+
+        try:
+            if action == 'create_project':
+                from core.services.bpaas.packet_service import create_project_from_packet
+                from core.models_skin_layer import ProjectWorkspace
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+
+                workspace_id = payload.get('workspace_id')
+                packet = payload.get('packet')
+                if not workspace_id or not packet:
+                    return {'success': False, 'error': 'workspace_id and packet are required'}
+
+                workspace = ProjectWorkspace.objects.get(id=workspace_id)
+                user = User.objects.get(id=user_id) if user_id else None
+                result = create_project_from_packet(workspace=workspace, packet=packet, created_by=user)
+                return {'success': True, 'action': 'create_project', **result}
+
+            elif action == 'generate_close_pack':
+                from core.services.bpaas.packet_service import generate_close_pack
+
+                packet = payload.get('packet')
+                if not packet:
+                    return {'success': False, 'error': 'packet is required'}
+                return {'success': True, 'action': 'generate_close_pack', **generate_close_pack(packet)}
+
+            elif action == 'get_schema':
+                from core.services.bpaas.build_packet_schema import BUILD_PACKET_SCHEMA
+                return {'success': True, 'action': 'get_schema', 'schema': BUILD_PACKET_SCHEMA}
+
+            elif action == 'get_example':
+                from core.services.bpaas.build_packet_schema import NORMAN_HANDYMAN_EXAMPLE
+                return {'success': True, 'action': 'get_example', 'example': NORMAN_HANDYMAN_EXAMPLE}
+
+            else:
+                return {'success': False, 'error': f"Unknown action: {action}. Valid: create_project, generate_close_pack, get_schema, get_example"}
+
+        except Exception as e:
+            logger.error(f"[bpaas_tool] Error: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
