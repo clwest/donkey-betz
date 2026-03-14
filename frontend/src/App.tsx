@@ -29,6 +29,7 @@ import ImageStudioPage from '@/pages/ImageStudioPage'
 import VideoStudioPage from '@/pages/VideoStudioPage'
 import GovernmentPage from '@/pages/GovernmentPage'
 import ReviewPortalPage from '@/pages/ReviewPortalPage'  // Preview System: Public review portal
+import DemoHomePage from '@/pages/DemoHomePage'  // BPaaS: Platform overview + demo dashboard
 import HowItWorksPage from '@/pages/HowItWorksPage'
 import BoardroomPage from '@/pages/BoardroomPage'  // Session 1067: Full-page boardroom
 import GovernancePage from '@/pages/GovernancePage'  // Session 1067: Full-page governance
@@ -93,6 +94,7 @@ function App() {
         <Route path="assistant" element={<Navigate to="/" replace />} />
         <Route path="human" element={<Navigate to="/" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="demo" element={<DemoHomePage />} />
         <Route path="agents" element={<AgentsPage />} />
         <Route path="intelligence" element={<IntelligencePage />} />
         <Route path="content" element={<ContentPage />} />
