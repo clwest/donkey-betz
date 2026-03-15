@@ -117,6 +117,27 @@ def _resolve_image_and_bytes(user, image_id):
         logger.error(f"Failed to read image bytes for {image.id}: {e}")
         return None, None, f'Failed to read image file: {e}'
 
+    # Auto-downscale if image exceeds Stability AI's 4MP pixel limit
+    MAX_PIXELS = 4_194_304  # 2048x2048
+    try:
+        from io import BytesIO
+        img = PILImage.open(BytesIO(image_data))
+        w, h = img.size
+        total_pixels = w * h
+        if total_pixels > MAX_PIXELS:
+            scale = (MAX_PIXELS / total_pixels) ** 0.5
+            new_w = int(w * scale)
+            new_h = int(h * scale)
+            logger.info(f"Auto-downscaling image {image.id} from {w}x{h} ({total_pixels:,}px) to {new_w}x{new_h} for Stability AI")
+            img = img.resize((new_w, new_h), PILImage.LANCZOS)
+            buf = BytesIO()
+            # Preserve format (PNG for transparency, JPEG otherwise)
+            fmt = img.format or ('PNG' if img.mode == 'RGBA' else 'JPEG')
+            img.save(buf, format=fmt, quality=95)
+            image_data = buf.getvalue()
+    except Exception as e:
+        logger.warning(f"Auto-downscale check failed for {image.id}, proceeding with original: {e}")
+
     return image, image_data, None
 
 
