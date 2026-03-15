@@ -13,6 +13,7 @@ from core.views_image_generate import (  # noqa: F401
 from core.views_image_edit import (  # noqa: F401
     _enhance_prompt_rule_based,
     _execute_apply_color_grade,
+    _execute_process_image,
     _execute_recolor,
     _execute_remove_background,
     _execute_resize_image_for_format,

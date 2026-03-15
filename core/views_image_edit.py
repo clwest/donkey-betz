@@ -354,6 +354,134 @@ def _execute_apply_color_grade(user, parameters):
         raise
 
 
+def _execute_process_image(user, arguments):
+    """
+    Session 1036: General-purpose PIL image processing.
+    Supports: resize, center_crop, circular_mask, enhance, convert.
+    Called by ImageEditingAgent process_image tool.
+    """
+    try:
+        image_id = arguments.get('image_id')
+        operations = arguments.get('operations', [])
+        output_format = arguments.get('output_format', 'PNG')
+
+        image, image_data, err = _resolve_image_and_bytes(user, image_id)
+        if err:
+            return {'success': False, 'error': err}
+
+        from io import BytesIO
+        from PIL import ImageEnhance, ImageDraw
+
+        img = PILImage.open(BytesIO(image_data))
+        # Ensure RGBA for transparency support
+        if img.mode != 'RGBA':
+            img = img.convert('RGBA')
+
+        seq_num = image.get_sequential_number()
+        ops_applied = []
+
+        for op_spec in operations:
+            op = op_spec.get('op')
+
+            if op == 'resize':
+                w = op_spec.get('width', img.width)
+                h = op_spec.get('height', img.height)
+                img = img.resize((w, h), PILImage.LANCZOS)
+                ops_applied.append(f'resize({w}x{h})')
+
+            elif op == 'center_crop':
+                target_w = op_spec.get('width', min(img.width, img.height))
+                target_h = op_spec.get('height', target_w)
+                # Center crop
+                left = (img.width - target_w) // 2
+                top = (img.height - target_h) // 2
+                right = left + target_w
+                bottom = top + target_h
+                img = img.crop((left, top, right, bottom))
+                ops_applied.append(f'center_crop({target_w}x{target_h})')
+
+            elif op == 'circular_mask':
+                # Apply circular mask with transparent background
+                w, h = img.size
+                mask = PILImage.new('L', (w, h), 0)
+                draw = ImageDraw.Draw(mask)
+                # Draw filled circle — use the smaller dimension
+                diameter = min(w, h)
+                left = (w - diameter) // 2
+                top = (h - diameter) // 2
+                draw.ellipse([left, top, left + diameter, top + diameter], fill=255)
+                # Apply mask to alpha channel
+                img.putalpha(mask)
+                ops_applied.append('circular_mask')
+
+            elif op == 'enhance':
+                brightness = op_spec.get('brightness', 1.0)
+                contrast = op_spec.get('contrast', 1.0)
+                sharpness = op_spec.get('sharpness', 1.0)
+                if brightness != 1.0:
+                    img = ImageEnhance.Brightness(img).enhance(brightness)
+                if contrast != 1.0:
+                    img = ImageEnhance.Contrast(img).enhance(contrast)
+                if sharpness != 1.0:
+                    img = ImageEnhance.Sharpness(img).enhance(sharpness)
+                ops_applied.append(f'enhance(b={brightness},c={contrast},s={sharpness})')
+
+            elif op == 'convert':
+                fmt = op_spec.get('format', output_format)
+                if fmt == 'JPEG' and img.mode == 'RGBA':
+                    # JPEG doesn't support transparency — flatten to white bg
+                    bg = PILImage.new('RGB', img.size, (255, 255, 255))
+                    bg.paste(img, mask=img.split()[3])
+                    img = bg
+                output_format = fmt
+                ops_applied.append(f'convert({fmt})')
+
+        # Save result
+        ext = {'PNG': 'png', 'JPEG': 'jpg', 'WEBP': 'webp'}.get(output_format, 'png')
+        filename = f'processed_{uuid.uuid4().hex[:8]}.{ext}'
+        filepath = os.path.join('generated_images', user.username, filename)
+
+        buf = BytesIO()
+        save_kwargs = {'format': output_format}
+        if output_format == 'JPEG':
+            save_kwargs['quality'] = 95
+        img.save(buf, **save_kwargs)
+        buf.seek(0)
+
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        saved_path = default_storage.save(filepath, ContentFile(buf.getvalue()))
+        image_url = default_storage.url(saved_path)
+
+        # Create new ImageHistory record
+        from content.models import ImageHistory
+        new_image = ImageHistory.objects.create(
+            user=user,
+            prompt=f"Processed from image #{seq_num}: {', '.join(ops_applied)}",
+            file_path=image_url if image_url.startswith('http') else saved_path,
+            filename=filename,
+            model_used="pil-process",
+            image_width=img.width,
+            image_height=img.height,
+        )
+
+        logger.info(f"Processed image {image.id} -> {new_image.id}: {', '.join(ops_applied)}")
+
+        return {
+            'success': True,
+            'image_id': str(new_image.id),
+            'image_url': image_url,
+            'sequential_number': new_image.get_sequential_number(),
+            'operations_applied': ops_applied,
+            'dimensions': f'{img.width}x{img.height}',
+            'message': f"Image processed successfully (#{new_image.get_sequential_number()}): {', '.join(ops_applied)}"
+        }
+
+    except Exception as e:
+        logger.error(f"Process image error: {e}")
+        return {'success': False, 'error': str(e)}
+
+
 def _execute_recolor(user, parameters, session=None):
     """
     Internal function for recoloring images.
