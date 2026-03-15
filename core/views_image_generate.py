@@ -44,6 +44,8 @@ from core.validators import validate_prompt, sanitize_prompt, validate_uuid, val
 from core.services.watermark_integration import save_watermarked_image
 # Session 769: Cost tracking for external APIs
 from core.services.api_cost_config import calculate_stability_cost
+# Session 1036: save_to_history needed for gallery_generate
+from core.views_image_misc import save_to_history
 
 logger = logging.getLogger(__name__)
 
