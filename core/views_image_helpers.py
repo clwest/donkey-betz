@@ -2178,6 +2178,7 @@ def _execute_search_replace(user, parameters, session=None):
         image_url = default_storage.url(saved_path)
 
         # Create new image history entry
+        from content.models import ImageHistory
         new_image = ImageHistory.objects.create(
             user=user,
             prompt=f"Edited from image #{seq_num}: replaced {search_prompt} with {replace_prompt}",
