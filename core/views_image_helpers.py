@@ -812,17 +812,13 @@ def _execute_create_variations(user, parameters, session=None):
         count = parameters.get('count', 3)
         strength = parameters.get('variation_strength', 0.5)
 
-        if not image_id:
-            return {'success': False, 'error': 'image_id required'}
-
-        from content.models import ImageHistory
-        try:
-            image = ImageHistory.objects.get(id=image_id, user=user)
-        except ImageHistory.DoesNotExist:
-            return {'success': False, 'error': 'Image not found'}
+        from core.views_image_edit import _resolve_image_and_bytes
+        image, image_data, err = _resolve_image_and_bytes(user, image_id)
+        if err:
+            return {'success': False, 'error': err}
 
         seq_num = image.get_sequential_number()
-        logger.info(f"🎨 Agent creating {count} variations from image {image_id} (#{seq_num})")
+        logger.info(f"🎨 Agent creating {count} variations from image {image.id} (#{seq_num})")
 
         # For now, use image-to-image with variation prompts
         # This would use the Stability AI img2img endpoint
@@ -2137,25 +2133,16 @@ def _execute_search_replace(user, parameters, session=None):
         search_prompt = parameters.get('search_prompt')
         replace_prompt = parameters.get('replace_prompt')
 
-        if not image_id or not search_prompt or not replace_prompt:
-            return {'success': False, 'error': 'image_id, search_prompt, and replace_prompt required'}
+        if not search_prompt or not replace_prompt:
+            return {'success': False, 'error': 'search_prompt and replace_prompt required'}
 
-        from content.models import ImageHistory
-        try:
-            image = ImageHistory.objects.get(id=image_id, user=user)
-        except ImageHistory.DoesNotExist:
-            return {'success': False, 'error': 'Image not found'}
+        from core.views_image_edit import _resolve_image_and_bytes
+        image, image_data, err = _resolve_image_and_bytes(user, image_id)
+        if err:
+            return {'success': False, 'error': err}
 
         seq_num = image.get_sequential_number()
-        logger.info(f"🔄 Agent search-replace on image {image_id} (#{seq_num}): {search_prompt} → {replace_prompt}")
-
-        # Get image data
-        if image.file_path.startswith('data:'):
-            image_data = base64.b64decode(image.file_path.split(',')[1])
-        else:
-            file_full_path = os.path.join(settings.MEDIA_ROOT, image.file_path)
-            with open(file_full_path, 'rb') as f:
-                image_data = f.read()
+        logger.info(f"🔄 Agent search-replace on image {image.id} (#{seq_num}): {search_prompt} → {replace_prompt}")
 
         # Call Stability AI search-and-replace API
         stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
