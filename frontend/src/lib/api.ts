@@ -923,6 +923,16 @@ export const contentApi = {
   imageToVideo: (imageUrl: string, options?: Record<string, unknown>) =>
     api.post('/v1/video/image-to-video/', { image_url: imageUrl, ...options }),
 
+  // Image Upload
+  uploadImage: (file: File, title?: string) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    if (title) formData.append('title', title)
+    return api.post('/upload/image/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
   // Video Upload (simple — <50MB)
   uploadVideo: (file: File, title?: string) => {
     const formData = new FormData()
