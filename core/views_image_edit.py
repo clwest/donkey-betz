@@ -48,6 +48,78 @@ from core.services.api_cost_config import calculate_stability_cost
 logger = logging.getLogger(__name__)
 
 
+def _resolve_image_and_bytes(user, image_id):
+    """
+    Session 1036: Resolve image_id (UUID, sequential number, or Cloudinary URL)
+    to an ImageHistory record and its raw bytes.
+
+    Returns: (image: ImageHistory, image_data: bytes, error: str | None)
+    """
+    from content.models import ImageHistory
+
+    if not image_id:
+        return None, None, 'image_id required'
+
+    image = None
+
+    # 1. Try as UUID
+    try:
+        import uuid as _uuid
+        _uuid.UUID(str(image_id))
+        image = ImageHistory.objects.get(id=image_id, user=user)
+    except (ValueError, ImageHistory.DoesNotExist):
+        pass
+
+    # 2. Try as Cloudinary URL — lookup by file_path
+    if image is None and str(image_id).startswith('http'):
+        # Try exact match on file_path
+        image = ImageHistory.objects.filter(user=user, file_path=image_id).first()
+        if image is None:
+            # Try matching the Cloudinary public ID from the URL
+            # URLs look like: https://res.cloudinary.com/.../uploads/images/2026/03/<uuid>_<suffix>
+            # file_path might be: uploads/images/2026/03/<uuid>.<ext>
+            url_path = image_id.split('/upload/')[-1] if '/upload/' in image_id else ''
+            if url_path:
+                # Strip version prefix (v1/, v2/) if present
+                if url_path.startswith('v') and '/' in url_path:
+                    url_path = url_path.split('/', 1)[-1]
+                # Strip /media/ prefix if present
+                if url_path.startswith('media/'):
+                    url_path = url_path[6:]
+                image = ImageHistory.objects.filter(user=user, file_path__contains=url_path[:40]).first()
+
+    # 3. Try as sequential number
+    if image is None:
+        try:
+            seq = int(image_id)
+            images = ImageHistory.objects.filter(user=user).order_by('created_at')
+            if 0 < seq <= images.count():
+                image = images[seq - 1]
+        except (ValueError, TypeError):
+            pass
+
+    if image is None:
+        return None, None, f'Image not found for: {str(image_id)[:80]}'
+
+    # Fetch image bytes — handle Cloudinary URLs, data URIs, and local paths
+    try:
+        if image.file_path and image.file_path.startswith('http'):
+            resp = requests.get(image.file_path, timeout=30)
+            resp.raise_for_status()
+            image_data = resp.content
+        elif image.file_path and image.file_path.startswith('data:'):
+            image_data = base64.b64decode(image.file_path.split(',')[1])
+        else:
+            file_full_path = os.path.join(settings.MEDIA_ROOT, image.file_path)
+            with open(file_full_path, 'rb') as f:
+                image_data = f.read()
+    except Exception as e:
+        logger.error(f"Failed to read image bytes for {image.id}: {e}")
+        return None, None, f'Failed to read image file: {e}'
+
+    return image, image_data, None
+
+
 # ========================================
 # SESSION 794: SYSTEM USER FOR AUTONOMOUS OPERATIONS
 # ========================================
@@ -258,25 +330,15 @@ def _execute_recolor(user, parameters, session=None):
         target_color = parameters.get('target_color')
         new_color = parameters.get('new_color')
 
-        if not image_id or not target_color or not new_color:
-            return {'success': False, 'error': 'image_id, target_color, and new_color required'}
+        if not target_color or not new_color:
+            return {'success': False, 'error': 'target_color and new_color required'}
 
-        from content.models import ImageHistory
-        try:
-            image = ImageHistory.objects.get(id=image_id, user=user)
-        except ImageHistory.DoesNotExist:
-            return {'success': False, 'error': 'Image not found'}
+        image, image_data, err = _resolve_image_and_bytes(user, image_id)
+        if err:
+            return {'success': False, 'error': err}
 
         seq_num = image.get_sequential_number()
-        logger.info(f"🎨 Agent recoloring image {image_id} (#{seq_num}): {target_color} → {new_color}")
-
-        # Get image data
-        if image.file_path.startswith('data:'):
-            image_data = base64.b64decode(image.file_path.split(',')[1])
-        else:
-            file_full_path = os.path.join(settings.MEDIA_ROOT, image.file_path)
-            with open(file_full_path, 'rb') as f:
-                image_data = f.read()
+        logger.info(f"🎨 Agent recoloring image {image.id} (#{seq_num}): {target_color} → {new_color}")
 
         # Call Stability AI search-and-recolor API
         stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
@@ -312,6 +374,7 @@ def _execute_recolor(user, parameters, session=None):
         image_url = default_storage.url(saved_path)
 
         # Create new image history entry
+        from content.models import ImageHistory
         new_image = ImageHistory.objects.create(
             user=user,
             prompt=f"Recolored from image #{seq_num}: {target_color} → {new_color}",
@@ -350,25 +413,13 @@ def _execute_remove_background(user, parameters, session=None):
     """
     try:
         image_id = parameters.get('image_id')
-        if not image_id:
-            return {'success': False, 'error': 'image_id required'}
 
-        from content.models import ImageHistory
-        try:
-            image = ImageHistory.objects.get(id=image_id, user=user)
-        except ImageHistory.DoesNotExist:
-            return {'success': False, 'error': 'Image not found'}
+        image, image_data, err = _resolve_image_and_bytes(user, image_id)
+        if err:
+            return {'success': False, 'error': err}
 
         seq_num = image.get_sequential_number()
-        logger.info(f"🎭 Agent removing background from image {image_id} (#{seq_num})")
-
-        # Get image data
-        if image.file_path.startswith('data:'):
-            image_data = base64.b64decode(image.file_path.split(',')[1])
-        else:
-            file_full_path = os.path.join(settings.MEDIA_ROOT, image.file_path)
-            with open(file_full_path, 'rb') as f:
-                image_data = f.read()
+        logger.info(f"🎭 Agent removing background from image {image.id} (#{seq_num})")
 
         # Call Stability AI remove-background API
         stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
@@ -400,6 +451,7 @@ def _execute_remove_background(user, parameters, session=None):
         image_url = default_storage.url(saved_path)
 
         # Create new image history entry
+        from content.models import ImageHistory
         new_image = ImageHistory.objects.create(
             user=user,
             prompt=f"Background removed from image #{seq_num}",
@@ -612,25 +664,13 @@ def _execute_upscale(user, parameters, session=None):
     """
     try:
         image_id = parameters.get('image_id')
-        if not image_id:
-            return {'success': False, 'error': 'image_id required'}
 
-        from content.models import ImageHistory
-        try:
-            image = ImageHistory.objects.get(id=image_id, user=user)
-        except ImageHistory.DoesNotExist:
-            return {'success': False, 'error': 'Image not found'}
+        image, image_data, err = _resolve_image_and_bytes(user, image_id)
+        if err:
+            return {'success': False, 'error': err}
 
         seq_num = image.get_sequential_number()
-        logger.info(f"📈 Agent upscaling image {image_id} (sequential #{seq_num})")
-
-        # Get image data
-        if image.file_path.startswith('data:'):
-            image_data = base64.b64decode(image.file_path.split(',')[1])
-        else:
-            file_full_path = os.path.join(settings.MEDIA_ROOT, image.file_path)
-            with open(file_full_path, 'rb') as f:
-                image_data = f.read()
+        logger.info(f"📈 Agent upscaling image {image.id} (sequential #{seq_num})")
 
         # Call Stability AI upscale API
         stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
@@ -665,6 +705,7 @@ def _execute_upscale(user, parameters, session=None):
         image_url = default_storage.url(saved_path)
 
         # Create new image history entry
+        from content.models import ImageHistory
         new_image = ImageHistory.objects.create(
             user=user,
             prompt=f"Upscaled from image #{seq_num}",
