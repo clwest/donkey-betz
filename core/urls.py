@@ -4677,10 +4677,11 @@ urlpatterns += [
 # =============================================================================
 # Status Overview API
 # =============================================================================
-from core.views_status_api import status_overview
+from core.views_status_api import status_overview, tool_metrics
 
 urlpatterns += [
     path('api/status/overview/', status_overview, name='status-overview'),
+    path('api/status/tool-metrics/', tool_metrics, name='tool-metrics'),
 ]
 
 # =============================================================================
