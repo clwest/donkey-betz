@@ -472,6 +472,19 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
 
         # Session 987: Deliberation APIs (read-only for Orchestration Monitor tab)
         '/api/deliberation/',  # Deliberation sessions, turns, contracts, verification
+
+        # VIP Magic Link Exchange (must be public — unauthenticated users redeem tokens)
+        '/api/v1/vip-invites/exchange/',
+
+        # Preview System: Public magic-link review portal
+        '/api/review/',  # GET context + POST feedback (token-validated, not auth-validated)
+
+        # BPaaS: Public schema + example (documentation/intake)
+        '/api/bpaas/schema/',
+        '/api/bpaas/example/',
+
+        # Status overview (used by /demo page)
+        '/api/status/overview/',
     ]
 
     # Session 830: Exact match public paths (don't use prefix matching)
