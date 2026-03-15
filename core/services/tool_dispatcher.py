@@ -43,6 +43,88 @@ from functools import wraps
 logger = logging.getLogger(__name__)
 
 
+# ── Tool Call Metrics (Redis counters) ────────────────────────────────────
+# Tracks per-tool call counts, latency, and status for observability.
+# Keys: tool_metrics:{tool}:{action}:{status} → counter
+#        tool_metrics:{tool}:{action}:latency_sum → cumulative ms
+# Daily keys auto-expire after 48h.
+
+def _record_tool_metric(tool_name: str, action: str, status: str, latency_ms: int):
+    """Record a tool call metric in Redis. Fire-and-forget — never raises."""
+    try:
+        from django.conf import settings
+        import redis as redis_lib
+        from datetime import date
+
+        redis_url = getattr(settings, 'REDIS_URL', None)
+        if not redis_url:
+            return
+
+        r = redis_lib.Redis.from_url(redis_url, decode_responses=True, socket_timeout=1)
+        day = date.today().isoformat()
+        prefix = f"tool_metrics:{day}"
+
+        pipe = r.pipeline(transaction=False)
+        # Per-tool:action:status counter
+        pipe.hincrby(f"{prefix}:calls", f"{tool_name}:{action}:{status}", 1)
+        # Per-tool total counter
+        pipe.hincrby(f"{prefix}:totals", tool_name, 1)
+        # Latency accumulator (for avg calculation)
+        pipe.hincrby(f"{prefix}:latency", f"{tool_name}:{action}", latency_ms)
+        # Global counter
+        pipe.hincrby(f"{prefix}:calls", "_global_total", 1)
+        # Set 48h expiry on all keys
+        for key in [f"{prefix}:calls", f"{prefix}:totals", f"{prefix}:latency"]:
+            pipe.expire(key, 172800)
+        pipe.execute()
+    except Exception:
+        # Never let metrics recording break tool execution
+        pass
+
+
+def get_tool_metrics(day: str = None) -> Dict[str, Any]:
+    """
+    Read tool call metrics for a given day.
+
+    Returns: {
+        'date': '2026-03-15',
+        'total_calls': 1234,
+        'by_tool': {'bpaas_tool': 5, 'ops_tool': 42, ...},
+        'by_call': {'bpaas_tool:get_schema:ok': 3, ...},
+        'latency': {'bpaas_tool:get_schema': 150, ...},
+    }
+    """
+    try:
+        from django.conf import settings
+        import redis as redis_lib
+        from datetime import date as date_cls
+
+        redis_url = getattr(settings, 'REDIS_URL', None)
+        if not redis_url:
+            return {'error': 'Redis not configured'}
+
+        r = redis_lib.Redis.from_url(redis_url, decode_responses=True, socket_timeout=2)
+        day = day or date_cls.today().isoformat()
+        prefix = f"tool_metrics:{day}"
+
+        calls = r.hgetall(f"{prefix}:calls") or {}
+        totals = r.hgetall(f"{prefix}:totals") or {}
+        latency = r.hgetall(f"{prefix}:latency") or {}
+
+        # Build top tools sorted by call count
+        sorted_tools = sorted(totals.items(), key=lambda x: int(x[1]), reverse=True)
+
+        return {
+            'date': day,
+            'total_calls': int(calls.get('_global_total', 0)),
+            'by_tool': {k: int(v) for k, v in sorted_tools},
+            'by_call': {k: int(v) for k, v in calls.items() if k != '_global_total'},
+            'latency': {k: int(v) for k, v in latency.items()},
+        }
+    except Exception as e:
+        return {'error': str(e)}
+
+
 # Error codes for structured failures
 class ToolErrorCode:
     TOOL_NOT_FOUND = "TOOL_NOT_FOUND"
@@ -422,6 +504,7 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         trace_id = self._generate_trace_id()
         start_time = time.time()
         timeout = timeout or self.DEFAULT_TIMEOUT
+        action = payload.get('action', '_default') if isinstance(payload, dict) else '_default'
 
         logger.info(f"[{trace_id}] Executing tool: {tool_name}")
 
@@ -473,10 +556,10 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
             logger.info(f"[{trace_id}] Tool {tool_name} completed in {latency_ms}ms")
 
             # Session 1098: Emit ImpactEvent for PA tool completions.
-            # This gives PersonalAssistant measurable outcomes for ROI
-            # attribution — without this, PA shows 0 outcomes and gets
-            # flagged as low-QROI despite being user-facing.
             self._emit_pa_impact_event(tool_name, payload, user_id, trace_id)
+
+            # Track tool call metrics in Redis
+            _record_tool_metric(tool_name, action, 'ok', latency_ms)
 
             return ToolResult(
                 ok=True,
@@ -491,6 +574,7 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         except asyncio.TimeoutError:
             latency_ms = int((time.time() - start_time) * 1000)
             logger.error(f"[{trace_id}] Tool {tool_name} timed out after {timeout}s")
+            _record_tool_metric(tool_name, action, 'timeout', latency_ms)
             return ToolResult(
                 ok=False,
                 tool=tool_name,
@@ -504,6 +588,7 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         except Exception as e:
             latency_ms = int((time.time() - start_time) * 1000)
             logger.error(f"[{trace_id}] Tool {tool_name} failed: {e}", exc_info=True)
+            _record_tool_metric(tool_name, action, 'error', latency_ms)
             return ToolResult(
                 ok=False,
                 tool=tool_name,

@@ -101,3 +101,11 @@ def status_overview(request):
         },
         "timestamp": timezone.now().isoformat(),
     })
+
+
+@api_view(["GET"])
+def tool_metrics(request):
+    """Tool call metrics from Redis counters. Optional ?date=YYYY-MM-DD param."""
+    from core.services.tool_dispatcher import get_tool_metrics
+    day = request.query_params.get("date")
+    return Response(get_tool_metrics(day))
