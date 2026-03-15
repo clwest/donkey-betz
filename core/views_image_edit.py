@@ -103,18 +103,38 @@ def _resolve_image_and_bytes(user, image_id, max_pixels=4_194_304):
     if image is None:
         return None, None, f'Image not found for: {str(image_id)[:80]}'
 
-    # Fetch image bytes — handle Cloudinary URLs, data URIs, and local paths
+    # Fetch image bytes — handle Cloudinary URLs, data URIs, and storage paths
     try:
         if image.file_path and image.file_path.startswith('http'):
+            # Direct URL (Cloudinary CDN or other remote)
             resp = requests.get(image.file_path, timeout=30)
             resp.raise_for_status()
             image_data = resp.content
         elif image.file_path and image.file_path.startswith('data:'):
             image_data = base64.b64decode(image.file_path.split(',')[1])
         else:
-            file_full_path = os.path.join(settings.MEDIA_ROOT, image.file_path)
-            with open(file_full_path, 'rb') as f:
-                image_data = f.read()
+            # Relative storage path — use default_storage which handles
+            # Cloudinary (Railway) and local filesystem transparently.
+            # On Railway, file_path like "generated_images/user/file.png"
+            # lives on Cloudinary, not local disk.
+            try:
+                from django.core.files.storage import default_storage as _storage
+                # First try: get URL from storage backend and fetch via HTTP
+                # This works for Cloudinary where default_storage.url() returns CDN URL
+                storage_url = _storage.url(image.file_path)
+                if storage_url and storage_url.startswith('http'):
+                    resp = requests.get(storage_url, timeout=30)
+                    resp.raise_for_status()
+                    image_data = resp.content
+                else:
+                    # Local storage — read directly
+                    with _storage.open(image.file_path, 'rb') as f:
+                        image_data = f.read()
+            except Exception:
+                # Final fallback: try raw local file path
+                file_full_path = os.path.join(settings.MEDIA_ROOT, image.file_path)
+                with open(file_full_path, 'rb') as f:
+                    image_data = f.read()
     except Exception as e:
         logger.error(f"Failed to read image bytes for {image.id}: {e}")
         return None, None, f'Failed to read image file: {e}'
