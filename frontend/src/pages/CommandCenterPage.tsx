@@ -11,7 +11,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
-  assistantApi, userLearningApi, bodyApi, humanApi, homeApi, agentsApi, orchestrationApi
+  assistantApi, contentApi, userLearningApi, bodyApi, humanApi, homeApi, agentsApi, orchestrationApi
 } from '@/lib/api'
 import { useAuthStore } from '@/stores/authStore'
 import { useUnifiedStore } from '@/stores/unifiedStore'
@@ -30,6 +30,7 @@ import {
   ExternalLink, Workflow, Database,
   PanelLeftClose, PanelLeftOpen, Plus, Brain,
   BarChart3, Shield, BookOpen, Terminal,
+  Paperclip, FolderOpen, Image as ImageIcon, FileText, Film, Music, File,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -109,6 +110,34 @@ interface SystemState {
 }
 
 type SidebarTab = 'context' | 'attention' | 'controls' | 'learning'
+
+interface ChatAttachment {
+  id: string
+  file: File
+  name: string
+  size: number
+  type: string
+  status: 'pending' | 'uploading' | 'done' | 'error'
+  progress: number
+  url?: string
+  mediaId?: string
+  error?: string
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function getFileIcon(mimeType: string) {
+  if (mimeType.startsWith('image/')) return ImageIcon
+  if (mimeType.startsWith('video/')) return Film
+  if (mimeType.startsWith('audio/')) return Music
+  if (mimeType.includes('pdf') || mimeType.includes('document') || mimeType.includes('text'))
+    return FileText
+  return File
+}
 
 // ============================================================================
 // Constants
@@ -653,10 +682,16 @@ export default function CommandCenterPage() {
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
+  const chatAreaRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const isNearBottomRef = useRef(true)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  // File attachments
+  const [attachments, setAttachments] = useState<ChatAttachment[]>([])
+  const [isDragging, setIsDragging] = useState(false)
 
   const queryClient = useQueryClient()
   const { isAuthenticated } = useAuthStore()
@@ -851,8 +886,12 @@ export default function CommandCenterPage() {
 
   // Chat — Session 974b: Async dispatch + polling via Celery
   const chatMutation = useMutation({
-    mutationFn: (message: string) =>
-      assistantApi.paChat(message, { conversation_id: activeConversationId || undefined, source: 'web' }),
+    mutationFn: ({ message, attachmentMeta }: { message: string; attachmentMeta?: { url: string; name: string; type: string; mediaId?: string }[] }) =>
+      assistantApi.paChat(message, {
+        context: attachmentMeta && attachmentMeta.length > 0 ? { attachments: attachmentMeta } : undefined,
+        conversation_id: activeConversationId || undefined,
+        source: 'web',
+      }),
     onSuccess: (response) => {
       const taskId = response.data.task_id
       setIsPolling(true)
@@ -1130,14 +1169,112 @@ export default function CommandCenterPage() {
     return () => audio.removeEventListener('ended', handleEnded)
   }, [])
 
+  // ── File upload handlers ──────────────────────────────────────────────
+  const uploadFile = useCallback(async (attachment: ChatAttachment) => {
+    setAttachments(prev =>
+      prev.map(a => a.id === attachment.id ? { ...a, status: 'uploading' as const, progress: 10 } : a)
+    )
+    try {
+      const mime = attachment.type
+      if (mime.startsWith('image/')) {
+        const resp = await contentApi.uploadImage(attachment.file, attachment.name)
+        setAttachments(prev =>
+          prev.map(a => a.id === attachment.id ? { ...a, status: 'done' as const, progress: 100, url: resp.data.image?.url, mediaId: resp.data.image?.id } : a)
+        )
+      } else if (mime.startsWith('video/')) {
+        const resp = await contentApi.uploadVideo(attachment.file, attachment.name)
+        setAttachments(prev =>
+          prev.map(a => a.id === attachment.id ? { ...a, status: 'done' as const, progress: 100, url: resp.data.video?.url || resp.data.video?.file_path, mediaId: resp.data.video?.id } : a)
+        )
+      } else {
+        try {
+          const resp = await contentApi.uploadImage(attachment.file, attachment.name)
+          setAttachments(prev =>
+            prev.map(a => a.id === attachment.id ? { ...a, status: 'done' as const, progress: 100, url: resp.data.image?.url, mediaId: resp.data.image?.id } : a)
+          )
+        } catch {
+          setAttachments(prev =>
+            prev.map(a => a.id === attachment.id ? { ...a, status: 'error' as const, error: 'Use Media Library for this file type' } : a)
+          )
+        }
+      }
+    } catch (err) {
+      setAttachments(prev =>
+        prev.map(a => a.id === attachment.id ? { ...a, status: 'error' as const, error: err instanceof Error ? err.message : 'Upload failed' } : a)
+      )
+    }
+  }, [])
+
+  const addFiles = useCallback((files: FileList | File[]) => {
+    const newAttachments: ChatAttachment[] = Array.from(files).map(file => ({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      file, name: file.name, size: file.size,
+      type: file.type || 'application/octet-stream',
+      status: 'pending' as const, progress: 0,
+    }))
+    setAttachments(prev => [...prev, ...newAttachments])
+    newAttachments.forEach(a => uploadFile(a))
+  }, [uploadFile])
+
+  const removeAttachment = useCallback((id: string) => {
+    setAttachments(prev => prev.filter(a => a.id !== id))
+  }, [])
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true) }, [])
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation()
+    if (chatAreaRef.current && !chatAreaRef.current.contains(e.relatedTarget as Node)) setIsDragging(false)
+  }, [])
+  const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); e.stopPropagation() }, [])
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation(); setIsDragging(false)
+    if (e.dataTransfer.files.length > 0) addFiles(e.dataTransfer.files)
+  }, [addFiles])
+
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+    const imageFiles: File[] = []
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        const file = items[i].getAsFile()
+        if (file) {
+          Object.defineProperty(file, 'name', { writable: true, value: `pasted-image-${Date.now()}.${items[i].type.split('/')[1] || 'png'}` })
+          imageFiles.push(file)
+        }
+      }
+    }
+    if (imageFiles.length > 0) { e.preventDefault(); addFiles(imageFiles) }
+  }, [addFiles])
+
+  const hasUploading = attachments.some(a => a.status === 'uploading')
+  const completedAttachments = attachments.filter(a => a.status === 'done')
+
   const sendMessage = useCallback((messageText?: string) => {
     const text = messageText || input
-    if (!text.trim() || isBusy) return
+    const hasText = text.trim().length > 0
+    const hasAttached = completedAttachments.length > 0
+    if ((!hasText && !hasAttached) || isBusy || hasUploading) return
 
-    addPAMessage({ role: 'user', content: text })
+    let displayText = text.trim()
+    if (completedAttachments.length > 0 && !displayText) {
+      displayText = `Shared ${completedAttachments.length} file${completedAttachments.length > 1 ? 's' : ''}`
+    }
+    const displayParts = [displayText]
+    if (completedAttachments.length > 0) {
+      displayParts.push(completedAttachments.map(a => `[${a.name}](${a.url})`).join('\n'))
+    }
+
+    addPAMessage({ role: 'user', content: displayParts.join('\n\n') })
     setInput('')
-    chatMutation.mutate(text)
-  }, [input, isBusy, chatMutation, addPAMessage])
+    setAttachments([])
+    chatMutation.mutate({
+      message: displayText,
+      attachmentMeta: completedAttachments.length > 0
+        ? completedAttachments.map(a => ({ url: a.url || '', name: a.name, type: a.type, mediaId: a.mediaId }))
+        : undefined,
+    })
+  }, [input, isBusy, hasUploading, completedAttachments, chatMutation, addPAMessage])
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -1235,7 +1372,7 @@ export default function CommandCenterPage() {
     const userMessage = messages[messageIndex - 1]
     if (userMessage && userMessage.role === 'user') {
       // Can't slice store messages directly, so just re-send
-      chatMutation.mutate(userMessage.content)
+      chatMutation.mutate({ message: userMessage.content })
     }
   }
 
@@ -1317,7 +1454,24 @@ export default function CommandCenterPage() {
         )}
 
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div
+          ref={chatAreaRef}
+          className={cn('flex-1 flex flex-col min-w-0 relative transition-colors rounded-xl', isDragging && 'ring-2 ring-primary-400 bg-primary-900/5')}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
+          {/* Drag overlay */}
+          {isDragging && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-dark-card/90 border-2 border-dashed border-primary-400 rounded-xl">
+              <div className="text-center">
+                <Paperclip size={32} className="text-primary-400 mx-auto mb-2" />
+                <p className="text-sm font-medium text-primary-400">Drop files here</p>
+                <p className="text-xs text-gray-500 mt-1">Images, videos, documents</p>
+              </div>
+            </div>
+          )}
           {/* Chat Header */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
@@ -1663,7 +1817,47 @@ export default function CommandCenterPage() {
 
           {/* Input */}
           <div className="border-t border-dark-border pt-3">
+            {/* Attachment chips */}
+            {attachments.length > 0 && (
+              <div className="px-1 pb-2 flex flex-wrap gap-1.5">
+                {attachments.map(a => {
+                  const Icon = getFileIcon(a.type)
+                  return (
+                    <div
+                      key={a.id}
+                      className={cn(
+                        'flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-md text-[11px] max-w-[180px]',
+                        a.status === 'done' && 'bg-accent-green/10 border border-accent-green/20 text-accent-green',
+                        a.status === 'uploading' && 'bg-primary-600/10 border border-primary-500/20 text-primary-400',
+                        a.status === 'error' && 'bg-accent-red/10 border border-accent-red/20 text-accent-red',
+                        a.status === 'pending' && 'bg-dark-bg border border-dark-border text-gray-400',
+                      )}
+                    >
+                      {a.status === 'uploading' ? <Loader2 size={10} className="animate-spin flex-shrink-0" /> : <Icon size={10} className="flex-shrink-0" />}
+                      <span className="truncate">{a.name}</span>
+                      <span className="text-[9px] opacity-60 flex-shrink-0">{formatFileSize(a.size)}</span>
+                      <button onClick={() => removeAttachment(a.id)} className="p-0.5 rounded hover:bg-white/10 flex-shrink-0"><X size={8} /></button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
             <div className="flex gap-2">
+              {/* Paperclip — file picker */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isBusy}
+                className="btn btn-sm btn-secondary"
+                title="Attach files"
+              >
+                <Paperclip size={16} />
+              </button>
+              <input ref={fileInputRef} type="file" multiple className="hidden" onChange={(e) => { if (e.target.files?.length) { addFiles(e.target.files); e.target.value = '' } }} />
+              {/* Media Library */}
+              <a href="/media" target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-secondary" title="Open Media Library">
+                <FolderOpen size={16} />
+              </a>
+              {/* Mic button */}
               <button
                 className={cn(
                   'btn btn-sm select-none touch-none',
@@ -1671,12 +1865,10 @@ export default function CommandCenterPage() {
                   voiceSettings.voiceMode ? 'btn-secondary ring-2 ring-accent-green/50' :
                   voiceSettings.voiceInputEnabled ? 'btn-secondary ring-2 ring-primary-500/50' : 'btn-secondary'
                 )}
-                // Push-to-talk in Voice Mode: hold to record, release to stop
                 onPointerDown={voiceSettings.voiceMode && !isRecording ? (e) => { e.preventDefault(); startRecording() } : undefined}
                 onPointerUp={voiceSettings.voiceMode && isRecording ? () => stopRecording() : undefined}
                 onPointerLeave={voiceSettings.voiceMode && isRecording ? () => stopRecording() : undefined}
                 onPointerCancel={voiceSettings.voiceMode && isRecording ? () => stopRecording() : undefined}
-                // Click toggle when Voice Mode is off
                 onClick={!voiceSettings.voiceMode ? (isRecording ? stopRecording : startRecording) : undefined}
                 disabled={transcribeMutation.isPending || voiceChatMutation.isPending || voiceState === 'transcribing' || voiceState === 'thinking'}
                 title={voiceSettings.voiceMode ? 'Hold to talk' : (isRecording ? 'Stop recording' : 'Start recording')}
@@ -1693,14 +1885,15 @@ export default function CommandCenterPage() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder={isRecording ? 'Recording...' : 'Type your message...'}
+                onKeyDown={handleKeyPress}
+                onPaste={handlePaste}
+                placeholder={attachments.length > 0 ? 'Add a message...' : (isRecording ? 'Recording...' : 'Type your message...')}
                 className="input flex-1 text-sm"
                 disabled={isBusy || isRecording || voiceChatMutation.isPending}
               />
               <button
                 onClick={() => sendMessage()}
-                disabled={isBusy || !input.trim() || voiceChatMutation.isPending}
+                disabled={isBusy || hasUploading || (!input.trim() && completedAttachments.length === 0) || voiceChatMutation.isPending}
                 className="btn btn-sm btn-primary"
               >
                 {isBusy ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
