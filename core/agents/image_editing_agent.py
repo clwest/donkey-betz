@@ -89,6 +89,7 @@ You have these tools:
 - create_variations: Generate style variations of an existing image
 - recolor: Change colors in an image
 - search_replace: Find and replace objects within an image
+- process_image: General-purpose PIL processing — resize, center_crop, circular_mask, enhance, convert format. Use this for badges, thumbnails, cropping, circular masks, brightness/contrast/sharpness adjustments, and format conversion. Chain multiple operations in one call.
 
 When given a task:
 1. Identify which image the user wants to edit (by UUID, sequential number, or Cloudinary URL)
@@ -102,6 +103,12 @@ Common operations:
 - "Give me variations" / "Different versions" → create_variations
 - "Change the color to..." / "Make it blue" → recolor
 - "Replace the X with Y" → search_replace
+- "Make a badge" / "Crop and resize" / "Circle mask" / "Thumbnail" → process_image
+- "Enhance brightness/contrast" / "Sharpen" → process_image
+
+IMPORTANT: You MUST always use your tools to perform edits. NEVER return scripts or instructions.
+If a task needs multiple steps (e.g. remove background then crop to circle), call the tools in sequence.
+For badge/headshot creation: use remove_background first, then process_image with center_crop + circular_mask + enhance.
 
 You CANNOT create new images, videos, or audio. Only edit existing images.
 If asked to create something new, explain you can only edit existing images."""
@@ -228,6 +235,50 @@ If asked to create something new, explain you can only edit existing images."""
                         }
                     },
                     "required": ["image_id", "search_prompt", "replace_prompt"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "process_image",
+                "description": "General-purpose image processing using PIL: resize, crop, circular mask, enhance, convert format. Use this for badge creation, thumbnails, format conversion, or any local image manipulation that doesn't need AI.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "image_id": {
+                            "type": "string",
+                            "description": "ID of the image (UUID, sequential number, or Cloudinary URL)"
+                        },
+                        "operations": {
+                            "type": "array",
+                            "description": "List of operations to apply in order",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "op": {
+                                        "type": "string",
+                                        "enum": ["resize", "center_crop", "circular_mask", "enhance", "convert"],
+                                        "description": "Operation to perform"
+                                    },
+                                    "width": {"type": "integer", "description": "Target width (for resize/center_crop)"},
+                                    "height": {"type": "integer", "description": "Target height (for resize/center_crop)"},
+                                    "brightness": {"type": "number", "description": "Brightness factor for enhance (1.0 = no change)"},
+                                    "contrast": {"type": "number", "description": "Contrast factor for enhance (1.0 = no change)"},
+                                    "sharpness": {"type": "number", "description": "Sharpness factor for enhance (1.0 = no change)"},
+                                    "format": {"type": "string", "enum": ["PNG", "JPEG", "WEBP"], "description": "Output format for convert"}
+                                },
+                                "required": ["op"]
+                            }
+                        },
+                        "output_format": {
+                            "type": "string",
+                            "enum": ["PNG", "JPEG", "WEBP"],
+                            "description": "Final output format (default: PNG)",
+                            "default": "PNG"
+                        }
+                    },
+                    "required": ["image_id", "operations"]
                 }
             }
         }
@@ -441,5 +492,9 @@ If asked to create something new, explain you can only edit existing images."""
                 'replace_prompt': arguments.get('replace_prompt'),
             }
             return _execute_search_replace(self.user, parameters, session=None)
+
+        elif tool_name == "process_image":
+            from core.views_image_edit import _execute_process_image
+            return _execute_process_image(self.user, arguments)
 
         return super()._execute_tool_call(tool_name, arguments)
