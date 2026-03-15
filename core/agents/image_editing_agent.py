@@ -91,9 +91,10 @@ You have these tools:
 - search_replace: Find and replace objects within an image
 
 When given a task:
-1. Identify which image the user wants to edit (by ID or description)
+1. Identify which image the user wants to edit (by UUID, sequential number, or Cloudinary URL)
 2. Determine which editing operation is needed
 3. Apply the operation with appropriate parameters
+4. For image_id: pass whatever identifier you have — UUID, sequential number, or full URL all work
 
 Common operations:
 - "Make it bigger" / "Higher resolution" → upscale
