@@ -1,6 +1,7 @@
 /**
  * Session 948: Global PA Dock
  * Session 974: Switched to paChat API with conversation_id, added history overlay
+ * Session 1036: Added file upload — paperclip, drag-and-drop, clipboard paste, Media Library link
  *
  * A persistent, dockable chat panel that appears on every page.
  * - Slides in from the right side
@@ -8,6 +9,7 @@
  * - Preserves chat history across page navigations
  * - Aware of current page context
  * - Shares state with CommandCenterPage via paStore
+ * - Supports file attachments (images, videos, documents)
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react'
@@ -16,17 +18,50 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   Bot, User, Send, X, Minus, Maximize2, MessageSquare,
   Loader2, Copy, ThumbsUp, ThumbsDown, Trash2, Clock, Plus, Terminal,
+  Paperclip, Image as ImageIcon, FileText, Film, Music, File, FolderOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { assistantApi } from '@/lib/api'
+import { assistantApi, contentApi } from '@/lib/api'
 import { usePAStore } from '@/stores/paStore'
 import { ChatMarkdown } from './ChatMarkdown'
 import PAConversationSidebar from './PAConversationSidebar'
+
+// ── Attachment types ────────────────────────────────────────────────────────
+
+interface Attachment {
+  id: string
+  file: File
+  name: string
+  size: number
+  type: string // mime type
+  status: 'pending' | 'uploading' | 'done' | 'error'
+  progress: number
+  url?: string       // CDN URL after upload
+  mediaId?: string   // backend record ID
+  error?: string
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function getFileIcon(mimeType: string) {
+  if (mimeType.startsWith('image/')) return ImageIcon
+  if (mimeType.startsWith('video/')) return Film
+  if (mimeType.startsWith('audio/')) return Music
+  if (mimeType.includes('pdf') || mimeType.includes('document') || mimeType.includes('text'))
+    return FileText
+  return File
+}
 
 export default function GlobalPADock() {
   const location = useLocation()
   const inputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const dropZoneRef = useRef<HTMLDivElement>(null)
 
   // PA Store
   const {
@@ -55,6 +90,10 @@ export default function GlobalPADock() {
   const [localInput, setLocalInput] = useState(currentInput)
   const [isPolling, setIsPolling] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Attachment state
+  const [attachments, setAttachments] = useState<Attachment[]>([])
+  const [isDragging, setIsDragging] = useState(false)
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -87,6 +126,163 @@ export default function GlobalPADock() {
     }
   }, [isDockOpen, isDockMinimized, isSidebarOpen])
 
+  // ── File upload logic ───────────────────────────────────────────────────
+
+  const uploadFile = useCallback(async (attachment: Attachment) => {
+    setAttachments(prev =>
+      prev.map(a => a.id === attachment.id ? { ...a, status: 'uploading' as const, progress: 10 } : a)
+    )
+
+    try {
+      const mime = attachment.type
+
+      if (mime.startsWith('image/')) {
+        // Use image upload endpoint
+        const resp = await contentApi.uploadImage(attachment.file, attachment.name)
+        setAttachments(prev =>
+          prev.map(a => a.id === attachment.id ? {
+            ...a,
+            status: 'done' as const,
+            progress: 100,
+            url: resp.data.image?.url,
+            mediaId: resp.data.image?.id,
+          } : a)
+        )
+      } else if (mime.startsWith('video/')) {
+        // Use video upload endpoint
+        const resp = await contentApi.uploadVideo(attachment.file, attachment.name)
+        setAttachments(prev =>
+          prev.map(a => a.id === attachment.id ? {
+            ...a,
+            status: 'done' as const,
+            progress: 100,
+            url: resp.data.video?.url || resp.data.video?.file_path,
+            mediaId: resp.data.video?.id,
+          } : a)
+        )
+      } else {
+        // For other files (audio, documents, etc.) — use image endpoint as generic
+        // or RAG upload for documents. For now, use image endpoint which saves to Cloudinary.
+        const formData = new FormData()
+        formData.append('file', attachment.file)
+        formData.append('title', attachment.name)
+        // Try image upload — it will reject non-image types, so catch and note
+        try {
+          const resp = await contentApi.uploadImage(attachment.file, attachment.name)
+          setAttachments(prev =>
+            prev.map(a => a.id === attachment.id ? {
+              ...a,
+              status: 'done' as const,
+              progress: 100,
+              url: resp.data.image?.url,
+              mediaId: resp.data.image?.id,
+            } : a)
+          )
+        } catch {
+          // Non-image file — mark as pending with note
+          setAttachments(prev =>
+            prev.map(a => a.id === attachment.id ? {
+              ...a,
+              status: 'error' as const,
+              error: 'Use Media Library for this file type',
+            } : a)
+          )
+        }
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Upload failed'
+      setAttachments(prev =>
+        prev.map(a => a.id === attachment.id ? {
+          ...a,
+          status: 'error' as const,
+          error: errorMessage,
+        } : a)
+      )
+    }
+  }, [])
+
+  const addFiles = useCallback((files: FileList | File[]) => {
+    const newAttachments: Attachment[] = Array.from(files).map(file => ({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      file,
+      name: file.name,
+      size: file.size,
+      type: file.type || 'application/octet-stream',
+      status: 'pending' as const,
+      progress: 0,
+    }))
+
+    setAttachments(prev => [...prev, ...newAttachments])
+
+    // Start uploading each file
+    newAttachments.forEach(a => uploadFile(a))
+  }, [uploadFile])
+
+  const removeAttachment = useCallback((id: string) => {
+    setAttachments(prev => prev.filter(a => a.id !== id))
+  }, [])
+
+  // ── Drag and drop ─────────────────────────────────────────────────────
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    // Only set false if leaving the drop zone entirely
+    if (dropZoneRef.current && !dropZoneRef.current.contains(e.relatedTarget as Node)) {
+      setIsDragging(false)
+    }
+  }, [])
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+
+    if (e.dataTransfer.files.length > 0) {
+      addFiles(e.dataTransfer.files)
+    }
+  }, [addFiles])
+
+  // ── Clipboard paste ───────────────────────────────────────────────────
+
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+
+    const imageFiles: File[] = []
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile()
+        if (file) {
+          // Pasted images get a timestamp name via Object.defineProperty
+          const ext = item.type.split('/')[1] || 'png'
+          Object.defineProperty(file, 'name', {
+            writable: true,
+            value: `pasted-image-${Date.now()}.${ext}`,
+          })
+          imageFiles.push(file)
+        }
+      }
+    }
+
+    if (imageFiles.length > 0) {
+      e.preventDefault() // Don't paste the image data as text
+      addFiles(imageFiles)
+    }
+  }, [addFiles])
+
   // Live sync: poll server for new messages from Claude Code or other clients
   useQuery({
     queryKey: ['pa-dock-sync', activeConversationId],
@@ -107,9 +303,12 @@ export default function GlobalPADock() {
 
   // Session 974b: Chat mutation — dispatches Celery task, then polls for result
   const chatMutation = useMutation({
-    mutationFn: (message: string) =>
+    mutationFn: ({ message, attachmentMeta }: { message: string; attachmentMeta?: { url: string; name: string; type: string; mediaId?: string }[] }) =>
       assistantApi.paChat(message, {
-        context: { current_page: location.pathname },
+        context: {
+          current_page: location.pathname,
+          ...(attachmentMeta && attachmentMeta.length > 0 ? { attachments: attachmentMeta } : {}),
+        },
         conversation_id: activeConversationId || undefined,
         source: 'web-dock',
       }),
@@ -171,17 +370,44 @@ export default function GlobalPADock() {
   })
 
   const isBusy = chatMutation.isPending || isPolling
+  const hasUploading = attachments.some(a => a.status === 'uploading')
+  const completedAttachments = attachments.filter(a => a.status === 'done')
 
   const sendMessage = useCallback(() => {
-    if (!localInput.trim() || isBusy) return
+    const hasText = localInput.trim().length > 0
+    const hasAttached = completedAttachments.length > 0
+    if ((!hasText && !hasAttached) || isBusy || hasUploading) return
+
+    // Build message text with attachment references
+    let messageText = localInput.trim()
+    if (completedAttachments.length > 0 && !messageText) {
+      messageText = `Shared ${completedAttachments.length} file${completedAttachments.length > 1 ? 's' : ''}`
+    }
+
+    // Build attachment metadata for context
+    const attachmentMeta = completedAttachments.map(a => ({
+      url: a.url || '',
+      name: a.name,
+      type: a.type,
+      mediaId: a.mediaId,
+    }))
+
+    // Show attachments in user message
+    const displayParts = [messageText]
+    if (completedAttachments.length > 0) {
+      displayParts.push(
+        completedAttachments.map(a => `[${a.name}](${a.url})`).join('\n')
+      )
+    }
 
     addMessage({
       role: 'user',
-      content: localInput,
+      content: displayParts.join('\n\n'),
     })
-    chatMutation.mutate(localInput)
+    chatMutation.mutate({ message: messageText, attachmentMeta: attachmentMeta.length > 0 ? attachmentMeta : undefined })
     setLocalInput('')
-  }, [localInput, isBusy, chatMutation, addMessage])
+    setAttachments([])
+  }, [localInput, isBusy, hasUploading, completedAttachments, chatMutation, addMessage])
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -246,7 +472,28 @@ export default function GlobalPADock() {
 
   // Full dock
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-96 h-[500px] bg-dark-card border border-dark-border rounded-xl shadow-2xl flex flex-col overflow-hidden">
+    <div
+      ref={dropZoneRef}
+      className={cn(
+        'fixed bottom-6 right-6 z-50 w-96 h-[500px] bg-dark-card border rounded-xl shadow-2xl flex flex-col overflow-hidden transition-colors',
+        isDragging ? 'border-primary-400 bg-primary-900/10' : 'border-dark-border'
+      )}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {/* Drag overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-dark-card/90 border-2 border-dashed border-primary-400 rounded-xl">
+          <div className="text-center">
+            <Paperclip size={32} className="text-primary-400 mx-auto mb-2" />
+            <p className="text-sm font-medium text-primary-400">Drop files here</p>
+            <p className="text-xs text-gray-500 mt-1">Images, videos, documents</p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b border-dark-border flex-shrink-0">
         <div className="flex items-center gap-2">
@@ -317,6 +564,7 @@ export default function GlobalPADock() {
                 <Bot size={32} className="mb-2 opacity-50" />
                 <p className="text-sm mb-1">How can I help?</p>
                 <p className="text-xs text-gray-500">I'm available on any page</p>
+                <p className="text-xs text-gray-600 mt-2">Drag & drop files or paste images</p>
               </div>
             ) : (
               messages.map((message) => (
@@ -437,23 +685,96 @@ export default function GlobalPADock() {
         )}
       </div>
 
-      {/* Input */}
+      {/* Input area */}
       {!isSidebarOpen && (
-        <div className="border-t border-dark-border p-3 flex-shrink-0">
-          <div className="flex gap-2">
+        <div className="border-t border-dark-border flex-shrink-0">
+          {/* Attachment chips */}
+          {attachments.length > 0 && (
+            <div className="px-3 pt-2 flex flex-wrap gap-1.5">
+              {attachments.map(a => {
+                const Icon = getFileIcon(a.type)
+                return (
+                  <div
+                    key={a.id}
+                    className={cn(
+                      'flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-md text-[11px] max-w-[180px]',
+                      a.status === 'done' && 'bg-accent-green/10 border border-accent-green/20 text-accent-green',
+                      a.status === 'uploading' && 'bg-primary-600/10 border border-primary-500/20 text-primary-400',
+                      a.status === 'error' && 'bg-accent-red/10 border border-accent-red/20 text-accent-red',
+                      a.status === 'pending' && 'bg-dark-bg border border-dark-border text-gray-400',
+                    )}
+                  >
+                    {a.status === 'uploading' ? (
+                      <Loader2 size={10} className="animate-spin flex-shrink-0" />
+                    ) : (
+                      <Icon size={10} className="flex-shrink-0" />
+                    )}
+                    <span className="truncate">{a.name}</span>
+                    <span className="text-[9px] opacity-60 flex-shrink-0">{formatFileSize(a.size)}</span>
+                    <button
+                      onClick={() => removeAttachment(a.id)}
+                      className="p-0.5 rounded hover:bg-white/10 flex-shrink-0"
+                    >
+                      <X size={8} />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Composer row */}
+          <div className="p-3 flex items-center gap-2">
+            {/* Paperclip — file picker */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isBusy}
+              className="p-1.5 rounded hover:bg-dark-border text-gray-400 hover:text-primary-400 transition-colors disabled:opacity-40"
+              title="Attach files"
+            >
+              <Paperclip size={16} />
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                  addFiles(e.target.files)
+                  e.target.value = '' // reset so same file can be re-selected
+                }
+              }}
+            />
+
+            {/* Media Library link */}
+            <a
+              href="/media"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1.5 rounded hover:bg-dark-border text-gray-400 hover:text-primary-400 transition-colors"
+              title="Open Media Library"
+            >
+              <FolderOpen size={16} />
+            </a>
+
+            {/* Text input */}
             <input
               ref={inputRef}
               type="text"
               value={localInput}
               onChange={(e) => setLocalInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Ask anything..."
+              onKeyDown={handleKeyPress}
+              onPaste={handlePaste}
+              placeholder={attachments.length > 0 ? 'Add a message...' : 'Ask anything...'}
               className="input flex-1 text-sm py-2"
               disabled={isBusy}
             />
+
+            {/* Send button */}
             <button
               onClick={sendMessage}
-              disabled={isBusy || !localInput.trim()}
+              disabled={isBusy || hasUploading || (!localInput.trim() && completedAttachments.length === 0)}
               className="btn btn-sm btn-primary px-3"
             >
               {isBusy ? (
