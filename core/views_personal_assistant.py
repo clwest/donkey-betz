@@ -130,13 +130,45 @@ def chat_with_assistant(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_assistant_context(request):
-    """Get the current personalized context for the user."""
-    try:
-        # Create assistant fresh each time (contains unpickleable objects like OpenAI client)
-        assistant = PersonalAIAssistant(request.user)
+    """Get the current personalized context for the user.
 
-        # Get personalized context
-        context = assistant.get_personalized_context()
+    Session 1100+: Added 60s cache per user to prevent repeated heavy DB queries.
+    The get_personalized_context() call does multiple COUNT(*) and aggregate
+    queries on UserEmbedding/JobApplication which can be slow under load.
+    Also added a 15s timeout to prevent the endpoint from hanging indefinitely.
+    """
+    import hashlib
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
+
+    user_id = request.user.id
+    cache_key = f"pa_context:{hashlib.md5(str(user_id).encode()).hexdigest()}"
+
+    # Try cache first (60s TTL)
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response({'success': True, 'context': cached})
+
+    try:
+        def _build_context():
+            from django.db import close_old_connections
+            close_old_connections()
+            assistant = PersonalAIAssistant(request.user)
+            return assistant.get_personalized_context()
+
+        # Run with 15s timeout to prevent indefinite hangs
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(_build_context)
+            try:
+                context = future.result(timeout=15)
+            except FuturesTimeout:
+                logger.warning("get_assistant_context timed out after 15s for user %s", user_id)
+                return Response({
+                    'success': False,
+                    'error': 'Context assembly timed out',
+                }, status=504)
+
+        # Cache for 60 seconds
+        cache.set(cache_key, context, 60)
 
         return Response({
             'success': True,
