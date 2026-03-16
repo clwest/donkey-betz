@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import {
   FolderOpen,
   RefreshCw,
@@ -660,6 +661,19 @@ export default function WorkspacePage() {
 
   const activeWorkspace = activeWorkspaceData?.data as Workspace | undefined
   const workspaces = (workspacesData?.data?.results || workspacesData?.data || []) as Workspace[]
+
+  // Sync active workspace to global store (used by PA dock for chat context)
+  const setGlobalWorkspace = useWorkspaceStore(s => s.setActiveWorkspace)
+  useEffect(() => {
+    if (activeWorkspace) {
+      setGlobalWorkspace({
+        id: activeWorkspace.id,
+        name: activeWorkspace.name,
+        workspace_type: activeWorkspace.workspace_type,
+        git_remote_url: activeWorkspace.git_remote_url,
+      })
+    }
+  }, [activeWorkspace?.id, activeWorkspace?.name, setGlobalWorkspace])
 
   // Mutations
   const activateMutation = useMutation({
