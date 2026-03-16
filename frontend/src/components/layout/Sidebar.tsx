@@ -59,15 +59,12 @@ const navItems = [
   // Session 931: Command Center - Unified AI interface + controls
   { path: '/', label: 'Command Center', icon: Command },
 
-  // Session 1035: Platform dashboard (system-wide tabs) + Workspace (project-specific)
-  { path: '/platform', label: 'Platform', icon: LayoutGrid },
+  // Unified Workspace (merged Platform + Workspace)
   { path: '/workspace', label: 'Workspace', icon: FolderCog },
+
+  // Studios
   { path: '/image-studio', label: 'Image Studio', icon: Palette },
   { path: '/video-studio', label: 'Video Studio', icon: Film },
-
-  // Session 1067: Full-page boardroom & governance
-  { path: '/boardroom', label: 'Boardroom', icon: Gavel },
-  { path: '/governance', label: 'Governance', icon: ShieldCheck },
 
   // Session 1076: Executor runs
   { path: '/executor', label: 'Executor', icon: Play },
@@ -77,18 +74,14 @@ const navItems = [
   { path: '/stocks', label: 'Stock Intelligence', icon: TrendingUp },
   { path: '/government', label: 'Government', icon: Landmark },
 
-  // Domain Features - Session 899/997B: Betting re-enabled
+  // Domain Features
   { path: '/betting', label: 'Betting', icon: DollarSign },
-  // { path: '/legal', label: 'Legal', icon: Scale },
-  // { path: '/portfolio', label: 'Portfolio', icon: DollarSign },
 
   // Documents & Reference
-  { path: '/deliverables', label: 'Deliverables', icon: Package },
   { path: '/documents', label: 'Documents', icon: FileUp },
   { path: '/docs-index', label: 'Docs Index', icon: Book },
   { path: '/how-it-works', label: 'How it Works', icon: HelpCircle },
   { path: '/mythology-lab', label: 'Mythology Lab', icon: Beaker },
-  // Session 872: Removed Voices - available in Workspace tab
 
   // Admin & Settings
   { path: '/admin', label: 'Admin', icon: Shield },
