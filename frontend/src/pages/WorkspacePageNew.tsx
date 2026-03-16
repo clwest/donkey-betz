@@ -27,6 +27,11 @@ import {
   Sparkles,
   Package,
   Target,
+  Palette,
+  ClipboardList,
+  Server,
+  Radio,
+  BookOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
@@ -47,18 +52,32 @@ import {
   LaunchpadTab,
   DeliverablesTab,
   InitiativesTab,
+  ContentStudioTab,
+  BoardroomTab,
+  SystemTab,
+  DataIntelTab,
+  KnowledgeTab,
 } from './workspace/tabs'
 import { Toast } from './workspace/components'
 import type { Workspace, WorkspaceTab, ActionResult } from './workspace/types'
 import { PLATFORM_TABS, LEGACY_TO_PLATFORM } from './workspace/types'
 import { useWorkspaceTabTracking } from '@/hooks/usePageTracking'
 
-// Workspace tabs — centralized hub for all project work
+// Unified workspace tabs — all platform + workspace capabilities in one view
 const workspaceTabs = [
+  // Core project management
   { id: 'overview' as WorkspaceTab, label: 'Overview', icon: LayoutDashboard },
   { id: 'launchpad' as WorkspaceTab, label: 'Launchpad', icon: Sparkles },
   { id: 'deliverables' as WorkspaceTab, label: 'Deliverables', icon: Package },
   { id: 'initiatives' as WorkspaceTab, label: 'Initiatives', icon: Target },
+  // Content & governance (from Platform)
+  { id: 'content' as WorkspaceTab, label: 'Content', icon: Palette },
+  { id: 'boardroom' as WorkspaceTab, label: 'Boardroom', icon: ClipboardList },
+  // System & intelligence (from Platform)
+  { id: 'system' as WorkspaceTab, label: 'System', icon: Server },
+  { id: 'dataintel' as WorkspaceTab, label: 'Data & Intel', icon: Radio },
+  { id: 'knowledge' as WorkspaceTab, label: 'Knowledge', icon: BookOpen },
+  // Developer tools
   { id: 'files' as WorkspaceTab, label: 'Files', icon: FolderTree },
   { id: 'operations' as WorkspaceTab, label: 'Operations', icon: History },
   { id: 'git' as WorkspaceTab, label: 'Git', icon: GitBranch },
@@ -901,6 +920,26 @@ export default function WorkspacePage() {
 
           {activeTab === 'initiatives' && (
             <InitiativesTab />
+          )}
+
+          {activeTab === 'content' && (
+            <ContentStudioTab />
+          )}
+
+          {activeTab === 'boardroom' && (
+            <BoardroomTab />
+          )}
+
+          {activeTab === 'system' && (
+            <SystemTab />
+          )}
+
+          {activeTab === 'dataintel' && (
+            <DataIntelTab />
+          )}
+
+          {activeTab === 'knowledge' && (
+            <KnowledgeTab />
           )}
         </>
       )}
