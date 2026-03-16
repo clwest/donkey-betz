@@ -3,6 +3,7 @@
 // ChatGPT feedback: "Build 'Initiative Dashboard' View - One screen showing all initiatives"
 // Shows: Initiative name, status, owner, progress bar (Stage 1-5), health indicator
 import { useState } from 'react'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   FolderKanban,
@@ -2295,10 +2296,14 @@ export function InitiativesTab() {
     isLoading,
     isError,
     refetch,
+  const activeWsId = useWorkspaceStore(s => s.activeWorkspace?.id)
+
   } = useQuery({
-    queryKey: ['initiatives'],
+    queryKey: ['initiatives', activeWsId],
     queryFn: async () => {
-      const res = await platformApi.initiatives()
+      const res = await platformApi.initiatives(
+        activeWsId ? { workspace: activeWsId } : undefined
+      )
       return res.data
     },
     refetchInterval: 30000, // Refresh every 30 seconds
