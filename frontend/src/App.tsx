@@ -108,11 +108,11 @@ function App() {
         <Route path="government" element={<GovernmentPage />} />
         <Route path="admin" element={<AdminPage />} />
         <Route path="workspace" element={<WorkspacePage />} />
-        <Route path="platform" element={<PlatformPage />} />
+        <Route path="platform" element={<Navigate to="/workspace" replace />} />
 
-        {/* Session 1067: Full-page boardroom + governance */}
-        <Route path="boardroom" element={<BoardroomPage />} />
-        <Route path="governance" element={<GovernancePage />} />
+        {/* Session 1067: Boardroom + governance now in Workspace tabs */}
+        <Route path="boardroom" element={<Navigate to="/workspace?tab=boardroom" replace />} />
+        <Route path="governance" element={<Navigate to="/workspace?tab=boardroom" replace />} />
 
         {/* Standalone pages kept — distinct UI not duplicated in workspace */}
         <Route path="advisors" element={<AdvisorsPage />} />
