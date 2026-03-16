@@ -893,6 +893,7 @@ export default function CommandCenterPage() {
         context: attachmentMeta && attachmentMeta.length > 0 ? { attachments: attachmentMeta } : undefined,
         conversation_id: activeConversationId || undefined,
         source: 'web',
+        workspace_id: useWorkspaceStore.getState().activeWorkspace?.id || undefined,
       }),
     onSuccess: (response) => {
       const taskId = response.data.task_id
