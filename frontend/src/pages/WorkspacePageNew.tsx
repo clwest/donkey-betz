@@ -60,7 +60,7 @@ import {
 } from './workspace/tabs'
 import { Toast } from './workspace/components'
 import type { Workspace, WorkspaceTab, ActionResult } from './workspace/types'
-import { PLATFORM_TABS, LEGACY_TO_PLATFORM } from './workspace/types'
+// PLATFORM_TABS/LEGACY_TO_PLATFORM no longer needed — platform merged into workspace
 import { useWorkspaceTabTracking } from '@/hooks/usePageTracking'
 
 // Unified workspace tabs — all platform + workspace capabilities in one view
@@ -619,22 +619,30 @@ export default function WorkspacePage() {
   const navigate = useNavigate()
   const rawUrlTab = searchParams.get('tab') || ''
 
-  // Session 1035: Redirect platform tabs to /platform
+  // Handle legacy tab names that mapped to old platform tabs
+  // These are now handled directly in workspace (platform merged in)
   useEffect(() => {
     if (rawUrlTab) {
-      // Direct platform tab
-      if (PLATFORM_TABS.has(rawUrlTab)) {
-        navigate(`/platform?tab=${rawUrlTab}`, { replace: true })
-        return
+      const legacyMapping: Record<string, string> = {
+        infrastructure: 'system',
+        orchestration: 'system',
+        datasources: 'dataintel',
+        intelligence: 'dataintel',
+        governance: 'boardroom',
+        consciousness: 'knowledge',
+        conceptforge: 'content',
+        career: 'content',
+        voices: 'content',
+        command: 'overview',
+        evaluation: 'initiatives',
+        learning: 'knowledge',
       }
-      // Legacy tab that maps to a platform tab
-      const legacyPlatform = LEGACY_TO_PLATFORM[rawUrlTab]
-      if (legacyPlatform) {
-        navigate(`/platform?tab=${legacyPlatform}`, { replace: true })
-        return
+      const mapped = legacyMapping[rawUrlTab]
+      if (mapped && rawUrlTab !== mapped) {
+        setSearchParams({ tab: mapped }, { replace: true })
       }
     }
-  }, [rawUrlTab, navigate])
+  }, [rawUrlTab, setSearchParams])
 
   // Determine active workspace tab
   const initialTab: WorkspaceTab = (rawUrlTab && validWorkspaceTabs.has(rawUrlTab as WorkspaceTab))
