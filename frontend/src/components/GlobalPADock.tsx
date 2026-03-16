@@ -317,6 +317,7 @@ export default function GlobalPADock() {
         },
         conversation_id: activeConversationId || undefined,
         source: 'web-dock',
+        workspace_id: useWorkspaceStore.getState().activeWorkspace?.id || undefined,
       }),
     onSuccess: (response) => {
       const taskId = response.data.task_id
