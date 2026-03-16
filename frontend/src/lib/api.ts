@@ -3542,7 +3542,7 @@ export const platformApi = {
   // Session 847: Initiative Pipeline Dashboard
   // Session 872: Fixed paths from /v1/initiatives/ to /initiatives/ (backend migrated in Session 871)
   // Session 902: Increased limit to 500 to ensure all initiatives (including completed) are returned
-  initiatives: () =>
+  initiatives: (params?: { workspace?: string }) =>
     api.get<{
       success: boolean
       count: number
@@ -3562,7 +3562,7 @@ export const platformApi = {
         created_at: string
         updated_at: string
       }>
-    }>('/initiatives/?limit=500'),
+    }>('/initiatives/', { params: { limit: 500, ...params } }),
 
   // Session 847: Auto-populate initiatives from existing deliverables
   populateInitiatives: () =>
