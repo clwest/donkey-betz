@@ -1356,6 +1356,11 @@ def initiatives_api(request):
             Prefetch('source_decisions'),
         )
 
+        # Workspace filter
+        workspace_filter = request.GET.get('workspace')
+        if workspace_filter:
+            initiatives = initiatives.filter(target_workspace_id=workspace_filter)
+
         if status_filter:
             initiatives = initiatives.filter(status=status_filter)
         if program_filter:
