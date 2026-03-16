@@ -96,6 +96,21 @@ def vip_invite_exchange(request):
 
     logger.info("VIP invite redeemed: invite=%s user=%s label=%s", invite.id, username, invite.label)
 
+    # Record operation
+    try:
+        from core.services.operation_recorder import record_op
+        record_op(
+            op_type='vip_invite_exchange',
+            title=f"VIP invite redeemed: {invite.label or 'unlabeled'}",
+            description=f"User {username} created, role: vip_demo_viewer",
+            actor_type='user',
+            actor_id=username,
+            entity_type='vip_invite',
+            entity_id=str(invite.id),
+        )
+    except Exception:
+        pass
+
     return Response({
         'api_key': api_token.key,
         'username': username,
