@@ -2291,13 +2291,13 @@ export function InitiativesTab() {
   // Session 904: Expanded stages for stage view
   const [expandedStages, setExpandedStages] = useState<Record<number, boolean>>({1: true, 2: true, 3: true, 4: true, 5: true})
 
+  const activeWsId = useWorkspaceStore(s => s.activeWorkspace?.id)
+
   const {
     data,
     isLoading,
     isError,
     refetch,
-  const activeWsId = useWorkspaceStore(s => s.activeWorkspace?.id)
-
   } = useQuery({
     queryKey: ['initiatives', activeWsId],
     queryFn: async () => {

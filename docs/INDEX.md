@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-03-16 07:25
+**Generated:** 2026-03-16 09:59
 **Current Session:** 1077
 **Total Documentation:** 1820 files | 622,504 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,201 |
+| Total cross-references | 2,202 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/capabilities/07_Neural_Visualization/README.md` | 60 | 🎭 NEURAL ORCHESTRA VISUALIZATION - Living AI Symph |
+| `docs/archive/experimental/the_future_of_ai/README.md` | 60 | 🚀 The Future of AI: Physical Products Documentatio |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -155,7 +155,7 @@
 | [FRONTEND_BACKEND_DATA_FLOW_AUDIT.md](FRONTEND_BACKEND_DATA_FLOW_AUDIT.md) | 402 | 2026-02-15 |
 | [FRONTEND_INTEGRATION_NOTE.md](FRONTEND_INTEGRATION_NOTE.md) | 128 | 2026-01-21 |
 | [GOLDEN_GOOSE_STRATEGY.md](GOLDEN_GOOSE_STRATEGY.md) | 751 | 2026-01-21 |
-| [INDEX.md](INDEX.md) | 361 | 2026-03-13 |
+| [INDEX.md](INDEX.md) | 361 | 2026-03-16 |
 | [INTELLIGENCE_SYSTEMS.md](INTELLIGENCE_SYSTEMS.md) | 530 | 2026-01-21 |
 | [KNOWLEDGE_PIPELINE.md](KNOWLEDGE_PIPELINE.md) | 475 | 2026-01-21 |
 | [LEGAL_ASSISTANT.md](LEGAL_ASSISTANT.md) | 442 | 2026-01-21 |
@@ -217,7 +217,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 361 | 2026-03-13 17:36 |
+| INDEX.md | docs | 361 | 2026-03-16 07:26 |
 | remote-code-worker-contract.md | designs | 411 | 2026-03-10 16:25 |
 | personal-assistant.md | topics | 139 | 2026-03-05 07:03 |
 | video-upload.md | topics | 101 | 2026-03-04 13:08 |
