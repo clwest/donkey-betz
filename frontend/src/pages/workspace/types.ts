@@ -3,16 +3,21 @@
 // Session 971b: Updated for 9-tab model (from 18)
 // Session 1035: Split into workspace-only + platform tabs
 
-// Workspace-only tab IDs (5 tabs)
+// Unified workspace tab IDs (all platform + workspace tabs merged)
 export type WorkspaceTab =
   | 'overview'
+  | 'launchpad'
+  | 'deliverables'
+  | 'initiatives'
+  | 'content'
+  | 'boardroom'
+  | 'system'
+  | 'dataintel'
+  | 'knowledge'
   | 'files'
   | 'operations'
   | 'git'
   | 'triggers'
-  | 'launchpad'
-  | 'deliverables'
-  | 'initiatives'
 
 // Platform tab IDs (8 tabs — moved from workspace)
 export type PlatformTab =
