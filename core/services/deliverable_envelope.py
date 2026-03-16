@@ -210,6 +210,14 @@ class DeliverableEnvelopeService:
 
             # Session 843: Get trace context from kwargs or result (moved earlier for citation gate)
 
+            # Get active workspace for linking
+            active_workspace = None
+            try:
+                from core.models_skin_layer import ProjectWorkspace
+                active_workspace = ProjectWorkspace.objects.filter(is_active=True).first()
+            except Exception:
+                pass
+
             # Create the deliverable
             deliverable = Deliverable.objects.create(
                 title=title,
@@ -220,6 +228,7 @@ class DeliverableEnvelopeService:
                 agent_name=agent_name,
                 agent_task=task,
                 user=user,
+                workspace=active_workspace,
                 content=content,
                 content_format=content_format,
                 preview_content=self._generate_preview(content),

@@ -32,6 +32,7 @@ import {
 import { cn } from '@/lib/cn'
 import { deliverablesApi } from '@/lib/api'
 import { ErrorState } from '@/components/ErrorState'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 
 // ============ Types ============
 
@@ -165,9 +166,16 @@ export function DeliverablesTab() {
     queryFn: () => deliverablesApi.types().then(r => r.data),
   })
 
+  const activeWsId = useWorkspaceStore(s => s.activeWorkspace?.id)
+
   const listQuery = useQuery({
-    queryKey: ['deliverables-list', page, filters],
-    queryFn: () => deliverablesApi.list({ ...filters, page, per_page: 20 }).then(r => r.data),
+    queryKey: ['deliverables-list', page, filters, activeWsId],
+    queryFn: () => deliverablesApi.list({
+      ...filters,
+      page,
+      per_page: 20,
+      ...(activeWsId ? { workspace: activeWsId } : {}),
+    }).then(r => r.data),
   })
 
   const detailQuery = useQuery({

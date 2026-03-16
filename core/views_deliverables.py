@@ -75,6 +75,11 @@ def list_deliverables(request):
                 Q(user=request.user) | Q(user__isnull=True)
             )
 
+        # Filter by workspace if specified
+        workspace_id = request.GET.get('workspace')
+        if workspace_id:
+            queryset = queryset.filter(workspace_id=workspace_id)
+
         # Apply filters
         deliverable_type = request.GET.get('type')
         if deliverable_type:
