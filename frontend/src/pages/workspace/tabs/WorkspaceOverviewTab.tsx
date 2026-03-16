@@ -35,25 +35,31 @@ export function WorkspaceOverviewTab({
   onScan,
   isScanPending,
 }: WorkspaceOverviewTabProps) {
-  // Workspace stats
-  const { data: statsData, isLoading: loadingStats } = useQuery({
-    queryKey: ['workspace-stats', activeWorkspace.id],
+  // Workspace detail (includes scan context with files/LOC)
+  const { data: detailData, isLoading: loadingStats } = useQuery({
+    queryKey: ['workspace-detail', activeWorkspace.id],
     queryFn: async () => {
-      const res = await workspaceApi.stats(activeWorkspace.id)
+      const res = await workspaceApi.detail(activeWorkspace.id)
       return res.data
     },
   })
 
-  // Recent operations
+  // Recent operations — filtered by workspace ID
   const { data: opsData, isLoading: loadingOps } = useQuery({
-    queryKey: ['workspace-operations-recent'],
+    queryKey: ['workspace-operations-recent', activeWorkspace.id],
     queryFn: async () => {
-      const res = await workspaceOperationsApi.list()
+      const res = await workspaceOperationsApi.list({ workspace: activeWorkspace.id } as any)
       return res.data
     },
   })
 
-  const stats = statsData as any
+  // Build stats from workspace detail (scan context)
+  const detail = detailData as any
+  const stats = detail?.context ? {
+    total_files: detail.context.total_files,
+    total_lines_of_code: detail.context.total_lines_of_code,
+    operations_count: detail.total_operations || activeWorkspace.stats?.operations_count,
+  } : activeWorkspace.stats || null
   const operations = ((opsData as any)?.results || opsData || []).slice(0, 10)
 
   // Extract tech stack info
