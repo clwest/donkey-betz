@@ -60,7 +60,11 @@ export function GitTab({ activeWorkspace, showSuccess, showError }: GitTabProps)
 
   const git = gitData as any
 
-  if (!activeWorkspace.is_git_repo) {
+  const isGitRepo = activeWorkspace.is_git_repo ||
+    activeWorkspace.workspace_type === 'git_remote' ||
+    !!activeWorkspace.git_remote_url
+
+  if (!isGitRepo) {
     return (
       <div className="card text-center py-12">
         <GitBranch size={48} className="mx-auto text-gray-500 mb-4" />

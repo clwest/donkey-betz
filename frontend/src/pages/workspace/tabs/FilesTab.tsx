@@ -160,8 +160,12 @@ export function FilesTab({ activeWorkspaceId }: FilesTabProps) {
     )
   }
 
-  const files: FileNode[] = filesData?.files || []
-  const stats = statsData || { total_files: 0, total_lines: 0, languages: {} }
+  const files: FileNode[] = filesData?.tree || filesData?.files || []
+  const stats = filesData ? {
+    total_files: filesData.total_files || 0,
+    total_lines: 0,
+    languages: {},
+  } : { total_files: 0, total_lines: 0, languages: {} }
 
   const toggleDir = (path: string) => {
     setExpandedDirs((prev) => {
