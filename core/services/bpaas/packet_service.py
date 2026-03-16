@@ -162,6 +162,39 @@ def create_project_from_packet(workspace, packet: dict, created_by=None) -> dict
         name, len(repos_created),
     )
 
+    # Record operations for each BPaaS step
+    try:
+        from core.services.operation_recorder import record_op
+        ws_id = str(workspace.id)
+        record_op(
+            workspace_id=ws_id, op_type='bpaas_project_create',
+            title=f"BPaaS: Created project '{name}'",
+            description=f"{len(repos_created)} repos, preview env, magic link",
+            actor_type='system', actor_id='BPaaS',
+            entity_type='workspace_project', entity_id=str(project.id),
+        )
+        for repo in repos_created:
+            record_op(
+                workspace_id=ws_id, op_type='bpaas_project_create',
+                title=f"BPaaS: Created repo '{repo.name}' ({repo.type})",
+                actor_type='system', actor_id='BPaaS',
+                entity_type='project_repo', entity_id=str(repo.id),
+            )
+        record_op(
+            workspace_id=ws_id, op_type='preview_env_create',
+            title=f"Preview: Created '{preview_env.name}'",
+            actor_type='system', actor_id='BPaaS',
+            entity_type='preview_environment', entity_id=str(preview_env.id),
+        )
+        record_op(
+            workspace_id=ws_id, op_type='magic_link_create',
+            title=f"Magic link: '{magic_link.label}'",
+            actor_type='system', actor_id='BPaaS',
+            entity_type='magic_link', entity_id=str(magic_link.id),
+        )
+    except Exception:
+        pass
+
     return result
 
 

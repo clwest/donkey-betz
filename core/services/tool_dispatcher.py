@@ -561,6 +561,22 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
             # Track tool call metrics in Redis
             _record_tool_metric(tool_name, action, 'ok', latency_ms)
 
+            # Record as workspace operation (fire-and-forget)
+            try:
+                from core.services.operation_recorder import record_op
+                record_op(
+                    op_type='tool_call',
+                    title=f"{tool_name}.{action}",
+                    actor_type='system',
+                    actor_id='PersonalAssistant',
+                    success=True,
+                    execution_time_ms=latency_ms,
+                    metadata={'tool': tool_name, 'action': action},
+                    correlation_id=trace_id,
+                )
+            except Exception:
+                pass
+
             return ToolResult(
                 ok=True,
                 tool=tool_name,

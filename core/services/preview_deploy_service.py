@@ -296,6 +296,26 @@ def deploy_preview_environment(preview_env: PreviewEnvironment, deployment: Prev
         deployment.id, deployment.status, repos.count(),
     )
 
+    # Record deploy operation
+    try:
+        from core.services.operation_recorder import record_op
+        ws_id = str(preview_env.project.workspace_id)
+        op_type = 'deploy_succeeded' if all_succeeded else 'deploy_failed'
+        record_op(
+            workspace_id=ws_id,
+            op_type=op_type,
+            title=f"Deploy: {preview_env.name} ({deployment.status})",
+            description=f"{repos.count()} repos deployed",
+            actor_type='system',
+            actor_id='PreviewDeployService',
+            success=all_succeeded,
+            entity_type='preview_deployment',
+            entity_id=str(deployment.id),
+            correlation_id=str(deployment.id),
+        )
+    except Exception:
+        pass
+
     return deployment
 
 

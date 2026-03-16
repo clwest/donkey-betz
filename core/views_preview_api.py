@@ -528,6 +528,21 @@ def review_feedback(request, token):
         link.label, feedback.severity, feedback.message[:80],
     )
 
+    # Record operation
+    try:
+        from core.services.operation_recorder import record_op
+        record_op(
+            workspace_id=str(link.preview_env.project.workspace_id),
+            op_type='feedback_submit',
+            title=f"Feedback [{feedback.severity}]: {feedback.message[:60]}",
+            actor_type='user',
+            actor_id=feedback.reporter_name or 'anonymous',
+            entity_type='feedback_item',
+            entity_id=str(feedback.id),
+        )
+    except Exception:
+        pass
+
     return Response(
         {"id": str(feedback.id), "status": "submitted"},
         status=status.HTTP_201_CREATED,
