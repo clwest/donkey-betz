@@ -11,8 +11,10 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
-  assistantApi, contentApi, userLearningApi, bodyApi, humanApi, homeApi, agentsApi, orchestrationApi
+  assistantApi, contentApi, userLearningApi, bodyApi, humanApi, homeApi, agentsApi, orchestrationApi,
+  workspaceApi,
 } from '@/lib/api'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useUnifiedStore } from '@/stores/unifiedStore'
 import { usePAStore } from '@/stores/paStore'
@@ -2010,7 +2012,9 @@ export default function CommandCenterPage() {
                       <ExternalLink size={14} className="text-primary-400" />
                       <h3 className="font-medium text-sm">Workspace</h3>
                     </div>
-                    <div className="grid grid-cols-2 gap-1.5">
+                    {/* Workspace selector */}
+                    <WorkspaceQuickSelect />
+                    <div className="grid grid-cols-2 gap-1.5 mt-2">
                       <button
                         onClick={() => goToWorkspace('initiatives')}
                         className="flex items-center gap-2 p-2 rounded-lg bg-dark-bg hover:bg-dark-border transition-colors text-left"
@@ -2311,6 +2315,68 @@ export default function CommandCenterPage() {
       {/* Toast */}
       {actionResult && (
         <Toast result={actionResult} onClose={() => setActionResult(null)} />
+      )}
+    </div>
+  )
+}
+
+
+// ── Workspace Quick Select (sidebar widget) ──────────────────────────────
+
+function WorkspaceQuickSelect() {
+  const activeWs = useWorkspaceStore(s => s.activeWorkspace)
+  const setActiveWs = useWorkspaceStore(s => s.setActiveWorkspace)
+  const [isOpen, setIsOpen] = useState(false)
+
+  const { data } = useQuery({
+    queryKey: ['workspaces-cc-select'],
+    queryFn: () => workspaceApi.list().then(r => r.data),
+    enabled: isOpen,
+  })
+
+  const workspaces = (data?.results || data || []) as Array<Record<string, unknown>>
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between p-2 rounded-lg bg-dark-bg hover:bg-dark-border transition-colors text-left"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <FolderOpen size={12} className="text-primary-400 flex-shrink-0" />
+          <span className="text-xs truncate">{activeWs?.name || 'Select workspace...'}</span>
+        </div>
+        <ChevronDown size={10} className="text-gray-500 flex-shrink-0" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 bg-dark-card border border-dark-border rounded-lg shadow-lg max-h-[200px] overflow-y-auto">
+          {workspaces.map((ws) => (
+            <button
+              key={ws.id as string}
+              onClick={() => {
+                setActiveWs({
+                  id: ws.id as string,
+                  name: ws.name as string,
+                  workspace_type: ws.workspace_type as string,
+                  git_remote_url: ws.git_remote_url as string,
+                })
+                workspaceApi.activate(ws.id as string).catch(() => {})
+                setIsOpen(false)
+              }}
+              className={cn(
+                'w-full text-left px-3 py-2 text-xs hover:bg-dark-border/50 flex items-center gap-2 transition-colors',
+                activeWs?.id === ws.id && 'bg-primary-600/10 text-primary-400'
+              )}
+            >
+              <FolderOpen size={11} className="flex-shrink-0" />
+              <span className="truncate">{ws.name as string}</span>
+              {activeWs?.id === ws.id && (
+                <CheckCircle size={10} className="text-primary-400 flex-shrink-0 ml-auto" />
+              )}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   )
