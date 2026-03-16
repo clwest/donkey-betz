@@ -134,7 +134,7 @@ def record_op(
             file_path=file_path or f"[{op_type}]",
             agent_name=agent_name,
             agent_task=agent_task,
-            description=full_description[:2000] if full_description else '',
+            command=full_description[:2000] if full_description else '',
             success=success,
             error_message=error_message[:500] if error_message else '',
             execution_time_ms=execution_time_ms,
