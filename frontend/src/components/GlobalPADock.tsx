@@ -21,7 +21,7 @@ import {
   Paperclip, Image as ImageIcon, FileText, Film, Music, File, FolderOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { assistantApi, contentApi } from '@/lib/api'
+import { assistantApi, contentApi, workspaceApi } from '@/lib/api'
 import { usePAStore } from '@/stores/paStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { ChatMarkdown } from './ChatMarkdown'
@@ -63,6 +63,7 @@ export default function GlobalPADock() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dropZoneRef = useRef<HTMLDivElement>(null)
+  const [showWsPicker, setShowWsPicker] = useState(false)
 
   // PA Store
   const {
@@ -507,11 +508,15 @@ export default function GlobalPADock() {
           </div>
           <div>
             <span className="text-sm font-medium">AI Assistant</span>
-            <p className="text-[10px] text-gray-500">
+            <button
+              onClick={() => setShowWsPicker(!showWsPicker)}
+              className="block text-[10px] text-gray-500 hover:text-primary-400 transition-colors text-left"
+              title="Click to change workspace"
+            >
               {useWorkspaceStore.getState().activeWorkspace
-                ? `📂 ${useWorkspaceStore.getState().activeWorkspace!.name}`
-                : location.pathname}
-            </p>
+                ? `📂 ${useWorkspaceStore.getState().activeWorkspace!.name} ▾`
+                : `📂 No workspace ▾`}
+            </button>
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -558,6 +563,14 @@ export default function GlobalPADock() {
           </button>
         </div>
       </div>
+
+      {/* Workspace Picker Dropdown */}
+      {showWsPicker && <WorkspacePicker onSelect={(ws) => {
+        useWorkspaceStore.getState().setActiveWorkspace(ws)
+        // Also activate on the backend
+        workspaceApi.activate(ws.id).catch(() => {})
+        setShowWsPicker(false)
+      }} onClose={() => setShowWsPicker(false)} />}
 
       {/* Messages or Sidebar Overlay */}
       <div className="flex-1 overflow-auto p-3 space-y-3 relative">
@@ -794,6 +807,60 @@ export default function GlobalPADock() {
             </button>
           </div>
         </div>
+      )}
+    </div>
+  )
+}
+
+
+// ── Workspace Picker (inline dropdown) ───────────────────────────────────
+
+function WorkspacePicker({ onSelect, onClose }: {
+  onSelect: (ws: { id: string; name: string; workspace_type?: string; git_remote_url?: string }) => void
+  onClose: () => void
+}) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['workspaces-picker'],
+    queryFn: () => workspaceApi.list().then(r => r.data),
+  })
+
+  const workspaces = (data?.results || data || []) as Array<Record<string, unknown>>
+  const currentId = useWorkspaceStore.getState().activeWorkspace?.id
+
+  return (
+    <div className="border-b border-dark-border bg-dark-bg/95 max-h-[200px] overflow-y-auto">
+      <div className="px-3 py-2 text-[10px] text-gray-500 uppercase tracking-wide flex items-center justify-between">
+        <span>Switch Workspace</span>
+        <button onClick={onClose} className="text-gray-500 hover:text-white">
+          <X size={12} />
+        </button>
+      </div>
+      {isLoading ? (
+        <div className="px-3 py-4 text-center text-xs text-gray-500">Loading...</div>
+      ) : (
+        workspaces.map((ws) => (
+          <button
+            key={ws.id as string}
+            onClick={() => onSelect({
+              id: ws.id as string,
+              name: ws.name as string,
+              workspace_type: ws.workspace_type as string,
+              git_remote_url: ws.git_remote_url as string,
+            })}
+            className={cn(
+              'w-full text-left px-3 py-2 text-xs hover:bg-dark-border/50 flex items-center justify-between transition-colors',
+              currentId === ws.id && 'bg-primary-600/10 text-primary-400'
+            )}
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <FolderOpen size={12} className="flex-shrink-0" />
+              <span className="truncate">{ws.name as string}</span>
+            </div>
+            {currentId === ws.id && (
+              <span className="text-[9px] text-primary-400 flex-shrink-0 ml-2">active</span>
+            )}
+          </button>
+        ))
       )}
     </div>
   )
