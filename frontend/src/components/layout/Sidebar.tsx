@@ -31,6 +31,7 @@ import {
   HelpCircle,
   Play,
   Zap,
+  Package,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -82,6 +83,7 @@ const navItems = [
   // { path: '/portfolio', label: 'Portfolio', icon: DollarSign },
 
   // Documents & Reference
+  { path: '/deliverables', label: 'Deliverables', icon: Package },
   { path: '/documents', label: 'Documents', icon: FileUp },
   { path: '/docs-index', label: 'Docs Index', icon: Book },
   { path: '/how-it-works', label: 'How it Works', icon: HelpCircle },

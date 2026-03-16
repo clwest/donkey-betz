@@ -30,6 +30,7 @@ import VideoStudioPage from '@/pages/VideoStudioPage'
 import GovernmentPage from '@/pages/GovernmentPage'
 import ReviewPortalPage from '@/pages/ReviewPortalPage'  // Preview System: Public review portal
 import DemoHomePage from '@/pages/DemoHomePage'  // BPaaS: Platform overview + demo dashboard
+import DeliverablesPage from '@/pages/DeliverablesPage'  // Deliverables library
 import HowItWorksPage from '@/pages/HowItWorksPage'
 import BoardroomPage from '@/pages/BoardroomPage'  // Session 1067: Full-page boardroom
 import GovernancePage from '@/pages/GovernancePage'  // Session 1067: Full-page governance
@@ -124,6 +125,7 @@ function App() {
         <Route path="blog/:blogId" element={<BlogViewerPage />} />
 
         {/* Standalone content pages */}
+        <Route path="deliverables" element={<DeliverablesPage />} />
         <Route path="documents" element={<DocumentsPage />} />
         <Route path="image-studio" element={<ImageStudioPage />} />
         <Route path="video-studio" element={<VideoStudioPage />} />
