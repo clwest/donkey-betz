@@ -120,6 +120,17 @@ class Deliverable(models.Model):
         help_text="Session 843: ID of parent object"
     )
 
+    # Workspace linkage — connects deliverables to project workspaces
+    workspace = models.ForeignKey(
+        'core.ProjectWorkspace',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='deliverables',
+        db_index=True,
+        help_text="Workspace that produced or owns this deliverable"
+    )
+
     # Session 862: Content Flow Traceability - Real FKs for proper relationships
     initiative = models.ForeignKey(
         'core.Initiative',
