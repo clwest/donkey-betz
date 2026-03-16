@@ -249,6 +249,21 @@ def unified_pa_chat(request):
         if len(message) > 8000:
             message = message[:8000]
 
+        # Session 1077: Inject workspace context so PA knows which workspace is active
+        workspace_id = request.data.get('workspace_id')
+        if workspace_id:
+            try:
+                from core.models import ProjectWorkspace
+                workspace = ProjectWorkspace.objects.get(id=workspace_id)
+                context = context or {}
+                context['workspace'] = {
+                    'id': str(workspace.id),
+                    'name': workspace.name,
+                    'slug': getattr(workspace, 'slug', ''),
+                }
+            except Exception:
+                logger.warning(f"PA chat received invalid workspace_id: {workspace_id}")
+
         from core.tasks import process_pa_chat_task
 
         task = process_pa_chat_task.delay(
