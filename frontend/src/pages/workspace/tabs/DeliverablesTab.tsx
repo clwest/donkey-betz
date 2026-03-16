@@ -771,11 +771,18 @@ export function DeliverablesTab() {
 
           {/* Pagination */}
           {pagination && pagination.total_pages > 1 && (
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center justify-between pt-4 border-t border-dark-border mt-4">
               <span className="text-xs text-gray-500">
-                Page {pagination.page} of {pagination.total_pages} ({pagination.total_items} items)
+                Page {pagination.page} of {pagination.total_pages} ({pagination.total_items?.toLocaleString()} items)
               </span>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage(1)}
+                  disabled={pagination.page <= 1}
+                  className="px-2 py-1 rounded text-xs text-gray-400 hover:text-white hover:bg-dark-border disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  First
+                </button>
                 <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={!pagination.has_previous}
@@ -783,6 +790,29 @@ export function DeliverablesTab() {
                 >
                   <ChevronLeft size={16} />
                 </button>
+                {/* Page number buttons */}
+                {(() => {
+                  const current = pagination.page
+                  const total = pagination.total_pages
+                  const pages: number[] = []
+                  const start = Math.max(1, current - 2)
+                  const end = Math.min(total, current + 2)
+                  for (let i = start; i <= end; i++) pages.push(i)
+                  return pages.map(p => (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p)}
+                      className={cn(
+                        'w-7 h-7 rounded text-xs font-medium',
+                        p === current
+                          ? 'bg-primary-600 text-white'
+                          : 'text-gray-400 hover:text-white hover:bg-dark-border'
+                      )}
+                    >
+                      {p}
+                    </button>
+                  ))
+                })()}
                 <button
                   onClick={() => setPage(p => p + 1)}
                   disabled={!pagination.has_next}
@@ -790,6 +820,29 @@ export function DeliverablesTab() {
                 >
                   <ChevronRight size={16} />
                 </button>
+                <button
+                  onClick={() => setPage(pagination.total_pages)}
+                  disabled={pagination.page >= pagination.total_pages}
+                  className="px-2 py-1 rounded text-xs text-gray-400 hover:text-white hover:bg-dark-border disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  Last
+                </button>
+                {/* Jump to page */}
+                <div className="flex items-center gap-1 ml-2">
+                  <span className="text-xs text-gray-500">Go to</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={pagination.total_pages}
+                    className="w-14 px-2 py-1 bg-dark-bg border border-dark-border rounded text-xs text-center"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        const val = parseInt((e.target as HTMLInputElement).value)
+                        if (val >= 1 && val <= pagination.total_pages) setPage(val)
+                      }
+                    }}
+                  />
+                </div>
               </div>
             </div>
           )}
