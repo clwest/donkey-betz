@@ -23,6 +23,7 @@ import {
 import { cn } from '@/lib/cn'
 import { assistantApi, contentApi } from '@/lib/api'
 import { usePAStore } from '@/stores/paStore'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { ChatMarkdown } from './ChatMarkdown'
 import PAConversationSidebar from './PAConversationSidebar'
 
@@ -307,6 +308,10 @@ export default function GlobalPADock() {
       assistantApi.paChat(message, {
         context: {
           current_page: location.pathname,
+          ...(useWorkspaceStore.getState().activeWorkspace ? {
+            workspace_id: useWorkspaceStore.getState().activeWorkspace!.id,
+            workspace_name: useWorkspaceStore.getState().activeWorkspace!.name,
+          } : {}),
           ...(attachmentMeta && attachmentMeta.length > 0 ? { attachments: attachmentMeta } : {}),
         },
         conversation_id: activeConversationId || undefined,
@@ -502,7 +507,11 @@ export default function GlobalPADock() {
           </div>
           <div>
             <span className="text-sm font-medium">AI Assistant</span>
-            <p className="text-[10px] text-gray-500">{location.pathname}</p>
+            <p className="text-[10px] text-gray-500">
+              {useWorkspaceStore.getState().activeWorkspace
+                ? `📂 ${useWorkspaceStore.getState().activeWorkspace!.name}`
+                : location.pathname}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-1">
