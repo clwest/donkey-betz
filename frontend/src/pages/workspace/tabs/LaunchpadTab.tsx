@@ -110,7 +110,7 @@ export function LaunchpadTab({ workspaceId }: LaunchpadTabProps) {
         const url = `${window.location.origin}/r/${token}`
         navigator.clipboard.writeText(url)
         setCopiedToken(token)
-        setTimeout(() => setCopiedToken(null), 3000)
+        setTimeout(() => setCopiedToken(null), 15000)
       }
     },
   })
@@ -391,9 +391,20 @@ export function LaunchpadTab({ workspaceId }: LaunchpadTabProps) {
           )}
 
           {/* Magic Links */}
-          {envDetail.magic_links?.length > 0 && (
-            <div>
-              <h4 className="text-sm font-medium mb-2">Magic Links</h4>
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-sm font-medium">Magic Links</h4>
+              {copiedToken && (
+                <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-1.5">
+                  <CheckCircle2 size={14} className="text-green-400" />
+                  <span className="text-xs text-green-400">Link copied to clipboard!</span>
+                  <code className="text-xs text-green-300 font-mono truncate max-w-[300px]">
+                    {`${window.location.origin}/r/${copiedToken}`}
+                  </code>
+                </div>
+              )}
+            </div>
+            {envDetail.magic_links?.length > 0 ? (
               <div className="space-y-2">
                 {envDetail.magic_links.map((link: Record<string, unknown>) => (
                   <div key={link.id as string} className="flex items-center justify-between bg-dark-card p-3 rounded-lg">
@@ -414,8 +425,16 @@ export function LaunchpadTab({ workspaceId }: LaunchpadTabProps) {
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <p className="text-sm text-muted-foreground py-2">
+                No magic links yet. Click &quot;Magic Link&quot; above to generate a shareable review link.
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground mt-2">
+              Click the purple <strong>Magic Link</strong> button above to generate a new link.
+              The URL will be copied to your clipboard automatically.
+            </p>
+          </div>
 
           {/* Feedback */}
           {envDetail.feedback_count > 0 && (
