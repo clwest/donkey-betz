@@ -696,6 +696,34 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
+    # ── Voice Clone & Marketplace ─────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "voice_clone_tool",
+        "description": (
+            "Manage voice cloning and the voice marketplace. "
+            "Actions: list (user's cloned voices), detail (voice info by id), "
+            "clone_requests (clone request history), marketplace (browse public voices), "
+            "stats (voice counts and revenue). "
+            "Voice cloning from audio files is done via the web UI at /workspace > Voice Marketplace > Clone Voice. "
+            "Discord users can clone via /voice clone command."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list", "detail", "clone_requests", "marketplace", "stats"],
+                    "description": "list=my voices, detail=voice info, clone_requests=history, marketplace=browse public, stats=counts.",
+                },
+                "id": {"type": "string", "description": "UUID of voice profile (for detail action)"},
+                "search": {"type": "string", "description": "Search query for marketplace action"},
+                "limit": {"type": "integer", "description": "Max items to return (default 10, max 30)"},
+            },
+            "required": ["action"],
+        },
+    },
+
     # ── DaVinci Resolve Control Surface ────────────────────────────────────
     {
         "type": "function",

@@ -2622,6 +2622,10 @@ export const voiceMarketplaceApi = {
   startClone: (data: FormData) => api.post('/voice-marketplace/clone/start/', data, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
+  cloneUpload: (data: FormData) => api.post('/voice-marketplace/clone/upload/', data, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000,
+  }),
   cloneStatus: (taskId: string) => api.get(`/voice-marketplace/clone/status/${taskId}/`),
 
   // Generation & Preview
