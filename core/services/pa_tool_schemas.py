@@ -2636,8 +2636,8 @@ PA_TOOL_SCHEMAS = [
                         "generate_blog", "bulk_archive", "bulk_archive_published", "run_cleanup",
                         "deliverable_list", "deliverable_detail",
                         "deliverable_search", "deliverable_save",
-                        "deliverable_create", "deliverable_stats",
-                        "deliverable_export_pdf",
+                        "deliverable_create", "deliverable_update",
+                        "deliverable_stats", "deliverable_export_pdf",
                         "podcasts", "series", "content_studio",
                         "initiative_doc",
                     ],
@@ -2657,7 +2657,8 @@ PA_TOOL_SCHEMAS = [
                         "deliverable_detail: content of a deliverable (default 8K chars; pass full=true for uncapped, or content_offset+content_limit to paginate). "
                         "deliverable_search: search deliverables by title. "
                         "deliverable_save: bookmark a deliverable. "
-                        "deliverable_create: create a new deliverable. "
+                        "deliverable_create: create a new deliverable (supports category, tags, workspace_id, data_sensitivity, is_pinned, agent_name). "
+                        "deliverable_update: update an existing deliverable by id (supports content, title, category, tags, workspace_id, data_sensitivity, prepend, append). "
                         "deliverable_stats: aggregate counts by type/category/agent. "
                         "deliverable_export_pdf: generate a downloadable PDF from a deliverable (returns CDN URL). "
                         "podcasts: list completed podcast episodes. "
@@ -2696,6 +2697,12 @@ PA_TOOL_SCHEMAS = [
                 "full": {"type": "boolean", "description": "For deliverable_detail: return full content without 8K char cap (default false)"},
                 "content_offset": {"type": "integer", "description": "For deliverable_detail: start reading content from this char position"},
                 "content_limit": {"type": "integer", "description": "For deliverable_detail: max chars to return (default 8000)"},
+                "workspace_id": {"type": "string", "description": "For deliverable_create/update: workspace UUID to link deliverable to"},
+                "agent_name": {"type": "string", "description": "For deliverable_create: agent name (default PersonalAssistantAgent)"},
+                "data_sensitivity": {"type": "string", "description": "For deliverable_create/update: public, internal, confidential, restricted"},
+                "is_pinned": {"type": "boolean", "description": "For deliverable_create: pin to prevent auto-cleanup"},
+                "prepend": {"type": "string", "description": "For deliverable_update: text to prepend to existing content"},
+                "append": {"type": "string", "description": "For deliverable_update: text to append to existing content"},
             },
             "required": ["action"],
         },

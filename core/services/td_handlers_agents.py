@@ -1297,6 +1297,7 @@ class AgentHandlersMixin:
 
         elif action == 'create':
             # Session 1065: Allow PA to save arbitrary content to Deliverables
+            # Session 1077: Accept category, tags, workspace, data_sensitivity, is_pinned
             title = payload.get('title', '').strip()
             content = payload.get('content', '').strip()
             if not title or not content:
@@ -1319,25 +1320,47 @@ class AgentHandlersMixin:
                 except _DUser.DoesNotExist:
                     pass
 
+            # Resolve workspace
+            resolved_workspace = None
+            ws_id = payload.get('workspace_id') or payload.get('workspace')
+            if ws_id:
+                try:
+                    from core.models_skin_layer import ProjectWorkspace
+                    resolved_workspace = ProjectWorkspace.objects.get(id=ws_id)
+                except Exception:
+                    pass
+
             preview = content[:500]
             if len(content) > 500:
                 preview += '...'
+
+            # Accept payload overrides with sensible defaults
+            category = payload.get('category', 'PA Created')
+            tags = payload.get('tags', ['pa-created'])
+            if isinstance(tags, str):
+                tags = [t.strip() for t in tags.split(',') if t.strip()]
+            agent_name = payload.get('agent_name', 'PersonalAssistantAgent')
+            data_sensitivity = payload.get('data_sensitivity', 'internal')
+            is_pinned = bool(payload.get('is_pinned', False))
 
             obj = Deliverable.objects.create(
                 title=title[:255],
                 slug=slug,
                 deliverable_type=dtype,
-                category='PA Created',
-                tags=['pa-created'],
+                category=category,
+                tags=tags,
                 content=content,
                 content_format=content_format,
                 preview_content=preview,
-                agent_name='PersonalAssistantAgent',
+                agent_name=agent_name,
                 user=resolved_user,
-                quality_score=0.7,
-                confidence_score=0.8,
+                workspace=resolved_workspace,
+                quality_score=float(payload.get('quality_score', 0.7)),
+                confidence_score=float(payload.get('confidence_score', 0.8)),
                 is_saved=True,
-                status='ready',
+                is_pinned=is_pinned,
+                status='completed',
+                data_sensitivity=data_sensitivity,
                 metadata={'source': 'pa_deliverables_tool', 'trace_id': trace_id},
             )
             return {
@@ -1345,6 +1368,7 @@ class AgentHandlersMixin:
                 'id': str(obj.id),
                 'title': obj.title,
                 'deliverable_type': obj.deliverable_type,
+                'category': obj.category,
                 'saved': True,
                 'message': f'Created and saved "{obj.title}" to your Deliverables library.',
             }
@@ -1389,11 +1413,30 @@ class AgentHandlersMixin:
                 obj.content_format = payload['content_format']
                 update_fields.append('content_format')
             if 'tags' in payload:
-                obj.tags = [t.strip() for t in payload['tags'].split(',') if t.strip()]
+                raw_tags = payload['tags']
+                if isinstance(raw_tags, list):
+                    obj.tags = [str(t).strip() for t in raw_tags if str(t).strip()]
+                else:
+                    obj.tags = [t.strip() for t in str(raw_tags).split(',') if t.strip()]
                 update_fields.append('tags')
+            if 'category' in payload:
+                obj.category = payload['category'].strip()[:100]
+                update_fields.append('category')
+            if 'data_sensitivity' in payload:
+                obj.data_sensitivity = payload['data_sensitivity']
+                update_fields.append('data_sensitivity')
+            if 'workspace_id' in payload or 'workspace' in payload:
+                ws_id = payload.get('workspace_id') or payload.get('workspace')
+                if ws_id:
+                    try:
+                        from core.models_skin_layer import ProjectWorkspace
+                        obj.workspace = ProjectWorkspace.objects.get(id=ws_id)
+                        update_fields.append('workspace')
+                    except Exception:
+                        pass
 
             if not update_fields:
-                raise ValueError("update requires at least one of: title, content, prepend, append, type, content_format, tags")
+                raise ValueError("update requires at least one of: title, content, prepend, append, type, content_format, tags, category, data_sensitivity, workspace_id")
 
             obj.save(update_fields=update_fields)
             return {
