@@ -3783,6 +3783,7 @@ class ContentHandlersMixin:
             'deliverable_search': 'search',
             'deliverable_save': 'save',
             'deliverable_create': 'create',
+            'deliverable_update': 'update',
             'deliverable_stats': 'stats',
             'deliverable_export_pdf': 'export_pdf',
         }
