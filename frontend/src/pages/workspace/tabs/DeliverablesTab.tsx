@@ -156,17 +156,17 @@ export function DeliverablesTab() {
   const [showFilters, setShowFilters] = useState(false)
 
   // ---- Queries ----
+  const activeWsId = useWorkspaceStore(s => s.activeWorkspace?.id)
+
   const statsQuery = useQuery({
-    queryKey: ['deliverables-stats'],
-    queryFn: () => deliverablesApi.stats().then(r => r.data),
+    queryKey: ['deliverables-stats', activeWsId],
+    queryFn: () => deliverablesApi.stats(activeWsId ? { workspace: activeWsId } : undefined).then(r => r.data),
   })
 
   const typesQuery = useQuery({
     queryKey: ['deliverables-types'],
     queryFn: () => deliverablesApi.types().then(r => r.data),
   })
-
-  const activeWsId = useWorkspaceStore(s => s.activeWorkspace?.id)
 
   const listQuery = useQuery({
     queryKey: ['deliverables-list', page, filters, activeWsId],
