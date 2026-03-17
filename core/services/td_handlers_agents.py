@@ -1229,10 +1229,28 @@ class AgentHandlersMixin:
             except Exception:
                 pass  # fire-and-forget
 
-            # Session 1086: Return full content so the PA can read
-            # deliverables completely. Cap at 8000 chars to stay within
-            # reasonable tool-result size for the LLM context window.
+            # Session 1086: Return content for PA reading.
+            # Session 1077: Support full=true to bypass 8K cap, and
+            # offset/limit for paginated reading of long documents.
             full_content = obj.content or ''
+            want_full = str(payload.get('full', '')).lower() in ('true', '1', 'yes')
+            content_offset = int(payload.get('content_offset', 0))
+            content_limit = int(payload.get('content_limit', 0))
+
+            if content_offset or content_limit:
+                # Paginated read: return a slice of the content
+                end = content_offset + (content_limit or 8000)
+                content_slice = full_content[content_offset:end]
+                is_truncated = end < len(full_content)
+            elif want_full:
+                # Full read: no cap (caller opted in to large payload)
+                content_slice = full_content
+                is_truncated = False
+            else:
+                # Default: cap at 8000 chars for LLM context safety
+                content_slice = full_content[:8000]
+                is_truncated = len(full_content) > 8000
+
             return _sanitize_deliverable({
                 'action': 'detail',
                 'id': str(obj.id),
@@ -1241,8 +1259,9 @@ class AgentHandlersMixin:
                 'category': obj.category,
                 'agent_name': obj.agent_name,
                 'content_format': obj.content_format,
-                'content': full_content[:8000],
-                'content_truncated': len(full_content) > 8000,
+                'content': content_slice,
+                'content_truncated': is_truncated,
+                'content_length': len(full_content),
                 'content_preview': full_content[:500],
                 'quality_score': obj.quality_score,
                 'is_saved': obj.is_saved,
