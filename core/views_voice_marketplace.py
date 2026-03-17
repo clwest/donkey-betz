@@ -736,6 +736,198 @@ def start_clone_request(request):
 
 
 @token_auth_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def clone_voice_upload(request):
+    """
+    Clone a voice from an uploaded audio file via ElevenLabs IVC API.
+
+    POST /api/voice-marketplace/clone/upload/
+
+    Form Data:
+    - audio: Audio file (WAV, MP3, M4A - max 10MB)
+    - name: Display name for the cloned voice
+    - description: Voice description (optional)
+    - gender: male/female/neutral (optional, default neutral)
+    - age_range: child/teen/young_adult/adult/senior (optional, default adult)
+    - accent: Accent description (optional)
+    - primary_use_case: narration/podcast/gaming/commercial/assistant/general (optional)
+    - consent: Must be "true" - user confirms they own or have rights to this voice
+    """
+    import os
+    import tempfile
+
+    try:
+        audio_file = request.FILES.get('audio')
+        if not audio_file:
+            return JsonResponse({
+                'success': False,
+                'error': 'Audio file is required. Upload a WAV, MP3, or M4A file.'
+            }, status=400)
+
+        # Validate consent
+        consent = request.POST.get('consent', '').lower()
+        if consent != 'true':
+            return JsonResponse({
+                'success': False,
+                'error': 'You must confirm you own or have rights to clone this voice.'
+            }, status=400)
+
+        # Validate file size (10MB max for ElevenLabs)
+        if audio_file.size > 10 * 1024 * 1024:
+            return JsonResponse({
+                'success': False,
+                'error': 'Audio file too large. Maximum size is 10MB.'
+            }, status=400)
+
+        # Validate file type
+        allowed_types = ['audio/wav', 'audio/mpeg', 'audio/mp3', 'audio/mp4',
+                         'audio/x-wav', 'audio/x-m4a', 'audio/m4a', 'audio/ogg',
+                         'audio/webm', 'audio/flac']
+        content_type = audio_file.content_type or ''
+        file_ext = os.path.splitext(audio_file.name)[1].lower()
+        allowed_exts = ['.wav', '.mp3', '.m4a', '.ogg', '.webm', '.flac']
+
+        if content_type not in allowed_types and file_ext not in allowed_exts:
+            return JsonResponse({
+                'success': False,
+                'error': f'Unsupported audio format: {content_type or file_ext}. '
+                         f'Supported: WAV, MP3, M4A, OGG, WebM, FLAC.'
+            }, status=400)
+
+        voice_name = request.POST.get('name', '').strip()
+        if not voice_name:
+            voice_name = f"{request.user.username}'s Voice"
+
+        description = request.POST.get('description', '').strip()
+        gender = request.POST.get('gender', 'neutral')
+        age_range = request.POST.get('age_range', 'adult')
+        accent = request.POST.get('accent', '')
+        primary_use_case = request.POST.get('primary_use_case', 'general')
+
+        # Create a VoiceCloneRequest to track the process
+        clone_request = VoiceCloneRequest.objects.create(
+            user=request.user,
+            discord_user_id='',
+            discord_guild_id='',
+            discord_channel_id='',
+            status='processing',
+        )
+
+        # Save uploaded file to temp location
+        suffix = file_ext if file_ext else '.wav'
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+            for chunk in audio_file.chunks():
+                tmp.write(chunk)
+            temp_path = tmp.name
+
+        clone_request.audio_file_path = temp_path
+        clone_request.save(update_fields=['audio_file_path', 'updated_at'])
+
+        # Clone via ElevenLabs IVC API
+        elevenlabs_key = os.getenv('ELEVENLABS_API_KEY') or os.getenv('ELEVEN_LABS_API')
+        if not elevenlabs_key:
+            clone_request.mark_failed('ElevenLabs API key not configured')
+            return JsonResponse({
+                'success': False,
+                'error': 'Voice cloning service is not configured.'
+            }, status=500)
+
+        import httpx
+
+        # Determine content type for upload
+        ext_to_mime = {
+            '.wav': 'audio/wav', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4',
+            '.ogg': 'audio/ogg', '.webm': 'audio/webm', '.flac': 'audio/flac',
+        }
+        upload_content_type = ext_to_mime.get(suffix, content_type or 'audio/wav')
+
+        with open(temp_path, 'rb') as f:
+            file_content = f.read()
+
+        clone_request.status = 'cloning'
+        clone_request.save(update_fields=['status', 'updated_at'])
+
+        data = {
+            'name': voice_name,
+            'remove_background_noise': 'true',
+        }
+        if description:
+            data['description'] = description
+
+        headers = {'xi-api-key': elevenlabs_key}
+        files = [('files', (audio_file.name, file_content, upload_content_type))]
+
+        with httpx.Client(timeout=120.0) as client:
+            response = client.post(
+                'https://api.elevenlabs.io/v1/voices/add',
+                data=data,
+                files=files,
+                headers=headers,
+            )
+
+        # Clean up temp file
+        try:
+            os.unlink(temp_path)
+        except Exception:
+            pass
+
+        if response.status_code != 200:
+            error_detail = response.text[:300]
+            logger.error(f"ElevenLabs clone error: {response.status_code} - {error_detail}")
+            clone_request.mark_failed(f'ElevenLabs API error ({response.status_code}): {error_detail}')
+            return JsonResponse({
+                'success': False,
+                'error': f'Voice cloning failed: {error_detail}'
+            }, status=500)
+
+        result = response.json()
+        elevenlabs_voice_id = result.get('voice_id')
+
+        if not elevenlabs_voice_id:
+            clone_request.mark_failed('No voice_id returned from ElevenLabs')
+            return JsonResponse({
+                'success': False,
+                'error': 'Voice cloning succeeded but no voice ID was returned.'
+            }, status=500)
+
+        # Create VoiceProfile
+        voice_profile = VoiceProfile.objects.create(
+            owner=request.user,
+            elevenlabs_voice_id=elevenlabs_voice_id,
+            name=voice_name,
+            description=description,
+            gender=gender,
+            age_range=age_range,
+            accent=accent,
+            language='English',
+            primary_use_case=primary_use_case,
+            creation_method='web_clone',
+        )
+
+        # Link clone request to voice profile
+        clone_request.complete(voice_profile)
+
+        logger.info(
+            f"Voice cloned successfully: {voice_name} (ElevenLabs ID: {elevenlabs_voice_id}) "
+            f"for user {request.user.username}"
+        )
+
+        return JsonResponse({
+            'success': True,
+            'voice_id': str(voice_profile.id),
+            'elevenlabs_voice_id': elevenlabs_voice_id,
+            'name': voice_name,
+            'request_id': str(clone_request.id),
+            'message': f'Voice "{voice_name}" cloned successfully!',
+        })
+
+    except Exception as e:
+        logger.error(f"Error cloning voice: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@token_auth_required
 @require_http_methods(["GET"])
 def clone_request_status(request, request_id):
     """

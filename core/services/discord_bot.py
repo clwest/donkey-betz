@@ -4045,6 +4045,202 @@ class VoiceCommands(commands.Cog):
                 ephemeral=True
             )
 
+    @voice_group.command(name="clone", description="Clone your voice from a Discord voice channel recording")
+    @app_commands.describe(
+        name="Name for your cloned voice",
+        duration="Recording duration in seconds (default 30, max 120)"
+    )
+    async def voice_clone(
+        self,
+        interaction: discord.Interaction,
+        name: Optional[str] = None,
+        duration: Optional[int] = 30
+    ):
+        """Record your voice in a Discord voice channel and clone it via ElevenLabs."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            from core.services.discord_voice import get_voice_recorder, get_voice_cloner
+
+            service = self._ensure_voice_service()
+            recorder = get_voice_recorder()
+            cloner = get_voice_cloner()
+
+            # Check prerequisites
+            if not cloner.is_available():
+                await interaction.followup.send(
+                    "Voice cloning is not available - ElevenLabs API key not configured.",
+                    ephemeral=True
+                )
+                return
+
+            if not interaction.user.voice or not interaction.user.voice.channel:
+                await interaction.followup.send(
+                    "You need to be in a voice channel!\n"
+                    "1. Join a voice channel\n"
+                    "2. Use `/voice join` to bring me in\n"
+                    "3. Then use `/voice clone` to start recording",
+                    ephemeral=True
+                )
+                return
+
+            if not service.is_in_voice(interaction.guild.id):
+                await interaction.followup.send(
+                    "I need to be in the voice channel first!\n"
+                    "Use `/voice join` to bring me in, then `/voice clone` to record.",
+                    ephemeral=True
+                )
+                return
+
+            # Clamp duration
+            record_duration = max(10, min(duration or 30, 120))
+            voice_name = name or f"{interaction.user.display_name}'s Voice"
+
+            # Start recording
+            embed = discord.Embed(
+                title="Voice Cloning - Recording",
+                description=(
+                    f"Recording your voice for **{record_duration} seconds**...\n\n"
+                    "Speak naturally and clearly. Read aloud or talk about anything - "
+                    "the AI will learn your voice characteristics."
+                ),
+                color=discord.Color.red(),
+                timestamp=datetime.now()
+            )
+            embed.add_field(name="Voice Name", value=voice_name, inline=True)
+            embed.add_field(name="Duration", value=f"{record_duration}s", inline=True)
+            embed.set_footer(text="Recording in progress...")
+
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+            # Record
+            session = recorder.start_recording(
+                user_id=interaction.user.id,
+                guild_id=interaction.guild.id,
+                channel_id=interaction.user.voice.channel.id
+            )
+
+            if not session:
+                await interaction.followup.send(
+                    "Failed to start recording. Voice recording may not be available on this server.",
+                    ephemeral=True
+                )
+                return
+
+            # Wait for recording duration
+            await asyncio.sleep(record_duration)
+
+            # Stop recording
+            audio_path = recorder.stop_recording(interaction.user.id)
+
+            if not audio_path:
+                await interaction.followup.send(
+                    "No audio was captured. Make sure you were speaking during the recording.\n"
+                    "Tip: Speak clearly and continuously for best results.",
+                    ephemeral=True
+                )
+                return
+
+            # Update status - cloning
+            clone_embed = discord.Embed(
+                title="Voice Cloning - Processing",
+                description="Recording complete! Now cloning your voice with ElevenLabs...",
+                color=discord.Color.gold(),
+                timestamp=datetime.now()
+            )
+            clone_embed.set_footer(text="This may take up to 2 minutes...")
+
+            await interaction.edit_original_response(embed=clone_embed)
+
+            # Clone via ElevenLabs
+            result = await cloner.clone_voice(
+                audio_file_path=audio_path,
+                voice_name=voice_name,
+                description=f"Cloned from Discord recording by {interaction.user.display_name}",
+                remove_background_noise=True,
+                labels={'source': 'discord', 'user': str(interaction.user.id)}
+            )
+
+            if 'error' in result:
+                await interaction.edit_original_response(
+                    embed=discord.Embed(
+                        title="Voice Cloning Failed",
+                        description=f"Error: {result['error'][:300]}",
+                        color=discord.Color.red()
+                    )
+                )
+                return
+
+            elevenlabs_voice_id = result['voice_id']
+
+            # Create VoiceProfile in database (if user is linked)
+            voice_profile_id = None
+            try:
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                user = User.objects.filter(discord_id=str(interaction.user.id)).first()
+
+                if user:
+                    from core.models_voice_marketplace import VoiceProfile, VoiceCloneRequest
+
+                    voice_profile = VoiceProfile.objects.create(
+                        owner=user,
+                        elevenlabs_voice_id=elevenlabs_voice_id,
+                        name=voice_name,
+                        description=f"Cloned from Discord recording",
+                        creation_method='discord_clone',
+                    )
+                    voice_profile_id = str(voice_profile.id)
+
+                    # Create clone request record
+                    VoiceCloneRequest.objects.create(
+                        user=user,
+                        discord_user_id=str(interaction.user.id),
+                        discord_guild_id=str(interaction.guild.id),
+                        discord_channel_id=str(interaction.user.voice.channel.id if interaction.user.voice else ''),
+                        status='completed',
+                        recording_duration_seconds=record_duration,
+                        voice_profile=voice_profile,
+                    )
+
+                    logger.info(f"Voice cloned and saved for linked user {user.username}")
+            except Exception as e:
+                logger.warning(f"Could not save voice profile to DB: {e}")
+
+            # Success embed
+            success_embed = discord.Embed(
+                title="Voice Cloned Successfully!",
+                description=f"Your voice **{voice_name}** has been created!",
+                color=discord.Color.green(),
+                timestamp=datetime.now()
+            )
+            success_embed.add_field(name="Voice Name", value=voice_name, inline=True)
+            success_embed.add_field(name="ElevenLabs ID", value=elevenlabs_voice_id[:20] + '...', inline=True)
+            if voice_profile_id:
+                success_embed.add_field(
+                    name="Platform",
+                    value="Saved to your account! Use it in the web app too.",
+                    inline=False
+                )
+            else:
+                success_embed.add_field(
+                    name="Tip",
+                    value="Link your Discord account with `/link` to use this voice on the web platform.",
+                    inline=False
+                )
+            success_embed.set_footer(text="Use /voice speak to test your new voice!")
+
+            await interaction.edit_original_response(embed=success_embed)
+
+        except Exception as e:
+            logger.error(f"/voice clone command error: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            await interaction.followup.send(
+                f"Error during voice cloning: {str(e)[:200]}",
+                ephemeral=True
+            )
+
 
 # VoiceMarketplaceCommands removed in Phase G2 command consolidation
 
