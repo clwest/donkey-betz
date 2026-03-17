@@ -789,6 +789,24 @@ def generate_deliverable_pdf_bytes(title: str, content: str, content_format: str
     ))
     story.append(Spacer(1, 8))
 
+    def _safe_para(text: str, style) -> None:
+        """Append a Paragraph to story, falling back to escaped plaintext on error."""
+        try:
+            story.append(Paragraph(text, style))
+        except Exception:
+            # Strip ALL markup and retry as plain escaped text
+            plain = re.sub(r'<[^>]+>', '', text)
+            try:
+                story.append(Paragraph(plain, style))
+            except Exception:
+                story.append(Spacer(1, 6))  # Give up on this line
+
+    # Markdown table detection: lines starting with | are table rows
+    table_style = ParagraphStyle(
+        'Table', parent=body_style, fontName='Courier',
+        fontSize=9, leading=11, spaceAfter=2, leftIndent=0,
+    )
+
     in_code_block = False
     code_lines: list = []
 
@@ -799,7 +817,7 @@ def generate_deliverable_pdf_bytes(title: str, content: str, content_format: str
             if in_code_block:
                 if code_lines:
                     code_text = '<br/>'.join(_escape(cl) for cl in code_lines)
-                    story.append(Paragraph(code_text, code_style))
+                    _safe_para(code_text, code_style)
                 code_lines = []
                 in_code_block = False
             else:
@@ -814,28 +832,35 @@ def generate_deliverable_pdf_bytes(title: str, content: str, content_format: str
             story.append(Spacer(1, 6))
             continue
 
+        # Markdown table rows — render as monospace, skip separator rows
+        if stripped.startswith('|'):
+            if re.match(r'^\|[\s\-:|]+\|$', stripped):
+                continue  # Skip table separator row (|---|---|)
+            _safe_para(_escape(stripped), table_style)
+            continue
+
         if stripped.startswith('### '):
-            story.append(Paragraph(_escape(stripped[4:]), h3_style))
+            _safe_para(_escape(stripped[4:]), h3_style)
         elif stripped.startswith('## '):
-            story.append(Paragraph(_escape(stripped[3:]), h2_style))
+            _safe_para(_escape(stripped[3:]), h2_style)
         elif stripped.startswith('# '):
-            story.append(Paragraph(_escape(stripped[2:]), h1_style))
+            _safe_para(_escape(stripped[2:]), h1_style)
         elif stripped.startswith('- ') or stripped.startswith('* '):
             text = _apply_inline(_escape(stripped[2:]))
-            story.append(Paragraph(f'\u2022 {text}', bullet_style))
+            _safe_para(f'\u2022 {text}', bullet_style)
         elif re.match(r'^\d+\.\s', stripped):
             text = _apply_inline(_escape(stripped))
-            story.append(Paragraph(text, bullet_style))
+            _safe_para(text, bullet_style)
         elif re.match(r'^-{3,}$|^\*{3,}$|^_{3,}$', stripped):
             story.append(Spacer(1, 12))
         else:
             text = _apply_inline(_escape(stripped))
-            story.append(Paragraph(text, body_style))
+            _safe_para(text, body_style)
 
     # Flush unclosed code block
     if code_lines:
         code_text = '<br/>'.join(_escape(cl) for cl in code_lines)
-        story.append(Paragraph(code_text, code_style))
+        _safe_para(code_text, code_style)
 
     def _add_page_number(canvas, doc):
         canvas.saveState()
@@ -844,9 +869,15 @@ def generate_deliverable_pdf_bytes(title: str, content: str, content_format: str
                                  f"Page {canvas.getPageNumber()}")
         canvas.restoreState()
 
+    logger.info(
+        f"[PDF] Building PDF for '{title}': {len(content)} chars input, "
+        f"{len(story)} story elements"
+    )
     doc.build(story, onFirstPage=_add_page_number, onLaterPages=_add_page_number)
     buf.seek(0)
-    return buf.getvalue()
+    pdf_bytes = buf.getvalue()
+    logger.info(f"[PDF] Generated '{title}': {len(pdf_bytes)} bytes, {len(story)} elements rendered")
+    return pdf_bytes
 
 
 def export_deliverable_to_pdf(deliverable_id: str, user_id) -> dict:
