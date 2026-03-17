@@ -438,6 +438,11 @@ def get_deliverable_stats(request):
                 Q(user=request.user) | Q(user__isnull=True)
             )
 
+        # Session 1077: Scope stats to workspace when specified
+        workspace_id = request.GET.get('workspace')
+        if workspace_id:
+            queryset = queryset.filter(workspace_id=workspace_id)
+
         # Aggregate stats
         total = queryset.count()
         saved = queryset.filter(is_saved=True).count()

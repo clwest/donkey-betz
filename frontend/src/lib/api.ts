@@ -4079,7 +4079,7 @@ export const deliverablesApi = {
   list: (params?: { type?: string; category?: string; agent?: string; saved?: boolean; template?: boolean; source?: string; search?: string; page?: number; per_page?: number; workspace?: string }) =>
     api.get('/deliverables/', { params }),
   detail: (id: string) => api.get(`/deliverables/${id}/`),
-  stats: () => api.get('/deliverables/stats/'),
+  stats: (params?: Record<string, string>) => api.get('/deliverables/stats/', { params }),
   types: () => api.get('/deliverables/types/'),
   save: (id: string) => api.post(`/deliverables/${id}/save/`),
   unsave: (id: string) => api.post(`/deliverables/${id}/unsave/`),
