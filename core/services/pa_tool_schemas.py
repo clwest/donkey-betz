@@ -2654,7 +2654,7 @@ PA_TOOL_SCHEMAS = [
                         "bulk_archive_published: admin-only — archive published deliverables by category (requires categories + created_before + confirm). "
                         "run_cleanup: trigger cleanup_stale_content Celery task (async, returns task_id). "
                         "deliverable_list: browse deliverables library (supports status/type/category/date filters). "
-                        "deliverable_detail: full content of a deliverable. "
+                        "deliverable_detail: content of a deliverable (default 8K chars; pass full=true for uncapped, or content_offset+content_limit to paginate). "
                         "deliverable_search: search deliverables by title. "
                         "deliverable_save: bookmark a deliverable. "
                         "deliverable_create: create a new deliverable. "
