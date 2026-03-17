@@ -1771,6 +1771,129 @@ class AgentHandlersMixin:
         else:
             raise ValueError(f"Unknown action: {action}")
 
+    def _handle_voice_clone(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """Handle voice cloning tool - clone voices, list cloned voices, manage voice profiles."""
+        from core.models_voice_marketplace import VoiceProfile, VoiceCloneRequest
+
+        action = payload.get('action', 'list')
+
+        # Helper for user-scoped queries
+        def _user_qs(model):
+            qs = model.objects.all()
+            if user_id:
+                qs = qs.filter(owner_id=user_id) if hasattr(model, 'owner') else qs.filter(user_id=user_id)
+            return qs
+
+        if action == 'list':
+            # List user's cloned voices
+            voices = _user_qs(VoiceProfile).filter(is_active=True).order_by('-created_at')[:20]
+            items = []
+            for v in voices:
+                items.append({
+                    'id': str(v.id),
+                    'name': v.name,
+                    'elevenlabs_voice_id': v.elevenlabs_voice_id,
+                    'gender': v.gender,
+                    'creation_method': v.creation_method,
+                    'is_public': v.is_public,
+                    'total_uses': v.total_uses,
+                    'average_rating': round(v.average_rating, 1),
+                    'created_at': v.created_at.isoformat(),
+                })
+            return {'action': 'list', 'count': len(items), 'voices': items}
+
+        elif action == 'detail':
+            voice_id = payload.get('id')
+            if not voice_id:
+                raise ValueError("id parameter required for detail action")
+            voice = VoiceProfile.objects.filter(id=voice_id, is_active=True).first()
+            if not voice:
+                raise ValueError(f"Voice {voice_id} not found")
+            return {
+                'action': 'detail',
+                'id': str(voice.id),
+                'name': voice.name,
+                'description': voice.description,
+                'elevenlabs_voice_id': voice.elevenlabs_voice_id,
+                'gender': voice.gender,
+                'age_range': voice.age_range,
+                'accent': voice.accent,
+                'language': voice.language,
+                'style_tags': voice.style_tags,
+                'primary_use_case': voice.primary_use_case,
+                'creation_method': voice.creation_method,
+                'is_public': voice.is_public,
+                'price_display': voice.get_price_display(),
+                'total_uses': voice.total_uses,
+                'average_rating': round(voice.average_rating, 1),
+                'owner': voice.owner.username,
+                'created_at': voice.created_at.isoformat(),
+            }
+
+        elif action == 'clone_requests':
+            # List clone request history
+            requests = VoiceCloneRequest.objects.all()
+            if user_id:
+                requests = requests.filter(user_id=user_id)
+            requests = requests.order_by('-created_at')[:10]
+            items = []
+            for r in requests:
+                items.append({
+                    'id': str(r.id),
+                    'status': r.status,
+                    'recording_duration': r.recording_duration_seconds,
+                    'voice_id': str(r.voice_profile.id) if r.voice_profile else None,
+                    'error': r.error_message or None,
+                    'created_at': r.created_at.isoformat(),
+                })
+            return {'action': 'clone_requests', 'count': len(items), 'requests': items}
+
+        elif action == 'marketplace':
+            # Browse public marketplace voices
+            limit = min(payload.get('limit', 10), 30)
+            search = payload.get('search', '')
+            from django.db.models import Q
+            qs = VoiceProfile.objects.filter(is_public=True, is_active=True)
+            if search:
+                qs = qs.filter(Q(name__icontains=search) | Q(description__icontains=search))
+            qs = qs.order_by('-is_featured', '-average_rating')[:limit]
+            items = []
+            for v in qs:
+                items.append({
+                    'id': str(v.id),
+                    'name': v.name,
+                    'description': (v.description or '')[:150],
+                    'gender': v.gender,
+                    'price_display': v.get_price_display(),
+                    'total_uses': v.total_uses,
+                    'average_rating': round(v.average_rating, 1),
+                    'owner': v.owner.username,
+                })
+            return {'action': 'marketplace', 'count': len(items), 'voices': items}
+
+        elif action == 'stats':
+            my_voices = _user_qs(VoiceProfile).filter(is_active=True)
+            total_public = VoiceProfile.objects.filter(is_public=True, is_active=True).count()
+            return {
+                'action': 'stats',
+                'my_voices': my_voices.count(),
+                'marketplace_total': total_public,
+                'my_total_uses': sum(v.total_uses for v in my_voices),
+                'my_total_revenue': str(sum(v.total_revenue for v in my_voices)),
+            }
+
+        else:
+            raise ValueError(
+                f"Unknown action: {action}. "
+                f"Available: list, detail, clone_requests, marketplace, stats"
+            )
+
     def _handle_davinci(
         self,
         tool_name: str,
