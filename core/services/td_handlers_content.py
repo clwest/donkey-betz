@@ -3717,6 +3717,12 @@ class ContentHandlersMixin:
         """
         action = payload.get('action', 'content_stats')
 
+        # Session 1077: Log incoming payload for dispatch debugging
+        import logging as _cl
+        _cl.getLogger('core.services.td_handlers_content').info(
+            f"[content_tool] action={action!r} payload_keys={sorted(payload.keys())}"
+        )
+
         # ── content_review_tool actions ──
         CONTENT_REVIEW_MAP = {
             'content_stats': 'stats',
