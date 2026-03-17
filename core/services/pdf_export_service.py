@@ -759,11 +759,26 @@ def generate_deliverable_pdf_bytes(title: str, content: str, content_format: str
         return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
     def _apply_inline(text: str) -> str:
+        # Protect inline code first — replace backtick spans with placeholders
+        # so bold/italic regexes don't mangle underscores inside code
+        code_spans = []
+
+        def _save_code(m):
+            code_spans.append(m.group(1))
+            return f'\x00CODE{len(code_spans) - 1}\x00'
+
+        text = re.sub(r'`(.+?)`', _save_code, text)
+
+        # Now apply bold/italic on code-free text
         text = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', text)
         text = re.sub(r'__(.+?)__', r'<b>\1</b>', text)
-        text = re.sub(r'\*(.+?)\*', r'<i>\1</i>', text)
-        text = re.sub(r'_(.+?)_', r'<i>\1</i>', text)
-        text = re.sub(r'`(.+?)`', r'<font face="Courier" size="9">\1</font>', text)
+        text = re.sub(r'(?<!\w)\*(.+?)\*(?!\w)', r'<i>\1</i>', text)
+        text = re.sub(r'(?<!\w)_([^_]+?)_(?!\w)', r'<i>\1</i>', text)
+
+        # Restore code spans as styled font tags
+        for i, code in enumerate(code_spans):
+            text = text.replace(f'\x00CODE{i}\x00',
+                                f'<font face="Courier" size="9">{code}</font>')
         return text
 
     story = []
