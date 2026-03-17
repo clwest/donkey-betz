@@ -1379,7 +1379,7 @@ class AgentHandlersMixin:
                 return disambiguation
 
             update_fields = []
-            if 'title' in payload:
+            if 'title' in payload and payload['title'] and payload['title'].strip():
                 obj.title = payload['title'].strip()[:255]
                 update_fields.append('title')
 
@@ -1419,10 +1419,10 @@ class AgentHandlersMixin:
                 else:
                     obj.tags = [t.strip() for t in str(raw_tags).split(',') if t.strip()]
                 update_fields.append('tags')
-            if 'category' in payload:
+            if 'category' in payload and payload['category'] and payload['category'].strip():
                 obj.category = payload['category'].strip()[:100]
                 update_fields.append('category')
-            if 'data_sensitivity' in payload:
+            if 'data_sensitivity' in payload and payload['data_sensitivity']:
                 obj.data_sensitivity = payload['data_sensitivity']
                 update_fields.append('data_sensitivity')
             if 'workspace_id' in payload or 'workspace' in payload:
