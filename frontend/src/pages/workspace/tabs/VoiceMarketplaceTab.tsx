@@ -12,6 +12,7 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useCallback, useRef } from 'react'
 import {
   Mic,
   Search,
@@ -31,6 +32,10 @@ import {
   Check,
   Clock,
   Sparkles,
+  FileAudio,
+  Shield,
+  AlertTriangle,
+  CheckCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { platformApi } from '@/lib/api'
@@ -80,7 +85,7 @@ interface MarketplaceStats {
 }
 
 // Sub-tabs
-type VoiceSubTab = 'browse' | 'my-voices' | 'earnings'
+type VoiceSubTab = 'browse' | 'my-voices' | 'clone' | 'earnings'
 
 // Audio player hook
 function useAudioPlayer() {
@@ -426,6 +431,308 @@ function VoiceDetailModal({
   )
 }
 
+// Voice Clone Panel Component
+function VoiceClonePanel({ onSuccess }: { onSuccess: () => void }) {
+  const [dragActive, setDragActive] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [voiceName, setVoiceName] = useState('')
+  const [description, setDescription] = useState('')
+  const [gender, setGender] = useState('neutral')
+  const [ageRange, setAgeRange] = useState('adult')
+  const [accent, setAccent] = useState('')
+  const [useCase, setUseCase] = useState('general')
+  const [consent, setConsent] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const cloneMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedFile) throw new Error('No file selected')
+      const formData = new FormData()
+      formData.append('audio', selectedFile)
+      formData.append('name', voiceName || `My Voice`)
+      formData.append('description', description)
+      formData.append('gender', gender)
+      formData.append('age_range', ageRange)
+      formData.append('accent', accent)
+      formData.append('primary_use_case', useCase)
+      formData.append('consent', 'true')
+      const res = await platformApi.post('/api/voice-marketplace/clone/upload/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 120000, // 2 min timeout for cloning
+      })
+      return res.data
+    },
+    onSuccess: () => {
+      setSelectedFile(null)
+      setVoiceName('')
+      setDescription('')
+      setConsent(false)
+      onSuccess()
+    },
+  })
+
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true)
+    } else if (e.type === 'dragleave') {
+      setDragActive(false)
+    }
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file && file.type.startsWith('audio/')) {
+      setSelectedFile(file)
+    }
+  }, [])
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setSelectedFile(file)
+    }
+  }, [])
+
+  const fileSizeMB = selectedFile ? (selectedFile.size / (1024 * 1024)).toFixed(1) : '0'
+  const canSubmit = selectedFile && consent && !cloneMutation.isPending
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="text-center">
+        <div className="inline-flex items-center justify-center p-3 rounded-full bg-primary-500/20 mb-3">
+          <Mic className="w-8 h-8 text-primary-400" />
+        </div>
+        <h3 className="text-xl font-semibold text-white">Clone Your Voice</h3>
+        <p className="text-sm text-gray-400 mt-1">
+          Upload an audio sample to create an AI clone of your voice using ElevenLabs
+        </p>
+      </div>
+
+      {/* Success State */}
+      {cloneMutation.isSuccess && (
+        <div className="p-4 bg-green-500/20 border border-green-500/30 rounded-xl flex items-start gap-3">
+          <CheckCircle className="text-green-400 flex-shrink-0 mt-0.5" size={20} />
+          <div>
+            <p className="font-medium text-green-400">Voice cloned successfully!</p>
+            <p className="text-sm text-green-300/70 mt-1">
+              Your voice "{cloneMutation.data?.name}" is now available in My Voices.
+              You can use it for TTS generation across the platform.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* File Upload Zone */}
+      <div
+        onDragEnter={handleDrag}
+        onDragLeave={handleDrag}
+        onDragOver={handleDrag}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()}
+        className={cn(
+          'border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all',
+          dragActive
+            ? 'border-primary-500 bg-primary-500/10'
+            : selectedFile
+            ? 'border-green-500/50 bg-green-500/5'
+            : 'border-dark-border hover:border-primary-500/50 hover:bg-dark-hover'
+        )}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="audio/*"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+        {selectedFile ? (
+          <div className="space-y-2">
+            <FileAudio className="mx-auto text-green-400" size={40} />
+            <p className="font-medium text-green-400">{selectedFile.name}</p>
+            <p className="text-sm text-gray-400">{fileSizeMB} MB</p>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setSelectedFile(null)
+              }}
+              className="text-xs text-red-400 hover:text-red-300 underline"
+            >
+              Remove file
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <Upload className="mx-auto text-gray-500" size={40} />
+            <p className="text-gray-300">Drop an audio file here or click to browse</p>
+            <p className="text-xs text-gray-500">
+              WAV, MP3, M4A, OGG, WebM, FLAC - Max 10MB
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Tips */}
+      <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+        <p className="text-xs text-blue-300 font-medium mb-1">Tips for best results:</p>
+        <ul className="text-xs text-blue-300/70 space-y-0.5 list-disc list-inside">
+          <li>Use a clear recording with minimal background noise</li>
+          <li>30 seconds to 3 minutes of speech works best</li>
+          <li>Speak naturally in your normal voice</li>
+          <li>Avoid music or multiple speakers</li>
+        </ul>
+      </div>
+
+      {/* Voice Configuration */}
+      <div className="space-y-4">
+        <h4 className="font-medium text-gray-300">Voice Details</h4>
+
+        <div>
+          <label className="block text-sm text-gray-400 mb-1">Voice Name</label>
+          <input
+            type="text"
+            value={voiceName}
+            onChange={(e) => setVoiceName(e.target.value)}
+            placeholder="e.g., My Narrator Voice"
+            className="w-full px-3 py-2 bg-dark-card border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm text-gray-400 mb-1">Description (optional)</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Describe the voice characteristics..."
+            rows={2}
+            className="w-full px-3 py-2 bg-dark-card border border-dark-border rounded-lg text-sm resize-none focus:outline-none focus:border-primary-500"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Gender</label>
+            <select
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+              className="w-full px-3 py-2 bg-dark-card border border-dark-border rounded-lg text-sm"
+            >
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="neutral">Neutral</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Age Range</label>
+            <select
+              value={ageRange}
+              onChange={(e) => setAgeRange(e.target.value)}
+              className="w-full px-3 py-2 bg-dark-card border border-dark-border rounded-lg text-sm"
+            >
+              <option value="child">Child (5-12)</option>
+              <option value="teen">Teen (13-19)</option>
+              <option value="young_adult">Young Adult (20-35)</option>
+              <option value="adult">Adult (35-55)</option>
+              <option value="senior">Senior (55+)</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Accent (optional)</label>
+            <input
+              type="text"
+              value={accent}
+              onChange={(e) => setAccent(e.target.value)}
+              placeholder="e.g., American, British"
+              className="w-full px-3 py-2 bg-dark-card border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Use Case</label>
+            <select
+              value={useCase}
+              onChange={(e) => setUseCase(e.target.value)}
+              className="w-full px-3 py-2 bg-dark-card border border-dark-border rounded-lg text-sm"
+            >
+              <option value="general">General Purpose</option>
+              <option value="narration">Narration / Audiobook</option>
+              <option value="podcast">Podcast / YouTube</option>
+              <option value="commercial">Commercial</option>
+              <option value="gaming">Gaming / Character</option>
+              <option value="assistant">Virtual Assistant</option>
+              <option value="animation">Animation / Character</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Consent */}
+      <div className="p-4 bg-dark-card border border-dark-border rounded-xl">
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={consent}
+            onChange={(e) => setConsent(e.target.checked)}
+            className="mt-1 rounded border-dark-border bg-dark-bg text-primary-500 focus:ring-primary-500"
+          />
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Shield size={14} className="text-primary-400" />
+              <span className="text-sm font-medium text-gray-300">Voice Rights Confirmation</span>
+            </div>
+            <p className="text-xs text-gray-400">
+              I confirm that I own or have explicit permission to clone this voice.
+              I understand this will create an AI replica that can generate speech.
+              I will not use this to impersonate others without their consent.
+            </p>
+          </div>
+        </label>
+      </div>
+
+      {/* Error State */}
+      {cloneMutation.isError && (
+        <div className="p-3 bg-red-500/20 border border-red-500/30 rounded-lg flex items-start gap-2">
+          <AlertTriangle className="text-red-400 flex-shrink-0 mt-0.5" size={16} />
+          <p className="text-sm text-red-400">
+            {(cloneMutation.error as Error)?.message || 'Voice cloning failed. Please try again.'}
+          </p>
+        </div>
+      )}
+
+      {/* Submit */}
+      <button
+        onClick={() => cloneMutation.mutate()}
+        disabled={!canSubmit}
+        className={cn(
+          'w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors',
+          canSubmit
+            ? 'bg-primary-500 hover:bg-primary-600 text-white'
+            : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+        )}
+      >
+        {cloneMutation.isPending ? (
+          <>
+            <Loader2 size={18} className="animate-spin" />
+            Cloning voice... This may take up to 2 minutes
+          </>
+        ) : (
+          <>
+            <Mic size={18} />
+            Clone Voice
+          </>
+        )}
+      </button>
+    </div>
+  )
+}
+
 // Main Component
 export function VoiceMarketplaceTab() {
   const [subTab, setSubTab] = useState<VoiceSubTab>('browse')
@@ -485,9 +792,12 @@ export function VoiceMarketplaceTab() {
     },
   })
 
+  const queryClient = useQueryClient()
+
   const subTabs = [
     { id: 'browse' as VoiceSubTab, label: 'Browse', icon: Search },
     { id: 'my-voices' as VoiceSubTab, label: 'My Voices', icon: Mic },
+    { id: 'clone' as VoiceSubTab, label: 'Clone Voice', icon: Upload },
     { id: 'earnings' as VoiceSubTab, label: 'Earnings', icon: DollarSign },
   ]
 
@@ -663,6 +973,16 @@ export function VoiceMarketplaceTab() {
               </div>
             )}
           </div>
+        )}
+
+        {/* Clone Voice Tab */}
+        {subTab === 'clone' && (
+          <VoiceClonePanel
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ['voice-marketplace', 'my-voices'] })
+              queryClient.invalidateQueries({ queryKey: ['voice-marketplace', 'stats'] })
+            }}
+          />
         )}
 
         {/* Earnings Tab */}

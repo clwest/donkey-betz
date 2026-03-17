@@ -324,6 +324,7 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         self.register("universal_agent_tool", self._handle_universal_agent)
         self.register("workspace_tool", self._handle_workspace)
         self.register("media_tool", self._handle_media)
+        self.register("voice_clone_tool", self._handle_voice_clone)
         self.register("davinci_tool", self._handle_davinci)
         self.register("obs_tool", self._handle_obs)
         self.register("bpaas_tool", self._handle_bpaas)
