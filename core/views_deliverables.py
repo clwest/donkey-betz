@@ -457,12 +457,12 @@ def get_deliverable_stats(request):
             .order_by('-count')
         )
 
-        # By category
+        # By category — return all for dropdown filter (Session 1077)
         by_category = list(
             queryset.exclude(category='')
             .values('category')
             .annotate(count=Count('id'))
-            .order_by('-count')[:10]
+            .order_by('-count')
         )
 
         # By agent
