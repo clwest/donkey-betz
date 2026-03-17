@@ -146,6 +146,7 @@ export function DeliverablesTab() {
   const [page, setPage] = useState(1)
   const [filters, setFilters] = useState<{
     type?: string
+    category?: string
     agent?: string
     search?: string
     saved?: boolean
@@ -274,7 +275,7 @@ export function DeliverablesTab() {
   const deliverables: Deliverable[] = listQuery.data?.deliverables ?? []
   const pagination: Pagination | null = listQuery.data?.pagination ?? null
   const detail: Deliverable | null = detailQuery.data?.deliverable ?? null
-  const hasActiveFilters = !!(filters.type || filters.agent || filters.search || filters.saved || filters.template || filters.source)
+  const hasActiveFilters = !!(filters.type || filters.category || filters.agent || filters.search || filters.saved || filters.template || filters.source)
 
   // Today queue: recent deliverables (last 24h) that haven't been acted on
   const recentDeliverables = deliverables.filter(d => {
@@ -645,6 +646,16 @@ export function DeliverablesTab() {
               <option value="">All Types</option>
               {types.map(t => (
                 <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
+            <select
+              value={filters.category || ''}
+              onChange={(e) => { setFilters(f => ({ ...f, category: e.target.value || undefined })); setPage(1) }}
+              className="px-2 py-1.5 bg-gray-800 border border-dark-border rounded text-sm text-gray-300"
+            >
+              <option value="">All Categories</option>
+              {(stats?.by_category || []).map((c: { category: string; count: number }) => (
+                <option key={c.category} value={c.category}>{c.category} ({c.count})</option>
               ))}
             </select>
             <input
