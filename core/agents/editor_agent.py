@@ -108,6 +108,7 @@ class EditorAgent(BaseAgent):
     """
 
     name = "EditorAgent"
+    create_deliverable_on_schedule = False  # Session 1077: scheduled outputs go to AgentExecution only
     description = "Enhances content structure, adds engagement elements, and polishes for publication"
 
     # Session 857: Output category configuration

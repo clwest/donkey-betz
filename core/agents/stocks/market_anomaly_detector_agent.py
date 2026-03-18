@@ -39,6 +39,7 @@ class MarketAnomalyDetectorAgent(BaseAgent):
     """
 
     name = "MarketAnomalyDetectorAgent"
+    create_deliverable_on_schedule = False  # Session 1077: scheduled outputs go to AgentExecution only
 
     # === Session 683: ML Integration Methods ===
 
