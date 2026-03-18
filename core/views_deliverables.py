@@ -65,8 +65,11 @@ def list_deliverables(request):
         - per_page: Items per page (default: 20, max: 100)
     """
     try:
-        # Base queryset
+        # Base queryset — exclude archived by default (Session 1077)
+        show_archived = request.GET.get('include_archived', '').lower() == 'true'
         queryset = Deliverable.objects.all()
+        if not show_archived:
+            queryset = queryset.exclude(status='archived')
 
         # Filter by user if authenticated
         if request.user.is_authenticated:
@@ -430,8 +433,8 @@ def export_deliverable(request, deliverable_id):
 def get_deliverable_stats(request):
     """Get statistics about deliverables."""
     try:
-        # Base queryset
-        queryset = Deliverable.objects.all()
+        # Base queryset — exclude archived by default (Session 1077)
+        queryset = Deliverable.objects.exclude(status='archived')
 
         if request.user.is_authenticated:
             queryset = queryset.filter(
