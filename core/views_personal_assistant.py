@@ -139,16 +139,29 @@ def get_assistant_context(request):
     """
     import hashlib
     from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
+    from time import monotonic
 
     user_id = request.user.id
     cache_key = f"pa_context:{hashlib.md5(str(user_id).encode()).hexdigest()}"
 
+    t0_total = monotonic()
+    cache_get_ms = None
+
     # Try cache first (60s TTL)
+    t0_cache = monotonic()
     cached = cache.get(cache_key)
+    cache_get_ms = int((monotonic() - t0_cache) * 1000)
     if cached is not None:
+        total_ms = int((monotonic() - t0_total) * 1000)
+        logger.info(
+            "PA_CONTEXT_METRICS status=ok cache_hit=true user_id=%s cache_get_ms=%s total_ms=%s",
+            user_id, cache_get_ms, total_ms,
+        )
         return Response({'success': True, 'context': cached})
 
     try:
+        t0_build = monotonic()
+
         def _build_context():
             from django.db import close_old_connections
             close_old_connections()
@@ -161,14 +174,29 @@ def get_assistant_context(request):
             try:
                 context = future.result(timeout=15)
             except FuturesTimeout:
-                logger.warning("get_assistant_context timed out after 15s for user %s", user_id)
+                build_ms = int((monotonic() - t0_build) * 1000)
+                total_ms = int((monotonic() - t0_total) * 1000)
+                logger.warning(
+                    "PA_CONTEXT_METRICS status=timeout cache_hit=false user_id=%s "
+                    "cache_get_ms=%s build_ms=%s total_ms=%s",
+                    user_id, cache_get_ms, build_ms, total_ms,
+                )
                 return Response({
                     'success': False,
                     'error': 'Context assembly timed out',
                 }, status=504)
 
+        build_ms = int((monotonic() - t0_build) * 1000)
+
         # Cache for 60 seconds
         cache.set(cache_key, context, 60)
+
+        total_ms = int((monotonic() - t0_total) * 1000)
+        logger.info(
+            "PA_CONTEXT_METRICS status=ok cache_hit=false user_id=%s "
+            "cache_get_ms=%s build_ms=%s total_ms=%s",
+            user_id, cache_get_ms, build_ms, total_ms,
+        )
 
         return Response({
             'success': True,
@@ -176,7 +204,12 @@ def get_assistant_context(request):
         })
 
     except Exception as e:
-        logger.error(f"Error getting assistant context: {e}")
+        total_ms = int((monotonic() - t0_total) * 1000)
+        logger.error(
+            "PA_CONTEXT_METRICS status=error cache_hit=false user_id=%s "
+            "cache_get_ms=%s total_ms=%s error=%s",
+            user_id, cache_get_ms, total_ms, str(e),
+        )
         return Response({
             'error': 'Failed to get context',
             'detail': str(e)
