@@ -46,6 +46,7 @@ import SmartOutputRenderer from '@/components/SmartOutputRenderer'
 // Import workspace-only tab components
 import {
   WorkTab,
+  OpsConsoleTab,
   WorkspaceOverviewTab,
   FilesTab,
   OperationsTab,
@@ -949,7 +950,13 @@ export default function WorkspacePage() {
           )}
 
           {activeTab === 'system' && (
-            <SystemTab />
+            <div className="space-y-8">
+              <OpsConsoleTab />
+              <div className="border-t border-dark-border pt-6">
+                <h3 className="text-sm font-medium text-gray-400 mb-4">System Details</h3>
+                <SystemTab />
+              </div>
+            </div>
           )}
 
           {activeTab === 'dataintel' && (
