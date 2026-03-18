@@ -15,7 +15,7 @@ import {
   ExternalLink,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { deliverablesApi } from '@/lib/api'
+import { api, deliverablesApi } from '@/lib/api'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { ChatMarkdown } from '@/components/ChatMarkdown'
 
@@ -99,11 +99,8 @@ export function WorkTab({ workspaceId, onNavigateTab }: WorkTabProps) {
     queryKey: ['work-attention'],
     queryFn: async () => {
       try {
-        const r = await fetch('/api/human/attention/?limit=15&urgency=critical,high,medium', {
-          credentials: 'include',
-        })
-        if (!r.ok) return { items: [], total: 0 }
-        const data = await r.json()
+        const r = await api.get('/human/attention/', { params: { limit: 15, urgency: 'critical,high,medium' } })
+        const data = r.data
         return {
           items: (data.results || data.items || []).slice(0, 15),
           total: data.count || data.total || 0,
@@ -127,11 +124,8 @@ export function WorkTab({ workspaceId, onNavigateTab }: WorkTabProps) {
     queryKey: ['work-activity', activeWsId],
     queryFn: async () => {
       try {
-        const r = await fetch(`/api/workspaces/${activeWsId}/operations/?limit=6&page_size=6`, {
-          credentials: 'include',
-        })
-        if (!r.ok) return []
-        const data = await r.json()
+        const r = await api.get(`/workspaces/${activeWsId}/operations/`, { params: { limit: 6, page_size: 6 } })
+        const data = r.data
         return (data.results || data.operations || []).slice(0, 6)
       } catch {
         return []
@@ -413,12 +407,7 @@ export function WorkTab({ workspaceId, onNavigateTab }: WorkTabProps) {
                           <>
                             <button
                               onClick={async () => {
-                                await fetch(`/api/human/attention/${item.id}/decide/`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  credentials: 'include',
-                                  body: JSON.stringify({ decision: 'approve' }),
-                                })
+                                await api.post(`/human/attention/${item.id}/decide/`, { decision: 'approve' })
                                 queryClient.invalidateQueries({ queryKey: ['work-attention'] })
                                 setExpandedId(null)
                               }}
@@ -428,12 +417,7 @@ export function WorkTab({ workspaceId, onNavigateTab }: WorkTabProps) {
                             </button>
                             <button
                               onClick={async () => {
-                                await fetch(`/api/human/attention/${item.id}/decide/`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  credentials: 'include',
-                                  body: JSON.stringify({ decision: 'reject' }),
-                                })
+                                await api.post(`/human/attention/${item.id}/decide/`, { decision: 'reject' })
                                 queryClient.invalidateQueries({ queryKey: ['work-attention'] })
                                 setExpandedId(null)
                               }}
@@ -443,11 +427,7 @@ export function WorkTab({ workspaceId, onNavigateTab }: WorkTabProps) {
                             </button>
                             <button
                               onClick={async () => {
-                                await fetch(`/api/human/attention/${item.id}/defer/`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  credentials: 'include',
-                                })
+                                await api.post(`/human/attention/${item.id}/defer/`)
                                 queryClient.invalidateQueries({ queryKey: ['work-attention'] })
                                 setExpandedId(null)
                               }}
