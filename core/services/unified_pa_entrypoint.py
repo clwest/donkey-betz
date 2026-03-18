@@ -1343,6 +1343,32 @@ class UnifiedPAEntrypoint:
                     user_id=self.user.id,  # type: ignore[attr-defined]
                     timeout=tool_timeout,
                 )
+
+                # Session 1077: Auto-retry when gateway returns wrong action.
+                # GPT-5.2 sometimes omits the action param, causing content_stats
+                # fallback. If the requested action doesn't match the response,
+                # retry once with the action explicitly re-injected.
+                requested_action = arguments.get('action', '')
+                result_action = ''
+                if tool_result.ok and isinstance(tool_result.result, dict):
+                    result_action = tool_result.result.get('action', '')
+                if (requested_action and result_action
+                        and requested_action != result_action
+                        and result_action in ('content_stats', 'list')
+                        and actual_tool_name in ('content_tool', 'work_tool')):
+                    logger.warning(
+                        f"[{trace_id}] FC action mismatch: requested={requested_action!r} "
+                        f"got={result_action!r} — retrying with action re-injected"
+                    )
+                    retry_payload = dict(arguments)
+                    retry_payload['action'] = requested_action
+                    tool_result = await self.tool_dispatcher.execute(
+                        tool_name=actual_tool_name,
+                        payload=retry_payload,
+                        user_id=self.user.id,  # type: ignore[attr-defined]
+                        timeout=tool_timeout,
+                    )
+
                 tool_runs.append(tool_result.to_dict())
 
                 # Session 1060: Record tool call in ToolCallRecord for observability.
