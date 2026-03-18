@@ -2740,6 +2740,97 @@ PA_TOOL_SCHEMAS = [
             "required": ["action"],
         },
     },
+    # ── Session 1077: Focused deliverable_tool (split from content_tool) ────────
+    {
+        "type": "function",
+        "name": "deliverable_tool",
+        "description": (
+            "Manage the deliverables library — create, read, update, search, save, export, and archive deliverables. "
+            "Use this tool (NOT content_tool) for ALL deliverable operations."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list", "detail", "create", "update", "append", "search", "save", "unsave", "stats", "export_pdf", "bulk_archive"],
+                    "description": (
+                        "list: browse deliverables (supports status/type/category/date/workspace filters). "
+                        "detail: get full content of a deliverable (pass full=true for uncapped content). "
+                        "create: create a new deliverable (title + content required). "
+                        "update: update an existing deliverable by id. "
+                        "append: append text to a deliverable (never overwrites). "
+                        "search: search deliverables by title keyword. "
+                        "save/unsave: bookmark or unbookmark a deliverable. "
+                        "stats: aggregate counts by type/category/agent. "
+                        "export_pdf: generate a downloadable PDF. "
+                        "bulk_archive: archive multiple deliverables by filter (dry_run=true by default)."
+                    ),
+                },
+                "id": {"type": "string", "description": "UUID of the deliverable"},
+                "title": {"type": "string", "description": "Title for create/update"},
+                "content": {"type": "string", "description": "Content for create/update/append"},
+                "query": {"type": "string", "description": "Search term for search action"},
+                "category": {"type": "string", "description": "Category filter or value for create/update"},
+                "type": {"type": "string", "description": "Deliverable type filter (document, analysis, etc.)"},
+                "status": {"type": "string", "description": "Status filter: ready, completed, draft, published"},
+                "agent": {"type": "string", "description": "Filter by agent_name"},
+                "tags": {"type": "array", "items": {"type": "string"}, "description": "Tags for create/update"},
+                "workspace_id": {"type": "string", "description": "Workspace UUID to scope or link"},
+                "full": {"type": "boolean", "description": "For detail: return full content without 8K cap"},
+                "content_offset": {"type": "integer", "description": "For detail: start reading from this char position"},
+                "content_limit": {"type": "integer", "description": "For detail: max chars to return"},
+                "data_sensitivity": {"type": "string", "description": "For create/update: public, internal, confidential, restricted"},
+                "is_pinned": {"type": "boolean", "description": "For create: pin to prevent auto-cleanup"},
+                "agent_name": {"type": "string", "description": "For create: agent name"},
+                "dry_run": {"type": "boolean", "description": "For bulk_archive: preview without executing (default true)"},
+                "cap": {"type": "integer", "description": "For bulk_archive: max items per run"},
+                "title_prefixes": {"type": "array", "items": {"type": "string"}, "description": "For bulk_archive: title prefix filter"},
+                "agent_names": {"type": "array", "items": {"type": "string"}, "description": "For bulk_archive: agent name filter"},
+                "protected_categories": {"type": "array", "items": {"type": "string"}, "description": "For bulk_archive: categories to exclude"},
+                "limit": {"type": "integer", "description": "Max items to return (default 10)"},
+                "offset": {"type": "integer", "description": "Pagination offset"},
+            },
+            "required": ["action"],
+        },
+    },
+    # ── Session 1077: Focused blog_tool (split from content_tool) ────────────
+    {
+        "type": "function",
+        "name": "blog_tool",
+        "description": (
+            "Manage the blog/content pipeline — stats, list, approve, reject, generate. "
+            "Use this tool for blog operations. Use deliverable_tool for deliverables."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["stats", "list", "detail", "search", "recent", "approve", "reject", "generate"],
+                    "description": (
+                        "stats: pipeline overview (blogs + deliverables counts). "
+                        "list: list blogs by status. "
+                        "detail: full blog content by id. "
+                        "search: search blogs by title. "
+                        "recent: recently created content. "
+                        "approve: publish a ready blog. "
+                        "reject: archive a blog with feedback. "
+                        "generate: create a new blog via deliberation pipeline."
+                    ),
+                },
+                "id": {"type": "string", "description": "UUID of the blog"},
+                "query": {"type": "string", "description": "Search term"},
+                "status": {"type": "string", "description": "Status filter"},
+                "topic": {"type": "string", "description": "Blog topic for generate action"},
+                "tone": {"type": "string", "description": "Tone for generate (default: enthusiastic)"},
+                "feedback": {"type": "string", "description": "Feedback when rejecting"},
+                "days": {"type": "integer", "description": "Lookback days for recent (default 30)"},
+                "limit": {"type": "integer", "description": "Max items"},
+            },
+            "required": ["action"],
+        },
+    },
     # ── ops_digest_tool ──────────────────────────────────────────────────
     {
         "type": "function",

@@ -78,6 +78,51 @@ class ToolResult:
 class ContentHandlersMixin:
     """Mixin providing handler methods for ToolDispatcher."""
 
+    # ── Session 1077: Focused tool handlers (split from content_tool) ────────
+
+    def _handle_deliverable_direct(self, tool_name, payload, user_id, trace_id):
+        """Direct deliverable handler — maps deliverable_tool actions to deliverables_tool."""
+        action = payload.get('action', 'list')
+        # Map direct actions to the deliverables handler action names
+        ACTION_MAP = {
+            'list': 'list', 'detail': 'detail', 'create': 'create',
+            'update': 'update', 'append': 'append', 'search': 'search',
+            'save': 'save', 'unsave': 'unsave', 'stats': 'stats',
+            'export_pdf': 'export_pdf', 'bulk_archive': 'bulk_archive',
+        }
+        mapped = ACTION_MAP.get(action, action)
+        del_payload = dict(payload)
+        del_payload['action'] = mapped
+        # Route bulk_archive to the dedicated handler
+        if action == 'bulk_archive':
+            return self._handle_bulk_archive(del_payload, user_id, trace_id)
+        result = self._handle_deliverables('deliverables_tool', del_payload, user_id, trace_id)
+        if isinstance(result, dict):
+            result['gateway'] = 'deliverable_tool'
+        return result
+
+    def _handle_blog_direct(self, tool_name, payload, user_id, trace_id):
+        """Direct blog handler — maps blog_tool actions to content_review_tool."""
+        action = payload.get('action', 'stats')
+        ACTION_MAP = {
+            'stats': 'stats', 'list': 'list', 'detail': 'details',
+            'search': 'search', 'recent': 'recent',
+            'approve': 'approve', 'reject': 'reject',
+        }
+        if action == 'generate':
+            blog_payload = dict(payload)
+            result = self._handle_generate_blog('generate_blog_tool', blog_payload, user_id, trace_id)
+            if isinstance(result, dict):
+                result['gateway'] = 'blog_tool'
+            return result
+        mapped = ACTION_MAP.get(action, action)
+        review_payload = dict(payload)
+        review_payload['action'] = mapped
+        result = self._handle_content_review('content_review_tool', review_payload, user_id, trace_id)
+        if isinstance(result, dict):
+            result['gateway'] = 'blog_tool'
+        return result
+
     def _record_content_feedback(self, agent_name, action, details, user_id=None):
         """Record PA review outcome as agent feedback for the content feedback loop.
 
