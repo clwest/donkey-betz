@@ -2753,7 +2753,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "detail", "create", "update", "append", "search", "save", "unsave", "stats", "export_pdf", "bulk_archive"],
+                    "enum": ["list", "detail", "create", "update", "append", "search", "save", "unsave", "stats", "export_pdf", "bulk_archive", "link_initiative", "unlink_initiative"],
                     "description": (
                         "list: browse deliverables (supports status/type/category/date/workspace filters). "
                         "detail: get full content of a deliverable (pass full=true for uncapped content). "
@@ -2764,10 +2764,13 @@ PA_TOOL_SCHEMAS = [
                         "save/unsave: bookmark or unbookmark a deliverable. "
                         "stats: aggregate counts by type/category/agent. "
                         "export_pdf: generate a downloadable PDF. "
-                        "bulk_archive: archive multiple deliverables by filter (dry_run=true by default)."
+                        "bulk_archive: archive multiple deliverables by filter (dry_run=true by default). "
+                        "link_initiative: link a deliverable to an initiative (pass deliverable_id + initiative_id). "
+                        "unlink_initiative: remove initiative link from a deliverable (pass deliverable_id)."
                     ),
                 },
-                "id": {"type": "string", "description": "UUID of the deliverable"},
+                "id": {"type": "string", "description": "UUID of the deliverable (also used as deliverable_id for link/unlink)"},
+                "initiative_id": {"type": "string", "description": "UUID of initiative — for link_initiative action"},
                 "title": {"type": "string", "description": "Title for create/update"},
                 "content": {"type": "string", "description": "Content for create/update/append"},
                 "query": {"type": "string", "description": "Search term for search action"},

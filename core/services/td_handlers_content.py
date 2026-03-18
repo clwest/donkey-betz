@@ -96,10 +96,57 @@ class ContentHandlersMixin:
         # Route bulk_archive to the dedicated handler
         if action == 'bulk_archive':
             return self._handle_bulk_archive(del_payload, user_id, trace_id)
+        # Session 1077: Link/unlink deliverable ↔ initiative
+        if action in ('link_initiative', 'unlink_initiative'):
+            return self._handle_deliverable_initiative_link(action, del_payload, user_id, trace_id)
         result = self._handle_deliverables('deliverables_tool', del_payload, user_id, trace_id)
         if isinstance(result, dict):
             result['gateway'] = 'deliverable_tool'
         return result
+
+    def _handle_deliverable_initiative_link(self, action, payload, user_id, trace_id):
+        """Link or unlink a deliverable to/from an initiative."""
+        from core.models_deliverables import Deliverable
+        from core.models import Initiative
+
+        deliverable_id = payload.get('deliverable_id') or payload.get('id')
+        initiative_id = payload.get('initiative_id')
+        if not deliverable_id:
+            return {'error': 'deliverable_id is required', 'action': action}
+        try:
+            deliverable = Deliverable.objects.get(id=deliverable_id)
+        except Deliverable.DoesNotExist:
+            return {'error': f'Deliverable {deliverable_id} not found', 'action': action}
+
+        if action == 'link_initiative':
+            if not initiative_id:
+                return {'error': 'initiative_id is required for link_initiative', 'action': action}
+            try:
+                initiative = Initiative.objects.get(id=initiative_id)
+            except Initiative.DoesNotExist:
+                return {'error': f'Initiative {initiative_id} not found', 'action': action}
+            deliverable.initiative = initiative
+            deliverable.save(update_fields=['initiative'])
+            return {
+                'action': 'link_initiative',
+                'deliverable_id': str(deliverable.id),
+                'deliverable_title': deliverable.title,
+                'initiative_id': str(initiative.id),
+                'initiative_name': initiative.name,
+                'gateway': 'deliverable_tool',
+            }
+        else:  # unlink_initiative
+            old_init = deliverable.initiative
+            old_name = old_init.name if old_init else None
+            deliverable.initiative = None
+            deliverable.save(update_fields=['initiative'])
+            return {
+                'action': 'unlink_initiative',
+                'deliverable_id': str(deliverable.id),
+                'deliverable_title': deliverable.title,
+                'unlinked_from': old_name,
+                'gateway': 'deliverable_tool',
+            }
 
     def _handle_blog_direct(self, tool_name, payload, user_id, trace_id):
         """Direct blog handler — maps blog_tool actions to content_review_tool."""
