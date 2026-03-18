@@ -345,6 +345,12 @@ class BaseAgent(ABC, TimeTravelMixin):
     enable_prompt_sharpening: bool = True  # Enable decisive language transformation
     sharpening_type: str = 'debate'  # 'debate', 'synthesis', or 'analysis'
 
+    # Session 1077: Deliverable creation gate for scheduled runs.
+    # When False, scheduled/autonomous runs skip Deliverable creation
+    # (output still saved to AgentExecution). Set True on agents whose
+    # scheduled outputs are keeper-worthy (specs, reports, initiatives).
+    create_deliverable_on_schedule: bool = True
+
     # Session 970: Auto-wrap _execute_tool_call in subclasses with recording
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -3807,6 +3813,19 @@ Consider this current data when formulating your response."""
             from django.utils import timezone as tz
             from datetime import timedelta
             import uuid
+
+            # Session 1077: Skip deliverable creation for scheduled runs
+            # if the agent has create_deliverable_on_schedule=False.
+            # The output is still in AgentExecution — just not promoted to Deliverable.
+            if not self.create_deliverable_on_schedule:
+                # Check if this is a scheduled/autonomous run (no user-initiated context)
+                is_scheduled = not user and not trace_id
+                if is_scheduled:
+                    logger.info(
+                        f"📦 [GATE] Skipping deliverable for scheduled {self.name} "
+                        f"(create_deliverable_on_schedule=False): {title[:60]}"
+                    )
+                    return None
 
             # Phase 3: Run content through persistence guard (scrub + provenance)
             guard_result = guard_persistence(
