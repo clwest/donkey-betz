@@ -1385,6 +1385,11 @@ class ContentHandlersMixin:
                 else:
                     qs = qs.filter(owner_agent__icontains=owner_filter)
 
+            # Session 1077: Filter by workspace
+            ws_filter = payload.get('workspace') or payload.get('workspace_id')
+            if ws_filter:
+                qs = qs.filter(workspace_id=ws_filter)
+
             # Order by priority score (impact*0.4 + urgency*0.2 + confidence*0.2 + revenue*0.2)
             total_count = qs.count()
             items = list(
