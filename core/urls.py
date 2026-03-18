@@ -2289,6 +2289,11 @@ urlpatterns = [
     path('api/proposals/<str:proposal_id>/reject/', lambda r, proposal_id: __import__('core.views_proposals', fromlist=['reject_proposal']).reject_proposal(r), name='reject-proposal'),
     path('api/proposals/<str:proposal_id>/execute/', lambda r, proposal_id: __import__('core.views_proposals', fromlist=['execute_proposal']).execute_proposal(r), name='execute-proposal'),
 
+    # Session 1077: Ops Console REST endpoints
+    path('api/ops/slo-status/', lambda r: __import__('core.views_ops_console', fromlist=['slo_status']).slo_status(r), name='ops-slo-status'),
+    path('api/ops/failure-signatures/', lambda r: __import__('core.views_ops_console', fromlist=['failure_signatures']).failure_signatures(r), name='ops-failure-signatures'),
+    path('api/ops/blocked-agents/', lambda r: __import__('core.views_ops_console', fromlist=['blocked_agents']).blocked_agents(r), name='ops-blocked-agents'),
+
     # Spider Dashboard API endpoints
     path('api/spider/stats/', lambda r: __import__('ai_core.api.spider_api', fromlist=['SpiderStatsAPI']).SpiderStatsAPI.as_view()(r), name='spider_stats'),
     path('api/spider/data/', lambda r: __import__('ai_core.api.spider_api', fromlist=['SpiderDataAPI']).SpiderDataAPI.as_view()(r), name='spider_data'),
