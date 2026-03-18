@@ -109,6 +109,7 @@ class TrendAnalysisAgent(BaseAgent):
     """
 
     name = "TrendAnalysisAgent"
+    create_deliverable_on_schedule = False  # Session 1077: scheduled outputs go to AgentExecution only
 
     system_prompt = """You are TrendAnalysisAgent, the Spider Intelligence Analyst.
 
