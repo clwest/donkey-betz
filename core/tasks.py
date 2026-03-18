@@ -10585,6 +10585,46 @@ def cleanup_audio_cache():
 def process_pa_chat_task(self, user_id, message, context=None, generate_audio=False, conversation_id=None, source='web', platform='web'):
     from core.tasks_misc import _impl_process_pa_chat_task
     return _impl_process_pa_chat_task(self, user_id, message, context, generate_audio, conversation_id, source, platform)
+
+
+# Session 1077: Background TTS task — offloaded from process_pa_chat_task
+# to prevent SoftTimeLimitExceeded from ElevenLabs blocking the main PA path.
+@shared_task(bind=True, time_limit=120, soft_time_limit=90, ignore_result=True)
+def process_pa_tts_task(self, user_id, text, conversation_id=None, trace_id=None):
+    """Generate TTS audio in background and update the conversation record."""
+    import asyncio
+    from django.contrib.auth import get_user_model
+
+    logger.info(f"[PA_TTS] Starting background TTS for user {user_id}, trace {trace_id}")
+    try:
+        User = get_user_model()
+        user = User.objects.get(id=user_id)
+
+        from core.services.unified_pa_entrypoint import UnifiedPAEntrypoint
+        pa = UnifiedPAEntrypoint(user, conversation_id=conversation_id)
+
+        loop = asyncio.new_event_loop()
+        try:
+            audio_url = loop.run_until_complete(
+                asyncio.wait_for(pa._generate_audio(text), timeout=60)
+            )
+        finally:
+            loop.close()
+
+        if audio_url and conversation_id:
+            from core.models import ChatConversation
+            ChatConversation.objects.filter(
+                conversation_id=conversation_id,
+                user=user,
+            ).order_by('-created_at').update(
+                assistant_audio_url=audio_url,
+            )
+            logger.info(f"[PA_TTS] Audio saved: {audio_url[:80]}...")
+
+    except Exception as e:
+        logger.warning(f"[PA_TTS] Background TTS failed: {e}")
+
+
 @shared_task(bind=True, time_limit=120, soft_time_limit=100)
 def generate_step_content(self, step_id):
     from core.tasks_content import _impl_generate_step_content
