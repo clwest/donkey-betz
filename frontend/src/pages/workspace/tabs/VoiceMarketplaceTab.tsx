@@ -433,6 +433,68 @@ function VoiceDetailModal({
 
 // Voice Clone Panel Component
 function VoiceClonePanel({ onSuccess }: { onSuccess: () => void }) {
+  const [inputMode, setInputMode] = useState<'upload' | 'record'>('upload')
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingTime, setRecordingTime] = useState(0)
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+          ? 'audio/webm;codecs=opus'
+          : 'audio/webm',
+      })
+      mediaRecorderRef.current = mediaRecorder
+      chunksRef.current = []
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data)
+      }
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+        setAudioBlob(blob)
+        // Create a File object for the upload flow
+        const file = new File([blob], `voice-recording-${Date.now()}.webm`, { type: 'audio/webm' })
+        setSelectedFile(file)
+        stream.getTracks().forEach(t => t.stop())
+      }
+
+      mediaRecorder.start(250) // collect in 250ms chunks
+      setIsRecording(true)
+      setRecordingTime(0)
+      setAudioBlob(null)
+
+      timerRef.current = setInterval(() => {
+        setRecordingTime(t => t + 1)
+      }, 1000)
+    } catch (err) {
+      alert('Microphone access denied. Please allow microphone access in your browser settings.')
+    }
+  }, [])
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop()
+    }
+    setIsRecording(false)
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+      timerRef.current = null
+    }
+  }, [])
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60)
+    const s = seconds % 60
+    return `${m}:${s.toString().padStart(2, '0')}`
+  }
+
   const [dragActive, setDragActive] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [voiceName, setVoiceName] = useState('')
@@ -528,54 +590,135 @@ function VoiceClonePanel({ onSuccess }: { onSuccess: () => void }) {
         </div>
       )}
 
-      {/* File Upload Zone */}
-      <div
-        onDragEnter={handleDrag}
-        onDragLeave={handleDrag}
-        onDragOver={handleDrag}
-        onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
-        className={cn(
-          'border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all',
-          dragActive
-            ? 'border-primary-500 bg-primary-500/10'
-            : selectedFile
-            ? 'border-green-500/50 bg-green-500/5'
-            : 'border-dark-border hover:border-primary-500/50 hover:bg-dark-hover'
-        )}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="audio/*"
-          onChange={handleFileSelect}
-          className="hidden"
-        />
-        {selectedFile ? (
-          <div className="space-y-2">
-            <FileAudio className="mx-auto text-green-400" size={40} />
-            <p className="font-medium text-green-400">{selectedFile.name}</p>
-            <p className="text-sm text-gray-400">{fileSizeMB} MB</p>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setSelectedFile(null)
-              }}
-              className="text-xs text-red-400 hover:text-red-300 underline"
-            >
-              Remove file
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <Upload className="mx-auto text-gray-500" size={40} />
-            <p className="text-gray-300">Drop an audio file here or click to browse</p>
-            <p className="text-xs text-gray-500">
-              WAV, MP3, M4A, OGG, WebM, FLAC - Max 10MB
-            </p>
-          </div>
-        )}
+      {/* Input Mode Toggle */}
+      <div className="flex gap-2 p-1 bg-gray-800/50 rounded-lg">
+        <button
+          onClick={() => setInputMode('upload')}
+          className={cn(
+            'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors',
+            inputMode === 'upload' ? 'bg-primary-500 text-white' : 'text-gray-400 hover:text-white'
+          )}
+        >
+          <Upload size={16} /> Upload File
+        </button>
+        <button
+          onClick={() => setInputMode('record')}
+          className={cn(
+            'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors',
+            inputMode === 'record' ? 'bg-primary-500 text-white' : 'text-gray-400 hover:text-white'
+          )}
+        >
+          <Mic size={16} /> Record Voice
+        </button>
       </div>
+
+      {/* Record Voice */}
+      {inputMode === 'record' && (
+        <div className="border-2 border-dashed rounded-xl p-8 text-center transition-all border-dark-border">
+          {!isRecording && !audioBlob && (
+            <div className="space-y-4">
+              <Mic className="mx-auto text-gray-500" size={48} />
+              <p className="text-gray-300">Click the button below to start recording</p>
+              <p className="text-xs text-gray-500">30 seconds to 3 minutes recommended for best results</p>
+              <button
+                onClick={startRecording}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-red-500 hover:bg-red-600 rounded-full text-white font-medium transition-colors"
+              >
+                <div className="w-3 h-3 rounded-full bg-white" />
+                Start Recording
+              </button>
+            </div>
+          )}
+
+          {isRecording && (
+            <div className="space-y-4">
+              <div className="relative inline-flex items-center justify-center">
+                <div className="w-20 h-20 rounded-full bg-red-500/20 animate-pulse flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-full bg-red-500/40 animate-pulse flex items-center justify-center">
+                    <Mic className="text-red-400" size={24} />
+                  </div>
+                </div>
+              </div>
+              <p className="text-2xl font-mono text-red-400">{formatTime(recordingTime)}</p>
+              <p className="text-sm text-gray-400">Recording... speak naturally</p>
+              <button
+                onClick={stopRecording}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-full text-white font-medium transition-colors"
+              >
+                <div className="w-3 h-3 rounded-sm bg-white" />
+                Stop Recording
+              </button>
+            </div>
+          )}
+
+          {audioBlob && !isRecording && (
+            <div className="space-y-4">
+              <CheckCircle className="mx-auto text-green-400" size={40} />
+              <p className="font-medium text-green-400">Recording captured — {formatTime(recordingTime)}</p>
+              <audio controls src={URL.createObjectURL(audioBlob)} className="mx-auto" />
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  onClick={() => { setAudioBlob(null); setSelectedFile(null); setRecordingTime(0) }}
+                  className="text-xs text-red-400 hover:text-red-300 underline"
+                >
+                  Discard & re-record
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* File Upload Zone */}
+      {inputMode === 'upload' && (
+        <div
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className={cn(
+            'border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all',
+            dragActive
+              ? 'border-primary-500 bg-primary-500/10'
+              : selectedFile
+              ? 'border-green-500/50 bg-green-500/5'
+              : 'border-dark-border hover:border-primary-500/50 hover:bg-dark-hover'
+          )}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="audio/*"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          {selectedFile ? (
+            <div className="space-y-2">
+              <FileAudio className="mx-auto text-green-400" size={40} />
+              <p className="font-medium text-green-400">{selectedFile.name}</p>
+              <p className="text-sm text-gray-400">{fileSizeMB} MB</p>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSelectedFile(null)
+                }}
+                className="text-xs text-red-400 hover:text-red-300 underline"
+              >
+                Remove file
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Upload className="mx-auto text-gray-500" size={40} />
+              <p className="text-gray-300">Drop an audio file here or click to browse</p>
+              <p className="text-xs text-gray-500">
+                WAV, MP3, M4A, OGG, WebM, FLAC - Max 10MB
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Tips */}
       <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
