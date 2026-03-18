@@ -1368,8 +1368,9 @@ class ContentHandlersMixin:
                 qs = qs.filter(program=program_filter)
 
             # Session 996: Filter by owner
+            # Session 1077: 'all' means no owner filter (was searching for literal 'all' in owner_agent)
             owner_filter = str(payload.get('owner', '')).strip()
-            if owner_filter:
+            if owner_filter and owner_filter.lower() != 'all':
                 if owner_filter == 'me' and user_id:
                     # Session 1077: Use User object lookup to avoid integer=UUID SQL error
                     try:
