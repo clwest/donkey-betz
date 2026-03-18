@@ -1384,8 +1384,13 @@ class AgentHandlersMixin:
                 update_fields.append('title')
 
             # Support prepend/append without requiring full content
+            # Session 1077: GPT-5.2 often sends content="" alongside append,
+            # so prioritize append/prepend over empty content replacement
             prepend_text = payload.get('prepend', '').strip()
             append_text = payload.get('append', '').strip()
+            raw_content = payload.get('content', '')
+            has_real_content = raw_content and raw_content.strip()
+
             if prepend_text or append_text:
                 current = obj.content or ''
                 if prepend_text:
@@ -1398,10 +1403,10 @@ class AgentHandlersMixin:
                     preview += '...'
                 obj.preview_content = preview
                 update_fields.extend(['content', 'preview_content'])
-            elif 'content' in payload:
-                obj.content = payload['content']
-                preview = payload['content'][:500]
-                if len(payload['content']) > 500:
+            elif has_real_content:
+                obj.content = raw_content
+                preview = raw_content[:500]
+                if len(raw_content) > 500:
                     preview += '...'
                 obj.preview_content = preview
                 update_fields.extend(['content', 'preview_content'])
