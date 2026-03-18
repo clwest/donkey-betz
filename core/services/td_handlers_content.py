@@ -1391,16 +1391,33 @@ class ContentHandlersMixin:
             if ws_filter:
                 qs = qs.filter(workspace_id=ws_filter)
 
-            # Order by priority score (impact*0.4 + urgency*0.2 + confidence*0.2 + revenue*0.2)
+            # Session 1077: Annotate action item counts to avoid N+1 queries
+            # (was 2 COUNT queries per initiative in the loop)
+            from django.db.models import Count, Q as _Q
+            qs = qs.annotate(
+                pending_actions=Count(
+                    'action_items', filter=_Q(action_items__status='pending'), distinct=True
+                ),
+                critical_actions=Count(
+                    'action_items',
+                    filter=_Q(action_items__status='pending', action_items__priority='critical'),
+                    distinct=True,
+                ),
+            )
+
+            # Order + paginate (offset was missing before Session 1077)
             total_count = qs.count()
+            start = int(offset)
+            end = start + int(limit)
             items = list(
-                qs.order_by('-impact_score', '-urgency', '-created_at')[:limit].values(
+                qs.order_by('-impact_score', '-urgency', '-created_at')[start:end].values(
                     'id', 'name', 'description', 'status', 'current_stage',
                     'purpose', 'program', 'impact_score', 'urgency',
                     'confidence', 'revenue_potential', 'created_at',
                     'updated_at', 'last_activity_at',
                     'owner_id', 'owner_agent',
                     'human_id', 'seq_id',
+                    'pending_actions', 'critical_actions',
                 )
             )
 
@@ -1414,28 +1431,16 @@ class ContentHandlersMixin:
                     User.objects.filter(id__in=owner_ids).values_list('id', 'username')
                 )
 
-            # Add action item counts (including critical) + serialize
+            # Serialize
             for item in items:
-                # Session 1065: Trim description in list view — full text via 'details' action
                 desc = item.get('description') or ''
                 if len(desc) > 200:
                     item['description'] = desc[:200] + '...'
-                item['pending_actions'] = InitiativeActionItem.objects.filter(
-                    initiative_id=item['id'],
-                    status='pending'
-                ).count()
-                item['critical_actions'] = InitiativeActionItem.objects.filter(
-                    initiative_id=item['id'],
-                    status='pending',
-                    priority='critical'
-                ).count()
-                # Session 996: Resolve owner to display name
                 item['owner'] = (
                     owner_map.get(item.pop('owner_id'))
                     or item.pop('owner_agent', '')
                     or None
                 )
-                # Session 987: Serialize UUIDs and datetimes
                 item['id'] = str(item['id'])
                 for dt_field in ('created_at', 'updated_at', 'last_activity_at'):
                     if item.get(dt_field):
@@ -1445,6 +1450,8 @@ class ContentHandlersMixin:
                 'action': 'list',
                 'count': len(items),
                 'total_count': total_count,
+                'offset': start,
+                'limit': int(limit),
                 'items': items,
                 'filters_applied': {
                     'status': status_filter,
