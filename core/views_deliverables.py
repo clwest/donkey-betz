@@ -552,6 +552,15 @@ def _serialize_deliverable(deliverable: Deliverable, include_content: bool = Fal
         'updated_at': deliverable.updated_at.isoformat(),
     }
 
+    # Session 1077: Include initiative context if linked
+    if deliverable.initiative_id:
+        data['initiative'] = {
+            'id': str(deliverable.initiative_id),
+            'name': deliverable.initiative.name if deliverable.initiative else None,
+        }
+    else:
+        data['initiative'] = None
+
     if include_content:
         data['content'] = deliverable.content
         data['content_format'] = deliverable.content_format

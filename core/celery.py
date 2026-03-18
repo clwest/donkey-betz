@@ -2568,6 +2568,15 @@ app.conf.beat_schedule = {
             'expires': 3600,
         },
     },
+    # Session 1077: Auto-archive stale unsaved deliverables — daily at 5 AM MST (12:00 UTC)
+    'auto-archive-stale-deliverables': {
+        'task': 'core.tasks.auto_archive_stale_deliverables',
+        'schedule': crontab(hour=12, minute=0),
+        'options': {
+            'queue': 'default',
+            'expires': 3600,
+        },
+    },
 }
 
 # Task routing configuration
