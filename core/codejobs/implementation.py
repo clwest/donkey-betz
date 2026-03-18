@@ -506,8 +506,8 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
                     else:
                         # Session 1077: Try collapsing all whitespace for fuzzy match
                         import re as _ws_re
-                        search_collapsed = _ws_re.sub(r'\s+', search.strip())
-                        file_collapsed = _ws_re.sub(r'\s+', file_text.strip())
+                        search_collapsed = _ws_re.sub(r'\s+', ' ', search.strip())
+                        file_collapsed = _ws_re.sub(r'\s+', ' ', file_text.strip())
                         if search_collapsed and search_collapsed in file_collapsed:
                             # Find the matching region by line-by-line scanning
                             search_lines = [l.strip() for l in search.strip().split('\n') if l.strip()]
