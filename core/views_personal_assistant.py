@@ -142,14 +142,16 @@ def get_assistant_context(request):
     from time import monotonic
 
     user_id = request.user.id
-    cache_key = f"pa_context:{hashlib.md5(str(user_id).encode()).hexdigest()}"
+    user_hash = hashlib.md5(str(user_id).encode()).hexdigest()
+    cache_key_fresh = f"pa_context:fresh:{user_hash}"
+    cache_key_stale = f"pa_context:stale:{user_hash}"
 
     t0_total = monotonic()
     cache_get_ms = None
 
-    # Try cache first (60s TTL)
+    # Try fresh cache first (60s TTL)
     t0_cache = monotonic()
-    cached = cache.get(cache_key)
+    cached = cache.get(cache_key_fresh)
     cache_get_ms = int((monotonic() - t0_cache) * 1000)
     if cached is not None:
         total_ms = int((monotonic() - t0_total) * 1000)
@@ -158,6 +160,9 @@ def get_assistant_context(request):
             user_id, cache_get_ms, total_ms,
         )
         return Response({'success': True, 'context': cached})
+
+    # Grab stale copy (10 min TTL) as fallback for timeout/error
+    stale = cache.get(cache_key_stale)
 
     try:
         t0_build = monotonic()
@@ -176,6 +181,14 @@ def get_assistant_context(request):
             except FuturesTimeout:
                 build_ms = int((monotonic() - t0_build) * 1000)
                 total_ms = int((monotonic() - t0_total) * 1000)
+                # Serve stale context instead of 504
+                if stale is not None:
+                    logger.warning(
+                        "PA_CONTEXT_METRICS status=stale_served cache_hit=false user_id=%s "
+                        "cache_get_ms=%s build_ms=%s total_ms=%s",
+                        user_id, cache_get_ms, build_ms, total_ms,
+                    )
+                    return Response({'success': True, 'context': stale})
                 logger.warning(
                     "PA_CONTEXT_METRICS status=timeout cache_hit=false user_id=%s "
                     "cache_get_ms=%s build_ms=%s total_ms=%s",
@@ -188,8 +201,9 @@ def get_assistant_context(request):
 
         build_ms = int((monotonic() - t0_build) * 1000)
 
-        # Cache for 60 seconds
-        cache.set(cache_key, context, 60)
+        # Write both fresh (60s) and stale (600s) caches
+        cache.set(cache_key_fresh, context, 60)
+        cache.set(cache_key_stale, context, 600)
 
         total_ms = int((monotonic() - t0_total) * 1000)
         logger.info(
@@ -205,6 +219,14 @@ def get_assistant_context(request):
 
     except Exception as e:
         total_ms = int((monotonic() - t0_total) * 1000)
+        # Serve stale context on error instead of 500
+        if stale is not None:
+            logger.error(
+                "PA_CONTEXT_METRICS status=stale_on_error cache_hit=false user_id=%s "
+                "cache_get_ms=%s total_ms=%s error=%s",
+                user_id, cache_get_ms, total_ms, str(e),
+            )
+            return Response({'success': True, 'context': stale})
         logger.error(
             "PA_CONTEXT_METRICS status=error cache_hit=false user_id=%s "
             "cache_get_ms=%s total_ms=%s error=%s",
