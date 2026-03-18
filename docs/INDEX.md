@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-03-17 13:35
+**Generated:** 2026-03-18 17:54
 **Current Session:** 1077
 **Total Documentation:** 1836 files | 627,193 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,224 |
+| Total cross-references | 2,223 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/capabilities/02_Content_Creation/README.md` | 60 | 🎨 AI CONTENT STUDIO - The Complete Creation Suite |
+| `docs/archive/old-structure/handoffs/README.md` | 60 | 🤝 Session Handoffs |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -218,7 +218,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 362 | 2026-03-17 09:12 |
+| INDEX.md | docs | 362 | 2026-03-17 16:38 |
 | EXECUTIVE_SUMMARY_WS4.md | patents | 49 | 2026-03-16 17:32 |
 | DISCLOSURE_L_SELF_TUNING_EXPERIMENTATION.md | patents | 367 | 2026-03-16 17:32 |
 | DISCLOSURE_K_BUDGET_AWARE_SCHEDULING.md | patents | 295 | 2026-03-16 17:32 |
