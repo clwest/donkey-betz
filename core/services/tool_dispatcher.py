@@ -198,9 +198,10 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         'error_summary_tool': ('ops_tool', 'failure_signatures'),
     }
 
-    # The 8 gateway tool names (+ 3 standalone primitives)
+    # The 8 gateway tool names (+ 3 standalone primitives + 2 focused splits)
     GATEWAY_TOOLS = frozenset([
         'ops_tool', 'work_tool', 'content_tool',
+        'deliverable_tool', 'blog_tool',  # Session 1077: focused splits
         'governance_tool', 'intelligence_tool', 'studio_tool',
         'cockpit_tool', 'narrative_tool',  # Session 1100
         # Session 1035-W2: 11 new gateway tools
@@ -427,6 +428,10 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
 
         # Session 1079: Content tool — gateway for content_review + blog generation + deliverables
         self.register("content_tool", self._handle_content)
+
+        # Session 1077: Focused tool split — reduce GPT function-calling confusion
+        self.register("deliverable_tool", self._handle_deliverable_direct)
+        self.register("blog_tool", self._handle_blog_direct)
 
         # Session 1079: Governance tool — gateway for boardroom + human decisions
         self.register("governance_tool", self._handle_governance)
