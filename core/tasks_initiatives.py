@@ -2078,6 +2078,36 @@ Requirements:
                 results['stages_updated'].append(f"{init.name[:30]}... Stage {stage_num}")
                 results['processed'] += 1
 
+                # Session 1077: Also create a Deliverable linked to the initiative
+                # so stage outputs appear in the Workspace deliverables library.
+                try:
+                    from core.models_deliverables import Deliverable
+                    from django.utils.text import slugify as _init_slugify
+                    _del_slug = f"{_init_slugify(doc_title[:100])}-{uuid.uuid4().hex[:8]}"
+                    if not Deliverable.objects.filter(
+                        self_blog=blog, initiative=init,
+                    ).exists():
+                        Deliverable.objects.create(
+                            title=doc_title,
+                            slug=_del_slug,
+                            deliverable_type='document',
+                            category=f"Initiative — Stage {stage_num}",
+                            tags=['initiative', f'stage-{stage_num}', init.program or 'general'],
+                            content=content,
+                            content_format='markdown',
+                            preview_content=content[:500] + ('...' if len(content) > 500 else ''),
+                            agent_name=agent_name,
+                            quality_score=0.7,
+                            confidence_score=0.7,
+                            status='completed',
+                            initiative=init,
+                            self_blog=blog,
+                            workspace=init.workspace,
+                        )
+                        logger.info(f"📦 [INITIATIVE→DELIVERABLE] Linked deliverable for {init.name[:30]} Stage {stage_num}")
+                except Exception as del_err:
+                    logger.warning(f"[INITIATIVE→DELIVERABLE] Failed to create deliverable: {del_err}")
+
                 logger.info(f"✅ [INITIATIVE PIPELINE] Created document for: {init.name[:30]}... Stage {stage_num}")
 
             # Session 880: Auto-approve the stage and advance to next
@@ -2661,6 +2691,38 @@ Stage {stage_num} ({config['template']}) should include:
         stage.document = document
         stage.status = 'DRAFT'
         stage.save()
+
+        # Session 1077: Also create a Deliverable linked to the initiative
+        # so stage outputs appear in the Workspace deliverables library.
+        try:
+            import uuid as _uuid_mod
+            from core.models_deliverables import Deliverable
+            from django.utils.text import slugify as _init_slugify
+            _doc_title = f"{initiative.name} - Stage {stage_num}: {config['template']}"
+            _del_slug = f"{_init_slugify(_doc_title[:100])}-{_uuid_mod.uuid4().hex[:8]}"
+            if not Deliverable.objects.filter(
+                self_blog=document, initiative=initiative,
+            ).exists():
+                Deliverable.objects.create(
+                    title=_doc_title,
+                    slug=_del_slug,
+                    deliverable_type='document',
+                    category=f"Initiative — Stage {stage_num}",
+                    tags=['initiative', f'stage-{stage_num}', initiative.program or 'general'],
+                    content=document_content,
+                    content_format='markdown',
+                    preview_content=document_content[:500] + ('...' if len(document_content) > 500 else ''),
+                    agent_name=config.get('agent', 'InitiativePipeline'),
+                    quality_score=0.7,
+                    confidence_score=0.7,
+                    status='completed',
+                    initiative=initiative,
+                    self_blog=document,
+                    workspace=initiative.workspace,
+                )
+                logger.info(f"📦 [INITIATIVE→DELIVERABLE] Linked deliverable for {initiative.name[:30]} Stage {stage_num}")
+        except Exception as del_err:
+            logger.warning(f"[INITIATIVE→DELIVERABLE] Failed to create deliverable: {del_err}")
 
         # Session 1016: Post-generation semantic drift check
         try:

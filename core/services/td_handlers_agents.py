@@ -1127,11 +1127,16 @@ class AgentHandlersMixin:
                 dt = parse_datetime(created_after)
                 if dt:
                     qs = qs.filter(created_at__gte=dt)
+            # Session 1077: Initiative filter
+            init_id = payload.get('initiative_id')
+            if init_id:
+                qs = qs.filter(initiative_id=init_id)
             return qs
 
         _LIST_FIELDS = (
             'id', 'title', 'deliverable_type', 'category',
             'agent_name', 'quality_score', 'is_saved', 'created_at',
+            'initiative_id', 'initiative__name',
         )
 
         def _sanitize_deliverable(d: dict) -> dict:
