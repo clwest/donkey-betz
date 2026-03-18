@@ -34,6 +34,12 @@ import {
   BookOpen,
   Briefcase,
   Mic,
+  Brain,
+  Lightbulb,
+  GraduationCap,
+  Megaphone,
+  FlaskConical,
+  UserCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
@@ -62,6 +68,13 @@ import {
   DataIntelTab,
   KnowledgeTab,
   VoiceMarketplaceTab,
+  // Session 1077: Previously disconnected tabs
+  AIConsciousnessTab,
+  ConceptForgeTab,
+  CareerTab,
+  LearningJourneyTab,
+  CampaignTab,
+  Stage3EvaluationTab,
 } from './workspace/tabs'
 import { Toast } from './workspace/components'
 import type { Workspace, WorkspaceTab, ActionResult } from './workspace/types'
@@ -83,8 +96,15 @@ const workspaceTabs = [
   { id: 'system' as WorkspaceTab, label: 'System', icon: Server },
   { id: 'dataintel' as WorkspaceTab, label: 'Data & Intel', icon: Radio },
   { id: 'knowledge' as WorkspaceTab, label: 'Knowledge', icon: BookOpen },
-  // Creative tools
+  // Creative & production tools
   { id: 'voices' as WorkspaceTab, label: 'Voices', icon: Mic },
+  { id: 'campaigns' as WorkspaceTab, label: 'Campaigns', icon: Megaphone },
+  { id: 'conceptforge' as WorkspaceTab, label: 'ConceptForge', icon: Lightbulb },
+  // AI & learning
+  { id: 'consciousness' as WorkspaceTab, label: 'AI Mind', icon: Brain },
+  { id: 'learning' as WorkspaceTab, label: 'Learning', icon: GraduationCap },
+  { id: 'career' as WorkspaceTab, label: 'Career', icon: UserCircle },
+  { id: 'evaluation' as WorkspaceTab, label: 'Evaluation', icon: FlaskConical },
   // Developer tools
   { id: 'files' as WorkspaceTab, label: 'Files', icon: FolderTree },
   { id: 'operations' as WorkspaceTab, label: 'Operations', icon: History },
@@ -973,6 +993,30 @@ export default function WorkspacePage() {
 
           {activeTab === 'voices' && (
             <VoiceMarketplaceTab />
+          )}
+
+          {activeTab === 'campaigns' && (
+            <CampaignTab />
+          )}
+
+          {activeTab === 'conceptforge' && (
+            <ConceptForgeTab />
+          )}
+
+          {activeTab === 'consciousness' && (
+            <AIConsciousnessTab />
+          )}
+
+          {activeTab === 'learning' && (
+            <LearningJourneyTab />
+          )}
+
+          {activeTab === 'career' && (
+            <CareerTab />
+          )}
+
+          {activeTab === 'evaluation' && (
+            <Stage3EvaluationTab />
           )}
         </>
       )}
