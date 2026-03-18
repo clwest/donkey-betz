@@ -1411,11 +1411,11 @@ class AgentHandlersMixin:
                 obj.preview_content = preview
                 update_fields.extend(['content', 'preview_content'])
 
-            if 'type' in payload:
-                obj.deliverable_type = payload['type']
+            if 'type' in payload and payload['type'] and str(payload['type']).strip():
+                obj.deliverable_type = str(payload['type']).strip()
                 update_fields.append('deliverable_type')
-            if 'content_format' in payload:
-                obj.content_format = payload['content_format']
+            if 'content_format' in payload and payload['content_format'] and str(payload['content_format']).strip():
+                obj.content_format = str(payload['content_format']).strip()
                 update_fields.append('content_format')
             if 'tags' in payload:
                 raw_tags = payload['tags']
@@ -1450,6 +1450,28 @@ class AgentHandlersMixin:
                 'title': obj.title,
                 'updated_fields': update_fields,
                 'message': f'Updated "{obj.title}" ({", ".join(update_fields)}).',
+            }
+
+        elif action == 'append':
+            # Session 1077: Dedicated append action — simpler than update for GPT.
+            # Only appends text; never replaces content or touches other fields.
+            obj, disambiguation = _resolve_deliverable(base_qs, payload, 'append')
+            if disambiguation:
+                return disambiguation
+            text = payload.get('content', '') or payload.get('text', '') or payload.get('append', '')
+            if not text or not text.strip():
+                raise ValueError("content or text is required for append action")
+            current = obj.content or ''
+            obj.content = current + '\n\n' + text.strip() if current else text.strip()
+            obj.preview_content = obj.content[:500] + ('...' if len(obj.content) > 500 else '')
+            obj.save(update_fields=['content', 'preview_content'])
+            return {
+                'action': 'append',
+                'id': str(obj.id),
+                'title': obj.title,
+                'content_length': len(obj.content),
+                'appended_chars': len(text.strip()),
+                'message': f'Appended {len(text.strip())} chars to "{obj.title}" (total: {len(obj.content)} chars).',
             }
 
         elif action == 'delete':

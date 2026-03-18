@@ -1368,10 +1368,18 @@ class ContentHandlersMixin:
                 qs = qs.filter(program=program_filter)
 
             # Session 996: Filter by owner
-            owner_filter = payload.get('owner')
+            owner_filter = str(payload.get('owner', '')).strip()
             if owner_filter:
-                if owner_filter == 'me':
-                    qs = qs.filter(owner_id=user_id)
+                if owner_filter == 'me' and user_id:
+                    # Session 1077: Use User object lookup to avoid integer=UUID SQL error
+                    try:
+                        from django.contrib.auth import get_user_model
+                        _User = get_user_model()
+                        user_obj = _User.objects.filter(id=user_id).first()
+                        if user_obj:
+                            qs = qs.filter(owner=user_obj)
+                    except Exception:
+                        pass  # Skip owner filter on error
                 elif owner_filter == 'unowned':
                     qs = qs.filter(owner__isnull=True, owner_agent='')
                 else:
@@ -3715,9 +3723,27 @@ class ContentHandlersMixin:
         - generate_blog → generate_blog_tool
         - deliverable_* actions → deliverables_tool
         """
-        action = payload.get('action', 'content_stats')
+        action = payload.get('action', '')
 
-        # Session 1077: Log incoming payload for dispatch debugging
+        # Session 1077: Smart action inference — GPT-5.2 sometimes omits the
+        # action field. Infer from other params present in the payload.
+        if not action:
+            keys = set(payload.keys())
+            if 'append' in keys or 'prepend' in keys:
+                action = 'deliverable_update'
+            elif 'content_offset' in keys or 'content_limit' in keys:
+                action = 'deliverable_detail'
+            elif keys & {'full'}:
+                action = 'deliverable_detail'
+            elif 'topic' in keys and 'tone' in keys:
+                action = 'generate_blog'
+            elif 'id' in keys and 'content' in keys and len(keys) > 3:
+                action = 'deliverable_update'
+            elif 'id' in keys and not (keys & {'query', 'type', 'category'}):
+                action = 'deliverable_detail'
+            else:
+                action = 'content_stats'  # safe fallback
+
         import logging as _cl
         _cl.getLogger('core.services.td_handlers_content').info(
             f"[content_tool] action={action!r} payload_keys={sorted(payload.keys())}"
@@ -3790,6 +3816,7 @@ class ContentHandlersMixin:
             'deliverable_save': 'save',
             'deliverable_create': 'create',
             'deliverable_update': 'update',
+            'deliverable_append': 'append',
             'deliverable_stats': 'stats',
             'deliverable_export_pdf': 'export_pdf',
         }
