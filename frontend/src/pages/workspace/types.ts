@@ -15,6 +15,7 @@ export type WorkspaceTab =
   | 'system'
   | 'dataintel'
   | 'knowledge'
+  | 'voices'
   | 'files'
   | 'operations'
   | 'git'

@@ -33,6 +33,7 @@ import {
   Radio,
   BookOpen,
   Briefcase,
+  Mic,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
@@ -60,6 +61,7 @@ import {
   SystemTab,
   DataIntelTab,
   KnowledgeTab,
+  VoiceMarketplaceTab,
 } from './workspace/tabs'
 import { Toast } from './workspace/components'
 import type { Workspace, WorkspaceTab, ActionResult } from './workspace/types'
@@ -81,6 +83,8 @@ const workspaceTabs = [
   { id: 'system' as WorkspaceTab, label: 'System', icon: Server },
   { id: 'dataintel' as WorkspaceTab, label: 'Data & Intel', icon: Radio },
   { id: 'knowledge' as WorkspaceTab, label: 'Knowledge', icon: BookOpen },
+  // Creative tools
+  { id: 'voices' as WorkspaceTab, label: 'Voices', icon: Mic },
   // Developer tools
   { id: 'files' as WorkspaceTab, label: 'Files', icon: FolderTree },
   { id: 'operations' as WorkspaceTab, label: 'Operations', icon: History },
@@ -965,6 +969,10 @@ export default function WorkspacePage() {
 
           {activeTab === 'knowledge' && (
             <KnowledgeTab />
+          )}
+
+          {activeTab === 'voices' && (
+            <VoiceMarketplaceTab />
           )}
         </>
       )}
