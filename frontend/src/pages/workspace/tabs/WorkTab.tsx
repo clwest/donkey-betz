@@ -103,6 +103,25 @@ export function WorkTab({ workspaceId, onNavigateTab }: WorkTabProps) {
     enabled: false, // Disabled for MVP — initiatives come from direct API later
   })
 
+  // Fetch recent activity (workspace operations)
+  const activityQuery = useQuery({
+    queryKey: ['work-activity', activeWsId],
+    queryFn: async () => {
+      try {
+        const r = await fetch(`/api/workspaces/${activeWsId}/operations/?limit=8&page_size=8`, {
+          credentials: 'include',
+        })
+        if (!r.ok) return []
+        const data = await r.json()
+        return (data.results || data.operations || []).slice(0, 8)
+      } catch {
+        return []
+      }
+    },
+    enabled: !!activeWsId,
+    staleTime: 30000,
+  })
+
   // Fetch governance attention items
   const attentionQuery = useQuery({
     queryKey: ['work-attention'],
@@ -334,6 +353,32 @@ export function WorkTab({ workspaceId, onNavigateTab }: WorkTabProps) {
               )
             })
           )}
+        </div>
+      )}
+
+      {/* Recent Activity Feed */}
+      {(activityQuery.data || []).length > 0 && (
+        <div className="pt-4 border-t border-dark-border">
+          <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+            <Clock size={14} />
+            Recent Activity
+          </h3>
+          <div className="space-y-1.5">
+            {(activityQuery.data || []).map((op: Record<string, string>) => (
+              <div key={op.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-800/30 text-xs">
+                <span className={cn(
+                  'w-1.5 h-1.5 rounded-full flex-shrink-0',
+                  op.success !== false ? 'bg-green-400' : 'bg-red-400'
+                )} />
+                <span className="text-gray-300 truncate flex-1">
+                  {op.agent_name && <span className="text-primary-400">{op.agent_name}</span>}
+                  {op.agent_name && ' — '}
+                  {op.agent_task || op.description || op.operation_type || 'Operation'}
+                </span>
+                <span className="text-gray-600 whitespace-nowrap">{getAge(op.created_at)}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
