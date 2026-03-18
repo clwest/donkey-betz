@@ -31,6 +31,7 @@ class ContentStrategyAgent(BaseBusinessResearchAgent):
 
     research_type = "content_strategy"
     name = "ContentStrategyAgent"
+    create_deliverable_on_schedule = False  # Session 1077: scheduled outputs go to AgentExecution only
 
     system_prompt = """You are ContentStrategyAgent, a strategic content advisor that helps users plan what content to create.
 
