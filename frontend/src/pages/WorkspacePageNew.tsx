@@ -32,6 +32,7 @@ import {
   Server,
   Radio,
   BookOpen,
+  Briefcase,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
@@ -44,6 +45,7 @@ import SmartOutputRenderer from '@/components/SmartOutputRenderer'
 
 // Import workspace-only tab components
 import {
+  WorkTab,
   WorkspaceOverviewTab,
   FilesTab,
   OperationsTab,
@@ -67,6 +69,7 @@ import { useWorkspaceTabTracking } from '@/hooks/usePageTracking'
 const workspaceTabs = [
   // Core project management
   { id: 'overview' as WorkspaceTab, label: 'Overview', icon: LayoutDashboard },
+  { id: 'work' as WorkspaceTab, label: 'Work', icon: Briefcase },
   { id: 'launchpad' as WorkspaceTab, label: 'Launchpad', icon: Sparkles },
   { id: 'deliverables' as WorkspaceTab, label: 'Deliverables', icon: Package },
   { id: 'initiatives' as WorkspaceTab, label: 'Initiatives', icon: Target },
@@ -887,6 +890,13 @@ export default function WorkspacePage() {
               onNavigateTab={handleTabChange}
               onScan={() => scanMutation.mutate(activeWorkspace.id)}
               isScanPending={scanMutation.isPending}
+            />
+          )}
+
+          {activeTab === 'work' && (
+            <WorkTab
+              workspaceId={activeWorkspace.id}
+              onNavigateTab={handleTabChange}
             />
           )}
 
