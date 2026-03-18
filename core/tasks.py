@@ -10581,6 +10581,15 @@ def check_operating_rhythm_status():
 def cleanup_audio_cache():
     from core.tasks_misc import _impl_cleanup_audio_cache
     return _impl_cleanup_audio_cache()
+
+
+# Session 1077: Daily auto-archive stale deliverables (noise prevention)
+@shared_task(soft_time_limit=120, time_limit=150)
+def auto_archive_stale_deliverables(days=3):
+    from core.tasks_misc import _impl_auto_archive_stale_deliverables
+    return _impl_auto_archive_stale_deliverables(days=days)
+
+
 @shared_task(bind=True, time_limit=300, soft_time_limit=280)
 def process_pa_chat_task(self, user_id, message, context=None, generate_audio=False, conversation_id=None, source='web', platform='web'):
     from core.tasks_misc import _impl_process_pa_chat_task
