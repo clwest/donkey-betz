@@ -3997,7 +3997,7 @@ class ContentHandlersMixin:
             base_qs = base_qs.filter(Q(user_id=user_id) | Q(user__isnull=True))
 
         # Never archive published or already-archived items
-        statuses = payload.get('statuses', ['ready', 'draft'])
+        statuses = payload.get('statuses', ['ready', 'draft', 'completed'])
         safe_statuses = [s for s in statuses if s not in ('published', 'archived')]
         if not safe_statuses:
             return {'error': 'Cannot bulk archive published/archived items. Valid statuses: ready, draft, approved'}
@@ -4014,6 +4014,24 @@ class ContentHandlersMixin:
         agent = payload.get('agent')
         if agent:
             qs = qs.filter(agent_name__iexact=agent)
+
+        # Session 1077: Extended filters for cleanup (designed by Rigby)
+        # Multiple agent names
+        agent_names = payload.get('agent_names')
+        if agent_names and isinstance(agent_names, list):
+            qs = qs.filter(agent_name__in=agent_names)
+
+        # Title prefix matching — archive items whose title starts with any prefix
+        title_prefixes = payload.get('title_prefixes')
+        if title_prefixes and isinstance(title_prefixes, list):
+            from functools import reduce
+            prefix_q = reduce(lambda a, b: a | b, [Q(title__istartswith=p) for p in title_prefixes])
+            qs = qs.filter(prefix_q)
+
+        # Protected categories — exclude these from archiving
+        protected_categories = payload.get('protected_categories')
+        if protected_categories and isinstance(protected_categories, list):
+            qs = qs.exclude(category__in=protected_categories)
 
         # Date range — created_before is the key filter for "older than X days"
         created_before = payload.get('created_before')
