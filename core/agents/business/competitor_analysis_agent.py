@@ -142,6 +142,7 @@ class CompetitorAnalysisAgent(BaseAgent):
     """
 
     name = "CompetitorAnalysisAgent"
+    create_deliverable_on_schedule = False  # Session 1077: scheduled outputs go to AgentExecution only
 
     system_prompt = """You are CompetitorAnalysisAgent, a specialist in competitive intelligence and market analysis.
 

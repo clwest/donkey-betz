@@ -55,6 +55,7 @@ class ResearchAgent(BaseAgent):
     """
 
     name = "ResearchAgent"
+    create_deliverable_on_schedule = False  # Session 1077: scheduled outputs go to AgentExecution only
     llm_timeout = 180.0  # Session 1074: Research tasks generate long outputs, need 3 min
 
     system_prompt = """You are ResearchAgent, a specialist in finding and analyzing information.
