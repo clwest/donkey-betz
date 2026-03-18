@@ -163,7 +163,18 @@ class CodeJobHandlersMixin:
         from core.models import ExecutionRun
         job_id = payload.get('job_id') or payload.get('id', '')
         if not job_id:
-            return {'error': 'job_id is required'}
+            # Session 1077: Smart inference — GPT often drops job_id.
+            # Fall back to the most recent job for this user.
+            if user_id:
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                user = User.objects.filter(id=user_id).first()
+                if user:
+                    latest = ExecutionRun.objects.filter(created_by=user).order_by('-created_at').first()
+                    if latest:
+                        job_id = str(latest.id)
+            if not job_id:
+                return {'error': 'job_id is required'}
         try:
             run = ExecutionRun.objects.select_related('repo').get(id=job_id)
         except ExecutionRun.DoesNotExist:
