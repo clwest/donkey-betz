@@ -237,9 +237,24 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
     }
 
     # 4. Call Claude (with one retry on schema validation failure)
+    # Session 1077: Added timeout + heartbeat to prevent indefinite hangs
     log_fn('implement', 'Calling Claude (claude-sonnet-4-6) for code generation...')
     from anthropic import Anthropic
+    import concurrent.futures
     client = Anthropic()  # reads ANTHROPIC_API_KEY from env
+
+    _CODEGEN_TIMEOUT = 120  # seconds — hard cap on LLM call
+
+    def _call_claude(model_name, msgs, sys_prompt, tools_list, tool_ch):
+        """Blocking LLM call — run in thread with timeout."""
+        return client.messages.create(
+            model=model_name,
+            max_tokens=16384,
+            system=sys_prompt,
+            messages=msgs,  # type: ignore[arg-type]
+            tools=tools_list,  # type: ignore[arg-type]
+            tool_choice=tool_ch,
+        )
 
     messages: list = [{'role': 'user', 'content': user_message}]
     tool_input: dict | None = None
@@ -248,14 +263,26 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
 
     while attempts < max_attempts:
         attempts += 1
-        response = client.messages.create(
-            model='claude-sonnet-4-6',
-            max_tokens=16384,
-            system=system_prompt,
-            messages=messages,  # type: ignore[arg-type]
-            tools=[file_changes_tool],  # type: ignore[arg-type]
-            tool_choice={'type': 'tool', 'name': 'apply_file_changes'},
-        )
+        # Run LLM call in thread with timeout + heartbeat
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(
+                _call_claude, 'claude-sonnet-4-6', messages, system_prompt,
+                [file_changes_tool], {'type': 'tool', 'name': 'apply_file_changes'},
+            )
+            # Heartbeat while waiting
+            start_wait = __import__('time').time()
+            while True:
+                try:
+                    response = future.result(timeout=10)
+                    break  # Got response
+                except concurrent.futures.TimeoutError:
+                    elapsed = int(__import__('time').time() - start_wait)
+                    if elapsed >= _CODEGEN_TIMEOUT:
+                        future.cancel()
+                        raise TimeoutError(
+                            f"Code generation timed out after {elapsed}s"
+                        )
+                    log_fn('implement', f'Waiting on Claude... ({elapsed}s elapsed)')
 
         tool_use_id = None
         for block in response.content:
