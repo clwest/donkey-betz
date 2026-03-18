@@ -4681,12 +4681,15 @@ def _impl_process_pa_chat_task(self, user_id, message, context=None, generate_au
     # Session 976: Run async PA in a fresh event loop to avoid deadlock
     # in Celery's --pool=threads worker. async_to_sync and asyncio.run()
     # can both fail if an event loop already exists in the thread.
+    # Session 1077: NEVER generate audio in the main task — it blocks for
+    # 60-280s calling ElevenLabs TTS and causes SoftTimeLimitExceeded.
+    # Audio is generated in a separate background task after the response.
     loop = asyncio.new_event_loop()
     try:
         response = loop.run_until_complete(pa.process_message(
             message=message,
             context=context or {},
-            generate_audio=generate_audio
+            generate_audio=False  # Always False — TTS offloaded below
         ))
     finally:
         loop.close()
@@ -4730,6 +4733,21 @@ def _impl_process_pa_chat_task(self, user_id, message, context=None, generate_au
     except Exception as persist_err:
         logger.warning(f"Failed to persist PA conversation: {persist_err}")
 
+    # Session 1077: Offload TTS to background task if audio was requested
+    audio_url = response.audio_url  # Will be None since we forced generate_audio=False
+    if generate_audio and response.content:
+        try:
+            from core.tasks import process_pa_tts_task
+            process_pa_tts_task.delay(
+                user_id=user_id,
+                text=response.content[:5000],  # Cap TTS input
+                conversation_id=conversation_id,
+                trace_id=response.trace_id,
+            )
+            logger.info(f"[PA_TTS] Dispatched background TTS for conversation {conversation_id}")
+        except Exception as tts_err:
+            logger.warning(f"[PA_TTS] Failed to dispatch TTS task: {tts_err}")
+
     # Session 1076+: Sanitize entire return dict — tool_runs may contain
     # non-JSON-serializable objects (ManyRelatedManager, UUID, ProjectWorkspace)
     # that cause EncodeError in Celery's JSON serializer.
@@ -4738,7 +4756,7 @@ def _impl_process_pa_chat_task(self, user_id, message, context=None, generate_au
         'content': response.content,
         'trace_id': response.trace_id,
         'tool_runs': response.tool_runs,
-        'audio_url': response.audio_url,
+        'audio_url': audio_url,
         'intent': response.intent,
         'routed_to': response.routed_to,
         'profile_completeness': response.profile_completeness,
