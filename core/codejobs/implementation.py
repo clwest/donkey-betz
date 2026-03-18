@@ -979,7 +979,11 @@ def _impl_execute_code_job(self, run_id: str):
         if run.conversation_id:
             try:
                 from core.services.collaboration_protocol import post_structured_message
-                pr_info = f'\n**PR:** {run.pr_url}' if run.pr_url else ''
+                # Session 1077: Clickable PR link in chat
+                pr_info = ''
+                if run.pr_url:
+                    label = f'#{run.pr_number}' if run.pr_number else 'View PR'
+                    pr_info = f'\n\n**PR Ready for Review:** [{label}]({run.pr_url})\n*Click to review and merge →*'
                 post_structured_message(
                     user=run.created_by,
                     conversation_id=run.conversation_id,
@@ -987,7 +991,7 @@ def _impl_execute_code_job(self, run_id: str):
                     title=f'Code Job {str(run.id)[:8]}: {"Succeeded" if not is_dry_run else "Dry run complete"}',
                     body=(
                         f'**Task:** {run.plan_summary[:200]}\n'
-                        f'**Branch:** {run.working_branch}\n'
+                        f'**Branch:** `{run.working_branch}`\n'
                         f'**Mode:** {mode}\n'
                         f'**Files changed:** {len(changed_files)}{pr_info}'
                     ),
