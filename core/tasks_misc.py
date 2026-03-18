@@ -5093,3 +5093,29 @@ def _impl_rag_retrieval_canary():
 
     return result
 
+
+
+# Session 1077: Daily auto-archive for deliverable noise prevention
+def _impl_auto_archive_stale_deliverables(days=3):
+    """Archive unsaved, unpinned deliverables older than N days.
+    
+    Protects: Patent Disclosures, Platform Diagnostics categories.
+    Only archives status=ready/completed/draft (never published/archived).
+    """
+    from core.models_deliverables import Deliverable
+    from django.utils import timezone
+    from datetime import timedelta
+
+    cutoff = timezone.now() - timedelta(days=days)
+    qs = Deliverable.objects.filter(
+        is_saved=False,
+        is_pinned=False,
+        status__in=['ready', 'completed', 'draft'],
+        created_at__lt=cutoff,
+    ).exclude(
+        category__in=['Patent Disclosures', 'Platform Diagnostics']
+    )
+
+    count = qs.update(status='archived', updated_at=timezone.now())
+    logger.info(f"[AUTO_ARCHIVE] Archived {count} stale deliverables older than {days} days")
+    return {'archived': count, 'cutoff_days': days}
