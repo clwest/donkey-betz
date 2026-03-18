@@ -3997,10 +3997,13 @@ class ContentHandlersMixin:
             base_qs = base_qs.filter(Q(user_id=user_id) | Q(user__isnull=True))
 
         # Never archive published or already-archived items
-        statuses = payload.get('statuses', ['ready', 'draft', 'completed'])
-        safe_statuses = [s for s in statuses if s not in ('published', 'archived')]
+        raw_statuses = payload.get('statuses', ['ready', 'draft', 'completed'])
+        # Session 1077: Coerce string to list (GPT sometimes sends 'ready' instead of ['ready'])
+        if isinstance(raw_statuses, str):
+            raw_statuses = [s.strip() for s in raw_statuses.split(',') if s.strip()]
+        safe_statuses = [s for s in raw_statuses if s not in ('published', 'archived')]
         if not safe_statuses:
-            return {'error': 'Cannot bulk archive published/archived items. Valid statuses: ready, draft, approved'}
+            return {'error': 'Cannot bulk archive published/archived items. Valid statuses: ready, draft, completed, approved'}
 
         qs = base_qs.filter(status__in=safe_statuses)
 
