@@ -2665,7 +2665,8 @@ PA_TOOL_SCHEMAS = [
                         "deliverable_list", "deliverable_detail",
                         "deliverable_search", "deliverable_save",
                         "deliverable_create", "deliverable_update",
-                        "deliverable_stats", "deliverable_export_pdf",
+                        "deliverable_append", "deliverable_stats",
+                        "deliverable_export_pdf",
                         "podcasts", "series", "content_studio",
                         "initiative_doc",
                     ],
@@ -2686,7 +2687,8 @@ PA_TOOL_SCHEMAS = [
                         "deliverable_search: search deliverables by title. "
                         "deliverable_save: bookmark a deliverable. "
                         "deliverable_create: create a new deliverable (supports category, tags, workspace_id, data_sensitivity, is_pinned, agent_name). "
-                        "deliverable_update: update an existing deliverable by id (supports content, title, category, tags, workspace_id, data_sensitivity, prepend, append). "
+                        "deliverable_update: update an existing deliverable by id (supports content, title, category, tags, workspace_id, data_sensitivity). "
+                        "deliverable_append: append text to an existing deliverable's content (pass content or text with the text to add — never overwrites existing content). "
                         "deliverable_stats: aggregate counts by type/category/agent. "
                         "deliverable_export_pdf: generate a downloadable PDF from a deliverable (returns CDN URL). "
                         "podcasts: list completed podcast episodes. "
