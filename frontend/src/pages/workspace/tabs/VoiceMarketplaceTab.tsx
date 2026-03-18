@@ -38,7 +38,7 @@ import {
   CheckCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { platformApi } from '@/lib/api'
+import { api, platformApi } from '@/lib/api'
 
 // Types
 interface Voice {
@@ -229,7 +229,7 @@ function VoiceDetailModal({
 
   const generateMutation = useMutation({
     mutationFn: async (text: string) => {
-      const res = await platformApi.post(`/api/voice-marketplace/${voiceId}/generate/`, { text })
+      const res = await api.post(`/voice-marketplace/${voiceId}/generate/`, { text })
       return res.data
     },
     onSuccess: () => {
@@ -518,9 +518,9 @@ function VoiceClonePanel({ onSuccess }: { onSuccess: () => void }) {
       formData.append('accent', accent)
       formData.append('primary_use_case', useCase)
       formData.append('consent', 'true')
-      const res = await platformApi.post('/api/voice-marketplace/clone/upload/', formData, {
+      const res = await api.post('/voice-marketplace/clone/upload/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 120000, // 2 min timeout for cloning
+        timeout: 120000,
       })
       return res.data
     },
