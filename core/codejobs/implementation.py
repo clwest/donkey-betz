@@ -479,8 +479,15 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
             for edit_idx, edit in enumerate(edits):
                 search = edit.get('search', '')
                 replace = edit.get('replace', '')
+                if not search and replace:
+                    # Session 1077: Empty search = prepend to file (Claude's way
+                    # of saying "insert at the top")
+                    file_text = replace + '\n' + file_text
+                    edit_count += 1
+                    log_fn('implement', f'  Prepended content to {path}')
+                    continue
                 if not search:
-                    log_fn('implement', f'  SKIPPED empty search in edit for {path}', level='warning')
+                    log_fn('implement', f'  SKIPPED empty search+replace in edit for {path}', level='warning')
                     continue
                 if search not in file_text:
                     # Try with normalized whitespace (strip trailing spaces per line)
@@ -497,13 +504,44 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
                         file_text = file_text.replace(orig_section, replace, 1)
                         edit_count += 1
                     else:
-                        anchor_failures.append({
-                            'edit_index': edit_idx,
-                            'search_preview': search[:120],
-                            'path': path,
-                            'file_size': file_size,
-                        })
-                        log_fn('implement', f'  ANCHOR NOT FOUND in {path} (edit #{edit_idx + 1}): {search[:100]}', level='warning')
+                        # Session 1077: Try collapsing all whitespace for fuzzy match
+                        import re as _ws_re
+                        search_collapsed = _ws_re.sub(r'\s+', search.strip())
+                        file_collapsed = _ws_re.sub(r'\s+', file_text.strip())
+                        if search_collapsed and search_collapsed in file_collapsed:
+                            # Find the matching region by line-by-line scanning
+                            search_lines = [l.strip() for l in search.strip().split('\n') if l.strip()]
+                            file_lines = file_text.split('\n')
+                            for start_idx in range(len(file_lines)):
+                                match_count = 0
+                                for j, sl in enumerate(search_lines):
+                                    if start_idx + j < len(file_lines) and sl in file_lines[start_idx + j]:
+                                        match_count += 1
+                                if match_count == len(search_lines):
+                                    # Found fuzzy match — replace those lines
+                                    end_idx = start_idx + len(search_lines)
+                                    replace_lines = replace.split('\n')
+                                    file_lines[start_idx:end_idx] = replace_lines
+                                    file_text = '\n'.join(file_lines)
+                                    edit_count += 1
+                                    log_fn('implement', f'  Fuzzy-matched and patched {path} (edit #{edit_idx + 1})')
+                                    break
+                            else:
+                                anchor_failures.append({
+                                    'edit_index': edit_idx,
+                                    'search_preview': search[:120],
+                                    'path': path,
+                                    'file_size': file_size,
+                                })
+                                log_fn('implement', f'  ANCHOR NOT FOUND in {path} (edit #{edit_idx + 1}): {search[:100]}', level='warning')
+                        else:
+                            anchor_failures.append({
+                                'edit_index': edit_idx,
+                                'search_preview': search[:120],
+                                'path': path,
+                                'file_size': file_size,
+                            })
+                            log_fn('implement', f'  ANCHOR NOT FOUND in {path} (edit #{edit_idx + 1}): {search[:100]}', level='warning')
                 else:
                     occurrences = file_text.count(search)
                     if occurrences > 1:
