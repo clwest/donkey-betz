@@ -1,920 +1,777 @@
-// Session 825: Knowledge Tab
-// Extracted from WorkspacePage.tsx for modular architecture
-// Session 833: Document viewer with markdown rendering
-// Session 840: Enhanced cards with metadata and onClick handlers for all sections
-// Session 840: Replaced static audits with Audit Dashboard showing actionable findings
-// Session 957: Added RAG Observability Dashboard section
+/**
+ * Session 1077: Knowledge Tab — Complete Rewrite
+ *
+ * 7 sub-tabs:
+ * 1. Search — Unified semantic search across all knowledge
+ * 2. Ingest — URL + file upload with status tracking
+ * 3. Documents — Library browser with filters
+ * 4. Provenance — Citation tracking + "used by" lookup
+ * 5. Playbooks — Curated operational guides
+ * 6. Audit Findings — DB-backed findings dashboard
+ * 7. RAG Health — Observability dashboard
+ */
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { BookOpen, FileText, ClipboardList, Loader2, X, AlertCircle, Calendar, FileCode, Shield, CheckCircle, Clock, XCircle, ChevronDown, Database, Zap, Activity, RefreshCw, AlertTriangle, Info, Target, Layers } from 'lucide-react'
+import {
+  Search, Upload, FileText, GitBranch, BookOpen, Shield, Database,
+  Loader2, X, AlertCircle, Calendar, CheckCircle, Clock, XCircle,
+  ChevronDown, Zap, Activity, RefreshCw, AlertTriangle, Info,
+  Target, Layers, Link, Globe, ExternalLink, Trash2, Tag,
+  FileCode, ClipboardList,
+} from 'lucide-react'
 import { platformApi } from '@/lib/api'
 import { ErrorState } from '@/components/ErrorState'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { cn } from '@/lib/cn'
 
-// Session 840: Extended interfaces for full API response data
-interface Document {
-  path: string
-  name?: string
-  title: string
-  category?: string
-  description?: string
-  summary?: string
-  audit_type?: string
-  size_bytes?: number
-  modified_at?: string
-  lines?: number
-  status?: string
-}
+type KnowledgeSubTab = 'search' | 'ingest' | 'documents' | 'provenance' | 'playbooks' | 'audits' | 'rag'
 
-interface Playbook {
-  path: string
-  name: string
-  title: string
-  description?: string
-  category: string
-  size_bytes: number
-  modified_at: string
-}
+const subTabs: Array<{ id: KnowledgeSubTab; label: string; icon: typeof Search }> = [
+  { id: 'search', label: 'Search', icon: Search },
+  { id: 'ingest', label: 'Ingest', icon: Upload },
+  { id: 'documents', label: 'Documents', icon: FileText },
+  { id: 'provenance', label: 'Provenance', icon: GitBranch },
+  { id: 'playbooks', label: 'Playbooks', icon: BookOpen },
+  { id: 'audits', label: 'Audit Findings', icon: Shield },
+  { id: 'rag', label: 'RAG Health', icon: Database },
+]
 
-// Session 840: Audit Finding interface from database
-interface AuditFinding {
-  id: string
-  title: string
-  description: string
-  priority: string
-  category: string
-  status: string
-  impact: string
-  audit_report: {
-    id: string
-    title: string
+// ============================================================================
+// Sub-Tab 1: Search
+// ============================================================================
+function SearchPanel() {
+  const [query, setQuery] = useState('')
+  const [threshold, setThreshold] = useState(0.7)
+
+  const searchMutation = useMutation({
+    mutationFn: async (q: string) => {
+      const r = await fetch('/api/v1/rag/semantic-search/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          query: q,
+          max_results: 20,
+          similarity_threshold: threshold,
+        }),
+      })
+      if (!r.ok) throw new Error(`Search failed: ${r.status}`)
+      return r.json()
+    },
+  })
+
+  const handleSearch = () => {
+    if (query.trim()) searchMutation.mutate(query.trim())
   }
-  recommendation: string
-  assigned_agent: string
-  fixed_by: string
-  created_at: string
-  updated_at: string
+
+  const results = searchMutation.data?.results || []
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+          placeholder="Search all knowledge — documents, spider data, uploads..."
+          className="flex-1 px-4 py-3 bg-gray-800 border border-dark-border rounded-lg text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none"
+        />
+        <button
+          onClick={handleSearch}
+          disabled={searchMutation.isPending || !query.trim()}
+          className="px-6 py-3 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+        >
+          {searchMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+          Search
+        </button>
+      </div>
+
+      <div className="flex items-center gap-3 text-xs text-gray-500">
+        <span>Similarity threshold:</span>
+        <input
+          type="range"
+          min={0.3}
+          max={0.95}
+          step={0.05}
+          value={threshold}
+          onChange={(e) => setThreshold(parseFloat(e.target.value))}
+          className="w-32"
+        />
+        <span className="text-primary-400">{threshold.toFixed(2)}</span>
+      </div>
+
+      {searchMutation.isPending && (
+        <div className="flex justify-center py-8"><Loader2 size={24} className="animate-spin text-primary-400" /></div>
+      )}
+
+      {searchMutation.isError && (
+        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+          Search failed: {(searchMutation.error as Error).message}
+        </div>
+      )}
+
+      {results.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs text-gray-500">{results.length} results</p>
+          {results.map((r: Record<string, string | number>, i: number) => (
+            <div key={i} className="p-4 rounded-lg bg-dark-card border border-dark-border hover:border-gray-600 transition-colors">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white">{r.document_title || 'Untitled'}</p>
+                  <p className="text-xs text-gray-400 mt-1 line-clamp-3">{r.content || r.chunk_text}</p>
+                </div>
+                <span className={cn(
+                  'px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap',
+                  (r.similarity_score as number) >= 0.85 ? 'bg-green-500/20 text-green-400' :
+                  (r.similarity_score as number) >= 0.75 ? 'bg-blue-500/20 text-blue-400' :
+                  'bg-gray-500/20 text-gray-400'
+                )}>
+                  {((r.similarity_score as number) * 100).toFixed(0)}%
+                </span>
+              </div>
+              {(r.context_before || r.context_after) && (
+                <p className="text-xs text-gray-600 mt-2 italic truncate">
+                  ...{r.context_before || ''} [{r.content ? 'match' : ''}] {r.context_after || ''}...
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {searchMutation.isSuccess && results.length === 0 && (
+        <div className="text-center py-12 text-gray-500">
+          <Search size={32} className="mx-auto mb-2 opacity-50" />
+          <p className="text-sm">No results found. Try a broader query or lower the threshold.</p>
+        </div>
+      )}
+    </div>
+  )
 }
 
-export function KnowledgeTab() {
-  const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
-  const [selectedFinding, setSelectedFinding] = useState<AuditFinding | null>(null)
-  const [auditStatusFilter, setAuditStatusFilter] = useState<string>('open')
+// ============================================================================
+// Sub-Tab 2: Ingest
+// ============================================================================
+function IngestPanel() {
+  const [url, setUrl] = useState('')
+  const [title, setTitle] = useState('')
   const queryClient = useQueryClient()
 
-  const {
-    data: canonData,
-    isLoading: loadingCanon,
-    isError: canonError,
-    error: canonErrorData,
-    refetch: refetchCanon,
-  } = useQuery({
-    queryKey: ['platform-canon'],
-    queryFn: async () => {
-      const res = await platformApi.canon()
-      return res.data
-    },
-  })
-
-  const {
-    data: playbooksData,
-    isLoading: loadingPlaybooks,
-    isError: playbooksError,
-    refetch: refetchPlaybooks,
-  } = useQuery({
-    queryKey: ['platform-playbooks'],
-    queryFn: async () => {
-      const res = await platformApi.playbooks()
-      return res.data
-    },
-  })
-
-  // Session 840: Audit findings from database (replaces static files)
-  const {
-    data: auditSummary,
-    isLoading: loadingAuditSummary,
-  } = useQuery({
-    queryKey: ['audit-findings-summary'],
-    queryFn: async () => {
-      const res = await platformApi.auditFindingsSummary()
-      return res.data
-    },
-  })
-
-  const {
-    data: auditFindings,
-    isLoading: loadingFindings,
-    isError: findingsError,
-    refetch: refetchFindings,
-  } = useQuery({
-    queryKey: ['audit-findings', auditStatusFilter],
-    queryFn: async () => {
-      const res = await platformApi.auditFindings({
-        status: auditStatusFilter === 'all' ? undefined : auditStatusFilter,
-        limit: 20
+  const ingestUrlMutation = useMutation({
+    mutationFn: async () => {
+      const r = await fetch('/api/documents/ingest-url/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          url: url.trim(),
+          title: title.trim() || undefined,
+          generate_embeddings: true,
+        }),
       })
-      return res.data
-    },
-  })
-
-  // Session 840: Mutation to update finding status
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ findingId, status, notes }: { findingId: string, status: string, notes?: string }) => {
-      const res = await platformApi.auditFindingUpdateStatus(findingId, { status, notes })
-      return res.data
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}))
+        throw new Error(err.error || `Ingest failed: ${r.status}`)
+      }
+      return r.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['audit-findings'] })
-      queryClient.invalidateQueries({ queryKey: ['audit-findings-summary'] })
-      setSelectedFinding(null)
+      setUrl('')
+      setTitle('')
+      queryClient.invalidateQueries({ queryKey: ['knowledge-documents'] })
     },
   })
 
-  // Session 957: RAG Observability Dashboard
-  const [showRagDetails, setShowRagDetails] = useState(false)
-  const {
-    data: ragData,
-    isLoading: loadingRag,
-    isError: ragError,
-    refetch: refetchRag,
-  } = useQuery({
-    queryKey: ['rag-observability-dashboard'],
-    queryFn: async () => {
-      const res = await platformApi.ragDashboard()
-      return res.data
-    },
-  })
-
-  const runClassificationMutation = useMutation({
-    mutationFn: async (params?: { limit?: number; force?: boolean }) => {
-      const res = await platformApi.ragRunClassification(params)
-      return res.data
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      const r = await fetch('/api/documents/ingest-file/', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      })
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}))
+        throw new Error(err.error || `Upload failed: ${r.status}`)
+      }
+      return r.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rag-observability-dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['knowledge-documents'] })
     },
   })
 
-  // Session 833: Combined error handling
-  // Session 957: Added ragError to error handling
-  const hasError = canonError || playbooksError || findingsError || ragError
-  const handleRetry = () => {
-    if (canonError) refetchCanon()
-    if (playbooksError) refetchPlaybooks()
-    if (findingsError) refetchFindings()
-    if (ragError) refetchRag()
-  }
-
-  if (hasError) {
-    return (
-      <ErrorState
-        error={canonErrorData as Error}
-        onRetry={handleRetry}
-        message="Failed to load knowledge data. Please check your connection and try again."
-      />
-    )
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) uploadMutation.mutate(file)
   }
 
   return (
     <div className="space-y-6">
-      {/* Canon Documents */}
-      <div className="card">
-        <div className="flex items-center gap-2 mb-4">
-          <BookOpen className="text-primary-400" size={18} />
-          <h3 className="text-md font-semibold uppercase">Canon Documents</h3>
-          {canonData?.documents && (
-            <span className="text-xs text-gray-500">({canonData.documents.length})</span>
+      {/* URL Ingest */}
+      <div className="p-5 rounded-xl bg-dark-card border border-dark-border">
+        <h3 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+          <Globe size={16} className="text-primary-400" />
+          Ingest from URL
+        </h3>
+        <p className="text-xs text-gray-500 mb-3">
+          Paste a web page, YouTube video, or PDF URL. Content will be extracted, chunked, and embedded for semantic search.
+        </p>
+        <div className="space-y-2">
+          <input
+            type="url"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://example.com/article or YouTube URL..."
+            className="w-full px-3 py-2 bg-gray-800 border border-dark-border rounded-lg text-sm text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none"
+          />
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Title (optional — auto-detected from page)"
+            className="w-full px-3 py-2 bg-gray-800 border border-dark-border rounded-lg text-sm text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none"
+          />
+          <button
+            onClick={() => ingestUrlMutation.mutate()}
+            disabled={ingestUrlMutation.isPending || !url.trim()}
+            className="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
+          >
+            {ingestUrlMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Link size={14} />}
+            Ingest URL
+          </button>
+        </div>
+        {ingestUrlMutation.isSuccess && (
+          <div className="mt-3 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm text-green-400">
+            <CheckCircle size={14} className="inline mr-1" />
+            Ingested successfully — {ingestUrlMutation.data?.chunks_created || 0} chunks created, embeddings generating.
+          </div>
+        )}
+        {ingestUrlMutation.isError && (
+          <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+            {(ingestUrlMutation.error as Error).message}
+          </div>
+        )}
+      </div>
+
+      {/* File Upload */}
+      <div className="p-5 rounded-xl bg-dark-card border border-dark-border">
+        <h3 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+          <Upload size={16} className="text-blue-400" />
+          Upload File
+        </h3>
+        <p className="text-xs text-gray-500 mb-3">
+          Upload PDF, text, markdown, or code files. Content will be chunked and embedded automatically.
+        </p>
+        <label className="flex items-center justify-center gap-2 px-4 py-8 border-2 border-dashed border-dark-border rounded-xl hover:border-primary-500/50 transition-colors cursor-pointer">
+          <input type="file" onChange={handleFileSelect} className="hidden" accept=".pdf,.txt,.md,.py,.js,.ts,.json,.csv,.html" />
+          {uploadMutation.isPending ? (
+            <><Loader2 size={20} className="animate-spin text-primary-400" /> Processing...</>
+          ) : (
+            <><Upload size={20} className="text-gray-500" /> <span className="text-sm text-gray-400">Click to select a file (PDF, TXT, MD, code files)</span></>
           )}
-        </div>
-        {loadingCanon ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="animate-spin text-primary-400" size={24} />
+        </label>
+        {uploadMutation.isSuccess && (
+          <div className="mt-3 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm text-green-400">
+            <CheckCircle size={14} className="inline mr-1" />
+            Uploaded — {uploadMutation.data?.title || 'Document'} processed ({uploadMutation.data?.chunks_created || 0} chunks).
           </div>
-        ) : (
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            {(canonData?.documents || []).slice(0, 10).map((doc: Document) => (
-              <div
-                key={doc.path}
-                className="p-3 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-colors cursor-pointer"
-                onClick={() => setSelectedDoc(doc)}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <FileText size={14} className="text-primary-400 shrink-0" />
-                      <span className="text-sm truncate">{doc.title || doc.path}</span>
-                    </div>
-                  </div>
-                  {doc.category && doc.category !== 'root' && (
-                    <span className="text-xs px-2 py-0.5 bg-primary-500/20 text-primary-400 rounded ml-2 shrink-0">
-                      {doc.category}
-                    </span>
-                  )}
-                </div>
-                {/* Metadata row */}
-                <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                  {doc.lines && <span>{doc.lines} lines</span>}
-                  {doc.size_bytes && (
-                    <>
-                      {doc.lines && <span>•</span>}
-                      <span>{(doc.size_bytes / 1024).toFixed(1)} KB</span>
-                    </>
-                  )}
-                  {doc.modified_at && (
-                    <>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <Calendar size={10} />
-                        {new Date(doc.modified_at).toLocaleDateString()}
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
+        )}
+        {uploadMutation.isError && (
+          <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+            {(uploadMutation.error as Error).message}
           </div>
         )}
       </div>
+    </div>
+  )
+}
 
-      {/* Playbooks */}
-      <div className="card">
-        <div className="flex items-center gap-2 mb-4">
-          <ClipboardList className="text-accent-green" size={18} />
-          <h3 className="text-md font-semibold uppercase">Playbooks</h3>
-          {playbooksData?.playbooks && (
-            <span className="text-xs text-gray-500">({playbooksData.playbooks.length})</span>
-          )}
-        </div>
-        {loadingPlaybooks ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="animate-spin text-primary-400" size={24} />
-          </div>
-        ) : (
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            {(playbooksData?.playbooks || []).slice(0, 10).map((playbook: Playbook) => (
-              <div
-                key={playbook.path}
-                className="p-3 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-colors cursor-pointer"
-                onClick={() => setSelectedDoc({ path: playbook.path, title: playbook.title, category: playbook.category })}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <FileCode size={14} className="text-accent-green shrink-0" />
-                      <h4 className="font-medium text-sm truncate">{playbook.title}</h4>
-                    </div>
-                    {playbook.description && (
-                      <p className="text-xs text-gray-400 mt-1 line-clamp-2">{playbook.description}</p>
-                    )}
-                  </div>
-                  {playbook.category && playbook.category !== 'root' && (
-                    <span className="text-xs px-2 py-0.5 bg-accent-green/20 text-accent-green rounded ml-2 shrink-0">
-                      {playbook.category}
-                    </span>
-                  )}
-                </div>
-                {/* Metadata row */}
-                <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                  <span>{(playbook.size_bytes / 1024).toFixed(1)} KB</span>
-                  {playbook.modified_at && (
-                    <>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <Calendar size={10} />
-                        {new Date(playbook.modified_at).toLocaleDateString()}
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+// ============================================================================
+// Sub-Tab 3: Documents
+// ============================================================================
+function DocumentsPanel() {
+  const [search, setSearch] = useState('')
 
-      {/* Session 840: Audit Dashboard - Actionable Findings from Database */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Shield className="text-accent-amber" size={18} />
-            <h3 className="text-md font-semibold uppercase">Audit Findings</h3>
-          </div>
-          {/* Summary Stats */}
-          {auditSummary?.summary && (
-            <div className="flex items-center gap-3 text-xs">
-              <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded">
-                P0: {auditSummary.summary.by_priority?.P0 || 0}
-              </span>
-              <span className="px-2 py-1 bg-orange-500/20 text-orange-400 rounded">
-                P1: {auditSummary.summary.by_priority?.P1 || 0}
-              </span>
-              <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded">
-                Open: {auditSummary.summary.by_status?.open || 0}
-              </span>
-              <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded">
-                Fixed: {auditSummary.summary.by_status?.fixed || 0}
-              </span>
-            </div>
-          )}
-        </div>
+  const docsQuery = useQuery({
+    queryKey: ['knowledge-documents', search],
+    queryFn: async () => {
+      const params = new URLSearchParams({ limit: '30' })
+      if (search) params.set('q', search)
+      const r = await fetch(`/api/documents/?${params}`, { credentials: 'include' })
+      if (!r.ok) return { documents: [], count: 0 }
+      return r.json()
+    },
+    staleTime: 30000,
+  })
 
-        {/* Status Filter Tabs */}
-        <div className="flex gap-1 mb-4 p-1 bg-gray-800/50 rounded-lg">
-          {[
-            { value: 'open', label: 'Open', icon: AlertCircle },
-            { value: 'in_progress', label: 'In Progress', icon: Clock },
-            { value: 'fixed', label: 'Fixed', icon: CheckCircle },
-            { value: 'deferred', label: 'Deferred', icon: XCircle },
-            { value: 'all', label: 'All', icon: ClipboardList },
-          ].map(({ value, label, icon: Icon }) => (
-            <button
-              key={value}
-              onClick={() => setAuditStatusFilter(value)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                auditStatusFilter === value
-                  ? 'bg-primary-500 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-700'
-              }`}
-            >
-              <Icon size={12} />
-              {label}
-            </button>
-          ))}
-        </div>
+  const docs = docsQuery.data?.documents || docsQuery.data?.results || []
 
-        {/* Findings List */}
-        {loadingFindings || loadingAuditSummary ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="animate-spin text-primary-400" size={24} />
-          </div>
-        ) : (
-          <div className="space-y-2 max-h-80 overflow-y-auto">
-            {auditFindings?.findings?.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <CheckCircle size={32} className="mx-auto mb-2 opacity-50" />
-                <p>No {auditStatusFilter === 'all' ? '' : auditStatusFilter} findings</p>
-              </div>
-            ) : (
-              auditFindings?.findings?.map((finding: AuditFinding) => (
-                <div
-                  key={finding.id}
-                  className="p-3 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-colors cursor-pointer"
-                  onClick={() => setSelectedFinding(finding)}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-                          finding.priority === 'P0' ? 'bg-red-500/20 text-red-400' :
-                          finding.priority === 'P1' ? 'bg-orange-500/20 text-orange-400' :
-                          finding.priority === 'P2' ? 'bg-yellow-500/20 text-yellow-400' :
-                          'bg-gray-500/20 text-gray-400'
-                        }`}>
-                          {finding.priority}
-                        </span>
-                        <span className="text-sm font-medium truncate">{finding.title}</span>
-                      </div>
-                      <p className="text-xs text-gray-400 mt-1 line-clamp-2">{finding.description}</p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 shrink-0">
-                      <span className={`text-xs px-2 py-0.5 rounded ${
-                        finding.status === 'open' ? 'bg-blue-500/20 text-blue-400' :
-                        finding.status === 'fixed' ? 'bg-green-500/20 text-green-400' :
-                        finding.status === 'in_progress' ? 'bg-yellow-500/20 text-yellow-400' :
-                        'bg-gray-500/20 text-gray-400'
-                      }`}>
-                        {finding.status}
-                      </span>
-                      <span className="text-xs text-gray-500">{finding.category}</span>
-                    </div>
-                  </div>
-                  {/* Source audit */}
-                  <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
-                    <span>From: {finding.audit_report?.title || 'Unknown audit'}</span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        )}
-
-        {/* Total count */}
-        {auditFindings?.count && (
-          <div className="mt-3 pt-3 border-t border-dark-border text-xs text-gray-500 text-center">
-            Showing {auditFindings.findings?.length || 0} of {auditFindings.count} findings
-          </div>
-        )}
-      </div>
-
-      {/* Session 957: RAG Observability Dashboard */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Database className="text-purple-400" size={18} />
-            <h3 className="text-md font-semibold uppercase">RAG System Health</h3>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => refetchRag()}
-              disabled={loadingRag}
-              className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
-              title="Refresh"
-            >
-              <RefreshCw size={14} className={loadingRag ? 'animate-spin' : ''} />
-            </button>
-            <button
-              onClick={() => setShowRagDetails(!showRagDetails)}
-              className="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
-            >
-              {showRagDetails ? 'Hide Details' : 'Show Details'}
-            </button>
-          </div>
-        </div>
-
-        {loadingRag ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="animate-spin text-primary-400" size={24} />
-          </div>
-        ) : ragData ? (
-          <div className="space-y-4">
-            {/* Summary Stats Row */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="p-3 bg-gray-800/50 rounded-lg">
-                <div className="text-2xl font-bold text-white">{ragData.summary?.total_documents || 0}</div>
-                <div className="text-xs text-gray-400">Total Documents</div>
-              </div>
-              <div className="p-3 bg-gray-800/50 rounded-lg">
-                <div className="text-2xl font-bold text-red-400">{ragData.summary?.critical_documents || 0}</div>
-                <div className="text-xs text-gray-400">Critical Docs</div>
-              </div>
-              <div className="p-3 bg-gray-800/50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-400">{ragData.summary?.classified_documents || 0}</div>
-                <div className="text-xs text-gray-400">Classified</div>
-              </div>
-              <div className="p-3 bg-gray-800/50 rounded-lg">
-                <div className="text-2xl font-bold text-purple-400">{ragData.summary?.budget_utilization?.toFixed(1) || 0}%</div>
-                <div className="text-xs text-gray-400">Budget Used</div>
-              </div>
-            </div>
-
-            {/* Health Indicators */}
-            {ragData.health_indicators && ragData.health_indicators.length > 0 && (
-              <div className="space-y-2">
-                {ragData.health_indicators.map((indicator, idx) => (
-                  <div
-                    key={idx}
-                    className={`flex items-start gap-2 p-2 rounded text-sm ${
-                      indicator.level === 'success' ? 'bg-green-500/10 text-green-400' :
-                      indicator.level === 'warning' ? 'bg-amber-500/10 text-amber-400' :
-                      'bg-blue-500/10 text-blue-400'
-                    }`}
-                  >
-                    {indicator.level === 'success' ? <CheckCircle size={16} className="shrink-0 mt-0.5" /> :
-                     indicator.level === 'warning' ? <AlertTriangle size={16} className="shrink-0 mt-0.5" /> :
-                     <Info size={16} className="shrink-0 mt-0.5" />}
-                    <div>
-                      <span>{indicator.message}</span>
-                      {indicator.recommendation && (
-                        <span className="text-xs opacity-70 ml-2">→ {indicator.recommendation}</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Detailed Sections (collapsible) */}
-            {showRagDetails && (
-              <div className="space-y-4 pt-4 border-t border-dark-border">
-                {/* Context Budget Breakdown */}
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Layers size={14} className="text-purple-400" />
-                    <h4 className="text-sm font-medium">Context Budget Allocation</h4>
-                    <span className="text-xs text-gray-500">({ragData.context_budget?.total_budget || 4000} tokens)</span>
-                  </div>
-                  <div className="space-y-2">
-                    {[
-                      { label: 'Reserved Tier', value: ragData.context_budget?.reserved_tier_tokens || 0, color: 'bg-red-500', pct: ((ragData.context_budget?.reserved_tier_tokens || 0) / (ragData.context_budget?.total_budget || 4000)) * 100 },
-                      { label: 'Critical Tier', value: ragData.context_budget?.critical_tier_tokens || 0, color: 'bg-orange-500', pct: ((ragData.context_budget?.critical_tier_tokens || 0) / (ragData.context_budget?.total_budget || 4000)) * 100 },
-                      { label: 'High Tier', value: ragData.context_budget?.high_tier_tokens || 0, color: 'bg-yellow-500', pct: ((ragData.context_budget?.high_tier_tokens || 0) / (ragData.context_budget?.total_budget || 4000)) * 100 },
-                      { label: 'Medium Tier', value: ragData.context_budget?.medium_tier_tokens || 0, color: 'bg-blue-500', pct: ((ragData.context_budget?.medium_tier_tokens || 0) / (ragData.context_budget?.total_budget || 4000)) * 100 },
-                      { label: 'Low Tier', value: ragData.context_budget?.low_tier_tokens || 0, color: 'bg-gray-500', pct: ((ragData.context_budget?.low_tier_tokens || 0) / (ragData.context_budget?.total_budget || 4000)) * 100 },
-                    ].map(tier => (
-                      <div key={tier.label} className="flex items-center gap-2">
-                        <span className="text-xs text-gray-400 w-24">{tier.label}</span>
-                        <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
-                          <div className={`h-full ${tier.color}`} style={{ width: `${tier.pct}%` }} />
-                        </div>
-                        <span className="text-xs text-gray-500 w-20 text-right">{tier.value} ({tier.pct.toFixed(1)}%)</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Document Inventory by Risk Level */}
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Target size={14} className="text-red-400" />
-                    <h4 className="text-sm font-medium">Documents by Risk Level</h4>
-                  </div>
-                  <div className="grid grid-cols-4 gap-2">
-                    {Object.entries(ragData.document_inventory?.by_risk_level || {}).map(([level, count]) => (
-                      <div key={level} className={`p-2 rounded text-center ${
-                        level === 'critical' ? 'bg-red-500/20 text-red-400' :
-                        level === 'high' ? 'bg-orange-500/20 text-orange-400' :
-                        level === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                        'bg-gray-500/20 text-gray-400'
-                      }`}>
-                        <div className="text-lg font-bold">{count as number}</div>
-                        <div className="text-xs capitalize">{level}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Document Inventory by Class */}
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <FileText size={14} className="text-blue-400" />
-                    <h4 className="text-sm font-medium">Documents by Classification</h4>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(ragData.document_inventory?.by_document_class || {}).slice(0, 8).map(([docClass, count]) => (
-                      <span key={docClass} className="px-2 py-1 bg-gray-700 rounded text-xs">
-                        {docClass}: <span className="text-white font-medium">{count as number}</span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Risk Boost Stats */}
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Zap size={14} className="text-yellow-400" />
-                    <h4 className="text-sm font-medium">Risk Boost Effectiveness</h4>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="p-2 bg-gray-800/50 rounded">
-                      <div className="text-lg font-bold text-green-400">{ragData.risk_boost?.total_results_boosted || 0}</div>
-                      <div className="text-xs text-gray-400">Boosted Docs</div>
-                    </div>
-                    <div className="p-2 bg-gray-800/50 rounded">
-                      <div className="text-lg font-bold text-white">{((ragData.risk_boost?.avg_boost_applied || 0) * 100).toFixed(0)}%</div>
-                      <div className="text-xs text-gray-400">Avg Boost</div>
-                    </div>
-                    <div className="p-2 bg-gray-800/50 rounded">
-                      <div className="text-lg font-bold text-purple-400">{((ragData.risk_boost?.max_boost_applied || 0) * 100).toFixed(0)}%</div>
-                      <div className="text-xs text-gray-400">Max Boost</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Retrieval Channels */}
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Activity size={14} className="text-green-400" />
-                    <h4 className="text-sm font-medium">Retrieval Channels</h4>
-                  </div>
-                  <div className="grid grid-cols-4 gap-2 text-center">
-                    <div className="p-2 bg-gray-800/50 rounded">
-                      <div className="text-sm font-bold text-blue-400">{ragData.retrieval_channels?.semantic_channel_count || 0}</div>
-                      <div className="text-xs text-gray-400">Semantic</div>
-                    </div>
-                    <div className="p-2 bg-gray-800/50 rounded">
-                      <div className="text-sm font-bold text-red-400">{ragData.retrieval_channels?.critical_channel_count || 0}</div>
-                      <div className="text-xs text-gray-400">Critical</div>
-                    </div>
-                    <div className="p-2 bg-gray-800/50 rounded">
-                      <div className="text-sm font-bold text-orange-400">{ragData.retrieval_channels?.incident_channel_count || 0}</div>
-                      <div className="text-xs text-gray-400">Incident</div>
-                    </div>
-                    <div className="p-2 bg-gray-800/50 rounded">
-                      <div className="text-sm font-bold text-purple-400">{ragData.retrieval_channels?.constraint_channel_count || 0}</div>
-                      <div className="text-xs text-gray-400">Constraint</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Run Classification Button */}
-                <div className="pt-2 border-t border-dark-border">
-                  <button
-                    onClick={() => runClassificationMutation.mutate({ limit: 100 })}
-                    disabled={runClassificationMutation.isPending}
-                    className="flex items-center gap-2 px-3 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded text-sm transition-colors disabled:opacity-50"
-                  >
-                    {runClassificationMutation.isPending ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : (
-                      <RefreshCw size={14} />
-                    )}
-                    Run Document Classification
-                  </button>
-                  {runClassificationMutation.data && (
-                    <p className="text-xs text-gray-400 mt-2">
-                      Classified {runClassificationMutation.data.classified_count} documents
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-gray-400">
-            <Database size={32} className="mx-auto mb-2 opacity-50" />
-            <p>No RAG data available</p>
-          </div>
-        )}
-      </div>
-
-      {/* Session 857: Documentation info shown inline instead of external link */}
-      <div className="card">
-        <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
-          <div>
-            <h4 className="font-medium">Documentation Index</h4>
-            <p className="text-sm text-gray-400 mt-1">
-              1,500+ documentation files available in canon and playbooks above
-            </p>
-          </div>
-          <BookOpen size={20} className="text-primary-400" />
-        </div>
-      </div>
-
-      {/* Document Preview Modal */}
-      {selectedDoc && (
-        <DocumentViewerModal
-          doc={selectedDoc}
-          onClose={() => setSelectedDoc(null)}
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Filter documents..."
+          className="flex-1 px-3 py-2 bg-gray-800 border border-dark-border rounded-lg text-sm text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none"
         />
+      </div>
+
+      {docsQuery.isLoading && (
+        <div className="flex justify-center py-8"><Loader2 size={24} className="animate-spin text-primary-400" /></div>
       )}
 
-      {/* Session 840: Finding Detail Modal */}
-      {selectedFinding && (
-        <FindingDetailModal
-          finding={selectedFinding}
-          onClose={() => setSelectedFinding(null)}
-          onUpdateStatus={(status, notes) => {
-            updateStatusMutation.mutate({
-              findingId: selectedFinding.id,
-              status,
-              notes,
-            })
-          }}
-          isUpdating={updateStatusMutation.isPending}
-        />
+      <div className="space-y-2">
+        {docs.length === 0 && !docsQuery.isLoading && (
+          <div className="text-center py-12 text-gray-500">
+            <FileText size={32} className="mx-auto mb-2 opacity-50" />
+            <p className="text-sm">No documents yet. Use the Ingest tab to add knowledge.</p>
+          </div>
+        )}
+        {docs.map((doc: Record<string, string | number>) => (
+          <div key={doc.id as string} className="p-3 rounded-lg bg-dark-card border border-dark-border hover:border-gray-600 transition-colors">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <FileText size={14} className="text-primary-400 shrink-0" />
+                  <p className="text-sm font-medium text-white truncate">{doc.title || 'Untitled'}</p>
+                </div>
+                {doc.description && (
+                  <p className="text-xs text-gray-400 mt-1 line-clamp-2">{doc.description}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {doc.document_type && (
+                  <span className="px-2 py-0.5 bg-gray-700 rounded text-xs text-gray-300">{doc.document_type}</span>
+                )}
+                {doc.status && (
+                  <span className={cn(
+                    'px-2 py-0.5 rounded text-xs',
+                    doc.status === 'processed' ? 'bg-green-500/20 text-green-400' :
+                    doc.status === 'processing' ? 'bg-blue-500/20 text-blue-400' :
+                    doc.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                    'bg-gray-500/20 text-gray-400'
+                  )}>{doc.status}</span>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+              {doc.word_count && <span>{(doc.word_count as number).toLocaleString()} words</span>}
+              {doc.source && <><span>&middot;</span><span>{doc.source}</span></>}
+              {doc.created_at && <><span>&middot;</span><span>{new Date(doc.created_at as string).toLocaleDateString()}</span></>}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {docsQuery.data?.count > docs.length && (
+        <p className="text-xs text-gray-500 text-center">
+          Showing {docs.length} of {docsQuery.data.count} documents
+        </p>
       )}
     </div>
   )
 }
 
-// Session 833: Document Viewer Modal Component
-function DocumentViewerModal({ doc, onClose }: { doc: Document; onClose: () => void }) {
-  const {
-    data: docData,
-    isLoading,
-    isError,
-    error,
-  } = useQuery({
-    queryKey: ['doc-content', doc.path],
+// ============================================================================
+// Sub-Tab 4: Provenance
+// ============================================================================
+function ProvenancePanel() {
+  const violationsQuery = useQuery({
+    queryKey: ['citation-violations'],
     queryFn: async () => {
-      const res = await platformApi.docContent(doc.path)
-      return res.data
+      try {
+        const r = await fetch('/api/citation-violations/?limit=20&is_resolved=false', { credentials: 'include' })
+        if (!r.ok) return { violations: [], count: 0 }
+        return r.json()
+      } catch { return { violations: [], count: 0 } }
     },
+    staleTime: 60000,
+  })
+
+  const violations = violationsQuery.data?.violations || violationsQuery.data?.results || []
+
+  return (
+    <div className="space-y-4">
+      <div className="p-4 rounded-xl bg-dark-card border border-dark-border">
+        <h3 className="text-sm font-medium text-white mb-2 flex items-center gap-2">
+          <AlertTriangle size={16} className="text-amber-400" />
+          Unresolved Citation Violations
+        </h3>
+        <p className="text-xs text-gray-500 mb-3">
+          Agents that produced output without sufficient source citations.
+        </p>
+
+        {violationsQuery.isLoading && (
+          <div className="flex justify-center py-4"><Loader2 size={20} className="animate-spin text-primary-400" /></div>
+        )}
+
+        {violations.length === 0 && !violationsQuery.isLoading && (
+          <div className="text-center py-6 text-gray-500">
+            <CheckCircle size={24} className="mx-auto mb-2 opacity-50" />
+            <p className="text-sm">No unresolved citation violations.</p>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          {violations.map((v: Record<string, string | number | boolean>) => (
+            <div key={v.id as string} className="p-3 rounded-lg bg-gray-800/50 border border-dark-border">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white">{v.agent_name}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{v.violation_type}: {v.provided_sources}/{v.required_sources} sources</p>
+                  {v.task_description && (
+                    <p className="text-xs text-gray-500 mt-1 truncate">{v.task_description}</p>
+                  )}
+                </div>
+                <span className={cn(
+                  'px-2 py-0.5 rounded text-xs',
+                  v.was_blocked ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'
+                )}>
+                  {v.was_blocked ? 'Blocked' : 'Warning'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="p-4 rounded-xl bg-dark-card border border-dark-border">
+        <h3 className="text-sm font-medium text-white mb-2 flex items-center gap-2">
+          <GitBranch size={16} className="text-purple-400" />
+          Knowledge Attribution
+        </h3>
+        <p className="text-xs text-gray-500">
+          Track which documents and spider sources are cited in agent outputs.
+          This feature is built into the agent execution pipeline — every AgentResult
+          includes a KnowledgeAttribution with spider_sources, confidence, and freshness.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================================
+// Sub-Tab 5: Playbooks (from original KnowledgeTab)
+// ============================================================================
+function PlaybooksPanel() {
+  const [selectedDoc, setSelectedDoc] = useState<{ path: string; title: string; category?: string } | null>(null)
+
+  const canonQuery = useQuery({
+    queryKey: ['platform-canon'],
+    queryFn: () => platformApi.canon().then(r => r.data),
+  })
+
+  const playbooksQuery = useQuery({
+    queryKey: ['platform-playbooks'],
+    queryFn: () => platformApi.playbooks().then(r => r.data),
+  })
+
+  const allDocs = [
+    ...(canonQuery.data?.documents || []).map((d: Record<string, string>) => ({ ...d, section: 'Canon' })),
+    ...(playbooksQuery.data?.playbooks || []).map((d: Record<string, string>) => ({ ...d, section: 'Playbook' })),
+  ]
+
+  const isLoading = canonQuery.isLoading || playbooksQuery.isLoading
+
+  return (
+    <div className="space-y-4">
+      {isLoading ? (
+        <div className="flex justify-center py-8"><Loader2 size={24} className="animate-spin text-primary-400" /></div>
+      ) : (
+        <div className="space-y-2 max-h-[600px] overflow-y-auto">
+          {allDocs.map((doc: Record<string, string>) => (
+            <div
+              key={doc.path}
+              className="p-3 rounded-lg bg-dark-card border border-dark-border hover:border-gray-600 transition-colors cursor-pointer"
+              onClick={() => setSelectedDoc({ path: doc.path, title: doc.title, category: doc.category })}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  {doc.section === 'Canon' ? (
+                    <BookOpen size={14} className="text-primary-400 shrink-0" />
+                  ) : (
+                    <FileCode size={14} className="text-green-400 shrink-0" />
+                  )}
+                  <span className="text-sm truncate">{doc.title || doc.path}</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs px-2 py-0.5 bg-gray-700 rounded text-gray-400">{doc.section}</span>
+                  {doc.category && doc.category !== 'root' && (
+                    <span className="text-xs px-2 py-0.5 bg-primary-500/20 text-primary-400 rounded">{doc.category}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {selectedDoc && (
+        <DocumentViewerModal doc={selectedDoc} onClose={() => setSelectedDoc(null)} />
+      )}
+    </div>
+  )
+}
+
+// ============================================================================
+// Sub-Tab 6: Audit Findings (from original KnowledgeTab)
+// ============================================================================
+function AuditFindingsPanel() {
+  const [statusFilter, setStatusFilter] = useState('open')
+  const queryClient = useQueryClient()
+
+  const summaryQuery = useQuery({
+    queryKey: ['audit-findings-summary'],
+    queryFn: () => platformApi.auditFindingsSummary().then(r => r.data),
+  })
+
+  const findingsQuery = useQuery({
+    queryKey: ['audit-findings', statusFilter],
+    queryFn: () => platformApi.auditFindings({
+      status: statusFilter === 'all' ? undefined : statusFilter,
+      limit: 20,
+    }).then(r => r.data),
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      platformApi.auditFindingUpdateStatus(id, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['audit-findings'] })
+      queryClient.invalidateQueries({ queryKey: ['audit-findings-summary'] })
+    },
+  })
+
+  const summary = summaryQuery.data?.summary
+  const findings = findingsQuery.data?.findings || []
+
+  return (
+    <div className="space-y-4">
+      {/* Stats */}
+      {summary && (
+        <div className="flex items-center gap-3 text-xs">
+          <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded">P0: {summary.by_priority?.P0 || 0}</span>
+          <span className="px-2 py-1 bg-orange-500/20 text-orange-400 rounded">P1: {summary.by_priority?.P1 || 0}</span>
+          <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded">Open: {summary.by_status?.open || 0}</span>
+          <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded">Fixed: {summary.by_status?.fixed || 0}</span>
+        </div>
+      )}
+
+      {/* Status tabs */}
+      <div className="flex gap-1 p-1 bg-gray-800/50 rounded-lg">
+        {['open', 'in_progress', 'fixed', 'deferred', 'all'].map(s => (
+          <button
+            key={s}
+            onClick={() => setStatusFilter(s)}
+            className={cn(
+              'px-3 py-1.5 rounded text-xs font-medium transition-colors',
+              statusFilter === s ? 'bg-primary-500 text-white' : 'text-gray-400 hover:text-white'
+            )}
+          >
+            {s === 'in_progress' ? 'In Progress' : s.charAt(0).toUpperCase() + s.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* Findings */}
+      {findingsQuery.isLoading ? (
+        <div className="flex justify-center py-8"><Loader2 size={24} className="animate-spin text-primary-400" /></div>
+      ) : findings.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          <CheckCircle size={32} className="mx-auto mb-2 opacity-50" />
+          <p>No {statusFilter === 'all' ? '' : statusFilter} findings</p>
+        </div>
+      ) : (
+        <div className="space-y-2 max-h-[500px] overflow-y-auto">
+          {findings.map((f: Record<string, string>) => (
+            <div key={f.id} className="p-3 rounded-lg bg-dark-card border border-dark-border">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      'text-xs px-1.5 py-0.5 rounded font-medium',
+                      f.priority === 'P0' ? 'bg-red-500/20 text-red-400' :
+                      f.priority === 'P1' ? 'bg-orange-500/20 text-orange-400' :
+                      'bg-gray-500/20 text-gray-400'
+                    )}>{f.priority}</span>
+                    <span className="text-sm font-medium truncate">{f.title}</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1 line-clamp-2">{f.description}</p>
+                </div>
+                <span className={cn(
+                  'text-xs px-2 py-0.5 rounded shrink-0',
+                  f.status === 'open' ? 'bg-blue-500/20 text-blue-400' :
+                  f.status === 'fixed' ? 'bg-green-500/20 text-green-400' :
+                  'bg-gray-500/20 text-gray-400'
+                )}>{f.status}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ============================================================================
+// Sub-Tab 7: RAG Health (from original KnowledgeTab)
+// ============================================================================
+function RAGHealthPanel() {
+  const queryClient = useQueryClient()
+
+  const ragQuery = useQuery({
+    queryKey: ['rag-observability-dashboard'],
+    queryFn: () => platformApi.ragDashboard().then(r => r.data),
+  })
+
+  const classifyMutation = useMutation({
+    mutationFn: (params?: { limit?: number; force?: boolean }) =>
+      platformApi.ragRunClassification(params).then(r => r.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['rag-observability-dashboard'] }),
+  })
+
+  const data = ragQuery.data
+
+  if (ragQuery.isLoading) {
+    return <div className="flex justify-center py-8"><Loader2 size={24} className="animate-spin text-primary-400" /></div>
+  }
+
+  if (!data) {
+    return <div className="text-center py-8 text-gray-400"><Database size={32} className="mx-auto mb-2 opacity-50" /><p>No RAG data available</p></div>
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Summary */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="p-3 bg-dark-card border border-dark-border rounded-lg">
+          <div className="text-2xl font-bold text-white">{data.summary?.total_documents || 0}</div>
+          <div className="text-xs text-gray-400">Total Documents</div>
+        </div>
+        <div className="p-3 bg-dark-card border border-dark-border rounded-lg">
+          <div className="text-2xl font-bold text-red-400">{data.summary?.critical_documents || 0}</div>
+          <div className="text-xs text-gray-400">Critical Docs</div>
+        </div>
+        <div className="p-3 bg-dark-card border border-dark-border rounded-lg">
+          <div className="text-2xl font-bold text-blue-400">{data.summary?.classified_documents || 0}</div>
+          <div className="text-xs text-gray-400">Classified</div>
+        </div>
+        <div className="p-3 bg-dark-card border border-dark-border rounded-lg">
+          <div className="text-2xl font-bold text-purple-400">{data.summary?.budget_utilization?.toFixed(1) || 0}%</div>
+          <div className="text-xs text-gray-400">Budget Used</div>
+        </div>
+      </div>
+
+      {/* Health Indicators */}
+      {data.health_indicators?.length > 0 && (
+        <div className="space-y-2">
+          {data.health_indicators.map((ind: Record<string, string>, idx: number) => (
+            <div key={idx} className={cn(
+              'flex items-start gap-2 p-2 rounded text-sm',
+              ind.level === 'success' ? 'bg-green-500/10 text-green-400' :
+              ind.level === 'warning' ? 'bg-amber-500/10 text-amber-400' :
+              'bg-blue-500/10 text-blue-400'
+            )}>
+              {ind.level === 'success' ? <CheckCircle size={16} className="shrink-0 mt-0.5" /> :
+               ind.level === 'warning' ? <AlertTriangle size={16} className="shrink-0 mt-0.5" /> :
+               <Info size={16} className="shrink-0 mt-0.5" />}
+              <span>{ind.message}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Classify button */}
+      <button
+        onClick={() => classifyMutation.mutate({ limit: 100 })}
+        disabled={classifyMutation.isPending}
+        className="flex items-center gap-2 px-3 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded text-sm transition-colors disabled:opacity-50"
+      >
+        {classifyMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+        Run Document Classification
+      </button>
+    </div>
+  )
+}
+
+// ============================================================================
+// Document Viewer Modal (shared)
+// ============================================================================
+function DocumentViewerModal({ doc, onClose }: { doc: { path: string; title: string; category?: string }; onClose: () => void }) {
+  const docQuery = useQuery({
+    queryKey: ['doc-content', doc.path],
+    queryFn: () => platformApi.docContent(doc.path).then(r => r.data),
     enabled: !!doc.path,
   })
 
   return (
-    <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-      onClick={onClose}
-    >
-      <div
-        className="bg-dark-card border border-dark-border rounded-xl w-full max-w-4xl mx-4 max-h-[85vh] overflow-hidden flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-4xl mx-4 max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-dark-border shrink-0">
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold truncate">{docData?.metadata?.title || doc.title || doc.path}</h3>
+            <h3 className="font-semibold truncate">{docQuery.data?.metadata?.title || doc.title}</h3>
             <p className="text-xs text-gray-500 truncate mt-1">{doc.path}</p>
           </div>
-          <button
-            onClick={onClose}
-            className="ml-4 p-1 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
-          >
-            <X size={20} />
-          </button>
+          <button onClick={onClose} className="ml-4 p-1 text-gray-400 hover:text-white rounded"><X size={20} /></button>
         </div>
-
-        {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="animate-spin text-primary-400" size={32} />
-              <span className="ml-3 text-gray-400">Loading document...</span>
-            </div>
-          ) : isError ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="h-12 w-12 rounded-full bg-red-500/20 flex items-center justify-center mb-4">
-                <AlertCircle className="text-red-400" size={24} />
-              </div>
-              <h4 className="text-lg font-medium text-white mb-2">Failed to Load Document</h4>
-              <p className="text-sm text-gray-400 max-w-md">
-                {(error as Error)?.message || 'An error occurred while loading the document'}
-              </p>
-            </div>
-          ) : docData?.content ? (
-            /* Session 943: Unified prose styling */
-            <div className="prose prose-invert prose-dark prose-sm max-w-none">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {docData.content}
-              </ReactMarkdown>
+          {docQuery.isLoading ? (
+            <div className="flex justify-center py-12"><Loader2 size={32} className="animate-spin text-primary-400" /></div>
+          ) : docQuery.data?.content ? (
+            <div className="prose prose-invert prose-sm max-w-none">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{docQuery.data.content}</ReactMarkdown>
             </div>
           ) : (
-            <div className="text-center py-12 text-gray-400">
-              <FileText size={48} className="mx-auto mb-4 opacity-50" />
-              <p>No content available</p>
-            </div>
+            <div className="text-center py-12 text-gray-400"><FileText size={48} className="mx-auto mb-4 opacity-50" /><p>No content available</p></div>
           )}
         </div>
-
-        {/* Footer with metadata */}
-        {docData?.metadata && (
-          <div className="flex items-center gap-4 px-4 py-2 border-t border-dark-border bg-gray-900/50 text-xs text-gray-500 shrink-0">
-            <span>{docData.metadata.lines} lines</span>
-            <span>•</span>
-            <span>{(docData.metadata.size_bytes / 1024).toFixed(1)} KB</span>
-            {docData.metadata.modified_at && (
-              <>
-                <span>•</span>
-                <span>Modified: {new Date(docData.metadata.modified_at).toLocaleDateString()}</span>
-              </>
-            )}
-          </div>
-        )}
       </div>
     </div>
   )
 }
 
-// Session 840: Finding Detail Modal Component
-function FindingDetailModal({
-  finding,
-  onClose,
-  onUpdateStatus,
-  isUpdating,
-}: {
-  finding: AuditFinding
-  onClose: () => void
-  onUpdateStatus: (status: string, notes?: string) => void
-  isUpdating: boolean
-}) {
-  const [showStatusMenu, setShowStatusMenu] = useState(false)
-
-  const statusActions = [
-    { value: 'in_progress', label: 'Mark In Progress', color: 'text-yellow-400' },
-    { value: 'fixed', label: 'Mark as Fixed', color: 'text-green-400' },
-    { value: 'deferred', label: 'Defer', color: 'text-gray-400' },
-    { value: 'wontfix', label: "Won't Fix", color: 'text-red-400' },
-  ]
+// ============================================================================
+// Main KnowledgeTab
+// ============================================================================
+export function KnowledgeTab() {
+  const [activeSubTab, setActiveSubTab] = useState<KnowledgeSubTab>('search')
 
   return (
-    <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-      onClick={onClose}
-    >
-      <div
-        className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-hidden flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-start justify-between p-4 border-b border-dark-border shrink-0">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
-              <span className={`text-xs px-2 py-1 rounded font-medium ${
-                finding.priority === 'P0' ? 'bg-red-500/20 text-red-400' :
-                finding.priority === 'P1' ? 'bg-orange-500/20 text-orange-400' :
-                finding.priority === 'P2' ? 'bg-yellow-500/20 text-yellow-400' :
-                'bg-gray-500/20 text-gray-400'
-              }`}>
-                {finding.priority}
-              </span>
-              <span className={`text-xs px-2 py-1 rounded ${
-                finding.status === 'open' ? 'bg-blue-500/20 text-blue-400' :
-                finding.status === 'fixed' ? 'bg-green-500/20 text-green-400' :
-                finding.status === 'in_progress' ? 'bg-yellow-500/20 text-yellow-400' :
-                'bg-gray-500/20 text-gray-400'
-              }`}>
-                {finding.status}
-              </span>
-              <span className="text-xs px-2 py-1 bg-gray-700 rounded text-gray-300">
-                {finding.category}
-              </span>
-            </div>
-            <h3 className="font-semibold text-lg">{finding.title}</h3>
-            <p className="text-xs text-gray-500 mt-1">
-              From: {finding.audit_report?.title || 'Unknown audit'}
-            </p>
-          </div>
+    <div className="space-y-4">
+      {/* Sub-tab nav */}
+      <div className="flex gap-1 overflow-x-auto pb-1">
+        {subTabs.map(tab => (
           <button
-            onClick={onClose}
-            className="ml-4 p-1 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Description */}
-          <div>
-            <h4 className="text-sm font-medium text-gray-300 mb-2">Description</h4>
-            <p className="text-sm text-gray-400">{finding.description}</p>
-          </div>
-
-          {/* Recommendation */}
-          {finding.recommendation && (
-            <div>
-              <h4 className="text-sm font-medium text-gray-300 mb-2">Recommendation</h4>
-              <p className="text-sm text-gray-400">{finding.recommendation}</p>
-            </div>
-          )}
-
-          {/* Impact */}
-          <div>
-            <h4 className="text-sm font-medium text-gray-300 mb-2">Impact</h4>
-            <span className={`text-xs px-2 py-1 rounded ${
-              finding.impact === 'critical' ? 'bg-red-500/20 text-red-400' :
-              finding.impact === 'high' ? 'bg-orange-500/20 text-orange-400' :
-              finding.impact === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
-              'bg-gray-500/20 text-gray-400'
-            }`}>
-              {finding.impact}
-            </span>
-          </div>
-
-          {/* Assignment info */}
-          {(finding.assigned_agent || finding.fixed_by) && (
-            <div>
-              <h4 className="text-sm font-medium text-gray-300 mb-2">Assignment</h4>
-              <div className="text-sm text-gray-400 space-y-1">
-                {finding.assigned_agent && <p>Assigned to: {finding.assigned_agent}</p>}
-                {finding.fixed_by && <p>Fixed by: {finding.fixed_by}</p>}
-              </div>
-            </div>
-          )}
-
-          {/* Timestamps */}
-          <div className="text-xs text-gray-500 pt-4 border-t border-dark-border">
-            <p>Created: {new Date(finding.created_at).toLocaleString()}</p>
-            <p>Updated: {new Date(finding.updated_at).toLocaleString()}</p>
-          </div>
-        </div>
-
-        {/* Footer with actions */}
-        <div className="flex items-center justify-between p-4 border-t border-dark-border bg-gray-900/50 shrink-0">
-          <div className="relative">
-            <button
-              onClick={() => setShowStatusMenu(!showStatusMenu)}
-              disabled={isUpdating}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
-            >
-              {isUpdating ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <ChevronDown size={16} />
-              )}
-              Update Status
-            </button>
-
-            {showStatusMenu && (
-              <div className="absolute bottom-full left-0 mb-2 bg-dark-card border border-dark-border rounded-lg shadow-xl overflow-hidden min-w-[160px]">
-                {statusActions.map(({ value, label, color }) => (
-                  <button
-                    key={value}
-                    onClick={() => {
-                      onUpdateStatus(value)
-                      setShowStatusMenu(false)
-                    }}
-                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-700 transition-colors ${color}`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+            key={tab.id}
+            onClick={() => setActiveSubTab(tab.id)}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors',
+              activeSubTab === tab.id
+                ? 'bg-primary-500/20 text-primary-400'
+                : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
             )}
-          </div>
-
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-400 hover:text-white text-sm transition-colors"
           >
-            Close
+            <tab.icon size={14} />
+            {tab.label}
           </button>
-        </div>
+        ))}
       </div>
+
+      {/* Sub-tab content */}
+      {activeSubTab === 'search' && <SearchPanel />}
+      {activeSubTab === 'ingest' && <IngestPanel />}
+      {activeSubTab === 'documents' && <DocumentsPanel />}
+      {activeSubTab === 'provenance' && <ProvenancePanel />}
+      {activeSubTab === 'playbooks' && <PlaybooksPanel />}
+      {activeSubTab === 'audits' && <AuditFindingsPanel />}
+      {activeSubTab === 'rag' && <RAGHealthPanel />}
     </div>
   )
 }
