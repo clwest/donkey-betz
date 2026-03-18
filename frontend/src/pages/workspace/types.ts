@@ -6,6 +6,7 @@
 // Unified workspace tab IDs (all platform + workspace tabs merged)
 export type WorkspaceTab =
   | 'overview'
+  | 'work'
   | 'launchpad'
   | 'deliverables'
   | 'initiatives'

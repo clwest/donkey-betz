@@ -1,5 +1,7 @@
 // Session 825: Workspace tabs barrel export
 // Session 971b: Added SystemTab, DataIntelTab adapters for 9-tab model
+// Session 1077: Unified Work tab
+export { WorkTab } from './WorkTab'
 export { CommandTab } from './CommandTab'
 export { GovernanceTab } from './GovernanceTab'
 export { KnowledgeTab } from './KnowledgeTab'
