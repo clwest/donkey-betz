@@ -10611,31 +10611,38 @@ def rebuild_pa_context_task(self, user_id, reason='fresh_miss'):
     user_hash = hashlib.md5(str(user_id).encode()).hexdigest()
     lock_key = f"pa_ctx:rebuild_lock:{user_hash}"
 
+    def _get_rss_mb():
+        """Current RSS in MB (cross-platform)."""
+        try:
+            import os
+            import resource
+            rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            return round(rss / (1024 * 1024), 1) if os.uname().sysname == 'Darwin' else round(rss / 1024, 1)
+        except Exception:
+            return None
+
     # Stampede lock — skip if another rebuild is already running
-    if not cache.add(lock_key, '1', timeout=90):
+    lock_acquired = cache.add(lock_key, '1', timeout=90)
+    if not lock_acquired:
         logger.info(
-            "PA_CONTEXT_REBUILD status=lock_held user_id=%s reason=%s",
+            "PA_CONTEXT_REBUILD status=lock_suppressed lock_acquired=false "
+            "user_id=%s reason=%s",
             user_id, reason,
         )
         return {'skipped': True, 'reason': 'lock_held'}
 
+    logger.info(
+        "PA_CONTEXT_REBUILD status=lock_acquired lock_acquired=true "
+        "user_id=%s reason=%s",
+        user_id, reason,
+    )
+
     try:
         import json
-        import os
         close_old_connections()
         user = User.objects.get(id=user_id)
 
-        # RSS before build
-        rss_start_mb = None
-        try:
-            import resource
-            rss_start_mb = round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / (1024 * 1024), 1)
-            if os.uname().sysname == 'Darwin':
-                rss_start_mb = round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / (1024 * 1024), 1)
-            else:
-                rss_start_mb = round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024, 1)
-        except Exception:
-            pass
+        rss_start_mb = _get_rss_mb()
 
         t0 = monotonic()
         from core.personal_ai_assistant import PersonalAIAssistant
@@ -10643,34 +10650,27 @@ def rebuild_pa_context_task(self, user_id, reason='fresh_miss'):
         context = assistant.get_personalized_context()
         build_ms = int((monotonic() - t0) * 1000)
 
-        # RSS after build
-        rss_end_mb = None
-        rss_delta_mb = None
-        try:
-            import resource
-            if os.uname().sysname == 'Darwin':
-                rss_end_mb = round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / (1024 * 1024), 1)
-            else:
-                rss_end_mb = round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024, 1)
-            if rss_start_mb is not None:
-                rss_delta_mb = round(rss_end_mb - rss_start_mb, 1)
-        except Exception:
-            pass
+        rss_end_mb = _get_rss_mb()
+        rss_delta_mb = round(rss_end_mb - rss_start_mb, 1) if rss_start_mb is not None and rss_end_mb is not None else None
 
         fresh_key = f"pa_ctx:fresh:{user_hash}"
         stale_key = f"pa_ctx:stale:{user_hash}"
         cache.set(fresh_key, context, 300)   # 5 min fresh
         cache.set(stale_key, context, 1800)  # 30 min stale
+
+        # Verify cache writes landed
+        cache_write_ok = cache.get(fresh_key) is not None
         payload_bytes = len(json.dumps(context, default=str))
 
         logger.info(
             "PA_CONTEXT_REBUILD status=ok user_id=%s build_ms=%s reason=%s "
+            "lock_acquired=true cache_write_ok=%s "
             "rss_start_mb=%s rss_end_mb=%s rss_delta_mb=%s payload_bytes=%s",
-            user_id, build_ms, reason,
+            user_id, build_ms, reason, cache_write_ok,
             rss_start_mb, rss_end_mb, rss_delta_mb, payload_bytes,
         )
 
-        # Alert on memory spikes
+        # Alert: memory spike
         if rss_delta_mb is not None and rss_delta_mb > 300:
             logger.warning(
                 "[MEMORY] PA_CONTEXT_REBUILD rss_delta_mb=%s exceeds 300MB threshold "
@@ -10678,10 +10678,29 @@ def rebuild_pa_context_task(self, user_id, reason='fresh_miss'):
                 rss_delta_mb, user_id, build_ms,
             )
 
-        return {'success': True, 'build_ms': build_ms, 'rss_delta_mb': rss_delta_mb}
+        # Alert: slow build
+        if build_ms > 5000:
+            logger.warning(
+                "[SLOW] PA_CONTEXT_REBUILD build_ms=%s exceeds 5s threshold "
+                "user_id=%s reason=%s",
+                build_ms, user_id, reason,
+            )
+
+        # Alert: cache write failure
+        if not cache_write_ok:
+            logger.error(
+                "[CACHE] PA_CONTEXT_REBUILD cache_write_ok=false — Redis may be down "
+                "user_id=%s",
+                user_id,
+            )
+
+        return {'success': True, 'build_ms': build_ms, 'rss_delta_mb': rss_delta_mb, 'cache_write_ok': cache_write_ok}
 
     except Exception as e:
-        logger.error("PA_CONTEXT_REBUILD status=error user_id=%s reason=%s error=%s", user_id, reason, str(e))
+        logger.error(
+            "PA_CONTEXT_REBUILD status=error user_id=%s reason=%s error=%s",
+            user_id, reason, str(e),
+        )
         return {'success': False, 'error': str(e)}
     finally:
         cache.delete(lock_key)
