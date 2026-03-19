@@ -12,11 +12,13 @@ import {
   CheckCircle, Clock, ArrowRight,
   ChevronRight, ChevronDown, X,
   ThumbsUp, ThumbsDown, Eye, Archive,
-  ExternalLink,
+  ExternalLink, MessageSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { api, deliverablesApi } from '@/lib/api'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { usePAStore } from '@/stores/paStore'
+import { useAssistantContextStore } from '@/stores/assistantContextStore'
 import { ChatMarkdown } from '@/components/ChatMarkdown'
 
 interface WorkTabProps {
@@ -437,6 +439,21 @@ export function WorkTab({ workspaceId, onNavigateTab }: WorkTabProps) {
                             </button>
                           </>
                         )}
+
+                        <button
+                          onClick={() => {
+                            useAssistantContextStore.getState().setFocusedEntity({
+                              type: item.type === 'attention' ? 'attention' : item.type,
+                              id: item.id,
+                              title: item.title,
+                            })
+                            usePAStore.getState().setCurrentInput(`Tell me about "${item.title}"`)
+                            usePAStore.getState().openDock()
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-500/20 text-primary-400 hover:bg-primary-500/30 rounded text-xs font-medium transition-colors"
+                        >
+                          <MessageSquare size={12} /> Ask Rigby
+                        </button>
 
                         <button
                           onClick={() => setExpandedId(null)}
