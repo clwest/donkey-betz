@@ -68,3 +68,6 @@ export { Stage3EvaluationTab } from './Stage3EvaluationTab'
 
 // Preview System: Workspace Hosted Previews + Magic Links
 export { LaunchpadTab } from './LaunchpadTab'
+
+// Session 1078: Home Tab — attention queue + active work + pulse
+export { default as HomeTab } from './HomeTab'
