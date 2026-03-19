@@ -42,10 +42,13 @@ class PersonalAIAssistant:
         self.user = user
         self.profile = self._get_or_create_profile()
         self.context_middleware = AgentContextMiddleware()
-        self.agent_registry = get_agent_registry()
-        self.advisor_registry = get_advisor_registry()
-        self.ml_engine = MLEngine()
-        self.embeddings = CodebaseEmbeddings()
+        # Session 1078: Lazy-load heavy objects — MLEngine (~800MB), CodebaseEmbeddings,
+        # agent/advisor registries are NOT needed by get_personalized_context() and were
+        # causing +1.1GB RSS spikes in rebuild_pa_context_task.
+        self._agent_registry = None
+        self._advisor_registry = None
+        self._ml_engine = None
+        self._embeddings = None
         self.learning_history = []
         self.session_context = {}
 
@@ -54,7 +57,31 @@ class PersonalAIAssistant:
         self.learning_rate = 0.1
         self.memory_window = 30  # days
 
-        logger.info(f"✅ Personal AI Assistant initialized for {user.username}")
+        logger.info(f"Personal AI Assistant initialized for {user.username}")
+
+    @property
+    def agent_registry(self):
+        if self._agent_registry is None:
+            self._agent_registry = get_agent_registry()
+        return self._agent_registry
+
+    @property
+    def advisor_registry(self):
+        if self._advisor_registry is None:
+            self._advisor_registry = get_advisor_registry()
+        return self._advisor_registry
+
+    @property
+    def ml_engine(self):
+        if self._ml_engine is None:
+            self._ml_engine = MLEngine()
+        return self._ml_engine
+
+    @property
+    def embeddings(self):
+        if self._embeddings is None:
+            self._embeddings = CodebaseEmbeddings()
+        return self._embeddings
 
     def _get_or_create_profile(self) -> ExtendedUserProfile:
         """Get or create extended user profile."""
