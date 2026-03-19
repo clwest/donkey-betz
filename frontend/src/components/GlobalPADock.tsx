@@ -64,6 +64,7 @@ export default function GlobalPADock() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dropZoneRef = useRef<HTMLDivElement>(null)
   const [showWsPicker, setShowWsPicker] = useState(false)
+  const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace)
 
   // PA Store
   const {
@@ -711,6 +712,15 @@ export default function GlobalPADock() {
       {/* Input area */}
       {!isSidebarOpen && (
         <div className="border-t border-dark-border flex-shrink-0">
+          {/* Context strip — shows what Rigby sees when you send */}
+          <ContextStrip
+            activeWorkspace={activeWorkspace}
+            pathname={location.pathname}
+            attachmentCount={attachments.length}
+            onWorkspaceClick={() => setShowWsPicker(!showWsPicker)}
+            onClearAttachments={() => setAttachments([])}
+          />
+
           {/* Attachment chips */}
           {attachments.length > 0 && (
             <div className="px-3 pt-2 flex flex-wrap gap-1.5">
@@ -808,6 +818,66 @@ export default function GlobalPADock() {
             </button>
           </div>
         </div>
+      )}
+    </div>
+  )
+}
+
+
+// ── Context Strip (above composer) ────────────────────────────────────────
+
+function ContextStrip({
+  activeWorkspace,
+  pathname,
+  attachmentCount,
+  onWorkspaceClick,
+  onClearAttachments,
+}: {
+  activeWorkspace: { id: string; name: string } | null
+  pathname: string
+  attachmentCount: number
+  onWorkspaceClick: () => void
+  onClearAttachments: () => void
+}) {
+  const [copied, setCopied] = useState(false)
+
+  const copyPath = () => {
+    navigator.clipboard.writeText(pathname)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1200)
+  }
+
+  // Truncate long paths in the middle
+  const displayPath = pathname.length > 24
+    ? pathname.slice(0, 10) + '...' + pathname.slice(-12)
+    : pathname
+
+  return (
+    <div className="px-3 pt-2 pb-1 flex flex-wrap gap-1.5 items-center">
+      <button
+        onClick={onWorkspaceClick}
+        className="text-[11px] px-2 py-0.5 rounded-md bg-dark-bg border border-dark-border text-gray-400 hover:text-primary-300 hover:border-primary-500/30 transition-colors truncate max-w-[160px]"
+        title={activeWorkspace ? `Workspace: ${activeWorkspace.name}` : 'Select workspace'}
+      >
+        {activeWorkspace ? `\u{1F4C2} ${activeWorkspace.name}` : '\u{1F4C2} No workspace'}
+      </button>
+
+      <button
+        onClick={copyPath}
+        className="text-[11px] px-2 py-0.5 rounded-md bg-dark-bg border border-dark-border text-gray-500 hover:text-gray-300 hover:border-dark-border transition-colors"
+        title={copied ? 'Copied!' : `Page: ${pathname}`}
+      >
+        {copied ? '\u2705 Copied' : `\u{1F4CD} ${displayPath}`}
+      </button>
+
+      {attachmentCount > 0 && (
+        <button
+          onClick={onClearAttachments}
+          className="text-[11px] px-2 py-0.5 rounded-md bg-dark-bg border border-dark-border text-gray-500 hover:text-accent-red hover:border-accent-red/30 transition-colors"
+          title="Clear all attachments"
+        >
+          {`\u{1F4CE} ${attachmentCount} file${attachmentCount > 1 ? 's' : ''} \u00D7`}
+        </button>
       )}
     </div>
   )
