@@ -10596,6 +10596,54 @@ def process_pa_chat_task(self, user_id, message, context=None, generate_audio=Fa
     return _impl_process_pa_chat_task(self, user_id, message, context, generate_audio, conversation_id, source, platform)
 
 
+# Session 1078: Background PA context rebuild — eliminates ghost timeout on first hit.
+# Enqueued by get_assistant_context when fresh cache misses. Stampede-locked per user.
+@shared_task(bind=True, time_limit=60, soft_time_limit=45, ignore_result=True, queue='pa')
+def rebuild_pa_context_task(self, user_id, reason='fresh_miss'):
+    """Rebuild PA context in background and populate caches."""
+    import hashlib
+    from time import monotonic
+    from django.contrib.auth import get_user_model
+    from django.core.cache import cache
+    from django.db import close_old_connections
+
+    User = get_user_model()
+    user_hash = hashlib.md5(str(user_id).encode()).hexdigest()
+    lock_key = f"pa_ctx:rebuild_lock:{user_hash}"
+
+    # Stampede lock — skip if another rebuild is already running
+    if not cache.add(lock_key, '1', timeout=90):
+        logger.info("[PA_CTX_REBUILD] Lock held for user %s, skipping (reason=%s)", user_id, reason)
+        return {'skipped': True, 'reason': 'lock_held'}
+
+    try:
+        close_old_connections()
+        user = User.objects.get(id=user_id)
+
+        t0 = monotonic()
+        from core.personal_ai_assistant import PersonalAIAssistant
+        assistant = PersonalAIAssistant(user)
+        context = assistant.get_personalized_context()
+        build_ms = int((monotonic() - t0) * 1000)
+
+        fresh_key = f"pa_ctx:fresh:{user_hash}"
+        stale_key = f"pa_ctx:stale:{user_hash}"
+        cache.set(fresh_key, context, 300)   # 5 min fresh
+        cache.set(stale_key, context, 1800)  # 30 min stale
+
+        logger.info(
+            "PA_CONTEXT_REBUILD status=ok user_id=%s build_ms=%s reason=%s",
+            user_id, build_ms, reason,
+        )
+        return {'success': True, 'build_ms': build_ms}
+
+    except Exception as e:
+        logger.error("PA_CONTEXT_REBUILD status=error user_id=%s reason=%s error=%s", user_id, reason, str(e))
+        return {'success': False, 'error': str(e)}
+    finally:
+        cache.delete(lock_key)
+
+
 # Session 1077: Background TTS task — offloaded from process_pa_chat_task
 # to prevent SoftTimeLimitExceeded from ElevenLabs blocking the main PA path.
 @shared_task(bind=True, time_limit=120, soft_time_limit=90, ignore_result=True)

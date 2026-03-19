@@ -132,110 +132,92 @@ def chat_with_assistant(request):
 def get_assistant_context(request):
     """Get the current personalized context for the user.
 
-    Session 1100+: Added 60s cache per user to prevent repeated heavy DB queries.
-    The get_personalized_context() call does multiple COUNT(*) and aggregate
-    queries on UserEmbedding/JobApplication which can be slow under load.
-    Also added a 15s timeout to prevent the endpoint from hanging indefinitely.
+    Session 1078: Stale-first, async rebuild pattern.
+    - Fresh hit → return immediately.
+    - Fresh miss + stale exists → return stale, enqueue Celery rebuild.
+    - Both miss → return minimal skeleton, enqueue Celery rebuild.
+    Never blocks the request thread on a cold context build.
+
+    Admin query params (staff only):
+        force_rebuild=1  — bypass fresh cache (still reads stale)
+        skip_cache=1     — bypass all cache reads AND writes (pure profiling)
+        debug=1          — include timing breakdown in response
     """
     import hashlib
-    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
     from time import monotonic
 
     user_id = request.user.id
     user_hash = hashlib.md5(str(user_id).encode()).hexdigest()
-    cache_key_fresh = f"pa_context:fresh:{user_hash}"
-    cache_key_stale = f"pa_context:stale:{user_hash}"
+    fresh_key = f"pa_ctx:fresh:{user_hash}"
+    stale_key = f"pa_ctx:stale:{user_hash}"
 
     t0_total = monotonic()
-    cache_get_ms = None
+    is_staff = getattr(request.user, 'is_staff', False)
+    force_rebuild = is_staff and request.query_params.get('force_rebuild') == '1'
+    skip_cache = is_staff and request.query_params.get('skip_cache') == '1'
+    include_debug = is_staff and request.query_params.get('debug') == '1'
 
-    # Try fresh cache first (60s TTL)
-    t0_cache = monotonic()
-    cached = cache.get(cache_key_fresh)
-    cache_get_ms = int((monotonic() - t0_cache) * 1000)
-    if cached is not None:
-        total_ms = int((monotonic() - t0_total) * 1000)
-        logger.info(
-            "PA_CONTEXT_METRICS status=ok cache_hit=true user_id=%s cache_get_ms=%s total_ms=%s",
-            user_id, cache_get_ms, total_ms,
-        )
-        return Response({'success': True, 'context': cached})
+    def _enqueue_rebuild(reason):
+        """Fire-and-forget Celery rebuild with stampede lock."""
+        try:
+            from core.tasks import rebuild_pa_context_task
+            rebuild_pa_context_task.delay(user_id, reason=reason)
+        except Exception as exc:
+            logger.warning("PA_CONTEXT_METRICS enqueue_failed user_id=%s error=%s", user_id, str(exc))
 
-    # Grab stale copy (10 min TTL) as fallback for timeout/error
-    stale = cache.get(cache_key_stale)
+    def _minimal_skeleton():
+        """Safe default when no cache exists at all."""
+        return {
+            'user_id': str(user_id),
+            'username': request.user.username,
+            'personalization': {'profile_completeness': 0},
+            '_skeleton': True,
+        }
 
-    try:
-        t0_build = monotonic()
+    # ── 1. Try fresh cache ──────────────────────────────────────────────
+    if not skip_cache and not force_rebuild:
+        t0_cache = monotonic()
+        fresh = cache.get(fresh_key)
+        cache_get_ms = int((monotonic() - t0_cache) * 1000)
 
-        def _build_context():
-            from django.db import close_old_connections
-            close_old_connections()
-            assistant = PersonalAIAssistant(request.user)
-            return assistant.get_personalized_context()
-
-        # Run with 15s timeout to prevent indefinite hangs
-        with ThreadPoolExecutor(max_workers=1) as pool:
-            future = pool.submit(_build_context)
-            try:
-                context = future.result(timeout=15)
-            except FuturesTimeout:
-                build_ms = int((monotonic() - t0_build) * 1000)
-                total_ms = int((monotonic() - t0_total) * 1000)
-                # Serve stale context instead of 504
-                if stale is not None:
-                    logger.warning(
-                        "PA_CONTEXT_METRICS status=stale_served cache_hit=false user_id=%s "
-                        "cache_get_ms=%s build_ms=%s total_ms=%s",
-                        user_id, cache_get_ms, build_ms, total_ms,
-                    )
-                    return Response({'success': True, 'context': stale})
-                logger.warning(
-                    "PA_CONTEXT_METRICS status=timeout cache_hit=false user_id=%s "
-                    "cache_get_ms=%s build_ms=%s total_ms=%s",
-                    user_id, cache_get_ms, build_ms, total_ms,
-                )
-                return Response({
-                    'success': False,
-                    'error': 'Context assembly timed out',
-                }, status=504)
-
-        build_ms = int((monotonic() - t0_build) * 1000)
-
-        # Write both fresh (60s) and stale (600s) caches
-        cache.set(cache_key_fresh, context, 60)
-        cache.set(cache_key_stale, context, 600)
-
-        total_ms = int((monotonic() - t0_total) * 1000)
-        logger.info(
-            "PA_CONTEXT_METRICS status=ok cache_hit=false user_id=%s "
-            "cache_get_ms=%s build_ms=%s total_ms=%s",
-            user_id, cache_get_ms, build_ms, total_ms,
-        )
-
-        return Response({
-            'success': True,
-            'context': context
-        })
-
-    except Exception as e:
-        total_ms = int((monotonic() - t0_total) * 1000)
-        # Serve stale context on error instead of 500
-        if stale is not None:
-            logger.error(
-                "PA_CONTEXT_METRICS status=stale_on_error cache_hit=false user_id=%s "
-                "cache_get_ms=%s total_ms=%s error=%s",
-                user_id, cache_get_ms, total_ms, str(e),
+        if fresh is not None:
+            total_ms = int((monotonic() - t0_total) * 1000)
+            logger.info(
+                "PA_CONTEXT_METRICS status=fresh_hit user_id=%s cache_get_ms=%s total_ms=%s",
+                user_id, cache_get_ms, total_ms,
             )
-            return Response({'success': True, 'context': stale})
-        logger.error(
-            "PA_CONTEXT_METRICS status=error cache_hit=false user_id=%s "
-            "cache_get_ms=%s total_ms=%s error=%s",
-            user_id, cache_get_ms, total_ms, str(e),
+            resp = {'success': True, 'context': fresh}
+            if include_debug:
+                resp['_debug'] = {'cache': 'fresh_hit', 'cache_get_ms': cache_get_ms, 'total_ms': total_ms}
+            return Response(resp)
+
+    # ── 2. Fresh miss — try stale, enqueue rebuild ──────────────────────
+    stale = None if skip_cache else cache.get(stale_key)
+
+    if stale is not None:
+        _enqueue_rebuild('fresh_miss')
+        total_ms = int((monotonic() - t0_total) * 1000)
+        logger.info(
+            "PA_CONTEXT_METRICS status=stale_served user_id=%s total_ms=%s enqueue_rebuild=true",
+            user_id, total_ms,
         )
-        return Response({
-            'error': 'Failed to get context',
-            'detail': str(e)
-        }, status=500)
+        resp = {'success': True, 'context': stale}
+        if include_debug:
+            resp['_debug'] = {'cache': 'stale_served', 'total_ms': total_ms, 'rebuild_enqueued': True}
+        return Response(resp)
+
+    # ── 3. Both miss — return skeleton, enqueue rebuild ─────────────────
+    _enqueue_rebuild('cold_start')
+    skeleton = _minimal_skeleton()
+    total_ms = int((monotonic() - t0_total) * 1000)
+    logger.warning(
+        "PA_CONTEXT_METRICS status=skeleton user_id=%s total_ms=%s enqueue_rebuild=true",
+        user_id, total_ms,
+    )
+    resp = {'success': True, 'context': skeleton}
+    if include_debug:
+        resp['_debug'] = {'cache': 'skeleton', 'total_ms': total_ms, 'rebuild_enqueued': True}
+    return Response(resp)
 
 
 @api_view(['GET'])
