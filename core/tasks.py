@@ -10613,12 +10613,29 @@ def rebuild_pa_context_task(self, user_id, reason='fresh_miss'):
 
     # Stampede lock — skip if another rebuild is already running
     if not cache.add(lock_key, '1', timeout=90):
-        logger.info("[PA_CTX_REBUILD] Lock held for user %s, skipping (reason=%s)", user_id, reason)
+        logger.info(
+            "PA_CONTEXT_REBUILD status=lock_held user_id=%s reason=%s",
+            user_id, reason,
+        )
         return {'skipped': True, 'reason': 'lock_held'}
 
     try:
+        import json
+        import os
         close_old_connections()
         user = User.objects.get(id=user_id)
+
+        # RSS before build
+        rss_start_mb = None
+        try:
+            import resource
+            rss_start_mb = round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / (1024 * 1024), 1)
+            if os.uname().sysname == 'Darwin':
+                rss_start_mb = round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / (1024 * 1024), 1)
+            else:
+                rss_start_mb = round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024, 1)
+        except Exception:
+            pass
 
         t0 = monotonic()
         from core.personal_ai_assistant import PersonalAIAssistant
@@ -10626,16 +10643,42 @@ def rebuild_pa_context_task(self, user_id, reason='fresh_miss'):
         context = assistant.get_personalized_context()
         build_ms = int((monotonic() - t0) * 1000)
 
+        # RSS after build
+        rss_end_mb = None
+        rss_delta_mb = None
+        try:
+            import resource
+            if os.uname().sysname == 'Darwin':
+                rss_end_mb = round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / (1024 * 1024), 1)
+            else:
+                rss_end_mb = round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024, 1)
+            if rss_start_mb is not None:
+                rss_delta_mb = round(rss_end_mb - rss_start_mb, 1)
+        except Exception:
+            pass
+
         fresh_key = f"pa_ctx:fresh:{user_hash}"
         stale_key = f"pa_ctx:stale:{user_hash}"
         cache.set(fresh_key, context, 300)   # 5 min fresh
         cache.set(stale_key, context, 1800)  # 30 min stale
+        payload_bytes = len(json.dumps(context, default=str))
 
         logger.info(
-            "PA_CONTEXT_REBUILD status=ok user_id=%s build_ms=%s reason=%s",
+            "PA_CONTEXT_REBUILD status=ok user_id=%s build_ms=%s reason=%s "
+            "rss_start_mb=%s rss_end_mb=%s rss_delta_mb=%s payload_bytes=%s",
             user_id, build_ms, reason,
+            rss_start_mb, rss_end_mb, rss_delta_mb, payload_bytes,
         )
-        return {'success': True, 'build_ms': build_ms}
+
+        # Alert on memory spikes
+        if rss_delta_mb is not None and rss_delta_mb > 300:
+            logger.warning(
+                "[MEMORY] PA_CONTEXT_REBUILD rss_delta_mb=%s exceeds 300MB threshold "
+                "user_id=%s build_ms=%s",
+                rss_delta_mb, user_id, build_ms,
+            )
+
+        return {'success': True, 'build_ms': build_ms, 'rss_delta_mb': rss_delta_mb}
 
     except Exception as e:
         logger.error("PA_CONTEXT_REBUILD status=error user_id=%s reason=%s error=%s", user_id, reason, str(e))

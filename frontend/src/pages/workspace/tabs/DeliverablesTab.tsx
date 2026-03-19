@@ -28,11 +28,14 @@ import {
   ListChecks,
   Inbox,
   CheckCircle2,
+  MessageSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { deliverablesApi } from '@/lib/api'
 import { ErrorState } from '@/components/ErrorState'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { usePAStore } from '@/stores/paStore'
+import { useAssistantContextStore } from '@/stores/assistantContextStore'
 
 // ============ Types ============
 
@@ -419,6 +422,21 @@ export function DeliverablesTab() {
                   >
                     <ListChecks size={14} />
                     Create Follow-up Task
+                  </button>
+                  <button
+                    onClick={() => {
+                      useAssistantContextStore.getState().setFocusedEntity({
+                        type: 'deliverable',
+                        id: detail.id,
+                        title: detail.title,
+                      })
+                      usePAStore.getState().setCurrentInput(`Tell me about deliverable "${detail.title}"`)
+                      usePAStore.getState().openDock()
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded text-sm bg-primary-500/20 text-primary-400 hover:bg-primary-500/30 transition-colors"
+                  >
+                    <MessageSquare size={14} />
+                    Ask Rigby
                   </button>
                 </div>
               </div>
