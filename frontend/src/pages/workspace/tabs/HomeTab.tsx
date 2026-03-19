@@ -76,9 +76,12 @@ export default function HomeTab({ activeWorkspace, onNavigateTab }: HomeTabProps
     refetchInterval: 30000,
   })
 
-  const attentionItems = (attentionQuery.data?.results || attentionQuery.data || []) as Array<Record<string, unknown>>
-  const deliverables = (delivQuery.data?.results || []) as Array<Record<string, unknown>>
-  const initiatives = (initQuery.data?.results || []) as Array<Record<string, unknown>>
+  const rawAttention = attentionQuery.data?.results ?? attentionQuery.data
+  const attentionItems = (Array.isArray(rawAttention) ? rawAttention : []) as Array<Record<string, unknown>>
+  const rawDeliv = delivQuery.data?.results ?? delivQuery.data
+  const deliverables = (Array.isArray(rawDeliv) ? rawDeliv : []) as Array<Record<string, unknown>>
+  const rawInit = initQuery.data?.results ?? initQuery.data
+  const initiatives = (Array.isArray(rawInit) ? rawInit : []) as Array<Record<string, unknown>>
   const pulse = pulseQuery.data as Record<string, unknown> | undefined
   const stats = statsQuery.data as Record<string, unknown> | undefined
 
