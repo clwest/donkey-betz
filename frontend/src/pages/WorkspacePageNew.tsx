@@ -24,7 +24,6 @@ import {
   Zap,
   LayoutDashboard,
   FolderTree,
-  Sparkles,
   Package,
   Target,
   Palette,
@@ -36,10 +35,8 @@ import {
   Mic,
   Brain,
   Lightbulb,
-  GraduationCap,
   Megaphone,
   FlaskConical,
-  UserCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
@@ -50,11 +47,12 @@ import { useAuthStore } from '@/stores/authStore'
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
 import SmartOutputRenderer from '@/components/SmartOutputRenderer'
 
-// Import workspace-only tab components
+// Import workspace tab components
 import {
   WorkTab,
   OpsConsoleTab,
   WorkspaceOverviewTab,
+  HomeTab,
   FilesTab,
   OperationsTab,
   GitTab,
@@ -68,7 +66,6 @@ import {
   DataIntelTab,
   KnowledgeTab,
   VoiceMarketplaceTab,
-  // Session 1077: Previously disconnected tabs
   AIConsciousnessTab,
   ConceptForgeTab,
   CareerTab,
@@ -81,38 +78,93 @@ import type { Workspace, WorkspaceTab, ActionResult } from './workspace/types'
 // PLATFORM_TABS/LEGACY_TO_PLATFORM no longer needed — platform merged into workspace
 import { useWorkspaceTabTracking } from '@/hooks/usePageTracking'
 
-// Unified workspace tabs — all platform + workspace capabilities in one view
-const workspaceTabs = [
-  // Core project management
-  { id: 'overview' as WorkspaceTab, label: 'Overview', icon: LayoutDashboard },
-  { id: 'work' as WorkspaceTab, label: 'Work', icon: Briefcase },
-  { id: 'launchpad' as WorkspaceTab, label: 'Launchpad', icon: Sparkles },
-  { id: 'deliverables' as WorkspaceTab, label: 'Deliverables', icon: Package },
-  { id: 'initiatives' as WorkspaceTab, label: 'Initiatives', icon: Target },
-  // Content & governance (from Platform)
-  { id: 'content' as WorkspaceTab, label: 'Content', icon: Palette },
-  { id: 'boardroom' as WorkspaceTab, label: 'Boardroom', icon: ClipboardList },
-  // System & intelligence (from Platform)
-  { id: 'system' as WorkspaceTab, label: 'System', icon: Server },
-  { id: 'dataintel' as WorkspaceTab, label: 'Data & Intel', icon: Radio },
-  { id: 'knowledge' as WorkspaceTab, label: 'Knowledge', icon: BookOpen },
-  // Creative & production tools
-  { id: 'voices' as WorkspaceTab, label: 'Voices', icon: Mic },
-  { id: 'campaigns' as WorkspaceTab, label: 'Campaigns', icon: Megaphone },
-  { id: 'conceptforge' as WorkspaceTab, label: 'ConceptForge', icon: Lightbulb },
-  // AI & learning
-  { id: 'consciousness' as WorkspaceTab, label: 'AI Mind', icon: Brain },
-  { id: 'learning' as WorkspaceTab, label: 'Learning', icon: GraduationCap },
-  { id: 'career' as WorkspaceTab, label: 'Career', icon: UserCircle },
-  { id: 'evaluation' as WorkspaceTab, label: 'Evaluation', icon: FlaskConical },
-  // Developer tools
-  { id: 'files' as WorkspaceTab, label: 'Files', icon: FolderTree },
-  { id: 'operations' as WorkspaceTab, label: 'Operations', icon: History },
-  { id: 'git' as WorkspaceTab, label: 'Git', icon: GitBranch },
-  { id: 'triggers' as WorkspaceTab, label: 'Triggers', icon: Zap },
+// Session 1078: 5 primary tabs with sub-tabs (was 21 flat tabs)
+interface SubTab { id: string; label: string; icon: React.ComponentType<{ size?: number; className?: string }> }
+interface PrimaryTab { id: string; label: string; icon: React.ComponentType<{ size?: number; className?: string }>; subTabs?: SubTab[] }
+
+const primaryTabs: PrimaryTab[] = [
+  { id: 'home', label: 'Home', icon: LayoutDashboard },
+  {
+    id: 'work', label: 'Work', icon: Briefcase,
+    subTabs: [
+      { id: 'queue', label: 'Queue', icon: ClipboardList },
+      { id: 'deliverables', label: 'Deliverables', icon: Package },
+      { id: 'initiatives', label: 'Initiatives', icon: Target },
+    ],
+  },
+  {
+    id: 'build', label: 'Build', icon: Palette,
+    subTabs: [
+      { id: 'content', label: 'Content Studio', icon: Palette },
+      { id: 'campaigns', label: 'Campaigns', icon: Megaphone },
+      { id: 'voices', label: 'Voices', icon: Mic },
+      { id: 'conceptforge', label: 'ConceptForge', icon: Lightbulb },
+    ],
+  },
+  {
+    id: 'intelligence', label: 'Intelligence', icon: Radio,
+    subTabs: [
+      { id: 'dataintel', label: 'Data & Intel', icon: Radio },
+      { id: 'knowledge', label: 'Knowledge', icon: BookOpen },
+      { id: 'consciousness', label: 'AI Mind', icon: Brain },
+    ],
+  },
+  {
+    id: 'system', label: 'System', icon: Server,
+    subTabs: [
+      { id: 'ops', label: 'Operations', icon: History },
+      { id: 'boardroom', label: 'Governance', icon: ClipboardList },
+      { id: 'triggers', label: 'Automations', icon: Zap },
+      { id: 'evaluation', label: 'Quality', icon: FlaskConical },
+      { id: 'files', label: 'Files', icon: FolderTree },
+      { id: 'git', label: 'Git', icon: GitBranch },
+    ],
+  },
 ]
 
-const validWorkspaceTabs = new Set(workspaceTabs.map(t => t.id))
+// All valid primary + sub tab IDs for URL validation
+const validPrimaryIds = new Set(primaryTabs.map(t => t.id))
+const allSubTabIds = new Map<string, string>() // sub-id → parent-id
+primaryTabs.forEach(p => p.subTabs?.forEach(s => allSubTabIds.set(s.id, p.id)))
+
+// Legacy URL mapping: old tab IDs → new primary + sub
+const legacyTabMapping: Record<string, { primary: string; sub?: string }> = {
+  overview: { primary: 'home' },
+  work: { primary: 'work', sub: 'queue' },
+  launchpad: { primary: 'work', sub: 'queue' },
+  deliverables: { primary: 'work', sub: 'deliverables' },
+  initiatives: { primary: 'work', sub: 'initiatives' },
+  content: { primary: 'build', sub: 'content' },
+  campaigns: { primary: 'build', sub: 'campaigns' },
+  voices: { primary: 'build', sub: 'voices' },
+  conceptforge: { primary: 'build', sub: 'conceptforge' },
+  dataintel: { primary: 'intelligence', sub: 'dataintel' },
+  knowledge: { primary: 'intelligence', sub: 'knowledge' },
+  consciousness: { primary: 'intelligence', sub: 'consciousness' },
+  boardroom: { primary: 'system', sub: 'boardroom' },
+  operations: { primary: 'system', sub: 'ops' },
+  triggers: { primary: 'system', sub: 'triggers' },
+  evaluation: { primary: 'system', sub: 'evaluation' },
+  files: { primary: 'system', sub: 'files' },
+  git: { primary: 'system', sub: 'git' },
+  learning: { primary: 'intelligence', sub: 'knowledge' },
+  career: { primary: 'work', sub: 'queue' },
+  system: { primary: 'system', sub: 'ops' },
+  infrastructure: { primary: 'system', sub: 'ops' },
+  orchestration: { primary: 'system', sub: 'ops' },
+  datasources: { primary: 'intelligence', sub: 'dataintel' },
+  intelligence: { primary: 'intelligence', sub: 'dataintel' },
+  governance: { primary: 'system', sub: 'boardroom' },
+  command: { primary: 'home' },
+}
+
+// Default sub-tab for each primary
+const defaultSubTab: Record<string, string> = {
+  work: 'queue',
+  build: 'content',
+  intelligence: 'dataintel',
+  system: 'ops',
+}
 
 // Workspace Selector Modal
 function WorkspaceSelectorModal({
@@ -646,45 +698,73 @@ export default function WorkspacePage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const rawUrlTab = searchParams.get('tab') || ''
+  const rawUrlSub = searchParams.get('sub') || ''
 
-  // Handle legacy tab names that mapped to old platform tabs
-  // These are now handled directly in workspace (platform merged in)
+  // Session 1078: Resolve initial tab from URL (handles legacy + new format)
+  function resolveFromUrl(tab: string, sub: string): { primary: string; sub: string } {
+    // New format: ?tab=work&sub=deliverables
+    if (validPrimaryIds.has(tab)) {
+      const defSub = defaultSubTab[tab] || ''
+      return { primary: tab, sub: sub || defSub }
+    }
+    // Legacy format: ?tab=deliverables → maps to work/deliverables
+    const legacy = legacyTabMapping[tab]
+    if (legacy) return { primary: legacy.primary, sub: legacy.sub || defaultSubTab[legacy.primary] || '' }
+    // Fallback
+    return { primary: 'home', sub: '' }
+  }
+
+  const initial = resolveFromUrl(rawUrlTab, rawUrlSub)
+  const [activePrimary, setActivePrimary] = useState(initial.primary)
+  const [activeSub, setActiveSub] = useState(initial.sub)
+
+  // Redirect legacy URLs once
   useEffect(() => {
-    if (rawUrlTab) {
-      const legacyMapping: Record<string, string> = {
-        infrastructure: 'system',
-        orchestration: 'system',
-        datasources: 'dataintel',
-        intelligence: 'dataintel',
-        governance: 'boardroom',
-        consciousness: 'knowledge',
-        conceptforge: 'content',
-        career: 'content',
-        voices: 'content',
-        command: 'overview',
-        evaluation: 'initiatives',
-        learning: 'knowledge',
-      }
-      const mapped = legacyMapping[rawUrlTab]
-      if (mapped && rawUrlTab !== mapped) {
-        setSearchParams({ tab: mapped }, { replace: true })
-      }
+    if (rawUrlTab && !validPrimaryIds.has(rawUrlTab) && legacyTabMapping[rawUrlTab]) {
+      const mapped = legacyTabMapping[rawUrlTab]
+      const params: Record<string, string> = { tab: mapped.primary }
+      if (mapped.sub) params.sub = mapped.sub
+      setSearchParams(params, { replace: true })
     }
   }, [rawUrlTab, setSearchParams])
 
-  // Determine active workspace tab
-  const initialTab: WorkspaceTab = (rawUrlTab && validWorkspaceTabs.has(rawUrlTab as WorkspaceTab))
-    ? rawUrlTab as WorkspaceTab
-    : 'overview'
+  useWorkspaceTabTracking(activePrimary as WorkspaceTab)
 
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>(initialTab)
-
-  useWorkspaceTabTracking(activeTab)
-
-  const handleTabChange = (tab: WorkspaceTab) => {
-    setActiveTab(tab)
-    setSearchParams({ tab }, { replace: true })
+  const handleTabChange = (tab: WorkspaceTab | string) => {
+    // Support both old-style calls (from child components) and new primary tab clicks
+    const legacy = legacyTabMapping[tab]
+    if (legacy) {
+      setActivePrimary(legacy.primary)
+      setActiveSub(legacy.sub || defaultSubTab[legacy.primary] || '')
+      const params: Record<string, string> = { tab: legacy.primary }
+      if (legacy.sub) params.sub = legacy.sub
+      setSearchParams(params, { replace: true })
+      return
+    }
+    if (validPrimaryIds.has(tab)) {
+      setActivePrimary(tab)
+      const defSub = defaultSubTab[tab] || ''
+      setActiveSub(defSub)
+      const params: Record<string, string> = { tab }
+      if (defSub) params.sub = defSub
+      setSearchParams(params, { replace: true })
+      return
+    }
+    // Direct sub-tab ID
+    const parent = allSubTabIds.get(tab)
+    if (parent) {
+      setActivePrimary(parent)
+      setActiveSub(tab)
+      setSearchParams({ tab: parent, sub: tab }, { replace: true })
+    }
   }
+
+  const handleSubTabChange = (sub: string) => {
+    setActiveSub(sub)
+    setSearchParams({ tab: activePrimary, sub }, { replace: true })
+  }
+
+  const currentPrimaryDef = primaryTabs.find(t => t.id === activePrimary)
 
   const [showWorkspaceSelector, setShowWorkspaceSelector] = useState(false)
   const [showRegisterModal, setShowRegisterModal] = useState(false)
@@ -889,134 +969,128 @@ export default function WorkspacePage() {
       {/* Main content when workspace is selected */}
       {activeWorkspace && (
         <>
-          {/* Tab Navigation — 5 workspace tabs */}
+          {/* Primary Tab Navigation — 5 tabs */}
           <div className="flex items-center gap-1 border-b border-dark-border pb-2">
-            {workspaceTabs.map((tab) => (
+            {primaryTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
                 className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap',
-                  activeTab === tab.id
+                  'flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
+                  activePrimary === tab.id
                     ? 'bg-primary-500/20 text-primary-400'
                     : 'text-gray-500 hover:text-white hover:bg-dark-border/50'
                 )}
               >
-                <tab.icon size={14} />
+                <tab.icon size={15} />
                 {tab.label}
               </button>
             ))}
           </div>
 
-          {/* Tab Content */}
-          {activeTab === 'overview' && (
-            <WorkspaceOverviewTab
+          {/* Sub-Tab Navigation (if primary has sub-tabs) */}
+          {currentPrimaryDef?.subTabs && currentPrimaryDef.subTabs.length > 0 && (
+            <div className="flex items-center gap-1 pt-1 pb-2">
+              {currentPrimaryDef.subTabs.map((sub) => (
+                <button
+                  key={sub.id}
+                  onClick={() => handleSubTabChange(sub.id)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap',
+                    activeSub === sub.id
+                      ? 'bg-gray-700/50 text-white'
+                      : 'text-gray-500 hover:text-gray-300 hover:bg-dark-border/30'
+                  )}
+                >
+                  <sub.icon size={12} />
+                  {sub.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* ── Tab Content ────────────────────────────────────── */}
+
+          {/* HOME */}
+          {activePrimary === 'home' && (
+            <HomeTab
               activeWorkspace={activeWorkspace}
               onNavigateTab={handleTabChange}
-              onScan={() => scanMutation.mutate(activeWorkspace.id)}
-              isScanPending={scanMutation.isPending}
             />
           )}
 
-          {activeTab === 'work' && (
+          {/* WORK */}
+          {activePrimary === 'work' && activeSub === 'queue' && (
             <WorkTab
               workspaceId={activeWorkspace.id}
               onNavigateTab={handleTabChange}
             />
           )}
-
-          {activeTab === 'files' && (
-            <FilesTab activeWorkspaceId={activeWorkspace.id} />
+          {activePrimary === 'work' && activeSub === 'deliverables' && (
+            <DeliverablesTab />
+          )}
+          {activePrimary === 'work' && activeSub === 'initiatives' && (
+            <InitiativesTab />
           )}
 
-          {activeTab === 'operations' && (
-            <OperationsTab
-              activeWorkspace={activeWorkspace}
-              onViewFileContent={(operationId) => setViewingOperationId(operationId)}
-              showSuccess={showSuccess}
-              showError={showError}
-            />
+          {/* BUILD */}
+          {activePrimary === 'build' && activeSub === 'content' && (
+            <ContentStudioTab />
+          )}
+          {activePrimary === 'build' && activeSub === 'campaigns' && (
+            <CampaignTab />
+          )}
+          {activePrimary === 'build' && activeSub === 'voices' && (
+            <VoiceMarketplaceTab />
+          )}
+          {activePrimary === 'build' && activeSub === 'conceptforge' && (
+            <ConceptForgeTab />
           )}
 
-          {activeTab === 'git' && (
-            <GitTab
-              activeWorkspace={activeWorkspace}
-              showSuccess={showSuccess}
-              showError={showError}
-            />
+          {/* INTELLIGENCE */}
+          {activePrimary === 'intelligence' && activeSub === 'dataintel' && (
+            <DataIntelTab />
+          )}
+          {activePrimary === 'intelligence' && activeSub === 'knowledge' && (
+            <KnowledgeTab />
+          )}
+          {activePrimary === 'intelligence' && activeSub === 'consciousness' && (
+            <AIConsciousnessTab />
           )}
 
-          {activeTab === 'triggers' && (
+          {/* SYSTEM */}
+          {activePrimary === 'system' && activeSub === 'ops' && (
+            <div className="space-y-8">
+              <OpsConsoleTab />
+              <OperationsTab
+                activeWorkspace={activeWorkspace}
+                onViewFileContent={(operationId) => setViewingOperationId(operationId)}
+                showSuccess={showSuccess}
+                showError={showError}
+              />
+            </div>
+          )}
+          {activePrimary === 'system' && activeSub === 'boardroom' && (
+            <BoardroomTab />
+          )}
+          {activePrimary === 'system' && activeSub === 'triggers' && (
             <TriggersTab
               showSuccess={showSuccess}
               showError={showError}
             />
           )}
-
-          {activeTab === 'launchpad' && activeWorkspace && (
-            <LaunchpadTab workspaceId={activeWorkspace.id} />
-          )}
-
-          {activeTab === 'deliverables' && (
-            <DeliverablesTab />
-          )}
-
-          {activeTab === 'initiatives' && (
-            <InitiativesTab />
-          )}
-
-          {activeTab === 'content' && (
-            <ContentStudioTab />
-          )}
-
-          {activeTab === 'boardroom' && (
-            <BoardroomTab />
-          )}
-
-          {activeTab === 'system' && (
-            <div className="space-y-8">
-              <OpsConsoleTab />
-              <div className="border-t border-dark-border pt-6">
-                <h3 className="text-sm font-medium text-gray-400 mb-4">System Details</h3>
-                <SystemTab />
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'dataintel' && (
-            <DataIntelTab />
-          )}
-
-          {activeTab === 'knowledge' && (
-            <KnowledgeTab />
-          )}
-
-          {activeTab === 'voices' && (
-            <VoiceMarketplaceTab />
-          )}
-
-          {activeTab === 'campaigns' && (
-            <CampaignTab />
-          )}
-
-          {activeTab === 'conceptforge' && (
-            <ConceptForgeTab />
-          )}
-
-          {activeTab === 'consciousness' && (
-            <AIConsciousnessTab />
-          )}
-
-          {activeTab === 'learning' && (
-            <LearningJourneyTab />
-          )}
-
-          {activeTab === 'career' && (
-            <CareerTab />
-          )}
-
-          {activeTab === 'evaluation' && (
+          {activePrimary === 'system' && activeSub === 'evaluation' && (
             <Stage3EvaluationTab />
+          )}
+          {activePrimary === 'system' && activeSub === 'files' && (
+            <FilesTab activeWorkspaceId={activeWorkspace.id} />
+          )}
+          {activePrimary === 'system' && activeSub === 'git' && (
+            <GitTab
+              activeWorkspace={activeWorkspace}
+              showSuccess={showSuccess}
+              showError={showError}
+            />
           )}
         </>
       )}

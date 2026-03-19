@@ -3,16 +3,23 @@
 // Session 971b: Updated for 9-tab model (from 18)
 // Session 1035: Split into workspace-only + platform tabs
 
-// Unified workspace tab IDs (all platform + workspace tabs merged)
+// Session 1078: Consolidated from 21 flat tabs to 5 primary tabs with sub-tabs
+// Primary tabs: home, work, build, intelligence, system
+// Old tab IDs kept as sub-tab values for URL compatibility
 export type WorkspaceTab =
-  | 'overview'
+  | 'home'
   | 'work'
+  | 'build'
+  | 'intelligence'
+  | 'system'
+  // Sub-tab IDs (used in ?tab=work&sub=deliverables)
+  // Kept for backwards-compatible URL routing
+  | 'overview'
   | 'launchpad'
   | 'deliverables'
   | 'initiatives'
   | 'content'
   | 'boardroom'
-  | 'system'
   | 'dataintel'
   | 'knowledge'
   | 'voices'
