@@ -22,7 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / '.env')
 
 # --- LLM Router defaults (prep only; no behavior change yet) ---
-LLM_DEFAULT_PROVIDER = os.getenv("LLM_DEFAULT_PROVIDER", "ollama")  # "ollama" or "openai"
+LLM_DEFAULT_PROVIDER = os.getenv("LLM_DEFAULT_PROVIDER", "openai")  # "openai" or "ollama"
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
 
 LLM_DEFAULTS = {
