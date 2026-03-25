@@ -11843,3 +11843,37 @@ def check_learning_loop_slo():
         'prompt_injection': pij,
         'usage_rate': usage_rate,
     }
+
+
+# ── Backfill: deliverable workspaces ───────────────────────────────────────
+@shared_task(
+    name='core.tasks.backfill_deliverable_workspaces',
+    ignore_result=False,
+    queue='long_running',
+    soft_time_limit=300,
+    time_limit=360,
+)
+def backfill_deliverable_workspaces(workspace_name='Donkey Betz',
+                                    username=None,
+                                    include_archived=False,
+                                    dry_run=False):
+    """Backfill workspace_id on deliverables where it is NULL.
+
+    Triggerable by PA via cockpit_tool.trigger_task.
+    """
+    from django.core.management import call_command
+    from io import StringIO
+
+    out = StringIO()
+    args = ['backfill_deliverable_workspaces', '--workspace', workspace_name]
+    if username:
+        args.extend(['--username', username])
+    if include_archived:
+        args.append('--include-archived')
+    if dry_run:
+        args.append('--dry-run')
+
+    call_command(*args, stdout=out)
+    output = out.getvalue()
+    logger.info('[BACKFILL_WORKSPACES] %s', output)
+    return {'output': output}
