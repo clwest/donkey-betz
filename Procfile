@@ -15,7 +15,7 @@ web: daphne -b 0.0.0.0 -p ${PORT:-8000} --http-timeout 120 --application-close-t
 celery-worker: celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=5 --max-memory-per-child=150000 -Q default,agents,sports
 celery-pa: celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=10 --max-memory-per-child=200000 -Q pa
 celery-content: celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=2 --max-memory-per-child=250000 -Q content
-celery-long-running: celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=3 --max-memory-per-child=250000 -Q long_running,ml
+celery-long-running: celery -A core worker -l info --pool=prefork -c 2 --max-tasks-per-child=3 --max-memory-per-child=250000 -Q long_running,ml
 celery-broadcast: celery -A core worker -l info --pool=threads -c 3 --max-tasks-per-child=50 --max-memory-per-child=200000 -Q broadcast
 celery-beat: celery -A core beat -l info
 code-worker: celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=1 --max-memory-per-child=400000 -Q code_jobs
