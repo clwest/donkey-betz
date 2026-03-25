@@ -1311,6 +1311,7 @@ from core.views_agent_ecosystem import (
     execute_workflow_train_brand_style, execute_workflow_refine_and_perfect,
     get_ecosystem_status
 )
+from core.views_agent_extras import agent_channels, agent_tools, agent_templates
 from core.views_agent_orchestration import (
     list_agents, get_agents_by_specialization, orchestrate_multi_agent_task,
     suggest_agent, route_task, get_agent_status, health_check_agents, get_agent_details,
@@ -2950,11 +2951,10 @@ urlpatterns = [
     path('api/v1/agents/discovery/refresh/', refresh_agent_discovery, name='agent-discovery-refresh'),
     path('api/v1/agents/comprehensive/', comprehensive_agents_list, name='agents-comprehensive'),  # Session 663
 
-    # Session 1036: Stub endpoints for AgentsPage tabs (channels, tools, templates)
-    # Frontend expects {results: []} format — return empty lists until backends are built
-    path('api/v1/agents/channels/', lambda r: __import__('django.http', fromlist=['JsonResponse']).JsonResponse({'results': [], 'count': 0}), name='v1-agent-channels'),
-    path('api/v1/agents/tools/', lambda r: __import__('django.http', fromlist=['JsonResponse']).JsonResponse({'results': [], 'count': 0}), name='v1-agent-tools'),
-    path('api/v1/agents/templates/', lambda r: __import__('django.http', fromlist=['JsonResponse']).JsonResponse({'results': [], 'count': 0}), name='v1-agent-templates'),
+    # Session 1036 → now wired to real data
+    path('api/v1/agents/channels/', agent_channels, name='v1-agent-channels'),
+    path('api/v1/agents/tools/', agent_tools, name='v1-agent-tools'),
+    path('api/v1/agents/templates/', agent_templates, name='v1-agent-templates'),
 
     # Odds & Sports Analytics APIs (from DBAO tools-manifest)
     path('api/v1/odds/convert-odds/', convert_odds, name='odds-convert'),
