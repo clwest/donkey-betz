@@ -29,22 +29,55 @@ def _inject_github_token(repo_url: str, token: str) -> str:
 
 
 def _gather_repo_context(workdir, task_prompt, path_filters, log_fn):
-    """Gather bounded repo context for Claude: file tree + relevant files.
+    """Gather bounded repo context for Claude: architecture docs + file tree + relevant files.
 
     Budget (approx):
+      - Architecture (CLAUDE.md + topic docs):  30K chars
       - Tree:     10K chars
-      - Markers:  10K chars
-      - Files:    70K chars
-      - Total:    100K hard cap
+      - Markers:   5K chars
+      - Files:    80K chars
+      - Total:   150K hard cap
     """
     import os
     import subprocess
 
     context_parts = []
     budget_used = 0
+    ARCH_BUDGET = 30_000
     TREE_BUDGET = 10_000
-    MARKER_BUDGET = 10_000
-    FILE_BUDGET = 70_000
+    MARKER_BUDGET = 5_000
+    FILE_BUDGET = 80_000
+
+    # 0. Architecture context — CLAUDE.md + topic docs (highest priority)
+    #    This prevents the LLM from creating duplicate models/apps that
+    #    already exist in the codebase.
+    arch_text = ''
+    arch_files = [
+        # CLAUDE.md is the single most important context file — contains
+        # project structure, model locations, gotchas, and conventions
+        ('CLAUDE.md', 15_000),
+        # Topic docs are embedding-optimized subsystem descriptions
+        ('docs/topics/agent-system.md', 3_000),
+        ('docs/topics/content-pipeline.md', 3_000),
+        ('docs/topics/infrastructure.md', 3_000),
+        ('docs/topics/frontend.md', 3_000),
+        ('docs/topics/personal-assistant.md', 3_000),
+    ]
+    for arch_file, max_chars in arch_files:
+        arch_path = os.path.join(workdir, arch_file)
+        if os.path.isfile(arch_path):
+            try:
+                with open(arch_path, 'r', errors='replace') as f:
+                    content = f.read(max_chars)
+                chunk = f'## {arch_file}\n```\n{content}\n```\n'
+                if len(arch_text) + len(chunk) <= ARCH_BUDGET:
+                    arch_text += chunk
+            except Exception:
+                pass
+    if arch_text:
+        context_parts.append('# ARCHITECTURE CONTEXT (read this first)\n' + arch_text)
+        budget_used += len(context_parts[-1])
+        log_fn('implement', f'Architecture context: {len(arch_text)} chars from CLAUDE.md + topic docs')
 
     # 1. File tree (exclude heavy dirs)
     exclude_dirs = [
@@ -62,8 +95,9 @@ def _gather_repo_context(workdir, task_prompt, path_filters, log_fn):
     budget_used += len(context_parts[-1])
 
     # 2. Project marker files (README, pyproject.toml, etc.)
+    #    Note: CLAUDE.md already read above — skip it here
     marker_text = ''
-    for marker in ['README.md', 'pyproject.toml', 'setup.py', 'package.json',
+    for marker in ['pyproject.toml', 'setup.py', 'package.json',
                     'Cargo.toml', 'go.mod', 'requirements.txt']:
         marker_path = os.path.join(workdir, marker)
         if os.path.isfile(marker_path):
@@ -178,6 +212,18 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
         'Be precise, minimal, and production-ready. Do not add unnecessary comments or TODOs. '
         f'You may modify at most {max_patch_files} files. '
         'Keep commit messages under 72 characters.\n\n'
+        'CRITICAL architecture rules:\n'
+        '- READ the CLAUDE.md / architecture context FIRST — it describes where models, '
+        'services, and views live. Follow existing patterns.\n'
+        '- NEVER create new Django apps (new top-level directories with models.py/apps.py) '
+        'unless the task explicitly asks for one. This codebase uses a monolithic "core" app '
+        'with split model files (core/models_*.py). New models go in existing files.\n'
+        '- NEVER create models that duplicate existing ones. Check the architecture context '
+        'for existing model locations before creating anything.\n'
+        '- NEVER delete or gut large existing files (>100 lines removed). If you need to '
+        'restructure, use patches to modify specific sections.\n'
+        '- Prefer patching existing code over rewriting. The codebase is large (200K+ lines) '
+        'and existing code is battle-tested.\n\n'
         'CRITICAL rules for file changes:\n'
         '- Use "create" ONLY for brand new files. Provide complete file content.\n'
         '- Use "patch" for modifying EXISTING files. Provide a JSON array of search-replace edits '
@@ -374,6 +420,26 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
 
         if len(changes) > max_patch_files:
             validation_errors.append(f'Too many files: {len(changes)} > {max_patch_files}')
+
+        # Detect new Django app creation — a common LLM mistake in monolithic codebases
+        _new_app_signals = set()
+        for change in changes:
+            path = change.get('path', '')
+            action = change.get('action', '')
+            if action == 'create' and path.count('/') >= 1:
+                top_dir = path.split('/')[0]
+                basename = os.path.basename(path)
+                if basename in ('apps.py', 'models.py', 'admin.py', 'urls.py', 'views.py'):
+                    # Check if this is a new top-level directory (not core/ or existing apps)
+                    if top_dir not in ('core', 'ai_core', 'content', 'resolve_node', 'frontend'):
+                        _new_app_signals.add(top_dir)
+        if _new_app_signals:
+            validation_errors.append(
+                f'BLOCKED: Creating new Django app(s): {_new_app_signals}. '
+                f'This codebase uses a monolithic "core" app. '
+                f'Add new models to core/models_*.py, views to core/views_*.py, '
+                f'and management commands to core/management/commands/.'
+            )
 
         for change in changes:
             path = change.get('path', '')
