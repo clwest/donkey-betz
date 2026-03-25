@@ -57,19 +57,29 @@ export const useAuthStore = create<AuthState>((set, get) => {
               set({ status: 'signedIn', user: result.user });
               return;
             }
-            // Explicit invalid token — sign out
-          } catch {
+            // Explicit invalid token — clear and sign out
+            console.log('[Auth] Token validation returned invalid, signing out');
+          } catch (e) {
             // Network/server error — trust cached token + user
-            // so a Railway hiccup doesn't log everyone out
-            set({ status: 'signedIn', user });
-            return;
+            // so a Railway hiccup doesn't log everyone out.
+            // But if the cached user is corrupted, fall through to signOut.
+            if (user && typeof user === 'object' && user.id && user.username) {
+              set({ status: 'signedIn', user });
+              return;
+            }
+            console.warn('[Auth] Cached user data corrupted, signing out:', e);
           }
         }
-      } catch {
+      } catch (e) {
         // SecureStore read failed — fall through to signed out
+        console.warn('[Auth] SecureStore read failed:', e);
       }
-      await clearToken();
-      await clearStoredUser();
+      try {
+        await clearToken();
+        await clearStoredUser();
+      } catch {
+        // SecureStore clear failed — not fatal
+      }
       set({ status: 'signedOut', user: null });
     },
 
