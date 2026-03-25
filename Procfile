@@ -8,6 +8,7 @@
 # Session 1009: Reduced content from -c 2 → -c 1 (OOM fix: deliberation + dream tasks are memory-heavy)
 # Session 1040: Moved 5 heaviest tasks off content→long_running, recycle 5→2 tasks (repeated OOM with 25+ initiatives)
 # Feb 2026: Reduced long_running from -c 3 → -c 1, max-tasks 10→3 (OOM: 3 concurrent heavy tasks + 200MB parent exceeds 512MB)
+# Mar 2026: Bumped long_running -c 1 → -c 2 to prevent queue saturation, lowered child memory 250→150MB and tasks 3→2 to fit 512MB (200MB parent + 2×150MB = 500MB)
 # --pool=prefork on Linux (Railway) recycles child processes after N tasks
 # macOS local dev should still use --pool=threads (prefork causes SIGSEGV) via Makefile
 release: chown -R appuser:appuser /app/workspaces 2>/dev/null || true; python manage.py collectstatic --noinput && python manage.py migrate --noinput && python manage.py sync_celery_beat --apply --create-only --disable-missing && python manage.py sync_task_queues --apply && python manage.py setup_codebase_workspace && python manage.py setup_pa_service_account
@@ -15,7 +16,7 @@ web: daphne -b 0.0.0.0 -p ${PORT:-8000} --http-timeout 120 --application-close-t
 celery-worker: celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=5 --max-memory-per-child=150000 -Q default,agents,sports
 celery-pa: celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=10 --max-memory-per-child=200000 -Q pa
 celery-content: celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=2 --max-memory-per-child=250000 -Q content
-celery-long-running: celery -A core worker -l info --pool=prefork -c 2 --max-tasks-per-child=3 --max-memory-per-child=250000 -Q long_running,ml
+celery-long-running: celery -A core worker -l info --pool=prefork -c 2 --max-tasks-per-child=2 --max-memory-per-child=150000 -Q long_running,ml
 celery-broadcast: celery -A core worker -l info --pool=threads -c 3 --max-tasks-per-child=50 --max-memory-per-child=200000 -Q broadcast
 celery-beat: celery -A core beat -l info
 code-worker: celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=1 --max-memory-per-child=400000 -Q code_jobs
