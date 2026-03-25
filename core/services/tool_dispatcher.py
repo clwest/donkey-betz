@@ -158,9 +158,10 @@ from core.services.td_handlers_ops import OpsHandlersMixin
 from core.services.td_handlers_core import CoreHandlersMixin
 from core.services.td_handlers_gateway import GatewayHandlersMixin
 from core.services.td_handlers_codejobs import CodeJobHandlersMixin
+from core.services.td_handlers_railway import RailwayToolMixin
 
 
-class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin, CoreHandlersMixin, GatewayHandlersMixin, CodeJobHandlersMixin):
+class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin, CoreHandlersMixin, GatewayHandlersMixin, CodeJobHandlersMixin, RailwayToolMixin):
     """
     Centralized dispatcher for all PA tool executions.
 
@@ -203,7 +204,7 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         'ops_tool', 'work_tool', 'content_tool',
         'deliverable_tool', 'blog_tool',  # Session 1077: focused splits
         'governance_tool', 'intelligence_tool', 'studio_tool',
-        'cockpit_tool', 'narrative_tool',  # Session 1100
+        'cockpit_tool', 'narrative_tool', 'railway_tool',  # Session 1100
         # Session 1035-W2: 11 new gateway tools
         'proactive_tool', 'distribution_tool', 'calendar_tool',
         'experiment_tool', 'podcast_tool', 'campaign_tool',
@@ -441,6 +442,9 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
 
         # Session 1100: Cockpit tool — Celery beat schedule, worker health, queue depths
         self.register("cockpit_tool", self._handle_cockpit)
+
+        # Railway platform tool — service status, logs, restart, redeploy
+        self.register("railway_tool", self._handle_railway)
 
         # Session 1100: Narrative tool — narrative drift, shifts, evidence, alerts
         self.register("narrative_tool", self._handle_narrative)
