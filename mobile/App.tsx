@@ -1,7 +1,7 @@
 import 'react-native-gesture-handler';
 import React, { useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useAuthStore } from './src/auth/authStore';
 import LoginScreen from './src/screens/auth/LoginScreen';
@@ -53,10 +53,23 @@ function App() {
   const hydrate = useAuthStore((s) => s.hydrate);
   const pushRegistered = useRef(false);
   const hydrateDemo = useDemoStore((s) => s.hydrate);
+  const [initError, setInitError] = React.useState<string | null>(null);
 
   useEffect(() => {
-    hydrate();
-    hydrateDemo();
+    (async () => {
+      try {
+        await hydrate();
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        console.error('[App] hydrate() crashed:', msg);
+        setInitError(`Auth init failed: ${msg}`);
+      }
+      try {
+        await hydrateDemo();
+      } catch (e) {
+        console.warn('[App] hydrateDemo() failed:', e);
+      }
+    })();
   }, [hydrate, hydrateDemo]);
 
   // Set Sentry user context on auth change
@@ -94,6 +107,24 @@ function App() {
       console.warn('[Push] addNotificationResponseListener failed:', e);
     }
   }, []);
+
+  // Show init error if hydration crashed
+  if (initError) {
+    return (
+      <View style={styles.loading}>
+        <Text style={{ color: '#ef4444', fontSize: 16, textAlign: 'center', padding: 20 }}>
+          {initError}
+        </Text>
+        <Text
+          style={{ color: '#6366f1', fontSize: 14, marginTop: 12 }}
+          onPress={() => { setInitError(null); hydrate(); }}
+        >
+          Tap to retry
+        </Text>
+        <StatusBar style="light" />
+      </View>
+    );
+  }
 
   if (status === 'loading') {
     return (
