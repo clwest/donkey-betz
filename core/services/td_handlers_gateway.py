@@ -768,6 +768,7 @@ class GatewayHandlersMixin:
                     'core.tasks.backfill_spider_embeddings',
                     'core.tasks.check_content_diversity',
                     'core.tasks.run_body_system_check',
+                    'core.tasks.backfill_deliverable_workspaces',
                 }
 
                 if task_name not in ALLOWED_TASKS:
@@ -778,7 +779,10 @@ class GatewayHandlersMixin:
 
                 from core.celery import app as celery_app
                 queue = payload.get('queue', '') or 'long_running'
-                result = celery_app.send_task(task_name, queue=queue)
+                task_kwargs = payload.get('task_kwargs') or {}
+                result = celery_app.send_task(
+                    task_name, kwargs=task_kwargs, queue=queue,
+                )
                 task_id = str(result.id)
 
                 # Create CeleryTaskEvent immediately so task_status doesn't
