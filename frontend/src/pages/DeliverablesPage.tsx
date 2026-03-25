@@ -1,7 +1,7 @@
 // Deliverables Page — Standalone page wrapping the DeliverablesTab component
 // Provides a full-page view of all agent-produced deliverables
 
-import { DeliverablesTab } from './workspace/tabs/DeliverablesTab'
+import { DeliverablesTab } from './workspace/tabs'
 
 export default function DeliverablesPage() {
   return (
