@@ -59,15 +59,33 @@ export default function AppNavigator() {
       try {
         const m = await getManifest();
         if (cancelled) return;
+
+        // Validate manifest has the minimum required shape
+        if (!m || !Array.isArray(m.routes)) {
+          throw new Error(`Invalid manifest: routes is ${typeof m?.routes}`);
+        }
+
         setManifest(m);
 
         // resolveScreens may throw if the manifest shape is unexpected
-        const resolved = resolveScreens(m.routes ?? []);
+        const resolved = resolveScreens(m.routes);
         if (cancelled) return;
+
+        if (!resolved || resolved.length === 0) {
+          throw new Error('No screens resolved from manifest');
+        }
+
         setScreens(resolved);
       } catch (e) {
         if (!cancelled) {
           const msg = e instanceof Error ? e.message : String(e);
+          console.error('[AppNavigator] Manifest load failed:', msg);
+
+          // If it's a 401, don't show error — the auth interceptor will sign out
+          if (msg.includes('401') || msg.includes('Unauthorized')) {
+            return;
+          }
+
           setError(`Failed to load app manifest: ${msg}`);
         }
       }
@@ -83,12 +101,24 @@ export default function AppNavigator() {
     setRetryCount((c) => c + 1);
   }, []);
 
+  const handleSignOut = useCallback(async () => {
+    try {
+      const { signOut } = useAuthStore.getState();
+      await signOut();
+    } catch (e) {
+      console.warn('[AppNavigator] signOut failed:', e);
+    }
+  }, []);
+
   if (error) {
     return (
       <View style={styles.center}>
         <Text style={styles.errorText}>{error}</Text>
         <Text style={styles.retryText} onPress={handleRetry}>
           Tap to retry
+        </Text>
+        <Text style={[styles.retryText, { marginTop: 16, color: '#ef4444' }]} onPress={handleSignOut}>
+          Sign out and start fresh
         </Text>
       </View>
     );
