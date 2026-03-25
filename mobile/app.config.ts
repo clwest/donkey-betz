@@ -10,10 +10,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   icon: './assets/icon.png',
   userInterfaceStyle: 'automatic',
   scheme: 'donkeybetz',
-  // newArchEnabled disabled — was causing crashes on TestFlight builds
-  // with @sentry/react-native and other native modules.
-  // Re-enable after verifying all native deps support New Architecture.
-  newArchEnabled: false,
+  // New Architecture required by react-native-reanimated >=4.x
+  // Sentry RN 7.2+ and all other deps are compatible.
+  newArchEnabled: true,
   runtimeVersion: {
     policy: 'appVersion',
   },
