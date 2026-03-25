@@ -3020,7 +3020,8 @@ PA_TOOL_SCHEMAS = [
                     "type": "string",
                     "enum": [
                         "beat_schedule", "task_status", "worker_health",
-                        "recent_failures", "queue_lengths", "trigger_task", "help",
+                        "recent_failures", "queue_lengths", "trigger_task",
+                        "revoke_task", "help",
                     ],
                     "description": (
                         "beat_schedule: list all periodic tasks with intervals and last run. "
@@ -3029,12 +3030,13 @@ PA_TOOL_SCHEMAS = [
                         "recent_failures: failed tasks with error messages. "
                         "queue_lengths: current depth of all queues. "
                         "trigger_task: manually dispatch an allowlisted Celery task (use task_name param). "
+                        "revoke_task: cancel/revoke a running or queued task by task_id (optionally terminate running tasks). "
                         "help: list all actions."
                     ),
                 },
                 "task_id": {
                     "type": "string",
-                    "description": "Celery task ID (for task_status action)",
+                    "description": "Celery task ID (for task_status or revoke_task actions)",
                 },
                 "limit": {
                     "type": "integer",
@@ -3047,6 +3049,14 @@ PA_TOOL_SCHEMAS = [
                 "task_name": {
                     "type": "string",
                     "description": "Fully-qualified Celery task name for trigger_task (e.g. core.tasks.sync_congress_data)",
+                },
+                "task_kwargs": {
+                    "type": "object",
+                    "description": "Keyword arguments to pass to the triggered task (e.g. {\"dry_run\": true}). Used with trigger_task.",
+                },
+                "terminate": {
+                    "type": "boolean",
+                    "description": "For revoke_task: if true, send SIGTERM to kill a running task. Default false (just removes from queue).",
                 },
             },
             "required": ["action"],
