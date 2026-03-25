@@ -3063,6 +3063,53 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
+    # ── Railway Platform Tool — service management ─────────────────────────────
+    {
+        "type": "function",
+        "name": "railway_tool",
+        "description": (
+            "Railway platform infrastructure management. List services and their "
+            "deployment status, view deploy logs, restart or redeploy services, "
+            "check service metrics, and inspect environment variables. "
+            "Use when Chris asks about Railway services, deploys, restarts, "
+            "service health, or infrastructure status."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "services", "logs", "restart", "redeploy",
+                        "metrics", "variables", "help",
+                    ],
+                    "description": (
+                        "services: list all Railway services with deployment status. "
+                        "logs: view recent deploy logs (requires service_name). "
+                        "restart: restart a service (requires service_name). "
+                        "redeploy: trigger fresh build + deploy (requires service_name). "
+                        "metrics: get service details and deployment info (requires service_name). "
+                        "variables: list env vars for a service, masked (requires service_name). "
+                        "help: list all actions."
+                    ),
+                },
+                "service_name": {
+                    "type": "string",
+                    "description": (
+                        "Railway service name (e.g. 'celery-long-running', 'donkey-betz-platform', "
+                        "'celery-pa', 'celery-worker', 'celery-content', 'celery-broadcast', "
+                        "'celery-beat', 'celery-long-running-2', 'code-worker', 'resolve-node')"
+                    ),
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max log lines to return (default 50, max 200)",
+                },
+            },
+            "required": ["action"],
+        },
+    },
+
     # ── Session 1100: Narrative Tool — Narrative drift & cultural analysis ────
     {
         "type": "function",
