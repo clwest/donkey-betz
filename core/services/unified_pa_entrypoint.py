@@ -1337,6 +1337,12 @@ class UnifiedPAEntrypoint:
                 else:
                     tool_timeout = None
 
+                # Inject conversation_id so tools that dispatch async
+                # work (e.g. cockpit_tool.trigger_task) can post results
+                # back to this conversation when the work completes.
+                if self.conversation_id and isinstance(arguments, dict):
+                    arguments['conversation_id'] = self.conversation_id
+
                 tool_result = await self.tool_dispatcher.execute(
                     tool_name=actual_tool_name,
                     payload=arguments,

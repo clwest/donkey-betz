@@ -60,7 +60,7 @@ def on_task_prerun(sender=None, task_id=None, task=None, **kwargs):
 
 
 @task_postrun.connect
-def on_task_postrun(sender=None, task_id=None, task=None, state=None, **kwargs):
+def on_task_postrun(sender=None, task_id=None, task=None, state=None, retval=None, **kwargs):
     """Update row to SUCCESS/FAILURE when a task completes."""
     try:
         from core.models_celery_telemetry import CeleryTaskEvent
@@ -100,6 +100,13 @@ def on_task_postrun(sender=None, task_id=None, task=None, state=None, **kwargs):
             )
     except Exception:
         logger.debug(f"Celery telemetry: failed to record postrun for {task_id}", exc_info=True)
+
+    # Post completion notification to PA conversation if registered
+    try:
+        from core.services.task_notification import check_and_notify
+        check_and_notify(task_id=task_id, state=state or 'SUCCESS', result=retval)
+    except Exception:
+        logger.debug(f"Celery telemetry: task notification failed for {task_id}", exc_info=True)
 
 
 @task_failure.connect
@@ -147,3 +154,10 @@ def on_task_failure(sender=None, task_id=None, exception=None, traceback=None, *
             )
     except Exception:
         logger.debug(f"Celery telemetry: failed to record failure for {task_id}", exc_info=True)
+
+    # Post failure notification to PA conversation if registered
+    try:
+        from core.services.task_notification import check_and_notify
+        check_and_notify(task_id=task_id, state='FAILURE', error=exception)
+    except Exception:
+        logger.debug(f"Celery telemetry: task failure notification failed for {task_id}", exc_info=True)
