@@ -36,8 +36,12 @@ http.interceptors.response.use(
   (error) => {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
       const url = error.config?.url ?? '';
-      const isAuthEndpoint = url.includes('/auth/') || url.includes('/login');
-      if (isAuthEndpoint && onUnauthorized) {
+      // Skip signOut for login attempts (user typed wrong password)
+      const isLoginAttempt = url.includes('/login') || url.includes('/auth/token');
+      if (!isLoginAttempt && onUnauthorized) {
+        // Any 401 on a non-login endpoint means the token is invalid/expired.
+        // Sign out immediately to break the "cached stale token → 401 loop"
+        // that causes repeated crashes on app restart.
         onUnauthorized();
       }
     }
