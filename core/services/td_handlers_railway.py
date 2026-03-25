@@ -60,7 +60,7 @@ def _gql(query: str, variables: Optional[dict] = None) -> dict:
 def list_services() -> dict:
     """List all services with their current deployment status."""
     query = """
-    query($projectId: String!, $environmentId: String!) {
+    query($projectId: String!) {
         project(id: $projectId) {
             name
             environments(first: 1) {
@@ -88,7 +88,7 @@ def list_services() -> dict:
         }
     }
     """
-    data = _gql(query, {'projectId': _PROJECT_ID, 'environmentId': _ENVIRONMENT_ID})
+    data = _gql(query, {'projectId': _PROJECT_ID})
     if 'error' in data:
         return data
 
