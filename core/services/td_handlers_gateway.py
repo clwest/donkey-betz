@@ -637,6 +637,7 @@ class GatewayHandlersMixin:
                         'recent_failures — failed tasks with errors',
                         'queue_lengths — current queue depths',
                         'trigger_task — manually dispatch an allowlisted Celery task',
+                        'revoke_task — cancel/revoke a running or queued task by task_id',
                     ],
                 }
 
@@ -817,6 +818,52 @@ class GatewayHandlersMixin:
                     'task_id': task_id,
                     'queue': queue,
                     'status': 'dispatched',
+                }
+
+            if action == 'revoke_task':
+                task_id = payload.get('task_id', '').strip()
+                if not task_id:
+                    return {'error': 'Provide task_id to revoke'}
+
+                terminate = payload.get('terminate', False)
+
+                from core.celery import app as celery_app
+                try:
+                    celery_app.control.revoke(task_id, terminate=bool(terminate))
+                except Exception as revoke_err:
+                    return {
+                        'action': 'revoke_task',
+                        'task_id': task_id,
+                        'revoked': False,
+                        'error': str(revoke_err),
+                    }
+
+                # Update CeleryTaskEvent status if it exists
+                try:
+                    from core.models_celery_telemetry import CeleryTaskEvent
+                    event = CeleryTaskEvent.objects.filter(task_id=task_id).first()
+                    if event and event.status in ('QUEUED', 'STARTED'):
+                        event.status = 'REVOKED'
+                        event.save(update_fields=['status'])
+                except Exception:
+                    pass  # non-critical
+
+                # Clean up any pending notification
+                try:
+                    from core.services.task_notification import _get_redis, _KEY_PREFIX
+                    r = _get_redis()
+                    if r:
+                        r.delete(f'{_KEY_PREFIX}{task_id}')
+                except Exception:
+                    pass
+
+                return {
+                    'action': 'revoke_task',
+                    'task_id': task_id,
+                    'revoked': True,
+                    'terminate': bool(terminate),
+                    'note': 'Task revocation sent. Queued tasks are removed; running tasks '
+                            'are terminated only if terminate=true was set.',
                 }
 
             return {'error': f'Unknown cockpit_tool action: {action}'}
