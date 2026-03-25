@@ -611,6 +611,17 @@ export default function GlobalPADock() {
                   )}
 
                   <div className={cn('max-w-[80%] group', message.role === 'user' && message.source !== 'claude-code' && 'order-first')}>
+                    {/* Actor name label */}
+                    <div className={cn(
+                      'text-[10px] font-medium mb-0.5 px-1',
+                      message.source === 'claude-code' ? 'text-emerald-400'
+                        : message.role === 'assistant' ? 'text-primary-400'
+                        : 'text-gray-400 text-right'
+                    )}>
+                      {message.source === 'claude-code' ? 'Claude Code'
+                        : message.role === 'assistant' ? 'Rigby'
+                        : 'Chris'}
+                    </div>
                     <div
                       className={cn(
                         'rounded-lg px-3 py-2 text-sm',
