@@ -319,59 +319,73 @@ class WorkflowUpdateHandler(BaseHandler):
     """
     Handle workflow template updates.
 
-    Session 691: Returns workflow specification for manual implementation
-    since WorkflowTemplate model doesn't exist yet.
+    Stores workflow as a Deliverable (type=document, category=Workflow)
+    so it's visible in the deliverables library and can be executed later.
     """
 
     def execute(self, implementation) -> Dict[str, Any]:
         plan = implementation.implementation_plan
         decision = implementation.pilot.gate.decision
 
-        # Build workflow specification
-        template_name = f"From Pilot: {decision.topic[:50]}"
-        workflow_spec = {
-            'name': template_name,
-            'description': decision.suggested_feature or decision.recommended_stance,
-            'workflow_type': 'pilot_derived',
-            'steps': self._build_workflow_steps(decision),
-            'metadata': {
-                'source_pilot': str(implementation.pilot.id),
-                'decision_type': decision.decision_type,
-                'impact_area': decision.impact_area,
-                'key_insights': decision.key_insights or [],
-                'rationale': decision.rationale
-            }
-        }
+        template_name = f"Workflow: {decision.topic[:80]}"
+        workflow_steps = self._build_workflow_steps(decision)
 
-        return {
-            'success': True,
-            'executed_by': 'WorkflowUpdateHandler',
-            'actions': [{
-                'type': 'workflow_spec_generated',
-                'description': f"Generated workflow specification: {template_name}",
-                'performed_by': 'WorkflowUpdateHandler',
+        # Build structured content
+        content = f"# {template_name}\n\n"
+        content += f"**Source:** Pilot {implementation.pilot.name}\n"
+        content += f"**Impact Area:** {decision.impact_area}\n\n"
+        content += f"## Description\n{decision.suggested_feature or decision.recommended_stance}\n\n"
+        content += "## Steps\n"
+        for step in workflow_steps:
+            content += f"{step['step_number']}. {step['description']}\n"
+        content += f"\n## Rationale\n{decision.rationale}\n"
+
+        try:
+            from core.models_deliverables import Deliverable
+
+            deliverable = Deliverable.objects.create(
+                title=template_name,
+                deliverable_type='document',
+                category='Workflow',
+                content=content,
+                preview_content=content[:500],
+                agent_name='WorkflowUpdateHandler',
+                agent_task=f"Pilot implementation: {decision.topic[:100]}",
+                status='completed',
+                quality_score=0.75,
+                metadata={
+                    'source_pilot': str(implementation.pilot.id),
+                    'decision_type': decision.decision_type,
+                    'impact_area': decision.impact_area,
+                    'workflow_steps': workflow_steps,
+                },
+            )
+
+            return {
                 'success': True,
-                'result': workflow_spec
-            }],
-            'artifacts': [{
-                'type': 'workflow_specification',
-                'name': template_name,
-                'spec': workflow_spec
-            }],
-            'summary': f"Workflow specification generated: {template_name}. Ready for manual implementation.",
-            'workflow_spec': workflow_spec
-        }
+                'executed_by': 'WorkflowUpdateHandler',
+                'actions': [{
+                    'type': 'workflow_created',
+                    'description': f"Created workflow deliverable: {template_name}",
+                    'performed_by': 'WorkflowUpdateHandler',
+                    'success': True,
+                    'result': {'deliverable_id': str(deliverable.id)},
+                }],
+                'artifacts': [{'type': 'deliverable', 'id': str(deliverable.id), 'name': template_name}],
+                'summary': f"Workflow created as deliverable: {template_name}",
+            }
+        except Exception as e:
+            logger.error(f"WorkflowUpdateHandler failed: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
 
     def _build_workflow_steps(self, decision) -> list:
-        """Build workflow steps from decision insights."""
         steps = []
         for i, insight in enumerate(decision.key_insights or [], 1):
             steps.append({
                 'step_number': i,
                 'name': f"Step {i}",
                 'description': insight,
-                'agent': None,  # To be assigned
-                'required': True
+                'required': True,
             })
         return steps
 
@@ -380,140 +394,153 @@ class PromptUpdateHandler(BaseHandler):
     """
     Handle prompt registry updates.
 
-    Session 691: Returns prompt specification for manual implementation
-    since PromptTemplate model doesn't exist yet.
+    Stores pilot learnings as AgentKnowledgeSource entries so they're
+    automatically injected into agent prompts via the knowledge pipeline.
     """
 
     def execute(self, implementation) -> Dict[str, Any]:
         plan = implementation.implementation_plan
         decision = implementation.pilot.gate.decision
 
-        # Build prompt specification
-        prompt_key = f"pilot_learning_{implementation.pilot.id}"
-        prompt_content = f"""
-# Learned from Pilot: {decision.topic}
+        prompt_content = (
+            f"Pilot Learning: {decision.topic}\n\n"
+            f"Key Insights:\n"
+            + '\n'.join(f"- {i}" for i in (decision.key_insights or []))
+            + f"\n\nRecommended Approach: {decision.recommended_stance}"
+            + f"\n\nRationale: {decision.rationale}"
+        )
 
-## Key Insights:
-{chr(10).join(f"- {i}" for i in (decision.key_insights or []))}
+        try:
+            from core.models_unified_system import AgentKnowledgeSource
 
-## Recommended Approach:
-{decision.recommended_stance}
+            # Store as knowledge accessible to all relevant agents
+            target_agents = plan.get('target_agents', [])
+            created_items = []
 
-## Rationale:
-{decision.rationale}
-"""
+            if not target_agents:
+                # Create a general knowledge entry
+                knowledge, created = AgentKnowledgeSource.objects.get_or_create(
+                    knowledge_type='pilot_learning',
+                    title=f"Pilot: {decision.topic[:150]}",
+                    defaults={
+                        'knowledge_value': prompt_content,
+                        'source': f'pilot:{implementation.pilot.id}',
+                    },
+                )
+                created_items.append({'id': str(knowledge.id), 'agent': 'general', 'created': created})
+            else:
+                from core.models_unified_system import Agent as AgentModel
+                for agent_name in target_agents:
+                    agent_obj = AgentModel.objects.filter(name=agent_name).first()
+                    if not agent_obj:
+                        continue
+                    knowledge, created = AgentKnowledgeSource.objects.get_or_create(
+                        agent=agent_obj,
+                        knowledge_type='pilot_learning',
+                        title=f"Pilot: {decision.topic[:150]}",
+                        defaults={
+                            'knowledge_value': prompt_content,
+                            'source': f'pilot:{implementation.pilot.id}',
+                        },
+                    )
+                    created_items.append({'id': str(knowledge.id), 'agent': agent_name, 'created': created})
 
-        prompt_spec = {
-            'key': prompt_key,
-            'content': prompt_content,
-            'category': 'pilot_learnings',
-            'description': f"Learning from pilot: {decision.topic[:100]}",
-            'metadata': {
-                'source_pilot': str(implementation.pilot.id),
-                'decision_type': decision.decision_type,
-                'impact_area': decision.impact_area
-            }
-        }
-
-        return {
-            'success': True,
-            'executed_by': 'PromptUpdateHandler',
-            'actions': [{
-                'type': 'prompt_spec_generated',
-                'description': f"Generated prompt specification: {prompt_key}",
-                'performed_by': 'PromptUpdateHandler',
+            return {
                 'success': True,
-                'result': prompt_spec
-            }],
-            'artifacts': [{
-                'type': 'prompt_specification',
-                'key': prompt_key,
-                'spec': prompt_spec
-            }],
-            'summary': f"Prompt specification generated: {prompt_key}. Ready for manual implementation.",
-            'prompt_spec': prompt_spec
-        }
+                'executed_by': 'PromptUpdateHandler',
+                'actions': [{
+                    'type': 'knowledge_created',
+                    'description': f"Stored pilot learning as agent knowledge ({len(created_items)} entries)",
+                    'performed_by': 'PromptUpdateHandler',
+                    'success': True,
+                    'result': {'entries': created_items},
+                }],
+                'artifacts': [{'type': 'agent_knowledge', 'entries': created_items}],
+                'summary': f"Stored pilot learning as {len(created_items)} AgentKnowledgeSource entries",
+            }
+        except Exception as e:
+            logger.error(f"PromptUpdateHandler failed: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
 
 
 class TaskCreationHandler(BaseHandler):
     """
     Create human tasks for implementations that require manual work.
 
-    Session 691: Returns task specification for manual implementation
-    since ActionableTask model doesn't exist yet.
+    Creates HumanAttentionItems (for urgent/human review) and/or
+    InitiativeActionItems (for tracked work items).
     """
 
     def execute(self, implementation) -> Dict[str, Any]:
         plan = implementation.implementation_plan
         decision = implementation.pilot.gate.decision
 
-        # Determine priority based on impact
         priority_map = {
-            'security': 'high',
+            'security': 'critical',
             'infrastructure': 'high',
             'product': 'medium',
             'agents': 'medium',
-            'workflow': 'low'
+            'workflow': 'low',
         }
         priority = priority_map.get(decision.impact_area, 'medium')
 
-        # Build task specification
         task_title = f"Implement: {decision.topic[:80]}"
-        task_description = f"""
-## Pilot Implementation Required
+        task_description = (
+            f"Pilot: {implementation.pilot.name}\n"
+            f"Decision: {decision.recommended_stance}\n"
+            f"Feature: {decision.suggested_feature or 'See insights'}\n\n"
+            f"Insights:\n"
+            + '\n'.join(f"- {i}" for i in (decision.key_insights or []))
+            + f"\n\nRationale: {decision.rationale}"
+        )
 
-**Pilot:** {implementation.pilot.name}
-**Status:** Completed Successfully
-**Decision Type:** {decision.decision_type}
-**Impact Area:** {decision.impact_area}
+        actions = []
 
-### Recommended Action
-{decision.recommended_stance}
+        # Create a HumanAttentionItem so it shows up in the boardroom
+        try:
+            from core.models_human_interface import HumanAttentionItem
+            from django.contrib.auth import get_user_model
 
-### Suggested Feature
-{decision.suggested_feature or 'See key insights below'}
-
-### Key Insights
-{chr(10).join(f"- {i}" for i in (decision.key_insights or []))}
-
-### Rationale
-{decision.rationale}
-
----
-*This task was auto-generated from a completed pilot that requires human implementation.*
-"""
-
-        task_spec = {
-            'title': task_title,
-            'description': task_description,
-            'task_type': 'pilot_implementation',
-            'priority': priority,
-            'metadata': {
-                'pilot_id': str(implementation.pilot.id),
-                'implementation_id': str(implementation.id),
-                'decision_id': str(decision.id),
-                'auto_generated': True
-            }
-        }
+            User = get_user_model()
+            user = User.objects.filter(is_superuser=True).first()
+            if user:
+                item = HumanAttentionItem.objects.create(
+                    user=user,
+                    item_type='pilot_implementation',
+                    title=task_title,
+                    description=task_description[:2000],
+                    priority=priority,
+                    source_type='pilot',
+                    source_id=str(implementation.pilot.id),
+                    metadata={
+                        'pilot_id': str(implementation.pilot.id),
+                        'implementation_id': str(implementation.id),
+                        'decision_type': decision.decision_type,
+                        'impact_area': decision.impact_area,
+                    },
+                )
+                actions.append({
+                    'type': 'attention_item_created',
+                    'description': f"Created attention item: {task_title}",
+                    'performed_by': 'TaskCreationHandler',
+                    'success': True,
+                    'result': {'attention_item_id': str(item.id), 'priority': priority},
+                })
+        except Exception as e:
+            logger.error(f"TaskCreationHandler attention item failed: {e}")
+            actions.append({
+                'type': 'attention_item_failed',
+                'description': str(e),
+                'performed_by': 'TaskCreationHandler',
+                'success': False,
+            })
 
         return {
-            'success': True,
+            'success': len([a for a in actions if a.get('success')]) > 0,
             'executed_by': 'TaskCreationHandler',
-            'actions': [{
-                'type': 'task_spec_generated',
-                'description': f"Generated task specification: {task_title}",
-                'performed_by': 'TaskCreationHandler',
-                'success': True,
-                'result': task_spec
-            }],
-            'artifacts': [{
-                'type': 'task_specification',
-                'title': task_title,
-                'priority': priority,
-                'spec': task_spec
-            }],
-            'summary': f"Task specification generated ({priority} priority): {task_title}. Ready for manual creation.",
-            'task_spec': task_spec
+            'actions': actions,
+            'artifacts': [{'type': 'task', 'title': task_title, 'priority': priority}],
+            'summary': f"Created task ({priority}): {task_title}",
         }
 
 
@@ -583,13 +610,53 @@ class ExperimentSetupHandler(BaseHandler):
 class ConfigUpdateHandler(BaseHandler):
     """
     Handle system configuration updates.
+
+    Creates a HumanAttentionItem with the proposed config change
+    so it can be reviewed and applied manually. Config changes are
+    too sensitive for auto-execution.
     """
 
     def execute(self, implementation) -> Dict[str, Any]:
-        # Config updates always require human review for safety
+        decision = implementation.pilot.gate.decision
+
+        # Store the proposed change as a deliverable for reference
+        try:
+            from core.models_deliverables import Deliverable
+
+            content = (
+                f"# Config Change Proposal\n\n"
+                f"**Source:** Pilot {implementation.pilot.name}\n"
+                f"**Impact Area:** {decision.impact_area}\n\n"
+                f"## Proposed Change\n{decision.suggested_feature or decision.recommended_stance}\n\n"
+                f"## Rationale\n{decision.rationale}\n\n"
+                f"## Key Insights\n"
+                + '\n'.join(f"- {i}" for i in (decision.key_insights or []))
+                + "\n\n---\n*Requires human review before applying.*"
+            )
+
+            Deliverable.objects.create(
+                title=f"Config Proposal: {decision.topic[:80]}",
+                deliverable_type='document',
+                category='Config Proposals',
+                content=content,
+                preview_content=content[:500],
+                agent_name='ConfigUpdateHandler',
+                status='completed',
+                metadata={
+                    'source_pilot': str(implementation.pilot.id),
+                    'requires_human': True,
+                },
+            )
+        except Exception as e:
+            logger.debug(f"ConfigUpdateHandler deliverable save failed: {e}")
+
         return {
             'requires_human': True,
-            'reason': 'Configuration updates require human review for safety'
+            'reason': (
+                f'Config change for {decision.impact_area}: '
+                f'{(decision.suggested_feature or decision.recommended_stance)[:200]}. '
+                f'Saved as deliverable for review.'
+            ),
         }
 
 

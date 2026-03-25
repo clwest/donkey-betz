@@ -114,7 +114,7 @@ class ContextBudgetManager:
     TOTAL_BUDGET = 4000
 
     # Feature flags
-    ENABLE_ENFORCEMENT = False  # When True, actually truncate/skip sections
+    ENABLE_ENFORCEMENT = True   # Truncate/skip sections that exceed budget
     ENABLE_LOGGING = True       # Log all budget usage
 
     def __init__(self, encoding_name: str = "cl100k_base"):
