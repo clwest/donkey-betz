@@ -798,6 +798,19 @@ class GatewayHandlersMixin:
                 except Exception:
                     pass  # non-critical — telemetry signal will create on worker pickup
 
+                # Store notification metadata so task_postrun can post
+                # results back to the PA conversation automatically.
+                try:
+                    from core.services.task_notification import register_task_notification
+                    register_task_notification(
+                        task_id=task_id,
+                        task_name=task_name,
+                        user_id=user_id,
+                        conversation_id=payload.get('conversation_id', ''),
+                    )
+                except Exception:
+                    pass  # non-critical
+
                 return {
                     'action': 'trigger_task',
                     'task_name': task_name,
