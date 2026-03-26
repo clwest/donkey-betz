@@ -4440,6 +4440,7 @@ from core.views_deliverables import (
     get_deliverable_stats,
     get_deliverable_types,
     record_deliverable_event,
+    link_deliverable_workspace,
     stage3_dashboard,
 )
 
@@ -4455,6 +4456,7 @@ urlpatterns += [
     path('api/deliverables/<uuid:deliverable_id>/templateize/', templateize_deliverable, name='deliverable-templateize'),
     path('api/deliverables/<uuid:deliverable_id>/export/', export_deliverable, name='deliverable-export'),
     path('api/deliverables/<uuid:deliverable_id>/event/', record_deliverable_event, name='deliverable-event'),
+    path('api/deliverables/<uuid:deliverable_id>/link-workspace/', link_deliverable_workspace, name='deliverable-link-workspace'),
 ]
 
 # =========================================================================
