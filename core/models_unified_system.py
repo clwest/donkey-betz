@@ -818,6 +818,17 @@ class Opportunity(models.Model):
         ('expired', 'Expired'),
     ], default='active')
 
+    # Workspace binding
+    workspace = models.ForeignKey(
+        'core.ProjectWorkspace',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='opportunities',
+        db_index=True,
+        help_text="Workspace this opportunity belongs to"
+    )
+
     # Matching
     match_score = models.IntegerField(default=0)  # 0-100
     recommended_by = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True, blank=True)
@@ -933,11 +944,20 @@ class Opportunity(models.Model):
     )
 
     def save(self, *args, **kwargs):
-        """Auto-assign user_friendly_id on creation."""
+        """Auto-assign user_friendly_id and workspace on creation."""
         if self._state.adding and self.user_friendly_id is None:
             from django.db.models import Max
             max_id = Opportunity.objects.aggregate(Max('user_friendly_id'))['user_friendly_id__max']
             self.user_friendly_id = (max_id or 0) + 1
+        # Auto-resolve workspace if not set
+        if not self.workspace_id:
+            try:
+                from core.services.deliverable_workspace_resolver import resolve_workspace
+                ws, _ = resolve_workspace()
+                if ws:
+                    self.workspace = ws
+            except Exception:
+                pass
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -2607,6 +2627,17 @@ class OpportunityTask(models.Model):
         related_name='opportunity_tasks'
     )
 
+    # Workspace (inherited from parent opportunity)
+    workspace = models.ForeignKey(
+        'core.ProjectWorkspace',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='opportunity_tasks',
+        db_index=True,
+        help_text="Inherited from parent opportunity's workspace"
+    )
+
     # Task details
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
@@ -2663,6 +2694,24 @@ class OpportunityTask(models.Model):
             models.Index(fields=['status', 'priority']),
             models.Index(fields=['due_date']),
         ]
+
+    def save(self, *args, **kwargs):
+        """Auto-inherit workspace from parent opportunity."""
+        if not self.workspace_id and self.opportunity_id:
+            try:
+                if self.opportunity and self.opportunity.workspace_id:
+                    self.workspace_id = self.opportunity.workspace_id
+            except Exception:
+                pass
+        if not self.workspace_id:
+            try:
+                from core.services.deliverable_workspace_resolver import resolve_workspace
+                ws, _ = resolve_workspace()
+                if ws:
+                    self.workspace = ws
+            except Exception:
+                pass
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Task: {self.title} ({self.status})"
