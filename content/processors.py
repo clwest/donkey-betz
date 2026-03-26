@@ -812,25 +812,40 @@ class YouTubeProcessor(BaseProcessor):
             proxy_config = GenericProxyConfig(https_url=proxy_url) if proxy_url else None
             ytt_api = YouTubeTranscriptApi(proxy_config=proxy_config)
 
-            # List available transcripts
-            transcript_list = ytt_api.list(video_id)
+            # Wall-clock timeout (20s) to prevent Railway edge 503 on slow/blocked requests
+            from concurrent.futures import ThreadPoolExecutor, TimeoutError as _FuturesTimeout
+            TRANSCRIPT_TIMEOUT = 20  # seconds
 
-            # Try to find English transcript first
-            transcript_language = None
-            available_languages = []
+            def _fetch_transcript():
+                transcript_list = ytt_api.list(video_id)
+                lang = None
+                langs = []
+                for t in transcript_list:
+                    langs.append(t.language_code)
+                    if t.language_code in ['en', 'en-US', 'en-GB'] and not lang:
+                        lang = t.language_code
+                if not lang and langs:
+                    lang = langs[0]
+                data = ytt_api.fetch(video_id, languages=[lang]) if lang else None
+                return lang, langs, data
 
-            for t in transcript_list:
-                available_languages.append(t.language_code)
-                if t.language_code in ['en', 'en-US', 'en-GB'] and not transcript_language:
-                    transcript_language = t.language_code
-
-            # Use first available if no English
-            if not transcript_language and available_languages:
-                transcript_language = available_languages[0]
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                try:
+                    future = pool.submit(_fetch_transcript)
+                    transcript_language, available_languages, transcript_data = future.result(timeout=TRANSCRIPT_TIMEOUT)
+                except _FuturesTimeout:
+                    return ProcessingResult(
+                        success=False,
+                        error_message="YouTube transcript request timed out. This is likely caused by YouTube blocking requests from this server's IP.",
+                        metadata={'video_id': video_id, 'source_url': url, 'ip_blocked': True},
+                        processing_steps=[
+                            {'step': 'transcript_fetch', 'status': 'error', 'error': 'Timed out after 20s'}
+                        ]
+                    )
 
             metadata['available_languages'] = available_languages
 
-            if not transcript_language:
+            if not transcript_language or transcript_data is None:
                 return ProcessingResult(
                     success=False,
                     error_message="No transcript available for this video",
@@ -839,9 +854,6 @@ class YouTubeProcessor(BaseProcessor):
                         {'step': 'transcript_fetch', 'status': 'error', 'error': 'No transcript available'}
                     ]
                 )
-
-            # Fetch the transcript
-            transcript_data = ytt_api.fetch(video_id, languages=[transcript_language])
 
             # Build raw content with timestamps
             raw_parts = []
