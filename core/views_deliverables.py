@@ -382,14 +382,41 @@ def export_deliverable(request, deliverable_id):
                     content=deliverable.content or '',
                     content_format=deliverable.content_format or 'markdown',
                 )
-                DeliverableExport.objects.create(
+
+                # Upload to Cloudinary for shareable URL if requested
+                share_url = None
+                upload_param = body.get('upload', '') if isinstance(body, dict) else ''
+                if upload_param == 'cloudinary':
+                    try:
+                        from django.core.files.storage import default_storage
+                        from django.core.files.base import ContentFile
+                        import hashlib
+                        content_hash = hashlib.md5(pdf_bytes).hexdigest()[:8]
+                        cloud_path = f'exports/pdf/{deliverable.slug}-{content_hash}.pdf'
+                        saved_path = default_storage.save(cloud_path, ContentFile(pdf_bytes))
+                        share_url = default_storage.url(saved_path)
+                    except Exception as upload_err:
+                        logger.warning("Cloudinary upload failed for PDF: %s", upload_err)
+
+                export_record = DeliverableExport.objects.create(
                     deliverable=deliverable,
                     user=request.user,
                     export_format='pdf',
                     file_size_bytes=len(pdf_bytes),
+                    file_url=share_url or '',
                 )
                 _emit_event(deliverable, 'deliverable_exported', request.user, 'frontend',
-                             {'format': 'pdf'})
+                             {'format': 'pdf', 'share_url': share_url})
+
+                if share_url:
+                    return JsonResponse({
+                        'success': True,
+                        'format': 'pdf',
+                        'share_url': share_url,
+                        'export_id': str(export_record.id),
+                        'file_size': len(pdf_bytes),
+                    })
+
                 response = HttpResponse(pdf_bytes, content_type='application/pdf')
                 response['Content-Disposition'] = f'attachment; filename="{deliverable.slug}.pdf"'
                 return response
