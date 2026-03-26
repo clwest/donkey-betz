@@ -286,7 +286,10 @@ export default function GlobalPADock() {
     }
   }, [addFiles])
 
-  // Live sync: poll server for new messages from Claude Code or other clients
+  // ── Tool-source detection ────────────────────────────────────────────────
+const TOOL_SOURCES = new Set(['code-worker', 'code_worker', 'claude-code', 'claude_code'])
+
+// Live sync: poll server for new messages from Claude Code or other clients
   useQuery({
     queryKey: ['pa-dock-sync', activeConversationId],
     queryFn: async () => {
