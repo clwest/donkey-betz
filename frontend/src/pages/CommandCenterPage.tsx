@@ -68,7 +68,7 @@ interface AsyncJob {
 
 interface Message {
   id: string
-  role: 'user' | 'assistant'
+  role: 'user' | 'assistant' | 'tool' | 'system'
   content: string
   timestamp: Date
   tools_used?: string[]
