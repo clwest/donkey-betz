@@ -3769,6 +3769,8 @@ Consider this current data when formulating your response."""
         confidence_score: float = 0.7,
         origin: str = '',
         provenance: Dict[str, Any] = None,
+        workspace_id: str = None,
+        force_ephemeral: bool = False,
     ) -> Optional[Any]:
         """
         Session 861: Save agent output to Deliverable model for persistence.
@@ -3879,6 +3881,25 @@ Consider this current data when formulating your response."""
             # are owned by the real user (not NULL / system_autonomous).
             resolved_user = user or getattr(self, 'user', None)
 
+            # Resolve workspace: explicit param > agent context > active workspace fallback
+            resolved_workspace = None
+            resolved_ws_id = workspace_id or getattr(self, '_workspace_id', None)
+            if resolved_ws_id:
+                try:
+                    from core.models_skin_layer import ProjectWorkspace
+                    resolved_workspace = ProjectWorkspace.objects.filter(id=resolved_ws_id).first()
+                except Exception:
+                    pass
+            if not resolved_workspace and not force_ephemeral:
+                try:
+                    from core.models_skin_layer import ProjectWorkspace
+                    resolved_workspace = ProjectWorkspace.objects.filter(is_active=True).first()
+                except Exception:
+                    pass
+
+            # Auto-save when workspace is resolved (unless explicitly ephemeral)
+            should_save = bool(resolved_workspace) and not force_ephemeral
+
             deliverable = Deliverable.objects.create(
                 title=resolved_title,
                 slug=unique_slug,
@@ -3892,13 +3913,15 @@ Consider this current data when formulating your response."""
                 preview_content=preview,
                 metadata=metadata or {},
                 user=resolved_user,
+                workspace=resolved_workspace,
+                is_saved=should_save,
                 trace_id=uuid.UUID(trace_id) if trace_id else None,
                 quality_score=quality_score,
                 confidence_score=confidence_score,
                 status='ready',
             )
 
-            logger.info(f"📦 Session 861: Saved Deliverable {deliverable.id} - {resolved_title[:50]}")
+            logger.info(f"📦 Saved Deliverable {deliverable.id} - {resolved_title[:50]} | workspace={'yes' if resolved_workspace else 'none'} | is_saved={should_save}")
 
             # Session 930: Trigger auto-learning from deliverable
             self._trigger_deliverable_learning(deliverable, user)

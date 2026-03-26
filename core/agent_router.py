@@ -887,6 +887,31 @@ class AgentRouter:
         else:
             agent = agent_class(user=self.user)
 
+        # Inject workspace_id into agent so deliverables get assigned correctly.
+        # Priority: explicit context > initiative workspace > active workspace fallback.
+        workspace_id = context.get('workspace_id') if context else None
+        if not workspace_id and context and context.get('initiative_id'):
+            try:
+                from core.models_document_registry import Initiative
+                init = Initiative.objects.filter(id=context['initiative_id']).first()
+                if init and init.target_workspace_id:
+                    workspace_id = str(init.target_workspace_id)
+            except Exception:
+                pass
+        if not workspace_id:
+            try:
+                from core.models_skin_layer import ProjectWorkspace
+                active_ws = ProjectWorkspace.objects.filter(is_active=True).first()
+                if active_ws:
+                    workspace_id = str(active_ws.id)
+            except Exception:
+                pass
+        if workspace_id:
+            agent._workspace_id = workspace_id
+            if context is None:
+                context = {}
+            context['workspace_id'] = workspace_id
+
         # Session 769: Use pre-gathered context if provided (for timeout isolation)
         if pre_gathered_context and pre_gathered_context.get('gathered'):
             scifi_context = pre_gathered_context.get('scifi_context', {})
