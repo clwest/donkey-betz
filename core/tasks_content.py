@@ -221,6 +221,10 @@ Return ONLY valid JSON, no markdown fences."""
         content_pack['transcript_id'] = str(transcript.id)
         content_pack['duration_seconds'] = transcript.duration_seconds
 
+        # Resolve workspace for deliverable
+        from core.services.deliverable_workspace_resolver import resolve_workspace
+        ws, ws_saved = resolve_workspace()
+
         # Save as Deliverable
         deliverable = Deliverable.objects.create(
             title=f"Content Pack: {video_title[:180]}",
@@ -230,6 +234,8 @@ Return ONLY valid JSON, no markdown fences."""
             agent_name='VideoContentPackAgent',
             agent_task=f"Generate content pack for video: {video_title}",
             user=user,
+            workspace=ws,
+            is_saved=ws_saved,
             content=json.dumps(content_pack, indent=2),
             content_format='json',
             preview_content=(content_pack.get('summary', '') or '')[:500],
