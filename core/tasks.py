@@ -3554,6 +3554,10 @@ def generate_video_content_pack_task(self, video_id, user_id, language='en'):
 def ingest_video_task(self, document_id, tmp_video_path, original_filename, user_id, language='en'):
     from core.tasks_media import _impl_ingest_video_task
     return _impl_ingest_video_task(self, document_id, tmp_video_path, original_filename, user_id, language)
+@shared_task(bind=True, max_retries=1, soft_time_limit=1800, time_limit=1860, ignore_result=False)
+def youtube_whisper_task(self, document_id, youtube_url, user_id, language='en'):
+    from core.tasks_media import _impl_youtube_whisper_task
+    return _impl_youtube_whisper_task(self, document_id, youtube_url, user_id, language)
 @shared_task
 def collect_training_data():
     from core.tasks_ops import _impl_collect_training_data

@@ -1348,6 +1348,8 @@ from core.views_rag_embeddings import (
     list_documents, ingest_url, ingest_file, get_document, delete_document,
     # Video RAG ingest
     ingest_video, ingest_video_status,
+    # YouTube Whisper fallback
+    ingest_youtube_whisper,
 )
 # Session 403: Legal Case Files APIs
 # Session 407: Added export_legal_section for document downloads
@@ -3038,6 +3040,7 @@ urlpatterns = [
 
     # Video RAG ingest
     path('api/documents/ingest-video/', ingest_video, name='documents-ingest-video'),
+    path('api/documents/ingest-youtube-whisper/', ingest_youtube_whisper, name='documents-ingest-youtube-whisper'),
     path('api/documents/ingest-status/<str:job_id>/', ingest_video_status, name='documents-ingest-status'),
 
     # Session 403: Legal Case Files APIs
