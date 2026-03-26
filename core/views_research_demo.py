@@ -1347,6 +1347,7 @@ def initiatives_api(request):
         # Session 901: New filters
         program_filter = request.GET.get('program')  # Optional: growth_intelligence, etc.
         purpose_filter = request.GET.get('purpose')  # Optional: revenue, stability, etc.
+        workspace_filter = request.GET.get('workspace')  # Filter by target_workspace FK
         sort_by = request.GET.get('sort', 'priority')  # 'priority' (default) or 'updated'
 
         # Session 897: Use prefetch_related to batch load stages and decisions
@@ -1356,8 +1357,7 @@ def initiatives_api(request):
             Prefetch('source_decisions'),
         )
 
-        # Workspace filter
-        workspace_filter = request.GET.get('workspace')
+        # Workspace filter — scope to project when specified
         if workspace_filter:
             initiatives = initiatives.filter(target_workspace_id=workspace_filter)
 
