@@ -2253,6 +2253,14 @@ export const ragApi = {
     url_pattern?: string;
   }) => api.post('/documents/ingest-url/', { url, ...options }),
 
+  // YouTube Whisper fallback — downloads audio server-side and transcribes with Whisper
+  ingestYoutubeWhisper: (url: string, options?: { title?: string; language?: string }) =>
+    api.post('/documents/ingest-youtube-whisper/', { url, ...options }),
+
+  // Ingest job status polling (shared by video + whisper)
+  ingestStatus: (jobId: string) =>
+    api.get(`/documents/ingest-status/${jobId}/`),
+
   // Semantic search
   semanticSearch: (query: string, options?: { limit?: number; similarity_threshold?: number }) =>
     api.post('/v1/rag/semantic-search/', { query, ...options }),
