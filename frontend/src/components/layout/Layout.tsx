@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import GlobalAlertBanner, { useAlertBannerHeight } from '@/components/GlobalAlertBanner'
@@ -12,7 +12,10 @@ export default function Layout() {
   // Session 971b: Track all route changes for telemetry
   usePageTracking()
 
+  const location = useLocation()
   const bannerHeight = useAlertBannerHeight()
+
+  const hideGlobalDock = location.pathname === '/'
 
   // Session 715: Wire system events to unified store
   const fetchAttentionStats = useUnifiedStore((s) => s.fetchAttentionStats)
@@ -62,8 +65,8 @@ export default function Layout() {
         </main>
       </div>
 
-      {/* Session 948: Global PA Dock - available on every page */}
-      <GlobalPADock />
+      {/* Session 948: Global PA Dock - hidden on Command Center (has built-in chat) */}
+      {!hideGlobalDock && <GlobalPADock />}
     </div>
   )
 }
