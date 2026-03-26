@@ -864,20 +864,26 @@ export default function DocumentsPage() {
       queryClient.invalidateQueries({ queryKey: ['rag-stats'] })
     },
     onError: (error: any) => {
+      const status = error?.response?.status
       const responseData = error?.response?.data
       const errorCode = responseData?.error_code || null
       const correlationId = responseData?.correlation_id || null
       const errorMessage = responseData?.error || error.message || 'Failed to import URL'
 
-      setIngestErrorCode(errorCode)
       setShowErrorDetails(false)
 
       if (errorCode === 'YOUTUBE_TRANSCRIPT_BLOCKED') {
+        setIngestErrorCode(errorCode)
         setIngestError('YouTube is blocking transcript requests from our server. An admin needs to configure a proxy to resolve this.')
         setIngestErrorDetails(
           [correlationId ? `Correlation ID: ${correlationId}` : '', 'Fix: set YOUTUBE_PROXY_URL env var on Railway with a residential proxy URL.'].filter(Boolean).join('\n')
         )
+      } else if (status === 503 && !responseData?.error) {
+        setIngestErrorCode('EDGE_UNAVAILABLE')
+        setIngestError('Server temporarily unavailable. Please wait a moment and try again.')
+        setIngestErrorDetails(`Status: 503 | ${new Date().toLocaleTimeString()}`)
       } else {
+        setIngestErrorCode(null)
         setIngestError(errorMessage)
         setIngestErrorDetails(correlationId ? `Correlation ID: ${correlationId}` : null)
       }
@@ -987,19 +993,29 @@ export default function DocumentsPage() {
         <div className={`rounded-lg p-4 flex items-start gap-3 ${
           ingestErrorCode === 'YOUTUBE_TRANSCRIPT_BLOCKED'
             ? 'bg-orange-500/10 border border-orange-500/30'
+            : ingestErrorCode === 'EDGE_UNAVAILABLE'
+            ? 'bg-yellow-500/10 border border-yellow-500/30'
             : 'bg-red-500/10 border border-red-500/30'
         }`}>
           <XCircle className={`h-5 w-5 shrink-0 mt-0.5 ${
-            ingestErrorCode === 'YOUTUBE_TRANSCRIPT_BLOCKED' ? 'text-orange-400' : 'text-red-400'
+            ingestErrorCode === 'YOUTUBE_TRANSCRIPT_BLOCKED' ? 'text-orange-400'
+            : ingestErrorCode === 'EDGE_UNAVAILABLE' ? 'text-yellow-400'
+            : 'text-red-400'
           }`} />
           <div className="flex-1">
             <div className={`font-medium ${
-              ingestErrorCode === 'YOUTUBE_TRANSCRIPT_BLOCKED' ? 'text-orange-400' : 'text-red-400'
+              ingestErrorCode === 'YOUTUBE_TRANSCRIPT_BLOCKED' ? 'text-orange-400'
+              : ingestErrorCode === 'EDGE_UNAVAILABLE' ? 'text-yellow-400'
+              : 'text-red-400'
             }`}>
-              {ingestErrorCode === 'YOUTUBE_TRANSCRIPT_BLOCKED' ? 'YouTube Transcript Blocked' : 'Import Error'}
+              {ingestErrorCode === 'YOUTUBE_TRANSCRIPT_BLOCKED' ? 'YouTube Transcript Blocked'
+                : ingestErrorCode === 'EDGE_UNAVAILABLE' ? 'Temporary Server Issue'
+                : 'Import Error'}
             </div>
             <div className={`text-sm ${
-              ingestErrorCode === 'YOUTUBE_TRANSCRIPT_BLOCKED' ? 'text-orange-300/80' : 'text-red-300/80'
+              ingestErrorCode === 'YOUTUBE_TRANSCRIPT_BLOCKED' ? 'text-orange-300/80'
+              : ingestErrorCode === 'EDGE_UNAVAILABLE' ? 'text-yellow-300/80'
+              : 'text-red-300/80'
             }`}>{ingestError}</div>
             {ingestErrorDetails && (
               <div className="mt-2">

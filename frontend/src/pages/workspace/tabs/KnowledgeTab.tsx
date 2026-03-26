@@ -174,12 +174,18 @@ function IngestPanel() {
       })
       if (!r.ok) {
         const err = await r.json().catch(() => ({}))
-        const error = new Error(
-          err.error_code === 'YOUTUBE_TRANSCRIPT_BLOCKED'
-            ? 'YouTube is blocking transcript requests from our server. An admin needs to configure a proxy to resolve this.'
-            : err.error || `Ingest failed: ${r.status}`
-        )
-        ;(error as any).errorCode = err.error_code || null
+        let message: string
+        let code: string | null = err.error_code || null
+        if (err.error_code === 'YOUTUBE_TRANSCRIPT_BLOCKED') {
+          message = 'YouTube is blocking transcript requests from our server. An admin needs to configure a proxy to resolve this.'
+        } else if (r.status === 503 && !err.error) {
+          message = 'Server temporarily unavailable. Please wait a moment and try again.'
+          code = 'EDGE_UNAVAILABLE'
+        } else {
+          message = err.error || `Ingest failed: ${r.status}`
+        }
+        const error = new Error(message)
+        ;(error as any).errorCode = code
         ;(error as any).correlationId = err.correlation_id || null
         throw error
       }
@@ -262,6 +268,8 @@ function IngestPanel() {
           <div className={`mt-3 p-3 rounded-lg text-sm ${
             (ingestUrlMutation.error as any)?.errorCode === 'YOUTUBE_TRANSCRIPT_BLOCKED'
               ? 'bg-orange-500/10 border border-orange-500/20 text-orange-400'
+              : (ingestUrlMutation.error as any)?.errorCode === 'EDGE_UNAVAILABLE'
+              ? 'bg-yellow-500/10 border border-yellow-500/20 text-yellow-400'
               : 'bg-red-500/10 border border-red-500/20 text-red-400'
           }`}>
             {(ingestUrlMutation.error as Error).message}
