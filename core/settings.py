@@ -971,7 +971,7 @@ CELERY_TASK_ROUTES = {
     'core.tasks.run_autonomous_intelligence_loop': {'queue': 'long_running'},
     'core.tasks.run_agent_learning_cycle': {'queue': 'long_running'},
     'core.tasks.score_and_promote_dreams': {'queue': 'long_running'},
-    'core.tasks.process_approved_dreams': {'queue': 'long_running'},
+    'core.tasks.process_approved_dreams': {'queue': 'default'},  # 171ms avg, 348/day — lightweight dispatcher
     # Session 1004: Moved I/O-bound LLM API tasks off long_running (was saturating c=1)
     # Session 1034: Moved run_agent_conversation back to long_running — max 72min, OOM on 200MB default worker
     'core.tasks.run_agent_conversation': {'queue': 'long_running'},
@@ -985,8 +985,8 @@ CELERY_TASK_ROUTES = {
     # Session 1040: Moved 3 heavy tasks off content → long_running to fix OOM
     # Content worker was crashing with 25+ completed initiatives driving heavy LLM tasks
     'core.tasks.generate_initiative_stage_document': {'queue': 'long_running'},  # TechnicalDocumentAgent, heavy context build
-    'core.tasks.execute_approved_artifacts': {'queue': 'long_running'},  # Session 1068: now just a fan-out dispatcher (<1s)
-    'core.tasks.execute_single_artifact': {'queue': 'long_running'},  # Session 1068: per-artifact agent execution, 5min limit
+    'core.tasks.execute_approved_artifacts': {'queue': 'default'},  # Fan-out dispatcher (<1s), moved off long_running to reduce saturation
+    'core.tasks.execute_single_artifact': {'queue': 'default'},  # p50=86ms, 5700 runs/day — lightweight, was saturating long_running
     'core.tasks.generate_pending_reviews': {'queue': 'long_running'},  # LLM review generation, max 254s
     # Session 1000: Intelligence desks — 4 coordinators, heavy memory
     'core.tasks.run_all_desks_intelligence': {'queue': 'long_running'},
@@ -1016,7 +1016,7 @@ CELERY_TASK_ROUTES = {
     'core.tasks.agent_research_to_workspace': {'queue': 'long_running'},
     'core.tasks.agent_content_to_workspace': {'queue': 'long_running'},
     'core.tasks.universal_agent_workspace_output': {'queue': 'long_running'},
-    'core.tasks.agent_category_rotation': {'queue': 'long_running'},
+    'core.tasks.agent_category_rotation': {'queue': 'default'},  # 149ms avg, 301/day — lightweight
     'core.tasks.full_agent_rotation': {'queue': 'long_running'},
     'autonomous.blockchain_security_monitor': {'queue': 'agents'},  # Session 1004: LLM API calls
     # Session 989: Removed phantom autonomous.stock_market_intelligence routing (task didn't exist)
@@ -1051,8 +1051,8 @@ CELERY_TASK_ROUTES = {
     'core.tasks.run_proactive_system_check': {'queue': 'long_running'},  # Chains alerts + suggestions + automations
     'core.tasks.generate_smart_suggestions': {'queue': 'long_running'},  # LLM suggestion generation
     'core.tasks.score_opportunities_from_spider_data': {'queue': 'long_running'},  # Scores up to 100 spider items
-    'core.tasks.process_gate_progression': {'queue': 'long_running'},  # Gate waiving + pilot starts
-    'core.tasks.generate_human_attention_items': {'queue': 'long_running'},  # Scans failed executions + stale items
+    'core.tasks.process_gate_progression': {'queue': 'default'},  # 472ms avg, 348/day — DB operations, not memory-heavy
+    'core.tasks.generate_human_attention_items': {'queue': 'default'},  # 274ms avg, 348/day — DB scan, lightweight
     # Content pipeline tasks that call LLM → content worker
     'core.tasks.reevaluate_enhanced_blogs': {'queue': 'content'},  # PublishGate LLM calls per blog
     'core.tasks.evaluate_unscored_blogs': {'queue': 'content'},  # PublishGate LLM calls per blog
@@ -1065,7 +1065,7 @@ CELERY_TASK_ROUTES = {
     # aggregate_tool_call_stats: 480MB spike — scans all ToolCallRecord rows
     # apply_mood_trigger_rules: 385MB spike — lightweight but triggers on default
     # check_workflow_schedules/sync_workflow_schedules: workflow iteration
-    'core.tasks.send_proactive_opportunity_alerts': {'queue': 'long_running'},
+    'core.tasks.send_proactive_opportunity_alerts': {'queue': 'default'},  # 209ms avg, 174/day — lightweight
     'core.tasks.poll_processing_videos': {'queue': 'content'},
     'core.tasks.aggregate_tool_call_stats': {'queue': 'long_running'},
     'core.tasks.apply_mood_trigger_rules': {'queue': 'broadcast'},
@@ -1181,7 +1181,7 @@ CELERY_TASK_ROUTES = {
     # These 7 tasks had no routing and all landed on default queue,
     # causing repeated OOM crashes (4 restarts in 2 hours).
     'core.tasks.check_celery_health': {'queue': 'broadcast'},
-    'core.tasks.process_core_spider_data': {'queue': 'long_running'},
+    'core.tasks.process_core_spider_data': {'queue': 'default'},  # p50=155ms, 2610 runs/day — lightweight, moved off long_running
     'core.tasks.batch_extract_artifacts': {'queue': 'long_running'},
     'core.tasks.collect_kalshi_prediction_markets': {'queue': 'long_running'},
     'core.tasks.run_stock_audit_cycle': {'queue': 'long_running'},
@@ -1227,7 +1227,7 @@ CELERY_TASK_ROUTES = {
     'core.tasks.run_stock_market_intelligence': {'queue': 'long_running'},
     'core.tasks.check_content_diversity': {'queue': 'long_running'},
     'core.tasks.run_daily_intelligence_digest': {'queue': 'long_running'},
-    'core.tasks.auto_resolve_knowledge_gaps': {'queue': 'long_running'},
+    'core.tasks.auto_resolve_knowledge_gaps': {'queue': 'default'},  # 186ms avg, 840/day — lightweight
     'core.tasks.mine_learning_patterns': {'queue': 'long_running'},
     'core.tasks.run_system_self_audit': {'queue': 'long_running'},
     'core.tasks.generate_weekly_intelligence_brief': {'queue': 'long_running'},
@@ -1237,7 +1237,7 @@ CELERY_TASK_ROUTES = {
     'core.tasks.market_movement_alerts': {'queue': 'long_running'},
     'core.tasks.check_sec_filings_alert': {'queue': 'long_running'},
     'core.tasks.workspace_autopilot_tick': {'queue': 'long_running'},
-    'core.tasks.dispatch_pending_action_items': {'queue': 'long_running'},
+    'core.tasks.dispatch_pending_action_items': {'queue': 'default'},  # 192ms avg, 174/day — lightweight
     'core.tasks.aggregate_spider_signals': {'queue': 'long_running'},
     'core.tasks.process_pending_auto_topics': {'queue': 'long_running'},
 
@@ -1314,7 +1314,7 @@ CELERY_TASK_ROUTES = {
     'core.tasks.run_daily_learning_pipeline': {'queue': 'long_running'},
     'core.tasks.run_project_conversation': {'queue': 'long_running'},
     'core.tasks.run_single_project_learning': {'queue': 'long_running'},
-    'core.tasks.run_diagnostic_pipeline_task': {'queue': 'long_running'},
+    'core.tasks.run_diagnostic_pipeline_task': {'queue': 'default'},  # 178ms avg, 348/day — lightweight
     'core.tasks.run_proactive_system_check': {'queue': 'long_running'},
     'core.tasks.run_agent_health_rotation': {'queue': 'long_running'},
     'core.tasks.run_daily_priority_scan': {'queue': 'broadcast'},
