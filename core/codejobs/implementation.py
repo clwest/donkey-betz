@@ -113,7 +113,17 @@ def _gather_repo_context(workdir, task_prompt, path_filters, log_fn):
         context_parts.append(marker_text)
         budget_used += len(marker_text)
 
-    # 3. Find relevant files via grep on task keywords
+    # 3. Extract explicit file paths mentioned in the task prompt
+    #    (e.g. "frontend/src/components/layout/Layout.tsx")
+    import re as _path_re
+    explicit_paths = set()
+    # Match file paths like foo/bar/baz.ext
+    for match in _path_re.finditer(r'(?:^|\s)((?:[\w.-]+/)+[\w.-]+\.(?:tsx?|jsx?|py|rs|go|css|json|md))', task_prompt):
+        explicit_paths.add(match.group(1))
+    if explicit_paths:
+        log_fn('implement', f'Explicit file paths in task: {sorted(explicit_paths)}')
+
+    # 4. Find relevant files via grep on task keywords
     keywords = [w for w in task_prompt.split() if len(w) > 4 and w.isalpha()][:5]
     relevant_files = set()
     for kw in keywords:
@@ -132,31 +142,79 @@ def _gather_repo_context(workdir, task_prompt, path_filters, log_fn):
 
     # Apply path_filters if set
     if path_filters:
+        # Also find ALL files under the filtered paths (not just grep matches)
+        for pf in path_filters:
+            try:
+                find_result = subprocess.run(
+                    f'find ./{pf} -type f \\( -name "*.py" -o -name "*.ts" -o -name "*.tsx" '
+                    f'-o -name "*.js" -o -name "*.jsx" \\) 2>/dev/null | head -20',
+                    shell=True, cwd=workdir, capture_output=True, text=True, timeout=10,
+                )
+                for f in find_result.stdout.strip().splitlines():
+                    if f.strip():
+                        relevant_files.add(f.strip())
+            except Exception:
+                pass
         relevant_files = {
             f for f in relevant_files
             if any(f.startswith(f'./{pf}') or f.startswith(pf) for pf in path_filters)
         }
 
-    # 4. Read up to 10 relevant files, staying within FILE_BUDGET
+    # Add explicit paths from the task prompt (highest priority)
+    for ep in explicit_paths:
+        rel = f'./{ep}'
+        abs_p = os.path.join(workdir, ep)
+        if os.path.isfile(abs_p):
+            relevant_files.add(rel)
+
+    # 5. Read files, prioritizing explicit paths + smaller files
+    #    Read FULL content for files under 500 lines (likely patch targets).
+    #    These are the files Claude will actually need to generate correct anchors.
     files_budget_used = 0
     files_read = 0
-    for rel_path in sorted(relevant_files)[:10]:
+
+    # Sort: explicit paths first, then by size (smaller first)
+    def _file_sort_key(f):
+        is_explicit = any(f.endswith(ep) or ep in f for ep in explicit_paths)
+        try:
+            size = os.path.getsize(os.path.join(workdir, f.lstrip('./')))
+        except Exception:
+            size = 999999
+        return (0 if is_explicit else 1, size)
+
+    for rel_path in sorted(relevant_files, key=_file_sort_key)[:15]:
         abs_path = os.path.join(workdir, rel_path.lstrip('./'))
         if not os.path.isfile(abs_path):
             continue
         try:
             with open(abs_path, 'r', errors='replace') as f:
-                lines = f.readlines()[:300]
-            chunk = f'## {rel_path} ({len(lines)} lines)\n```\n{"".join(lines)}\n```\n'
+                content = f.read()
+            line_count = content.count('\n') + 1
+
+            # For small files (<500 lines), include FULL content so Claude
+            # can generate exact patch anchors. This is the key fix for
+            # CODEJOB_ANCHOR_NOT_FOUND failures.
+            if line_count <= 500:
+                chunk = f'## {rel_path} (FULL — {line_count} lines)\n```\n{content}\n```\n'
+            else:
+                # For large files, include first 300 lines
+                lines = content.split('\n')[:300]
+                chunk = f'## {rel_path} (first 300 of {line_count} lines)\n```\n{chr(10).join(lines)}\n```\n'
+
             if files_budget_used + len(chunk) > FILE_BUDGET:
-                break
+                # If we're over budget, try truncating this file
+                if files_budget_used < FILE_BUDGET * 0.8:
+                    remaining = FILE_BUDGET - files_budget_used - 200
+                    chunk = f'## {rel_path} (truncated, {line_count} lines total)\n```\n{content[:remaining]}\n... [truncated]\n```\n'
+                else:
+                    break
             context_parts.append(chunk)
             files_budget_used += len(chunk)
             files_read += 1
         except Exception:
             pass
 
-    log_fn('implement', f'Context: {len(file_tree.splitlines())} files in tree, {files_read} files read, {budget_used + files_budget_used} chars')
+    log_fn('implement', f'Context: {len(file_tree.splitlines())} files in tree, {files_read} files read ({len(explicit_paths)} explicit), {budget_used + files_budget_used} chars')
 
     return '\n'.join(context_parts)
 
@@ -230,6 +288,9 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
         'in the "content" field. Each edit is an object with "search" (exact existing text to find) '
         'and "replace" (text to replace it with). Include enough context lines in "search" to be unique. '
         'Example content: [{"search": "def old_func():\\n    return 1", "replace": "def old_func():\\n    return 2"}]\n'
+        'IMPORTANT: Files marked "(FULL)" in the Repository Context below show their COMPLETE '
+        'current content. Copy search strings EXACTLY from that content — do not guess or '
+        'paraphrase. Even small differences in whitespace or quotes will cause the patch to fail.\n'
         'This is MANDATORY for existing files — NEVER use "create" on files already in the repo, '
         'as that replaces the ENTIRE file, destroying existing code.\n'
         '- Use "delete" to remove files.\n'
@@ -615,8 +676,6 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
                     file_text = file_text.replace(search, replace, 1)
                     edit_count += 1
 
-            # If ANY edits failed for this file, raise anchor error
-            # (fail deterministically — no partial patch application)
             if anchor_failures:
                 detail = '; '.join(
                     f'edit #{f["edit_index"]+1}: "{f["search_preview"]}"'
