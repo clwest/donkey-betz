@@ -1034,12 +1034,19 @@ def ingest_url(request):
 
             if not result.success:
                 cid = str(uuid.uuid4())
+                ip_blocked = result.metadata.get('ip_blocked', False) if result.metadata else False
+                video_id = result.metadata.get('video_id') if result.metadata else None
+                status_code = 502 if ip_blocked else 400
                 logger.warning(f"URL processing failed for '{url}' [correlation_id={cid}]: {result.error_message}")
-                return Response({
+                error_response = {
                     'success': False,
                     'error': result.error_message or 'Failed to process URL',
                     'correlation_id': cid,
-                }, status=400)
+                }
+                if ip_blocked:
+                    error_response['error_code'] = 'YOUTUBE_TRANSCRIPT_BLOCKED'
+                    error_response['video_id'] = video_id
+                return Response(error_response, status=status_code)
 
             # Determine document type
             doc_type = DocumentType.YOUTUBE if is_youtube else DocumentType.URL

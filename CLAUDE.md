@@ -1,6 +1,14 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** February 19, 2026 - Session 1035
+**Last Updated:** March 26, 2026
+
+## Working with Rigby (PA)
+
+Claude Code MUST coordinate with Rigby (the Personal Assistant) for all decision-making, questions, and status updates. **Do not ask yes/no or approval questions in the terminal** — route them through Rigby via `python tools/pa_chat.py "message" --tools --conversation <conversation_id>`. The user (Chris) will respond via the Chat UI. Only use the terminal for questions if explicitly told to do so for a specific reason.
+
+- **Active conversation:** Set per session (check with Chris or Rigby)
+- **Tool:** `python tools/pa_chat.py "message" --tools --conversation <id>`
+- **Rigby knows:** current priorities, context, errors, and Chris's preferences
 
 ## Quick Start
 
