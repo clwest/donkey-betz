@@ -348,6 +348,10 @@ class ConversationDeliverableExtractor:
             base_slug = slugify(title)[:200]
             slug = f"{base_slug}-{str(uuid.uuid4())[:8]}"
 
+            # Resolve workspace for deliverable assignment
+            from core.services.deliverable_workspace_resolver import resolve_workspace
+            ws, ws_saved = resolve_workspace()
+
             # Create the Deliverable
             deliverable = Deliverable.objects.create(
                 title=title,
@@ -360,6 +364,8 @@ class ConversationDeliverableExtractor:
                 agent_name=participants[0] if participants else 'ConversationOrchestrator',
                 quality_score=extracted.confidence,
                 confidence_score=extracted.confidence,
+                workspace=ws,
+                is_saved=ws_saved,
                 parent_object_type='conversation',
                 parent_object_id=uuid.UUID(conversation_id) if conversation_id else None,
                 metadata={

@@ -751,6 +751,10 @@ class Initiative(models.Model):
         # Get source dream if exists
         source_dream = self.source_dreams.first()
 
+        # Resolve workspace from initiative
+        from core.services.deliverable_workspace_resolver import resolve_workspace
+        ws, ws_saved = resolve_workspace(initiative=self)
+
         # Create the deliverable
         deliverable = Deliverable.objects.create(
             user=user,
@@ -761,6 +765,8 @@ class Initiative(models.Model):
             status='published',
             initiative=self,
             dream=source_dream,
+            workspace=ws,
+            is_saved=ws_saved,
             category='initiative_completion',
             agent_name='InitiativePipeline',
             metadata={
