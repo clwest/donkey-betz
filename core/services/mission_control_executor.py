@@ -232,6 +232,10 @@ class MissionControlExecutor:
 
                 body = '\n'.join(body_parts)
 
+                # Resolve workspace for deliverable
+                from core.services.deliverable_workspace_resolver import resolve_workspace
+                ws, ws_saved = resolve_workspace()
+
                 # Create the deliverable
                 deliverable = Deliverable.objects.create(
                     user=user,
@@ -239,6 +243,8 @@ class MissionControlExecutor:
                     content=body,
                     content_type=content_type,
                     status='published',
+                    workspace=ws,
+                    is_saved=ws_saved,
                     metadata={
                         'tags': content.get('tags', []),
                         'sources': content.get('sources', []),
