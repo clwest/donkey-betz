@@ -38,6 +38,12 @@ import {
 import { cn } from '@/lib/cn'
 
 // ============================================================================
+// TUNABLE UI CONSTANTS — change these for quick layout tweaks
+// ============================================================================
+const COMPOSER_MIN_PX = 56
+const COMPOSER_MAX_PX = 400
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -1926,7 +1932,7 @@ export default function CommandCenterPage() {
                   // Auto-grow: reset height then set to scrollHeight
                   if (el) {
                     el.style.height = '0'
-                    el.style.height = Math.min(Math.max(el.scrollHeight, 56), 240) + 'px'
+                    el.style.height = Math.min(Math.max(el.scrollHeight, COMPOSER_MIN_PX), COMPOSER_MAX_PX) + 'px'
                   }
                 }}
                 value={input}
@@ -1940,7 +1946,8 @@ export default function CommandCenterPage() {
                 }}
                 onPaste={handlePaste}
                 placeholder={attachments.length > 0 ? 'Add a message...' : (isRecording ? 'Recording...' : 'Type your message...')}
-                className="input flex-1 text-sm leading-5 px-3 py-3 resize-none rounded-xl min-h-[56px] max-h-[240px] overflow-y-auto"
+                className="input flex-1 text-sm leading-5 px-3 py-3 resize-none rounded-xl overflow-y-auto"
+                style={{ minHeight: COMPOSER_MIN_PX, maxHeight: COMPOSER_MAX_PX }}
                 disabled={isBusy || isRecording || voiceChatMutation.isPending}
                 rows={1}
               />
