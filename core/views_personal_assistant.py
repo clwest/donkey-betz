@@ -603,17 +603,33 @@ def voice_to_assistant(request):
             logger.info(f"✅ Transcribed: '{user_text[:100]}...'")
 
         except Exception as e:
-            logger.error(f"❌ Transcription failed: {str(e)}")
+            error_str = str(e)
+            logger.error(f"❌ Transcription failed: {error_str}")
+            # Distinguish client errors (bad audio) from server errors
+            if 'could not be decoded' in error_str or 'format is not supported' in error_str:
+                return Response({
+                    'error': 'Audio format not supported. Please use webm, m4a, or wav.',
+                    'details': error_str,
+                    'code': 'BAD_AUDIO_FORMAT',
+                }, status=400)
+            if 'rate limit' in error_str.lower() or '429' in error_str:
+                return Response({
+                    'error': 'Transcription service temporarily unavailable. Please try again.',
+                    'details': error_str,
+                    'code': 'RATE_LIMITED',
+                }, status=429)
             return Response({
                 'error': 'Failed to transcribe audio',
-                'details': str(e)
+                'details': error_str,
+                'code': 'TRANSCRIPTION_FAILED',
             }, status=500)
 
         # Step 3: Send transcribed text to Personal Assistant
         # (Reusing logic from chat_with_assistant)
         try:
-            # Create assistant fresh each time (contains unpickleable objects like OpenAI client)
-            assistant = PersonalAIAssistant(request.user)
+            # Create assistant via factory to avoid property/inheritance conflicts
+            from core.services.assistant_factory import get_assistant
+            assistant = get_assistant(request.user)
 
             # Process message with optional context
             context = request.data.get('context', {})
