@@ -33,6 +33,7 @@ import {
   PanelLeftClose, PanelLeftOpen, Plus, Brain,
   BarChart3, Shield, BookOpen, Terminal,
   Paperclip, FolderOpen, Image as ImageIcon, FileText, Film, Music, File,
+  Maximize2, Minimize2,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -669,6 +670,9 @@ export default function CommandCenterPage() {
   const [isDashboardCollapsed, setIsDashboardCollapsed] = useState(() => {
     try { return localStorage.getItem('cc_dashboard_collapsed') === 'true' } catch { return false }
   })
+  const [chatFocusMode, setChatFocusMode] = useState(() => {
+    try { return localStorage.getItem('cc_chat_focus_mode') === '1' } catch { return false }
+  })
 
   // Voice state
   const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>(loadVoiceSettings)
@@ -710,6 +714,9 @@ export default function CommandCenterPage() {
   useEffect(() => {
     try { localStorage.setItem('cc_dashboard_collapsed', String(isDashboardCollapsed)) } catch {}
   }, [isDashboardCollapsed])
+  useEffect(() => {
+    try { localStorage.setItem('cc_chat_focus_mode', chatFocusMode ? '1' : '0') } catch {}
+  }, [chatFocusMode])
 
   // Session 948: Navigate to Workspace tabs
   const goToWorkspace = useCallback((tab?: string) => {
@@ -1489,8 +1496,8 @@ export default function CommandCenterPage() {
                 <Bot size={18} className="text-primary-400" />
               </div>
               <div>
-                <h2 className="font-medium text-sm">AI Assistant</h2>
-                <p className="text-xs text-gray-500">GPT-5-mini</p>
+                <h2 className="font-medium text-sm">Rigby</h2>
+                <p className="text-xs text-gray-500">Personal Assistant</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -1501,6 +1508,25 @@ export default function CommandCenterPage() {
                 title="New Chat"
               >
                 <Plus size={14} />
+              </button>
+
+              {/* Focus Mode Toggle */}
+              <button
+                className={cn(
+                  'btn btn-sm gap-1.5 transition-all',
+                  chatFocusMode
+                    ? 'bg-primary-600/20 text-primary-400 border-primary-500/40 hover:bg-primary-600/30'
+                    : 'btn-secondary'
+                )}
+                onClick={() => {
+                  const next = !chatFocusMode
+                  setChatFocusMode(next)
+                  if (next) setIsDashboardCollapsed(true)
+                }}
+                title={chatFocusMode ? 'Exit Focus Mode' : 'Focus Mode — maximize chat area'}
+              >
+                {chatFocusMode ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                <span className="text-xs font-medium hidden sm:inline">{chatFocusMode ? 'Exit Focus' : 'Focus'}</span>
               </button>
 
               {/* Voice Mode Toggle */}
@@ -1637,8 +1663,8 @@ export default function CommandCenterPage() {
             </div>
           )}
 
-          {/* Messages */}
-          <div ref={chatContainerRef} className="flex-1 overflow-auto space-y-3 pb-3">
+          {/* Messages — flex-1 with min-h-0 to allow shrink, contained scroll */}
+          <div ref={chatContainerRef} className="flex-1 min-h-0 overflow-y-auto px-3 py-2 space-y-3">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-400">
                 <Bot size={40} className="mb-3 opacity-50" />
@@ -1829,8 +1855,8 @@ export default function CommandCenterPage() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input */}
-          <div className="border-t border-dark-border pt-3">
+          {/* Composer — sticky at bottom of chat panel */}
+          <div className="shrink-0 border-t border-dark-border pt-3 pb-1">
             {/* Attachment chips */}
             {attachments.length > 0 && (
               <div className="px-1 pb-2 flex flex-wrap gap-1.5">
@@ -1895,15 +1921,28 @@ export default function CommandCenterPage() {
                   <Mic size={16} />
                 )}
               </button>
-              <input
-                type="text"
+              <textarea
+                ref={(el) => {
+                  // Auto-grow: reset height then set to scrollHeight
+                  if (el) {
+                    el.style.height = '0'
+                    el.style.height = Math.min(Math.max(el.scrollHeight, 56), 240) + 'px'
+                  }
+                }}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyPress}
+                onKeyDown={(e) => {
+                  // Enter sends, Shift+Enter adds newline
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    handleKeyPress(e as any)
+                  }
+                }}
                 onPaste={handlePaste}
                 placeholder={attachments.length > 0 ? 'Add a message...' : (isRecording ? 'Recording...' : 'Type your message...')}
-                className="input flex-1 text-sm"
+                className="input flex-1 text-sm leading-5 px-3 py-3 resize-none rounded-xl min-h-[56px] max-h-[240px] overflow-y-auto"
                 disabled={isBusy || isRecording || voiceChatMutation.isPending}
+                rows={1}
               />
               <button
                 onClick={() => sendMessage()}
@@ -1916,8 +1955,8 @@ export default function CommandCenterPage() {
           </div>
         </div>
 
-        {/* Sidebar */}
-        {showSidebar && (
+        {/* Sidebar — hidden in focus mode */}
+        {showSidebar && !chatFocusMode && (
           <div className="w-72 flex flex-col overflow-hidden border-l border-dark-border pl-4">
             {/* Sidebar Tabs */}
             <div className="flex gap-1 mb-3 p-1 bg-dark-bg rounded-lg">
