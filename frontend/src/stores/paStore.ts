@@ -23,7 +23,7 @@ interface AsyncJob {
 
 interface Message {
   id: string
-  role: 'user' | 'assistant'
+  role: 'user' | 'assistant' | 'tool' | 'system'
   content: string
   timestamp: string // ISO string for persistence
   tools_used?: string[]
@@ -143,7 +143,7 @@ export const usePAStore = create<PAState>()(
           if (data.success) {
             set({
               activeConversationId: id,
-              messages: data.messages.map((m: { id: string; role: 'user' | 'assistant'; content: string; timestamp: string; tools_used?: string[]; source?: string }) => ({
+              messages: data.messages.map((m: { id: string; role: 'user' | 'assistant' | 'tool' | 'system'; content: string; timestamp: string; tools_used?: string[]; source?: string }) => ({
                 id: m.id,
                 role: m.role,
                 content: m.content,
