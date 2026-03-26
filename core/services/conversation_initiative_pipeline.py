@@ -529,6 +529,9 @@ class ConversationInitiativePipeline:
             base_slug = slugify(deliverable_title)[:200]
             slug = f"{base_slug}-{str(uuid.uuid4())[:8]}"
 
+            from core.services.deliverable_workspace_resolver import resolve_workspace
+            ws, ws_saved = resolve_workspace(initiative=initiative)
+
             deliverable = Deliverable.objects.create(
                 title=deliverable_title,
                 slug=slug,
@@ -540,7 +543,9 @@ class ConversationInitiativePipeline:
                 agent_name=participants[0] if participants else 'ConversationOrchestrator',
                 quality_score=0.7,
                 confidence_score=0.7,
-                initiative=initiative,  # Link to Initiative!
+                initiative=initiative,
+                workspace=ws,
+                is_saved=ws_saved,
                 parent_object_type='conversation',
                 parent_object_id=uuid.UUID(conversation_id) if conversation_id else None,
                 metadata={

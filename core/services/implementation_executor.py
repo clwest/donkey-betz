@@ -342,6 +342,8 @@ class WorkflowUpdateHandler(BaseHandler):
 
         try:
             from core.models_deliverables import Deliverable
+            from core.services.deliverable_workspace_resolver import resolve_workspace
+            ws, ws_saved = resolve_workspace()
 
             deliverable = Deliverable.objects.create(
                 title=template_name,
@@ -353,6 +355,8 @@ class WorkflowUpdateHandler(BaseHandler):
                 agent_task=f"Pilot implementation: {decision.topic[:100]}",
                 status='completed',
                 quality_score=0.75,
+                workspace=ws,
+                is_saved=ws_saved,
                 metadata={
                     'source_pilot': str(implementation.pilot.id),
                     'decision_type': decision.decision_type,
@@ -622,6 +626,8 @@ class ConfigUpdateHandler(BaseHandler):
         # Store the proposed change as a deliverable for reference
         try:
             from core.models_deliverables import Deliverable
+            from core.services.deliverable_workspace_resolver import resolve_workspace
+            ws, ws_saved = resolve_workspace()
 
             content = (
                 f"# Config Change Proposal\n\n"
@@ -642,6 +648,8 @@ class ConfigUpdateHandler(BaseHandler):
                 preview_content=content[:500],
                 agent_name='ConfigUpdateHandler',
                 status='completed',
+                workspace=ws,
+                is_saved=ws_saved,
                 metadata={
                     'source_pilot': str(implementation.pilot.id),
                     'requires_human': True,
