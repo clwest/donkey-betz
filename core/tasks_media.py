@@ -715,6 +715,183 @@ def _impl_ingest_video_task(self, document_id, tmp_video_path, original_filename
 
 
 # ============================================================
+# YouTube Whisper Fallback — download audio via yt-dlp, transcribe with Whisper
+# ============================================================
+
+def _impl_youtube_whisper_task(self, document_id, youtube_url, user_id, language='en'):
+    """
+    Download YouTube audio via yt-dlp, transcribe with OpenAI Whisper API.
+    Fallback for when youtube-transcript-api is blocked by YouTube IP restrictions.
+    """
+    import os
+    import tempfile
+    from django.conf import settings as django_settings
+    from content.models import Document
+
+    document = None
+    audio_path = None
+
+    try:
+        document = Document.objects.get(id=document_id)
+        document.status = 'processing'
+        document.save(update_fields=['status'])
+        document.add_processing_log('youtube_whisper', 'started', {'url': youtube_url})
+
+        # --- Stage 1: Download audio via yt-dlp ---
+        audio_fd, audio_path = tempfile.mkstemp(suffix='.mp3')
+        os.close(audio_fd)
+
+        import yt_dlp
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'outtmpl': audio_path,
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '64',
+            }],
+            'quiet': True,
+            'no_warnings': True,
+            'socket_timeout': 30,
+            'retries': 2,
+        }
+
+        # yt-dlp appends the extension, so remove the temp file first
+        if os.path.exists(audio_path):
+            os.unlink(audio_path)
+
+        logger.info(f"🎤 Downloading YouTube audio for document {document_id}: {youtube_url}")
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(youtube_url, download=True)
+
+        # yt-dlp may produce audio_path or audio_path.mp3
+        if not os.path.exists(audio_path) and os.path.exists(audio_path + '.mp3'):
+            os.rename(audio_path + '.mp3', audio_path)
+
+        if not os.path.exists(audio_path):
+            raise RuntimeError("yt-dlp download completed but audio file not found")
+
+        duration_seconds = info.get('duration', 0) or 0
+        video_title = info.get('title', '') or youtube_url
+
+        # Cap at 2 hours
+        if duration_seconds > 7200:
+            raise RuntimeError(f"Video too long ({duration_seconds}s / {duration_seconds // 60}min). Max: 2 hours.")
+
+        audio_size_mb = os.path.getsize(audio_path) / (1024 * 1024)
+        document.add_processing_log('yt_dlp_download', 'success', {
+            'audio_size_mb': round(audio_size_mb, 1),
+            'duration_seconds': duration_seconds,
+            'title': video_title[:200],
+        })
+        logger.info(f"🎤 Audio downloaded: {audio_size_mb:.1f}MB, {duration_seconds}s for document {document_id}")
+
+        # Whisper API limit is 25MB — check before sending
+        if audio_size_mb > 25:
+            raise RuntimeError(f"Audio too large ({audio_size_mb:.1f}MB). Whisper API max is 25MB.")
+
+        # --- Stage 2: Transcribe with OpenAI Whisper ---
+        from openai import OpenAI
+        client = OpenAI(api_key=django_settings.OPENAI_API_KEY)
+
+        with open(audio_path, 'rb') as audio_file:
+            transcript = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file,
+                language=language,
+                response_format="verbose_json",
+                timestamp_granularities=["segment"],
+            )
+
+        segments = transcript.segments or []
+        full_text = transcript.text or ''
+
+        document.add_processing_log('whisper_transcription', 'success', {
+            'segment_count': len(segments),
+            'text_length': len(full_text),
+            'language': language,
+        })
+
+        # --- Stage 3: Store transcript in Document ---
+        lines = []
+        raw_segments = []
+        for seg in segments:
+            if isinstance(seg, dict):
+                start_sec = seg.get('start', 0)
+                text = seg.get('text', '').strip()
+                raw_segments.append(seg)
+            else:
+                start_sec = getattr(seg, 'start', 0)
+                text = getattr(seg, 'text', '').strip()
+                raw_segments.append({
+                    'start': getattr(seg, 'start', 0),
+                    'end': getattr(seg, 'end', 0),
+                    'text': text,
+                })
+            minutes = int(start_sec // 60)
+            seconds = int(start_sec % 60)
+            lines.append(f"[{minutes:02d}:{seconds:02d}] {text}")
+
+        processed_content = '\n'.join(lines)
+
+        document.title = document.title or video_title[:200]
+        document.raw_content = full_text[:100000]
+        document.processed_content = processed_content[:100000]
+        document.source_url = youtube_url
+        document.extracted_metadata = {
+            'segments': raw_segments,
+            'segment_count': len(raw_segments),
+            'duration_seconds': round(duration_seconds, 1),
+            'audio_size_mb': round(audio_size_mb, 1),
+            'language': language,
+            'video_title': video_title,
+            'transcription_method': 'whisper_fallback',
+        }
+        document.word_count = len(full_text.split())
+        document.language = language
+        document.status = 'processed'
+        document.save(update_fields=[
+            'title', 'raw_content', 'processed_content', 'source_url',
+            'extracted_metadata', 'word_count', 'language', 'status',
+        ])
+
+        # --- Stage 4: Dispatch embedding generation ---
+        generate_document_embeddings.delay(str(document.id))
+
+        logger.info(f"🎤 YouTube Whisper ingest complete for {document_id}: {len(segments)} segments, {document.word_count} words")
+
+        return {
+            'status': 'success',
+            'document_id': str(document_id),
+            'title': video_title[:200],
+            'segment_count': len(segments),
+            'word_count': document.word_count,
+            'duration_seconds': round(duration_seconds, 1),
+        }
+
+    except Document.DoesNotExist:
+        logger.error(f"🎤 Document not found: {document_id}")
+        return {'status': 'error', 'error': f'Document {document_id} not found'}
+
+    except Exception as exc:
+        logger.error(f"🎤 YouTube Whisper failed for {document_id}: {exc}")
+        if document:
+            document.status = 'failed'
+            document.error_message = str(exc)[:1000]
+            document.save(update_fields=['status', 'error_message'])
+            document.add_processing_log('youtube_whisper', 'failed', {'error': str(exc)[:500]})
+        raise self.retry(exc=exc, countdown=120, max_retries=1)
+
+    finally:
+        if audio_path and os.path.exists(audio_path):
+            try:
+                os.unlink(audio_path)
+            except OSError:
+                pass
+
+
+# ============================================================
 # SESSION 420: Training Data Collection from HuggingFace
 # ============================================================
 
