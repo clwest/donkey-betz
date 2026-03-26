@@ -37,6 +37,7 @@ import {
   Youtube,
   Globe,
   AlertTriangle,
+  Mic,
 } from 'lucide-react'
 import { ragApi } from '@/lib/api'
 import Breadcrumb from '@/components/Breadcrumb'
@@ -144,10 +145,14 @@ interface CrawlOptions {
 
 function URLIngestZone({
   onIngestUrl,
+  onWhisperFallback,
   isIngesting,
+  isWhisperRunning,
 }: {
   onIngestUrl: (url: string, title?: string, crawlOptions?: CrawlOptions) => void
+  onWhisperFallback?: (url: string, title?: string) => void
   isIngesting: boolean
+  isWhisperRunning?: boolean
 }) {
   const [url, setUrl] = useState('')
   const [title, setTitle] = useState('')
@@ -329,6 +334,38 @@ function URLIngestZone({
             </>
           )}
         </button>
+
+        {/* Whisper Fallback Button — shown for YouTube URLs */}
+        {isYouTube && onWhisperFallback && (
+          <button
+            type="button"
+            onClick={() => {
+              if (url.trim() && isValidUrl) {
+                onWhisperFallback(url.trim(), title.trim() || undefined)
+                setUrl('')
+                setTitle('')
+              }
+            }}
+            disabled={isWhisperRunning || isIngesting || !url.trim() || !isValidUrl}
+            className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              isWhisperRunning || isIngesting || !url.trim() || !isValidUrl
+                ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                : 'bg-gray-700 border border-gray-600 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            {isWhisperRunning ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Transcribing with Whisper...
+              </>
+            ) : (
+              <>
+                <Mic className="h-4 w-4" />
+                Transcribe with Whisper (fallback)
+              </>
+            )}
+          </button>
+        )}
       </form>
 
       {/* Help Text */}
@@ -890,6 +927,59 @@ export default function DocumentsPage() {
     },
   })
 
+  // YouTube Whisper fallback mutation (async — returns job_id, polls for status)
+  const [whisperJobId, setWhisperJobId] = useState<string | null>(null)
+  const whisperPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const whisperMutation = useMutation({
+    mutationFn: async ({ url, title }: { url: string; title?: string }) => {
+      const response = await ragApi.ingestYoutubeWhisper(url, { title })
+      return response.data
+    },
+    onSuccess: (data) => {
+      setIngestError(null)
+      setIngestErrorCode(null)
+      setIngestErrorDetails(null)
+      setWhisperJobId(data.job_id)
+      setIngestWarning('Whisper transcription started — downloading audio and transcribing. This may take a few minutes...')
+
+      // Poll for completion
+      if (whisperPollRef.current) clearInterval(whisperPollRef.current)
+      whisperPollRef.current = setInterval(async () => {
+        try {
+          const statusResp = await ragApi.ingestStatus(data.job_id)
+          const status = statusResp.data
+          if (status.status === 'completed' || status.status === 'success') {
+            if (whisperPollRef.current) clearInterval(whisperPollRef.current)
+            setWhisperJobId(null)
+            setIngestWarning(`Whisper transcription complete — ${status.word_count || 0} words, ${status.segment_count || 0} segments`)
+            queryClient.invalidateQueries({ queryKey: ['rag-documents'] })
+            queryClient.invalidateQueries({ queryKey: ['rag-stats'] })
+          } else if (status.status === 'failed') {
+            if (whisperPollRef.current) clearInterval(whisperPollRef.current)
+            setWhisperJobId(null)
+            setIngestWarning(null)
+            setIngestError(status.error || 'Whisper transcription failed')
+            setIngestErrorCode(null)
+          }
+        } catch {
+          // Polling error — keep trying
+        }
+      }, 5000)
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.error || error.message || 'Failed to start Whisper transcription'
+      setIngestError(errorMessage)
+      setIngestErrorCode(null)
+      setIngestErrorDetails(null)
+    },
+  })
+
+  const handleWhisperFallback = (url: string, title?: string) => {
+    setIngestError(null)
+    whisperMutation.mutate({ url, title })
+  }
+
   // Search mutation
   const searchMutation = useMutation({
     mutationFn: async (query: string) => {
@@ -1121,7 +1211,9 @@ export default function DocumentsPage() {
         <div className="space-y-6">
           <URLIngestZone
             onIngestUrl={handleIngestUrl}
+            onWhisperFallback={handleWhisperFallback}
             isIngesting={ingestUrlMutation.isPending}
+            isWhisperRunning={whisperMutation.isPending || !!whisperJobId}
           />
           <UploadZone
             onUpload={handleUpload}

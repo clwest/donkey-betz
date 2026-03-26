@@ -1246,6 +1246,7 @@ CELERY_TASK_ROUTES = {
     'core.tasks.embed_daily_agent_learning': {'queue': 'ml'},
     'core.tasks.generate_document_embeddings': {'queue': 'ml'},
     'core.tasks.ingest_video_task': {'queue': 'long_running'},
+    'core.tasks.youtube_whisper_task': {'queue': 'long_running'},
     'core.tasks.generate_memory_embedding': {'queue': 'ml'},
     'core.tasks.collect_training_data': {'queue': 'ml'},
 

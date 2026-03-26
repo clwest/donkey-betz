@@ -1294,6 +1294,66 @@ def ingest_file(request):
 
 
 # ============================================================
+# YouTube Whisper Fallback — download audio + Whisper transcription
+# ============================================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@throttle_classes([RagIngestThrottle])
+def ingest_youtube_whisper(request):
+    """
+    Fallback YouTube ingest: downloads audio via yt-dlp and transcribes with Whisper.
+    Use when youtube-transcript-api is blocked by YouTube IP restrictions.
+    Returns 202 with job_id for async polling via ingest_video_status.
+    """
+    data = request.data if hasattr(request, 'data') else json.loads(request.body or b"{}")
+    url = data.get('url', '').strip()
+    language = data.get('language', 'en').strip() or 'en'
+    title = data.get('title', '').strip()
+
+    if not url:
+        return Response({'success': False, 'error': 'URL is required'}, status=400)
+
+    is_youtube = 'youtube.com' in url or 'youtu.be' in url
+    if not is_youtube:
+        return Response({'success': False, 'error': 'Only YouTube URLs are supported for Whisper fallback'}, status=400)
+
+    try:
+        from content.models import Document, DocumentType
+
+        document = Document.objects.create(
+            owner=request.user,
+            title=title or f'YouTube Whisper: {url[:80]}',
+            document_type=DocumentType.YOUTUBE,
+            source_url=url,
+            status='pending',
+            metadata={'transcription_method': 'whisper_fallback', 'language': language},
+        )
+
+        from core.tasks import youtube_whisper_task
+        task = youtube_whisper_task.delay(
+            str(document.id), url, str(request.user.id), language
+        )
+
+        return Response({
+            'success': True,
+            'job_id': task.id,
+            'document_id': str(document.id),
+            'status_url': f'/api/documents/ingest-video/status/{task.id}/',
+            'message': 'YouTube audio download and Whisper transcription started. This may take a few minutes.',
+        }, status=202)
+
+    except Exception as e:
+        cid = str(uuid.uuid4())
+        logger.exception(f"Error starting YouTube Whisper ingest '{url}' [correlation_id={cid}]: {e}")
+        return Response({
+            'success': False,
+            'error': str(e),
+            'correlation_id': cid,
+        }, status=500)
+
+
+# ============================================================
 # Video RAG Ingest
 # ============================================================
 
