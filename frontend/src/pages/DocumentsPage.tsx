@@ -772,6 +772,9 @@ export default function DocumentsPage() {
   const queryClient = useQueryClient()
   const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null)
   const [ingestError, setIngestError] = useState<string | null>(null)
+  const [ingestErrorCode, setIngestErrorCode] = useState<string | null>(null)
+  const [ingestErrorDetails, setIngestErrorDetails] = useState<string | null>(null)
+  const [showErrorDetails, setShowErrorDetails] = useState(false)
   const [ingestWarning, setIngestWarning] = useState<string | null>(null)
 
   // Fetch stats
@@ -818,11 +821,15 @@ export default function DocumentsPage() {
     },
     onSuccess: () => {
       setIngestError(null)
+      setIngestErrorCode(null)
+      setIngestErrorDetails(null)
       setIngestWarning(null)
       queryClient.invalidateQueries({ queryKey: ['rag-documents'] })
       queryClient.invalidateQueries({ queryKey: ['rag-stats'] })
     },
     onError: (error: Error) => {
+      setIngestErrorCode(null)
+      setIngestErrorDetails(null)
       setIngestError(error.message || 'Failed to upload file')
     },
   })
@@ -843,6 +850,8 @@ export default function DocumentsPage() {
     },
     onSuccess: (data) => {
       setIngestError(null)
+      setIngestErrorCode(null)
+      setIngestErrorDetails(null)
       if (data.warning) {
         setIngestWarning(data.warning)
       } else if (data.crawl_stats) {
@@ -854,8 +863,24 @@ export default function DocumentsPage() {
       queryClient.invalidateQueries({ queryKey: ['rag-documents'] })
       queryClient.invalidateQueries({ queryKey: ['rag-stats'] })
     },
-    onError: (error: Error) => {
-      setIngestError(error.message || 'Failed to import URL')
+    onError: (error: any) => {
+      const responseData = error?.response?.data
+      const errorCode = responseData?.error_code || null
+      const correlationId = responseData?.correlation_id || null
+      const errorMessage = responseData?.error || error.message || 'Failed to import URL'
+
+      setIngestErrorCode(errorCode)
+      setShowErrorDetails(false)
+
+      if (errorCode === 'YOUTUBE_TRANSCRIPT_BLOCKED') {
+        setIngestError('YouTube is blocking transcript requests from our server. An admin needs to configure a proxy to resolve this.')
+        setIngestErrorDetails(
+          [correlationId ? `Correlation ID: ${correlationId}` : '', 'Fix: set YOUTUBE_PROXY_URL env var on Railway with a residential proxy URL.'].filter(Boolean).join('\n')
+        )
+      } else {
+        setIngestError(errorMessage)
+        setIngestErrorDetails(correlationId ? `Correlation ID: ${correlationId}` : null)
+      }
     },
   })
 
@@ -959,15 +984,42 @@ export default function DocumentsPage() {
 
       {/* Error/Warning Banners */}
       {ingestError && (
-        <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-4 flex items-start gap-3">
-          <XCircle className="h-5 w-5 text-red-400 shrink-0 mt-0.5" />
-          <div>
-            <div className="font-medium text-red-400">Import Error</div>
-            <div className="text-sm text-red-300/80">{ingestError}</div>
+        <div className={`rounded-lg p-4 flex items-start gap-3 ${
+          ingestErrorCode === 'YOUTUBE_TRANSCRIPT_BLOCKED'
+            ? 'bg-orange-500/10 border border-orange-500/30'
+            : 'bg-red-500/10 border border-red-500/30'
+        }`}>
+          <XCircle className={`h-5 w-5 shrink-0 mt-0.5 ${
+            ingestErrorCode === 'YOUTUBE_TRANSCRIPT_BLOCKED' ? 'text-orange-400' : 'text-red-400'
+          }`} />
+          <div className="flex-1">
+            <div className={`font-medium ${
+              ingestErrorCode === 'YOUTUBE_TRANSCRIPT_BLOCKED' ? 'text-orange-400' : 'text-red-400'
+            }`}>
+              {ingestErrorCode === 'YOUTUBE_TRANSCRIPT_BLOCKED' ? 'YouTube Transcript Blocked' : 'Import Error'}
+            </div>
+            <div className={`text-sm ${
+              ingestErrorCode === 'YOUTUBE_TRANSCRIPT_BLOCKED' ? 'text-orange-300/80' : 'text-red-300/80'
+            }`}>{ingestError}</div>
+            {ingestErrorDetails && (
+              <div className="mt-2">
+                <button
+                  onClick={() => setShowErrorDetails(!showErrorDetails)}
+                  className="text-xs text-zinc-500 hover:text-zinc-400 underline"
+                >
+                  {showErrorDetails ? 'Hide details' : 'Show details'}
+                </button>
+                {showErrorDetails && (
+                  <div className="mt-1 text-xs text-zinc-500 font-mono">{ingestErrorDetails}</div>
+                )}
+              </div>
+            )}
           </div>
           <button
-            onClick={() => setIngestError(null)}
-            className="ml-auto text-red-400 hover:text-red-300"
+            onClick={() => { setIngestError(null); setIngestErrorCode(null); setIngestErrorDetails(null); }}
+            className={`ml-auto ${
+              ingestErrorCode === 'YOUTUBE_TRANSCRIPT_BLOCKED' ? 'text-orange-400 hover:text-orange-300' : 'text-red-400 hover:text-red-300'
+            }`}
           >
             <XCircle className="h-4 w-4" />
           </button>

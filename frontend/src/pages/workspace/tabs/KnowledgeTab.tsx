@@ -174,7 +174,14 @@ function IngestPanel() {
       })
       if (!r.ok) {
         const err = await r.json().catch(() => ({}))
-        throw new Error(err.error || `Ingest failed: ${r.status}`)
+        const error = new Error(
+          err.error_code === 'YOUTUBE_TRANSCRIPT_BLOCKED'
+            ? 'YouTube is blocking transcript requests from our server. An admin needs to configure a proxy to resolve this.'
+            : err.error || `Ingest failed: ${r.status}`
+        )
+        ;(error as any).errorCode = err.error_code || null
+        ;(error as any).correlationId = err.correlation_id || null
+        throw error
       }
       return r.json()
     },
@@ -252,8 +259,17 @@ function IngestPanel() {
           </div>
         )}
         {ingestUrlMutation.isError && (
-          <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+          <div className={`mt-3 p-3 rounded-lg text-sm ${
+            (ingestUrlMutation.error as any)?.errorCode === 'YOUTUBE_TRANSCRIPT_BLOCKED'
+              ? 'bg-orange-500/10 border border-orange-500/20 text-orange-400'
+              : 'bg-red-500/10 border border-red-500/20 text-red-400'
+          }`}>
             {(ingestUrlMutation.error as Error).message}
+            {(ingestUrlMutation.error as any)?.correlationId && (
+              <div className="mt-1 text-xs opacity-60 font-mono">
+                Correlation ID: {(ingestUrlMutation.error as any).correlationId}
+              </div>
+            )}
           </div>
         )}
       </div>
