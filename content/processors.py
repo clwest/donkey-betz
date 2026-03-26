@@ -64,6 +64,7 @@ except ImportError:
 
 try:
     from youtube_transcript_api import YouTubeTranscriptApi
+    from youtube_transcript_api.proxies import GenericProxyConfig
     HAS_YOUTUBE = True
 except ImportError:
     HAS_YOUTUBE = False
@@ -806,8 +807,10 @@ class YouTubeProcessor(BaseProcessor):
             metadata['processor'] = 'YouTubeProcessor'
             metadata['source_url'] = url
 
-            # Create API instance
-            ytt_api = YouTubeTranscriptApi()
+            # Create API instance (with proxy if configured, to avoid YouTube IP blocks on cloud providers)
+            proxy_url = os.environ.get('YOUTUBE_PROXY_URL', '')
+            proxy_config = GenericProxyConfig(https_url=proxy_url) if proxy_url else None
+            ytt_api = YouTubeTranscriptApi(proxy_config=proxy_config)
 
             # List available transcripts
             transcript_list = ytt_api.list(video_id)
@@ -888,11 +891,13 @@ class YouTubeProcessor(BaseProcessor):
             # Handle common errors
             if "Subtitles are disabled" in error_msg or "No transcripts" in error_msg:
                 error_msg = "This video does not have transcripts/captions available"
+            elif "blocking requests from your IP" in error_msg or "RequestBlocked" in type(e).__name__:
+                error_msg = "YouTube is blocking transcript requests from this server. A proxy must be configured to resolve this."
 
             return ProcessingResult(
                 success=False,
                 error_message=error_msg,
-                metadata={'video_id': video_id, 'source_url': url},
+                metadata={'video_id': video_id, 'source_url': url, 'ip_blocked': 'blocking' in str(e).lower()},
                 processing_steps=[
                     {'step': 'transcript_fetch', 'status': 'error', 'error': error_msg}
                 ]

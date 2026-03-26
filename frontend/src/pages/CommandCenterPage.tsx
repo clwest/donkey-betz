@@ -1064,7 +1064,7 @@ export default function CommandCenterPage() {
       }
     },
     onError: () => {
-      setActionResult({ type: 'error', message: 'Failed to generate speech' })
+      // TTS failure is non-fatal — silently reset state without showing error banner
       setIsSpeaking(false)
       setSpeakingMessageId(null)
       setVoiceState('idle')
