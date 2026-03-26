@@ -429,6 +429,45 @@ def export_deliverable(request, deliverable_id):
         }, status=500)
 
 
+@require_POST
+@token_auth_required
+def link_deliverable_workspace(request, deliverable_id):
+    """Link a deliverable to a workspace (set workspace FK)."""
+    import json
+
+    try:
+        deliverable = get_object_or_404(Deliverable, id=deliverable_id)
+
+        body = json.loads(request.body) if request.body else {}
+        workspace_id = body.get('workspace_id', '')
+        if not workspace_id:
+            return JsonResponse({'success': False, 'error': 'workspace_id is required'}, status=400)
+
+        from core.models_skin_layer import ProjectWorkspace
+        workspace = get_object_or_404(ProjectWorkspace, id=workspace_id)
+
+        # Don't overwrite if already linked to a different workspace
+        if deliverable.workspace_id and str(deliverable.workspace_id) != str(workspace_id):
+            return JsonResponse({
+                'success': False,
+                'error': f'Already linked to workspace {deliverable.workspace_id}',
+            }, status=409)
+
+        deliverable.workspace = workspace
+        deliverable.save(update_fields=['workspace', 'updated_at'])
+
+        return JsonResponse({
+            'success': True,
+            'deliverable_id': str(deliverable.id),
+            'workspace_id': str(workspace.id),
+            'workspace_name': workspace.name,
+        })
+
+    except Exception as e:
+        logger.error(f"Error linking deliverable {deliverable_id}: {e}", exc_info=True)
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
 @require_GET
 def get_deliverable_stats(request):
     """Get statistics about deliverables."""

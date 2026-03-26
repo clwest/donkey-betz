@@ -33,6 +33,7 @@ import {
 import { cn } from '@/lib/cn'
 import { deliverablesApi } from '@/lib/api'
 import { ErrorState } from '@/components/ErrorState'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { usePAStore } from '@/stores/paStore'
 import { useAssistantContextStore } from '@/stores/assistantContextStore'
 
@@ -159,12 +160,13 @@ export function DeliverablesTab() {
   const [showFilters, setShowFilters] = useState(false)
 
   // ---- Queries ----
-  // Note: workspace filter removed — PA-created and system deliverables have
-  // workspace_id=None, so filtering by workspace hides them from the list.
+  // Workspace-aware: when viewed inside a workspace context, filter by
+  // workspace. When on the global /deliverables page, show everything.
+  const activeWsId = useWorkspaceStore(s => s.activeWorkspace?.id)
 
   const statsQuery = useQuery({
-    queryKey: ['deliverables-stats'],
-    queryFn: () => deliverablesApi.stats().then(r => r.data),
+    queryKey: ['deliverables-stats', activeWsId],
+    queryFn: () => deliverablesApi.stats(activeWsId ? { workspace: activeWsId } : undefined).then(r => r.data),
   })
 
   const typesQuery = useQuery({
@@ -173,11 +175,12 @@ export function DeliverablesTab() {
   })
 
   const listQuery = useQuery({
-    queryKey: ['deliverables-list', page, filters],
+    queryKey: ['deliverables-list', page, filters, activeWsId],
     queryFn: () => deliverablesApi.list({
       ...filters,
       page,
       per_page: 20,
+      ...(activeWsId ? { workspace: activeWsId } : {}),
     }).then(r => r.data),
   })
 
