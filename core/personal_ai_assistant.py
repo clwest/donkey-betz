@@ -65,11 +65,19 @@ class PersonalAIAssistant:
             self._agent_registry = get_agent_registry()
         return self._agent_registry
 
+    @agent_registry.setter
+    def agent_registry(self, value):
+        self._agent_registry = value
+
     @property
     def advisor_registry(self):
         if self._advisor_registry is None:
             self._advisor_registry = get_advisor_registry()
         return self._advisor_registry
+
+    @advisor_registry.setter
+    def advisor_registry(self, value):
+        self._advisor_registry = value
 
     @property
     def ml_engine(self):
