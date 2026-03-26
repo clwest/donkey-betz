@@ -142,6 +142,17 @@ class ChatConversation(models.Model):
         help_text="Whether this session is still active/resumable"
     )
 
+    # Workspace binding — conversations started in a workspace stay bound to it
+    workspace = models.ForeignKey(
+        'core.ProjectWorkspace',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='chat_conversations',
+        db_index=True,
+        help_text="Workspace this conversation is bound to (set when started from a workspace)"
+    )
+
     # Context and metadata
     context_used = models.JSONField(default=dict)  # RAG context if any
     metadata = models.JSONField(default=dict)

@@ -4716,6 +4716,28 @@ def _impl_process_pa_chat_task(self, user_id, message, context=None, generate_au
             raw_metadata['lane'] = response.lane
         metadata = json.loads(json.dumps(raw_metadata, default=str))
 
+        # Resolve workspace for conversation binding
+        conv_workspace = None
+        ctx = context or {}
+        ws_id = ctx.get('workspace_id')
+        if ws_id:
+            try:
+                from core.models_skin_layer import ProjectWorkspace
+                conv_workspace = ProjectWorkspace.objects.filter(id=ws_id).first()
+            except Exception:
+                pass
+        # Also check if this conversation already has a workspace binding
+        if not conv_workspace:
+            existing = ChatConversation.objects.filter(
+                conversation_id=conversation_id, workspace__isnull=False
+            ).values_list('workspace_id', flat=True).first()
+            if existing:
+                try:
+                    from core.models_skin_layer import ProjectWorkspace
+                    conv_workspace = ProjectWorkspace.objects.filter(id=existing).first()
+                except Exception:
+                    pass
+
         chat_row = ChatConversation.objects.create(
             user=user,
             conversation_id=conversation_id,
@@ -4723,6 +4745,7 @@ def _impl_process_pa_chat_task(self, user_id, message, context=None, generate_au
             assistant_response=response.content or '',
             platform=platform,
             source=source,  # Session 1074: Collaboration protocol actor tracking
+            workspace=conv_workspace,
             metadata=metadata,
             response_time_ms=response.latency_ms or elapsed_ms,
             agents_used=[r.get('tool', '') for r in (response.tool_runs or [])],
