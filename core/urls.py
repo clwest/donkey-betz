@@ -4458,6 +4458,16 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Project Hub API
+# =========================================================================
+from core.views_project_hub import list_projects, project_hub
+
+urlpatterns += [
+    path('api/projects/', list_projects, name='projects-list'),
+    path('api/projects/<uuid:workspace_id>/hub/', project_hub, name='project-hub'),
+]
+
+# =========================================================================
 # Session 819: Audit Tracking System API
 # =========================================================================
 from core.views_audit_tracking import (
