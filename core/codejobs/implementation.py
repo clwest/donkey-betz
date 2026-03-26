@@ -243,6 +243,143 @@ _MAX_TOTAL_SIZE = 2_000_000    # 2MB total (output)
 
 _MAX_EDIT_FILE_SIZE = 500_000  # 500KB — files larger than this are too big for safe patch editing
 
+def _preflight_validate(workdir, files_changed, log_fn):
+    """Pre-flight validation: catch hallucinated imports and broken migrations.
+
+    Returns a list of error strings. Empty list = all clear.
+    """
+    import ast
+    import os
+    import subprocess
+
+    errors = []
+
+    # 1. Check Python imports against the actual codebase
+    py_files = [f for f in files_changed if f.endswith('.py')]
+    for rel_path in py_files:
+        abs_path = os.path.join(workdir, rel_path)
+        if not os.path.isfile(abs_path):
+            continue
+
+        try:
+            with open(abs_path, 'r') as fh:
+                source = fh.read()
+            tree = ast.parse(source, filename=rel_path)
+        except SyntaxError:
+            continue  # Already caught by py_compile check
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module:
+                module = node.module
+                # Only check internal imports (core.*, ai_core.*, etc.)
+                if not module.startswith(('core.', 'ai_core.', 'content.', 'resolve_node.')):
+                    continue
+
+                # Convert module path to file path(s) and check if they exist
+                module_path = module.replace('.', '/')
+                possible_paths = [
+                    os.path.join(workdir, module_path + '.py'),
+                    os.path.join(workdir, module_path, '__init__.py'),
+                ]
+                if not any(os.path.isfile(p) for p in possible_paths):
+                    errors.append(
+                        f'IMPORT_NOT_FOUND: {rel_path} imports from "{module}" '
+                        f'but neither {module_path}.py nor {module_path}/__init__.py exists'
+                    )
+                    continue
+
+                # Check if specific names exist in the module
+                for alias in (node.names or []):
+                    name = alias.name
+                    if name == '*':
+                        continue
+                    # Check if the name is defined in the module file
+                    module_file = None
+                    for p in possible_paths:
+                        if os.path.isfile(p):
+                            module_file = p
+                            break
+                    if module_file:
+                        try:
+                            with open(module_file, 'r') as mf:
+                                module_source = mf.read()
+                            # Quick check: is the name defined in the module?
+                            # Look for class/def/variable definitions
+                            if (f'class {name}' not in module_source
+                                    and f'def {name}' not in module_source
+                                    and f'{name} =' not in module_source
+                                    and f'from ' not in module_source  # re-exports
+                                    ):
+                                # Could be a re-export via __init__.py — check imports
+                                if f'import {name}' not in module_source and f'{name}' not in module_source:
+                                    errors.append(
+                                        f'SYMBOL_NOT_FOUND: {rel_path} imports "{name}" from "{module}" '
+                                        f'but "{name}" is not defined in {module_file}'
+                                    )
+                        except Exception:
+                            pass  # Can't read module file — skip this check
+
+    # 2. Check migration dependencies
+    migration_files = [f for f in files_changed if '/migrations/' in f and f.endswith('.py')]
+    for mig_path in migration_files:
+        abs_mig = os.path.join(workdir, mig_path)
+        if not os.path.isfile(abs_mig):
+            continue
+        try:
+            with open(abs_mig, 'r') as mf:
+                mig_source = mf.read()
+            mig_tree = ast.parse(mig_source)
+
+            # Find the dependencies list
+            for node in ast.walk(mig_tree):
+                if (isinstance(node, ast.Assign)
+                        and any(isinstance(t, ast.Attribute) and t.attr == 'dependencies'
+                                for t in (node.targets if hasattr(node, 'targets') else []))):
+                    # This is a simple heuristic — look for tuples in the value
+                    pass  # Complex AST parsing; use simpler approach below
+
+            # Simpler: regex for dependency tuples like ('core', '0229_xxx')
+            import re as _mig_re
+            deps = _mig_re.findall(r"\('(\w+)',\s*'(\d{4}_\w+)'\)", mig_source)
+            for app_label, dep_name in deps:
+                # Check if the dependency migration exists
+                dep_path = os.path.join(workdir, app_label, 'migrations', dep_name + '.py')
+                if not os.path.isfile(dep_path):
+                    # Also check core/migrations/ for the core app
+                    alt_path = os.path.join(workdir, 'core', 'migrations', dep_name + '.py')
+                    if not os.path.isfile(alt_path):
+                        errors.append(
+                            f'MIGRATION_DEP_MISSING: {mig_path} depends on '
+                            f'({app_label}, {dep_name}) but that migration does not exist'
+                        )
+        except Exception as e:
+            log_fn('implement', f'  Migration validation error for {mig_path}: {e}', level='warning')
+
+    # 3. Check for new top-level app directories (already blocked by validation
+    #    gate, but double-check here for defense in depth)
+    for f in files_changed:
+        parts = f.split('/')
+        if len(parts) >= 2:
+            top_dir = parts[0]
+            basename = os.path.basename(f)
+            if basename in ('apps.py', 'models.py') and top_dir not in (
+                'core', 'ai_core', 'content', 'resolve_node', 'frontend', 'mobile', 'tools'
+            ):
+                errors.append(
+                    f'NEW_DJANGO_APP: {f} creates a new Django app directory "{top_dir}/". '
+                    f'This codebase uses a monolithic core app.'
+                )
+
+    if errors:
+        log_fn('implement', f'PREFLIGHT: {len(errors)} validation error(s) found', level='warning')
+        for e in errors[:5]:
+            log_fn('implement', f'  PREFLIGHT: {e}', level='warning')
+    else:
+        log_fn('implement', 'PREFLIGHT: all validation checks passed')
+
+    return errors
+
+
 def _implement_with_claude(workdir, run, plan, log_fn, shell):
     """Use Claude API to generate code changes and apply them to workdir."""
     import os
@@ -738,6 +875,16 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
         )
         if check_result.returncode != 0:
             log_fn('implement', 'Python syntax check FAILED — changes may have errors', level='warning')
+
+    # 6b. Pre-flight validation: catch hallucinated imports/models/migrations
+    #     before they get committed and break Railway deploys.
+    preflight_errors = _preflight_validate(workdir, files_changed, log_fn)
+    if preflight_errors:
+        error_summary = '\n'.join(f'  - {e}' for e in preflight_errors[:10])
+        raise RuntimeError(
+            f'PREFLIGHT_VALIDATION_FAILED: {len(preflight_errors)} issue(s) found in proposed changes. '
+            f'These changes would break the deploy:\n{error_summary}'
+        )
 
     # 7. Git add + commit
     shell('git add -A', cwd=workdir)
