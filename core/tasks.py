@@ -10594,6 +10594,13 @@ def auto_archive_stale_deliverables(days=3):
     return _impl_auto_archive_stale_deliverables(days=days)
 
 
+# Regression detector: alert if deliverables are created without workspace
+@shared_task(soft_time_limit=60, time_limit=90)
+def check_orphan_deliverables():
+    from core.tasks_misc import _impl_check_orphan_deliverables
+    return _impl_check_orphan_deliverables()
+
+
 @shared_task(bind=True, time_limit=300, soft_time_limit=280)
 def process_pa_chat_task(self, user_id, message, context=None, generate_audio=False, conversation_id=None, source='web', platform='web'):
     from core.tasks_misc import _impl_process_pa_chat_task

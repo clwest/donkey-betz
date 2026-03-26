@@ -372,15 +372,20 @@ class LLMEnforcer:
 
         # Session 129: GPT-5.1 with Responses API
         # Configure reasoning effort based on task type
+        # Valid values: none, low, medium, high, xhigh
         reasoning_effort_map = {
             'conversation': 'low',     # Session 129: Changed from 'none' to 'low' for better agentic tool execution
             'cover_letter': 'low',     # Quick content generation
             'content': 'low',          # Quick content generation
             'analysis': 'medium',      # Balanced analysis
             'code': 'high',            # Complex coding tasks
-            'general': 'minimal'       # Default fast mode (gpt-5-mini requires minimal, not none)
+            'general': 'low'           # Default fast mode
         }
-        reasoning_effort = reasoning_effort_map.get(task_type, 'minimal')
+        reasoning_effort = reasoning_effort_map.get(task_type, 'low')
+        _VALID_EFFORTS = {'none', 'low', 'medium', 'high', 'xhigh'}
+        if reasoning_effort not in _VALID_EFFORTS:
+            logger.warning(f"[LLMEnforcer] Invalid reasoning.effort={reasoning_effort!r}; coercing to 'low'")
+            reasoning_effort = 'low'
 
         # Build Responses API parameters
         # Session 1036: GPT-5.2 pricing: $1.75/1M input, $14/1M output

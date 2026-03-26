@@ -5119,3 +5119,34 @@ def _impl_auto_archive_stale_deliverables(days=3):
     count = qs.update(status='archived', updated_at=timezone.now())
     logger.info(f"[AUTO_ARCHIVE] Archived {count} stale deliverables older than {days} days")
     return {'archived': count, 'cutoff_days': days}
+
+
+def _impl_check_orphan_deliverables():
+    """Check for deliverables created without workspace assignment (regression detector)."""
+    from django.utils import timezone
+    from core.models_deliverables import Deliverable
+
+    cutoff = timezone.now() - timedelta(hours=24)
+    qs = Deliverable.objects.filter(workspace__isnull=True, created_at__gte=cutoff)
+    count = qs.count()
+
+    if count == 0:
+        logger.info("[ORPHAN_CHECK] No orphan deliverables in last 24h — workspace assignment healthy")
+        return {'orphan_count': 0, 'status': 'healthy'}
+
+    sample = list(qs.order_by('-created_at').values('id', 'title', 'agent_name', 'created_at')[:10])
+    sample_serialized = [
+        {**s, 'id': str(s['id']), 'created_at': s['created_at'].isoformat()}
+        for s in sample
+    ]
+
+    logger.error(
+        f"[ORPHAN_CHECK] {count} deliverable(s) created without workspace in last 24h! "
+        f"Sample: {[s['title'][:50] for s in sample_serialized[:5]]}"
+    )
+
+    return {
+        'orphan_count': count,
+        'status': 'regression_detected',
+        'sample': sample_serialized,
+    }

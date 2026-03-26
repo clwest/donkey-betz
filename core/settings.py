@@ -1181,6 +1181,7 @@ CELERY_TASK_ROUTES = {
     # These 7 tasks had no routing and all landed on default queue,
     # causing repeated OOM crashes (4 restarts in 2 hours).
     'core.tasks.check_celery_health': {'queue': 'broadcast'},
+    'core.tasks.check_orphan_deliverables': {'queue': 'broadcast'},
     'core.tasks.process_core_spider_data': {'queue': 'default'},  # p50=155ms, 2610 runs/day — lightweight, moved off long_running
     'core.tasks.batch_extract_artifacts': {'queue': 'long_running'},
     'core.tasks.collect_kalshi_prediction_markets': {'queue': 'long_running'},
