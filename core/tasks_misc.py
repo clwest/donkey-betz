@@ -4793,6 +4793,15 @@ def _impl_process_pa_chat_task(self, user_id, message, context=None, generate_au
     except Exception as persist_err:
         logger.warning(f"Failed to persist PA conversation: {persist_err}")
 
+    # Dispatch autonomous Claude Code agent if message addresses it
+    try:
+        from core.services.claude_code_agent import should_claude_code_respond
+        if should_claude_code_respond(message, source):
+            from core.tasks import claude_code_agent_respond
+            claude_code_agent_respond.delay(conversation_id, message, source)
+    except Exception:
+        pass  # Non-critical
+
     # Session 1077: Offload TTS to background task if audio was requested
     audio_url = response.audio_url  # Will be None since we forced generate_audio=False
     if generate_audio and response.content:

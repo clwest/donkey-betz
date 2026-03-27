@@ -10601,6 +10601,13 @@ def check_orphan_deliverables():
     return _impl_check_orphan_deliverables()
 
 
+@shared_task(soft_time_limit=60, time_limit=90, ignore_result=True)
+def claude_code_agent_respond(conversation_id, message_text, source):
+    """Autonomous Claude Code agent — responds when addressed in a conversation."""
+    from core.services.claude_code_agent import handle_message
+    return handle_message(conversation_id, message_text, source)
+
+
 @shared_task(bind=True, time_limit=300, soft_time_limit=280)
 def process_pa_chat_task(self, user_id, message, context=None, generate_audio=False, conversation_id=None, source='web', platform='web'):
     from core.tasks_misc import _impl_process_pa_chat_task
