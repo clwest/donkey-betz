@@ -67,7 +67,7 @@ interface PAState {
   minimizeDock: () => void
   maximizeDock: () => void
 
-  addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void
+  addMessage: (message: Omit<Message, 'id' | 'timestamp'> & { id?: string; timestamp?: string }) => void
   updateMessageFeedback: (messageId: string, feedback: 'positive' | 'negative') => void
   clearMessages: () => void
 
@@ -106,16 +106,28 @@ export const usePAStore = create<PAState>()(
       minimizeDock: () => set({ isDockMinimized: true }),
       maximizeDock: () => set({ isDockMinimized: false }),
 
-      // Message management
+      // Message management — merge by ID to prevent duplicates from WebSocket + poll
       addMessage: (message) => {
         const newMessage: Message = {
           ...message,
-          id: Date.now().toString(),
-          timestamp: new Date().toISOString(),
+          id: message.id || Date.now().toString(),
+          timestamp: message.timestamp || new Date().toISOString(),
         }
-        set((state) => ({
-          messages: [...state.messages, newMessage],
-        }))
+        set((state) => {
+          // Dedupe: check if message with this ID already exists
+          const exists = state.messages.some((m) => m.id === newMessage.id)
+          if (exists) return state
+
+          // Also dedupe by content+role+source for optimistic messages
+          const contentMatch = state.messages.some(
+            (m) => m.content === newMessage.content && m.role === newMessage.role && m.source === newMessage.source
+          )
+          if (contentMatch) return state
+
+          const merged = [...state.messages, newMessage]
+          merged.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+          return { messages: merged }
+        })
       },
 
       updateMessageFeedback: (messageId, feedback) => {
