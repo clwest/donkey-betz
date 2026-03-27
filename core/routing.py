@@ -25,6 +25,7 @@ from .command_center_ai import CommandCenterAIConsumer
 
 # Import V2 consumers for new unified UI
 from .consumers_unified_v2 import PersonalAssistantConsumer as PersonalAssistantV2Consumer
+from .consumers_pa_conversation import PAConversationConsumer
 
 # Import consumers from intelligence app
 from intelligence.consumers import IncomeBuilderConsumer
@@ -130,6 +131,9 @@ websocket_urlpatterns = [
     # Sports real-time updates and force refresh
     re_path(r'^ws/sports/updates/$', consumers_sports.SportsUpdatesConsumer.as_asgi()),
     
+    # PA Conversation WebSocket — real-time 3-way chat (User + Claude Code + Rigby)
+    re_path(r'^ws/pa/conversations/(?P<conversation_id>[^/]+)/$', PAConversationConsumer.as_asgi()),
+
     # Assistant chat WebSocket (V2 - new unified UI)
     re_path(r'^ws/assistant/$', PersonalAssistantV2Consumer.as_asgi()),
 
