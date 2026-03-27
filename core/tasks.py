@@ -10601,6 +10601,13 @@ def check_orphan_deliverables():
     return _impl_check_orphan_deliverables()
 
 
+@shared_task(soft_time_limit=600, time_limit=660, ignore_result=True)
+def enforce_db_retention():
+    """Daily database retention — prevents disk exhaustion by cleaning old rows."""
+    from core.tasks_misc import _impl_enforce_db_retention
+    return _impl_enforce_db_retention()
+
+
 @shared_task(soft_time_limit=60, time_limit=90, ignore_result=True)
 def claude_code_agent_respond(conversation_id, message_text, source):
     """Autonomous Claude Code agent — responds when addressed in a conversation."""
