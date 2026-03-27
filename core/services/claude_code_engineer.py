@@ -1,0 +1,329 @@
+"""
+Claude Code Engineer Service
+==============================
+
+Gives Rigby (PA) the ability to spawn autonomous Claude Code engineering
+sessions that can read files, write code, create git branches, and open PRs.
+
+This is the bridge between Rigby's operational awareness and Claude Code's
+engineering capabilities. When Rigby identifies a bug, a needed feature,
+or a code change, he can dispatch this service to do the actual work.
+
+Architecture:
+- Rigby calls claude_code_tool via PA function calling
+- Tool handler dispatches a Celery task on the code_jobs queue
+- Task calls Anthropic Claude API with codebase tools (file read, write, git)
+- Results posted back to the conversation via WebSocket
+- If code changes are made, a PR is created automatically
+
+Tools available to the engineer:
+- read_file: Read any file in the repository
+- write_file: Write/create files
+- search_code: Search for patterns across the codebase
+- git_diff: See current changes
+- git_branch: Create a branch
+- git_commit: Commit changes
+- create_pr: Open a pull request on GitHub
+"""
+import json
+import logging
+import os
+import subprocess
+from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
+
+REPO_ROOT = '/app'  # Railway container path
+
+SYSTEM_PROMPT = """You are Claude Code Engineer, an autonomous coding agent deployed inside the Donkey Betz platform.
+
+You have been invoked by Rigby (the PA) to perform an engineering task. You have REAL tools to read files, write code, search the codebase, and create git branches/commits/PRs.
+
+RULES:
+- Read before writing. Understand existing code before modifying it.
+- Make minimal, focused changes. Don't refactor beyond what's asked.
+- Always create a branch, never commit to main directly.
+- Write clear commit messages explaining the "why."
+- If the task is unclear, say so instead of guessing.
+- Report what you did concisely — Rigby and Chris will see your response.
+
+CODEBASE:
+- Django 5.0 + PostgreSQL + Celery + Redis + React frontend
+- core/ has agents, services, tasks, views, models
+- frontend/src/ has React components, stores, hooks
+- 82 agents, 77 spiders, 134 services
+
+After completing your task, summarize what you changed and provide the PR link if applicable.
+"""
+
+# Tool definitions for the Claude API
+TOOLS = [
+    {
+        "name": "read_file",
+        "description": "Read a file from the repository. Returns the file content.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "File path relative to repo root (e.g. 'core/tasks.py')"},
+                "start_line": {"type": "integer", "description": "Start reading from this line (1-indexed)"},
+                "end_line": {"type": "integer", "description": "Stop reading at this line"},
+            },
+            "required": ["path"],
+        },
+    },
+    {
+        "name": "search_code",
+        "description": "Search for a pattern across the codebase using grep.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "pattern": {"type": "string", "description": "Regex pattern to search for"},
+                "file_glob": {"type": "string", "description": "File pattern to search in (e.g. '*.py', 'core/**/*.py')"},
+                "max_results": {"type": "integer", "description": "Maximum results to return", "default": 20},
+            },
+            "required": ["pattern"],
+        },
+    },
+    {
+        "name": "write_file",
+        "description": "Write content to a file. Creates the file if it doesn't exist, overwrites if it does.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "File path relative to repo root"},
+                "content": {"type": "string", "description": "Full file content to write"},
+            },
+            "required": ["path", "content"],
+        },
+    },
+    {
+        "name": "git_command",
+        "description": "Run a git command. Use for: branch, add, commit, diff, status, log.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "command": {"type": "string", "description": "Git subcommand and args (e.g. 'checkout -b fix/my-fix', 'add core/tasks.py', 'commit -m \"fix: thing\"')"},
+            },
+            "required": ["command"],
+        },
+    },
+    {
+        "name": "create_pr",
+        "description": "Create a GitHub pull request from the current branch.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string", "description": "PR title"},
+                "body": {"type": "string", "description": "PR description"},
+            },
+            "required": ["title", "body"],
+        },
+    },
+]
+
+
+def _execute_tool(tool_name: str, tool_input: dict) -> str:
+    """Execute a tool and return the result as a string."""
+    try:
+        if tool_name == "read_file":
+            path = os.path.join(REPO_ROOT, tool_input["path"])
+            if not os.path.exists(path):
+                return f"Error: File not found: {tool_input['path']}"
+            with open(path) as f:
+                lines = f.readlines()
+            start = tool_input.get("start_line", 1) - 1
+            end = tool_input.get("end_line", len(lines))
+            selected = lines[start:end]
+            return ''.join(selected)[:50000]  # Cap at 50KB
+
+        elif tool_name == "search_code":
+            pattern = tool_input["pattern"]
+            glob = tool_input.get("file_glob", "*.py")
+            max_results = tool_input.get("max_results", 20)
+            cmd = ["grep", "-rn", "--include", glob, pattern, REPO_ROOT]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            lines = result.stdout.strip().split('\n')[:max_results]
+            # Remove repo root prefix for cleaner output
+            cleaned = [l.replace(REPO_ROOT + '/', '') for l in lines]
+            return '\n'.join(cleaned) or "No matches found"
+
+        elif tool_name == "write_file":
+            path = os.path.join(REPO_ROOT, tool_input["path"])
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, 'w') as f:
+                f.write(tool_input["content"])
+            return f"Written {len(tool_input['content'])} bytes to {tool_input['path']}"
+
+        elif tool_name == "git_command":
+            cmd = f"git {tool_input['command']}"
+            result = subprocess.run(
+                cmd, shell=True, capture_output=True, text=True,
+                cwd=REPO_ROOT, timeout=60
+            )
+            output = result.stdout + result.stderr
+            return output[:10000] or "(no output)"
+
+        elif tool_name == "create_pr":
+            cmd = f'gh pr create --title "{tool_input["title"]}" --body "{tool_input["body"]}"'
+            result = subprocess.run(
+                cmd, shell=True, capture_output=True, text=True,
+                cwd=REPO_ROOT, timeout=60
+            )
+            return result.stdout + result.stderr
+
+        else:
+            return f"Unknown tool: {tool_name}"
+
+    except subprocess.TimeoutExpired:
+        return f"Error: Tool {tool_name} timed out"
+    except Exception as e:
+        return f"Error in {tool_name}: {str(e)}"
+
+
+def execute_engineering_task(
+    task_description: str,
+    conversation_id: str = None,
+    requested_by: str = 'rigby',
+    max_iterations: int = 15,
+) -> Dict[str, Any]:
+    """
+    Execute an engineering task using Claude with codebase tools.
+
+    Args:
+        task_description: What to do (from Rigby or Chris)
+        conversation_id: PA conversation to post results to
+        requested_by: Who requested this (for attribution)
+        max_iterations: Max tool-use iterations
+
+    Returns:
+        Dict with status, summary, files_changed, pr_url
+    """
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    if not api_key:
+        return {'status': 'error', 'error': 'ANTHROPIC_API_KEY not set'}
+
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+
+        messages = [{"role": "user", "content": task_description}]
+        files_changed = []
+        pr_url = None
+
+        for iteration in range(max_iterations):
+            response = client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=4096,
+                system=SYSTEM_PROMPT,
+                tools=TOOLS,
+                messages=messages,
+            )
+
+            # Check if we're done (no more tool calls)
+            if response.stop_reason == "end_turn":
+                # Extract final text response
+                final_text = ''
+                for block in response.content:
+                    if hasattr(block, 'text'):
+                        final_text += block.text
+                break
+
+            # Process tool calls
+            tool_results = []
+            for block in response.content:
+                if block.type == "tool_use":
+                    logger.info(f"[ClaudeEngineer] Tool: {block.name} (iteration {iteration+1})")
+                    result = _execute_tool(block.name, block.input)
+
+                    # Track file changes
+                    if block.name == "write_file":
+                        files_changed.append(block.input.get("path", "?"))
+                    elif block.name == "create_pr" and "github.com" in result:
+                        pr_url = result.strip()
+
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": result[:20000],  # Cap tool result size
+                    })
+
+            # Add assistant response + tool results to conversation
+            messages.append({"role": "assistant", "content": response.content})
+            messages.append({"role": "user", "content": tool_results})
+
+        else:
+            final_text = f"Reached max iterations ({max_iterations}). Task may be incomplete."
+
+        # Post result to conversation if specified
+        if conversation_id:
+            _post_to_conversation(conversation_id, final_text, files_changed, pr_url)
+
+        return {
+            'status': 'success',
+            'summary': final_text[:2000],
+            'files_changed': files_changed,
+            'pr_url': pr_url,
+            'iterations': iteration + 1 if 'iteration' in dir() else 0,
+        }
+
+    except Exception as e:
+        logger.error(f"[ClaudeEngineer] Task failed: {e}")
+        error_msg = f"Engineering task failed: {str(e)}"
+
+        if conversation_id:
+            _post_to_conversation(conversation_id, error_msg, [], None)
+
+        return {'status': 'error', 'error': str(e)}
+
+
+def _post_to_conversation(conversation_id: str, summary: str, files_changed: list, pr_url: str = None):
+    """Post engineering results back to the PA conversation."""
+    from core.models import ChatConversation
+    from django.contrib.auth import get_user_model
+
+    # Build result message
+    parts = [summary]
+    if files_changed:
+        parts.append(f"\n**Files changed:** {', '.join(files_changed)}")
+    if pr_url:
+        parts.append(f"\n**PR:** {pr_url}")
+
+    content = '\n'.join(parts)
+
+    # Resolve user
+    User = get_user_model()
+    user = ChatConversation.objects.filter(
+        conversation_id=conversation_id, user__isnull=False
+    ).values_list('user_id', flat=True).first()
+
+    chat_row = ChatConversation.objects.create(
+        user_id=user,
+        conversation_id=conversation_id,
+        user_message=content,
+        assistant_response='',
+        source='claude-code',
+        platform='agent',
+        metadata={'autonomous': True, 'agent': 'claude_code_engineer', 'files_changed': files_changed, 'pr_url': pr_url},
+    )
+
+    # Broadcast via WebSocket
+    try:
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        channel_layer = get_channel_layer()
+        if channel_layer:
+            async_to_sync(channel_layer.group_send)(
+                f"pa_conversation_{conversation_id}",
+                {
+                    "type": "message.created",
+                    "message": {
+                        "id": str(chat_row.id),
+                        "role": "user",
+                        "content": content,
+                        "source": "claude-code",
+                        "timestamp": chat_row.created_at.isoformat(),
+                    }
+                }
+            )
+    except Exception:
+        pass
