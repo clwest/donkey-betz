@@ -4753,6 +4753,41 @@ def _impl_process_pa_chat_task(self, user_id, message, context=None, generate_au
 
         if is_first:
             chat_row.generate_session_title()
+
+        # Broadcast to WebSocket for real-time 3-way chat
+        try:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                group = f"pa_conversation_{conversation_id}"
+                # Broadcast user message
+                async_to_sync(channel_layer.group_send)(group, {
+                    "type": "message.created",
+                    "message": {
+                        "id": str(chat_row.id),
+                        "role": "user",
+                        "content": message,
+                        "source": source,
+                        "timestamp": chat_row.created_at.isoformat(),
+                    }
+                })
+                # Broadcast Rigby's response
+                if response.content:
+                    async_to_sync(channel_layer.group_send)(group, {
+                        "type": "message.created",
+                        "message": {
+                            "id": f"{chat_row.id}-response",
+                            "role": "assistant",
+                            "content": response.content,
+                            "source": "pa",
+                            "tools_used": [r.get('tool', '') for r in (response.tool_runs or [])],
+                            "timestamp": chat_row.created_at.isoformat(),
+                        }
+                    })
+        except Exception as ws_err:
+            logger.debug(f"WebSocket broadcast failed (non-critical): {ws_err}")
+
     except Exception as persist_err:
         logger.warning(f"Failed to persist PA conversation: {persist_err}")
 

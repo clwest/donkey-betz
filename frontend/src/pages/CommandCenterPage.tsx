@@ -18,6 +18,7 @@ import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useUnifiedStore } from '@/stores/unifiedStore'
 import { usePAStore } from '@/stores/paStore'
+import { useWebSocket } from '@/hooks/useWebSocket'
 import PAConversationSidebar from '@/components/PAConversationSidebar'
 import { ChatMarkdown } from '@/components/ChatMarkdown'
 import AsyncJobTracker from '@/components/AsyncJobTracker'
@@ -662,6 +663,30 @@ export default function CommandCenterPage() {
     () => paMessages.map((m) => ({ ...m, timestamp: new Date(m.timestamp) })),
     [paMessages],
   )
+
+  // Real-time 3-way chat WebSocket — receives messages from all participants
+  const wsEndpoint = activeConversationId ? `/pa/conversations/${activeConversationId}` : ''
+  useWebSocket(wsEndpoint, {
+    autoConnect: !!activeConversationId,
+    onMessage: useCallback((data: unknown) => {
+      const event = data as { type?: string; message?: { id?: string; role?: string; content?: string; source?: string; tools_used?: string[]; timestamp?: string } }
+      if (event?.type === 'message.created' && event.message) {
+        const msg = event.message
+        // Avoid duplicating messages we already have (from our own send flow)
+        const isDuplicate = paMessages.some(
+          (m) => m.id === msg.id || (m.content === msg.content && m.role === msg.role && m.source === msg.source)
+        )
+        if (!isDuplicate && msg.content) {
+          addPAMessage({
+            role: (msg.role as 'user' | 'assistant') || 'assistant',
+            content: msg.content,
+            source: msg.source,
+            tools_used: msg.tools_used,
+          })
+        }
+      }
+    }, [paMessages, addPAMessage]),
+  })
 
   // Chat state
   const [input, setInput] = useState(initialMessage)
