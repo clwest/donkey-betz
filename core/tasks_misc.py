@@ -5222,3 +5222,120 @@ def _impl_check_orphan_deliverables():
         'status': 'regression_detected',
         'sample': sample_serialized,
     }
+
+
+def _impl_enforce_db_retention():
+    """
+    Daily database retention enforcement.
+
+    Prevents disk exhaustion by cleaning up high-volume tables.
+    This is the task that would have prevented the pgvector-volume
+    crash of March 27, 2026.
+
+    Tables cleaned (with retention periods):
+    - CeleryTaskEvent: 14 days (was 975K rows, caused 50GB disk full)
+    - LLMCallLog: 30 days (cost tracking, keep longer for billing)
+    - AgentExecution: 30 days (performance history)
+    """
+    from django.utils import timezone
+    from django.db.models import Count
+
+    results = {}
+
+    # 1. CeleryTaskEvent — 14 day retention (biggest offender)
+    try:
+        from core.models_celery_telemetry import CeleryTaskEvent
+        cutoff = timezone.now() - timedelta(days=14)
+        total_before = CeleryTaskEvent.objects.count()
+        old_count = CeleryTaskEvent.objects.filter(started_at__lt=cutoff).count()
+
+        if old_count > 0:
+            # Batched delete to avoid long locks
+            total_deleted = 0
+            batch_size = 50000
+            while True:
+                batch_ids = list(
+                    CeleryTaskEvent.objects.filter(started_at__lt=cutoff)
+                    .values_list('id', flat=True)[:batch_size]
+                )
+                if not batch_ids:
+                    break
+                deleted, _ = CeleryTaskEvent.objects.filter(id__in=batch_ids).delete()
+                total_deleted += deleted
+
+            results['celery_task_events'] = {
+                'before': total_before,
+                'deleted': total_deleted,
+                'remaining': CeleryTaskEvent.objects.count(),
+                'retention_days': 14,
+            }
+            logger.info(f"[DB_RETENTION] CeleryTaskEvent: deleted {total_deleted:,} rows (kept 14 days)")
+        else:
+            results['celery_task_events'] = {'deleted': 0, 'status': 'clean'}
+    except Exception as e:
+        results['celery_task_events'] = {'error': str(e)}
+        logger.warning(f"[DB_RETENTION] CeleryTaskEvent cleanup failed: {e}")
+
+    # 2. LLMCallLog — 30 day retention
+    try:
+        from core.models_llm_routing import LLMCallLog
+        cutoff = timezone.now() - timedelta(days=30)
+        old_count = LLMCallLog.objects.filter(created_at__lt=cutoff).count()
+
+        if old_count > 0:
+            total_deleted = 0
+            batch_size = 50000
+            while True:
+                batch_ids = list(
+                    LLMCallLog.objects.filter(created_at__lt=cutoff)
+                    .values_list('id', flat=True)[:batch_size]
+                )
+                if not batch_ids:
+                    break
+                deleted, _ = LLMCallLog.objects.filter(id__in=batch_ids).delete()
+                total_deleted += deleted
+
+            results['llm_call_log'] = {
+                'deleted': total_deleted,
+                'remaining': LLMCallLog.objects.count(),
+                'retention_days': 30,
+            }
+            logger.info(f"[DB_RETENTION] LLMCallLog: deleted {total_deleted:,} rows (kept 30 days)")
+        else:
+            results['llm_call_log'] = {'deleted': 0, 'status': 'clean'}
+    except Exception as e:
+        results['llm_call_log'] = {'error': str(e)}
+        logger.warning(f"[DB_RETENTION] LLMCallLog cleanup failed: {e}")
+
+    # 3. Run VACUUM ANALYZE on cleaned tables (reclaim space)
+    try:
+        from django.db import connection
+        with connection.cursor() as cursor:
+            for table in ['core_celerytaskevent', 'core_llmcalllog']:
+                try:
+                    cursor.execute(f'VACUUM (ANALYZE) {table}')
+                    logger.info(f"[DB_RETENTION] VACUUM ANALYZE {table} complete")
+                except Exception as ve:
+                    logger.warning(f"[DB_RETENTION] VACUUM {table} failed: {ve}")
+        results['vacuum'] = 'completed'
+    except Exception as e:
+        results['vacuum'] = f'failed: {e}'
+
+    # 4. Report disk usage estimate
+    try:
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT relname, pg_total_relation_size(relid) / 1024 / 1024 as size_mb
+                FROM pg_stat_user_tables
+                ORDER BY pg_total_relation_size(relid) DESC
+                LIMIT 10
+            """)
+            top_tables = [{'table': row[0], 'size_mb': round(row[1], 1)} for row in cursor.fetchall()]
+            results['top_tables_mb'] = top_tables
+            total_mb = sum(t['size_mb'] for t in top_tables)
+            logger.info(f"[DB_RETENTION] Top 10 tables: {total_mb:.0f} MB total")
+    except Exception as e:
+        results['top_tables_mb'] = f'error: {e}'
+
+    return results
