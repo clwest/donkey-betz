@@ -4796,11 +4796,14 @@ def _impl_process_pa_chat_task(self, user_id, message, context=None, generate_au
     # Dispatch autonomous Claude Code agent if message addresses it
     try:
         from core.services.claude_code_agent import should_claude_code_respond
-        if should_claude_code_respond(message, source):
+        should_respond = should_claude_code_respond(message, source)
+        logger.info(f"[ClaudeCodeAgent] Trigger check: should_respond={should_respond} source={source} message={message[:80]}")
+        if should_respond:
             from core.tasks import claude_code_agent_respond
             claude_code_agent_respond.delay(conversation_id, message, source)
-    except Exception:
-        pass  # Non-critical
+            logger.info(f"[ClaudeCodeAgent] Dispatched agent task for conversation {conversation_id}")
+    except Exception as agent_err:
+        logger.warning(f"[ClaudeCodeAgent] Trigger failed: {agent_err}")
 
     # Session 1077: Offload TTS to background task if audio was requested
     audio_url = response.audio_url  # Will be None since we forced generate_audio=False
