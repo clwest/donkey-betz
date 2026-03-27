@@ -157,8 +157,19 @@ def post_response(conversation_id: str, response_text: str):
     """Post Claude Code's response to the conversation via store-only + WebSocket."""
     from core.models import ChatConversation
 
+    # Resolve user from existing conversation messages
+    user = None
+    existing = ChatConversation.objects.filter(
+        conversation_id=conversation_id, user__isnull=False
+    ).values_list('user_id', flat=True).first()
+    if existing:
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        user = User.objects.filter(id=existing).first()
+
     # Store the message
     chat_row = ChatConversation.objects.create(
+        user=user,
         conversation_id=conversation_id,
         user_message=response_text,
         assistant_response='',  # No PA response — this IS the response
