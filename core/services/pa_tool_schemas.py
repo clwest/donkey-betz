@@ -3754,6 +3754,26 @@ PA_TOOL_SCHEMAS = [
             "required": ["action"],
         },
     },
+    # ── Claude Code Engineer — Rigby can spawn autonomous coding sessions ──
+    {
+        "type": "function",
+        "name": "claude_code_tool",
+        "description": "Spawn an autonomous Claude Code engineering session that can read files, write code, create branches, and open PRs. Use when you need code changes, bug fixes, new features, or technical investigation that requires reading/modifying the codebase.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "task": {
+                    "type": "string",
+                    "description": "Detailed description of what Claude Code should do. Be specific about files, functions, or features involved."
+                },
+                "conversation_id": {
+                    "type": "string",
+                    "description": "Conversation ID to post results back to (optional — defaults to current conversation)"
+                },
+            },
+            "required": ["task"],
+        },
+    },
 ]
 
 # ── Startup validation: every tool must have name, description, parameters ──
@@ -3972,6 +3992,7 @@ TOOL_TO_INTENT_MAP = {
     'infra_health_tool': 'system_health',
     'kb_tool': 'knowledge_base',
     'bpaas_tool': 'workspace',
+    'claude_code_tool': 'codebase',
 }
 
 
