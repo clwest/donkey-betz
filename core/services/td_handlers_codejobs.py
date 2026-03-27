@@ -318,4 +318,25 @@ class CodeJobHandlersMixin:
             'is_active': True,
         }
 
+    def _handle_claude_code(self, tool_name, payload, user_id, trace_id):
+        """Spawn autonomous Claude Code engineering session. Reads files, writes code, creates PRs."""
+        task_description = payload.get('task', '')
+        if not task_description:
+            return {'error': 'task description is required'}
+
+        conversation_id = payload.get('conversation_id')
+
+        from core.tasks import claude_code_engineer_task
+        task = claude_code_engineer_task.delay(
+            task_description=task_description,
+            conversation_id=conversation_id,
+            requested_by='rigby',
+        )
+
+        return {
+            'status': 'dispatched',
+            'task_id': str(task.id),
+            'message': f'Claude Code engineering session started. Task ID: {task.id}. Results will be posted to the conversation when complete.',
+        }
+
 

@@ -10608,6 +10608,13 @@ def enforce_db_retention():
     return _impl_enforce_db_retention()
 
 
+@shared_task(bind=True, soft_time_limit=300, time_limit=360, ignore_result=False)
+def claude_code_engineer_task(self, task_description, conversation_id=None, requested_by='rigby'):
+    """Autonomous Claude Code engineering session — reads files, writes code, creates PRs."""
+    from core.services.claude_code_engineer import execute_engineering_task
+    return execute_engineering_task(task_description, conversation_id, requested_by)
+
+
 @shared_task(soft_time_limit=60, time_limit=90, ignore_result=True)
 def claude_code_agent_respond(conversation_id, message_text, source):
     """Autonomous Claude Code agent — responds when addressed in a conversation."""
