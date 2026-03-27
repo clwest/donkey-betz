@@ -407,6 +407,7 @@ def pa_conversation_post_message(request, conversation_id):
             from core.tasks import process_pa_chat_task
             context = request.data.get('context', {})
             context['source'] = source
+            context['already_stored'] = True  # Prevent duplicate user message broadcast
             task = process_pa_chat_task.delay(
                 user_id=str(request.user.id),
                 message=message,
