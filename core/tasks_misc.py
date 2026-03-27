@@ -4761,18 +4761,20 @@ def _impl_process_pa_chat_task(self, user_id, message, context=None, generate_au
             channel_layer = get_channel_layer()
             if channel_layer:
                 group = f"pa_conversation_{conversation_id}"
-                # Broadcast user message
-                async_to_sync(channel_layer.group_send)(group, {
-                    "type": "message.created",
-                    "message": {
-                        "id": str(chat_row.id),
-                        "role": "user",
-                        "content": message,
-                        "source": source,
-                        "timestamp": chat_row.created_at.isoformat(),
-                    }
-                })
-                # Broadcast Rigby's response
+                ctx = context or {}
+                # Only broadcast user message if NOT already stored by store-only endpoint
+                if not ctx.get('already_stored'):
+                    async_to_sync(channel_layer.group_send)(group, {
+                        "type": "message.created",
+                        "message": {
+                            "id": str(chat_row.id),
+                            "role": "user",
+                            "content": message,
+                            "source": source,
+                            "timestamp": chat_row.created_at.isoformat(),
+                        }
+                    })
+                # Always broadcast Rigby's response
                 if response.content:
                     async_to_sync(channel_layer.group_send)(group, {
                         "type": "message.created",
