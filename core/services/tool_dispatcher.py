@@ -472,6 +472,9 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         # Remote Code Worker
         self.register("code_job_tool", self._handle_code_job)
 
+        # Claude Code Engineer — Rigby can spawn autonomous coding sessions
+        self.register("claude_code_tool", self._handle_claude_code)
+
         # Session 1035-Audit: Platform access gap tools
         self.register("spider_status_tool", self._handle_spider_status)
         self.register("agent_memory_tool", self._handle_agent_memory)
