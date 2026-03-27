@@ -119,6 +119,32 @@ TOOLS = [
             "required": ["title", "body"],
         },
     },
+    {
+        "name": "create_github_repo",
+        "description": "Create a new GitHub repository. Use when starting a new project/app.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Repository name (e.g. 'dogwalkr-app')"},
+                "description": {"type": "string", "description": "Short description of the repo"},
+                "private": {"type": "boolean", "description": "Whether the repo is private (default: true)"},
+            },
+            "required": ["name"],
+        },
+    },
+    {
+        "name": "create_workspace",
+        "description": "Create a workspace in the Donkey Betz platform linked to a GitHub repo. Organizes deliverables, agent work, and project files.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Workspace name (e.g. 'DogWalkr')"},
+                "description": {"type": "string", "description": "What this project is for"},
+                "git_remote_url": {"type": "string", "description": "GitHub repo URL to link (optional)"},
+            },
+            "required": ["name"],
+        },
+    },
 ]
 
 
@@ -243,6 +269,64 @@ def _execute_tool(tool_name: str, tool_input: dict) -> str:
                     return f"GitHub API PR creation failed: {api_err}"
             else:
                 return "Error: GITHUB_TOKEN not set — cannot create PR"
+
+        elif tool_name == "create_github_repo":
+            github_token = os.environ.get('GITHUB_TOKEN', '')
+            if not github_token:
+                return "Error: GITHUB_TOKEN not set"
+            repo_name = tool_input.get("name", "")
+            description = tool_input.get("description", "")
+            private = tool_input.get("private", True)
+
+            import urllib.request
+            api_url = "https://api.github.com/user/repos"
+            repo_data = json.dumps({
+                "name": repo_name,
+                "description": description,
+                "private": private,
+                "auto_init": True,  # Creates with README
+            }).encode()
+            req = urllib.request.Request(api_url, data=repo_data, method="POST")
+            req.add_header("Authorization", f"token {github_token}")
+            req.add_header("Content-Type", "application/json")
+            req.add_header("Accept", "application/vnd.github.v3+json")
+            try:
+                resp = urllib.request.urlopen(req, timeout=30)
+                repo_resp = json.loads(resp.read().decode())
+                repo_url = repo_resp.get('html_url', '')
+                clone_url = repo_resp.get('clone_url', '')
+                return f"Repository created: {repo_url}\nClone URL: {clone_url}\nPrivate: {private}"
+            except Exception as api_err:
+                return f"GitHub repo creation failed: {api_err}"
+
+        elif tool_name == "create_workspace":
+            ws_name = tool_input.get("name", "")
+            ws_description = tool_input.get("description", "")
+            git_remote = tool_input.get("git_remote_url", "")
+
+            try:
+                import django
+                django.setup()
+                from core.models_skin_layer import ProjectWorkspace
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                # Use the first superuser as workspace owner
+                user = User.objects.filter(is_superuser=True).first()
+                if not user:
+                    return "Error: No superuser found to own the workspace"
+
+                ws = ProjectWorkspace.objects.create(
+                    user=user,
+                    name=ws_name,
+                    description=ws_description,
+                    root_path=f'/app/workspaces/{ws_name.lower().replace(" ", "-")}',
+                    git_remote_url=git_remote,
+                    is_active=False,  # Don't make active by default
+                    workspace_type='local',
+                )
+                return f"Workspace created: {ws.name} (id={ws.id})\nLinked repo: {git_remote or 'none'}\nActive: False (set active manually when ready)"
+            except Exception as ws_err:
+                return f"Workspace creation failed: {ws_err}"
 
         else:
             return f"Unknown tool: {tool_name}"
