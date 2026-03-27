@@ -401,6 +401,15 @@ def pa_conversation_post_message(request, conversation_id):
         except Exception:
             pass  # WebSocket broadcast is non-critical
 
+        # Dispatch autonomous Claude Code agent if message is addressed to it
+        try:
+            from core.tasks import claude_code_agent_respond
+            from core.services.claude_code_agent import should_claude_code_respond
+            if should_claude_code_respond(message, source):
+                claude_code_agent_respond.delay(conversation_id, message, source)
+        except Exception:
+            pass  # Non-critical
+
         # If @rigby mentioned, trigger PA processing
         task_id = None
         if trigger_pa:
