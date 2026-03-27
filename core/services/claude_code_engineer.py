@@ -122,6 +122,51 @@ TOOLS = [
 ]
 
 
+def _ensure_git_repo():
+    """
+    Initialize git repo in the Railway container if not present.
+    Railway deploys built images without .git — we need to init one
+    and configure the GitHub remote so branches/commits/PRs work.
+    """
+    git_dir = os.path.join(REPO_ROOT, '.git')
+    if os.path.exists(git_dir):
+        return  # Already initialized
+
+    github_token = os.environ.get('GITHUB_TOKEN', '')
+    repo_slug = 'clwest/donkey-betz-platform'
+
+    try:
+        cmds = [
+            'git init',
+            'git config user.email "claude-code@donkeybetz.com"',
+            'git config user.name "Claude Code Engineer"',
+        ]
+
+        # Build remote URL with auth via git credential helper (avoids token in URL)
+        base_url = f'https://github.com/{repo_slug}.git'
+        cmds.append(f'git remote add origin {base_url}')
+
+        if github_token:
+            # Configure credential helper so git push/fetch uses the token
+            cmds.append(f'git config credential.helper "!f() {{ echo username=x-access-token; echo password={github_token}; }}; f"')  # noqa: E501
+
+        # Fetch main branch reference (shallow to save time/space)
+        cmds.append('git fetch --depth=1 origin main')
+        cmds.append('git checkout -b main FETCH_HEAD')
+
+        for cmd in cmds:
+            result = subprocess.run(
+                cmd, shell=True, capture_output=True, text=True,
+                cwd=REPO_ROOT, timeout=60
+            )
+            if result.returncode != 0 and 'already exists' not in result.stderr:
+                logger.warning(f"[ClaudeEngineer] git setup: {cmd} -> {result.stderr[:200]}")
+
+        logger.info("[ClaudeEngineer] Git repo initialized in /app")
+    except Exception as e:
+        logger.warning(f"[ClaudeEngineer] Git setup failed (non-fatal): {e}")
+
+
 def _execute_tool(tool_name: str, tool_input: dict) -> str:
     """Execute a tool and return the result as a string."""
     try:
@@ -164,12 +209,40 @@ def _execute_tool(tool_name: str, tool_input: dict) -> str:
             return output[:10000] or "(no output)"
 
         elif tool_name == "create_pr":
-            cmd = f'gh pr create --title "{tool_input["title"]}" --body "{tool_input["body"]}"'
-            result = subprocess.run(
-                cmd, shell=True, capture_output=True, text=True,
-                cwd=REPO_ROOT, timeout=60
+            # Try gh CLI first, fall back to GitHub API
+            github_token = os.environ.get('GITHUB_TOKEN', '')
+            title = tool_input.get("title", "")
+            body = tool_input.get("body", "")
+
+            # Get current branch
+            branch_result = subprocess.run(
+                "git rev-parse --abbrev-ref HEAD",
+                shell=True, capture_output=True, text=True, cwd=REPO_ROOT, timeout=10
             )
-            return result.stdout + result.stderr
+            branch = branch_result.stdout.strip() or "main"
+
+            if github_token:
+                # Use GitHub API directly (more reliable than gh CLI in containers)
+                import urllib.request
+                api_url = "https://api.github.com/repos/clwest/donkey-betz-platform/pulls"
+                pr_data = json.dumps({
+                    "title": title,
+                    "body": body + "\n\n🤖 Created by Claude Code Engineer",
+                    "head": branch,
+                    "base": "main",
+                }).encode()
+                req = urllib.request.Request(api_url, data=pr_data, method="POST")
+                req.add_header("Authorization", f"token {github_token}")
+                req.add_header("Content-Type", "application/json")
+                req.add_header("Accept", "application/vnd.github.v3+json")
+                try:
+                    resp = urllib.request.urlopen(req, timeout=30)
+                    pr_resp = json.loads(resp.read().decode())
+                    return f"PR created: {pr_resp.get('html_url', 'unknown')}"
+                except Exception as api_err:
+                    return f"GitHub API PR creation failed: {api_err}"
+            else:
+                return "Error: GITHUB_TOKEN not set — cannot create PR"
 
         else:
             return f"Unknown tool: {tool_name}"
@@ -201,6 +274,9 @@ def execute_engineering_task(
     api_key = os.environ.get('ANTHROPIC_API_KEY')
     if not api_key:
         return {'status': 'error', 'error': 'ANTHROPIC_API_KEY not set'}
+
+    # Initialize git repo if not present (Railway containers don't include .git)
+    _ensure_git_repo()
 
     try:
         import anthropic
