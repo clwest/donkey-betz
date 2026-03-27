@@ -331,6 +331,156 @@ def unified_pa_chat(request):
         }, status=500)
 
 
+def _should_trigger_pa(message_text: str) -> bool:
+    """Check if a message mentions Rigby and should trigger PA processing."""
+    import re
+    text = message_text.lower().strip()
+    patterns = [
+        r'\brigby\b',        # "rigby" as a word
+        r'@rigby',           # explicit @mention
+    ]
+    return any(re.search(p, text) for p in patterns)
+
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def pa_conversation_post_message(request, conversation_id):
+    """
+    Store-only message endpoint for 3-way chat.
+
+    Posts a message to the conversation without triggering PA processing,
+    UNLESS the message mentions @rigby or 'Rigby'.
+
+    Used by Claude Code to participate in conversations directly.
+    """
+    try:
+        message = request.data.get('message', '').strip()
+        source = request.data.get('source', 'web')
+        trigger_pa = request.data.get('trigger_pa', None)  # Explicit override
+
+        if not message:
+            return Response({'error': 'Message is required'}, status=400)
+
+        from core.models import ChatConversation
+
+        # Auto-detect whether to trigger PA if not explicitly set
+        if trigger_pa is None:
+            trigger_pa = _should_trigger_pa(message)
+
+        # Store the message
+        chat_row = ChatConversation.objects.create(
+            user=request.user,
+            conversation_id=conversation_id,
+            user_message=message,
+            assistant_response='',  # No response yet (store-only)
+            source=source,
+            platform='cli' if source == 'claude-code' else 'web',
+            metadata={'store_only': not trigger_pa, 'mentions_pa': trigger_pa},
+        )
+
+        # Broadcast to WebSocket for real-time delivery
+        try:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                async_to_sync(channel_layer.group_send)(
+                    f"pa_conversation_{conversation_id}",
+                    {
+                        "type": "message.created",
+                        "message": {
+                            "id": str(chat_row.id),
+                            "role": "user",
+                            "content": message,
+                            "source": source,
+                            "timestamp": chat_row.created_at.isoformat(),
+                        }
+                    }
+                )
+        except Exception:
+            pass  # WebSocket broadcast is non-critical
+
+        # If @rigby mentioned, trigger PA processing
+        task_id = None
+        if trigger_pa:
+            from core.tasks import process_pa_chat_task
+            context = request.data.get('context', {})
+            context['source'] = source
+            task = process_pa_chat_task.delay(
+                user_id=str(request.user.id),
+                message=message,
+                context=context,
+                conversation_id=conversation_id,
+                source=source,
+                platform='cli' if source == 'claude-code' else 'web',
+            )
+            task_id = str(task.id)
+
+        return Response({
+            'success': True,
+            'message_id': str(chat_row.id),
+            'conversation_id': conversation_id,
+            'trigger_pa': trigger_pa,
+            'task_id': task_id,
+            'source': source,
+        })
+
+    except Exception as e:
+        logger.error(f"Error in pa_conversation_post_message: {e}")
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def pa_conversation_messages(request, conversation_id):
+    """
+    Get recent messages for a conversation (for CLI watch mode).
+    Supports ?after=<message_id> for incremental polling.
+    """
+    from core.models import ChatConversation
+
+    after_id = request.query_params.get('after')
+    limit = min(int(request.query_params.get('limit', 50)), 100)
+
+    qs = ChatConversation.objects.filter(conversation_id=conversation_id).order_by('created_at')
+
+    if after_id:
+        try:
+            after_row = ChatConversation.objects.get(id=after_id)
+            qs = qs.filter(created_at__gt=after_row.created_at)
+        except ChatConversation.DoesNotExist:
+            pass
+
+    messages = []
+    for row in qs.order_by('-created_at')[:limit]:
+        if row.user_message:
+            messages.append({
+                'id': str(row.id),
+                'role': 'user',
+                'content': row.user_message,
+                'source': row.source or 'web',
+                'timestamp': row.created_at.isoformat(),
+            })
+        if row.assistant_response:
+            messages.append({
+                'id': f"{row.id}-response",
+                'role': 'assistant',
+                'content': row.assistant_response,
+                'source': 'pa',
+                'timestamp': row.created_at.isoformat(),
+            })
+
+    messages.reverse()  # Chronological order
+
+    return Response({
+        'success': True,
+        'conversation_id': conversation_id,
+        'messages': messages[-limit:],
+        'count': len(messages),
+    })
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def pa_chat_status(request, task_id):
