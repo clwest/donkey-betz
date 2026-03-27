@@ -1182,6 +1182,7 @@ CELERY_TASK_ROUTES = {
     # causing repeated OOM crashes (4 restarts in 2 hours).
     'core.tasks.check_celery_health': {'queue': 'broadcast'},
     'core.tasks.check_orphan_deliverables': {'queue': 'broadcast'},
+    'core.tasks.enforce_db_retention': {'queue': 'long_running'},  # Daily cleanup, may take a few minutes
     'core.tasks.claude_code_agent_respond': {'queue': 'pa'},  # Fast response, same queue as PA
     'core.tasks.process_core_spider_data': {'queue': 'default'},  # p50=155ms, 2610 runs/day — lightweight, moved off long_running
     'core.tasks.batch_extract_artifacts': {'queue': 'long_running'},
