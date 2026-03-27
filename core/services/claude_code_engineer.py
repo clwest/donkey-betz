@@ -151,46 +151,67 @@ TOOLS = [
 def _ensure_git_repo():
     """
     Initialize git repo in the Railway container if not present.
-    Railway deploys built images without .git — we need to init one
-    and configure the GitHub remote so branches/commits/PRs work.
+    Railway deploys built images without .git — we init one with the
+    deployed files as the initial commit, then add the GitHub remote.
     """
     git_dir = os.path.join(REPO_ROOT, '.git')
     if os.path.exists(git_dir):
-        return  # Already initialized
+        logger.info("[ClaudeEngineer] Git repo already exists")
+        return
 
     github_token = os.environ.get('GITHUB_TOKEN', '')
-    repo_slug = 'clwest/donkey-betz-platform'
+    repo_slug = os.environ.get('GITHUB_REPO', 'clwest/donkey-betz-platform')
 
-    try:
-        cmds = [
-            'git init',
-            'git config user.email "claude-code@donkeybetz.com"',
-            'git config user.name "Claude Code Engineer"',
-        ]
+    logger.info("[ClaudeEngineer] Initializing git repo in /app...")
+    errors = []
 
-        # Build remote URL with auth via git credential helper (avoids token in URL)
-        base_url = f'https://github.com/{repo_slug}.git'
-        cmds.append(f'git remote add origin {base_url}')
+    def _run(cmd, timeout=120):
+        result = subprocess.run(
+            cmd, shell=True, capture_output=True, text=True,
+            cwd=REPO_ROOT, timeout=timeout
+        )
+        if result.returncode != 0:
+            err = result.stderr.strip()[:300]
+            if 'already exists' not in err:
+                errors.append(f"{cmd}: {err}")
+                logger.warning(f"[ClaudeEngineer] git: {cmd} -> {err}")
+        return result
 
-        if github_token:
-            # Configure credential helper so git push/fetch uses the token
-            cmds.append(f'git config credential.helper "!f() {{ echo username=x-access-token; echo password={github_token}; }}; f"')  # noqa: E501
+    # Step 1: Init repo with deployed files as baseline
+    _run('git init')
+    _run('git config user.email "claude-code@donkeybetz.com"')
+    _run('git config user.name "Claude Code Engineer"')
 
-        # Fetch main branch reference (shallow to save time/space)
-        cmds.append('git fetch --depth=1 origin main')
-        cmds.append('git checkout -b main FETCH_HEAD')
+    # Step 2: Add all deployed files as initial commit
+    _run('git add -A')
+    _run('git commit -m "Railway deploy baseline" --allow-empty')
 
-        for cmd in cmds:
-            result = subprocess.run(
-                cmd, shell=True, capture_output=True, text=True,
-                cwd=REPO_ROOT, timeout=60
-            )
-            if result.returncode != 0 and 'already exists' not in result.stderr:
-                logger.warning(f"[ClaudeEngineer] git setup: {cmd} -> {result.stderr[:200]}")
+    # Step 3: Configure remote with auth via environment
+    base_url = f'https://github.com/{repo_slug}.git'
+    if github_token:
+        # Set credential helper via environment — git reads GIT_ASKPASS or credential helper
+        _run(f'git remote add origin {base_url}')
+        # Write a helper script that provides the token
+        helper_path = '/tmp/git-credential-helper.sh'
+        with open(helper_path, 'w') as f:
+            f.write(f'#!/bin/sh\necho "username=x-access-token"\necho "password={github_token}"\n')
+        os.chmod(helper_path, 0o755)
+        _run(f'git config credential.helper "{helper_path}"')
+    else:
+        _run(f'git remote add origin {base_url}')
+        logger.warning("[ClaudeEngineer] No GITHUB_TOKEN — push/fetch will require auth")
 
-        logger.info("[ClaudeEngineer] Git repo initialized in /app")
-    except Exception as e:
-        logger.warning(f"[ClaudeEngineer] Git setup failed (non-fatal): {e}")
+    # Step 4: Try to fetch remote refs (non-fatal if it fails)
+    fetch_result = _run('git fetch origin main --depth=1', timeout=30)
+    if fetch_result.returncode == 0:
+        logger.info("[ClaudeEngineer] Fetched remote main branch")
+    else:
+        logger.info("[ClaudeEngineer] Remote fetch skipped — working with local baseline only")
+
+    if errors:
+        logger.warning(f"[ClaudeEngineer] Git init completed with {len(errors)} warnings")
+    else:
+        logger.info("[ClaudeEngineer] Git repo initialized successfully in /app")
 
 
 def _execute_tool(tool_name: str, tool_input: dict) -> str:
