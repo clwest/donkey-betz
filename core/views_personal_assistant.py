@@ -313,6 +313,18 @@ def unified_pa_chat(request):
             platform=platform,
         )
 
+        # Dispatch autonomous Claude Code agent if message addresses it
+        # This runs at the VIEW level (synchronous, before returning to client)
+        # so it doesn't depend on the PA task completing first.
+        try:
+            from core.services.claude_code_agent import should_claude_code_respond
+            if should_claude_code_respond(message, source):
+                from core.tasks import claude_code_agent_respond
+                claude_code_agent_respond.delay(conversation_id, message, source)
+                logger.info(f"[ClaudeCodeAgent] Dispatched from view for conversation {conversation_id}")
+        except Exception as e:
+            logger.warning(f"[ClaudeCodeAgent] View dispatch failed: {e}")
+
         return Response({
             'success': True,
             'task_id': str(task.id),
