@@ -385,6 +385,7 @@ def execute_engineering_task(
 
     try:
         import anthropic
+        import time as _time
         client = anthropic.Anthropic(api_key=api_key)
 
         messages = [{"role": "user", "content": task_description}]
@@ -392,13 +393,23 @@ def execute_engineering_task(
         pr_url = None
 
         for iteration in range(max_iterations):
-            response = client.messages.create(
-                model="claude-sonnet-4-20250514",
-                max_tokens=4096,
-                system=SYSTEM_PROMPT,
-                tools=TOOLS,
-                messages=messages,
-            )
+            # Rate limit retry loop
+            for retry in range(3):
+                try:
+                    response = client.messages.create(
+                        model="claude-sonnet-4-20250514",
+                        max_tokens=4096,
+                        system=SYSTEM_PROMPT,
+                        tools=TOOLS,
+                        messages=messages,
+                    )
+                    break  # Success
+                except anthropic.RateLimitError as rle:
+                    wait = (retry + 1) * 30  # 30s, 60s, 90s
+                    logger.warning(f"[ClaudeEngineer] Rate limited, waiting {wait}s (retry {retry+1}/3)")
+                    _time.sleep(wait)
+                    if retry == 2:
+                        raise rle  # Give up after 3 retries
 
             # Check if we're done (no more tool calls)
             if response.stop_reason == "end_turn":
@@ -425,12 +436,16 @@ def execute_engineering_task(
                     tool_results.append({
                         "type": "tool_result",
                         "tool_use_id": block.id,
-                        "content": result[:20000],  # Cap tool result size
+                        "content": result[:10000],  # Cap at 10KB per result to reduce token usage
                     })
 
             # Add assistant response + tool results to conversation
             messages.append({"role": "assistant", "content": response.content})
             messages.append({"role": "user", "content": tool_results})
+
+            # Trim old messages if context getting too large (keep first + last 10 turns)
+            if len(messages) > 24:
+                messages = [messages[0]] + messages[-20:]
 
         else:
             final_text = f"Reached max iterations ({max_iterations}). Task may be incomplete."
