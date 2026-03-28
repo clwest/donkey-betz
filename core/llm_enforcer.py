@@ -241,7 +241,7 @@ class LLMEnforcer:
                 # Session 1036: Pass input_messages for structured Responses API input
                 response = self._call_openai(prompt, max_tokens, temperature, task_type, tools, context, previous_response_id, tool_choice, input_messages)
                 provider = "openai"
-                model = "gpt-5.2"  # Session 1036: Upgraded to GPT-5.2 (agentic tool calling optimized)
+                model = "gpt-5-mini"  # Switched from gpt-5.2 during OpenAI outage
             else:
                 raise Exception("No LLM client available")
 
@@ -391,11 +391,11 @@ class LLMEnforcer:
         # Session 1036: GPT-5.2 pricing: $1.75/1M input, $14/1M output
         #   Cached input (via previous_response_id): $0.18/1M (90% discount)
         # Session 1088: Apply budget downgrade if active
-        effective_model = "gpt-5.2"
+        effective_model = "gpt-5-mini"
         if getattr(self, '_budget_downgrade_model', None):
             effective_model = self._budget_downgrade_model
             logger.info(
-                f"[BudgetController] Downgrading {task_type} from gpt-5.2 → {effective_model}"
+                f"[BudgetController] Downgrading {task_type} from gpt-5-mini → {effective_model}"
             )
 
         params = {
