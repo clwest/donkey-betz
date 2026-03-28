@@ -33,7 +33,8 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-REPO_ROOT = '/app'  # Railway container path
+REPO_ROOT = '/app'  # Railway container path — may be read-only
+WRITABLE_ROOT = '/tmp/engineer-workspace'  # Writable clone for git operations
 
 SYSTEM_PROMPT = """You are Claude Code Engineer, an autonomous coding agent deployed inside the Donkey Betz platform.
 
@@ -150,68 +151,66 @@ TOOLS = [
 
 def _ensure_git_repo():
     """
-    Initialize git repo in the Railway container if not present.
-    Railway deploys built images without .git — we init one with the
-    deployed files as the initial commit, then add the GitHub remote.
+    Clone the repo into a writable temp directory.
+    Railway's /app/ is read-only for the appuser, so we shallow-clone
+    into /tmp/engineer-workspace/ which is always writable.
+    Updates REPO_ROOT globally so all tools use the writable copy.
     """
-    git_dir = os.path.join(REPO_ROOT, '.git')
-    if os.path.exists(git_dir):
-        logger.info("[ClaudeEngineer] Git repo already exists")
+    global REPO_ROOT
+
+    # If writable workspace already exists, use it
+    if os.path.exists(os.path.join(WRITABLE_ROOT, '.git')):
+        REPO_ROOT = WRITABLE_ROOT
+        logger.info("[ClaudeEngineer] Using existing writable workspace")
         return
 
     github_token = os.environ.get('GITHUB_TOKEN', '')
     repo_slug = os.environ.get('GITHUB_REPO', 'clwest/donkey-betz-platform')
 
-    logger.info("[ClaudeEngineer] Initializing git repo in /app...")
-    errors = []
+    logger.info(f"[ClaudeEngineer] Cloning repo into {WRITABLE_ROOT}...")
 
-    def _run(cmd, timeout=120):
+    try:
+        # Write credential helper BEFORE clone so git can authenticate
+        clone_url = f'https://github.com/{repo_slug}.git'
+        if github_token:
+            helper_path = '/tmp/git-credential-helper.sh'
+            with open(helper_path, 'w') as f:
+                f.write(f'#!/bin/sh\necho "username=x-access-token"\necho "password={github_token}"\n')
+            os.chmod(helper_path, 0o755)
+            os.environ['GIT_ASKPASS'] = helper_path
+
+        # Shallow clone into writable directory
         result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True,
-            cwd=REPO_ROOT, timeout=timeout
+            f'git clone --depth=1 -c credential.helper="{helper_path if github_token else ""}" {clone_url} {WRITABLE_ROOT}',
+            shell=True, capture_output=True, text=True, timeout=120
         )
-        if result.returncode != 0:
-            err = result.stderr.strip()[:300]
-            if 'already exists' not in err:
-                errors.append(f"{cmd}: {err}")
-                logger.warning(f"[ClaudeEngineer] git: {cmd} -> {err}")
-        return result
 
-    # Step 1: Init repo with deployed files as baseline
-    _run('git init')
-    _run('git config user.email "claude-code@donkeybetz.com"')
-    _run('git config user.name "Claude Code Engineer"')
+        if result.returncode == 0:
+            # Configure git user
+            subprocess.run('git config user.email "claude-code@donkeybetz.com"',
+                         shell=True, cwd=WRITABLE_ROOT, capture_output=True, timeout=10)
+            subprocess.run('git config user.name "Claude Code Engineer"',
+                         shell=True, cwd=WRITABLE_ROOT, capture_output=True, timeout=10)
 
-    # Step 2: Add all deployed files as initial commit
-    _run('git add -A')
-    _run('git commit -m "Railway deploy baseline" --allow-empty')
+            # Write credential helper for push operations
+            helper_path = '/tmp/git-credential-helper.sh'
+            if github_token:
+                with open(helper_path, 'w') as f:
+                    f.write(f'#!/bin/sh\necho "username=x-access-token"\necho "password={github_token}"\n')
+                os.chmod(helper_path, 0o755)
+                subprocess.run(f'git config credential.helper "{helper_path}"',
+                             shell=True, cwd=WRITABLE_ROOT, capture_output=True, timeout=10)
 
-    # Step 3: Configure remote with auth via environment
-    base_url = f'https://github.com/{repo_slug}.git'
-    if github_token:
-        # Set credential helper via environment — git reads GIT_ASKPASS or credential helper
-        _run(f'git remote add origin {base_url}')
-        # Write a helper script that provides the token
-        helper_path = '/tmp/git-credential-helper.sh'
-        with open(helper_path, 'w') as f:
-            f.write(f'#!/bin/sh\necho "username=x-access-token"\necho "password={github_token}"\n')
-        os.chmod(helper_path, 0o755)
-        _run(f'git config credential.helper "{helper_path}"')
-    else:
-        _run(f'git remote add origin {base_url}')
-        logger.warning("[ClaudeEngineer] No GITHUB_TOKEN — push/fetch will require auth")
+            REPO_ROOT = WRITABLE_ROOT
+            logger.info(f"[ClaudeEngineer] Repo cloned successfully to {WRITABLE_ROOT}")
+        else:
+            logger.warning(f"[ClaudeEngineer] Clone failed: {result.stderr[:300]}")
+            # Fall back to /app/ read-only access
+            logger.info("[ClaudeEngineer] Falling back to /app/ (read-only)")
 
-    # Step 4: Try to fetch remote refs (non-fatal if it fails)
-    fetch_result = _run('git fetch origin main --depth=1', timeout=30)
-    if fetch_result.returncode == 0:
-        logger.info("[ClaudeEngineer] Fetched remote main branch")
-    else:
-        logger.info("[ClaudeEngineer] Remote fetch skipped — working with local baseline only")
-
-    if errors:
-        logger.warning(f"[ClaudeEngineer] Git init completed with {len(errors)} warnings")
-    else:
-        logger.info("[ClaudeEngineer] Git repo initialized successfully in /app")
+    except Exception as e:
+        logger.warning(f"[ClaudeEngineer] Git setup failed: {e}")
+        logger.info("[ClaudeEngineer] Falling back to /app/ (read-only)")
 
 
 def _execute_tool(tool_name: str, tool_input: dict) -> str:
