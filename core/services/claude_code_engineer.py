@@ -362,7 +362,7 @@ def execute_engineering_task(
     task_description: str,
     conversation_id: str = None,
     requested_by: str = 'rigby',
-    max_iterations: int = 200,
+    max_iterations: int = 500,
 ) -> Dict[str, Any]:
     """
     Execute an engineering task using Claude with codebase tools.
