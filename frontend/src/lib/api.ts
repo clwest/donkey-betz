@@ -1201,6 +1201,9 @@ export const assistantApi = {
   getAttentionItems: () => api.get('/assistant/attention-items/'),
   getTaskProgress: () => api.get('/assistant/task-progress/'),
 
+  // Rigby activity feed — accountability dashboard
+  getActivityFeed: (hours = 1) => api.get(`/pa/activity/?hours=${hours}`),
+
   // Session 933: Unified Attention Aggregator - combines system health + user notifications
   getUnifiedAttention: (params?: {
     include_system?: boolean
