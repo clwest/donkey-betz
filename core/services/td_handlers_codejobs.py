@@ -320,11 +320,27 @@ class CodeJobHandlersMixin:
 
     def _handle_claude_code(self, tool_name, payload, user_id, trace_id):
         """Spawn autonomous Claude Code engineering session. Reads files, writes code, creates PRs."""
-        task_description = payload.get('task', '')
+        # Accept multiple param names — LLM may use different keys
+        task_description = (
+            payload.get('task')
+            or payload.get('task_description')
+            or payload.get('description')
+            or payload.get('prompt')
+            or payload.get('message')
+            or ''
+        )
         if not task_description:
-            return {'error': 'task description is required'}
+            # Log what we actually received for debugging
+            import logging
+            logging.getLogger(__name__).warning(
+                f"[claude_code_tool] No task found in payload keys: {list(payload.keys())} | trace={trace_id}"
+            )
+            return {'error': f'task description is required. Received keys: {list(payload.keys())}'}
 
+        # Auto-inject conversation_id from the PA context if not explicitly set
         conversation_id = payload.get('conversation_id')
+        if not conversation_id and hasattr(self, '_conversation_id'):
+            conversation_id = self._conversation_id
 
         from core.tasks import claude_code_engineer_task
         task = claude_code_engineer_task.delay(
