@@ -4098,6 +4098,7 @@ export const deliverablesApi = {
   types: () => api.get('/deliverables/types/'),
   save: (id: string) => api.post(`/deliverables/${id}/save/`),
   unsave: (id: string) => api.post(`/deliverables/${id}/unsave/`),
+  delete: (id: string) => api.post(`/deliverables/${id}/delete/`),
   clone: (id: string) => api.post(`/deliverables/${id}/clone/`),
   templateize: (id: string) => api.post(`/deliverables/${id}/templateize/`),
   export: (id: string, format: string) => api.post(`/deliverables/${id}/export/`, { format }, { responseType: 'blob' }),
