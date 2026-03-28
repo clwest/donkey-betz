@@ -223,6 +223,23 @@ def save_deliverable(request, deliverable_id):
 
 @require_POST
 @token_auth_required
+def delete_deliverable(request, deliverable_id):
+    """Permanently delete a deliverable."""
+    try:
+        deliverable = get_object_or_404(Deliverable, id=deliverable_id)
+        title = deliverable.title
+        deliverable.delete()
+        return JsonResponse({
+            'success': True,
+            'message': f'Deleted: {title}',
+        })
+    except Exception as e:
+        logger.error(f"Error deleting deliverable {deliverable_id}: {e}", exc_info=True)
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_POST
+@token_auth_required
 def unsave_deliverable(request, deliverable_id):
     """Remove a deliverable from the user's library."""
     try:

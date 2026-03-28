@@ -29,6 +29,7 @@ import {
   Inbox,
   CheckCircle2,
   MessageSquare,
+  Trash2,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { deliverablesApi } from '@/lib/api'
@@ -206,6 +207,16 @@ export function DeliverablesTab() {
       queryClient.invalidateQueries({ queryKey: ['deliverables-list'] })
       queryClient.invalidateQueries({ queryKey: ['deliverables-detail'] })
       queryClient.invalidateQueries({ queryKey: ['deliverables-stats'] })
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deliverablesApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deliverables-list'] })
+      queryClient.invalidateQueries({ queryKey: ['deliverables-detail'] })
+      queryClient.invalidateQueries({ queryKey: ['deliverables-stats'] })
+      setSelectedId(null)
     },
   })
 
@@ -406,6 +417,19 @@ export function DeliverablesTab() {
                     </button>
                   ))}
                 </div>
+
+                <button
+                  onClick={() => {
+                    if (confirm(`Delete "${detail.title}"? This cannot be undone.`)) {
+                      deleteMutation.mutate(detail.id)
+                    }
+                  }}
+                  disabled={deleteMutation.isPending}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded text-sm bg-red-900/20 text-red-400 hover:bg-red-900/40 transition-colors"
+                >
+                  <Trash2 size={14} />
+                  Delete
+                </button>
 
                 {/* ATR CTAs — record action events for Stage 3 pilot metrics */}
                 <div className="pt-2 border-t border-dark-border space-y-2">
