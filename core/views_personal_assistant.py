@@ -505,6 +505,62 @@ def pa_conversation_messages(request, conversation_id):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def pa_activity_feed(request):
+    """
+    Rigby's activity feed — shows actual tool calls with timestamps.
+    Proves what Rigby is really doing vs what he says he's doing.
+
+    Query params:
+    - hours: lookback window (default 1)
+    - limit: max results (default 50)
+    - agent: filter by agent name (default: PersonalAssistant)
+    """
+    from core.models_tool_calls import ToolCallRecord
+    from django.utils import timezone
+    from datetime import timedelta
+
+    hours = int(request.query_params.get('hours', 1))
+    limit = min(int(request.query_params.get('limit', 50)), 200)
+    agent_filter = request.query_params.get('agent', '')
+
+    cutoff = timezone.now() - timedelta(hours=hours)
+    qs = ToolCallRecord.objects.filter(created_at__gte=cutoff).order_by('-created_at')
+
+    if agent_filter:
+        qs = qs.filter(agent_name__icontains=agent_filter)
+
+    records = []
+    for r in qs[:limit]:
+        records.append({
+            'id': str(r.id),
+            'agent': r.agent_name,
+            'tool': r.tool_name,
+            'success': r.success,
+            'latency_ms': r.latency_ms,
+            'timestamp': r.created_at.isoformat(),
+            'parameters_preview': str(r.parameters)[:200] if r.parameters else '',
+            'result_preview': str(r.result_summary)[:200] if r.result_summary else '',
+        })
+
+    # Summary stats
+    total_calls = qs.count()
+    tool_counts = {}
+    for r in qs[:500]:
+        tool_counts[r.tool_name] = tool_counts.get(r.tool_name, 0) + 1
+
+    return Response({
+        'success': True,
+        'window_hours': hours,
+        'total_calls': total_calls,
+        'tool_breakdown': dict(sorted(tool_counts.items(), key=lambda x: -x[1])[:15]),
+        'recent_calls': records,
+        'message': f'Rigby made {total_calls} tool calls in the last {hours} hour(s)' if total_calls > 0
+                   else f'Rigby has made NO tool calls in the last {hours} hour(s) — he may be idle',
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def pa_chat_status(request, task_id):
     """
     Session 974b: Poll async PA chat task status.
