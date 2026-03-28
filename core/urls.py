@@ -1061,6 +1061,7 @@ from core.views_personal_assistant import (
     list_pa_conversations, get_pa_conversation, create_pa_conversation,  # Session 974: Conversation history
     trigger_boardroom_maintenance,  # Session 977: On-demand boardroom cleanup
     pa_conversation_post_message, pa_conversation_messages,  # 3-way chat: store-only + message polling
+    pa_activity_feed,  # Rigby accountability: actual tool call activity
 )
 from core.views_assistant_bypass import assistant_chat_bypass, get_task_progress
 if settings.DEBUG:
@@ -2425,6 +2426,8 @@ urlpatterns = [
     # 3-way chat: store-only message post + incremental message polling
     path('api/pa/conversations/<str:conversation_id>/message/', pa_conversation_post_message, name='pa-conversation-post-message'),
     path('api/pa/conversations/<str:conversation_id>/messages/', pa_conversation_messages, name='pa-conversation-messages'),
+    # Rigby activity feed — accountability dashboard
+    path('api/pa/activity/', pa_activity_feed, name='pa-activity-feed'),
     # Session 977: On-demand boardroom maintenance trigger
     path('api/pa/boardroom/maintenance/', trigger_boardroom_maintenance, name='boardroom-maintenance'),
 
