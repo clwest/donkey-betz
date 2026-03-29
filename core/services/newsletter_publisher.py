@@ -22,9 +22,7 @@ Usage:
 
 import logging
 import re
-import uuid
 from abc import ABC, abstractmethod
-from datetime import datetime
 from typing import Dict, Any, Optional, List
 
 logger = logging.getLogger(__name__)
@@ -226,6 +224,11 @@ class SubstackManualProvider(PublisherProvider):
             cta = DEFAULT_CTA.replace('{{subscribe_url}}', subscribe_url)
             full_content = content.rstrip() + '\n\n' + cta
 
+        # Replace subscribe URL placeholders in existing content
+        full_content = full_content.replace('{{subscribe_url}}', subscribe_url)
+        full_content = full_content.replace('(Substack link)', f'({subscribe_url})')
+        full_content = full_content.replace('{{sponsor_email}}', sponsor_email)
+
         # Ensure sponsor slot exists (placeholder if no sponsor)
         if not sections.get('sponsor'):
             sponsor_block = SPONSOR_PLACEHOLDER.replace('{{sponsor_email}}', sponsor_email)
@@ -273,11 +276,15 @@ class SubstackManualProvider(PublisherProvider):
     def _generate_subjects(self, title: str, issue_number, sections: Dict) -> List[str]:
         """Generate 3 subject line options."""
         top_signal = sections.get('top_signal', '')
-        # Extract first sentence-like fragment
-        first_line = top_signal.split('.')[0].strip()[:60] if top_signal else ''
+        # Clean up: remove time markers like "(1 minute)", strip leading whitespace/newlines
+        import re
+        cleaned = re.sub(r'\(\d+\s*minutes?\)', '', top_signal).strip()
+        # Skip lines that are just formatting artifacts
+        lines = [l.strip() for l in cleaned.split('\n') if l.strip() and not l.strip().startswith('*')]
+        first_sentence = lines[0].split('.')[0].strip()[:60] if lines else ''
 
         return [
-            f"Ops Autopilot #{issue_number}: {first_line}" if first_line else f"Ops Autopilot #{issue_number}",
+            f"Ops Autopilot #{issue_number}: {first_sentence}" if first_sentence else f"Ops Autopilot #{issue_number}",
             f"Autopilot Ops #{issue_number} — What broke + what to automate",
             f"#{issue_number}: Reliability signals, condensed",
         ]
