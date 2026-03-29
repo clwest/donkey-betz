@@ -140,7 +140,29 @@ class AssistantProfile(UnifiedBaseModel):
         """Return the system prompt override for this user.
 
         Priority: explicit system_prompt_override > role defaults.
+        Also injects prospect profile content so the PA knows about the user.
         """
-        if self.system_prompt_override:
-            return self.system_prompt_override
-        return ROLE_PROMPTS.get(self.role, '')
+        base = self.system_prompt_override or ROLE_PROMPTS.get(self.role, '')
+
+        # Inject prospect profile so PA knows about this person
+        prospect_context = self._load_prospect_context()
+        if prospect_context:
+            base += f'\n\nABOUT THIS PERSON (use this to personalize your responses):\n{prospect_context}'
+
+        return base
+
+    def _load_prospect_context(self):
+        """Load prospect profile content from the linked VIPInvite."""
+        try:
+            from core.models_vip_invite import VIPInvite
+            invite = VIPInvite.objects.filter(
+                redeemed_by=self.user,
+                prospect_profile__isnull=False,
+            ).select_related('prospect_profile').order_by('-redeemed_at').first()
+            if invite and invite.prospect_profile:
+                content = invite.prospect_profile.content or ''
+                # Cap at 2000 chars to keep system prompt reasonable
+                return content[:2000] if content else None
+        except Exception:
+            pass
+        return None
