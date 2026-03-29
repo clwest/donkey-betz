@@ -1427,7 +1427,7 @@ function DistributionSubTab() {
     { name: 'YouTube', status: 'not_connected' },
     { name: 'Spotify', status: 'not_connected' },
     { name: 'Medium', status: 'not_connected' },
-    { name: 'Substack', status: 'not_connected' },
+    { name: 'Substack', status: 'connected' },
   ]
 
   const toggleSection = (section: string) => {
@@ -2947,6 +2947,50 @@ function VoiceProfileModal({ onClose }: { onClose: () => void }) {
 // Session 857: Platform Detail Modal
 function PlatformDetailModal({ platform, onClose }: { platform: Platform; onClose: () => void }) {
   const isConnected = platform.status === 'connected'
+  const isSubstack = platform.name === 'Substack'
+
+  // Fetch newsletter deliverables for Substack
+  const { data: newsletterData, isLoading: nlLoading } = useQuery({
+    queryKey: ['newsletter-deliverables'],
+    queryFn: async () => {
+      const res = await api.get('/deliverables/', {
+        params: { category: 'Newsletter', per_page: 20 },
+      })
+      return res.data
+    },
+    enabled: isSubstack,
+  })
+
+  const [copied, setCopied] = useState(false)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  const { data: selectedDetail } = useQuery({
+    queryKey: ['deliverable-detail', selectedId],
+    queryFn: async () => {
+      if (!selectedId) return null
+      const res = await api.get(`/deliverables/${selectedId}/`)
+      return res.data
+    },
+    enabled: !!selectedId,
+  })
+
+  const handleCopy = async (content: string) => {
+    await navigator.clipboard.writeText(content)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  // Group newsletter deliverables by issue number
+  const issues = (newsletterData?.results || newsletterData?.items || []).reduce(
+    (acc: Record<string, Array<{ id: string; title: string; metadata?: Record<string, unknown> }>>, d: { id: string; title: string; metadata?: Record<string, unknown> }) => {
+      const issueNum = (d.metadata as Record<string, unknown>)?.issue_number || 'other'
+      const key = String(issueNum)
+      if (!acc[key]) acc[key] = []
+      acc[key].push(d)
+      return acc
+    },
+    {} as Record<string, Array<{ id: string; title: string; metadata?: Record<string, unknown> }>>
+  )
 
   return (
     <div
@@ -2954,19 +2998,24 @@ function PlatformDetailModal({ platform, onClose }: { platform: Platform; onClos
       onClick={onClose}
     >
       <div
-        className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-hidden flex flex-col"
+        className="bg-dark-card border border-dark-border rounded-xl w-full max-w-3xl mx-4 max-h-[85vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b border-dark-border">
           <div className="flex items-center gap-3">
-            <Share2 size={20} className={isConnected ? 'text-accent-green' : 'text-gray-400'} />
+            {isSubstack ? (
+              <Send size={20} className="text-accent-green" />
+            ) : (
+              <Share2 size={20} className={isConnected ? 'text-accent-green' : 'text-gray-400'} />
+            )}
             <div>
               <h3 className="font-semibold">{platform.name}</h3>
               <span className={cn(
                 'text-xs px-2 py-0.5 rounded',
+                isSubstack ? 'bg-accent-green/20 text-accent-green' :
                 isConnected ? 'bg-accent-green/20 text-accent-green' : 'bg-gray-500/20 text-gray-400'
               )}>
-                {isConnected ? 'Connected' : 'Not Connected'}
+                {isSubstack ? 'Manual Deploy' : isConnected ? 'Connected' : 'Not Connected'}
               </span>
             </div>
           </div>
@@ -2976,7 +3025,113 @@ function PlatformDetailModal({ platform, onClose }: { platform: Platform; onClos
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {isConnected ? (
+          {isSubstack ? (
+            <>
+              {/* Substack Deploy Panel */}
+              <div className="p-3 bg-primary-500/10 border border-primary-500/20 rounded-lg">
+                <p className="text-sm text-primary-300">
+                  Deploy to Substack by copying publish-ready content below and pasting into your Substack editor.
+                </p>
+                <a
+                  href="https://substack.com/@donkeybetzking"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary-400 hover:text-primary-300 mt-1 inline-flex items-center gap-1"
+                >
+                  Open Substack <ChevronRight size={12} />
+                </a>
+              </div>
+
+              {/* Newsletter Issues */}
+              {nlLoading ? (
+                <div className="text-center py-6">
+                  <Loader2 className="mx-auto mb-2 animate-spin text-gray-400" size={24} />
+                  <p className="text-sm text-gray-500">Loading newsletter content...</p>
+                </div>
+              ) : Object.keys(issues).length === 0 ? (
+                <div className="text-center py-6 text-gray-500">
+                  <FileText className="mx-auto mb-2" size={24} />
+                  <p className="text-sm">No newsletter content yet</p>
+                  <p className="text-xs text-gray-600 mt-1">Use the newsletter tool to prepare issues</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-gray-400">Newsletter Issues</h4>
+                  {(newsletterData?.results || newsletterData?.items || []).map((d: { id: string; title: string; created_at?: string; metadata?: Record<string, unknown> }) => {
+                    const artifactType = (d.metadata as Record<string, unknown>)?.artifact_type as string || ''
+                    const isPublishReady = artifactType?.includes('publish_ready')
+                    const isChecklist = artifactType === 'publish_checklist'
+                    const isSubjectPreheader = artifactType === 'subject_preheader'
+                    return (
+                      <div
+                        key={d.id}
+                        className={cn(
+                          'p-3 rounded-lg border cursor-pointer transition-all',
+                          selectedId === d.id
+                            ? 'border-primary-500 bg-primary-500/10'
+                            : 'border-dark-border bg-gray-800/30 hover:border-gray-600'
+                        )}
+                        onClick={() => setSelectedId(selectedId === d.id ? null : d.id)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {isPublishReady && <Send size={14} className="text-accent-green" />}
+                            {isChecklist && <CheckCircle size={14} className="text-accent-amber" />}
+                            {isSubjectPreheader && <FileText size={14} className="text-primary-400" />}
+                            {!isPublishReady && !isChecklist && !isSubjectPreheader && <FileText size={14} className="text-gray-500" />}
+                            <span className="text-sm font-medium">{d.title}</span>
+                          </div>
+                          {isPublishReady && (
+                            <span className="text-xs px-2 py-0.5 rounded bg-accent-green/20 text-accent-green">
+                              Ready
+                            </span>
+                          )}
+                        </div>
+                        {d.created_at && (
+                          <p className="text-xs text-gray-500 mt-1 ml-6">
+                            {new Date(d.created_at).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Selected Content Preview + Copy */}
+              {selectedDetail && (
+                <div className="border border-dark-border rounded-lg overflow-hidden">
+                  <div className="flex items-center justify-between p-3 bg-gray-800/50 border-b border-dark-border">
+                    <span className="text-sm font-medium">{selectedDetail.title}</span>
+                    <button
+                      onClick={() => handleCopy(selectedDetail.content || '')}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-all',
+                        copied
+                          ? 'bg-accent-green/20 text-accent-green'
+                          : 'bg-primary-500/20 text-primary-400 hover:bg-primary-500/30'
+                      )}
+                    >
+                      {copied ? <CheckCircle size={14} /> : <Send size={14} />}
+                      {copied ? 'Copied!' : 'Copy to Clipboard'}
+                    </button>
+                  </div>
+                  <div className="p-4 max-h-64 overflow-y-auto">
+                    <div className="prose prose-invert prose-sm max-w-none">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {(selectedDetail.content || '').slice(0, 3000)}
+                      </ReactMarkdown>
+                      {(selectedDetail.content || '').length > 3000 && (
+                        <p className="text-xs text-gray-500 mt-2 italic">
+                          Content truncated in preview. Full content copied to clipboard.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : isConnected ? (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 bg-gray-800/50 rounded-lg">
@@ -3002,8 +3157,19 @@ function PlatformDetailModal({ platform, onClose }: { platform: Platform; onClos
           )}
         </div>
 
-        <div className="p-4 border-t border-dark-border flex justify-end">
-          <button onClick={onClose} className="btn btn-primary text-sm">
+        <div className="p-4 border-t border-dark-border flex justify-between">
+          {isSubstack && (
+            <a
+              href="https://substack.com/@donkeybetzking"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-primary text-sm flex items-center gap-2"
+            >
+              <Send size={14} />
+              Open Substack Editor
+            </a>
+          )}
+          <button onClick={onClose} className={cn("btn text-sm", isSubstack ? "btn-secondary" : "btn-primary ml-auto")}>
             Close
           </button>
         </div>
