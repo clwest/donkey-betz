@@ -45,15 +45,40 @@ class NewsletterHandlersMixin:
 
     # ── prepare ─────────────────────────────────────────────────────────────
 
+    def _load_newsletter_config(self):
+        """Load saved newsletter config from the config deliverable."""
+        from core.models_deliverables import Deliverable
+        defaults = {
+            'provider': 'substack_manual',
+            'subscribe_url': 'https://autopilotops.substack.com',
+            'sponsor_email': 'sponsor@autopilotops.com',
+            'publication_name': 'Autopilot Ops',
+        }
+        try:
+            config_del = Deliverable.objects.get(
+                title='Newsletter Config — Autopilot Ops',
+                category='Newsletter',
+            )
+            if config_del.metadata:
+                for key in defaults:
+                    val = config_del.metadata.get(key)
+                    if val:
+                        defaults[key] = val
+        except Deliverable.DoesNotExist:
+            pass
+        return defaults
+
     def _newsletter_prepare(self, payload, user_id, trace_id):
         """Transform an issue deliverable into a publish-ready artifact."""
         from core.models_deliverables import Deliverable
         from core.services.newsletter_publisher import get_publisher
 
+        # Load saved config, then allow payload overrides
+        saved_config = self._load_newsletter_config()
         deliverable_id = payload.get('id') or payload.get('deliverable_id')
-        provider_name = payload.get('provider', 'substack_manual')
-        subscribe_url = payload.get('subscribe_url', 'https://autopilotops.substack.com')
-        sponsor_email = payload.get('sponsor_email', 'sponsor@autopilotops.com')
+        provider_name = payload.get('provider', saved_config['provider'])
+        subscribe_url = payload.get('subscribe_url', saved_config['subscribe_url'])
+        sponsor_email = payload.get('sponsor_email', saved_config['sponsor_email'])
 
         if not deliverable_id:
             return {'error': 'id (deliverable_id) is required', 'action': 'prepare'}
