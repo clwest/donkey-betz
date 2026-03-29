@@ -1108,7 +1108,19 @@ class AgentHandlersMixin:
         base_qs = Deliverable.objects.all()
         # If workspace_id is in payload, scope to workspace (skip user filter — workspace is authoritative)
         ws_scope = payload.get('workspace_id') or payload.get('workspace')
-        logger.info(f"[deliverables] workspace_scope={ws_scope} user_id={user_id} payload_keys={sorted(payload.keys()) if isinstance(payload, dict) else 'N/A'}")
+
+        # Fallback: if no workspace in payload, check user's AssistantProfile for workspace scoping
+        if not ws_scope and user_id:
+            try:
+                from core.models_assistant_profile import AssistantProfile
+                ap = AssistantProfile.objects.filter(user_id=user_id).first()
+                if ap and ap.workspace_id:
+                    ws_scope = str(ap.workspace_id)
+                    logger.info(f"[deliverables] Workspace from AssistantProfile: {ws_scope}")
+            except Exception:
+                pass
+
+        logger.info(f"[deliverables] workspace_scope={ws_scope} user_id={user_id}")
         if ws_scope:
             base_qs = base_qs.filter(workspace_id=ws_scope)
             logger.info(f"[deliverables] Filtered to workspace {ws_scope}: {base_qs.count()} items")
