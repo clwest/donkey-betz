@@ -19,8 +19,17 @@ import traceback
 logger = logging.getLogger(__name__)
 
 
-def _get_vip_workspace_id(request):
-    """Extract workspace_id for VIP users. Returns None for admin/regular users."""
+def _get_cockpit_workspace_id(request):
+    """Extract workspace_id for cockpit filtering.
+
+    Priority:
+    1. Explicit ?workspace= query param (admin workspace switcher)
+    2. VIP user's assigned workspace (from invite)
+    3. None (global view)
+    """
+    explicit = request.GET.get('workspace', '').strip()
+    if explicit:
+        return explicit
     try:
         from core.vip_scope import get_vip_scope
         scope = get_vip_scope(request)
@@ -1021,7 +1030,7 @@ def cockpit_runs_list(request):
         qs = AgentExecution.objects.filter(created_at__gte=cutoff).select_related('agent')
 
         # VIP workspace scoping — only show runs linked to their workspace
-        vip_ws = _get_vip_workspace_id(request)
+        vip_ws = _get_cockpit_workspace_id(request)
         if vip_ws:
             from core.models_deliverables import Deliverable
             ws_agent_names = list(
@@ -1843,7 +1852,7 @@ def cockpit_library_deliverables(request):
     qs = Deliverable.objects.all().order_by('-created_at')
 
     # VIP workspace scoping
-    vip_ws = _get_vip_workspace_id(request)
+    vip_ws = _get_cockpit_workspace_id(request)
     if vip_ws:
         qs = qs.filter(workspace_id=vip_ws)
 
