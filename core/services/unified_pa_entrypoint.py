@@ -1925,6 +1925,14 @@ class UnifiedPAEntrypoint:
         except Exception as e:
             logger.debug(f"[PA] Tool learning enricher skipped: {e}")
 
+        # VIP mode — override system prompt to scope responses
+        vip_directive = context.get('vip_system_directive')
+        if vip_directive:
+            vip_name = context.get('vip_recipient_name', 'VIP viewer')
+            prompt_parts.insert(0, f"CRITICAL VIP MODE OVERRIDE:\n{vip_directive}")
+            prompt_parts.insert(1, f"You are speaking with: {vip_name}")
+            prompt_parts.insert(2, "")
+
         return "\n".join(prompt_parts)
 
     def _infer_intent_from_tools(self, tool_names: List[str]) -> Optional[str]:
