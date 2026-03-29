@@ -1145,6 +1145,10 @@ class AgentHandlersMixin:
             init_id = payload.get('initiative_id')
             if init_id:
                 qs = qs.filter(initiative_id=init_id)
+            # Workspace filter — scopes deliverable results to a workspace
+            ws_id = payload.get('workspace_id') or payload.get('workspace')
+            if ws_id:
+                qs = qs.filter(workspace_id=ws_id)
             return qs
 
         _LIST_FIELDS = (

@@ -938,6 +938,23 @@ class UnifiedPAEntrypoint:
             logger.debug(f"[PA] AssistantProfile lookup failed: {e}")
             return None
 
+    def _get_user_workspace_id(self):
+        """Return workspace_id from the user's AssistantProfile, if set.
+
+        Used to auto-scope tool calls (e.g. deliverable_tool) to the user's workspace.
+        Returns None for admin users or users without workspace scoping.
+        """
+        if not self.user:
+            return None
+        try:
+            from core.models_assistant_profile import AssistantProfile
+            profile = AssistantProfile.objects.filter(user=self.user).first()
+            if profile and profile.workspace_id:
+                return str(profile.workspace_id)
+        except Exception:
+            pass
+        return None
+
     # =========================================================================
     # Session 1036: LLM-Driven Function Calling (Agentic Loop)
     # =========================================================================
@@ -1369,6 +1386,14 @@ class UnifiedPAEntrypoint:
                 # back to this conversation when the work completes.
                 if self.conversation_id and isinstance(arguments, dict):
                     arguments['conversation_id'] = self.conversation_id
+
+                # Per-user workspace scoping — auto-inject workspace_id
+                # so tools like deliverable_tool only return workspace data
+                if isinstance(arguments, dict) and not arguments.get('workspace_id'):
+                    ws_id = self._get_user_workspace_id()
+                    if ws_id:
+                        arguments['workspace_id'] = ws_id
+                        arguments['workspace'] = ws_id
 
                 tool_result = await self.tool_dispatcher.execute(
                     tool_name=actual_tool_name,
