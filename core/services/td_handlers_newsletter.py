@@ -62,7 +62,7 @@ class NewsletterHandlersMixin:
             if config_del.metadata:
                 for key in defaults:
                     val = config_del.metadata.get(key)
-                    if val:
+                    if val and val != '':
                         defaults[key] = val
         except Deliverable.DoesNotExist:
             pass
@@ -462,11 +462,12 @@ class NewsletterHandlersMixin:
         except Deliverable.DoesNotExist:
             config_del = None
 
-        # If updating
+        # If updating — only accept non-empty values (PA may send empty strings)
         updates = {}
         for key in ['provider', 'subscribe_url', 'sponsor_email', 'publication_name', 'publication_slug']:
-            if payload.get(key) is not None:
-                updates[key] = payload[key]
+            val = payload.get(key)
+            if val is not None and val != '':
+                updates[key] = val
 
         if updates:
             if not config_del:
