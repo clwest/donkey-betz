@@ -490,3 +490,21 @@ export async function postObsUpload(body?: { title?: string; tags?: string[]; st
   const { data } = await api.post<ObsResponse>('/cockpit/obs/upload/', body)
   return data
 }
+
+// --- VIP Context ---
+
+export interface VipContext {
+  is_vip: boolean
+  recipient_name?: string
+  workspace_id?: string
+  workspace_name?: string
+  prospect_profile_id?: string
+  prospect_profile_title?: string
+  prospect_profile_preview?: string
+  workspace_deliverable_count?: number
+}
+
+export async function getVipContext() {
+  const { data } = await api.get<VipContext>('/cockpit/vip-context/')
+  return data
+}

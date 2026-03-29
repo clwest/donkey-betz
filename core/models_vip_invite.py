@@ -44,6 +44,29 @@ class VIPInvite(UnifiedBaseModel):
         related_name='vip_invites_created',
     )
 
+    # Workspace + personalization scoping
+    workspace = models.ForeignKey(
+        'core.ProjectWorkspace',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='vip_invites',
+        help_text="Workspace to scope the VIP view to",
+    )
+    prospect_profile = models.ForeignKey(
+        'core.Deliverable',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='vip_invites',
+        help_text="Prospect profile deliverable for personalization",
+    )
+    recipient_name = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Display name for the invitee (e.g. 'Matthew Berman')",
+    )
+
     # Lifecycle
     token_expires_at = models.DateTimeField(default=_default_token_expires)
     account_expires_at = models.DateTimeField(default=_default_account_expires)
