@@ -113,6 +113,19 @@ def vip_invite_exchange(request):
     except Exception:
         logger.warning("Could not set VIP primary_role on profile for %s", username)
 
+    # Create AssistantProfile for VIP user (per-user PA scoping)
+    try:
+        from core.models_assistant_profile import AssistantProfile
+        AssistantProfile.objects.create(
+            user=vip_user,
+            role='vip_viewer',
+            workspace=invite.workspace,
+            display_name=invite.recipient_name or '',
+        )
+        logger.info("Created AssistantProfile (vip_viewer) for %s", username)
+    except Exception:
+        logger.warning("Could not create AssistantProfile for %s", username)
+
     # Create DRF auth token
     from rest_framework.authtoken.models import Token
     api_token, _ = Token.objects.get_or_create(user=vip_user)

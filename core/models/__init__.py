@@ -255,6 +255,9 @@ from ..models_governance import GovernanceState, KillSwitch
 # Import VIP invite model (OVL - Magic Link Invites)
 from ..models_vip_invite import VIPInvite
 
+# Per-user PA configuration
+from ..models_assistant_profile import AssistantProfile
+
 # Learning readback telemetry
 from .learning_readback import LearningReadbackEvent
 
