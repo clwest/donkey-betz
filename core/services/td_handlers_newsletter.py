@@ -77,9 +77,9 @@ class NewsletterHandlersMixin:
         # Load saved config, then allow payload overrides
         saved_config = self._load_newsletter_config()
         deliverable_id = payload.get('id') or payload.get('deliverable_id')
-        provider_name = payload.get('provider', saved_config['provider'])
-        subscribe_url = payload.get('subscribe_url', saved_config['subscribe_url'])
-        sponsor_email = payload.get('sponsor_email', saved_config['sponsor_email'])
+        provider_name = payload.get('provider') or saved_config['provider']
+        subscribe_url = payload.get('subscribe_url') or saved_config['subscribe_url']
+        sponsor_email = payload.get('sponsor_email') or saved_config['sponsor_email']
 
         if not deliverable_id:
             return {'error': 'id (deliverable_id) is required', 'action': 'prepare'}
