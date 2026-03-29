@@ -83,6 +83,13 @@ class ContentHandlersMixin:
     def _handle_deliverable_direct(self, tool_name, payload, user_id, trace_id):
         """Direct deliverable handler — maps deliverable_tool actions to deliverables_tool."""
         action = payload.get('action', 'list')
+
+        # Session 1077+: Smart inference — GPT-5.2 sometimes drops action or
+        # defaults to 'list' even when title+content clearly indicate create.
+        if action == 'list' and payload.get('title') and payload.get('content'):
+            action = 'create'
+            logger.info(f"[deliverable_tool] Inferred action=create from title+content")
+
         # Map direct actions to the deliverables handler action names
         ACTION_MAP = {
             'list': 'list', 'detail': 'detail', 'create': 'create',
