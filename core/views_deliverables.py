@@ -164,10 +164,21 @@ def get_deliverable(request, deliverable_id):
         # Check access permissions
         if deliverable.user and request.user.is_authenticated:
             if deliverable.user != request.user:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Access denied'
-                }, status=403)
+                # Allow VIP users to view deliverables in their assigned workspace
+                vip_allowed = False
+                if deliverable.workspace_id:
+                    try:
+                        from core.vip_scope import get_vip_scope
+                        scope = get_vip_scope(request)
+                        if scope.is_vip and scope.workspace_id == str(deliverable.workspace_id):
+                            vip_allowed = True
+                    except Exception:
+                        pass
+                if not vip_allowed:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Access denied'
+                    }, status=403)
 
         # Auto-emit view event
         _emit_event(deliverable, 'synthesis_viewed', request.user, 'frontend')
