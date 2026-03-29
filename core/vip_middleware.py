@@ -12,11 +12,12 @@ from django.http import JsonResponse
 
 logger = logging.getLogger(__name__)
 
-# Paths VIP users are allowed to POST to (token exchange, auth)
+# Paths VIP users are allowed to POST to (token exchange, auth, PA chat)
 _VIP_ALLOWED_WRITE_PATHS = frozenset([
     '/api/v1/vip-invites/exchange/',
     '/api/auth/login/',
     '/api/auth/logout/',
+    '/api/pa/chat/',
 ])
 
 

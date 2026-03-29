@@ -286,8 +286,30 @@ def unified_pa_chat(request):
         if len(message) > 8000:
             message = message[:8000]
 
+        # VIP scoping — inject workspace context and restrict PA behavior
+        workspace_id = None
+        try:
+            from core.vip_scope import get_vip_scope
+            vip_scope = get_vip_scope(request)
+            if vip_scope.is_vip:
+                context = context or {}
+                if vip_scope.workspace_id:
+                    workspace_id = vip_scope.workspace_id
+                context['vip_mode'] = True
+                context['vip_recipient_name'] = vip_scope.recipient_name or ''
+                context['vip_system_directive'] = (
+                    'You are speaking with a VIP demo viewer. '
+                    'Only discuss deliverables, capabilities, and content visible in their workspace. '
+                    'Do NOT discuss internal operations, other users, costs, infrastructure details, '
+                    'API keys, deployment specifics, or system errors. '
+                    'Be helpful, professional, and focus on showcasing what the platform can do. '
+                    'If asked about pricing or business terms, say Chris will follow up directly.'
+                )
+        except Exception:
+            pass
+
         # Session 1077: Inject workspace context so PA knows which workspace is active
-        workspace_id = request.data.get('workspace_id')
+        workspace_id = request.data.get('workspace_id') or workspace_id
         if workspace_id:
             try:
                 from core.models import ProjectWorkspace
