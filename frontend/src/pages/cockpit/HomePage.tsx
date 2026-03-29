@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Package, FileText, Send } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { Package, FileText, Send, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
 import TodayRunsCard from '@/components/cockpit/today/TodayRunsCard'
 import TodayErrorsCard from '@/components/cockpit/today/TodayErrorsCard'
 import NorthStarCard from '@/components/cockpit/today/NorthStarCard'
@@ -53,6 +55,86 @@ function classifyRun(r: RunSummary): 'attention' | 'review' | 'routine' {
   return 'routine'
 }
 
+// ── VIP Deliverables List (expandable cards with inline content) ────────────
+
+function VipDeliverablesList({ items }: { items: Array<{ id: string; title: string; category?: string; deliverable_type?: string; agent_name?: string; created_at?: string }> }) {
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  // Fetch full content for expanded deliverable
+  const { data: expandedDetail } = useQuery({
+    queryKey: ['deliverable-detail', expandedId],
+    queryFn: async () => {
+      if (!expandedId) return null
+      const res = await api.get(`/deliverables/${expandedId}/`)
+      return res.data
+    },
+    enabled: !!expandedId,
+  })
+
+  if (items.length === 0) {
+    return (
+      <div>
+        <h2 className="text-lg font-semibold text-white mb-3">Workspace Deliverables</h2>
+        <div className="card p-6 text-center text-gray-500">
+          <FileText className="mx-auto mb-2" size={24} />
+          <p className="text-sm">No deliverables yet</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <h2 className="text-lg font-semibold text-white mb-3">Workspace Deliverables</h2>
+      <div className="space-y-2">
+        {items.map((d) => {
+          const isExpanded = expandedId === d.id
+          return (
+            <div key={d.id} className="card overflow-hidden">
+              <button
+                onClick={() => setExpandedId(isExpanded ? null : d.id)}
+                className="w-full p-4 flex items-center justify-between hover:bg-gray-800/30 transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <FileText size={16} className="text-primary-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-white">{d.title}</p>
+                    <p className="text-xs text-gray-500">
+                      {d.category || d.deliverable_type}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {d.created_at && (
+                    <span className="text-xs text-gray-500">
+                      {new Date(d.created_at).toLocaleDateString()}
+                    </span>
+                  )}
+                  {isExpanded ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+                </div>
+              </button>
+
+              {isExpanded && (
+                <div className="border-t border-dark-border p-5">
+                  {expandedDetail?.content ? (
+                    <div className="prose prose-invert prose-sm max-w-none">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {expandedDetail.content}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-gray-500 text-sm">Loading...</div>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── VIP Welcome View ────────────────────────────────────────────────────────
 
 function VipWelcome({ vip }: { vip: VipContext }) {
@@ -95,49 +177,18 @@ function VipWelcome({ vip }: { vip: VipContext }) {
         </div>
       </div>
 
-      {/* Deliverables Grid */}
-      <div>
-        <h2 className="text-lg font-semibold text-white mb-3">Workspace Deliverables</h2>
-        {items.length === 0 ? (
-          <div className="card p-6 text-center text-gray-500">
-            <FileText className="mx-auto mb-2" size={24} />
-            <p className="text-sm">No deliverables yet</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {items.map((d: { id: string; title: string; category?: string; deliverable_type?: string; agent_name?: string; created_at?: string; quality_score?: number }) => (
-              <div
-                key={d.id}
-                className="card p-4 flex items-center justify-between hover:border-primary-500/40 transition-colors cursor-pointer"
-                onClick={() => window.open(`/cockpit/library?id=${d.id}`, '_self')}
-              >
-                <div className="flex items-center gap-3">
-                  <FileText size={16} className="text-primary-400" />
-                  <div>
-                    <p className="text-sm font-medium text-white">{d.title}</p>
-                    <p className="text-xs text-gray-500">
-                      {d.category || d.deliverable_type} {d.agent_name ? `by ${d.agent_name}` : ''}
-                    </p>
-                  </div>
-                </div>
-                {d.created_at && (
-                  <span className="text-xs text-gray-500">
-                    {new Date(d.created_at).toLocaleDateString()}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Deliverables — expandable cards with inline content */}
+      <VipDeliverablesList items={items} />
 
-      {/* Prospect Profile Preview (if available) */}
+      {/* Prospect Profile (rendered markdown) */}
       {vip.prospect_profile_preview && (
-        <div className="card p-4">
-          <h3 className="text-sm font-medium text-gray-400 mb-2">Your Profile</h3>
-          <p className="text-sm text-gray-300 whitespace-pre-line">
-            {vip.prospect_profile_preview}
-          </p>
+        <div className="card p-5">
+          <h3 className="text-sm font-medium text-gray-400 mb-3">Your Profile</h3>
+          <div className="prose prose-invert prose-sm max-w-none">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {vip.prospect_profile_preview}
+            </ReactMarkdown>
+          </div>
         </div>
       )}
     </div>
