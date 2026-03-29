@@ -2834,6 +2834,55 @@ PA_TOOL_SCHEMAS = [
             "required": ["action"],
         },
     },
+    # ── Newsletter publishing adapter — POC 1 Autopilot Ops ─────────────
+    {
+        "type": "function",
+        "name": "newsletter_tool",
+        "description": (
+            "Newsletter publishing pipeline — prepare issues for Substack/Beehiiv, "
+            "generate outlines, validate against Template v1, track metrics. "
+            "Use when the user asks about newsletter, Autopilot Ops, publishing an issue, "
+            "newsletter metrics, or newsletter config."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["prepare", "outline", "validate", "metrics", "list_issues", "config", "sources"],
+                    "description": (
+                        "prepare: transform an issue deliverable into publish-ready markdown/HTML + checklist. "
+                        "outline: generate a Template v1 outline for a new issue number. "
+                        "validate: check a draft against Template v1 section completeness & length targets. "
+                        "metrics: compute or update metrics (word count, links, opens, clicks) for an issue. "
+                        "list_issues: list newsletter deliverables (outlines, drafts, published). "
+                        "config: view or update newsletter config (provider, subscribe_url, sponsor_email). "
+                        "sources: view the source pack (curated list of feeds/sites for each section)."
+                    ),
+                },
+                "id": {"type": "string", "description": "UUID of the issue deliverable (for prepare/validate/metrics)"},
+                "deliverable_id": {"type": "string", "description": "Alias for id"},
+                "issue_number": {"type": "integer", "description": "Issue number (for outline action)"},
+                "provider": {"type": "string", "enum": ["substack_manual", "beehiiv", "buttondown"], "description": "Publishing provider (default: substack_manual)"},
+                "subscribe_url": {"type": "string", "description": "Publication subscribe URL"},
+                "sponsor_email": {"type": "string", "description": "Sponsor inquiry email"},
+                "publication_name": {"type": "string", "description": "Newsletter name (for config)"},
+                "publication_slug": {"type": "string", "description": "Substack slug (for config)"},
+                "workspace_id": {"type": "string", "description": "Workspace to scope deliverables"},
+                "initiative_id": {"type": "string", "description": "Initiative to link deliverables"},
+                "source_pack_id": {"type": "string", "description": "Source pack deliverable ID (for outline)"},
+                "artifact_type": {"type": "string", "enum": ["outline", "draft", "publish_ready_markdown", "publish_ready_html", "publish_checklist"], "description": "Filter by artifact type (for list_issues)"},
+                "send_date": {"type": "string", "description": "ISO date when issue was sent (for metrics)"},
+                "opens": {"type": "integer", "description": "Manual open count (for metrics)"},
+                "clicks": {"type": "integer", "description": "Manual click count (for metrics)"},
+                "unsubscribes": {"type": "integer", "description": "Unsubscribe count (for metrics)"},
+                "new_subscribers": {"type": "integer", "description": "New subscriber count (for metrics)"},
+                "limit": {"type": "integer", "description": "Max items to return (default 20)"},
+                "offset": {"type": "integer", "description": "Pagination offset"},
+            },
+            "required": ["action"],
+        },
+    },
     # ── ops_digest_tool ──────────────────────────────────────────────────
     {
         "type": "function",
@@ -3985,6 +4034,7 @@ TOOL_TO_INTENT_MAP = {
     'self_awareness_tool': 'system_overview',
     'ats_tool': 'opportunities',
     'code_job_tool': 'codebase',
+    'newsletter_tool': 'content_review',
     # Session 1035-Audit: 4 new tools
     'spider_status_tool': 'system_overview',
     'agent_memory_tool': 'agent_introspection',
