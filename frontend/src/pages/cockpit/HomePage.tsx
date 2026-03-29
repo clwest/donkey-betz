@@ -150,7 +150,12 @@ function VipWelcome({ vip }: { vip: VipContext }) {
     enabled: !!vip.workspace_id,
   })
 
-  const items = deliverables?.items || []
+  const items = (
+    Array.isArray(deliverables?.items) ? deliverables.items
+    : Array.isArray(deliverables?.results) ? deliverables.results
+    : Array.isArray(deliverables) ? deliverables
+    : []
+  )
   const firstName = (vip.recipient_name || 'there').split(' ')[0]
 
   return (
