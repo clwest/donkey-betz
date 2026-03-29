@@ -1,6 +1,12 @@
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import StatusPill from '@/components/cockpit/shared/StatusPill'
 import type { Tone } from '@/components/cockpit/shared/StatusPill'
 import { formatRelative, formatDateTime } from '@/lib/time'
+import { api } from '@/lib/api'
 import type { DeliverableItem } from '@/types/cockpit'
 
 const STATUS_TONE: Record<string, Tone> = {
@@ -36,6 +42,17 @@ interface DeliverablesTableProps {
 export default function DeliverablesTable({ items, total, offset = 0, limit = 50, onPageChange }: DeliverablesTableProps) {
   const page = Math.floor(offset / limit) + 1
   const totalPages = Math.ceil(total / limit)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  const { data: expandedDetail } = useQuery({
+    queryKey: ['library-deliverable-detail', expandedId],
+    queryFn: async () => {
+      if (!expandedId) return null
+      const res = await api.get(`/deliverables/${expandedId}/`)
+      return res.data?.deliverable || res.data
+    },
+    enabled: !!expandedId,
+  })
 
   if (items.length === 0) {
     return (
@@ -54,27 +71,51 @@ export default function DeliverablesTable({ items, total, offset = 0, limit = 50
             <th className="px-4 py-2 font-medium">Type</th>
             <th className="px-4 py-2 font-medium">Agent</th>
             <th className="px-4 py-2 font-medium text-center">Status</th>
-            <th className="px-4 py-2 font-medium text-right">Quality</th>
             <th className="px-4 py-2 font-medium text-right">Created</th>
+            <th className="px-4 py-2 font-medium w-8"></th>
           </tr>
         </thead>
         <tbody>
-          {items.map((d) => (
-            <tr key={d.id} className="border-b border-dark-border/50">
-              <td className="px-4 py-2 text-gray-200 max-w-xs truncate" title={d.title}>{d.title}</td>
-              <td className="px-4 py-2 text-gray-400 whitespace-nowrap">{TYPE_LABELS[d.deliverable_type] ?? d.deliverable_type}</td>
-              <td className="px-4 py-2 text-gray-400 whitespace-nowrap">{d.agent_name}</td>
-              <td className="px-4 py-2 text-center">
-                <StatusPill label={d.status} tone={STATUS_TONE[d.status] ?? 'gray'} />
-              </td>
-              <td className="px-4 py-2 text-right text-gray-400 tabular-nums">
-                {(d.quality_score * 100).toFixed(0)}%
-              </td>
-              <td className="px-4 py-2 text-right text-gray-500" title={formatDateTime(d.created_at)}>
-                {formatRelative(d.created_at)}
-              </td>
-            </tr>
-          ))}
+          {items.map((d) => {
+            const isExpanded = expandedId === d.id
+            return (
+              <>
+                <tr
+                  key={d.id}
+                  className="border-b border-dark-border/50 cursor-pointer hover:bg-gray-800/30 transition-colors"
+                  onClick={() => setExpandedId(isExpanded ? null : d.id)}
+                >
+                  <td className="px-4 py-2 text-gray-200 max-w-xs truncate" title={d.title}>{d.title}</td>
+                  <td className="px-4 py-2 text-gray-400 whitespace-nowrap">{TYPE_LABELS[d.deliverable_type] ?? d.deliverable_type}</td>
+                  <td className="px-4 py-2 text-gray-400 whitespace-nowrap">{d.agent_name}</td>
+                  <td className="px-4 py-2 text-center">
+                    <StatusPill label={d.status} tone={STATUS_TONE[d.status] ?? 'gray'} />
+                  </td>
+                  <td className="px-4 py-2 text-right text-gray-500" title={formatDateTime(d.created_at)}>
+                    {formatRelative(d.created_at)}
+                  </td>
+                  <td className="px-4 py-2 text-gray-500">
+                    {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  </td>
+                </tr>
+                {isExpanded && (
+                  <tr key={`${d.id}-detail`}>
+                    <td colSpan={6} className="px-6 py-4 bg-gray-900/30 border-b border-dark-border">
+                      {expandedDetail?.content ? (
+                        <div className="prose prose-invert prose-sm max-w-none">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {expandedDetail.content}
+                          </ReactMarkdown>
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 text-gray-500 text-sm">Loading...</div>
+                      )}
+                    </td>
+                  </tr>
+                )}
+              </>
+            )
+          })}
         </tbody>
       </table>
       {totalPages > 1 && (

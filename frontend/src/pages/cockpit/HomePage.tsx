@@ -198,6 +198,32 @@ function VipWelcome({ vip }: { vip: VipContext }) {
           </div>
         </div>
       )}
+
+      {/* Contact CTA */}
+      <div className="card p-5 bg-gradient-to-r from-accent-cyan/5 to-primary-500/5 border-accent-cyan/20">
+        <h3 className="text-sm font-medium text-white mb-2">Questions or Feedback?</h3>
+        <p className="text-sm text-gray-400 mb-4">
+          I'd love to hear your thoughts on what you see here. This is a live platform — everything was built by AI agents working together.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <a
+            href="mailto:donkeyking@donkeybetz.com?subject=Donkey%20Betz%20VIP%20Feedback"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-500/20 text-primary-400 hover:bg-primary-500/30 text-sm font-medium transition-colors"
+          >
+            <Send size={14} />
+            Email Chris
+          </a>
+          <a
+            href="https://x.com/DonkeyBetzKing"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 text-sm font-medium transition-colors"
+          >
+            <ExternalLink size={14} />
+            @DonkeyBetzKing on X
+          </a>
+        </div>
+      </div>
     </div>
   )
 }
