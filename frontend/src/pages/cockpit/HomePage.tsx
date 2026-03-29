@@ -152,11 +152,15 @@ function VipWelcome({ vip }: { vip: VipContext }) {
     enabled: !!vip.workspace_id,
   })
 
-  const items = (
+  const rawItems = (
     Array.isArray(deliverables?.items) ? deliverables.items
     : Array.isArray(deliverables?.results) ? deliverables.results
     : Array.isArray(deliverables) ? deliverables
     : []
+  )
+  // Hide the prospect profile deliverable — that info is injected into the PA instead
+  const items = rawItems.filter((d: { id: string; title?: string; category?: string }) =>
+    d.id !== vip.prospect_profile_id && !(d.title || '').toLowerCase().includes('prospect profile')
   )
   const firstName = (vip.recipient_name || 'there').split(' ')[0]
 
@@ -186,18 +190,6 @@ function VipWelcome({ vip }: { vip: VipContext }) {
 
       {/* Deliverables — expandable cards with inline content */}
       <VipDeliverablesList items={items} />
-
-      {/* Prospect Profile (rendered markdown) */}
-      {vip.prospect_profile_preview && (
-        <div className="card p-5">
-          <h3 className="text-sm font-medium text-gray-400 mb-3">Your Profile</h3>
-          <div className="prose prose-invert prose-sm max-w-none">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {vip.prospect_profile_preview}
-            </ReactMarkdown>
-          </div>
-        </div>
-      )}
 
       {/* Contact CTA */}
       <div className="card p-5 bg-gradient-to-r from-accent-cyan/5 to-primary-500/5 border-accent-cyan/20">
