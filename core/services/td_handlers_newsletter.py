@@ -1,0 +1,478 @@
+"""
+ToolDispatcher NewsletterHandlersMixin — newsletter_tool handler.
+
+Session 1077+: POC 1 — Autopilot Ops Newsletter
+
+Actions:
+  prepare     — Transform an issue deliverable into publish-ready artifact
+  outline     — Generate a Template v1 outline for a new issue
+  validate    — Check an issue draft against Template v1 completeness
+  metrics     — Compute/store metrics for an issue
+  list_issues — List newsletter issue deliverables
+  config      — View/update newsletter config (provider, URLs, etc.)
+"""
+
+import json
+import logging
+from typing import Dict, Any, Optional
+
+logger = logging.getLogger(__name__)
+
+
+class NewsletterHandlersMixin:
+    """Mixin providing newsletter_tool handler for ToolDispatcher."""
+
+    def _handle_newsletter(self, tool_name, payload, user_id, trace_id):
+        """Handle newsletter_tool actions."""
+        action = payload.get('action', 'list_issues')
+
+        if action == 'prepare':
+            return self._newsletter_prepare(payload, user_id, trace_id)
+        elif action == 'outline':
+            return self._newsletter_outline(payload, user_id, trace_id)
+        elif action == 'validate':
+            return self._newsletter_validate(payload, user_id, trace_id)
+        elif action == 'metrics':
+            return self._newsletter_metrics(payload, user_id, trace_id)
+        elif action == 'list_issues':
+            return self._newsletter_list_issues(payload, user_id, trace_id)
+        elif action == 'config':
+            return self._newsletter_config(payload, user_id, trace_id)
+        elif action == 'sources':
+            return self._newsletter_sources(payload, user_id, trace_id)
+        else:
+            return {'error': f'Unknown newsletter action: {action}', 'action': action}
+
+    # ── prepare ─────────────────────────────────────────────────────────────
+
+    def _newsletter_prepare(self, payload, user_id, trace_id):
+        """Transform an issue deliverable into a publish-ready artifact."""
+        from core.models_deliverables import Deliverable
+        from core.services.newsletter_publisher import get_publisher
+
+        deliverable_id = payload.get('id') or payload.get('deliverable_id')
+        provider_name = payload.get('provider', 'substack_manual')
+        subscribe_url = payload.get('subscribe_url', 'https://autopilotops.substack.com')
+        sponsor_email = payload.get('sponsor_email', 'sponsor@autopilotops.com')
+
+        if not deliverable_id:
+            return {'error': 'id (deliverable_id) is required', 'action': 'prepare'}
+
+        try:
+            deliverable = Deliverable.objects.get(id=deliverable_id)
+        except Deliverable.DoesNotExist:
+            return {'error': f'Deliverable {deliverable_id} not found', 'action': 'prepare'}
+
+        # Extract issue number from title or metadata
+        issue_number = (
+            deliverable.metadata.get('issue_number')
+            if deliverable.metadata else None
+        )
+        if not issue_number:
+            import re
+            m = re.search(r'#(\d+)', deliverable.title)
+            issue_number = int(m.group(1)) if m else 1
+
+        publisher = get_publisher(provider_name)
+        metadata = {
+            'title': deliverable.title,
+            'issue_number': issue_number,
+            'subscribe_url': subscribe_url,
+            'sponsor_email': sponsor_email,
+        }
+
+        result = publisher.prepare_issue(deliverable.content, metadata)
+
+        # Save the publish-ready artifact as a new deliverable
+        workspace_id = payload.get('workspace_id')
+        initiative_id = None
+        if deliverable.initiative_id:
+            initiative_id = deliverable.initiative_id
+
+        # Save markdown version
+        md_deliverable = Deliverable.objects.create(
+            title=f"Newsletter #{issue_number} — Publish-Ready (Markdown)",
+            deliverable_type='document',
+            category='Newsletter',
+            agent_name='NewsletterTool',
+            content=result['markdown'],
+            content_format='markdown',
+            user_id=user_id,
+            initiative_id=initiative_id,
+            is_saved=True,
+            metadata={
+                'newsletter': True,
+                'issue_number': issue_number,
+                'provider': provider_name,
+                'source_deliverable_id': str(deliverable_id),
+                'subjects': result['subjects'],
+                'preview_text': result['preview_text'],
+                'stats': result['stats'],
+                'artifact_type': 'publish_ready_markdown',
+            },
+        )
+
+        # Save HTML version
+        html_deliverable = Deliverable.objects.create(
+            title=f"Newsletter #{issue_number} — Publish-Ready (HTML)",
+            deliverable_type='document',
+            category='Newsletter',
+            agent_name='NewsletterTool',
+            content=result['html'],
+            content_format='html',
+            user_id=user_id,
+            initiative_id=initiative_id,
+            is_saved=True,
+            metadata={
+                'newsletter': True,
+                'issue_number': issue_number,
+                'provider': provider_name,
+                'source_deliverable_id': str(deliverable_id),
+                'artifact_type': 'publish_ready_html',
+            },
+        )
+
+        # Save publish checklist
+        checklist_content = f"# Publish Checklist — Issue #{issue_number}\n\n"
+        checklist_content += f"**Provider:** {provider_name}\n"
+        checklist_content += f"**Source:** {deliverable.title}\n\n"
+        checklist_content += "## Subject Line Options\n"
+        for i, subj in enumerate(result['subjects'], 1):
+            checklist_content += f"{i}. {subj}\n"
+        checklist_content += f"\n**Preview text:** {result['preview_text']}\n\n"
+        checklist_content += "## Validation\n"
+        if result['validation_issues']:
+            for issue in result['validation_issues']:
+                icon = '❌' if issue['severity'] == 'error' else '⚠️'
+                checklist_content += f"- {icon} {issue['message']}\n"
+        else:
+            checklist_content += "- All sections present and meet length targets.\n"
+        checklist_content += f"\n## Stats\n"
+        for k, v in result['stats'].items():
+            checklist_content += f"- **{k}:** {v}\n"
+        checklist_content += f"\n## Steps\n"
+        for step in result['checklist']:
+            checklist_content += f"- [ ] {step}\n"
+
+        checklist_deliverable = Deliverable.objects.create(
+            title=f"Newsletter #{issue_number} — Publish Checklist",
+            deliverable_type='document',
+            category='Newsletter',
+            agent_name='NewsletterTool',
+            content=checklist_content,
+            content_format='markdown',
+            user_id=user_id,
+            initiative_id=initiative_id,
+            is_saved=True,
+            metadata={
+                'newsletter': True,
+                'issue_number': issue_number,
+                'provider': provider_name,
+                'source_deliverable_id': str(deliverable_id),
+                'artifact_type': 'publish_checklist',
+            },
+        )
+
+        return {
+            'action': 'prepare',
+            'provider': provider_name,
+            'source_deliverable_id': str(deliverable_id),
+            'issue_number': issue_number,
+            'artifacts': {
+                'markdown_id': str(md_deliverable.id),
+                'html_id': str(html_deliverable.id),
+                'checklist_id': str(checklist_deliverable.id),
+            },
+            'subjects': result['subjects'],
+            'preview_text': result['preview_text'],
+            'stats': result['stats'],
+            'validation_issues': result['validation_issues'],
+            'sections_found': result['sections_found'],
+            'sections_missing': result['sections_missing'],
+            'checklist_steps': len(result['checklist']),
+        }
+
+    # ── outline ─────────────────────────────────────────────────────────────
+
+    def _newsletter_outline(self, payload, user_id, trace_id):
+        """Generate a Template v1 outline for a new issue."""
+        from core.models_deliverables import Deliverable
+        from core.services.newsletter_publisher import generate_issue_outline
+
+        issue_number = payload.get('issue_number', 1)
+        workspace_id = payload.get('workspace_id')
+        initiative_id = payload.get('initiative_id')
+
+        # Load sources — from explicit deliverable or from built-in source pack
+        sources = None
+        source_pack_id = payload.get('source_pack_id')
+        if source_pack_id:
+            try:
+                sp = Deliverable.objects.get(id=source_pack_id)
+                if sp.metadata and sp.metadata.get('sources'):
+                    sources = sp.metadata['sources']
+            except Deliverable.DoesNotExist:
+                pass
+        if not sources:
+            from core.services.newsletter_sources import get_sources
+            raw = get_sources()
+            sources = [{'title': s['name'], 'url': s['url'], 'category': s['category']} for s in raw]
+
+        outline = generate_issue_outline(issue_number, sources)
+
+        # Save as deliverable
+        deliverable = Deliverable.objects.create(
+            title=f"Autopilot Ops — Issue #{issue_number} (Outline)",
+            deliverable_type='document',
+            category='Newsletter',
+            agent_name='NewsletterTool',
+            content=outline,
+            content_format='markdown',
+            user_id=user_id,
+            initiative_id=initiative_id,
+            is_saved=True,
+            metadata={
+                'newsletter': True,
+                'issue_number': issue_number,
+                'artifact_type': 'outline',
+                'status': 'outline',
+            },
+        )
+
+        return {
+            'action': 'outline',
+            'id': str(deliverable.id),
+            'title': deliverable.title,
+            'issue_number': issue_number,
+            'message': f"Created outline for Issue #{issue_number}. Edit the deliverable to fill in content.",
+        }
+
+    # ── validate ────────────────────────────────────────────────────────────
+
+    def _newsletter_validate(self, payload, user_id, trace_id):
+        """Validate an issue draft against Template v1 completeness."""
+        from core.models_deliverables import Deliverable
+        from core.services.newsletter_publisher import (
+            _extract_sections, _validate_sections, _word_count, _count_links,
+            TEMPLATE_V1_SECTIONS,
+        )
+
+        deliverable_id = payload.get('id') or payload.get('deliverable_id')
+        if not deliverable_id:
+            return {'error': 'id (deliverable_id) is required', 'action': 'validate'}
+
+        try:
+            deliverable = Deliverable.objects.get(id=deliverable_id)
+        except Deliverable.DoesNotExist:
+            return {'error': f'Deliverable {deliverable_id} not found', 'action': 'validate'}
+
+        sections = _extract_sections(deliverable.content)
+        issues = _validate_sections(sections)
+
+        total_words = _word_count(deliverable.content)
+        in_range = 1000 <= total_words <= 1600
+
+        section_details = {}
+        for spec in TEMPLATE_V1_SECTIONS:
+            key = spec['key']
+            text = sections.get(key, '')
+            section_details[spec['label']] = {
+                'present': bool(text),
+                'word_count': _word_count(text) if text else 0,
+                'target_min': spec['min_words'],
+                'required': spec['required'],
+            }
+
+        errors = [i for i in issues if i['severity'] == 'error']
+        warnings = [i for i in issues if i['severity'] == 'warning']
+
+        return {
+            'action': 'validate',
+            'deliverable_id': str(deliverable_id),
+            'title': deliverable.title,
+            'pass': len(errors) == 0 and in_range,
+            'total_words': total_words,
+            'word_count_in_range': in_range,
+            'target_range': '1000-1600',
+            'link_count': _count_links(deliverable.content),
+            'errors': errors,
+            'warnings': warnings,
+            'sections': section_details,
+        }
+
+    # ── metrics ─────────────────────────────────────────────────────────────
+
+    def _newsletter_metrics(self, payload, user_id, trace_id):
+        """Compute or update metrics for an issue."""
+        from core.models_deliverables import Deliverable
+        from core.services.newsletter_publisher import compute_issue_metrics
+
+        deliverable_id = payload.get('id') or payload.get('deliverable_id')
+        if not deliverable_id:
+            return {'error': 'id (deliverable_id) is required', 'action': 'metrics'}
+
+        try:
+            deliverable = Deliverable.objects.get(id=deliverable_id)
+        except Deliverable.DoesNotExist:
+            return {'error': f'Deliverable {deliverable_id} not found', 'action': 'metrics'}
+
+        issue_number = (
+            deliverable.metadata.get('issue_number')
+            if deliverable.metadata else None
+        ) or 0
+
+        metrics = compute_issue_metrics(deliverable.content, issue_number, deliverable.title)
+
+        # Allow manual metric updates via payload
+        manual_fields = ['send_date', 'opens', 'clicks', 'unsubscribes', 'new_subscribers']
+        for field in manual_fields:
+            if payload.get(field) is not None:
+                metrics[field] = payload[field]
+
+        # Save metrics to deliverable metadata
+        meta = deliverable.metadata or {}
+        meta['newsletter_metrics'] = metrics
+        deliverable.metadata = meta
+        deliverable.save(update_fields=['metadata'])
+
+        return {
+            'action': 'metrics',
+            'deliverable_id': str(deliverable_id),
+            'title': deliverable.title,
+            'metrics': metrics,
+        }
+
+    # ── list_issues ─────────────────────────────────────────────────────────
+
+    def _newsletter_list_issues(self, payload, user_id, trace_id):
+        """List newsletter issue deliverables."""
+        from core.models_deliverables import Deliverable
+
+        limit = min(payload.get('limit', 20), 50)
+        offset = payload.get('offset', 0)
+        artifact_type = payload.get('artifact_type')  # outline, draft, publish_ready, etc.
+
+        qs = Deliverable.objects.filter(
+            category='Newsletter',
+        ).order_by('-created_at')
+
+        if user_id:
+            from django.db.models import Q
+            qs = qs.filter(Q(user_id=user_id) | Q(user__isnull=True))
+
+        if artifact_type:
+            qs = qs.filter(metadata__artifact_type=artifact_type)
+
+        total = qs.count()
+        items = []
+        for d in qs[offset:offset + limit]:
+            meta = d.metadata or {}
+            items.append({
+                'id': str(d.id),
+                'title': d.title,
+                'issue_number': meta.get('issue_number'),
+                'artifact_type': meta.get('artifact_type', 'unknown'),
+                'provider': meta.get('provider'),
+                'content_format': d.content_format,
+                'is_saved': d.is_saved,
+                'created_at': str(d.created_at),
+            })
+
+        return {
+            'action': 'list_issues',
+            'total': total,
+            'offset': offset,
+            'limit': limit,
+            'count': len(items),
+            'items': items,
+        }
+
+    # ── config ──────────────────────────────────────────────────────────────
+
+    def _newsletter_config(self, payload, user_id, trace_id):
+        """View or update newsletter configuration."""
+        from core.models_deliverables import Deliverable
+
+        # Store config as a special deliverable
+        config_title = 'Newsletter Config — Autopilot Ops'
+        try:
+            config_del = Deliverable.objects.get(
+                title=config_title,
+                category='Newsletter',
+            )
+        except Deliverable.DoesNotExist:
+            config_del = None
+
+        # If updating
+        updates = {}
+        for key in ['provider', 'subscribe_url', 'sponsor_email', 'publication_name', 'publication_slug']:
+            if payload.get(key) is not None:
+                updates[key] = payload[key]
+
+        if updates:
+            if not config_del:
+                config_del = Deliverable.objects.create(
+                    title=config_title,
+                    deliverable_type='document',
+                    category='Newsletter',
+                    agent_name='NewsletterTool',
+                    content='Newsletter configuration — see metadata.',
+                    content_format='text',
+                    user_id=user_id,
+                    is_saved=True,
+                    metadata={'newsletter_config': True, **updates},
+                )
+            else:
+                meta = config_del.metadata or {}
+                meta.update(updates)
+                config_del.metadata = meta
+                config_del.save(update_fields=['metadata'])
+
+            return {
+                'action': 'config',
+                'updated': True,
+                'config': config_del.metadata,
+            }
+
+        # Read current config
+        if config_del:
+            return {
+                'action': 'config',
+                'config': config_del.metadata,
+            }
+
+        return {
+            'action': 'config',
+            'config': {
+                'provider': 'substack_manual',
+                'subscribe_url': 'https://autopilotops.substack.com',
+                'sponsor_email': 'sponsor@autopilotops.com',
+                'publication_name': 'Autopilot Ops',
+            },
+            'note': 'No config saved yet. Pass provider/subscribe_url/etc. to save.',
+        }
+
+    # ── sources ─────────────────────────────────────────────────────────────
+
+    def _newsletter_sources(self, payload, user_id, trace_id):
+        """View the newsletter source pack."""
+        from core.services.newsletter_sources import get_sources, get_source_summary
+
+        category = payload.get('category')
+        section = payload.get('section')
+
+        if category or section:
+            sources = get_sources(category=category, section=section)
+            return {
+                'action': 'sources',
+                'filter': {'category': category, 'section': section},
+                'count': len(sources),
+                'sources': sources,
+            }
+
+        summary = get_source_summary()
+        return {
+            'action': 'sources',
+            'summary': summary,
+            'sources': get_sources(),
+        }
