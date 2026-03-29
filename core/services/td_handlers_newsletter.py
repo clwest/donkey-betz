@@ -173,6 +173,39 @@ class NewsletterHandlersMixin:
             },
         )
 
+        # Save subject + preheader options as a deliverable
+        subject_content = f"# Newsletter #{issue_number} — Subject & Preheader Options\n\n"
+        subject_content += "## Subject Line Options\n"
+        for i, subj in enumerate(result['subjects'], 1):
+            subject_content += f"{i}. {subj}\n"
+        subject_content += f"\n## Preview Text (Preheader)\n{result['preview_text']}\n"
+        subject_content += f"\n## Stats\n"
+        subject_content += f"- Word count: {result['stats']['word_count']}\n"
+        subject_content += f"- Reading time: {result['stats']['reading_time_min']} min\n"
+        subject_content += f"- Links: {result['stats']['link_count']}\n"
+        subject_content += f"- Sections: {result['stats']['section_count']}\n"
+
+        subject_deliverable = Deliverable.objects.create(
+            title=f"Newsletter #{issue_number} — Subject + Preheader Options",
+            deliverable_type='document',
+            category='Newsletter',
+            agent_name='NewsletterTool',
+            content=subject_content,
+            content_format='markdown',
+            user_id=user_id,
+            initiative_id=initiative_id,
+            is_saved=True,
+            metadata={
+                'newsletter': True,
+                'issue_number': issue_number,
+                'provider': provider_name,
+                'source_deliverable_id': str(deliverable_id),
+                'artifact_type': 'subject_preheader',
+                'subjects': result['subjects'],
+                'preview_text': result['preview_text'],
+            },
+        )
+
         return {
             'action': 'prepare',
             'provider': provider_name,
@@ -182,6 +215,7 @@ class NewsletterHandlersMixin:
                 'markdown_id': str(md_deliverable.id),
                 'html_id': str(html_deliverable.id),
                 'checklist_id': str(checklist_deliverable.id),
+                'subject_id': str(subject_deliverable.id),
             },
             'subjects': result['subjects'],
             'preview_text': result['preview_text'],
