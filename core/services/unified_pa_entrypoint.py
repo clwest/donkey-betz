@@ -920,6 +920,24 @@ class UnifiedPAEntrypoint:
         UnifiedPAEntrypoint._cached_schema_version = schema_module.SCHEMA_VERSION
         return schema_module.PA_TOOL_SCHEMAS
 
+    def _get_user_allowed_tools(self):
+        """Return allowed tool names from the user's AssistantProfile.
+
+        Returns None if no profile or admin role (no filtering needed).
+        Returns a list of tool names if profile has restrictions.
+        """
+        if not self.user:
+            return None
+        try:
+            from core.models_assistant_profile import AssistantProfile
+            profile = AssistantProfile.objects.filter(user=self.user).first()
+            if not profile:
+                return None  # No profile = admin access (backwards compatible)
+            return profile.get_allowed_tools()
+        except Exception as e:
+            logger.debug(f"[PA] AssistantProfile lookup failed: {e}")
+            return None
+
     # =========================================================================
     # Session 1036: LLM-Driven Function Calling (Agentic Loop)
     # =========================================================================
@@ -1065,6 +1083,15 @@ class UnifiedPAEntrypoint:
         """
         all_schemas = self._get_live_tool_schemas()
         PA_TOOL_SCHEMAS = self._select_tool_schemas(message, all_schemas)
+
+        # Per-user tool filtering via AssistantProfile
+        allowed_tools = self._get_user_allowed_tools()
+        if allowed_tools is not None:
+            PA_TOOL_SCHEMAS = [
+                s for s in PA_TOOL_SCHEMAS
+                if isinstance(s, dict) and s.get('name') in allowed_tools
+            ]
+            logger.info(f"[PA] AssistantProfile filter: {len(PA_TOOL_SCHEMAS)} tools (from {len(all_schemas)})")
 
         # Build initial messages array
         messages = self._build_messages_array(message, context)
@@ -1925,13 +1952,30 @@ class UnifiedPAEntrypoint:
         except Exception as e:
             logger.debug(f"[PA] Tool learning enricher skipped: {e}")
 
-        # VIP mode — override system prompt to scope responses
-        vip_directive = context.get('vip_system_directive')
-        if vip_directive:
-            vip_name = context.get('vip_recipient_name', 'VIP viewer')
-            prompt_parts.insert(0, f"CRITICAL VIP MODE OVERRIDE:\n{vip_directive}")
-            prompt_parts.insert(1, f"You are speaking with: {vip_name}")
-            prompt_parts.insert(2, "")
+        # Per-user prompt override via AssistantProfile (replaces hardcoded VIP directives)
+        if self.user:
+            try:
+                from core.models_assistant_profile import AssistantProfile
+                profile = AssistantProfile.objects.filter(user=self.user).first()
+                if profile:
+                    role_prompt = profile.get_system_prompt()
+                    if role_prompt:
+                        display = profile.display_name or context.get('vip_recipient_name', '')
+                        prompt_parts.insert(0, f"CRITICAL ROLE OVERRIDE ({profile.role}):\n{role_prompt}")
+                        if display:
+                            prompt_parts.insert(1, f"You are speaking with: {display}")
+                            prompt_parts.insert(2, "")
+            except Exception as e:
+                logger.debug(f"[PA] AssistantProfile prompt lookup failed: {e}")
+
+        # Legacy fallback: VIP directive from view context (for users without AssistantProfile)
+        if not any('ROLE OVERRIDE' in p for p in prompt_parts[:3]):
+            vip_directive = context.get('vip_system_directive')
+            if vip_directive:
+                vip_name = context.get('vip_recipient_name', 'VIP viewer')
+                prompt_parts.insert(0, f"CRITICAL VIP MODE OVERRIDE:\n{vip_directive}")
+                prompt_parts.insert(1, f"You are speaking with: {vip_name}")
+                prompt_parts.insert(2, "")
 
         return "\n".join(prompt_parts)
 
