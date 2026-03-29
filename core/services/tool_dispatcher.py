@@ -159,9 +159,10 @@ from core.services.td_handlers_core import CoreHandlersMixin
 from core.services.td_handlers_gateway import GatewayHandlersMixin
 from core.services.td_handlers_codejobs import CodeJobHandlersMixin
 from core.services.td_handlers_railway import RailwayToolMixin
+from core.services.td_handlers_newsletter import NewsletterHandlersMixin
 
 
-class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin, CoreHandlersMixin, GatewayHandlersMixin, CodeJobHandlersMixin, RailwayToolMixin):
+class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin, CoreHandlersMixin, GatewayHandlersMixin, CodeJobHandlersMixin, RailwayToolMixin, NewsletterHandlersMixin):
     """
     Centralized dispatcher for all PA tool executions.
 
@@ -461,6 +462,9 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         self.register("profile_tool", self._handle_profile)
         self.register("self_awareness_tool", self._handle_self_awareness)
         self.register("ats_tool", self._handle_ats)
+
+        # Newsletter publishing adapter — POC 1 Autopilot Ops
+        self.register("newsletter_tool", self._handle_newsletter)
 
         # Codebase, analytics, Discord, and mobile introspection tools
         self.register("repo_tool", self._handle_repo)
