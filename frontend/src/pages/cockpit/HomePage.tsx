@@ -158,10 +158,14 @@ function VipWelcome({ vip }: { vip: VipContext }) {
     : Array.isArray(deliverables) ? deliverables
     : []
   )
-  // Hide the prospect profile deliverable — that info is injected into the PA instead
-  const items = rawItems.filter((d: { id: string; title?: string; category?: string }) =>
-    d.id !== vip.prospect_profile_id && !(d.title || '').toLowerCase().includes('prospect profile')
-  )
+  // Filter out internal/noisy deliverables from VIP view
+  const HIDDEN_PATTERNS = ['prospect profile', 'smoke test', 'system intelligence', 'config']
+  const items = rawItems.filter((d: { id: string; title?: string; category?: string; is_saved?: boolean }) => {
+    if (d.id === vip.prospect_profile_id) return false
+    const titleLower = (d.title || '').toLowerCase()
+    if (HIDDEN_PATTERNS.some(p => titleLower.includes(p))) return false
+    return true
+  })
   const firstName = (vip.recipient_name || 'there').split(' ')[0]
 
   return (
@@ -172,19 +176,26 @@ function VipWelcome({ vip }: { vip: VipContext }) {
           <h1 className="text-2xl font-bold text-white mb-2">
             Welcome{firstName !== 'there' ? `, ${firstName}` : ''}
           </h1>
-          <p className="text-gray-300">
-            {vip.workspace_name
-              ? `You're viewing the ${vip.workspace_name} workspace — here's what we've built.`
-              : `You have VIP access to the Donkey Betz platform.`}
+          <p className="text-gray-300 mb-4">
+            This workspace was put together specifically for you. Everything here was built by an autonomous AI system — from research to final deliverables.
           </p>
-          {vip.workspace_deliverable_count != null && (
-            <div className="flex items-center gap-4 mt-4">
-              <div className="flex items-center gap-2 text-sm text-gray-400">
-                <Package size={14} className="text-primary-400" />
-                <span>{vip.workspace_deliverable_count} deliverables</span>
-              </div>
-            </div>
-          )}
+          <div className="text-sm text-gray-400">
+            <p className="font-medium text-gray-300 mb-2">Here's what you can do:</p>
+            <ul className="space-y-1.5">
+              <li className="flex items-start gap-2">
+                <span className="text-primary-400 mt-0.5">1.</span>
+                <span>Browse the deliverables below — click any to read the full content</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-primary-400 mt-0.5">2.</span>
+                <span>Open the chat (bottom right) to ask questions — the AI assistant knows about your workspace</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-primary-400 mt-0.5">3.</span>
+                <span>Check the Library for the full list of documents and assets</span>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
 
