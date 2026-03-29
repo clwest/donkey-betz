@@ -10,6 +10,7 @@ import NoiseLeaderboardCard from '@/components/cockpit/today/NoiseLeaderboardCar
 import FocusModeCard from '@/components/cockpit/today/FocusModeCard'
 import { useRuns, useErrorSummary } from '@/hooks/cockpitQueries'
 import { getVipContext, type VipContext } from '@/lib/cockpitApi'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { api } from '@/lib/api'
 import type { RunSummary, NextActionType } from '@/types/cockpit'
 
@@ -203,13 +204,16 @@ function VipWelcome({ vip }: { vip: VipContext }) {
 // ── Main Home Page ──────────────────────────────────────────────────────────
 
 export default function CockpitHomePage() {
+  const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace)
+  const wsId = activeWorkspace?.id
+
   const { data: vipContext, isLoading: vipLoading } = useQuery({
     queryKey: ['vip-context'],
     queryFn: getVipContext,
     staleTime: 5 * 60 * 1000,
   })
 
-  const { data: runs = [], isLoading: runsLoading } = useRuns({ hours: 24, limit: 50, enrich: 1 })
+  const { data: runs = [], isLoading: runsLoading } = useRuns({ hours: 24, limit: 50, enrich: 1, ...(wsId ? { workspace: wsId } : {}) })
   const { data: errors, isLoading: errorsLoading } = useErrorSummary(24)
   const [showRoutine, setShowRoutine] = useState(false)
 

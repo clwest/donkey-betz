@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useDeliverables, useMedia } from '@/hooks/cockpitQueries'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import SkeletonRows from '@/components/cockpit/shared/SkeletonRows'
 import LibraryFilters from '@/components/cockpit/library/LibraryFilters'
 import DeliverablesTable from '@/components/cockpit/library/DeliverablesTable'
@@ -30,6 +31,9 @@ const MEDIA_TYPE_OPTIONS = [
 ]
 
 export default function CockpitLibraryPage() {
+  const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace)
+  const wsId = activeWorkspace?.id
+
   const [tab, setTab] = useState<Tab>('deliverables')
   const [search, setSearch] = useState('')
   const [dType, setDType] = useState('')
@@ -43,7 +47,8 @@ export default function CockpitLibraryPage() {
     days,
     limit: 50,
     offset: delOffset || undefined,
-  }), [search, dType, days, delOffset])
+    workspace: wsId || undefined,
+  }), [search, dType, days, delOffset, wsId])
 
   const mediaParams = useMemo(() => ({
     media_type: mType,

@@ -53,6 +53,7 @@ export interface RunsParams {
   offset?: number
   enrich?: 0 | 1
   include_summary?: 0 | 1
+  workspace?: string
 }
 
 export async function getRuns(params?: RunsParams) {
@@ -81,6 +82,7 @@ export async function getErrorSummary(hours = 24) {
 export interface InboxParams {
   hours?: number
   limit?: number
+  workspace?: string
 }
 
 export async function getInbox(params?: InboxParams) {
@@ -177,6 +179,7 @@ export interface DeliverableParams {
   days?: number
   limit?: number
   offset?: number
+  workspace?: string
 }
 
 export async function getDeliverables(params?: DeliverableParams) {

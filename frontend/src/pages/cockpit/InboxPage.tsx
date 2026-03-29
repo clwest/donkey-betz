@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useInbox } from '@/hooks/cockpitQueries'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import StatusPill from '@/components/cockpit/shared/StatusPill'
 import SkeletonRows from '@/components/cockpit/shared/SkeletonRows'
 import {
@@ -31,7 +32,8 @@ const TYPE_FILTERS: Array<{ value: string; label: string }> = [
 export default function CockpitInboxPage() {
   const [typeFilter, setTypeFilter] = useState('')
   const navigate = useNavigate()
-  const { data, isLoading } = useInbox({ hours: 24, limit: 50 })
+  const wsId = useWorkspaceStore((s) => s.activeWorkspace?.id)
+  const { data, isLoading } = useInbox({ hours: 24, limit: 50, ...(wsId ? { workspace: wsId } : {}) })
 
   const items = data?.items ?? []
   const filtered = typeFilter ? items.filter((i) => i.type === typeFilter) : items

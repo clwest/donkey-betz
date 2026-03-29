@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useRuns } from '@/hooks/cockpitQueries'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import StatusPill from '@/components/cockpit/shared/StatusPill'
 import SkeletonRows from '@/components/cockpit/shared/SkeletonRows'
 import { RUN_STATUS_LABEL, RUN_STATUS_TONE } from '@/components/cockpit/runs/runStatus'
@@ -19,12 +20,14 @@ export default function CockpitRunsPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [agentFilter, setAgentFilter] = useState('')
   const navigate = useNavigate()
+  const wsId = useWorkspaceStore((s) => s.activeWorkspace?.id)
 
   const { data: runs = [], isLoading } = useRuns({
     hours: 24,
     limit: 50,
     status: statusFilter || undefined,
     agent: agentFilter || undefined,
+    ...(wsId ? { workspace: wsId } : {}),
   })
 
   return (
