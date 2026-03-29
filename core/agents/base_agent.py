@@ -3881,19 +3881,15 @@ Consider this current data when formulating your response."""
             # are owned by the real user (not NULL / system_autonomous).
             resolved_user = user or getattr(self, 'user', None)
 
-            # Resolve workspace: explicit param > agent context > active workspace fallback
+            # Resolve workspace: explicit param > agent context only.
+            # Do NOT fall back to active workspace for scheduled/autonomous runs —
+            # that pollutes user workspaces with unrelated agent output.
             resolved_workspace = None
             resolved_ws_id = workspace_id or getattr(self, '_workspace_id', None)
             if resolved_ws_id:
                 try:
                     from core.models_skin_layer import ProjectWorkspace
                     resolved_workspace = ProjectWorkspace.objects.filter(id=resolved_ws_id).first()
-                except Exception:
-                    pass
-            if not resolved_workspace and not force_ephemeral:
-                try:
-                    from core.models_skin_layer import ProjectWorkspace
-                    resolved_workspace = ProjectWorkspace.objects.filter(is_active=True).first()
                 except Exception:
                     pass
 
