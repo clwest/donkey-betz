@@ -67,7 +67,8 @@ function VipDeliverablesList({ items }: { items: Array<{ id: string; title: stri
     queryFn: async () => {
       if (!expandedId) return null
       const res = await api.get(`/deliverables/${expandedId}/`)
-      return res.data
+      // API returns {success, deliverable: {content, ...}} — unwrap
+      return res.data?.deliverable || res.data
     },
     enabled: !!expandedId,
   })
