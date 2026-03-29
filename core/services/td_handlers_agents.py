@@ -1108,10 +1108,13 @@ class AgentHandlersMixin:
         base_qs = Deliverable.objects.all()
         # If workspace_id is in payload, scope to workspace (skip user filter — workspace is authoritative)
         ws_scope = payload.get('workspace_id') or payload.get('workspace')
+        logger.info(f"[deliverables] workspace_scope={ws_scope} user_id={user_id} payload_keys={sorted(payload.keys()) if isinstance(payload, dict) else 'N/A'}")
         if ws_scope:
             base_qs = base_qs.filter(workspace_id=ws_scope)
+            logger.info(f"[deliverables] Filtered to workspace {ws_scope}: {base_qs.count()} items")
         elif user_id:
             base_qs = base_qs.filter(Q(user_id=user_id) | Q(user__isnull=True))
+            logger.info(f"[deliverables] Filtered to user_id {user_id} + NULL: {base_qs.count()} items")
 
         def _apply_common_filters(qs):
             """Apply category/agent/type/saved/status/date filters."""

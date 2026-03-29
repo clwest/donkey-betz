@@ -1394,6 +1394,9 @@ class UnifiedPAEntrypoint:
                     if ws_id:
                         arguments['workspace_id'] = ws_id
                         arguments['workspace'] = ws_id
+                        logger.info(f"[PA] Injected workspace_id={ws_id} into {actual_tool_name} args")
+                    else:
+                        logger.info(f"[PA] No workspace_id to inject for {actual_tool_name} (user={self.user})")
 
                 tool_result = await self.tool_dispatcher.execute(
                     tool_name=actual_tool_name,
