@@ -1082,6 +1082,20 @@ class AgentHandlersMixin:
         from django.db.models import Count
 
         action = payload.get('action', 'list')
+
+        # Session 1077+: Smart action inference — GPT-5.2 sometimes drops the
+        # action field or defaults to 'list' even when title+content indicate create.
+        if action == 'list':
+            keys = set(payload.keys())
+            has_title = bool(payload.get('title', ''))
+            has_content = bool(payload.get('content', ''))
+            if has_title and has_content:
+                action = 'create'
+                logger.info(f"[deliverables] Inferred action=create from title+content (was 'list')")
+            elif has_content and payload.get('id'):
+                action = 'append'
+                logger.info(f"[deliverables] Inferred action=append from id+content (was 'list')")
+
         limit = min(payload.get('limit', 10), 50)
         offset = max(payload.get('offset', 0), 0)
 
