@@ -110,10 +110,9 @@ class NewsletterHandlersMixin:
         result = publisher.prepare_issue(deliverable.content, metadata)
 
         # Save the publish-ready artifact as a new deliverable
-        workspace_id = payload.get('workspace_id')
-        initiative_id = None
-        if deliverable.initiative_id:
-            initiative_id = deliverable.initiative_id
+        # Inherit workspace + initiative from source deliverable, allow payload override
+        workspace_id = payload.get('workspace_id') or getattr(deliverable, 'workspace_id', None)
+        initiative_id = deliverable.initiative_id if deliverable.initiative_id else None
 
         # Save markdown version
         md_deliverable = Deliverable.objects.create(
@@ -124,6 +123,7 @@ class NewsletterHandlersMixin:
             content=result['markdown'],
             content_format='markdown',
             user_id=user_id,
+            workspace_id=workspace_id,
             initiative_id=initiative_id,
             is_saved=True,
             metadata={
@@ -147,6 +147,7 @@ class NewsletterHandlersMixin:
             content=result['html'],
             content_format='html',
             user_id=user_id,
+            workspace_id=workspace_id,
             initiative_id=initiative_id,
             is_saved=True,
             metadata={
@@ -188,6 +189,7 @@ class NewsletterHandlersMixin:
             content=checklist_content,
             content_format='markdown',
             user_id=user_id,
+            workspace_id=workspace_id,
             initiative_id=initiative_id,
             is_saved=True,
             metadata={
@@ -219,6 +221,7 @@ class NewsletterHandlersMixin:
             content=subject_content,
             content_format='markdown',
             user_id=user_id,
+            workspace_id=workspace_id,
             initiative_id=initiative_id,
             is_saved=True,
             metadata={
@@ -289,6 +292,7 @@ class NewsletterHandlersMixin:
             content=outline,
             content_format='markdown',
             user_id=user_id,
+            workspace_id=workspace_id,
             initiative_id=initiative_id,
             is_saved=True,
             metadata={
