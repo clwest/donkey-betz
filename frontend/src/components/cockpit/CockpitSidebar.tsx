@@ -74,7 +74,12 @@ export default function CockpitSidebar({ focusMode, onToggleFocusMode }: Cockpit
     enabled: !isVip,
     staleTime: 60_000,
   })
-  const workspaces = (workspacesData?.workspaces || workspacesData || []) as Array<{
+  const workspaces = (
+    Array.isArray(workspacesData) ? workspacesData
+    : Array.isArray(workspacesData?.results) ? workspacesData.results
+    : Array.isArray(workspacesData?.workspaces) ? workspacesData.workspaces
+    : []
+  ) as Array<{
     id: string
     name: string
     workspace_type?: string
