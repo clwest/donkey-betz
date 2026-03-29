@@ -404,6 +404,12 @@ def pa_conversation_post_message(request, conversation_id):
 
         from core.models import ChatConversation
 
+        # Security: verify user has access to this conversation (or is creating a new one)
+        if not request.user.is_staff:
+            existing = ChatConversation.objects.filter(conversation_id=conversation_id).first()
+            if existing and existing.user_id and existing.user_id != request.user.id:
+                return Response({'error': 'Conversation not found'}, status=404)
+
         # Auto-detect whether to trigger PA if not explicitly set
         if trigger_pa is None:
             trigger_pa = _should_trigger_pa(message)
@@ -489,6 +495,14 @@ def pa_conversation_messages(request, conversation_id):
     Supports ?after=<message_id> for incremental polling.
     """
     from core.models import ChatConversation
+
+    # Security: verify user has access to this conversation
+    if not request.user.is_staff:
+        has_access = ChatConversation.objects.filter(
+            conversation_id=conversation_id, user=request.user
+        ).exists()
+        if not has_access:
+            return Response({'error': 'Conversation not found'}, status=404)
 
     after_id = request.query_params.get('after')
     limit = min(int(request.query_params.get('limit', 50)), 100)

@@ -71,17 +71,20 @@ def list_deliverables(request):
         if not show_archived:
             queryset = queryset.exclude(status='archived')
 
-        # Filter by user if authenticated
-        if request.user.is_authenticated:
-            # Show user's own deliverables plus public ones
-            queryset = queryset.filter(
-                Q(user=request.user) | Q(user__isnull=True)
-            )
-
-        # Filter by workspace if specified
+        # Security: scope deliverables by user/workspace
         workspace_id = request.GET.get('workspace')
         if workspace_id:
+            # Workspace filter is authoritative — show all deliverables in workspace
             queryset = queryset.filter(workspace_id=workspace_id)
+        elif request.user.is_authenticated:
+            if request.user.is_staff:
+                # Staff sees their own + NULL-user deliverables (system-created)
+                queryset = queryset.filter(
+                    Q(user=request.user) | Q(user__isnull=True)
+                )
+            else:
+                # Non-staff only sees their own deliverables (no NULL-user globals)
+                queryset = queryset.filter(user=request.user)
 
         # Apply filters
         deliverable_type = request.GET.get('type')

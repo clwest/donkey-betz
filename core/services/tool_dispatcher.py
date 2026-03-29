@@ -525,6 +525,29 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
 
         logger.info(f"[{trace_id}] Executing tool: {tool_name}")
 
+        # Server-side tool access enforcement via AssistantProfile
+        if user_id:
+            try:
+                from core.models_assistant_profile import AssistantProfile
+                profile = AssistantProfile.objects.filter(user_id=user_id).first()
+                if profile:
+                    allowed = profile.get_allowed_tools()
+                    if allowed is not None and tool_name not in allowed:
+                        latency_ms = int((time.time() - start_time) * 1000)
+                        logger.warning(
+                            f"[{trace_id}] TOOL ACCESS DENIED: {tool_name} not in allowed_tools "
+                            f"for user_id={user_id} (role={profile.role})"
+                        )
+                        _record_tool_metric(tool_name, action, 'denied', latency_ms)
+                        return ToolResult(
+                            ok=False, tool=tool_name, latency_ms=latency_ms,
+                            error_code='TOOL_PERMISSION_DENIED',
+                            error_message=f'Tool {tool_name} is not available for your account.',
+                            trace_id=trace_id, result=None,
+                        )
+            except Exception as e:
+                logger.debug(f"[{trace_id}] AssistantProfile check skipped: {e}")
+
         # Check if tool is registered
         if tool_name not in self._tool_handlers:
             latency_ms = int((time.time() - start_time) * 1000)
