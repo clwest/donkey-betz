@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { assistantApi, contentApi, workspaceApi } from '@/lib/api'
+import { getVipContext } from '@/lib/cockpitApi'
 import { usePAStore } from '@/stores/paStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { ChatMarkdown } from './ChatMarkdown'
@@ -66,6 +67,16 @@ export default function GlobalPADock() {
   const [showWsPicker, setShowWsPicker] = useState(false)
   const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace)
 
+  // VIP context — get display name for chat label
+  const { data: vipContext } = useQuery({
+    queryKey: ['vip-context'],
+    queryFn: getVipContext,
+    staleTime: 5 * 60 * 1000,
+  })
+  const userName = vipContext?.is_vip
+    ? (vipContext.recipient_name?.split(' ')[0] || 'You')
+    : 'Chris'
+
   // PA Store
   const {
     isDockOpen,
@@ -97,6 +108,16 @@ export default function GlobalPADock() {
   // Attachment state
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [isDragging, setIsDragging] = useState(false)
+
+  // VIP users: start fresh conversation (no stale history from other sessions)
+  const vipInitRef = useRef(false)
+  useEffect(() => {
+    if (vipContext?.is_vip && !vipInitRef.current) {
+      vipInitRef.current = true
+      clearMessages()
+      setActiveConversationId(null)
+    }
+  }, [vipContext?.is_vip, clearMessages, setActiveConversationId])
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -623,7 +644,7 @@ const TOOL_SOURCES = new Set(['code-worker', 'code_worker', 'claude-code', 'clau
                     )}>
                       {message.source === 'claude-code' ? 'Claude Code'
                         : message.role === 'assistant' ? 'Rigby'
-                        : 'Chris'}
+                        : userName}
                     </div>
                     <div
                       className={cn(

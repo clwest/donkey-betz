@@ -14,6 +14,7 @@ import {
   assistantApi, contentApi, userLearningApi, bodyApi, humanApi, homeApi, agentsApi, orchestrationApi,
   workspaceApi,
 } from '@/lib/api'
+import { getVipContext } from '@/lib/cockpitApi'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useUnifiedStore } from '@/stores/unifiedStore'
@@ -656,6 +657,10 @@ export default function CommandCenterPage() {
   const toggleChatSidebar = usePAStore((s) => s.toggleSidebar)
   const startNewConversation = usePAStore((s) => s.startNewConversation)
   const fetchConversations = usePAStore((s) => s.fetchConversations)
+
+  // VIP context — get display name for chat label
+  const { data: vipContext } = useQuery({ queryKey: ['vip-context'], queryFn: getVipContext, staleTime: 300_000 })
+  const userName = vipContext?.is_vip ? (vipContext.recipient_name?.split(' ')[0] || 'You') : 'Chris'
 
   // Adapt store messages to local Message type (timestamps are ISO strings in store)
   // Memoized to avoid creating new array + Date objects on every keystroke
@@ -1760,7 +1765,7 @@ export default function CommandCenterPage() {
                     )}>
                       {message.source === 'claude-code' ? 'Claude Code'
                         : message.role === 'assistant' ? 'Rigby'
-                        : 'Chris'}
+                        : userName}
                     </div>
                     <div className={cn(
                       'rounded-lg px-3 py-2 text-sm',
