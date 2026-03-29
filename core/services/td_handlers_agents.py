@@ -1106,7 +1106,11 @@ class AgentHandlersMixin:
         # find agent-created content.
         from django.db.models import Q
         base_qs = Deliverable.objects.all()
-        if user_id:
+        # If workspace_id is in payload, scope to workspace (skip user filter — workspace is authoritative)
+        ws_scope = payload.get('workspace_id') or payload.get('workspace')
+        if ws_scope:
+            base_qs = base_qs.filter(workspace_id=ws_scope)
+        elif user_id:
             base_qs = base_qs.filter(Q(user_id=user_id) | Q(user__isnull=True))
 
         def _apply_common_filters(qs):
