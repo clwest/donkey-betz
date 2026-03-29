@@ -1,10 +1,14 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Package, FileText, Send } from 'lucide-react'
 import TodayRunsCard from '@/components/cockpit/today/TodayRunsCard'
 import TodayErrorsCard from '@/components/cockpit/today/TodayErrorsCard'
 import NorthStarCard from '@/components/cockpit/today/NorthStarCard'
 import NoiseLeaderboardCard from '@/components/cockpit/today/NoiseLeaderboardCard'
 import FocusModeCard from '@/components/cockpit/today/FocusModeCard'
 import { useRuns, useErrorSummary } from '@/hooks/cockpitQueries'
+import { getVipContext, type VipContext } from '@/lib/cockpitApi'
+import { api } from '@/lib/api'
 import type { RunSummary, NextActionType } from '@/types/cockpit'
 
 // Action types that indicate a blocking issue
@@ -49,10 +53,114 @@ function classifyRun(r: RunSummary): 'attention' | 'review' | 'routine' {
   return 'routine'
 }
 
+// ── VIP Welcome View ────────────────────────────────────────────────────────
+
+function VipWelcome({ vip }: { vip: VipContext }) {
+  const { data: deliverables } = useQuery({
+    queryKey: ['vip-deliverables', vip.workspace_id],
+    queryFn: async () => {
+      if (!vip.workspace_id) return { items: [], total: 0 }
+      const res = await api.get('/cockpit/library/deliverables/', {
+        params: { days: 30, limit: 20 },
+      })
+      return res.data
+    },
+    enabled: !!vip.workspace_id,
+  })
+
+  const items = deliverables?.items || []
+  const firstName = (vip.recipient_name || 'there').split(' ')[0]
+
+  return (
+    <div className="space-y-6">
+      {/* Welcome Banner */}
+      <div className="card bg-gradient-to-r from-primary-500/10 to-accent-cyan/10 border-primary-500/30">
+        <div className="p-6">
+          <h1 className="text-2xl font-bold text-white mb-2">
+            Welcome{firstName !== 'there' ? `, ${firstName}` : ''}
+          </h1>
+          <p className="text-gray-300">
+            {vip.workspace_name
+              ? `You're viewing the ${vip.workspace_name} workspace — here's what we've built.`
+              : `You have VIP access to the Donkey Betz platform.`}
+          </p>
+          {vip.workspace_deliverable_count != null && (
+            <div className="flex items-center gap-4 mt-4">
+              <div className="flex items-center gap-2 text-sm text-gray-400">
+                <Package size={14} className="text-primary-400" />
+                <span>{vip.workspace_deliverable_count} deliverables</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Deliverables Grid */}
+      <div>
+        <h2 className="text-lg font-semibold text-white mb-3">Workspace Deliverables</h2>
+        {items.length === 0 ? (
+          <div className="card p-6 text-center text-gray-500">
+            <FileText className="mx-auto mb-2" size={24} />
+            <p className="text-sm">No deliverables yet</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {items.map((d: { id: string; title: string; category?: string; deliverable_type?: string; agent_name?: string; created_at?: string; quality_score?: number }) => (
+              <div
+                key={d.id}
+                className="card p-4 flex items-center justify-between hover:border-primary-500/40 transition-colors cursor-pointer"
+                onClick={() => window.open(`/cockpit/library?id=${d.id}`, '_self')}
+              >
+                <div className="flex items-center gap-3">
+                  <FileText size={16} className="text-primary-400" />
+                  <div>
+                    <p className="text-sm font-medium text-white">{d.title}</p>
+                    <p className="text-xs text-gray-500">
+                      {d.category || d.deliverable_type} {d.agent_name ? `by ${d.agent_name}` : ''}
+                    </p>
+                  </div>
+                </div>
+                {d.created_at && (
+                  <span className="text-xs text-gray-500">
+                    {new Date(d.created_at).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Prospect Profile Preview (if available) */}
+      {vip.prospect_profile_preview && (
+        <div className="card p-4">
+          <h3 className="text-sm font-medium text-gray-400 mb-2">Your Profile</h3>
+          <p className="text-sm text-gray-300 whitespace-pre-line">
+            {vip.prospect_profile_preview}
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Main Home Page ──────────────────────────────────────────────────────────
+
 export default function CockpitHomePage() {
+  const { data: vipContext, isLoading: vipLoading } = useQuery({
+    queryKey: ['vip-context'],
+    queryFn: getVipContext,
+    staleTime: 5 * 60 * 1000,
+  })
+
   const { data: runs = [], isLoading: runsLoading } = useRuns({ hours: 24, limit: 50, enrich: 1 })
   const { data: errors, isLoading: errorsLoading } = useErrorSummary(24)
   const [showRoutine, setShowRoutine] = useState(false)
+
+  // If VIP user, show personalized view
+  if (!vipLoading && vipContext?.is_vip) {
+    return <VipWelcome vip={vipContext} />
+  }
 
   // Split runs into 3 buckets
   const attention: RunSummary[] = []

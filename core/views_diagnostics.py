@@ -19,6 +19,16 @@ import traceback
 logger = logging.getLogger(__name__)
 
 
+def _get_vip_workspace_id(request):
+    """Extract workspace_id for VIP users. Returns None for admin/regular users."""
+    try:
+        from core.vip_scope import get_vip_scope
+        scope = get_vip_scope(request)
+        return scope.workspace_id if scope.is_vip else None
+    except Exception:
+        return None
+
+
 def _audit_log(request, action, target_type='', target_id='', request_body=None, response_summary=None):
     """Write an append-only audit log entry for cockpit mutations."""
     try:
@@ -1010,6 +1020,17 @@ def cockpit_runs_list(request):
         from core.models_unified_system import AgentExecution
         qs = AgentExecution.objects.filter(created_at__gte=cutoff).select_related('agent')
 
+        # VIP workspace scoping — only show runs linked to their workspace
+        vip_ws = _get_vip_workspace_id(request)
+        if vip_ws:
+            from core.models_deliverables import Deliverable
+            ws_agent_names = list(
+                Deliverable.objects.filter(workspace_id=vip_ws)
+                .values_list('agent_name', flat=True).distinct()
+            )
+            if ws_agent_names:
+                qs = qs.filter(agent__name__in=ws_agent_names)
+
         status_filter = request.GET.get('status')
         if status_filter:
             qs = qs.filter(status=status_filter)
@@ -1820,6 +1841,12 @@ def cockpit_library_deliverables(request):
     offset = int(request.GET.get('offset', 0))
 
     qs = Deliverable.objects.all().order_by('-created_at')
+
+    # VIP workspace scoping
+    vip_ws = _get_vip_workspace_id(request)
+    if vip_ws:
+        qs = qs.filter(workspace_id=vip_ws)
+
     if days > 0:
         cutoff = now() - timedelta(hours=days * 24)
         qs = qs.filter(created_at__gte=cutoff)
@@ -4003,3 +4030,50 @@ def cockpit_ops_run_detail(request, run_id):
         },
         'events': events,
     })
+
+
+# ── VIP Context Endpoint ────────────────────────────────────────────────────
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def cockpit_vip_context(request):
+    """Return VIP personalization context for the current user.
+
+    If the user is a VIP demo viewer, returns their workspace, prospect
+    profile, and personalized welcome data. Non-VIP users get is_vip=false.
+    """
+    if not (request.user and request.user.is_authenticated):
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    from core.vip_scope import get_vip_scope
+    scope = get_vip_scope(request)
+
+    if not scope.is_vip:
+        return JsonResponse({'is_vip': False})
+
+    result = {
+        'is_vip': True,
+        'recipient_name': scope.recipient_name or '',
+        'workspace_id': scope.workspace_id,
+        'workspace_name': scope.workspace_name,
+        'prospect_profile_id': scope.prospect_profile_id,
+    }
+
+    # Load workspace deliverable count
+    if scope.workspace_id:
+        from core.models_deliverables import Deliverable
+        result['workspace_deliverable_count'] = Deliverable.objects.filter(
+            workspace_id=scope.workspace_id,
+        ).count()
+
+    # Load prospect profile summary
+    if scope.prospect_profile_id:
+        from core.models_deliverables import Deliverable
+        try:
+            profile = Deliverable.objects.get(id=scope.prospect_profile_id)
+            result['prospect_profile_title'] = profile.title
+            result['prospect_profile_preview'] = (profile.content or '')[:500]
+        except Deliverable.DoesNotExist:
+            pass
+
+    return JsonResponse(result)

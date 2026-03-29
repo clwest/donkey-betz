@@ -27,13 +27,37 @@ logger = logging.getLogger(__name__)
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
 def vip_invite_create(request):
-    """Create a new VIP magic-link invite (admin-only)."""
-    label = request.data.get('label', '')
+    """Create a new VIP magic-link invite (admin-only).
 
-    invite = VIPInvite.objects.create(
-        created_by=request.user,
-        label=label,
-    )
+    Optional params:
+        workspace_id: UUID — scope the VIP view to this workspace
+        prospect_profile_id: UUID — deliverable ID for personalization
+        recipient_name: str — display name for the invitee
+    """
+    label = request.data.get('label', '')
+    workspace_id = request.data.get('workspace_id')
+    prospect_profile_id = request.data.get('prospect_profile_id')
+    recipient_name = request.data.get('recipient_name', '')
+
+    kwargs = {
+        'created_by': request.user,
+        'label': label,
+        'recipient_name': recipient_name,
+    }
+
+    if workspace_id:
+        from core.models_skin_layer import ProjectWorkspace
+        ws = ProjectWorkspace.objects.filter(id=workspace_id).first()
+        if ws:
+            kwargs['workspace'] = ws
+
+    if prospect_profile_id:
+        from core.models_deliverables import Deliverable
+        profile = Deliverable.objects.filter(id=prospect_profile_id).first()
+        if profile:
+            kwargs['prospect_profile'] = profile
+
+    invite = VIPInvite.objects.create(**kwargs)
 
     import os
     base_url = os.environ.get(
@@ -49,6 +73,10 @@ def vip_invite_create(request):
         'token_expires_at': invite.token_expires_at.isoformat(),
         'account_expires_at': invite.account_expires_at.isoformat(),
         'label': invite.label,
+        'recipient_name': invite.recipient_name,
+        'workspace_id': str(invite.workspace_id) if invite.workspace_id else None,
+        'workspace_name': invite.workspace.name if invite.workspace else None,
+        'prospect_profile_id': str(invite.prospect_profile_id) if invite.prospect_profile_id else None,
     }, status=201)
 
 
@@ -155,12 +183,15 @@ def vip_invite_revoke(request):
 @permission_classes([IsAdminUser])
 def vip_invite_list(request):
     """List all VIP invites (admin-only)."""
-    invites = VIPInvite.objects.select_related('created_by', 'redeemed_by').all()[:50]
+    invites = VIPInvite.objects.select_related(
+        'created_by', 'redeemed_by', 'workspace', 'prospect_profile',
+    ).all()[:50]
     data = []
     for inv in invites:
         data.append({
             'id': str(inv.id),
             'label': inv.label,
+            'recipient_name': inv.recipient_name or '',
             'is_valid': inv.is_valid,
             'token_expires_at': inv.token_expires_at.isoformat(),
             'account_expires_at': inv.account_expires_at.isoformat(),
@@ -169,5 +200,8 @@ def vip_invite_list(request):
             'revoked_at': inv.revoked_at.isoformat() if inv.revoked_at else None,
             'created_by': inv.created_by.username,
             'created_at': inv.created_at.isoformat(),
+            'workspace_id': str(inv.workspace_id) if inv.workspace_id else None,
+            'workspace_name': inv.workspace.name if inv.workspace else None,
+            'prospect_profile_id': str(inv.prospect_profile_id) if inv.prospect_profile_id else None,
         })
     return Response(data)
