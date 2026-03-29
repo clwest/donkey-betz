@@ -207,7 +207,7 @@ function VipWelcome({ vip }: { vip: VipContext }) {
         </p>
         <div className="flex flex-wrap gap-3">
           <a
-            href="mailto:donkeyking@donkeybetz.com?subject=Donkey%20Betz%20VIP%20Feedback"
+            href="mailto:chris@donkeybetz.com?subject=Donkey%20Betz%20VIP%20Feedback"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-500/20 text-primary-400 hover:bg-primary-500/30 text-sm font-medium transition-colors"
           >
             <Send size={14} />
