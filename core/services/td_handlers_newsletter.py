@@ -54,18 +54,19 @@ class NewsletterHandlersMixin:
             'sponsor_email': 'sponsor@autopilotops.com',
             'publication_name': 'Autopilot Ops',
         }
-        try:
-            config_del = Deliverable.objects.get(
-                title='Newsletter Config — Autopilot Ops',
-                category='Newsletter',
-            )
-            if config_del.metadata:
-                for key in defaults:
-                    val = config_del.metadata.get(key)
-                    if val and val != '':
-                        defaults[key] = val
-        except Deliverable.DoesNotExist:
-            pass
+        config_del = Deliverable.objects.filter(
+            title='Newsletter Config — Autopilot Ops',
+            category='Newsletter',
+        ).order_by('-created_at').first()
+        if config_del and config_del.metadata:
+            logger.info(f"Newsletter config loaded from deliverable {config_del.id}")
+            for key in defaults:
+                val = config_del.metadata.get(key)
+                if val and str(val).strip():
+                    defaults[key] = val
+        else:
+            logger.warning("No newsletter config deliverable found; using defaults")
+        logger.info(f"Newsletter config resolved: subscribe_url={defaults['subscribe_url']}")
         return defaults
 
     def _newsletter_prepare(self, payload, user_id, trace_id):

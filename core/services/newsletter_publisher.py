@@ -204,8 +204,8 @@ class SubstackManualProvider(PublisherProvider):
     def prepare_issue(self, content: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
         title = metadata.get('title', 'Autopilot Ops')
         issue_number = metadata.get('issue_number', '?')
-        subscribe_url = metadata.get('subscribe_url', 'https://autopilotops.substack.com')
-        sponsor_email = metadata.get('sponsor_email', 'sponsor@autopilotops.com')
+        subscribe_url = (metadata.get('subscribe_url') or '').strip() or 'https://autopilotops.substack.com'
+        sponsor_email = (metadata.get('sponsor_email') or '').strip() or 'sponsor@autopilotops.com'
 
         # Parse and validate sections
         sections = _extract_sections(content)
@@ -225,6 +225,7 @@ class SubstackManualProvider(PublisherProvider):
             full_content = content.rstrip() + '\n\n' + cta
 
         # Replace subscribe URL placeholders in existing content
+        # subscribe_url is guaranteed non-empty (falls back to default above)
         full_content = full_content.replace('{{subscribe_url}}', subscribe_url)
         full_content = full_content.replace('(Substack link)', f'({subscribe_url})')
         full_content = full_content.replace('{{sponsor_email}}', sponsor_email)
