@@ -4086,3 +4086,220 @@ def cockpit_vip_context(request):
             pass
 
     return JsonResponse(result)
+
+
+# ── Learning Loop Control Panel ──────────────────────────────────────────────
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def cockpit_learning_loop(request):
+    """Learning Loop Control Panel — recent learnings, patterns, rejections, agent improvement.
+
+    Returns 4 sections:
+    - recent_learnings: last 50 knowledge/memory entries
+    - reinforced_patterns: most frequently referenced knowledge types
+    - rejected: failed executions, negative feedback, archived content
+    - agent_improvement: per-agent success rate trends
+    """
+    if not (request.user and request.user.is_authenticated):
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    from django.utils import timezone
+    from datetime import timedelta
+    from django.db.models import Count, Avg, Q, F
+
+    cutoff_7d = timezone.now() - timedelta(days=7)
+    cutoff_30d = timezone.now() - timedelta(days=30)
+
+    result = {}
+
+    # 1. Recent Learnings (last 50 knowledge + memory entries)
+    try:
+        from core.models_unified_system import AgentKnowledgeSource, AgentMemory
+
+        recent_knowledge = list(
+            AgentKnowledgeSource.objects.filter(is_active=True)
+            .select_related('agent')
+            .order_by('-last_updated_at')[:25]
+            .values('id', 'title', 'knowledge_type', 'confidence_score',
+                    'agent__name', 'last_updated_at', 'data_points_count')
+        )
+        for item in recent_knowledge:
+            item['id'] = str(item['id'])
+            item['last_updated_at'] = item['last_updated_at'].isoformat() if item['last_updated_at'] else None
+            item['source'] = 'knowledge'
+
+        recent_memories = list(
+            AgentMemory.objects.filter(importance__gte=5)
+            .select_related('agent')
+            .order_by('-created_at')[:25]
+            .values('id', 'title', 'memory_type', 'importance',
+                    'valence', 'agent__name', 'created_at')
+        )
+        for item in recent_memories:
+            item['id'] = str(item['id'])
+            item['created_at'] = item['created_at'].isoformat() if item['created_at'] else None
+            item['source'] = 'memory'
+
+        # Merge and sort by date
+        all_learnings = sorted(
+            recent_knowledge + recent_memories,
+            key=lambda x: x.get('last_updated_at') or x.get('created_at') or '',
+            reverse=True,
+        )[:50]
+
+        result['recent_learnings'] = {
+            'count': len(all_learnings),
+            'items': all_learnings,
+            'total_knowledge': AgentKnowledgeSource.objects.filter(is_active=True).count(),
+            'total_memories': AgentMemory.objects.count(),
+        }
+    except Exception as e:
+        result['recent_learnings'] = {'error': str(e), 'items': []}
+
+    # 2. Reinforced Patterns (most common knowledge types + high-confidence items)
+    try:
+        from core.models_unified_system import AgentKnowledgeSource
+
+        by_type = list(
+            AgentKnowledgeSource.objects.filter(is_active=True)
+            .values('knowledge_type')
+            .annotate(
+                count=Count('id'),
+                avg_confidence=Avg('confidence_score'),
+                avg_freshness=Avg('freshness_score'),
+            )
+            .order_by('-count')[:10]
+        )
+
+        top_validated = list(
+            AgentKnowledgeSource.objects.filter(is_active=True, is_validated=True)
+            .select_related('agent')
+            .order_by('-confidence_score')[:10]
+            .values('id', 'title', 'knowledge_type', 'confidence_score',
+                    'agent__name', 'data_points_count')
+        )
+        for item in top_validated:
+            item['id'] = str(item['id'])
+
+        # Memory patterns — what types recur most
+        memory_patterns = list(
+            AgentMemory.objects.filter(created_at__gte=cutoff_30d)
+            .values('memory_type', 'valence')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:10]
+        )
+
+        result['reinforced_patterns'] = {
+            'by_knowledge_type': by_type,
+            'top_validated': top_validated,
+            'memory_patterns': memory_patterns,
+        }
+    except Exception as e:
+        result['reinforced_patterns'] = {'error': str(e)}
+
+    # 3. Rejected / Failed (negative feedback, failures, archived)
+    try:
+        from core.models_unified_system import AgentExecution, AgentMemory
+
+        # Failed executions (last 7 days)
+        failed_executions = list(
+            AgentExecution.objects.filter(
+                status='failed',
+                created_at__gte=cutoff_7d,
+            )
+            .select_related('agent')
+            .order_by('-created_at')[:15]
+            .values('id', 'agent__name', 'task', 'created_at', 'execution_time_ms')
+        )
+        for item in failed_executions:
+            item['id'] = str(item['id'])
+            item['created_at'] = item['created_at'].isoformat() if item['created_at'] else None
+            item['task'] = (item['task'] or '')[:150]
+
+        # Negative memories (failures, negative valence)
+        negative_memories = list(
+            AgentMemory.objects.filter(
+                Q(memory_type='failure') | Q(valence='negative'),
+                created_at__gte=cutoff_30d,
+            )
+            .select_related('agent')
+            .order_by('-created_at')[:15]
+            .values('id', 'title', 'memory_type', 'valence', 'agent__name', 'created_at')
+        )
+        for item in negative_memories:
+            item['id'] = str(item['id'])
+            item['created_at'] = item['created_at'].isoformat() if item['created_at'] else None
+
+        # Invalidated knowledge
+        invalidated = list(
+            AgentKnowledgeSource.objects.filter(is_active=False)
+            .select_related('agent')
+            .order_by('-last_updated_at')[:10]
+            .values('id', 'title', 'knowledge_type', 'agent__name', 'last_updated_at')
+        )
+        for item in invalidated:
+            item['id'] = str(item['id'])
+            item['last_updated_at'] = item['last_updated_at'].isoformat() if item['last_updated_at'] else None
+
+        result['rejected'] = {
+            'failed_executions': failed_executions,
+            'negative_memories': negative_memories,
+            'invalidated_knowledge': invalidated,
+            'failed_count_7d': len(failed_executions),
+            'negative_count_30d': len(negative_memories),
+        }
+    except Exception as e:
+        result['rejected'] = {'error': str(e)}
+
+    # 4. Agent Improvement (per-agent success rates)
+    try:
+        from core.models_unified_system import AgentExecution
+
+        # Per-agent stats for last 30 days
+        agent_stats = list(
+            AgentExecution.objects.filter(created_at__gte=cutoff_30d)
+            .values('agent__name')
+            .annotate(
+                total=Count('id'),
+                completed=Count('id', filter=Q(status='completed')),
+                failed=Count('id', filter=Q(status='failed')),
+                avg_time_ms=Avg('execution_time_ms'),
+            )
+            .order_by('-total')[:25]
+        )
+
+        for stat in agent_stats:
+            stat['success_rate'] = round(
+                (stat['completed'] / stat['total'] * 100) if stat['total'] > 0 else 0, 1
+            )
+            stat['avg_time_ms'] = round(stat['avg_time_ms'] or 0)
+
+        # Top improvers — agents with high success rate and high volume
+        top_performers = sorted(
+            [s for s in agent_stats if s['total'] >= 5],
+            key=lambda x: x['success_rate'],
+            reverse=True,
+        )[:10]
+
+        # Struggling agents — low success rate
+        struggling = sorted(
+            [s for s in agent_stats if s['total'] >= 3 and s['success_rate'] < 80],
+            key=lambda x: x['success_rate'],
+        )[:10]
+
+        result['agent_improvement'] = {
+            'agent_stats': agent_stats,
+            'top_performers': top_performers,
+            'struggling': struggling,
+            'total_executions_30d': sum(s['total'] for s in agent_stats),
+            'overall_success_rate': round(
+                sum(s['completed'] for s in agent_stats) / max(sum(s['total'] for s in agent_stats), 1) * 100, 1
+            ),
+        }
+    except Exception as e:
+        result['agent_improvement'] = {'error': str(e)}
+
+    return JsonResponse(result)
+
+    return JsonResponse(result)

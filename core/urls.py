@@ -1499,6 +1499,7 @@ from core.views_diagnostics import (
     cockpit_ops_runs_list,  # Focus Cockpit: ops runs list
     cockpit_ops_run_detail,  # Focus Cockpit: ops run detail + events
     cockpit_vip_context,  # VIP personalization context
+    cockpit_learning_loop,  # Learning Loop Control Panel
     system_version,  # Session 1078: Build/deploy version info
     # Session 871: Removed unused import: diagnostic_dashboard
 )
@@ -1724,6 +1725,7 @@ urlpatterns = [
     path('api/cockpit/config/changes/', cockpit_config_changes, name='cockpit-config-changes'),
     # VIP personalization context
     path('api/cockpit/vip-context/', cockpit_vip_context, name='cockpit-vip-context'),
+    path('api/cockpit/learning-loop/', cockpit_learning_loop, name='cockpit-learning-loop'),
     # P17: Incident Commander
     path('api/cockpit/incidents/', cockpit_incidents_list, name='cockpit-incidents-list'),
     path('api/cockpit/incidents/<str:incident_id>/', cockpit_incident_detail, name='cockpit-incident-detail'),

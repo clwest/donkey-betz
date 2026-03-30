@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   Home, Inbox, PlusCircle, Play, FolderOpen, AlertTriangle,
   Wrench, Settings, Zap, ArrowLeft, PanelLeft, PanelLeftClose, ShieldCheck, Bell, ScrollText, Bot,
-  Layers, DollarSign, Cpu, SlidersHorizontal, ShieldAlert, Activity, Video,
+  Layers, DollarSign, Cpu, SlidersHorizontal, ShieldAlert, Activity, Video, Brain,
   ChevronDown, Globe, Briefcase, X,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
@@ -32,6 +32,7 @@ const adminPrimaryNav = [
   { path: '/cockpit/approvals', label: 'Approvals', icon: ShieldCheck },
   { path: '/cockpit/alerts', label: 'Alerts', icon: Bell },
   { path: '/cockpit/agents', label: 'Agents', icon: Bot },
+  { path: '/cockpit/learning', label: 'Learning', icon: Brain },
 ]
 
 const adminSecondaryNav = [
