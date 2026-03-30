@@ -1438,6 +1438,7 @@ def _execute_generate_image(user, parameters, session=None):
         logger.info(f"✅ Executor generated image successfully: {saved_url}")
 
         # Session 96 Weekend Project: Update session counter and check for auto-project creation
+        from core.image_views.session import increment_session_counter
         project_info = increment_session_counter(session, 'image')
 
         # Session 66: AUTONOMOUS TEXT VERIFICATION & REFINEMENT
@@ -1896,6 +1897,7 @@ def _execute_generate_video(user, parameters, session=None):
             # Don't fail video creation if contribution tracking fails
 
         # Session 96 Weekend Project: Update session counter and check for auto-project creation
+        from core.image_views.session import increment_session_counter
         project_info = increment_session_counter(session, 'video')
 
         result_dict = {
