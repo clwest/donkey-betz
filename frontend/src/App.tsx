@@ -64,6 +64,7 @@ import CockpitConfigPage from '@/pages/cockpit/ConfigPage'
 import CockpitIncidentsPage from '@/pages/cockpit/IncidentsPage'
 import CockpitIncidentDetailPage from '@/pages/cockpit/IncidentDetailPage'
 import CockpitOpsRunsPage from '@/pages/cockpit/OpsRunsPage'
+import CockpitLearningLoopPage from '@/pages/cockpit/LearningLoopPage'
 import CockpitOpsRunDetailPage from '@/pages/cockpit/OpsRunDetailPage'
 import CockpitObsPage from '@/pages/cockpit/ObsPage'
 
@@ -164,6 +165,7 @@ function App() {
         <Route path="obs" element={<CockpitObsPage />} />
         <Route path="ops-runs" element={<CockpitOpsRunsPage />} />
         <Route path="ops-runs/:runId" element={<CockpitOpsRunDetailPage />} />
+        <Route path="learning" element={<CockpitLearningLoopPage />} />
       </Route>
     </Routes>
   )
