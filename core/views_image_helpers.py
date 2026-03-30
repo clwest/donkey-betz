@@ -44,9 +44,9 @@ from core.validators import validate_prompt, sanitize_prompt, validate_uuid, val
 from core.services.watermark_integration import save_watermarked_image
 # Session 769: Cost tracking for external APIs
 from core.services.api_cost_config import calculate_stability_cost
-# Session 1077+: save_to_history for image gallery generation
-from core.image_views.session import save_to_history
-from core.views_image_misc import get_system_user
+# Session 1077+: save_to_history and get_system_user imported lazily
+# inside functions to avoid circular imports
+# (views_image_helpers -> image_views.session -> image_views.__init__ -> views_image -> views_image_helpers)
 
 logger = logging.getLogger(__name__)
 
@@ -1383,9 +1383,11 @@ def _execute_generate_image(user, parameters, session=None):
                 # Session 794: Use system user for autonomous operations (Celery tasks)
                 history_user = user
                 if not history_user:
+                    from core.views_image_misc import get_system_user
                     history_user = get_system_user()
                     logger.info(f"🤖 Using system_autonomous user for image history")
 
+                from core.image_views.session import save_to_history
                 history_record = save_to_history(
                     user=history_user,
                     file_path=file_path,
@@ -1711,6 +1713,7 @@ def _execute_generate_video(user, parameters, session=None):
         # Session 794: Use system user for autonomous operations
         is_autonomous = user is None
         if is_autonomous:
+            from core.views_image_misc import get_system_user
             user = get_system_user()
             logger.info(f"🤖 Using system_autonomous user for video generation")
         # Session 183: Handle operation-based format from GPT
