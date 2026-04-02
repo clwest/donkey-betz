@@ -3826,6 +3826,7 @@ PA_TOOL_SCHEMAS = [
 
     # ── In-App Messaging ────────────────────────────────────────────────────
     {
+        "type": "function",
         "name": "messaging_tool",
         "description": (
             "Send direct messages between platform users. "
