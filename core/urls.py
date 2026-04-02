@@ -4017,11 +4017,26 @@ workspace_router.register(r'workspaces', ProjectWorkspaceViewSet, basename='work
 workspace_router.register(r'workspace-operations', WorkspaceOperationViewSet, basename='workspace-operation')
 workspace_router.register(r'code-artifacts', CodeArtifactViewSet, basename='code-artifact')
 
+from core.views_workspace_templates import (
+    list_templates, template_detail, create_from_template,
+    workspace_dashboard as ws_biz_dashboard, workspace_config,
+    trigger_pipeline, pipeline_status, pipeline_history,
+)
 urlpatterns += [
     # Specific Workspace Endpoints (must come BEFORE router to avoid {pk} pattern matching)
     path('api/workspaces/dashboard/', workspace_dashboard, name='workspace-dashboard'),
     path('api/workspaces/<uuid:workspace_id>/file-history/', file_history, name='workspace-file-history'),
     path('api/workspace-operations/pending-reviews/', pending_reviews, name='workspace-pending-reviews'),
+
+    # Workspace Templates & Business-Unit APIs (BEFORE router)
+    path('api/workspace-templates/', list_templates, name='workspace-templates-list'),
+    path('api/workspace-templates/<slug:slug>/', template_detail, name='workspace-templates-detail'),
+    path('api/workspaces/create-from-template/', create_from_template, name='workspace-create-from-template'),
+    path('api/workspaces/<uuid:workspace_id>/biz-dashboard/', ws_biz_dashboard, name='workspace-biz-dashboard'),
+    path('api/workspaces/<uuid:workspace_id>/config/', workspace_config, name='workspace-config'),
+    path('api/workspaces/<uuid:workspace_id>/pipeline/run/', trigger_pipeline, name='workspace-pipeline-run'),
+    path('api/workspaces/<uuid:workspace_id>/pipeline/status/', pipeline_status, name='workspace-pipeline-status'),
+    path('api/workspaces/<uuid:workspace_id>/pipeline/history/', pipeline_history, name='workspace-pipeline-history'),
 
     # Workspace Router URLs (generic patterns last)
     path('api/', include(workspace_router.urls)),
@@ -4744,24 +4759,7 @@ if settings.DEBUG:
         path('api/unified/dev/chat/', unified_assistant_chat_dev, name='unified-assistant-chat-dev'),
     ]
 
-# =========================================================================
-# Workspace Templates & Business-Unit APIs
-# =========================================================================
-from core.views_workspace_templates import (
-    list_templates, template_detail, create_from_template,
-    workspace_dashboard, workspace_config,
-    trigger_pipeline, pipeline_status, pipeline_history,
-)
-urlpatterns += [
-    path('api/workspace-templates/', list_templates, name='workspace-templates-list'),
-    path('api/workspace-templates/<slug:slug>/', template_detail, name='workspace-templates-detail'),
-    path('api/workspaces/create-from-template/', create_from_template, name='workspace-create-from-template'),
-    path('api/workspaces/<uuid:workspace_id>/dashboard/', workspace_dashboard, name='workspace-dashboard'),
-    path('api/workspaces/<uuid:workspace_id>/config/', workspace_config, name='workspace-config'),
-    path('api/workspaces/<uuid:workspace_id>/pipeline/run/', trigger_pipeline, name='workspace-pipeline-run'),
-    path('api/workspaces/<uuid:workspace_id>/pipeline/status/', pipeline_status, name='workspace-pipeline-status'),
-    path('api/workspaces/<uuid:workspace_id>/pipeline/history/', pipeline_history, name='workspace-pipeline-history'),
-]
+# (Workspace Templates URLs moved BEFORE the workspace router — see line ~4031)
 
 # =========================================================================
 # In-App Messaging / Inbox
