@@ -86,7 +86,7 @@ export default function WorkspaceDashboardPage() {
   const fetchDashboard = useCallback(async () => {
     if (!workspaceId) return
     try {
-      const res = await api.get(`/workspaces/${workspaceId}/dashboard/`)
+      const res = await api.get(`/workspaces/${workspaceId}/biz-dashboard/`)
       if (res.data.success) setDashboard(res.data)
     } catch (err) {
       console.error('Failed to fetch dashboard:', err)
