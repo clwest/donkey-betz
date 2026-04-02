@@ -83,6 +83,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         # Health & Status (truly public)
         '/api/v1/health/',  # Health check endpoint
         '/health/',  # Health check
+        '/api/app/manifest/',  # Deploy verification (returns minimal payload when unauthed)
 
         # Authentication endpoints (must be public to allow login/register)
         '/api/v1/auth/login/',  # Login endpoint
