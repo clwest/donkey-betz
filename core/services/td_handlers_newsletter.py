@@ -109,54 +109,57 @@ class NewsletterHandlersMixin:
 
         result = publisher.prepare_issue(deliverable.content, metadata)
 
-        # Save the publish-ready artifact as a new deliverable
+        # Save the publish-ready artifacts — update existing if re-prepared
         # Inherit workspace + initiative from source deliverable, allow payload override
         workspace_id = payload.get('workspace_id') or getattr(deliverable, 'workspace_id', None)
         initiative_id = deliverable.initiative_id if deliverable.initiative_id else None
 
-        # Save markdown version
-        md_deliverable = Deliverable.objects.create(
-            title=f"Newsletter #{issue_number} — Publish-Ready (Markdown)",
-            deliverable_type='document',
-            category='Newsletter',
-            agent_name='NewsletterTool',
-            content=result['markdown'],
-            content_format='markdown',
-            user_id=user_id,
-            workspace_id=workspace_id,
-            initiative_id=initiative_id,
-            is_saved=True,
-            metadata={
-                'newsletter': True,
-                'issue_number': issue_number,
-                'provider': provider_name,
-                'source_deliverable_id': str(deliverable_id),
-                'subjects': result['subjects'],
-                'preview_text': result['preview_text'],
-                'stats': result['stats'],
-                'artifact_type': 'publish_ready_markdown',
-            },
+        # Lookup key for dedup: title + category + agent_name
+        _lookup = lambda title: dict(title=title, category='Newsletter', agent_name='NewsletterTool')
+
+        # Save markdown version (update if exists)
+        md_deliverable, _ = Deliverable.objects.update_or_create(
+            **_lookup(f"Newsletter #{issue_number} — Publish-Ready (Markdown)"),
+            defaults=dict(
+                deliverable_type='document',
+                content=result['markdown'],
+                content_format='markdown',
+                user_id=user_id,
+                workspace_id=workspace_id,
+                initiative_id=initiative_id,
+                is_saved=True,
+                metadata={
+                    'newsletter': True,
+                    'issue_number': issue_number,
+                    'provider': provider_name,
+                    'source_deliverable_id': str(deliverable_id),
+                    'subjects': result['subjects'],
+                    'preview_text': result['preview_text'],
+                    'stats': result['stats'],
+                    'artifact_type': 'publish_ready_markdown',
+                },
+            ),
         )
 
-        # Save HTML version
-        html_deliverable = Deliverable.objects.create(
-            title=f"Newsletter #{issue_number} — Publish-Ready (HTML)",
-            deliverable_type='document',
-            category='Newsletter',
-            agent_name='NewsletterTool',
-            content=result['html'],
-            content_format='html',
-            user_id=user_id,
-            workspace_id=workspace_id,
-            initiative_id=initiative_id,
-            is_saved=True,
-            metadata={
-                'newsletter': True,
-                'issue_number': issue_number,
-                'provider': provider_name,
-                'source_deliverable_id': str(deliverable_id),
-                'artifact_type': 'publish_ready_html',
-            },
+        # Save HTML version (update if exists)
+        html_deliverable, _ = Deliverable.objects.update_or_create(
+            **_lookup(f"Newsletter #{issue_number} — Publish-Ready (HTML)"),
+            defaults=dict(
+                deliverable_type='document',
+                content=result['html'],
+                content_format='html',
+                user_id=user_id,
+                workspace_id=workspace_id,
+                initiative_id=initiative_id,
+                is_saved=True,
+                metadata={
+                    'newsletter': True,
+                    'issue_number': issue_number,
+                    'provider': provider_name,
+                    'source_deliverable_id': str(deliverable_id),
+                    'artifact_type': 'publish_ready_html',
+                },
+            ),
         )
 
         # Save publish checklist
@@ -181,24 +184,24 @@ class NewsletterHandlersMixin:
         for step in result['checklist']:
             checklist_content += f"- [ ] {step}\n"
 
-        checklist_deliverable = Deliverable.objects.create(
-            title=f"Newsletter #{issue_number} — Publish Checklist",
-            deliverable_type='document',
-            category='Newsletter',
-            agent_name='NewsletterTool',
-            content=checklist_content,
-            content_format='markdown',
-            user_id=user_id,
-            workspace_id=workspace_id,
-            initiative_id=initiative_id,
-            is_saved=True,
-            metadata={
-                'newsletter': True,
-                'issue_number': issue_number,
-                'provider': provider_name,
-                'source_deliverable_id': str(deliverable_id),
-                'artifact_type': 'publish_checklist',
-            },
+        checklist_deliverable, _ = Deliverable.objects.update_or_create(
+            **_lookup(f"Newsletter #{issue_number} — Publish Checklist"),
+            defaults=dict(
+                deliverable_type='document',
+                content=checklist_content,
+                content_format='markdown',
+                user_id=user_id,
+                workspace_id=workspace_id,
+                initiative_id=initiative_id,
+                is_saved=True,
+                metadata={
+                    'newsletter': True,
+                    'issue_number': issue_number,
+                    'provider': provider_name,
+                    'source_deliverable_id': str(deliverable_id),
+                    'artifact_type': 'publish_checklist',
+                },
+            ),
         )
 
         # Save subject + preheader options as a deliverable
@@ -213,26 +216,26 @@ class NewsletterHandlersMixin:
         subject_content += f"- Links: {result['stats']['link_count']}\n"
         subject_content += f"- Sections: {result['stats']['section_count']}\n"
 
-        subject_deliverable = Deliverable.objects.create(
-            title=f"Newsletter #{issue_number} — Subject + Preheader Options",
-            deliverable_type='document',
-            category='Newsletter',
-            agent_name='NewsletterTool',
-            content=subject_content,
-            content_format='markdown',
-            user_id=user_id,
-            workspace_id=workspace_id,
-            initiative_id=initiative_id,
-            is_saved=True,
-            metadata={
-                'newsletter': True,
-                'issue_number': issue_number,
-                'provider': provider_name,
-                'source_deliverable_id': str(deliverable_id),
-                'artifact_type': 'subject_preheader',
-                'subjects': result['subjects'],
-                'preview_text': result['preview_text'],
-            },
+        subject_deliverable, _ = Deliverable.objects.update_or_create(
+            **_lookup(f"Newsletter #{issue_number} — Subject + Preheader Options"),
+            defaults=dict(
+                deliverable_type='document',
+                content=subject_content,
+                content_format='markdown',
+                user_id=user_id,
+                workspace_id=workspace_id,
+                initiative_id=initiative_id,
+                is_saved=True,
+                metadata={
+                    'newsletter': True,
+                    'issue_number': issue_number,
+                    'provider': provider_name,
+                    'source_deliverable_id': str(deliverable_id),
+                    'artifact_type': 'subject_preheader',
+                    'subjects': result['subjects'],
+                    'preview_text': result['preview_text'],
+                },
+            ),
         )
 
         return {
@@ -283,24 +286,26 @@ class NewsletterHandlersMixin:
 
         outline = generate_issue_outline(issue_number, sources)
 
-        # Save as deliverable
-        deliverable = Deliverable.objects.create(
+        # Save as deliverable (update if re-generated)
+        deliverable, _ = Deliverable.objects.update_or_create(
             title=f"Autopilot Ops — Issue #{issue_number} (Outline)",
-            deliverable_type='document',
             category='Newsletter',
             agent_name='NewsletterTool',
-            content=outline,
-            content_format='markdown',
-            user_id=user_id,
-            workspace_id=workspace_id,
-            initiative_id=initiative_id,
-            is_saved=True,
-            metadata={
-                'newsletter': True,
-                'issue_number': issue_number,
-                'artifact_type': 'outline',
-                'status': 'outline',
-            },
+            defaults=dict(
+                deliverable_type='document',
+                content=outline,
+                content_format='markdown',
+                user_id=user_id,
+                workspace_id=workspace_id,
+                initiative_id=initiative_id,
+                is_saved=True,
+                metadata={
+                    'newsletter': True,
+                    'issue_number': issue_number,
+                    'artifact_type': 'outline',
+                    'status': 'outline',
+                },
+            ),
         )
 
         return {
