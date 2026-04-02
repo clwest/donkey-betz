@@ -220,13 +220,20 @@ function WorkspaceSelectorModal({
             </button>
           ))}
         </div>
-        <div className="p-4 border-t border-dark-border">
+        <div className="p-4 border-t border-dark-border space-y-2">
           <button
-            onClick={onCreateNew}
+            onClick={() => window.location.href = '/workspace/new'}
             className="btn btn-primary w-full flex items-center justify-center gap-2"
           >
-            <Plus size={16} />
-            Register New Workspace
+            <Zap size={16} />
+            Create Business Workspace
+          </button>
+          <button
+            onClick={onCreateNew}
+            className="btn w-full flex items-center justify-center gap-2 text-xs text-gray-400 hover:text-gray-300 bg-transparent hover:bg-dark-border border border-dark-border rounded-lg py-2"
+          >
+            <Plus size={14} />
+            Register Git Repo
           </button>
         </div>
       </div>
