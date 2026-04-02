@@ -160,6 +160,70 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0, hour=12),
         'options': {'queue': 'default', 'expires': 3600},
     },
+
+    # ── Spider Network (re-enabled) ────────────────────────────────────────
+    # Core spider execution — crawl all registered spiders
+    'run-spider-network': {
+        'task': 'core.tasks.run_spider_network',
+        'schedule': crontab(minute='*/30'),  # Every 30 min
+        'options': {'queue': 'long_running', 'expires': 1800},
+    },
+    # Warm up spider network — pre-flight checks + health
+    'warm-up-spiders': {
+        'task': 'ai_core.tasks.warm_up_spider_network',
+        'schedule': crontab(minute=0, hour='*/6'),  # Every 6 hours
+        'options': {'queue': 'long_running', 'expires': 21600},
+    },
+
+    # ── Spider Data Processing ──────────────────────────────────────────────
+    # Process new SpiderData rows (embedding text, dedup, quality)
+    'process-core-spider-data': {
+        'task': 'core.tasks.process_core_spider_data',
+        'schedule': crontab(minute='*/5'),  # Every 5 min
+        'options': {'queue': 'long_running', 'expires': 300},
+    },
+    # Backfill embeddings for spider data without vectors
+    'backfill-spider-embeddings': {
+        'task': 'core.tasks.backfill_spider_embeddings',
+        'schedule': crontab(minute='*/15'),  # Every 15 min
+        'kwargs': {'batch_size': 100},
+        'options': {'queue': 'long_running', 'expires': 900},
+    },
+
+    # ── Signal Intelligence ─────────────────────────────────────────────────
+    # Aggregate spider data into signal clusters
+    'aggregate-spider-signals': {
+        'task': 'aggregate_spider_signals',
+        'schedule': crontab(minute='*/30'),
+        'kwargs': {'lookback_hours': 6},
+        'options': {'queue': 'long_running', 'expires': 1800},
+    },
+    # Scan spider data for opportunities
+    'scan-spider-opportunities': {
+        'task': 'intelligence.tasks.scan_spider_opportunities',
+        'schedule': crontab(minute='*/30'),
+        'options': {'queue': 'long_running', 'expires': 1800},
+    },
+    # Process spider actions (convert spider data to action items)
+    'process-spider-actions': {
+        'task': 'core.tasks.process_spider_actions',
+        'schedule': crontab(minute='*/30'),
+        'options': {'queue': 'long_running', 'expires': 1800},
+    },
+    # Collect real opportunities from spider data
+    'collect-real-opportunities': {
+        'task': 'ai_core.tasks.collect_real_opportunities',
+        'schedule': crontab(minute='*/30'),  # Every 30 min (was 15)
+        'options': {'queue': 'long_running', 'expires': 1800},
+    },
+
+    # ── Dreams & Content ────────────────────────────────────────────────────
+    # Surface top dreams as boardroom attention items
+    'dream-daily-surfacing': {
+        'task': 'core.tasks.surface_top_dreams',
+        'schedule': crontab(hour=9, minute=0),  # Daily 9 AM
+        'options': {'queue': 'default', 'expires': 3600},
+    },
 }
 
 # Task routing configuration
