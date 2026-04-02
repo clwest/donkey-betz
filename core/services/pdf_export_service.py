@@ -888,6 +888,7 @@ def export_deliverable_to_pdf(deliverable_id: str, user_id) -> dict:
     """
     import uuid as _uuid
     from django.contrib.auth import get_user_model
+    from django.conf import settings as django_settings
     from django.core.files.base import ContentFile
     from django.core.files.storage import default_storage
     from django.utils.text import slugify
@@ -909,8 +910,20 @@ def export_deliverable_to_pdf(deliverable_id: str, user_id) -> dict:
     slug = slugify(deliverable.title)[:60]
     short_id = _uuid.uuid4().hex[:8]
     storage_path = f'exports/pdf/{slug}-{short_id}.pdf'
-    saved_path = default_storage.save(storage_path, ContentFile(pdf_bytes))
-    file_url = default_storage.url(saved_path)
+
+    # PDFs must be uploaded as resource_type='raw' on Cloudinary.
+    # default_storage (MediaCloudinaryStorage) uses resource_type='image',
+    # which makes PDF URLs return 404.
+    storage = default_storage
+    if not django_settings.DEBUG:
+        try:
+            from cloudinary_storage.storage import RawMediaCloudinaryStorage
+            storage = RawMediaCloudinaryStorage()
+        except ImportError:
+            pass  # fall back to default_storage in dev
+
+    saved_path = storage.save(storage_path, ContentFile(pdf_bytes))
+    file_url = storage.url(saved_path)
 
     export = DeliverableExport.objects.create(
         deliverable=deliverable,
