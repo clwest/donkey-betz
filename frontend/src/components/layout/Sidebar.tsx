@@ -60,6 +60,9 @@ const navItems = [
   // Session 931: Command Center - Unified AI interface + controls
   { path: '/', label: 'Command Center', icon: Command },
 
+  // In-app messaging
+  { path: '/inbox', label: 'Messages', icon: MessageSquare },
+
   // Unified Workspace (merged Platform + Workspace)
   { path: '/workspace', label: 'Workspace', icon: FolderCog },
 
@@ -113,6 +116,9 @@ export default function Sidebar() {
   const criticalGates = useCriticalGatesCount()
   const fetchAll = useUnifiedStore((s) => s.fetchAll)
 
+  // Inbox unread count
+  const [inboxUnread, setInboxUnread] = useState(0)
+
   // Fetch unified data on mount
   useEffect(() => {
     fetchAll()
@@ -120,6 +126,20 @@ export default function Sidebar() {
     const interval = setInterval(fetchAll, 60000)
     return () => clearInterval(interval)
   }, [fetchAll])
+
+  // Poll inbox unread count
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const { api } = await import('@/lib/api')
+        const res = await api.get('/inbox/unread-count/')
+        if (res.data.success) setInboxUnread(res.data.unread_count)
+      } catch { /* ignore */ }
+    }
+    fetchUnread()
+    const interval = setInterval(fetchUnread, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   // Badge counts for specific pages
   const getBadgeCount = (path: string): number | null => {
@@ -134,6 +154,8 @@ export default function Sidebar() {
         return runningPilots > 0 || criticalGates > 0
           ? runningPilots + criticalGates
           : null
+      case '/inbox':
+        return inboxUnread > 0 ? inboxUnread : null
       default:
         return null
     }

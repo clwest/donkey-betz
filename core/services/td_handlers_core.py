@@ -3229,4 +3229,172 @@ RESEARCH DATA:
         all_actions = sorted(list(BOARDROOM_MAP) + list(DECISIONS_MAP) + extra_actions)
         return {'error': f'Unknown governance_tool action: {action}. Valid: {", ".join(all_actions)}'}
 
+    # ── In-App Messaging Tool ──────────────────────────────────────────────────
+
+    def _handle_messaging(self, tool_name, payload, user_id, trace_id):
+        """Handle in-app messaging between platform users."""
+        from django.contrib.auth import get_user_model
+        from core.models_messaging import MessageThread, ThreadParticipant, DirectMessage
+
+        User = get_user_model()
+        action = payload.get('action', '')
+
+        if not user_id:
+            return {'error': 'Authentication required for messaging'}
+
+        try:
+            sender = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return {'error': 'User not found'}
+
+        if action == 'send_message':
+            recipient_username = payload.get('recipient_username', '').strip()
+            message_body = payload.get('message', '').strip()
+
+            if not recipient_username:
+                return {'error': 'recipient_username is required'}
+            if not message_body:
+                return {'error': 'message is required'}
+
+            try:
+                recipient = User.objects.get(username=recipient_username)
+            except User.DoesNotExist:
+                # List available users to help
+                usernames = list(
+                    User.objects.filter(is_active=True, is_staff=True)
+                    .exclude(id=user_id)
+                    .values_list('username', flat=True)
+                )
+                return {
+                    'error': f'User "{recipient_username}" not found',
+                    'available_users': usernames,
+                }
+
+            # Find or create DM thread between these two users
+            existing_thread = (
+                MessageThread.objects
+                .filter(thread_type='dm', is_archived=False)
+                .filter(threadparticipant__user=sender)
+                .filter(threadparticipant__user=recipient)
+                .first()
+            )
+
+            if existing_thread:
+                thread = existing_thread
+            else:
+                thread = MessageThread.objects.create(
+                    thread_type='rigby_routed',
+                    subject=payload.get('subject', ''),
+                    metadata={'routed_by': 'rigby', 'trace_id': trace_id},
+                )
+                ThreadParticipant.objects.create(thread=thread, user=sender)
+                ThreadParticipant.objects.create(thread=thread, user=recipient)
+
+            # Create the message
+            msg = DirectMessage.objects.create(
+                thread=thread,
+                sender=sender,
+                body=message_body,
+                sender_type='rigby',
+                metadata={
+                    'routed_by': 'rigby',
+                    'trace_id': trace_id,
+                    'on_behalf_of': sender.username,
+                },
+            )
+
+            # Update thread timestamp
+            from django.utils import timezone
+            thread.updated_at = timezone.now()
+            thread.save(update_fields=['updated_at'])
+
+            # Broadcast via WebSocket
+            from core.views_inbox import _broadcast_new_message
+            _broadcast_new_message(thread, msg)
+
+            return {
+                'action': 'send_message',
+                'status': 'sent',
+                'thread_id': str(thread.id),
+                'message_id': str(msg.id),
+                'recipient': recipient.username,
+                'message_preview': message_body[:100],
+                'message': f'Message sent to {recipient.username}: "{message_body[:60]}..."' if len(message_body) > 60 else f'Message sent to {recipient.username}: "{message_body}"',
+            }
+
+        elif action == 'list_threads':
+            participations = (
+                ThreadParticipant.objects
+                .filter(user=sender, thread__is_archived=False)
+                .select_related('thread')
+                .order_by('-thread__updated_at')[:20]
+            )
+
+            threads = []
+            for p in participations:
+                other_users = list(
+                    User.objects.filter(thread_participations__thread=p.thread)
+                    .exclude(id=sender.id)
+                    .values_list('username', flat=True)
+                )
+                last_msg = p.thread.messages.order_by('-created_at').first()
+                threads.append({
+                    'thread_id': str(p.thread.id),
+                    'participants': other_users,
+                    'unread_count': p.unread_count,
+                    'last_message': last_msg.body[:80] if last_msg else None,
+                    'last_message_at': last_msg.created_at.isoformat() if last_msg else None,
+                    'thread_type': p.thread.thread_type,
+                })
+
+            return {
+                'action': 'list_threads',
+                'thread_count': len(threads),
+                'threads': threads,
+            }
+
+        elif action == 'get_thread':
+            thread_id = payload.get('thread_id', '')
+            if not thread_id:
+                return {'error': 'thread_id is required'}
+
+            try:
+                participant = ThreadParticipant.objects.get(
+                    thread_id=thread_id, user=sender
+                )
+            except ThreadParticipant.DoesNotExist:
+                return {'error': 'Thread not found or access denied'}
+
+            messages = (
+                DirectMessage.objects
+                .filter(thread_id=thread_id)
+                .select_related('sender')
+                .order_by('created_at')[:50]
+            )
+
+            return {
+                'action': 'get_thread',
+                'thread_id': thread_id,
+                'messages': [{
+                    'sender': m.sender.username if m.sender else m.sender_type,
+                    'body': m.body,
+                    'created_at': m.created_at.isoformat(),
+                    'sender_type': m.sender_type,
+                } for m in messages],
+            }
+
+        elif action == 'unread_count':
+            participations = ThreadParticipant.objects.filter(
+                user=sender, thread__is_archived=False, is_muted=False,
+            )
+            total = sum(p.unread_count for p in participations)
+            return {
+                'action': 'unread_count',
+                'unread_count': total,
+                'message': f'You have {total} unread message{"s" if total != 1 else ""}.',
+            }
+
+        valid = ['send_message', 'list_threads', 'get_thread', 'unread_count']
+        return {'error': f'Unknown messaging_tool action: {action}. Valid: {", ".join(valid)}'}
+
     # ── Session 1079: Content Tool (gateway) ─────────────────────────────────────

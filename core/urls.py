@@ -4745,6 +4745,17 @@ if settings.DEBUG:
     ]
 
 # =========================================================================
+# In-App Messaging / Inbox
+# =========================================================================
+from core.views_inbox import inbox_threads, thread_messages, mark_thread_read, unread_count
+urlpatterns += [
+    path('api/inbox/threads/', inbox_threads, name='inbox-threads'),
+    path('api/inbox/threads/<uuid:thread_id>/messages/', thread_messages, name='inbox-thread-messages'),
+    path('api/inbox/threads/<uuid:thread_id>/read/', mark_thread_read, name='inbox-thread-read'),
+    path('api/inbox/unread-count/', unread_count, name='inbox-unread-count'),
+]
+
+# =========================================================================
 # Session 688: React Frontend Catch-All (MUST BE LAST!)
 # =========================================================================
 # This catches all remaining routes and serves the React SPA.

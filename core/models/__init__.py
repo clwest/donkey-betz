@@ -261,6 +261,9 @@ from ..models_assistant_profile import AssistantProfile
 # Learning readback telemetry
 from .learning_readback import LearningReadbackEvent
 
+# In-app messaging
+from ..models_messaging import MessageThread, ThreadParticipant, DirectMessage
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
