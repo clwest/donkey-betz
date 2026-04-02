@@ -264,7 +264,7 @@ def workspace_config(request, workspace_id):
         # Update allowed fields
         updatable = ['settings', 'quotas', 'status', 'governance_mode',
                      'pipeline_config', 'agent_pool', 'spider_subscriptions',
-                     'deliverable_categories']
+                     'deliverable_categories', 'workspace_brief']
         updated = []
         for field in updatable:
             if field in request.data:
@@ -303,6 +303,7 @@ def workspace_config(request, workspace_id):
             'deliverable_categories': config.deliverable_categories,
             'settings': config.settings,
             'quotas': config.quotas,
+            'workspace_brief': config.workspace_brief,
             'created_at': config.created_at.isoformat(),
             'updated_at': config.updated_at.isoformat(),
         },

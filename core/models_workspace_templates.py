@@ -165,6 +165,14 @@ class WorkspaceConfig(models.Model):
     spider_subscriptions = models.JSONField(default=list)
     deliverable_categories = models.JSONField(default=list)
 
+    # Workspace brief — what this business does, who it serves, what to focus on
+    # This feeds into every pipeline stage as context for agents
+    workspace_brief = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='{"topic": "...", "audience": "...", "tone": "...", "key_sources": [...], "focus_areas": [...], "notes": "..."}',
+    )
+
     # Workspace-specific settings (merged over template defaults)
     settings = models.JSONField(default=dict)
 
