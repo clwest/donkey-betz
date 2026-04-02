@@ -4750,6 +4750,7 @@ if settings.DEBUG:
 from core.views_workspace_templates import (
     list_templates, template_detail, create_from_template,
     workspace_dashboard, workspace_config,
+    trigger_pipeline, pipeline_status, pipeline_history,
 )
 urlpatterns += [
     path('api/workspace-templates/', list_templates, name='workspace-templates-list'),
@@ -4757,6 +4758,9 @@ urlpatterns += [
     path('api/workspaces/create-from-template/', create_from_template, name='workspace-create-from-template'),
     path('api/workspaces/<uuid:workspace_id>/dashboard/', workspace_dashboard, name='workspace-dashboard'),
     path('api/workspaces/<uuid:workspace_id>/config/', workspace_config, name='workspace-config'),
+    path('api/workspaces/<uuid:workspace_id>/pipeline/run/', trigger_pipeline, name='workspace-pipeline-run'),
+    path('api/workspaces/<uuid:workspace_id>/pipeline/status/', pipeline_status, name='workspace-pipeline-status'),
+    path('api/workspaces/<uuid:workspace_id>/pipeline/history/', pipeline_history, name='workspace-pipeline-history'),
 ]
 
 # =========================================================================

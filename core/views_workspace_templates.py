@@ -21,7 +21,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from core.models_workspace_templates import WorkspaceTemplate, WorkspaceConfig
+from core.models_workspace_templates import WorkspaceTemplate, WorkspaceConfig, PipelineRun
 
 logger = logging.getLogger(__name__)
 
@@ -306,4 +306,145 @@ def workspace_config(request, workspace_id):
             'created_at': config.created_at.isoformat(),
             'updated_at': config.updated_at.isoformat(),
         },
+    })
+
+
+# ── Pipeline Execution ───────────────────────────────────────────────────────
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def trigger_pipeline(request, workspace_id):
+    """
+    Trigger a pipeline run for a workspace.
+
+    Dispatches to Celery so the request returns immediately.
+    Returns the run_id for status polling.
+    """
+    from core.models_skin_layer import ProjectWorkspace
+
+    try:
+        workspace = ProjectWorkspace.objects.get(id=workspace_id, user=request.user)
+    except ProjectWorkspace.DoesNotExist:
+        return Response({'success': False, 'error': 'Workspace not found'}, status=404)
+
+    config = getattr(workspace, 'config', None)
+    if not config or not config.pipeline_config:
+        return Response({'success': False, 'error': 'No pipeline configured'}, status=400)
+
+    # Check for already-running pipeline
+    active = PipelineRun.objects.filter(
+        workspace=workspace, status='running'
+    ).first()
+    if active:
+        return Response({
+            'success': False,
+            'error': 'Pipeline already running',
+            'run_id': str(active.id),
+        }, status=409)
+
+    # Create the run record immediately so we can return run_id
+    run = PipelineRun.objects.create(
+        workspace=workspace,
+        triggered_by=request.user,
+        status='pending',
+        pipeline_snapshot=config.pipeline_config,
+        stage_results=[
+            {
+                'stage_index': i,
+                'name': stage.get('name', f'Stage {i+1}'),
+                'agent': stage.get('agent'),
+                'auto': stage.get('auto', False),
+                'requires_approval': stage.get('requires_approval', False),
+                'status': 'pending',
+                'started_at': None,
+                'finished_at': None,
+                'output': None,
+                'error': None,
+            }
+            for i, stage in enumerate(config.pipeline_config)
+        ],
+    )
+
+    # Dispatch to Celery
+    from core.tasks import execute_workspace_pipeline
+    execute_workspace_pipeline.delay(str(run.id))
+
+    return Response({
+        'success': True,
+        'run_id': str(run.id),
+        'status': 'pending',
+        'stages': run.stage_results,
+        'message': f'Pipeline started for "{workspace.name}" ({len(config.pipeline_config)} stages)',
+    }, status=202)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def pipeline_status(request, workspace_id):
+    """
+    Get pipeline run status for a workspace.
+
+    Query params:
+        run_id: specific run (optional — defaults to most recent)
+    """
+    from core.models_skin_layer import ProjectWorkspace
+
+    try:
+        workspace = ProjectWorkspace.objects.get(id=workspace_id, user=request.user)
+    except ProjectWorkspace.DoesNotExist:
+        return Response({'success': False, 'error': 'Workspace not found'}, status=404)
+
+    run_id = request.GET.get('run_id')
+    if run_id:
+        try:
+            run = PipelineRun.objects.get(id=run_id, workspace=workspace)
+        except PipelineRun.DoesNotExist:
+            return Response({'success': False, 'error': 'Run not found'}, status=404)
+    else:
+        run = PipelineRun.objects.filter(workspace=workspace).first()
+        if not run:
+            return Response({'success': True, 'run': None, 'message': 'No pipeline runs yet'})
+
+    return Response({
+        'success': True,
+        'run': {
+            'id': str(run.id),
+            'status': run.status,
+            'progress_pct': run.progress_pct,
+            'current_stage_index': run.current_stage_index,
+            'stages': run.stage_results,
+            'started_at': run.started_at.isoformat() if run.started_at else None,
+            'finished_at': run.finished_at.isoformat() if run.finished_at else None,
+            'duration_seconds': run.duration_seconds,
+            'error_message': run.error_message,
+            'created_at': run.created_at.isoformat(),
+        },
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def pipeline_history(request, workspace_id):
+    """List recent pipeline runs for a workspace."""
+    from core.models_skin_layer import ProjectWorkspace
+
+    try:
+        workspace = ProjectWorkspace.objects.get(id=workspace_id, user=request.user)
+    except ProjectWorkspace.DoesNotExist:
+        return Response({'success': False, 'error': 'Workspace not found'}, status=404)
+
+    runs = PipelineRun.objects.filter(workspace=workspace)[:10]
+
+    return Response({
+        'success': True,
+        'runs': [{
+            'id': str(r.id),
+            'status': r.status,
+            'progress_pct': r.progress_pct,
+            'stage_count': len(r.pipeline_snapshot),
+            'started_at': r.started_at.isoformat() if r.started_at else None,
+            'finished_at': r.finished_at.isoformat() if r.finished_at else None,
+            'duration_seconds': r.duration_seconds,
+            'created_at': r.created_at.isoformat(),
+        } for r in runs],
     })
