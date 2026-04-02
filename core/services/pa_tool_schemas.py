@@ -3823,6 +3823,53 @@ PA_TOOL_SCHEMAS = [
             "required": ["task"],
         },
     },
+
+    # ── In-App Messaging ────────────────────────────────────────────────────
+    {
+        "name": "messaging_tool",
+        "description": (
+            "Send direct messages between platform users. "
+            "Use when a user asks you to message, ask, tell, or notify another user. "
+            "Actions: send_message (send a message to a user), "
+            "list_threads (list the user's message threads), "
+            "get_thread (get messages in a thread), "
+            "unread_count (get unread message count). "
+            "Examples: 'ask Chris about X', 'message Jeremy', 'tell Jessica Y', "
+            "'check my messages', 'any new messages?'"
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["send_message", "list_threads", "get_thread", "unread_count"],
+                    "description": (
+                        "send_message: send a message to a user (requires recipient_username + message). "
+                        "list_threads: list all message threads. "
+                        "get_thread: get messages in a specific thread (requires thread_id). "
+                        "unread_count: get total unread message count."
+                    ),
+                },
+                "recipient_username": {
+                    "type": "string",
+                    "description": "Username of the recipient (for send_message)",
+                },
+                "message": {
+                    "type": "string",
+                    "description": "Message body to send",
+                },
+                "thread_id": {
+                    "type": "string",
+                    "description": "Thread ID (for get_thread)",
+                },
+                "subject": {
+                    "type": "string",
+                    "description": "Optional subject line for new threads",
+                },
+            },
+            "required": ["action"],
+        },
+    },
 ]
 
 # ── Startup validation: every tool must have name, description, parameters ──

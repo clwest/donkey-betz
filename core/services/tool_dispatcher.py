@@ -488,6 +488,9 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         # R2-6: KB / embedding browsing
         self.register("kb_tool", self._handle_kb_browse)
 
+        # In-app messaging between platform users
+        self.register("messaging_tool", self._handle_messaging)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):

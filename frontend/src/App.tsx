@@ -4,6 +4,7 @@ import { usePAStore } from '@/stores/paStore'
 import Layout from '@/components/layout/Layout'
 import LoginPage from '@/pages/LoginPage'
 import DashboardPage from '@/pages/DashboardPage'
+import InboxPage from '@/pages/InboxPage'
 import CommandCenterPage from '@/pages/CommandCenterPage'  // Session 931: Unified Command Center
 import AgentsPage from '@/pages/AgentsPage'
 import IntelligencePage from '@/pages/IntelligencePage'
@@ -121,6 +122,9 @@ function App() {
         {/* Session 1067: Boardroom + governance now in Workspace tabs */}
         <Route path="boardroom" element={<Navigate to="/workspace?tab=boardroom" replace />} />
         <Route path="governance" element={<Navigate to="/workspace?tab=boardroom" replace />} />
+
+        {/* In-app messaging */}
+        <Route path="inbox" element={<InboxPage />} />
 
         {/* Standalone pages kept — distinct UI not duplicated in workspace */}
         <Route path="advisors" element={<AdvisorsPage />} />
