@@ -135,6 +135,9 @@ export default function HomeTab({ activeWorkspace, onNavigateTab }: HomeTabProps
         </div>
       )}
 
+      {/* My Business Workspaces */}
+      <MyBusinessWorkspaces />
+
       {/* Pulse Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
         <PulseCard label="Agents Active" value={agentsActive} icon={Bot} color="text-primary-400" onClick={() => onNavigateTab('system')} />
@@ -447,5 +450,57 @@ function QuickAction({
       <Icon size={12} />
       {label}
     </button>
+  )
+}
+
+
+function MyBusinessWorkspaces() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['my-workspaces'],
+    queryFn: async () => {
+      const res = await api.get('/workspaces/')
+      return res.data
+    },
+    refetchInterval: 30000,
+  })
+
+  const workspaces = (data?.results || data || []) as Array<{
+    id: string
+    name: string
+    workspace_type: string
+    is_active: boolean
+    updated_at: string
+  }>
+
+  // Filter to sandbox (template-created) workspaces
+  const bizWorkspaces = workspaces.filter(w => w.workspace_type === 'sandbox')
+
+  if (isLoading || bizWorkspaces.length === 0) return null
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">My Business Workspaces</h3>
+        <a href="/workspace/new" className="text-xs text-blue-400 hover:text-blue-300">+ New</a>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {bizWorkspaces.map(ws => (
+          <a
+            key={ws.id}
+            href={`/workspace/${ws.id}`}
+            className="p-4 bg-dark-bg rounded-xl border border-dark-border hover:border-blue-800/50 hover:bg-dark-card transition-colors group"
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <Zap size={14} className="text-blue-400" />
+              <span className="font-medium text-white group-hover:text-blue-300 transition-colors">{ws.name}</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              {ws.is_active && <span className="text-green-400">Active</span>}
+              <span>Updated {new Date(ws.updated_at).toLocaleDateString()}</span>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
   )
 }
