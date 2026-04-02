@@ -192,32 +192,40 @@ function WorkspaceSelectorModal({
         </div>
         <div className="p-4 space-y-2 overflow-y-auto max-h-96">
           {workspaces.map((ws) => (
-            <button
+            <div
               key={ws.id}
-              onClick={() => {
-                onSelect(ws.id)
-                onClose()
-              }}
               className={cn(
-                'w-full p-3 rounded-lg text-left transition-colors',
+                'w-full p-3 rounded-lg transition-colors',
                 ws.is_active
                   ? 'bg-primary-500/20 border border-primary-500/50'
                   : 'bg-dark-bg hover:bg-dark-border'
               )}
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { onSelect(ws.id); onClose() }}
+                  className="flex items-center gap-2 text-left flex-1"
+                >
                   <FolderOpen size={18} className={ws.is_active ? 'text-primary-400' : 'text-gray-400'} />
-                  <span className="font-medium">{ws.name}</span>
+                  <div>
+                    <span className="font-medium">{ws.name}</span>
+                    <p className="text-xs text-gray-500">{ws.workspace_type === 'sandbox' ? 'Business Workspace' : ws.path}</p>
+                  </div>
+                </button>
+                <div className="flex items-center gap-2">
+                  {ws.is_active && (
+                    <span className="text-xs px-2 py-0.5 rounded bg-primary-500/20 text-primary-400">Active</span>
+                  )}
+                  <a
+                    href={`/workspace/${ws.id}`}
+                    onClick={(e) => { e.stopPropagation(); onClose() }}
+                    className="text-xs px-2 py-1 rounded bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 transition-colors"
+                  >
+                    Dashboard
+                  </a>
                 </div>
-                {ws.is_active && (
-                  <span className="text-xs px-2 py-1 rounded bg-primary-500/20 text-primary-400">
-                    Active
-                  </span>
-                )}
               </div>
-              <p className="text-xs text-gray-400 mt-1 truncate">{ws.path}</p>
-            </button>
+            </div>
           ))}
         </div>
         <div className="p-4 border-t border-dark-border space-y-2">
