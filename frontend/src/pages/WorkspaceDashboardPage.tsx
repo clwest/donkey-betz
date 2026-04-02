@@ -11,7 +11,9 @@ import { api } from '@/lib/api'
 import {
   ArrowLeft, Play, CheckCircle2, XCircle, Clock, Loader2,
   BarChart3, FileText, Bot, Zap, Pause, AlertCircle,
+  Save, MessageSquare, PenLine,
 } from 'lucide-react'
+import { usePAStore } from '@/stores/paStore'
 
 interface StageResult {
   stage_index: number
@@ -83,6 +85,13 @@ export default function WorkspaceDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [runningPipeline, setRunningPipeline] = useState(false)
 
+  // Workspace brief state
+  const [brief, setBrief] = useState<Record<string, string | string[]>>({
+    topic: '', audience: '', tone: '', focus_areas: [], notes: '',
+  })
+  const [briefDirty, setBriefDirty] = useState(false)
+  const [savingBrief, setSavingBrief] = useState(false)
+
   const fetchDashboard = useCallback(async () => {
     if (!workspaceId) return
     try {
@@ -105,10 +114,40 @@ export default function WorkspaceDashboardPage() {
     } catch { /* no runs yet */ }
   }, [workspaceId])
 
+  // Load brief from config on first load
+  const fetchConfig = useCallback(async () => {
+    if (!workspaceId) return
+    try {
+      const res = await api.get(`/workspaces/${workspaceId}/config/`)
+      if (res.data.success && res.data.config?.workspace_brief) {
+        setBrief(res.data.config.workspace_brief)
+      }
+    } catch { /* no config */ }
+  }, [workspaceId])
+
+  const saveBrief = async () => {
+    if (!workspaceId) return
+    setSavingBrief(true)
+    try {
+      await api.patch(`/workspaces/${workspaceId}/config/`, { workspace_brief: brief })
+      setBriefDirty(false)
+    } catch (err) {
+      console.error('Failed to save brief:', err)
+    } finally {
+      setSavingBrief(false)
+    }
+  }
+
+  const updateBrief = (field: string, value: string | string[]) => {
+    setBrief(prev => ({ ...prev, [field]: value }))
+    setBriefDirty(true)
+  }
+
   useEffect(() => {
     fetchDashboard()
     fetchPipelineStatus()
-  }, [fetchDashboard, fetchPipelineStatus])
+    fetchConfig()
+  }, [fetchDashboard, fetchPipelineStatus, fetchConfig])
 
   // Poll pipeline status while running
   useEffect(() => {
@@ -201,6 +240,92 @@ export default function WorkspaceDashboardPage() {
               <><Play size={16} /> Run Pipeline</>
             )}
           </button>
+        </div>
+
+        {/* Workspace Brief — tells agents what to do */}
+        <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <PenLine className="text-blue-400" size={18} />
+              <h2 className="text-lg font-semibold text-white">Workspace Brief</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const msg = `I'm working in the "${workspace.name}" workspace (${workspace.template}). Topic: ${brief.topic || 'not set'}. Help me configure this workspace and decide what to focus on.`
+                  usePAStore.getState().setCurrentInput(msg)
+                  usePAStore.getState().openDock()
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-900/30 border border-purple-800/30 hover:bg-purple-900/50 text-purple-300 text-sm transition-colors"
+              >
+                <MessageSquare size={14} /> Ask Rigby
+              </button>
+              {briefDirty && (
+                <button
+                  onClick={saveBrief}
+                  disabled={savingBrief}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 text-white text-sm rounded-lg transition-colors"
+                >
+                  <Save size={14} /> {savingBrief ? 'Saving...' : 'Save'}
+                </button>
+              )}
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mb-4">
+            This brief tells agents what to research, write about, and who the audience is when running the pipeline.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Topic / Focus</label>
+              <input
+                type="text"
+                value={(brief.topic as string) || ''}
+                onChange={e => updateBrief('topic', e.target.value)}
+                placeholder="e.g., AI trends in enterprise SaaS"
+                className="w-full bg-gray-800 text-white border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Target Audience</label>
+              <input
+                type="text"
+                value={(brief.audience as string) || ''}
+                onChange={e => updateBrief('audience', e.target.value)}
+                placeholder="e.g., CTOs and engineering leaders"
+                className="w-full bg-gray-800 text-white border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Tone</label>
+              <input
+                type="text"
+                value={(brief.tone as string) || ''}
+                onChange={e => updateBrief('tone', e.target.value)}
+                placeholder="e.g., Professional but approachable"
+                className="w-full bg-gray-800 text-white border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Focus Areas (comma-separated)</label>
+              <input
+                type="text"
+                value={Array.isArray(brief.focus_areas) ? (brief.focus_areas as string[]).join(', ') : ''}
+                onChange={e => updateBrief('focus_areas', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                placeholder="e.g., LLMs, DevOps, Cloud"
+                className="w-full bg-gray-800 text-white border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          </div>
+          <div className="mt-4">
+            <label className="text-xs text-gray-500 mb-1 block">Additional Notes</label>
+            <textarea
+              value={(brief.notes as string) || ''}
+              onChange={e => updateBrief('notes', e.target.value)}
+              placeholder="Any specific instructions, preferred sources, things to avoid..."
+              rows={2}
+              className="w-full bg-gray-800 text-white border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 resize-none"
+            />
+          </div>
         </div>
 
         {/* Metrics Cards */}

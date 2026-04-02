@@ -76,13 +76,28 @@ def execute_pipeline_run(run_id: str) -> dict:
 
         # Execute agent
         try:
-            task_desc = stage.get('description', f'Execute {stage_name} for {workspace.name}')
+            # Build a rich task description using the workspace brief
+            brief = config.workspace_brief if config else {}
+            task_parts = [stage.get('description', f'Execute {stage_name}')]
+            if brief.get('topic'):
+                task_parts.append(f"Topic/Focus: {brief['topic']}")
+            if brief.get('audience'):
+                task_parts.append(f"Target audience: {brief['audience']}")
+            if brief.get('tone'):
+                task_parts.append(f"Tone: {brief['tone']}")
+            if brief.get('focus_areas'):
+                task_parts.append(f"Focus areas: {', '.join(brief['focus_areas'])}")
+            if brief.get('notes'):
+                task_parts.append(f"Additional context: {brief['notes']}")
+            task_desc = '. '.join(task_parts)
+
             context = {
                 'workspace_id': str(workspace.id),
                 'workspace_name': workspace.name,
                 'pipeline_run_id': str(run.id),
                 'stage_name': stage_name,
                 'stage_index': i,
+                'workspace_brief': brief,
             }
             if config:
                 context['deliverable_categories'] = config.deliverable_categories
