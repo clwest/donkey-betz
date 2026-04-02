@@ -1399,10 +1399,28 @@ def get_pa_conversation(request, conversation_id):
     try:
         from core.models import ChatConversation
 
-        # Show all messages in the conversation — multiple sources (web, claude-code,
-        # ops_digest) may contribute under different user accounts.  Access is granted
-        # if the requesting user has at least one message in the conversation OR if
-        # the conversation_id was explicitly provided (knowledge of the ID = access).
+        # Access control: user must have at least one message in the conversation,
+        # or be staff/superuser.  Prevents cross-user conversation leakage.
+        if not request.user.is_staff:
+            has_access = ChatConversation.objects.filter(
+                conversation_id=conversation_id,
+                user=request.user,
+            ).exists()
+            if not has_access:
+                # Allow access to brand-new conversations (no rows yet)
+                if not ChatConversation.objects.filter(conversation_id=conversation_id).exists():
+                    if conversation_id.startswith('pa-'):
+                        return Response({
+                            'success': True,
+                            'conversation_id': conversation_id,
+                            'title': 'New Conversation',
+                            'messages': [],
+                        })
+                return Response({
+                    'success': False,
+                    'error': 'Conversation not found',
+                }, status=404)
+
         rows = ChatConversation.objects.filter(
             conversation_id=conversation_id,
         ).order_by('created_at')

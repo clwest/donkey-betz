@@ -34,6 +34,7 @@ import {
   Package,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
+import { usePAStore } from '@/stores/paStore'
 import {
   useUnifiedStore,
   usePendingDecisionsCount,
@@ -90,6 +91,7 @@ const navItems = [
 
 export default function Sidebar() {
   const { logout, user } = useAuthStore()
+  const syncUser = usePAStore((s) => s.syncUser)
   const navigate = useNavigate()
 
   // Collapsed state - persist in localStorage
@@ -214,7 +216,7 @@ export default function Sidebar() {
           </button>
           {!isCollapsed && (
             <button
-              onClick={() => logout()}
+              onClick={() => { syncUser(null); logout() }}
               className="text-gray-400 hover:text-white transition-colors"
               title="Logout"
             >

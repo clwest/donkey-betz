@@ -41,6 +41,9 @@ interface ConversationSummary {
 }
 
 interface PAState {
+  // User scoping — prevents conversation bleed between users
+  userId: number | null
+
   // Dock visibility
   isDockOpen: boolean
   isDockMinimized: boolean
@@ -61,6 +64,7 @@ interface PAState {
   conversationsLoading: boolean
 
   // Actions
+  syncUser: (userId: number | null) => void
   toggleDock: () => void
   openDock: () => void
   closeDock: () => void
@@ -89,6 +93,7 @@ export const usePAStore = create<PAState>()(
   persist(
     (set, get) => ({
       // Initial state
+      userId: null,
       isDockOpen: false,
       isDockMinimized: false,
       messages: [],
@@ -98,6 +103,21 @@ export const usePAStore = create<PAState>()(
       conversations: [],
       isSidebarOpen: false,
       conversationsLoading: false,
+
+      // User scoping: when user changes, wipe conversation state to prevent bleed
+      syncUser: (newUserId: number | null) => {
+        const current = get().userId
+        if (current !== newUserId) {
+          set({
+            userId: newUserId,
+            messages: [],
+            activeConversationId: null,
+            conversations: [],
+            currentInput: '',
+            conversationsLoading: false,
+          })
+        }
+      },
 
       // Dock controls
       toggleDock: () => set((state) => ({ isDockOpen: !state.isDockOpen })),
@@ -212,7 +232,7 @@ export const usePAStore = create<PAState>()(
     }),
     {
       name: 'pa-dock-state',
-      version: 2,
+      version: 3,
       migrate: (persisted: unknown, version: number) => {
         const state = persisted as Record<string, unknown>
         if (version < 2) {
@@ -222,12 +242,24 @@ export const usePAStore = create<PAState>()(
             conversations: [],
             isSidebarOpen: false,
             conversationsLoading: false,
+            userId: null,
+          }
+        }
+        if (version < 3) {
+          // v3: user scoping — wipe conversation state from pre-scoped store
+          return {
+            ...state,
+            userId: null,
+            messages: [],
+            activeConversationId: null,
+            conversations: [],
           }
         }
         return state
       },
       // Only persist some fields
       partialize: (state) => ({
+        userId: state.userId,
         isDockOpen: state.isDockOpen,
         isDockMinimized: state.isDockMinimized,
         messages: state.messages.slice(-50), // Keep last 50 messages
