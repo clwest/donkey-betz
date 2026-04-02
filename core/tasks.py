@@ -266,14 +266,20 @@ def _circuit_breaker_check(agent_name: str, task: str) -> dict | None:
 
     Returns None if the task should proceed, or a dict with block reason.
     Also acquires a single-flight lock if proceeding.
+
+    Three checks:
+    1. Timeout breaker — 2+ timeouts in 24h → trip
+    2. Rate limit — same (agent, task) can't run > N times per hour
+    3. Single-flight lock — no concurrent identical runs
     """
     from django.core.cache import cache
 
     th = _task_hash(agent_name, task)
     breaker_key = f'circuit:{agent_name}:{th}:timeouts'
+    rate_key = f'rate:{agent_name}:{th}:hourly'
     lock_key = f'flight:{agent_name}:{th}'
 
-    # Check timeout count (circuit breaker)
+    # 1. Check timeout count (circuit breaker)
     timeout_count = cache.get(breaker_key, 0)
     if timeout_count >= 2:
         logger.warning(
@@ -288,7 +294,31 @@ def _circuit_breaker_check(agent_name: str, task: str) -> dict | None:
             'timeout_count': timeout_count,
         }
 
-    # Single-flight lock: prevent duplicate concurrent executions
+    # 2. Rate limit — prevent rapid sequential re-invocation (runaway loops)
+    rate_limit = int(os.environ.get('AGENT_RATE_LIMIT_PER_HOUR', '3'))
+    run_count = cache.get(rate_key, 0)
+    if run_count >= rate_limit:
+        logger.warning(
+            f"[circuit_breaker] RATE LIMITED: {agent_name} ran {run_count}x "
+            f"in the last hour (limit={rate_limit}, task_hash={th})"
+        )
+        return {
+            'status': 'rate_limited',
+            'agent': agent_name,
+            'reason': f'{agent_name} rate limited: {run_count} runs in past hour (max {rate_limit})',
+            'task_hash': th,
+            'run_count': run_count,
+            'rate_limit': rate_limit,
+        }
+
+    # Increment hourly run counter (set with 1h TTL on first use)
+    try:
+        cache.incr(rate_key)
+    except ValueError:
+        # Key doesn't exist yet — initialize with TTL
+        cache.set(rate_key, 1, timeout=3600)
+
+    # 3. Single-flight lock: prevent duplicate concurrent executions
     if not cache.add(lock_key, '1', timeout=1800):  # 30 min lock
         logger.info(
             f"[circuit_breaker] DEDUP: {agent_name} task already in flight "
