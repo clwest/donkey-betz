@@ -5,6 +5,7 @@ import Layout from '@/components/layout/Layout'
 import LoginPage from '@/pages/LoginPage'
 import DashboardPage from '@/pages/DashboardPage'
 import InboxPage from '@/pages/InboxPage'
+import WorkspaceCreatePage from '@/pages/WorkspaceCreatePage'
 import CommandCenterPage from '@/pages/CommandCenterPage'  // Session 931: Unified Command Center
 import AgentsPage from '@/pages/AgentsPage'
 import IntelligencePage from '@/pages/IntelligencePage'
@@ -125,6 +126,9 @@ function App() {
 
         {/* In-app messaging */}
         <Route path="inbox" element={<InboxPage />} />
+
+        {/* Workspace creation wizard */}
+        <Route path="workspace/new" element={<WorkspaceCreatePage />} />
 
         {/* Standalone pages kept — distinct UI not duplicated in workspace */}
         <Route path="advisors" element={<AdvisorsPage />} />

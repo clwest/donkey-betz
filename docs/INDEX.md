@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-04-02 14:18
+**Generated:** 2026-04-02 15:40
 **Current Session:** 1077
 **Total Documentation:** 1836 files | 627,201 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/SYSTEM_CAPABILITIES-original/08_Sports_Analytics/README.md` | 60 | 🏆 SPORTS ANALYTICS PLATFORM - AI-Powered Betting I |
+| `docs/archive/old-structure/capabilities/README.md` | 59 | 🚀 UNIFIED DONKEY BETZ - SYSTEM CAPABILITIES DOCUME |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -218,7 +218,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 362 | 2026-04-02 13:05 |
+| INDEX.md | docs | 362 | 2026-04-02 14:19 |
 | EXECUTIVE_SUMMARY_WS4.md | patents | 49 | 2026-03-16 17:32 |
 | DISCLOSURE_L_SELF_TUNING_EXPERIMENTATION.md | patents | 367 | 2026-03-16 17:32 |
 | DISCLOSURE_K_BUDGET_AWARE_SCHEDULING.md | patents | 295 | 2026-03-16 17:32 |

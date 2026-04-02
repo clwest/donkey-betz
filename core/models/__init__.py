@@ -264,6 +264,9 @@ from .learning_readback import LearningReadbackEvent
 # In-app messaging
 from ..models_messaging import MessageThread, ThreadParticipant, DirectMessage
 
+# Workspace templates & business-unit config
+from ..models_workspace_templates import WorkspaceTemplate, WorkspaceConfig
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models

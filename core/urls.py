@@ -4745,6 +4745,21 @@ if settings.DEBUG:
     ]
 
 # =========================================================================
+# Workspace Templates & Business-Unit APIs
+# =========================================================================
+from core.views_workspace_templates import (
+    list_templates, template_detail, create_from_template,
+    workspace_dashboard, workspace_config,
+)
+urlpatterns += [
+    path('api/workspace-templates/', list_templates, name='workspace-templates-list'),
+    path('api/workspace-templates/<slug:slug>/', template_detail, name='workspace-templates-detail'),
+    path('api/workspaces/create-from-template/', create_from_template, name='workspace-create-from-template'),
+    path('api/workspaces/<uuid:workspace_id>/dashboard/', workspace_dashboard, name='workspace-dashboard'),
+    path('api/workspaces/<uuid:workspace_id>/config/', workspace_config, name='workspace-config'),
+]
+
+# =========================================================================
 # In-App Messaging / Inbox
 # =========================================================================
 from core.views_inbox import inbox_threads, thread_messages, mark_thread_read, unread_count
