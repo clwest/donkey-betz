@@ -272,6 +272,10 @@ def _check_assertion(assertion: dict, status: int, data: Any) -> dict:
         passed = status == expected
         return {'check': f'status == {expected}', 'pass': passed, 'detail': f'got {status}'}
 
+    if check == 'status_in':
+        passed = status in (expected or [])
+        return {'check': f'status in {expected}', 'pass': passed, 'detail': f'got {status}'}
+
     if check == 'has_key':
         key = assertion.get('key', '')
         passed = isinstance(data, dict) and key in data
@@ -728,13 +732,13 @@ BUILTIN_SUITES: dict[str, list[dict]] = {
                 {'check': 'has_key', 'key': 'latest_migration'},
             ],
         },
-        # 3. PA chat endpoint reachable
+        # 3. PA chat endpoint reachable (401 is acceptable — confirms endpoint exists)
         {
             'name': 'pa_chat',
             'method': 'GET',
             'path': '/api/assistant/context/',
             'assert': [
-                {'check': 'status', 'expected': 200},
+                {'check': 'status_in', 'expected': [200, 401]},
             ],
         },
         # 4. Docs index API
