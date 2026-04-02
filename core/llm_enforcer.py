@@ -241,7 +241,7 @@ class LLMEnforcer:
                 # Session 1036: Pass input_messages for structured Responses API input
                 response = self._call_openai(prompt, max_tokens, temperature, task_type, tools, context, previous_response_id, tool_choice, input_messages)
                 provider = "openai"
-                model = "gpt-5-mini"  # Switched from gpt-5.2 during OpenAI outage
+                model = "gpt-5.2"  # Restored — outage resolved
             else:
                 raise Exception("No LLM client available")
 
