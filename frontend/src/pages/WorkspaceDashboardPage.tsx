@@ -203,6 +203,8 @@ export default function WorkspaceDashboardPage() {
 
   const { workspace, metrics, pipeline } = dashboard
   const isPipelineRunning = pipelineRun?.status === 'running' || pipelineRun?.status === 'pending'
+  const isPipelineFailed = pipelineRun?.status === 'failed'
+  const isPipelineDone = pipelineRun?.status === 'completed'
 
   return (
     <div className="min-h-screen bg-gray-950 p-6">
@@ -229,17 +231,31 @@ export default function WorkspaceDashboardPage() {
             </div>
           </div>
 
-          <button
-            onClick={handleRunPipeline}
-            disabled={isPipelineRunning || runningPipeline}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-lg transition-colors"
-          >
-            {isPipelineRunning ? (
-              <><Loader2 size={16} className="animate-spin" /> Running...</>
-            ) : (
-              <><Play size={16} /> Run Pipeline</>
+          <div className="flex items-center gap-3">
+            {isPipelineFailed && (
+              <span className="text-xs text-red-400 bg-red-900/20 px-2 py-1 rounded">
+                Last run had failures
+              </span>
             )}
-          </button>
+            {isPipelineDone && !isPipelineFailed && (
+              <span className="text-xs text-green-400 bg-green-900/20 px-2 py-1 rounded">
+                Pipeline complete
+              </span>
+            )}
+            <button
+              onClick={handleRunPipeline}
+              disabled={isPipelineRunning || runningPipeline}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-lg transition-colors"
+            >
+              {isPipelineRunning ? (
+                <><Loader2 size={16} className="animate-spin" /> Running...</>
+              ) : isPipelineFailed ? (
+                <><Play size={16} /> Retry Pipeline</>
+              ) : (
+                <><Play size={16} /> Run Pipeline</>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Workspace Brief — tells agents what to do */}
