@@ -839,12 +839,13 @@ class UnifiedPAEntrypoint:
                     trace_id=trace_id,
                 )
                 if promo_result and promo_result.get('action') == 'saved':
-                    # Append a subtle footer so user knows facts were captured
+                    # Log internally only — never append to user-visible content
                     promo_tags = ', '.join(promo_result.get('tags', []))
-                    content = (content or '') + (
-                        f"\n\n---\n*Ops fact saved: {promo_result.get('content', '')[:60]}*"
-                        f"{f' [{promo_tags}]' if promo_tags else ''}"
-                        f" *(tell me if any are wrong)*"
+                    logger.info(
+                        "[%s] Ops fact saved: %s [%s]",
+                        trace_id,
+                        promo_result.get('content', '')[:60],
+                        promo_tags,
                     )
             except Exception as e:
                 logger.debug(f"[{trace_id}] Memory promotion skipped: {e}")

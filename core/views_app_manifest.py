@@ -11,7 +11,7 @@ import logging
 import os
 
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 logger = logging.getLogger(__name__)
@@ -193,8 +193,31 @@ def get_manifest_data(user) -> dict:
 # ── REST endpoint ────────────────────────────────────────────────────────────
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def app_manifest(request):
+    # Unauthenticated callers get a minimal deploy-verification payload
+    # (backend_sha, latest_migration, env) without RBAC-filtered routes.
+    if not request.user or not request.user.is_authenticated:
+        backend_sha = os.getenv('RAILWAY_GIT_COMMIT_SHA', '')
+        latest_migration = None
+        try:
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT app, name FROM django_migrations ORDER BY id DESC LIMIT 1"
+                )
+                row = cursor.fetchone()
+                if row:
+                    latest_migration = f"{row[0]}.{row[1]}"
+        except Exception:
+            pass
+        manifest = _load_manifest()
+        return Response({
+            'backend_sha': backend_sha or None,
+            'latest_migration': latest_migration,
+            'env': manifest.get('env', 'unknown'),
+            'route_count': len(manifest.get('routes', [])),
+        })
     return Response(get_manifest_data(request.user))
 
 
