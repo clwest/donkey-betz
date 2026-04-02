@@ -499,6 +499,11 @@ def cleanup_boardroom_junk(spider_action_hours: int = 6):
 def auto_approve_boardroom_items():
     from core.tasks_ops import _impl_auto_approve_boardroom_items
     return _impl_auto_approve_boardroom_items()
+@shared_task(bind=True, soft_time_limit=1800, time_limit=1900)
+def execute_workspace_pipeline(self, run_id: str):
+    """Execute a workspace pipeline run (dispatched from trigger_pipeline API)."""
+    from core.services.workspace_pipeline_runner import execute_pipeline_run
+    return execute_pipeline_run(run_id)
 @shared_task
 def cleanup_expired_boardroom_items(days_old: int = 7):
     from core.tasks_misc import _impl_cleanup_expired_boardroom_items

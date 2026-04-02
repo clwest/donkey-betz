@@ -237,3 +237,70 @@ class WorkspaceConfig(models.Model):
         }
         self.metrics_updated_at = timezone.now()
         self.save(update_fields=['metrics_snapshot', 'metrics_updated_at'])
+
+
+class PipelineRun(models.Model):
+    """
+    A single execution of a workspace's pipeline.
+
+    Tracks each stage's status, timing, and output references so
+    the frontend can show real-time progress.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    workspace = models.ForeignKey(
+        'core.ProjectWorkspace',
+        on_delete=models.CASCADE,
+        related_name='pipeline_runs',
+    )
+    triggered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+    )
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('running', 'Running'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
+
+    # Pipeline config snapshot (frozen at run time)
+    pipeline_snapshot = models.JSONField(default=list)
+
+    # Per-stage status tracking
+    # [{stage_index: 0, name: "Research", status: "completed", started_at: ..., finished_at: ...,
+    #   agent: "ResearchAgent", task_id: "...", output: {...}}, ...]
+    stage_results = models.JSONField(default=list)
+
+    current_stage_index = models.IntegerField(default=0)
+    error_message = models.TextField(blank=True, default='')
+
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        db_table = 'workspace_pipeline_runs'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"PipelineRun {self.id} ({self.status})"
+
+    @property
+    def duration_seconds(self):
+        if self.started_at and self.finished_at:
+            return (self.finished_at - self.started_at).total_seconds()
+        return None
+
+    @property
+    def progress_pct(self):
+        total = len(self.pipeline_snapshot)
+        if total == 0:
+            return 0
+        done = sum(1 for s in self.stage_results if s.get('status') in ('completed', 'skipped'))
+        return int((done / total) * 100)
