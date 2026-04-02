@@ -39,9 +39,9 @@ class SignalAggregationService:
     """
 
     # Minimum signals needed to form a cluster
-    # Session 1003: Lowered from 3 to 2 — with 18,893 spider records and 0 clusters,
-    # the old threshold was too strict for the keyword-based clustering approach
-    MIN_CLUSTER_SIZE = 2
+    # Raised back to 3 — size=2 created spurious clusters that flooded
+    # the initiative pipeline with noise when spiders were active
+    MIN_CLUSTER_SIZE = 3
 
     # Minimum sources needed for confidence
     MIN_SOURCES_FOR_CONFIDENCE = 2
@@ -102,14 +102,30 @@ class SignalAggregationService:
         self.lookback_hours = lookback_hours
         self.cutoff_time = timezone.now() - timedelta(hours=lookback_hours)
 
+    @staticmethod
+    def _get_governance_mode() -> str:
+        """Get current governance mode. Returns 'normal' on any error."""
+        try:
+            from core.models_governance import GovernanceState
+            gs = GovernanceState.objects.filter(scope='global').first()
+            return gs.effective_mode if gs else 'normal'
+        except Exception:
+            return 'normal'
+
     def aggregate_signals(self) -> List[SignalCluster]:
         """
         Main entry point: aggregate recent signals into clusters.
+        Respects governance mode: skipped in freeze/safe_mode.
 
         Returns:
             List of created/updated SignalCluster objects
         """
-        logger.info(f"Starting signal aggregation (lookback: {self.lookback_hours}h)")
+        mode = self._get_governance_mode()
+        if mode in ('freeze', 'safe_mode'):
+            logger.info("Signal aggregation skipped — governance mode: %s", mode)
+            return []
+
+        logger.info(f"Starting signal aggregation (lookback: {self.lookback_hours}h, governance: {mode})")
 
         # 1. Fetch recent spider data
         spider_data = self._fetch_recent_spider_data()
@@ -470,23 +486,45 @@ class SignalAggregationService:
 
         return f"{topic_clean} {type_desc}"
 
-    def generate_auto_topics(self, min_confidence: float = 0.5) -> List[AutoTopic]:
+    # Maximum auto-topics created per 24h rolling window
+    MAX_AUTO_TOPICS_PER_DAY = 10
+
+    def generate_auto_topics(self, min_confidence: float = 0.6) -> List[AutoTopic]:
         """
         Generate AutoTopic suggestions from active SignalClusters.
+        Respects governance mode: skipped in freeze/safe_mode, reduced in throttle.
 
         Args:
-            min_confidence: Minimum cluster confidence to consider
+            min_confidence: Minimum cluster confidence to consider (raised to 0.6)
 
         Returns:
             List of created AutoTopic objects
         """
+        mode = self._get_governance_mode()
+        if mode in ('freeze', 'safe_mode'):
+            logger.info("AutoTopic generation skipped — governance mode: %s", mode)
+            return []
+
+        # Daily rate limit — prevent topic flood
+        recent_count = AutoTopic.objects.filter(
+            created_at__gte=timezone.now() - timedelta(hours=24),
+        ).count()
+        if recent_count >= self.MAX_AUTO_TOPICS_PER_DAY:
+            logger.info(
+                "AutoTopic daily limit reached (%d/%d), skipping generation",
+                recent_count, self.MAX_AUTO_TOPICS_PER_DAY,
+            )
+            return []
+
+        remaining = self.MAX_AUTO_TOPICS_PER_DAY - recent_count
+
         # Get active clusters that haven't triggered yet
         active_clusters = SignalCluster.objects.filter(
             status='active',
             confidence__gte=min_confidence
         ).exclude(
             auto_topics__status='triggered'  # Not already triggered
-        ).order_by('-strength', '-confidence')[:10]
+        ).order_by('-strength', '-confidence')[:min(5, remaining)]
 
         created_topics = []
 

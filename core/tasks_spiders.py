@@ -327,6 +327,17 @@ def _impl_run_spider_network(self):
     from django.utils import timezone
     import traceback
 
+    # Governance mode check — skip in freeze/safe_mode
+    try:
+        from core.models_governance import GovernanceState
+        gs = GovernanceState.objects.filter(scope='global').first()
+        gov_mode = gs.effective_mode if gs else 'normal'
+        if gov_mode in ('freeze', 'safe_mode'):
+            logger.info("🕷️ Spider network skipped — governance mode: %s", gov_mode)
+            return {'skipped': True, 'reason': f'governance_mode={gov_mode}'}
+    except Exception:
+        pass
+
     logger.info("🕷️ Starting spider network execution with REAL data collection...")
 
     # Session 423: Track timing for Discord notifications

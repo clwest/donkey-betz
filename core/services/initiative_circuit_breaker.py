@@ -125,11 +125,12 @@ def is_backlog_too_high() -> bool:
 
 
 def get_daily_creation_limit() -> int:
-    """Session 1059: Max initiatives created per 24h rolling window."""
+    """Session 1059: Max initiatives created per 24h rolling window.
+    Lowered from 15 to 8 to reduce noise from auto-created initiatives."""
     try:
-        return int(os.environ.get('INITIATIVE_DAILY_LIMIT', '15'))
+        return int(os.environ.get('INITIATIVE_DAILY_LIMIT', '8'))
     except (ValueError, TypeError):
-        return 15
+        return 8
 
 
 def is_daily_limit_reached() -> bool:

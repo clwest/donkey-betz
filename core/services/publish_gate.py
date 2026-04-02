@@ -42,7 +42,7 @@ class PublishGate:
 
     # Thresholds for publishing
     QUALITY_THRESHOLD = 0.70  # Session 1009: Raised from 0.65 back toward 0.75 — quality > throughput
-    NOVELTY_THRESHOLD = 0.50  # Session 1008: Lowered from 0.6 to reduce false-negative rejections
+    NOVELTY_THRESHOLD = 0.60  # Raised back from 0.50 — low threshold caused duplicate-topic blogs
     STRUCTURE_THRESHOLD = 0.55  # Session 864: Lowered from 0.65 to catch more legitimate content
     # Session 1003: Lowered from 0.5 — MythologyDetectionService gives 0.55-1.0 risk
     # on ALL AI-generated content, blocking every blog from publishing.
