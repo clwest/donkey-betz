@@ -74,7 +74,11 @@ def list_deliverables(request):
         # Security: scope deliverables by user/workspace
         workspace_id = request.GET.get('workspace')
         if workspace_id:
-            # Workspace filter is authoritative — show all deliverables in workspace
+            # Verify user owns the workspace before showing its deliverables
+            from core.models_skin_layer import ProjectWorkspace
+            if not request.user.is_staff:
+                if not ProjectWorkspace.objects.filter(id=workspace_id, user=request.user).exists():
+                    return JsonResponse({'success': False, 'error': 'Workspace not found'}, status=404)
             queryset = queryset.filter(workspace_id=workspace_id)
         elif request.user.is_authenticated:
             if request.user.is_staff:
