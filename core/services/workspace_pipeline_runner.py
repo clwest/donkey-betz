@@ -95,6 +95,9 @@ def execute_pipeline_run(run_id: str) -> dict:
             context['deliverable_categories'] = config.deliverable_categories
         if previous_stage_output:
             context['previous_stage'] = previous_stage_output
+            # Some agents (e.g., EditorAgent) expect 'content' directly in context
+            if previous_stage_output.get('full_content'):
+                context['content'] = previous_stage_output['full_content']
 
         # Execute agent with wall-clock timeout
         timeout = stage.get('timeout_seconds', STAGE_TIMEOUT_SECONDS)

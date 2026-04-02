@@ -346,13 +346,16 @@ export default function WorkspaceDashboardPage() {
 
         {/* Metrics Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
+          <Link
+            to={`/workspace?tab=deliverables&workspace=${workspaceId}`}
+            className="bg-gray-900 rounded-xl border border-gray-800 p-4 hover:border-blue-800/50 transition-colors"
+          >
             <div className="flex items-center gap-2 text-gray-400 text-sm mb-1">
               <FileText size={14} /> Deliverables
             </div>
             <div className="text-2xl font-bold text-white">{metrics.deliverables_total}</div>
-            <div className="text-xs text-gray-500">{metrics.deliverables_saved} saved</div>
-          </div>
+            <div className="text-xs text-blue-400">{metrics.deliverables_saved} saved — click to view</div>
+          </Link>
           <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
             <div className="flex items-center gap-2 text-gray-400 text-sm mb-1">
               <Zap size={14} /> Initiatives
@@ -399,6 +402,8 @@ export default function WorkspaceDashboardPage() {
               const agentName = isRunResult ? (stage as StageResult).agent : (stage as typeof pipeline[0]).agent
               const stageName = isRunResult ? (stage as StageResult).name : (stage as typeof pipeline[0]).name
               const error = isRunResult ? (stage as StageResult).error : null
+              const output = isRunResult ? (stage as StageResult).output : null
+              const deliverableId = output?.deliverable_id as string | undefined
 
               return (
                 <div
@@ -407,6 +412,7 @@ export default function WorkspaceDashboardPage() {
                     status === 'running' ? 'bg-blue-950/30 border border-blue-800/30' :
                     status === 'completed' ? 'bg-green-950/20' :
                     status === 'failed' ? 'bg-red-950/20' :
+                    status === 'awaiting_approval' ? 'bg-yellow-950/20 border border-yellow-800/30' :
                     'bg-gray-800/30'
                   }`}
                 >
@@ -421,16 +427,44 @@ export default function WorkspaceDashboardPage() {
                     {error && (
                       <div className="text-xs text-red-400 mt-0.5">{error}</div>
                     )}
+                    {output?.message && status === 'completed' && (
+                      <div className="text-xs text-gray-400 mt-0.5 truncate max-w-md">
+                        {(output.message as string).slice(0, 100)}...
+                      </div>
+                    )}
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded ${
-                    status === 'completed' ? 'bg-green-900/30 text-green-300' :
-                    status === 'running' ? 'bg-blue-900/30 text-blue-300' :
-                    status === 'failed' ? 'bg-red-900/30 text-red-300' :
-                    status === 'awaiting_approval' ? 'bg-yellow-900/30 text-yellow-300' :
-                    'bg-gray-800 text-gray-500'
-                  }`}>
-                    {status}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {/* View deliverable link for completed stages */}
+                    {deliverableId && (
+                      <Link
+                        to={`/workspace?tab=deliverables&workspace=${workspaceId}`}
+                        className="text-xs px-2 py-1 rounded bg-blue-900/30 text-blue-300 hover:bg-blue-900/50 transition-colors"
+                      >
+                        View
+                      </Link>
+                    )}
+                    {/* Approve button for review stages */}
+                    {status === 'awaiting_approval' && (
+                      <button
+                        onClick={() => {
+                          // Mark as approved by navigating to deliverables to review
+                          window.location.href = `/workspace?tab=deliverables&workspace=${workspaceId}`
+                        }}
+                        className="text-xs px-3 py-1 rounded bg-green-600 hover:bg-green-500 text-white transition-colors"
+                      >
+                        Review & Approve
+                      </button>
+                    )}
+                    <span className={`text-xs px-2 py-0.5 rounded ${
+                      status === 'completed' ? 'bg-green-900/30 text-green-300' :
+                      status === 'running' ? 'bg-blue-900/30 text-blue-300' :
+                      status === 'failed' ? 'bg-red-900/30 text-red-300' :
+                      status === 'awaiting_approval' ? 'bg-yellow-900/30 text-yellow-300' :
+                      'bg-gray-800 text-gray-500'
+                    }`}>
+                      {status === 'awaiting_approval' ? 'needs review' : status}
+                    </span>
+                  </div>
                 </div>
               )
             })}
