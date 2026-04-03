@@ -100,7 +100,7 @@ def upgrade(apps, schema_editor):
     # Also update any existing workspace configs using the newsletter template
     try:
         WorkspaceConfig = apps.get_model('core', 'WorkspaceConfig')
-        for config in WorkspaceConfig.objects.filter(template_slug='newsletter'):
+        for config in WorkspaceConfig.objects.filter(template__slug='newsletter'):
             config.pipeline_config = NEWSLETTER_PIPELINE
             config.save(update_fields=['pipeline_config'])
     except LookupError:
