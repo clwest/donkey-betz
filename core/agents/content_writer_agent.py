@@ -1515,8 +1515,7 @@ CITATION RULES:
                     {"role": "system", "content": intelligent_system_prompt},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=4000,
-                temperature=0.7,
+                max_completion_tokens=8000,  # GPT-5.2: NOT max_tokens, NO temperature
                 timeout=120.0  # Session 767: Explicit request timeout
             )
 
