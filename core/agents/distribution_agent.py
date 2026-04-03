@@ -187,11 +187,28 @@ Rules:
             type_prompt = CONTENT_TYPE_PROMPTS.get(content_type, CONTENT_TYPE_PROMPTS['general'])
             goal_prompt = GOAL_INSTRUCTIONS.get(goal, GOAL_INSTRUCTIONS['engagement'])
 
+            # User's distribution hook / angle from the workspace brief
+            distribution_hook = context.get('distribution_hook', '')
+            if not distribution_hook:
+                brief = context.get('workspace_brief', {})
+                if isinstance(brief, dict):
+                    distribution_hook = brief.get('distribution_hook', '')
+
+            hook_instruction = ''
+            if distribution_hook:
+                hook_instruction = f"""
+IMPORTANT — The content creator specifically wants this angle/hook emphasized:
+"{distribution_hook}"
+Incorporate this direction into your subject lines, hooks, CTAs, and social snippets.
+This is their strategic insight — combine it with your analysis for maximum impact.
+"""
+
             prompt = f"""{type_prompt}
 {goal_prompt}
 
 Target audience: {audience}
 {f'Tone: {tone}' if tone else ''}
+{hook_instruction}
 
 --- CONTENT TO OPTIMIZE ---
 {content[:4000]}
