@@ -224,7 +224,7 @@ Output ONLY the DecisionSummary block, nothing else."""
 
         try:
             response = client.chat.completions.create(
-                model="gpt-4o-mini",  # Use faster model for backfill
+                model="gpt-5.2",  # Use faster model for backfill
                 messages=[
                     {
                         "role": "system",
@@ -232,8 +232,7 @@ Output ONLY the DecisionSummary block, nothing else."""
                     },
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=500,
-                temperature=0.3  # Lower temperature for consistent format
+                max_completion_tokens=500,
             )
 
             result = response.choices[0].message.content.strip()

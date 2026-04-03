@@ -767,9 +767,9 @@ Create a 3-5 minute podcast script with:
 Make it conversational and engaging. Use natural speech patterns."""
 
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5.2",
                 messages=[{"role": "user", "content": script_prompt}],
-                max_tokens=2000
+                max_completion_tokens=2000
             )
             script_content = response.choices[0].message.content
             logger.info(f"Session 636: Generated podcast script ({len(script_content)} chars) for {channel.name}")
@@ -790,9 +790,9 @@ Script excerpt:
 Reply with ONLY the title, nothing else. Do not include the show name prefix."""
 
             title_response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5.2",
                 messages=[{"role": "user", "content": title_prompt}],
-                max_tokens=50
+                max_completion_tokens=50
             )
             generated_title = title_response.choices[0].message.content.strip().strip('"\'')
             # Ensure it's not too long and add channel name prefix

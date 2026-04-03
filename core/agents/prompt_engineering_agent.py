@@ -521,7 +521,7 @@ Format your response as:
 [List any {{variable}} placeholders to fill in]"""
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": "You are an expert prompt engineer. Design clear, effective prompts that produce consistent results."},
                 {"role": "user", "content": prompt}
@@ -571,7 +571,7 @@ Provide:
 4. Token count comparison (estimate)"""
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": "You are an expert prompt optimizer. Improve prompts while preserving intent."},
                 {"role": "user", "content": prompt}
@@ -620,7 +620,7 @@ For each use case, create:
 Format as a structured library with clear sections for each use case."""
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": "You are an expert prompt engineer creating production-ready prompt libraries."},
                 {"role": "user", "content": prompt}
@@ -674,7 +674,7 @@ Identify:
 Provide an overall effectiveness score (1-10) with justification."""
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": "You are an expert prompt analyst. Evaluate prompts objectively and provide actionable feedback."},
                 {"role": "user", "content": analysis_prompt}
@@ -732,7 +732,7 @@ Generate a system prompt that:
 The system prompt should be production-ready and follow best practices."""
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": "You are an expert in designing AI agent system prompts. Create clear, effective system prompts."},
                 {"role": "user", "content": prompt}

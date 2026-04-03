@@ -357,7 +357,7 @@ class DonkeyBetzContentExecutor(ContentExecutorLearningMixin):
                 full_input = f"{self._get_donkey_betz_system_prompt()}\n\n{prompt}"
 
                 response = self.llm_enforcer.openai_client.responses.create(
-                    model="gpt-5-mini",
+                    model="gpt-5.2",
                     input=full_input,
                     reasoning={"effort": "low"},
                     text={"verbosity": "medium"},

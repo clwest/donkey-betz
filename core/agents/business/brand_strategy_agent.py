@@ -954,7 +954,7 @@ provide specific hex color codes."""
             # Session 857: Use retry-enabled completion call
             response = self._call_completion_with_retry(
                 messages=[{"role": "user", "content": strategy_prompt}],
-                model="gpt-4o-mini",  # Session 857: Fixed model name
+                model="gpt-5.2",  # Session 857: Fixed model name
                 max_completion_tokens=6000,
             )
 

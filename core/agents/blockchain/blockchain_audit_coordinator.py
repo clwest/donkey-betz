@@ -681,7 +681,7 @@ You have access to:
 [Key security metrics]"""
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": "You are a blockchain security analyst. Generate comprehensive security reports."},
                 {"role": "user", "content": prompt}

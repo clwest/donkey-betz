@@ -489,7 +489,7 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
 5. Addresses to watch"""
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": "You are a whale movement analyst. Track large crypto transfers and assess market impact."},
                 {"role": "user", "content": prompt}
@@ -543,7 +543,7 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
 5. Follow recommendation (WATCH / IGNORE / ALERT)"""
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": "You are a whale wallet analyst. Identify, categorize, and assess whale addresses."},
                 {"role": "user", "content": prompt}
@@ -602,7 +602,7 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
 5. 24h change in exchange balance"""
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": "You are an exchange flow analyst. Track crypto movements in/out of exchanges."},
                 {"role": "user", "content": prompt}
@@ -665,7 +665,7 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
 5. Market implication"""
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": "You are a crypto accumulation pattern analyst. Detect buying and selling patterns."},
                 {"role": "user", "content": prompt}

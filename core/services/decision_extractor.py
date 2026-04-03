@@ -225,7 +225,7 @@ class DecisionExtractor:
             # Session 338: Use gpt-5-mini for cost efficiency
             # Note: reasoning models don't support temperature parameter
             response = self.client.chat.completions.create(
-                model="gpt-5-mini",
+                model="gpt-5.2",
                 messages=[
                     {
                         "role": "system",
@@ -363,7 +363,7 @@ class DecisionExtractor:
 
         try:
             response = self.client.chat.completions.create(
-                model="gpt-5-mini",
+                model="gpt-5.2",
                 messages=[
                     {
                         "role": "system",

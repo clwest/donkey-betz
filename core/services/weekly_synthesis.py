@@ -298,7 +298,7 @@ If data is sparse, note that and provide general guidance."""
         try:
             # Session 876: Increased tokens for GPT-5-mini reasoning headroom
             response = self.client.chat.completions.create(
-                model="gpt-5-mini",
+                model="gpt-5.2",
                 messages=[
                     {
                         "role": "system",

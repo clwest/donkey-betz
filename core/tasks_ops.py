@@ -2872,12 +2872,12 @@ Respond in JSON format:
 
             try:
                 response = client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model="gpt-5.2",
                     messages=[
                         {"role": "system", "content": "You are a pilot evaluation expert. Analyze pilot data and suggest outcomes based on evidence."},
                         {"role": "user", "content": prompt}
                     ],
-                    max_tokens=1000,
+                    max_completion_tokens=1000,
                     response_format={"type": "json_object"}
                 )
                 

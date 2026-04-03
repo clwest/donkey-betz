@@ -1371,11 +1371,11 @@ Your job is to keep this system running smoothly and surfacing valuable narrativ
 
             # Call OpenAI with tools
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5.2",
                 messages=messages,
                 tools=self.get_tools_with_delegation(),
                 tool_choice="auto",
-                max_tokens=2000
+                max_completion_tokens=2000
             )
 
             assistant_message = response.choices[0].message

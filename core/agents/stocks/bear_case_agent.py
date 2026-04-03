@@ -520,7 +520,7 @@ Build the STRONGEST possible bear case. Focus on:
 Be specific and data-driven. Use the market data provided. Counter any obvious bull arguments."""
 
             response = client.chat.completions.create(
-                model="gpt-5-mini",
+                model="gpt-5.2",
                 messages=[
                     {"role": "system", "content": self.system_prompt},
                     {"role": "user", "content": prompt}

@@ -758,7 +758,7 @@ class DiscordVoiceService:
 
                 # Session 494: Use gpt-5-mini (reasoning model)
                 response = self.openai_client.chat.completions.create(
-                    model="gpt-5-mini",
+                    model="gpt-5.2",
                     messages=messages,
                     max_completion_tokens=2000  # Reasoning model needs more tokens
                 )

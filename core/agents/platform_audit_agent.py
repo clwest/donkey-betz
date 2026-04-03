@@ -292,12 +292,11 @@ Include counts, categorizations, and actionable findings."""
         ]
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-5.2",
             messages=messages,
             tools=self.get_tools_with_delegation(),
             tool_choice="auto",
-            max_tokens=4000,
-            temperature=0.3
+            max_completion_tokens=4000,
         )
 
         assistant_message = response.choices[0].message
@@ -329,10 +328,9 @@ Include counts, categorizations, and actionable findings."""
 
             # Get final response after tool calls
             final_response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5.2",
                 messages=messages,
-                max_tokens=4000,
-                temperature=0.3
+                max_completion_tokens=4000,
             )
 
             return {

@@ -303,7 +303,7 @@ You analyze and report - you do NOT give trading advice or recommendations."""
                 ]
 
                 response = self.client.chat.completions.create(
-                    model="gpt-5-mini",
+                    model="gpt-5.2",
                     messages=messages,
                     tools=self.get_tools_with_delegation(),
                     tool_choice="auto",
@@ -351,7 +351,7 @@ You analyze and report - you do NOT give trading advice or recommendations."""
 
                     # Get final analysis from GPT
                     final_response = self.client.chat.completions.create(
-                        model="gpt-5-mini",
+                        model="gpt-5.2",
                         messages=messages,
                         max_completion_tokens=3000
                     )

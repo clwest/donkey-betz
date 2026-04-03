@@ -122,7 +122,7 @@ Be rigorous but constructive. Your goal is to surface real risks, not to be a na
         # Note: gpt-5-mini is a reasoning model - needs extra tokens for reasoning + output
         try:
             response = self.client.chat.completions.create(
-                model="gpt-5-mini",
+                model="gpt-5.2",
                 messages=messages,
                 max_completion_tokens=2000,  # Extra for reasoning tokens
             )

@@ -1097,7 +1097,7 @@ Keep responses under 200 words. Be conversational and practical."""
         logger.info(f"🤖 Calling GPT-5-mini with {len(tools)} tools available...")
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",  # Session 56 confirmed this works with Chat Completions API
+            model="gpt-5.2",  # Session 56 confirmed this works with Chat Completions API
             messages=messages,
             tools=tools,
             tool_choice="auto"  # Let the model decide when to call tools

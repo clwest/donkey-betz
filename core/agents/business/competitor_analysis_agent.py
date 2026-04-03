@@ -605,7 +605,7 @@ For absurd ideas, suggest what realistic version might work."""
             # Session 857: Use retry-enabled completion call
             response = self._call_completion_with_retry(
                 messages=[{"role": "user", "content": check_prompt}],
-                model="gpt-4o-mini",  # Session 857: Fixed model name
+                model="gpt-5.2",  # Session 857: Fixed model name
                 max_completion_tokens=2000
             )
 
@@ -1427,7 +1427,7 @@ Return as JSON with keys: strengths, weaknesses, opportunities, threats (each an
             # Session 857: Use retry-enabled completion call
             response = self._call_completion_with_retry(
                 messages=[{"role": "user", "content": swot_prompt}],
-                model="gpt-4o-mini",  # Session 857: Fixed model name
+                model="gpt-5.2",  # Session 857: Fixed model name
                 max_completion_tokens=4000,
             )
 
@@ -1734,7 +1734,7 @@ IMPORTANT INSTRUCTIONS:
             # Session 857: Use retry-enabled completion call
             response = self._call_completion_with_retry(
                 messages=[{"role": "user", "content": analysis_prompt}],
-                model="gpt-4o-mini",  # Session 857: Fixed model name
+                model="gpt-5.2",  # Session 857: Fixed model name
                 max_completion_tokens=6000,
             )
 

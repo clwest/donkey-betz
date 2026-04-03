@@ -95,9 +95,9 @@ Script excerpt:
 Reply with ONLY the title, nothing else. Do not include the show name prefix."""
 
                 response = client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model="gpt-5.2",
                     messages=[{"role": "user", "content": title_prompt}],
-                    max_tokens=50
+                    max_completion_tokens=50
                 )
 
                 generated_title = response.choices[0].message.content.strip().strip('"\'')
