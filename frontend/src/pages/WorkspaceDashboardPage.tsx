@@ -404,6 +404,9 @@ export default function WorkspaceDashboardPage() {
               const error = isRunResult ? (stage as StageResult).error : null
               const output = isRunResult ? (stage as StageResult).output : null
               const deliverableId = output?.deliverable_id as string | undefined
+              // Check if stage is part of a parallel group (from pipeline snapshot)
+              const snapshotStage = dashboard.pipeline[i] || {} as Record<string, unknown>
+              const parallelGroup = (stage as Record<string, unknown>).parallel_group || (snapshotStage as Record<string, unknown>).parallel_group
 
               return (
                 <div
@@ -420,7 +423,14 @@ export default function WorkspaceDashboardPage() {
                     {STAGE_ICONS[status] || <span>{i + 1}</span>}
                   </div>
                   <div className="flex-1">
-                    <div className="text-sm font-medium text-white">{stageName}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-white">{stageName}</span>
+                      {parallelGroup && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-900/30 text-indigo-300 border border-indigo-800/30">
+                          parallel
+                        </span>
+                      )}
+                    </div>
                     {agentName && (
                       <div className="text-xs text-gray-500">{agentName}</div>
                     )}
