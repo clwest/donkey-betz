@@ -244,8 +244,26 @@ def _run_agent_with_timeout(run, stage_idx, stage, router, workspace, config, br
             result = future.result(timeout=timeout)
 
         if result and result.success:
+            # Validate output against contract
+            from core.services.agent_output_contract import validate_agent_output
+            validation = validate_agent_output(result, task_desc)
+
+            if validation['recommendation'] == 'escalate':
+                # Output is garbage — don't save as deliverable
+                issues = '; '.join(validation['issues'])
+                _update_stage(run, stage_idx, 'failed',
+                              error=f"Output quality too low ({validation['quality_score']}/100): {issues}")
+                logger.warning("Pipeline %s stage %d (%s) REJECTED by contract: %s",
+                               run.id, stage_idx, stage_name, issues)
+                return None
+
             content = _extract_content(result)
             summary = content[:300] if content else ''
+
+            # Log warning if output is borderline
+            if validation['recommendation'] == 'accept_with_warning':
+                logger.warning("Pipeline %s stage %d (%s) accepted with warnings: %s",
+                               run.id, stage_idx, stage_name, validation['issues'])
 
             deliverable_id = _save_stage_deliverable(
                 workspace=workspace, stage_name=stage_name, agent_name=agent_name,
@@ -258,14 +276,17 @@ def _run_agent_with_timeout(run, stage_idx, stage, router, workspace, config, br
                 'summary': summary,
                 'deliverable_id': str(deliverable_id) if deliverable_id else None,
                 'full_content': content[:2000] if content else '',
+                'quality_score': validation['quality_score'],
             }
 
             _update_stage(run, stage_idx, 'completed', output={
                 'message': summary[:500],
                 'agent': agent_name,
                 'deliverable_id': str(deliverable_id) if deliverable_id else None,
+                'quality_score': validation['quality_score'],
             })
-            logger.info("Pipeline %s stage %d (%s) completed", run.id, stage_idx, stage_name)
+            logger.info("Pipeline %s stage %d (%s) completed (quality: %d/100)",
+                        run.id, stage_idx, stage_name, validation['quality_score'])
             return output
         else:
             error_msg = str(result.message)[:500] if result and result.message else 'No result'
