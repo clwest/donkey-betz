@@ -1820,6 +1820,23 @@ EXAMPLES OF CORRECT OUTPUT:
 - "Partial analysis complete. Found 5 trends. Missing: engagement data." ✓
 """)
 
+        # Session 1103: Evidence-first injection — when pipeline provides research
+        # evidence, inject it at the TOP of the prompt (above all other context)
+        # so GPT prioritizes it over spider data and other context layers.
+        _evidence_context = getattr(self, '_evidence_context_override', '')
+        if _evidence_context:
+            prompt_parts.append(f"""
+
+## PRIMARY SOURCE MATERIAL — USE THIS FIRST
+The following evidence was gathered by research agents. You MUST use this as your
+primary source material. Do NOT ignore this in favor of other context below.
+Cite sources by URL. Do not make claims not supported by this evidence.
+
+{_evidence_context}
+
+## END PRIMARY SOURCE MATERIAL
+""")
+
         # 1. Add Platform Context
         try:
             from core.prompts.registry import PLATFORM_CONTEXT
