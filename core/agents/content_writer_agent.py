@@ -301,6 +301,24 @@ Always delegate tasks you cannot perform yourself rather than refusing or making
 
         prompt_parts = [self.system_prompt]
 
+        # Session 1103: Evidence-first injection — if research evidence is available,
+        # inject it at the very top of the system prompt so GPT prioritizes it
+        # over spider data, mood, memory, and all other context layers.
+        evidence = getattr(self, '_evidence_context_override', '')
+        if evidence:
+            prompt_parts.append(f"""
+
+## PRIMARY SOURCE MATERIAL — YOU MUST USE THIS
+The following evidence was gathered by research agents from real sources.
+You MUST base your article on this evidence. Cite sources by URL.
+Do NOT ignore this evidence in favor of spider data or other context below.
+If the evidence contradicts other context, USE THE EVIDENCE.
+
+{evidence[:4000]}
+
+## END PRIMARY SOURCE MATERIAL
+""")
+
         # Session 1001B: Dynamic platform summary replaces static PLATFORM_CONTEXT
         # (PLATFORM_CONTEXT listed every spider/agent name, causing fabrication)
         prompt_parts.append(f"\n\n{self._build_dynamic_platform_summary()}")
@@ -1489,8 +1507,10 @@ CITATION RULES:
             logger.debug(f"   Prompt includes: platform_context={PROMPTING_SYSTEM_AVAILABLE}, "
                         f"scifi={bool(scifi_context)}, spider={bool(spider_context)}")
 
+            # Session 1103: Switched from gpt-4o-mini to gpt-5.2 for better
+            # instruction following (evidence citations) and content quality
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5.2",
                 messages=[
                     {"role": "system", "content": intelligent_system_prompt},
                     {"role": "user", "content": prompt}
