@@ -81,10 +81,24 @@ def check_topic_alignment(
             'retry_instruction': f'Research produced no usable content. Focus specifically on: "{topic}"',
         }
 
-    # Check 1: Exact phrase match
-    topic_lower = topic.lower()
-    research_lower = combined_research.lower()
+    # Check 1: Exact phrase match (normalize dashes for comparison)
+    def _normalize_dashes(s: str) -> str:
+        return s.replace('\u2014', '-').replace('\u2013', '-').replace('\u2012', '-')
+
+    topic_lower = _normalize_dashes(topic.lower())
+    research_lower = _normalize_dashes(combined_research.lower())
     exact_phrase_match = topic_lower in research_lower
+
+    # Session 1103: Also check if most of the topic appears (allow minor wording differences)
+    topic_words = [w for w in re.findall(r'\b[a-zA-Z]{3,}\b', topic_lower) if w not in STOPWORDS]
+    if not exact_phrase_match and len(topic_words) >= 4:
+        # Check if 80%+ of topic content words appear in a 200-char window
+        for i in range(0, len(research_lower) - 100, 50):
+            window = research_lower[i:i+200]
+            window_hits = sum(1 for w in topic_words if w in window)
+            if window_hits >= len(topic_words) * 0.8:
+                exact_phrase_match = True
+                break
 
     # Check 2: Keyword overlap
     topic_keywords = _extract_keywords(topic)
@@ -96,6 +110,9 @@ def check_topic_alignment(
     keyword_matches = sum(1 for kw in topic_keywords if kw in research_lower)
     keyword_ratio = keyword_matches / max(len(topic_keywords), 1)
 
+    # Session 1103: Check for evidence URLs — strong signal research was done
+    url_count = len(re.findall(r'https?://\S+', combined_research))
+
     # Check 3: Audience alignment (bonus)
     audience = (workspace_brief.get('audience') or '').lower()
     audience_mentioned = bool(audience and audience[:20] in research_lower)
@@ -104,20 +121,26 @@ def check_topic_alignment(
     score = 0
 
     if exact_phrase_match:
-        score += 50  # Strong signal — topic phrase appears verbatim
+        score += 40  # Strong signal — topic phrase appears verbatim
 
     # Keyword overlap contributes up to 40 points
     score += int(keyword_ratio * 40)
 
+    # Session 1103: Evidence URLs contribute up to 15 points (real research was done)
+    score += min(15, url_count * 3)
+
     # Audience mention bonus
     if audience_mentioned:
-        score += 10
+        score += 5
 
     # Cap at 100
     score = min(100, score)
 
     # Determine pass/fail and recommendation
-    if score >= 60 or exact_phrase_match:
+    # Session 1103: Lowered threshold from 60 to 40 — keyword matching can't handle
+    # paraphrasing (topic says "teams" but research says "projects", "fix" vs "avoid").
+    # Evidence URLs provide strong on-topic signal that keyword matching misses.
+    if score >= 40 or exact_phrase_match:
         return {
             'passed': True,
             'score': score,
@@ -126,7 +149,7 @@ def check_topic_alignment(
             'details': f'Topic aligned (score {score}/100, {keyword_matches}/{len(topic_keywords)} keywords matched)',
             'recommendation': 'proceed',
         }
-    elif score >= 35:
+    elif score >= 25:
         # Borderline — retry with tighter instructions
         seed_phrases = list(topic_keywords)[:5]
         return {
