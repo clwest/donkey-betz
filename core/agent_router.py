@@ -1232,6 +1232,8 @@ class AgentRouter:
                 # Standard execution without workspace write
                 if not has_workspace:
                     logger.debug(f"[Session 908] No workspace for {agent_name}, using standard execute")
+                # Store execution context on agent for search strategy enhancement
+                agent._execution_context = context
                 result = agent.execute(
                     task=task,
                     context=context,

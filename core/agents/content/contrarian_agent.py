@@ -184,6 +184,8 @@ CRITICAL: Use tools to check actual saturation data. Don't just assume."""
         start_time = time.time()
         tool_calls_made = []
 
+        # Search strategy now handled universally by BaseAgent._enhance_task_with_queries()
+
         # Session 750: Time Travel integration
         with self.time_travel_session("contrarian_analysis", task, input_data=context):
             self.record_decision(

@@ -193,6 +193,8 @@ CRITICAL: Always use tools to get real spider data. Never make up trends or fake
         start_time = time.time()
         tool_calls_made = []
 
+        # Search strategy now handled universally by BaseAgent._enhance_task_with_queries()
+
         # Session 750: Time Travel integration
         with self.time_travel_session("topic_mining", task, input_data=context):
             self.record_decision(
