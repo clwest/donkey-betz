@@ -92,8 +92,11 @@ def generate_query_plan(
     queries = []
     priority = 1
 
-    # Extract keywords from seed
-    keywords = _extract_keywords(seed_text)
+    # Session 1103: Extract actual topic from verbose task text before keyword extraction
+    clean_topic = extract_topic_from_task(seed_text)
+
+    # Extract keywords from the CLEAN topic (not the full task string)
+    keywords = _extract_keywords(clean_topic)
     topic_keywords = ' '.join(sorted(keywords)[:6])
 
     # Get broader topic (first 3-4 significant words)
@@ -105,9 +108,9 @@ def generate_query_plan(
         focus_areas = [focus_areas]
     audience = brief.get('audience', '')
 
-    # Strategy 1: Direct seed (priority 1)
+    # Strategy 1: Direct seed using CLEAN topic (priority 1)
     queries.append({
-        'query': seed_text[:200],
+        'query': clean_topic[:200],
         'strategy': 'direct_seed',
         'priority': priority,
         'source_hint': 'news',
@@ -253,6 +256,59 @@ def evaluate_search_results(
             'recommendation': 'retry_broader',
             'next_queries': _generate_broader_queries(seed_text),
         }
+
+
+def extract_topic_from_task(task_text: str) -> str:
+    """
+    Session 1103: Extract the actual research topic from a verbose task string.
+
+    Pipeline tasks often include boilerplate like 'Deep dive research on...',
+    'Topic/Focus:', workspace IDs, audience descriptions, etc. This strips
+    all that to find the real topic the user cares about.
+    """
+    text = task_text.strip()
+
+    # Try explicit topic markers first
+    topic_patterns = [
+        r'Topic/Focus:\s*(.+?)(?:\.|Target audience|Audience|Tone:|Additional context|$)',
+        r'Topic:\s*(.+?)(?:\.|Target audience|Audience|Tone:|Additional context|$)',
+        r'Focus:\s*(.+?)(?:\.|Target audience|Audience|Tone:|Additional context|$)',
+        r'research (?:on|about|into|regarding)\s+(.+?)(?:\.|Target audience|Tone:|$)',
+        r'Research:\s*(.+?)(?:\.|$)',
+    ]
+    for pattern in topic_patterns:
+        match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+        if match:
+            topic = match.group(1).strip().rstrip('.,;')
+            if len(topic) > 10:
+                return topic[:200]
+
+    # Strip common instruction prefixes
+    cleaned = re.sub(
+        r'^(?:Deep dive research on the top trending topics using web search and spider data\.\s*)?',
+        '', text, flags=re.IGNORECASE
+    )
+    cleaned = re.sub(
+        r'^(?:Perform|Conduct|Do|Run|Execute)\s+(?:a\s+)?(?:comprehensive\s+|detailed\s+|thorough\s+)?'
+        r'(?:research|investigation|analysis)\s+(?:on|about|into|for|regarding)\s+',
+        '', cleaned, flags=re.IGNORECASE
+    )
+
+    # Strip trailing metadata (workspace IDs, audience, instructions)
+    cleaned = re.sub(r'\s*(?:Target audience|Audience|Tone|Additional context|Canary workspace|workspace \w{8}).*$',
+                     '', cleaned, flags=re.IGNORECASE | re.DOTALL)
+    cleaned = re.sub(r'\s*\[User Context:.*$', '', cleaned, flags=re.DOTALL)
+    cleaned = re.sub(r'\s*—\s*(?:produce|run|return|this run).*$', '', cleaned, flags=re.IGNORECASE | re.DOTALL)
+
+    # Strip UUID-like patterns and hex IDs
+    cleaned = re.sub(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', '', cleaned)
+    cleaned = re.sub(r'\b[0-9a-f]{8,}\b', '', cleaned)
+
+    cleaned = cleaned.strip().rstrip('.,;')
+    if cleaned and len(cleaned) > 10:
+        return cleaned[:200]
+
+    return task_text[:200]
 
 
 def _extract_keywords(text: str) -> set:

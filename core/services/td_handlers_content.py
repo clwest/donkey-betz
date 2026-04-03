@@ -2794,7 +2794,7 @@ class ContentHandlersMixin:
                                       'items_count', 'execution_time', 'pipeline_steps',
                                       'final_video_url', 'type', 'summary',
                                       'result_preview', 'attempts', 'contract',
-                                      'sources_count', 'query')},
+                                      'sources_count', 'query', 'evidence_claims')},
                     'result_preview': output.get('result_preview', '')[:2000],
                     'tool_calls': output.get('tool_calls', [])[:5],
                     '_truncated': True,
