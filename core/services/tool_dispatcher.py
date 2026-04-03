@@ -304,6 +304,7 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         self.register("performance_analyst_agent", self._handle_agent_tool)
         self.register("voice_critic_agent", self._handle_agent_tool)
         self.register("content_diversity_orchestrator", self._handle_agent_tool)
+        self.register("distribution_agent", self._handle_agent_tool)
 
         # Podcast agents
         self.register("podcast_coordinator_agent", self._handle_agent_tool)
