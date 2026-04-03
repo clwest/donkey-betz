@@ -390,6 +390,8 @@ You analyze and report - you do NOT create content or execute workflows."""
         start_time = time.time()
         tool_calls_made = []
 
+        # Search strategy now handled universally by BaseAgent._enhance_task_with_queries()
+
         # Session 736: Extract spider intelligence for real-time data
         spider_intel = self._extract_spider_intelligence(spider_context)
         if spider_intel['has_data']:

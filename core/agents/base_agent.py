@@ -415,6 +415,38 @@ class BaseAgent(ABC, TimeTravelMixin):
         self._health_check_mode = health_check_mode
         # Session 960 Phase 0: Track internal docs consumed during execution
         self._docs_consumed: list = []
+        # Search strategy context (populated by _enhance_task_with_queries)
+        self._search_suggestions: list = []
+
+    def _enhance_task_with_queries(self, task: str, context: Dict[str, Any] = None) -> str:
+        """
+        Enhance a task description with intelligent search query suggestions.
+
+        Uses the SearchStrategyService to generate paraphrase variants
+        so agents don't rely on a single literal search query.
+        Applied to ALL agents universally — every agent gets better search coverage.
+        """
+        try:
+            from core.services.search_strategy_service import generate_query_plan
+            ctx = context if isinstance(context, dict) else {}
+            workspace_brief = ctx.get('workspace_brief', {})
+            if not isinstance(workspace_brief, dict) or not workspace_brief.get('topic'):
+                return task
+
+            query_plan = generate_query_plan(task, workspace_brief, max_queries=5)
+            if query_plan:
+                self._search_suggestions = [q['query'] for q in query_plan]
+                suggested = '\n'.join(f"- {q['query']}" for q in query_plan[:4])
+                task = (
+                    f"{task}\n\n"
+                    f"[When searching, use these specific query variants for better coverage:]\n"
+                    f"{suggested}"
+                )
+                logger.debug("%s: enhanced task with %d search suggestions", self.name, len(query_plan))
+        except Exception as e:
+            logger.debug("%s: search strategy unavailable: %s", self.name, e)
+
+        return task
 
     # ==================== Doc Consumption Tracking (Session 960) ====================
 
@@ -1505,9 +1537,10 @@ Use delegation when you need expertise outside your specialty. For example:
             if agent_prefs:
                 parts.append(agent_prefs)
 
-        # Add the task
+        # Add the task (enhanced with search strategy if workspace brief available)
+        enhanced_task = self._enhance_task_with_queries(task, getattr(self, '_execution_context', None))
         parts.append(f"\n\n## Task")
-        parts.append(task)
+        parts.append(enhanced_task)
 
         prompt = "\n".join(parts)
         return prompt, attribution

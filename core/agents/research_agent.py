@@ -584,6 +584,9 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                 task = f"{task}\n\n[User Context: {'; '.join(user_context_parts)}]"
                 logger.info(f"📚 Session 858: Enhanced research task with user context for {user_name or 'user'}")
 
+        # Search strategy enhancement now handled universally by BaseAgent._enhance_task_with_queries()
+        # (called in _build_prompt_with_attribution)
+
         # Session 529: Build intelligent prompt with full context
         self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
 
