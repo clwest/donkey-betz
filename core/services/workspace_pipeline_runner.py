@@ -250,8 +250,17 @@ def _run_agent_with_timeout(run, stage_idx, stage, router, workspace, config, br
             # Research, Topic Mining, and Trend Analysis all contribute evidence
             if agent in ('ResearchAgent', 'TopicMinerAgent', 'TrendAnalysisAgent'):
                 research_content_parts.append(content)
+                logger.info(
+                    "Pipeline %s: collected %d chars of research from %s for downstream writer",
+                    run.id, len(content), agent,
+                )
         if research_content_parts:
-            context['research'] = '\n\n---\n\n'.join(research_content_parts)
+            combined = '\n\n---\n\n'.join(research_content_parts)
+            context['research'] = combined
+            logger.info(
+                "Pipeline %s: injected %d chars of research into context['research'] (%d sources)",
+                run.id, len(combined), len(research_content_parts),
+            )
 
     try:
         with ThreadPoolExecutor(max_workers=1) as executor:
