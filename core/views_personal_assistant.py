@@ -664,6 +664,15 @@ def unified_pa_context(request):
         "available_tools": ["image_generation", "web_search", ...]
     }
     """
+    # First-login onboarding check — fires once per new user
+    try:
+        from core.services.user_onboarding_service import is_first_login, onboard_new_user
+        if is_first_login(request.user):
+            onboard_new_user(request.user)
+            logger.info("Auto-onboarded new user: %s", request.user.username)
+    except Exception as e:
+        logger.debug("Onboarding check skipped: %s", e)
+
     try:
         from core.services.unified_pa_entrypoint import get_unified_pa
 

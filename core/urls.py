@@ -4024,6 +4024,7 @@ from core.views_workspace_templates import (
     list_templates, template_detail, create_from_template,
     workspace_dashboard as ws_biz_dashboard, workspace_config,
     trigger_pipeline, pipeline_status, pipeline_history,
+    add_workspace_member,
 )
 urlpatterns += [
     # Specific Workspace Endpoints (must come BEFORE router to avoid {pk} pattern matching)
@@ -4040,6 +4041,7 @@ urlpatterns += [
     path('api/workspaces/<uuid:workspace_id>/pipeline/run/', trigger_pipeline, name='workspace-pipeline-run'),
     path('api/workspaces/<uuid:workspace_id>/pipeline/status/', pipeline_status, name='workspace-pipeline-status'),
     path('api/workspaces/<uuid:workspace_id>/pipeline/history/', pipeline_history, name='workspace-pipeline-history'),
+    path('api/workspaces/<uuid:workspace_id>/members/', add_workspace_member, name='workspace-add-member'),
 
     # Workspace Router URLs (generic patterns last)
     path('api/', include(workspace_router.urls)),
