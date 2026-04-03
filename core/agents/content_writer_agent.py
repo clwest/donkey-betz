@@ -725,6 +725,15 @@ For this {content_type}, ensure:
             user_context = {}
         self._user_context = user_context  # Store for use in prompt building
 
+        # Session 1103: If pipeline provided research evidence, inject it as highest-priority
+        # context so GPT uses it instead of generic spider data
+        research_content = context.get('research', '')
+        if research_content and len(research_content) > 200:
+            self._evidence_context_override = research_content
+            logger.info("📝 [Session 1103] Evidence-first mode: %d chars of research injected as primary source", len(research_content))
+        else:
+            self._evidence_context_override = ''
+
         # Session 529: Build intelligent prompt with full context
         self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
 

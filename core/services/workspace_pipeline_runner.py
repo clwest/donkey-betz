@@ -236,6 +236,9 @@ def _run_agent_with_timeout(run, stage_idx, stage, router, workspace, config, br
                 'conclusion': '',
             }
             context['content_text'] = raw  # Plain string for agents that prefer it
+            # Session 1103: ContentWriterAgent reads context['research'] — feed it
+            # the full research output so evidence flows through to the writer
+            context['research'] = raw
         context['previous_stage'] = last
 
     try:
