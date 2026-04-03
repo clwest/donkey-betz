@@ -444,10 +444,15 @@ Tailor the content to match these preferences.""")
                 logger.debug(f"Could not fetch user preferences: {e}")
 
         # Session 1001B: Inject full spider intelligence (trends, discussions, articles, market data)
-        if spider_context:
+        # Session 1103: SKIP spider intelligence when evidence is available — spider URLs
+        # contaminate the output (GPT cites vaping/farmland/RISC-V URLs instead of evidence)
+        evidence = getattr(self, '_evidence_context_override', '')
+        if spider_context and not evidence:
             spider_intel = self._format_spider_intelligence(spider_context)
             if spider_intel:
                 prompt_parts.append(f"\n\n{spider_intel}")
+        elif evidence:
+            logger.info("📝 [Session 1103] Skipping spider intelligence — evidence-first mode active")
 
         # Session 886: Add performance context for feedback loop
         # Session 990: Wrapped with timeout to prevent context builders from hanging
@@ -1352,11 +1357,26 @@ Example attributions:
 
 This builds credibility and allows readers to verify the information."""
 
+        # Session 1103: When evidence is available, label it clearly and add URL instructions
+        has_evidence = research and ('Evidence' in research or 'URL:' in research or 'http' in research)
+        if has_evidence:
+            research_header = "## VERIFIED RESEARCH EVIDENCE (from ResearchAgent — USE THESE URLs)"
+            url_instruction = """
+
+## URL CITATION RULES
+You MUST cite URLs from the VERIFIED RESEARCH EVIDENCE section above.
+Do NOT cite URLs from spider data, trending feeds, or any other context.
+Every URL in your article must come from the evidence block above.
+If you cannot find a URL in the evidence, do not include one — never invent URLs."""
+        else:
+            research_header = "## RESEARCH CONTEXT (Real-Time Data from Spider Network)"
+            url_instruction = sources_instruction
+
         prompt = f"""Create a {content_config['name']} based on the following research and requirements.
 
-## RESEARCH CONTEXT (Real-Time Data from Spider Network)
+{research_header}
 {research if research else task}
-{sources_instruction}
+{url_instruction}
 
 ## REQUIREMENTS
 - Content Type: {content_config['name']}
