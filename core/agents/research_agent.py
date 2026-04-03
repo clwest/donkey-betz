@@ -375,6 +375,7 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
         super().__init__(user)
         self._spider_service = None
         self._search_service = None
+        self._iterative_attempts = []  # Track search attempts for provenance
 
     @property
     def spider_service(self):
@@ -383,6 +384,179 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
             from core.services.spider_intelligence import SpiderIntelligenceService
             self._spider_service = SpiderIntelligenceService()
         return self._spider_service
+
+    # === Iterative Search (Session 1103) ===
+
+    def _iterative_search(
+        self,
+        task: str,
+        context: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """
+        Session 1103: Direct iterative search bypassing GPT for query selection.
+
+        Calls SearchStrategyService to generate query variants, executes them
+        directly via web_search and spider_query, evaluates results, and retries
+        with broader/narrower queries if insufficient.
+
+        Returns:
+            {
+                'results': [...],       # All collected results
+                'attempts': [...],      # Attempt log with queries and outcomes
+                'sufficient': bool,     # Whether enough on-topic results were found
+                'quality_score': int,   # 0-100 quality assessment
+                'tool_calls': [...],    # Tool call records for provenance
+            }
+        """
+        from core.services.search_strategy_service import (
+            generate_query_plan,
+            evaluate_search_results,
+        )
+
+        workspace_brief = context.get('workspace_brief', {}) if isinstance(context, dict) else {}
+        if not isinstance(workspace_brief, dict):
+            workspace_brief = {}
+
+        all_results = []
+        all_tool_calls = []
+        attempts = []
+
+        # Round 1: Generate query plan from SearchStrategyService
+        query_plan = generate_query_plan(task, workspace_brief, max_queries=6)
+        if not query_plan:
+            # Fallback: use task itself as a single query
+            query_plan = [{'query': self._extract_search_query(task), 'strategy': 'fallback', 'priority': 1}]
+
+        round_results = self._execute_search_round(query_plan, all_tool_calls)
+        all_results.extend(round_results)
+
+        attempts.append({
+            'round': 1,
+            'strategy': 'initial',
+            'queries': [q['query'] for q in query_plan],
+            'results_count': len(round_results),
+            'strategies_used': list({q['strategy'] for q in query_plan}),
+        })
+
+        # Evaluate results
+        evaluation = evaluate_search_results(query_plan, round_results, task)
+
+        # Round 2: Retry if insufficient
+        if not evaluation.get('sufficient') and evaluation.get('next_queries'):
+            next_queries = evaluation['next_queries']
+            round_results = self._execute_search_round(next_queries, all_tool_calls)
+            all_results.extend(round_results)
+
+            attempts.append({
+                'round': 2,
+                'strategy': evaluation.get('recommendation', 'retry'),
+                'queries': [q['query'] for q in next_queries],
+                'results_count': len(round_results),
+            })
+
+            # Re-evaluate with all results
+            evaluation = evaluate_search_results(query_plan, all_results, task)
+
+        # Round 3: Last resort broadening if still insufficient
+        if not evaluation.get('sufficient') and len(attempts) < 3:
+            from core.services.search_strategy_service import _extract_keywords
+            keywords = _extract_keywords(task)
+            broader = ' '.join(sorted(keywords)[:2])
+            broaden_queries = [
+                {'query': f"{broader} latest news 2026", 'strategy': 'broaden_last_resort'},
+                {'query': f"{broader} overview analysis", 'strategy': 'broaden_last_resort'},
+            ]
+            round_results = self._execute_search_round(broaden_queries, all_tool_calls)
+            all_results.extend(round_results)
+
+            attempts.append({
+                'round': 3,
+                'strategy': 'broaden_last_resort',
+                'queries': [q['query'] for q in broaden_queries],
+                'results_count': len(round_results),
+            })
+
+            evaluation = evaluate_search_results(query_plan, all_results, task)
+
+        self._iterative_attempts = attempts
+
+        logger.info(
+            "[IterativeSearch] %s: %d rounds, %d total results, quality=%d, sufficient=%s",
+            task[:60], len(attempts), len(all_results),
+            evaluation.get('quality_score', 0), evaluation.get('sufficient', False),
+        )
+
+        return {
+            'results': all_results,
+            'attempts': attempts,
+            'sufficient': evaluation.get('sufficient', False),
+            'quality_score': evaluation.get('quality_score', 0),
+            'tool_calls': all_tool_calls,
+        }
+
+    def _execute_search_round(
+        self,
+        queries: List[Dict[str, Any]],
+        tool_calls_log: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        """Execute a round of search queries via web_search and spider_query."""
+        results = []
+
+        for q in queries:
+            query_text = q.get('query', '')
+            if not query_text:
+                continue
+
+            # Web search
+            try:
+                web_result = self._execute_tool_call('web_search', {
+                    'query': query_text,
+                    'num_results': 8,
+                })
+                if not isinstance(web_result, dict):
+                    web_result = {'success': False, 'data': web_result}
+                tool_calls_log.append({
+                    'tool': 'web_search',
+                    'arguments': {'query': query_text},
+                    'result': web_result,
+                    'strategy': q.get('strategy', 'unknown'),
+                })
+                if web_result.get('success'):
+                    data = web_result.get('data', web_result)
+                    if isinstance(data, dict) and 'results' in data:
+                        results.extend(data['results'])
+                    elif isinstance(data, list):
+                        results.extend(data)
+            except Exception as e:
+                logger.warning("web_search failed for %r: %s", query_text[:60], e)
+
+            # Spider query (only for first 3 queries to avoid over-querying)
+            source_hint = q.get('source_hint', 'search')
+            if source_hint != 'search' or q.get('priority', 99) <= 3:
+                try:
+                    spider_result = self._execute_tool_call('spider_query', {
+                        'query': query_text,
+                        'hours': 72,
+                        'limit': 10,
+                    })
+                    if not isinstance(spider_result, dict):
+                        spider_result = {'success': False, 'data': spider_result}
+                    tool_calls_log.append({
+                        'tool': 'spider_query',
+                        'arguments': {'query': query_text},
+                        'result': spider_result,
+                        'strategy': q.get('strategy', 'unknown'),
+                    })
+                    if spider_result.get('success'):
+                        data = spider_result.get('data', spider_result)
+                        if isinstance(data, list):
+                            results.extend(data)
+                        elif isinstance(data, dict):
+                            results.extend(data.get('results', data.get('data', [])))
+                except Exception as e:
+                    logger.warning("spider_query failed for %r: %s", query_text[:60], e)
+
+        return results
 
     # === Session 683: ML Integration Methods ===
 
@@ -584,8 +758,8 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                 task = f"{task}\n\n[User Context: {'; '.join(user_context_parts)}]"
                 logger.info(f"📚 Session 858: Enhanced research task with user context for {user_name or 'user'}")
 
-        # Search strategy enhancement now handled universally by BaseAgent._enhance_task_with_queries()
-        # (called in _build_prompt_with_attribution)
+        # Session 1103: Iterative search replaces GPT-mediated query selection.
+        # SearchStrategyService generates queries directly; GPT only synthesizes results.
 
         # Session 529: Build intelligent prompt with full context
         self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
@@ -608,75 +782,70 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
 
                 # Session 401: Use prompt with attribution for transparency
                 full_prompt, knowledge_attribution = self._build_prompt_with_attribution(task, scifi_context, spider_context)
-                # Session 744: Pass execution context for delegation support
-                execution_context = {
-                    'spider_context': spider_context,
-                    'scifi_context': scifi_context,
-                    'task': task,
-                }
-                gpt_response = self._call_openai(full_prompt, execution_context=execution_context)
 
-                if gpt_response.get('tool_calls'):
+                # === Session 1103: Iterative Search — bypass GPT for query selection ===
+                # Run direct searches first, then pass results to GPT for synthesis only.
+                iterative = self._iterative_search(task, context)
+                iterative_results = iterative.get('results', [])
+                tool_calls_made = iterative.get('tool_calls', [])
+
+                self.record_decision(
+                    decision_type="iterative_search",
+                    action=f"Direct search: {len(iterative.get('attempts', []))} rounds, {len(iterative_results)} results",
+                    reasoning=f"Quality={iterative.get('quality_score', 0)}, sufficient={iterative.get('sufficient', False)}",
+                    confidence=0.95,
+                )
+
+                if iterative_results:
+                    # Format pre-gathered results for GPT synthesis
+                    results_summary = self._format_results_for_synthesis(iterative_results, task)
+                    synthesis_prompt = (
+                        f"{full_prompt}\n\n"
+                        f"[PRE-GATHERED RESEARCH RESULTS — analyze and synthesize these, do NOT search again:]\n"
+                        f"{results_summary}"
+                    )
+                    # Call GPT without tools — synthesis only (no tool_choice)
+                    saved_tools = self.tools
+                    self.tools = []
+                    try:
+                        gpt_response = self._call_openai(synthesis_prompt)
+                    finally:
+                        self.tools = saved_tools
+                    # Wrap iterative results into the standard all_results format
+                    all_results = [{'source': 'iterative_search', 'data': iterative_results}]
+                else:
+                    # Fallback: no iterative results — let GPT try with tools
+                    logger.warning("[IterativeSearch] No results from direct search, falling back to GPT-mediated search")
+                    execution_context = {
+                        'spider_context': spider_context,
+                        'scifi_context': scifi_context,
+                        'task': task,
+                    }
+                    gpt_response = self._call_openai(full_prompt, execution_context=execution_context)
                     all_results = []
-                    for tool_call in gpt_response['tool_calls']:
-                        tool_name = tool_call['name']
-                        arguments = tool_call['arguments']
 
-                        self.record_decision(
-                            decision_type="tool_selection",
-                            action=f"Calling {tool_name}",
-                            reasoning=f"Selected {tool_name} for research",
-                            confidence=0.95
-                        )
-
-                        tool_result = self._execute_tool_call(tool_name, arguments)
-                        # Session 1068: Guard against non-dict returns (causes
-                        # "'str' object has no attribute 'get'" — 2 failures on 2026-02-23)
-                        if not isinstance(tool_result, dict):
-                            logger.warning(f"ResearchAgent: _execute_tool_call({tool_name}) returned {type(tool_result).__name__}, wrapping")
-                            tool_result = {'success': False, 'data': tool_result, 'error': 'non-dict tool result'}
-                        tool_calls_made.append({
-                            'tool': tool_name,
-                            'arguments': arguments,
-                            'result': tool_result
-                        })
-
-                        if tool_result.get('success'):
-                            all_results.append({
-                                'source': tool_name,
-                                'data': tool_result.get('data', tool_result)
+                    # Process GPT tool calls (legacy path)
+                    if gpt_response.get('tool_calls'):
+                        for tool_call in gpt_response['tool_calls']:
+                            tool_name = tool_call['name']
+                            arguments = tool_call['arguments']
+                            tool_result = self._execute_tool_call(tool_name, arguments)
+                            if not isinstance(tool_result, dict):
+                                tool_result = {'success': False, 'data': tool_result, 'error': 'non-dict tool result'}
+                            tool_calls_made.append({
+                                'tool': tool_name,
+                                'arguments': arguments,
+                                'result': tool_result,
                             })
-                        elif tool_result.get('data'):
-                            # Session 990: Include partial results even on failure
-                            all_results.append({
-                                'source': tool_name,
-                                'data': tool_result.get('data'),
-                                'partial': True,
-                                'error': tool_result.get('error', 'Unknown error')
-                            })
+                            if tool_result.get('success'):
+                                all_results.append({'source': tool_name, 'data': tool_result.get('data', tool_result)})
+                            elif tool_result.get('data'):
+                                all_results.append({'source': tool_name, 'data': tool_result.get('data'), 'partial': True})
 
-                        self.mark_decision_outcome(
-                            success=tool_result.get('success', False),
-                            result_summary=str(tool_result)[:100]
-                        )
-
-                    # Fallback: if GPT didn't call web_search, make an explicit call
-                    # to ensure we always combine spider + web data
-                    tools_used = {tc['tool'] for tc in tool_calls_made}
-                    if 'web_search' not in tools_used:
-                        search_query = self._extract_search_query(task)
-                        if search_query:
-                            logger.info(f"[Fallback] GPT skipped web_search, running: {search_query[:80]}")
-                            web_result = self._execute_tool_call('web_search', {'query': search_query, 'num_results': 10})
-                            if not isinstance(web_result, dict):
-                                web_result = {'success': False, 'data': web_result, 'error': 'non-dict tool result'}
-                            if web_result.get('success'):
-                                all_results.append({'source': 'web_search', 'data': web_result.get('data', web_result)})
-                                tool_calls_made.append({'tool': 'web_search', 'arguments': {'query': search_query}, 'result': web_result})
-
+                if all_results:
                     execution_time = int((time.time() - start_time) * 1000)
 
-                    if all_results:
+                    if all_results:  # Always true here but preserves structure for else-failure path
                         # Session 683: Add ML text analysis to research results
                         ml_analysis = {}
                         all_result_data = []
@@ -713,6 +882,8 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                             'sources_count': len(all_results),
                             # Session 872: Include Research Contract
                             'contract': research_contract,
+                            # Session 1103: Include iterative search attempts for provenance
+                            'attempts': self._iterative_attempts,
                         }
 
                         # Add ML analysis if performed
@@ -933,6 +1104,51 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                     agent_name=self.name,
                     execution_time_ms=int((time.time() - start_time) * 1000)
                 )
+
+    def _format_results_for_synthesis(self, results: List[Dict[str, Any]], task: str) -> str:
+        """
+        Session 1103: Format pre-gathered search results into a text block for GPT synthesis.
+
+        Extracts titles, snippets, URLs from raw search results and formats
+        them into a concise summary GPT can analyze without needing to search.
+        """
+        formatted = []
+        seen_urls = set()
+
+        for i, item in enumerate(results[:30]):  # Cap at 30 results
+            if not isinstance(item, dict):
+                continue
+
+            title = item.get('title') or item.get('headline') or item.get('name', '')
+            snippet = item.get('snippet') or item.get('description') or item.get('content', '')
+            url = item.get('url') or item.get('link') or item.get('source_url', '')
+
+            # Deduplicate by URL
+            if url and url in seen_urls:
+                continue
+            if url:
+                seen_urls.add(url)
+
+            # Truncate snippet
+            if snippet and len(snippet) > 300:
+                snippet = snippet[:300] + '...'
+
+            parts = []
+            if title:
+                parts.append(f"**{title}**")
+            if snippet:
+                parts.append(snippet)
+            if url:
+                parts.append(f"Source: {url}")
+
+            if parts:
+                formatted.append(f"{i+1}. " + '\n   '.join(parts))
+
+        if not formatted:
+            return "(No structured results found — raw data was returned from search)"
+
+        header = f"Found {len(formatted)} results for: {task[:100]}"
+        return f"{header}\n\n" + '\n\n'.join(formatted[:20])  # Cap display at 20
 
     def _extract_search_query(self, task: str) -> str:
         """Extract a concise web search query from a verbose task description."""
