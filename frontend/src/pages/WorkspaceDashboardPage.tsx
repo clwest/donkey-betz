@@ -391,6 +391,17 @@ export default function WorkspaceDashboardPage() {
 
         {/* Pipeline Status */}
         <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 mb-6">
+          {/* Quality gate failure banner */}
+          {pipelineRun?.error_message && pipelineRun.error_message.includes('Quality gate') && (
+            <div className="mb-4 p-3 bg-red-900/30 border border-red-800/50 rounded-lg">
+              <div className="text-sm font-medium text-red-300 mb-1">Topic Alignment Failed</div>
+              <div className="text-xs text-red-400">{pipelineRun.error_message}</div>
+              <div className="text-xs text-gray-500 mt-1">
+                Tip: Make your workspace brief topic more specific, or add focus areas that match what you want researched.
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-white">Pipeline</h2>
             {pipelineRun && (

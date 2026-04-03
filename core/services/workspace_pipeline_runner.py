@@ -61,6 +61,8 @@ def execute_pipeline_run(run_id: str) -> dict:
     # Group stages by parallel_group (None = sequential)
     stage_groups = _group_stages(run.pipeline_snapshot)
 
+    discovery_gate_run = False
+
     for group in stage_groups:
         if len(group) == 1:
             # Sequential stage
@@ -73,6 +75,28 @@ def execute_pipeline_run(run_id: str) -> dict:
             _execute_parallel_group(
                 run, group, router, workspace, config, brief, previous_outputs,
             )
+
+            # Quality gate: after discovery parallel group, check topic alignment
+            group_name = group[0][1].get('parallel_group', '')
+            if group_name == 'discovery' and not discovery_gate_run and brief:
+                discovery_gate_run = True
+                gate_result = _run_quality_gates(run, brief, previous_outputs)
+                if not gate_result['proceed']:
+                    logger.warning(
+                        "Pipeline %s STOPPED by quality gate: %s",
+                        run.id, gate_result['reason'],
+                    )
+                    run.error_message = f"Quality gate: {gate_result['reason']}"
+                    run.status = 'failed'
+                    run.finished_at = timezone.now()
+                    run.save(update_fields=['status', 'error_message', 'finished_at'])
+                    return {
+                        'success': False,
+                        'run_id': str(run.id),
+                        'status': 'failed',
+                        'error': gate_result['reason'],
+                        'gate_details': gate_result,
+                    }
 
     # Finalize
     statuses = [s.get('status') for s in run.stage_results]
@@ -338,3 +362,56 @@ def _update_stage(run, index, status, output=None, error=None):
     if error:
         stage['error'] = error
     run.save(update_fields=['stage_results', 'current_stage_index'])
+
+
+def _run_quality_gates(run, brief, previous_outputs):
+    """
+    Run quality gates after discovery stages.
+    Returns {'proceed': bool, 'reason': str, 'details': dict}.
+    """
+    from core.services.pipeline_quality_gates import check_topic_alignment, check_research_depth
+
+    # Gate 1: Topic Alignment
+    alignment = check_topic_alignment(brief, previous_outputs)
+    if not alignment['passed']:
+        logger.warning(
+            "Pipeline %s topic alignment FAILED: score=%s, recommendation=%s",
+            run.id, alignment['score'], alignment['recommendation'],
+        )
+
+        if alignment['recommendation'] == 'escalate':
+            return {
+                'proceed': False,
+                'reason': alignment['details'],
+                'gate': 'topic_alignment',
+                'details': alignment,
+            }
+
+        # For 'retry' recommendation — log it but let it proceed with a warning
+        # (Full retry logic is Phase 2)
+        logger.warning(
+            "Pipeline %s topic alignment borderline (score=%s) — proceeding with warning",
+            run.id, alignment['score'],
+        )
+
+    # Gate 2: Research Depth
+    depth = check_research_depth(previous_outputs)
+    if not depth['passed']:
+        logger.warning(
+            "Pipeline %s research depth FAILED: %s",
+            run.id, depth['details'],
+        )
+        # Don't hard-stop for depth — log warning and continue
+        # (Agents can still produce useful output from shallow research)
+
+    logger.info(
+        "Pipeline %s quality gates passed: alignment=%s/100, depth=%s chars",
+        run.id, alignment['score'], depth.get('total_content_length', 0),
+    )
+
+    return {
+        'proceed': True,
+        'reason': 'Quality gates passed',
+        'alignment': alignment,
+        'depth': depth,
+    }
