@@ -417,7 +417,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/platform/playbooks/',  # Playbooks list
         '/api/platform/audits/',  # System audits browser
         '/api/platform/doc-content/',  # Document content viewer
-        '/api/deliverables/',  # Deliverables marketplace
+        # '/api/deliverables/' moved to OPTIONAL_AUTH_PATHS — needs user context when logged in
 
         # Session 824: Live Metrics (read-only, no auth needed)
         '/api/platform/live-metrics/',  # Real-time system metrics
@@ -501,6 +501,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
     OPTIONAL_AUTH_PATHS = [
         '/api/voice-marketplace/',  # Browse marketplace is public, purchasing requires auth
         '/api/monitoring/',  # Public monitoring dashboard for stress tests
+        '/api/deliverables/',  # Deliverables: anonymous gets public, authed gets scoped by user/workspace
     ]
     
     # Paths that require staff privileges

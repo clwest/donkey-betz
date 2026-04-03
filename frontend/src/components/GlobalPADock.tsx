@@ -607,6 +607,9 @@ const TOOL_SOURCES = new Set(['code-worker', 'code_worker', 'claude-code', 'clau
 
         {!isSidebarOpen && (
           <>
+            {/* Session health banner */}
+            <SessionHealthBanner conversationId={activeConversationId} messageCount={messages.length} />
+
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-400">
                 <Bot size={32} className="mb-2 opacity-50" />
@@ -968,6 +971,119 @@ function WorkspacePicker({ onSelect, onClose }: {
           </button>
         ))
       )}
+    </div>
+  )
+}
+
+
+// Session Health Banner — shows when conversation context is getting stale
+function SessionHealthBanner({
+  conversationId,
+  messageCount,
+}: {
+  conversationId: string | null
+  messageCount: number
+}) {
+  const [health, setHealth] = useState<{
+    score: number
+    recommendation: string
+    reasons: string[]
+    auto_summary: string
+    starter_prompt: string
+  } | null>(null)
+  const [dismissed, setDismissed] = useState(false)
+  const startNewConversation = usePAStore((s) => s.startNewConversation)
+
+  // Check health every 30s when conversation has enough messages
+  useEffect(() => {
+    if (!conversationId || messageCount < 10 || dismissed) return
+
+    const check = async () => {
+      try {
+        const res = await assistantApi.getConversation(conversationId)
+        // Simple client-side health check based on message count
+        // (The API endpoint provides more sophisticated analysis)
+        if (messageCount > 30) {
+          setHealth({
+            score: Math.max(0, 100 - (messageCount - 10) * 2),
+            recommendation: messageCount > 40 ? 'strongly_recommend_fresh' : 'suggest_fresh',
+            reasons: [`Long conversation (${messageCount} messages)`],
+            auto_summary: '',
+            starter_prompt: 'Continuing from previous session. Pick up where we left off.',
+          })
+        }
+      } catch { /* ignore */ }
+    }
+
+    // Also try the server-side health endpoint
+    const checkServer = async () => {
+      try {
+        const res = await fetch(`/api/pa/conversations/${conversationId}/health/`, {
+          credentials: 'include',
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.success && data.recommendation !== 'continue') {
+            setHealth(data)
+          }
+        }
+      } catch { /* fall back to client-side */ }
+    }
+
+    checkServer()
+    const interval = setInterval(checkServer, 60000)
+    return () => clearInterval(interval)
+  }, [conversationId, messageCount, dismissed])
+
+  if (!health || health.recommendation === 'continue' || dismissed) return null
+
+  const isStrong = health.recommendation === 'strongly_recommend_fresh'
+
+  return (
+    <div className={cn(
+      'rounded-lg p-3 mb-2 text-sm',
+      isStrong
+        ? 'bg-yellow-900/40 border border-yellow-700/50'
+        : 'bg-blue-900/20 border border-blue-800/30'
+    )}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1">
+          <div className={cn('font-medium mb-1', isStrong ? 'text-yellow-300' : 'text-blue-300')}>
+            {isStrong ? 'Context getting crowded' : 'Fresh session recommended'}
+          </div>
+          <div className="text-xs text-gray-400">
+            {health.reasons.join('. ')}. A fresh session will give better results.
+          </div>
+        </div>
+        <button
+          onClick={() => setDismissed(true)}
+          className="text-gray-500 hover:text-gray-300"
+        >
+          <X size={14} />
+        </button>
+      </div>
+      <div className="flex gap-2 mt-2">
+        <button
+          onClick={async () => {
+            await startNewConversation()
+            setDismissed(true)
+          }}
+          className={cn(
+            'text-xs px-3 py-1.5 rounded-lg font-medium transition-colors',
+            isStrong
+              ? 'bg-yellow-600 hover:bg-yellow-500 text-white'
+              : 'bg-blue-600 hover:bg-blue-500 text-white'
+          )}
+        >
+          Start Fresh Session
+        </button>
+        <button
+          onClick={() => setDismissed(true)}
+          className="text-xs px-3 py-1.5 rounded-lg text-gray-400 hover:text-gray-300 bg-gray-800 hover:bg-gray-700 transition-colors"
+        >
+          Keep Going
+        </button>
+      </div>
     </div>
   )
 }
