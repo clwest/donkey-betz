@@ -203,7 +203,15 @@ def _run_agent_with_timeout(run, stage_idx, stage, router, workspace, config, br
     if previous_outputs:
         last = previous_outputs[-1]
         if last.get('full_content'):
-            context['content'] = last['full_content']
+            raw = last['full_content']
+            # EditorAgent expects content as a dict with title/sections/conclusion
+            # Other agents accept a plain string. Provide both formats.
+            context['content'] = {
+                'title': last.get('stage_name', 'Draft'),
+                'sections': [{'heading': 'Content', 'body': raw}],
+                'conclusion': '',
+            }
+            context['content_text'] = raw  # Plain string for agents that prefer it
         context['previous_stage'] = last
 
     try:

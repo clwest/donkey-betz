@@ -73,6 +73,9 @@ def list_deliverables(request):
 
         # Security: scope deliverables by user/workspace
         workspace_id = request.GET.get('workspace')
+        if not request.user.is_authenticated:
+            return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
         if workspace_id:
             # Verify user owns the workspace before showing its deliverables
             from core.models_skin_layer import ProjectWorkspace
