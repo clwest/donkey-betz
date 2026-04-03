@@ -209,7 +209,7 @@ GitHub: {user_profile.get('github_username', 'Not provided')}
             # Note: gpt-5-mini needs reasoning_effort and high max_completion_tokens
             # since reasoning tokens come from the same budget
             response = client.chat.completions.create(
-                model="gpt-5.2",
+                model="gpt-5-mini",
                 messages=[
                     {
                         "role": "system",

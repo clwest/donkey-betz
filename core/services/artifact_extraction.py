@@ -244,7 +244,7 @@ JSON array only, no other text:"""
 
         try:
             response = self.client.chat.completions.create(
-                model="gpt-5.2",
+                model="gpt-5-mini",
                 messages=[
                     {"role": "system", "content": "You are an artifact extraction specialist. Extract actionable items from agent conversations. Return only valid JSON."},
                     {"role": "user", "content": prompt}

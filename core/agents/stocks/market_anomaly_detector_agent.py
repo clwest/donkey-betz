@@ -279,7 +279,7 @@ Focus on patterns that suggest informed trading or manipulation."""
                 client = OpenAI()
 
                 response = client.chat.completions.create(
-                    model="gpt-5.2",
+                    model="gpt-5-mini",
                     messages=messages,
                     tools=self.get_tools_with_delegation(),
                     tool_choice="auto",
@@ -329,7 +329,7 @@ Focus on patterns that suggest informed trading or manipulation."""
 
                     # Get final synthesis from LLM
                     final_response = client.chat.completions.create(
-                        model="gpt-5.2",
+                        model="gpt-5-mini",
                         messages=messages,
                         max_completion_tokens=3000
                     )

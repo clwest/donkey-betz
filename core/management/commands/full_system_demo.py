@@ -242,7 +242,7 @@ What patterns do you see emerging? What excites you about being part of this col
 Generate a creative, insightful dream (2-3 paragraphs)."""
 
                 response = client.chat.completions.create(
-                    model="gpt-5.2",
+                    model="gpt-5-mini",
                     messages=[{"role": "user", "content": prompt}],
                     max_completion_tokens=500
                 )
@@ -298,7 +298,7 @@ Write a brief 2-3 sentence contribution to a brainstorming discussion about "How
 Speak from your unique perspective based on your role. Be concise and insightful."""
 
                 response = client.chat.completions.create(
-                    model="gpt-5.2",
+                    model="gpt-5-mini",
                     messages=[{"role": "user", "content": prompt}],
                     max_completion_tokens=200
                 )
@@ -368,7 +368,7 @@ CONCLUSION: [closing paragraph]
 TAGS: [comma-separated tags]"""
 
             response = client.chat.completions.create(
-                model="gpt-5.2",
+                model="gpt-5-mini",
                 messages=[{"role": "user", "content": prompt}],
                 max_completion_tokens=2000
             )
@@ -484,7 +484,7 @@ Provide your analysis from your agent perspective."""
 
             # TopicMiner analysis
             topic_response = client.chat.completions.create(
-                model="gpt-5.2",
+                model="gpt-5-mini",
                 messages=[{"role": "system", "content": "You are TopicMiner, analyzing trending potential."},
                          {"role": "user", "content": debate_prompt}],
                 max_completion_tokens=600
@@ -493,7 +493,7 @@ Provide your analysis from your agent perspective."""
 
             # Contrarian analysis
             contrarian_response = client.chat.completions.create(
-                model="gpt-5.2",
+                model="gpt-5-mini",
                 messages=[{"role": "system", "content": "You are Contrarian, providing counter-perspectives."},
                          {"role": "user", "content": debate_prompt}],
                 max_completion_tokens=600
@@ -502,7 +502,7 @@ Provide your analysis from your agent perspective."""
 
             # Analyst analysis
             analyst_response = client.chat.completions.create(
-                model="gpt-5.2",
+                model="gpt-5-mini",
                 messages=[{"role": "system", "content": "You are Analyst, predicting performance."},
                          {"role": "user", "content": debate_prompt}],
                 max_completion_tokens=600
@@ -539,7 +539,7 @@ Create a 3-minute podcast script with:
 Make it conversational and engaging."""
 
             script_response = client.chat.completions.create(
-                model="gpt-5.2",
+                model="gpt-5-mini",
                 messages=[{"role": "user", "content": script_prompt}],
                 max_completion_tokens=1200
             )
@@ -593,7 +593,7 @@ Max length: {max_chars} characters
 Include relevant hashtags/mentions."""
 
                 response = client.chat.completions.create(
-                    model="gpt-5.2",
+                    model="gpt-5-mini",
                     messages=[{"role": "user", "content": prompt}],
                     max_completion_tokens=200
                 )

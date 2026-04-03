@@ -4496,7 +4496,7 @@ Actions:
             # GPT-5-mini uses tokens for reasoning before generating content.
             # With long system prompts, 1500 wasn't enough - model used all for reasoning.
             response = self.client.chat.completions.create(
-                model="gpt-5.2",
+                model="gpt-5-mini",
                 messages=[
                     {"role": "system", "content": prompt},
                     {"role": "user", "content": task}

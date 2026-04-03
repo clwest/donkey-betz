@@ -375,7 +375,7 @@ Provide a concise analysis covering:
 Keep it actionable and under 400 words."""
 
             response = client.chat.completions.create(
-                model="gpt-5.2",
+                model="gpt-5-mini",
                 messages=[
                     {"role": "system", "content": self.system_prompt},
                     {"role": "user", "content": prompt}

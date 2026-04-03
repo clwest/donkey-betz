@@ -2872,7 +2872,7 @@ Respond in JSON format:
 
             try:
                 response = client.chat.completions.create(
-                    model="gpt-5.2",
+                    model="gpt-5-mini",
                     messages=[
                         {"role": "system", "content": "You are a pilot evaluation expert. Analyze pilot data and suggest outcomes based on evidence."},
                         {"role": "user", "content": prompt}

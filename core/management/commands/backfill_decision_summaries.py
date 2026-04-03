@@ -224,7 +224,7 @@ Output ONLY the DecisionSummary block, nothing else."""
 
         try:
             response = client.chat.completions.create(
-                model="gpt-5.2",  # Use faster model for backfill
+                model="gpt-5-mini",  # Use faster model for backfill
                 messages=[
                     {
                         "role": "system",

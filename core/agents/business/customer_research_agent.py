@@ -682,7 +682,7 @@ For absurd ideas, suggest what realistic version might work."""
             # Session 857: Use retry-enabled completion call
             response = self._call_completion_with_retry(
                 messages=[{"role": "user", "content": check_prompt}],
-                model="gpt-5.2",  # Session 857: Fixed model name
+                model="gpt-5-mini",  # Session 857: Fixed model name
                 max_completion_tokens=2000
             )
 
@@ -1521,7 +1521,7 @@ Return as JSON with these keys."""
             # Session 876: Increased tokens for better quality output
             response = self._call_completion_with_retry(
                 messages=[{"role": "user", "content": persona_prompt}],
-                model="gpt-5.2",  # Session 857: Fixed model name
+                model="gpt-5-mini",  # Session 857: Fixed model name
                 max_completion_tokens=2000,
             )
 
@@ -1784,7 +1784,7 @@ IMPORTANT INSTRUCTIONS:
             # Session 857: Use retry-enabled completion call
             response = self._call_completion_with_retry(
                 messages=[{"role": "user", "content": synthesis_prompt}],
-                model="gpt-5.2",  # Session 857: Fixed model name
+                model="gpt-5-mini",  # Session 857: Fixed model name
                 max_completion_tokens=6000,
             )
 

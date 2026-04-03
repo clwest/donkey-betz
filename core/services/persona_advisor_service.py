@@ -345,7 +345,7 @@ Be specific and practical. Format your response with clear sections using **bold
 """
 
             response = client.chat.completions.create(
-                model="gpt-5.2",
+                model="gpt-5-mini",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}

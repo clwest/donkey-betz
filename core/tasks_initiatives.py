@@ -748,7 +748,7 @@ Guidelines:
                     # Session 875: CRITICAL FIX - Increase tokens for reasoning models
                     # GPT-5-mini was returning empty content because reasoning consumed all 1000 tokens
                     response = client.chat.completions.create(
-                        model="gpt-5.2",
+                        model="gpt-5-mini",
                         messages=[
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": user_prompt}
@@ -782,7 +782,7 @@ Guidelines:
                     # Session 317: Generate catchy title with adequate tokens for reasoning
                     # Session 413: Added timeout for reasoning model
                     title_response = client.chat.completions.create(
-                        model="gpt-5.2",
+                        model="gpt-5-mini",
                         messages=[
                             {"role": "system", "content": "Generate a short, catchy title (3-7 words) for this creative thought. No quotes or punctuation."},
                             {"role": "user", "content": dream_content if dream_content else "Creative thinking session"}
@@ -1036,7 +1036,7 @@ Actionability means: Can this be implemented? Is it a concrete idea vs abstract 
 Respond with ONLY a number between 0.0 and 1.0, nothing else."""
 
                 actionability_response = client.chat.completions.create(
-                    model="gpt-5.2",
+                    model="gpt-5-mini",
                     messages=[{"role": "user", "content": actionability_prompt}],
                     max_completion_tokens=500  # GPT-5-mini uses ~350 tokens for reasoning
                 )
@@ -1070,7 +1070,7 @@ Format: SCORE|PROJECT_NAME
 Example: 0.8|AI Content Studio"""
 
                     relevance_response = client.chat.completions.create(
-                        model="gpt-5.2",
+                        model="gpt-5-mini",
                         messages=[{"role": "user", "content": relevance_prompt}],
                         max_completion_tokens=500  # GPT-5-mini uses ~350 tokens for reasoning
                     )
@@ -1312,7 +1312,7 @@ Format: numbered list of steps."""
 
                     try:
                         plan_response = client.chat.completions.create(
-                            model="gpt-5.2",
+                            model="gpt-5-mini",
                             messages=[{"role": "user", "content": plan_prompt}],
                             max_completion_tokens=800  # Higher for reasoning models
                         )

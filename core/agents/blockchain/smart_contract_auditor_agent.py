@@ -594,7 +594,7 @@ Provide a structured audit report with:
 7. Gas Optimization Opportunities"""
 
         response = client.chat.completions.create(
-            model="gpt-5.2",
+            model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": "You are an expert smart contract security auditor with deep knowledge of Solidity, the EVM, and DeFi attack vectors. Be thorough and specific."},
                 {"role": "user", "content": prompt}
@@ -657,7 +657,7 @@ Provide a structured audit report with:
 Rate overall reentrancy risk: CRITICAL / HIGH / MEDIUM / LOW / SAFE"""
 
         response = client.chat.completions.create(
-            model="gpt-5.2",
+            model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": "You are a reentrancy vulnerability expert. Analyze code for all forms of reentrancy attacks."},
                 {"role": "user", "content": prompt}
@@ -715,7 +715,7 @@ Rate overall reentrancy risk: CRITICAL / HIGH / MEDIUM / LOW / SAFE"""
 5. Code example fix"""
 
         response = client.chat.completions.create(
-            model="gpt-5.2",
+            model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": "You are an access control security expert for smart contracts."},
                 {"role": "user", "content": prompt}
@@ -776,7 +776,7 @@ Rate overall reentrancy risk: CRITICAL / HIGH / MEDIUM / LOW / SAFE"""
 4. Recommended fix"""
 
         response = client.chat.completions.create(
-            model="gpt-5.2",
+            model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": "You are an integer safety expert for Solidity smart contracts."},
                 {"role": "user", "content": prompt}
@@ -829,7 +829,7 @@ Rate overall reentrancy risk: CRITICAL / HIGH / MEDIUM / LOW / SAFE"""
 This is for educational and audit purposes only. Include a disclaimer."""
 
         response = client.chat.completions.create(
-            model="gpt-5.2",
+            model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": "You are a security researcher generating proof-of-concept exploits for educational purposes. Generate working exploit code with clear explanations."},
                 {"role": "user", "content": prompt}

@@ -123,7 +123,7 @@ Focus on:
 - Specific examples from the data when relevant"""
 
         response = client.chat.completions.create(
-            model="gpt-5.2",
+            model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": "You are a data analyst synthesizing intelligence from web scraped data. Return only valid JSON."},
                 {"role": "user", "content": prompt}

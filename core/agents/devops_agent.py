@@ -584,7 +584,7 @@ Generate:
 Include detailed comments explaining each section."""
 
         response = client.chat.completions.create(
-            model="gpt-5.2",
+            model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": f"You are a {platform} CI/CD expert. Generate production-ready pipeline configurations."},
                 {"role": "user", "content": prompt}
@@ -648,7 +648,7 @@ Generate:
 Include comments explaining optimization choices."""
 
         response = client.chat.completions.create(
-            model="gpt-5.2",
+            model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": "You are a Docker expert. Generate optimized, secure container configurations."},
                 {"role": "user", "content": prompt}
@@ -727,7 +727,7 @@ Generate:
 Include namespace, labels, and annotations following Kubernetes best practices."""
 
         response = client.chat.completions.create(
-            model="gpt-5.2",
+            model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": "You are a Kubernetes expert. Generate production-ready manifests following best practices."},
                 {"role": "user", "content": prompt}
@@ -798,7 +798,7 @@ Generate:
 Follow {cloud_provider} best practices for security and cost optimization."""
 
         response = client.chat.completions.create(
-            model="gpt-5.2",
+            model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": f"You are a Terraform and {cloud_provider} infrastructure expert."},
                 {"role": "user", "content": prompt}
@@ -867,7 +867,7 @@ Generate:
 Include setup instructions and best practices."""
 
         response = client.chat.completions.create(
-            model="gpt-5.2",
+            model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": f"You are a {stack} monitoring expert. Create comprehensive observability configurations."},
                 {"role": "user", "content": prompt}

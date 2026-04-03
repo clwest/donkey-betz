@@ -112,7 +112,7 @@ Please provide a corrected version of the code that fixes the error. Return only
                 from config.api_settings import get_openai_client
                 client = get_openai_client()
                 response = client.chat.completions.create(
-                    model="gpt-5.2",
+                    model="gpt-5-mini",
                     messages=[{"role": "user", "content": fix_prompt}],
                     max_completion_tokens=6000,
                 )
