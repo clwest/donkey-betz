@@ -333,6 +333,17 @@ export default function WorkspaceDashboardPage() {
             </div>
           </div>
           <div className="mt-4">
+            <label className="text-xs text-gray-500 mb-1 block">Distribution Hook / Angle</label>
+            <textarea
+              value={(brief.distribution_hook as string) || ''}
+              onChange={e => updateBrief('distribution_hook', e.target.value)}
+              placeholder="What angle should we push? e.g., 'Lead with the cost savings — founders care about ROI not features' or 'Use the controversy around X to drive clicks'"
+              rows={2}
+              className="w-full bg-gray-800 text-white border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 resize-none"
+            />
+            <p className="text-[11px] text-gray-600 mt-1">The DistributionAgent combines this with AI analysis to craft subject lines, hooks, CTAs, and social posts</p>
+          </div>
+          <div className="mt-4">
             <label className="text-xs text-gray-500 mb-1 block">Additional Notes</label>
             <textarea
               value={(brief.notes as string) || ''}
