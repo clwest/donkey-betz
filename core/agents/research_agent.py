@@ -1232,7 +1232,11 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
         seen_urls = set()
         clean_topic = extract_topic_from_task(task)
 
-        for item in results[:15]:
+        # Session 1103: Build topic keywords for relevance filtering
+        from core.services.search_strategy_service import _extract_keywords
+        topic_keywords = _extract_keywords(clean_topic)
+
+        for item in results[:30]:  # Scan more, filter down
             if not isinstance(item, dict):
                 continue
 
@@ -1246,6 +1250,15 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
             canonical = re.sub(r'[?&]utm_\w+=[^&]*', '', url).rstrip('?&')
             if canonical in seen_urls:
                 continue
+
+            # Session 1103: Relevance filter — require minimum keyword overlap
+            # between topic and the source title+snippet. Prevents garbage from
+            # broad search rounds (gaming forums, support pages, etc.)
+            combined_text = f"{title} {snippet}".lower()
+            keyword_hits = sum(1 for kw in topic_keywords if kw in combined_text)
+            if topic_keywords and keyword_hits < 2:
+                continue  # Skip off-topic results
+
             seen_urls.add(canonical)
 
             evidence = self._extract_best_evidence(snippet)
@@ -1265,6 +1278,9 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                 'claim_type': claim_type,
                 'evidence_type': evidence['type'],
             })
+
+            if len(claims) >= 12:  # Cap at 12 quality claims
+                break
 
         logger.info("[ClaimsBridge] Built %d claims from research for: %s", len(claims), clean_topic[:60])
         return claims
