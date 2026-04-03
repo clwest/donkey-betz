@@ -973,9 +973,13 @@ class AgentHandlersMixin:
 
         if action == 'list':
             workspaces = manager.list_workspaces()
+            # Support name filter for search
+            name_filter = payload.get('name', '').strip()
+            if name_filter:
+                workspaces = [ws for ws in workspaces if name_filter.lower() in ws.name.lower()]
             serialized = []
             for ws in workspaces:
-                serialized.append({
+                ws_data = {
                     'id': str(ws.id),
                     'name': ws.name,
                     'description': ws.description or '',
@@ -985,8 +989,62 @@ class AgentHandlersMixin:
                     'current_branch': ws.current_branch or '',
                     'total_operations': ws.total_operations,
                     'last_operation_at': ws.last_operation_at.isoformat() if ws.last_operation_at else None,
-                })
+                }
+                # Include config info if available
+                config = getattr(ws, 'config', None)
+                if config:
+                    ws_data['template'] = config.template.name if config.template else None
+                    ws_data['business_status'] = config.status
+                    ws_data['has_brief'] = bool(config.workspace_brief)
+                serialized.append(ws_data)
             return {'action': 'list', 'workspaces': serialized, 'count': len(serialized)}
+
+        elif action == 'get':
+            # Direct lookup by ID or name
+            from core.models_skin_layer import ProjectWorkspace
+            workspace_id = payload.get('workspace_id', '').strip()
+            workspace_name = payload.get('name', '').strip()
+
+            ws = None
+            if workspace_id:
+                ws = ProjectWorkspace.objects.filter(id=workspace_id).first()
+            elif workspace_name:
+                ws = ProjectWorkspace.objects.filter(name__icontains=workspace_name).first()
+
+            if not ws:
+                return {'action': 'get', 'error': f'Workspace not found: {workspace_id or workspace_name}'}
+
+            config = getattr(ws, 'config', None)
+            result = {
+                'action': 'get',
+                'id': str(ws.id),
+                'name': ws.name,
+                'description': ws.description or '',
+                'workspace_type': ws.workspace_type,
+                'is_active': ws.is_active,
+            }
+            if config:
+                result['template'] = config.template.name if config.template else None
+                result['business_status'] = config.status
+                result['workspace_brief'] = config.workspace_brief
+                result['pipeline_config'] = config.pipeline_config
+                result['agent_pool'] = config.agent_pool
+
+            # Recent pipeline runs
+            from core.models_workspace_templates import PipelineRun
+            recent_runs = PipelineRun.objects.filter(workspace=ws).order_by('-created_at')[:3]
+            result['recent_pipeline_runs'] = [{
+                'id': str(r.id),
+                'status': r.status,
+                'created_at': r.created_at.isoformat(),
+                'stage_count': len(r.pipeline_snapshot),
+            } for r in recent_runs]
+
+            # Deliverable count
+            from core.models_deliverables import Deliverable
+            result['deliverable_count'] = Deliverable.objects.filter(workspace=ws).count()
+
+            return result
 
         elif action == 'status':
             workspaces = manager.list_workspaces()

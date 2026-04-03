@@ -642,22 +642,28 @@ PA_TOOL_SCHEMAS = [
         "type": "function",
         "name": "workspace_tool",
         "description": (
-            "Manage development workspaces: list, check status, or create new ones. "
-            "Use when the user asks about their workspaces, project worktrees, "
-            "or wants to create a new workspace to organize work."
+            "Manage workspaces: list all, search by name, get details, check status, create, or delete. "
+            "Use 'get' with name to find a specific workspace. Use 'list' with name filter to search. "
+            "Each workspace can be a business unit with pipeline, agents, and deliverables."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "status", "create", "delete"],
-                    "description": "Workspace action. Use 'create' to make a new workspace, 'delete' to remove a sandbox workspace by id.",
+                    "enum": ["list", "get", "status", "create", "delete"],
+                    "description": (
+                        "list: list all workspaces (optional name filter). "
+                        "get: get full details for a workspace by ID or name (includes pipeline runs, deliverable count, brief). "
+                        "status: quick status of active workspace. "
+                        "create: make a new workspace. "
+                        "delete: remove a sandbox workspace."
+                    ),
                 },
-                "id": {"type": "string", "description": "UUID of workspace to act on"},
-                "name": {"type": "string", "description": "Name for new workspace (for create action)"},
-                "description": {"type": "string", "description": "Description/notes for the workspace (for create action)"},
-                "limit": {"type": "integer", "description": "Max items (default 10)"},
+                "workspace_id": {"type": "string", "description": "UUID of workspace (for get/delete)"},
+                "name": {"type": "string", "description": "Workspace name — for search (list), lookup (get), or creation (create)"},
+                "description": {"type": "string", "description": "Description/notes (for create)"},
+                "limit": {"type": "integer", "description": "Max items (default 100)"},
             },
             "required": ["action"],
         },
