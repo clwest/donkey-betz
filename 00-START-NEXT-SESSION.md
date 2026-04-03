@@ -1,117 +1,82 @@
-# Session 1077 - Start Here
+# Next Session — Start Here
 
-**Previous Sessions:** 1076 (Government section MVP — 5,000 bills synced + embedded, member lookup, bill browser, Ask chat), 1075 (Reliability initiative — zombie cleanup, spawn gates, spider adapter consolidation)
-**Date:** March 6, 2026
-**Status:** 218 Agents | 79 Spiders | 25 Advisors | **PA function calling LIVE (GPT-5.2, 84 tool schemas, 130+ handlers)** | Government section LIVE | 2 ACTIVE initiatives | 59 COMPLETED
-
----
-
-## Session 1076 — What Happened
-
-### Government Section MVP Built (Full Stack)
-Designed with Rigby (PA conversation `pa-c20a79117938`).
-
-**Data Pipeline:**
-- 548 congress members synced (Congress.gov v3 API, 119th Congress)
-- 4,989 federal bills synced from Congress.gov `/v3/bill/119` (20 pages × 250)
-- 30 state bills from LegiScan SpiderData migration
-- 4,991 bills embedded via pgvector (text-embedding-3-small, batch 50)
-- Celery beat: `sync_congress_data` every 6 hours (long_running queue)
-- 11 errors from null `latestAction` — fixed in code, will self-heal on next beat run
-
-**Models (migration 0300):**
-- `CongressMember` (bioguide_id PK, state, district, party, chamber, committees, terms)
-- `Bill` (bill_uid unique, pgvector embedding, content_hash, jurisdiction, M2M sponsors)
-- `BillChunk` (future full-text RAG chunking)
-- `RollCallVote` (congress, chamber, roll_number, session — unique_together)
-- `VotePosition` (roll_call FK, member FK, position)
-
-**Backend (8 endpoints, AllowAny):**
-- `GET /api/government/hub/` — stats, top topics, recent bills
-- `GET /api/government/bills/` — paginated, filterable (chamber, status, q, topic)
-- `GET /api/government/bills/<bill_uid>/` — detail with sponsors, roll calls
-- `GET /api/government/bills/search/` — semantic search via pgvector CosineDistance
-- `GET /api/government/members/` — filterable (state, chamber, party, district, q)
-- `GET /api/government/members/<bioguide_id>/` — detail with votes, sponsored bills
-- `GET /api/government/states/` — state picker data
-- `GET /api/government/states/<state>/districts/` — district picker
-
-**Frontend (GovernmentPage.tsx — 3 tabs):**
-- **My Reps:** State → Chamber → District picker → member cards → detail with voting record + sponsored bills
-- **Bills:** search, chamber filter, pagination, bill detail with sponsors/topics/roll calls, "Ask about this bill" button
-- **Ask:** context-aware chat with context pills (bill or member), suggested questions
-
-**Services:**
-- `CongressSyncService` (`core/services/congress_sync.py`): sync_members, sync_bills, migrate_spider_bills, enrich_bill_details, embed_bills, sync_votes, full_sync
-- Congress.gov API rate limited (0.5s between calls), handles 429 retry
-
-### Betting Section Improvements (Earlier in Session)
-- Predicted spread now populated in MLPrediction (was 100% null)
-- Closing odds fallback: evaluator sets `closing_odds = odds_at_prediction` when missing
-- Pipeline freshness endpoint + UI strips on Records/Games tabs
-- Intelligence mock views quarantined (Http404 + logging in production)
-- 481 lines of dead code removed from BettingPage.tsx
+**Date:** April 3, 2026
+**Previous Session:** Massive build session — workspaces, pipelines, messaging, agent guardrails, onboarding
+**PA Conversation:** Ask Chris for a fresh conversation ID
+**Status:** 218 Agents | 80 Spiders | 25 Advisors | PA function calling LIVE (GPT-5.2) | Workspaces LIVE | Messaging LIVE
 
 ---
 
-## Priority 1: Stocks Section MVP (Tomorrow)
+## Priority #1: ResearchAgent Iterative Search
 
-Rigby mapped this out (conversation `pa-c20a79117938`). Stocks already has more infrastructure than Government did.
+**The problem:** Agents find generic content instead of topic-specific content. The quality gate catches this (score 26/100) but the research itself is broken.
 
-### What Already Exists
-- **8 API endpoints** live: hub, dashboard, briefs, briefs/{id}, alerts, predictions, sec-filings, ticker/{symbol}
-- **Models:** MarketIntelligenceBrief (43+), StockMarketAlert, PredictionOutcome
-- **Data:** polygon_finance, finnhub, financial, sec_edgar spiders feeding SpiderData
-- **Mobile:** StocksScreen.tsx already implemented
-- **Desk:** daily market intelligence briefs operational (7 stocks/day)
+**Root cause (forensically confirmed):** GPT mediates all search queries. The agent tells GPT "search for X" but GPT picks generic queries like "trending topics" instead of the actual topic. The universal search strategy injects paraphrase variants into the prompt, but GPT ignores them.
 
-### Rigby's Recommended Build Order
-1. **Verify current behavior** — confirm endpoints work end-to-end, decide auth (keep IsAuthenticated vs AllowAny)
-2. **Add Watchlist model** — `WatchlistItem` (user + symbol), endpoints: list/add/remove
-3. **Beef up ticker detail** — aggregate alerts, predictions, SEC filings, news per symbol
-4. **Upgrade frontend** — 3 tabs: Watchlist | Market | Ask (parallel to Government structure)
-5. **Add semantic search** — embed briefs/alerts for pgvector search (MVP+)
+**The fix:** Bypass GPT for query selection. Have ResearchAgent call web_search/spider_query DIRECTLY with SearchStrategyService queries, collect results, THEN ask GPT to analyze them.
 
-### Key Difference from Government
-Government was greenfield — Stocks already has a pipeline + endpoints. The work is product-izing it into a cohesive section, not building from scratch.
+**PR Checklist:** Deliverable ID `2a92e2db` in AI teams Newsletter workspace — has full implementation plan from Rigby.
 
----
+**Rigby's confirmed priority list:**
+1. ResearchAgent iterative-search with attempts[] tracking
+2. Schema validator in pipeline runner (soft-fail mode)
+3. TopicMiner 3-topic guarantee + paraphrase seeds
+4. Source reliability ranking
 
-## Priority 2: Government Section Polish
+## What Was Built Last Session
 
-### Still Pending
-1. **Vote sync** (`sync_votes`) — needs LegiScan roll call data, ~50 bills per run
-2. **Bill enrichment** (`enrich_bill_details`) — summaries, subjects, sponsors M2M linking from Congress.gov
-3. **Congress.gov roll call parsing** — for direct House/Senate vote data without LegiScan
-4. **Remaining 8,886 bills** — currently capped at 5,000 (20 pages). Beat schedule will incrementally catch up.
+- **Workspace Templates** — Newsletter Studio (9 agents, parallel), LeadGen, Research, Custom
+- **Pipeline Runner** — parallel stages, per-stage timeouts, output threading, quality gates
+- **DistributionAgent** — engagement optimization (subject lines, hooks, CTAs, social snippets)
+- **In-App Messaging** — DMs between users, Rigby routing
+- **"First Win" Demo Pipeline** — one-click onboarding that produces a real deliverable
+- **Session Health** — context freshness scoring + banner suggesting fresh sessions
+- **User Onboarding** — auto-welcome DMs on first login
+- **Agent Guardrails** — rate limiting, output contract, quality gates, governance mode checks
+- **Spider Network** — re-enabled with conservative intervals
+- **Universal Search Strategy** — in BaseAgent, affects all 80+ agents (but GPT still mediates)
 
----
+## Accounts
 
-## Current System Health
+- `donkeyking` (Chris) — superuser/owner
+- `jessica` — superuser, business side
+- `jeremy` — superuser, patent lawyer
 
-| Metric | Value |
-|--------|-------|
-| PA routing | **GPT-5.2 function calling** (`PA_USE_FUNCTION_CALLING=true`) |
-| PA tools | **84 schemas, 130+ handlers** (Wave 2: +11 gateway tools) |
-| Government | **548 members, 5,019 bills, 4,991 embedded** |
-| Decision gates | **ACTIVE** — 0 unclassified artifacts |
-| Boardroom | **0 pending** |
-| Platform health score | **100** (7/7 components healthy) |
-| Celery throughput | **~1,177 tasks/hour, 99.5% success** |
+## Key Rules (from memory)
 
----
+- **Vertical slice:** Every feature ships backend + API + frontend + demo. Nothing is done until visible in UI.
+- **Last mile UI:** If Chris can't see it in the browser, it's not done.
+- **Rigby collaboration:** Read Rigby's FULL responses, answer every question, agree on plan BEFORE building.
+- **Workspace assignment:** All deliverables go to a workspace (default: Donkey Betz).
+- **Rigby-first comms:** Route questions through Rigby via `python tools/pa_chat.py`.
 
-## Critical Patterns & Gotchas
+## How to Work with Rigby (CRITICAL — read this)
 
-**Government Models:**
-- `CongressMember.bioguide_id` is PK (NOT auto UUID)
-- `Bill.bill_uid` is canonical key: `BILL:119:HR:1234` (federal), `LEGISCAN:{id}` (LegiScan)
-- `Bill.embedding` is pgvector VectorField(1536) — needs `HAS_PGVECTOR` guard
-- `Bill.content_hash` is sha256 of normalized embedding_text — used for incremental re-embedding
-- Congress.gov API returns `state: "Florida"` (full name) — use `STATE_ABBREV` dict in congress_sync.py
-- Congress.gov API returns `name: "Last, First"` format — parse carefully
-- `sync_bills(limit_pages=20)` caps at 5,000 bills per run — beat schedule fills incrementally
+Rigby is the PA (Personal Assistant). She runs on GPT-5.2 with 130+ tools. She knows the platform deeply from the ops side.
 
-**PA async flow:** POST `/api/pa/chat/` → `{task_id}`. Poll GET `/api/pa/chat/status/<task_id>/`.
-**PA conversation:** `pa-c20a79117938` (active with Rigby, has stocks roadmap context)
-**Railway:** `railway run python manage.py run_smoke_tests --token <token>` for CLI deploy checks.
+**How to communicate:**
+```bash
+python tools/pa_chat.py "your message" --tools --conversation <conversation_id>
+```
+Chris will provide the conversation ID at session start.
+
+**Collaboration rules (learned the hard way):**
+1. **Read Rigby's FULL response** — she puts important questions and suggestions at the bottom. Don't skip them.
+2. **Answer every question she asks** before building anything. If she says "Which should I run: A, B, or C?" — answer her.
+3. **When Rigby offers to do something** ("Shall I run X?"), say yes or explain why not. Don't ignore it.
+4. **Confirm plans with Rigby before executing.** "Here's what I'm going to build based on your design — does this match?"
+5. **Share results with Rigby after building.** Not just "I pushed it" — show her what changed and ask for verification.
+6. **Don't cherry-pick and go solo.** Rigby's response is a collaboration input, not a menu to order from.
+
+**What Rigby owns:** UX, user experience, messaging, onboarding flow, ops monitoring, quality standards
+**What Claude Code owns:** Backend, API, frontend wiring, execution flow, deployment
+
+**Test:** If Rigby asks a question and you don't answer it, that's a collaboration failure.
+
+## Known Issues (saved for this session)
+
+- Workspace list pagination (some workspaces missing from UI)
+- Pipeline stale run display (no clear/dismiss button)
+- Brief form doesn't clear after save
+- Pipeline stage detail panel (clickable to see agent activity)
+- Editor stage content format (dict wrapping — deployed but needs verification)
