@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-04-02 21:10
+**Generated:** 2026-04-02 22:18
 **Current Session:** 1077
 **Total Documentation:** 1836 files | 627,201 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/body/README.md` | 60 | Body Systems Documentation |
+| `docs/archive/sessions/README.md` | 60 | Session Documentation |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -218,7 +218,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 362 | 2026-04-02 19:48 |
+| INDEX.md | docs | 362 | 2026-04-02 21:13 |
 | EXECUTIVE_SUMMARY_WS4.md | patents | 49 | 2026-03-16 17:32 |
 | DISCLOSURE_L_SELF_TUNING_EXPERIMENTATION.md | patents | 367 | 2026-03-16 17:32 |
 | DISCLOSURE_K_BUDGET_AWARE_SCHEDULING.md | patents | 295 | 2026-03-16 17:32 |
