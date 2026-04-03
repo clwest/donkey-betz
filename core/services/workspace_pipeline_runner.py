@@ -283,17 +283,9 @@ def _run_agent_with_timeout(run, stage_idx, stage, router, workspace, config, br
 
 
 def _extract_content(result) -> str:
-    """Extract content from an AgentResult."""
-    if result.data and isinstance(result.data, dict):
-        content = result.data.get('content', {})
-        if isinstance(content, dict):
-            full_text = content.get('full_text', '')
-            if full_text:
-                return full_text
-        for key in ('full_text', 'text', 'output', 'report', 'findings', 'outline', 'enhanced_content'):
-            if key in result.data and isinstance(result.data[key], str):
-                return result.data[key]
-    return str(result.message) if result.message else ''
+    """Extract meaningful content from an AgentResult using universal extractor."""
+    from core.services.agent_content_extractor import extract_deliverable_content
+    return extract_deliverable_content(result)
 
 
 def _save_stage_deliverable(workspace, stage_name, agent_name, content, brief, run_id, user):
