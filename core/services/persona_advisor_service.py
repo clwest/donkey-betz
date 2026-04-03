@@ -345,13 +345,12 @@ Be specific and practical. Format your response with clear sections using **bold
 """
 
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5.2",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=1500,
-                temperature=0.7,
+                max_completion_tokens=1500,
                 timeout=60.0
             )
 

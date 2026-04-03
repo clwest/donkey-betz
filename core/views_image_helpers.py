@@ -2769,7 +2769,7 @@ def _verify_image_with_vision(image_url, expected_text):
 
         # Build Vision API request
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {
                     "role": "system",

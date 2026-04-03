@@ -531,7 +531,7 @@ Guidelines:
                                     # Re-prompt the same speaker with delegation results (NO tools)
                                     reprompt_system = system_prompt + delegation_result
                                     reprompt_response = client.chat.completions.create(
-                                        model="gpt-5-mini",
+                                        model="gpt-5.2",
                                         messages=[
                                             {"role": "system", "content": reprompt_system},
                                             {"role": "user", "content": user_content}
@@ -575,7 +575,7 @@ Guidelines:
                                     anthropic_client = Anthropic()
                                     claude_response = anthropic_client.messages.create(
                                         model="claude-sonnet-4-20250514",
-                                        max_tokens=1000,
+                                        max_completion_tokens=1000,
                                         system=system_prompt,
                                         messages=[{"role": "user", "content": user_content}]
                                     )
@@ -728,7 +728,7 @@ OUTPUT THE SYNTHESIS AND DECISION SUMMARY NOW:"""
                         try:
                             # Session 413: GPT-5 reasoning models need higher token limits + timeout
                             conclusion_response = client.chat.completions.create(
-                                model="gpt-5-mini",
+                                model="gpt-5.2",
                                 messages=[
                                     {"role": "system", "content": conclusion_system},
                                     {"role": "user", "content": conclusion_prompt}
@@ -755,7 +755,7 @@ OUTPUT THE SYNTHESIS AND DECISION SUMMARY NOW:"""
                                     anthropic_client = Anthropic()
                                     claude_response = anthropic_client.messages.create(
                                         model="claude-sonnet-4-20250514",
-                                        max_tokens=1200,
+                                        max_completion_tokens=1200,
                                         system=conclusion_system,
                                         messages=[{"role": "user", "content": conclusion_prompt}]
                                     )
@@ -1533,7 +1533,7 @@ VOICE RULES (Session 781):
                                         # Re-prompt same speaker with delegation results (NO tools)
                                         reprompt_system = system_prompt + delegation_result
                                         reprompt_response = client.chat.completions.create(
-                                            model="gpt-5-mini",
+                                            model="gpt-5.2",
                                             messages=[
                                                 {"role": "system", "content": reprompt_system},
                                                 {"role": "user", "content": user_prompt}
@@ -1576,7 +1576,7 @@ VOICE RULES (Session 781):
                                         anthropic_client = Anthropic()
                                         claude_response = anthropic_client.messages.create(
                                             model="claude-sonnet-4-20250514",
-                                            max_tokens=2000,
+                                            max_completion_tokens=2000,
                                             system=system_prompt,
                                             messages=[{"role": "user", "content": user_prompt}]
                                         )
@@ -1690,7 +1690,7 @@ Next Steps:
 OUTPUT THE SYNTHESIS AND DECISION SUMMARY NOW:"""
 
                     conclusion_response = client.chat.completions.create(
-                        model="gpt-5-mini",
+                        model="gpt-5.2",
                         messages=[
                             {"role": "system", "content": "You synthesize multi-agent panel discussions. You MUST include the DecisionSummary block with === DecisionSummary === marker."},
                             {"role": "user", "content": conclusion_prompt}
@@ -2068,7 +2068,7 @@ Keep your response to 2-3 sentences. Be specific about actionable insights."""
 
             try:
                 response = client.chat.completions.create(
-                    model="gpt-5-mini",
+                    model="gpt-5.2",
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": f"Analyze this new {spider_data.spider_name} data and share your initial assessment."}
@@ -2358,7 +2358,7 @@ Guidelines:
 
             try:
                 response = client.chat.completions.create(
-                    model="gpt-5-mini",
+                    model="gpt-5.2",
                     messages=[
                         {"role": "system", "content": system_prompt},
                         *history_msgs,
@@ -2471,7 +2471,7 @@ Next Steps:
 OUTPUT THE SYNTHESIS AND DECISION SUMMARY NOW:"""
 
                 conclusion_response = client.chat.completions.create(
-                    model="gpt-5-mini",
+                    model="gpt-5.2",
                     messages=[
                         {"role": "system", "content": "You synthesize project discussions. You MUST include the DecisionSummary block with === DecisionSummary === marker."},
                         {"role": "user", "content": conclusion_prompt}
@@ -2691,7 +2691,7 @@ NEXT_STEPS:
 
         try:
             response = client.chat.completions.create(
-                model="gpt-5-mini",
+                model="gpt-5.2",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
@@ -2890,7 +2890,7 @@ Respond as {agent.name}:"""
 
                 # Call GPT-5-mini for the contribution
                 response = client.chat.completions.create(
-                    model="gpt-5-mini",
+                    model="gpt-5.2",
                     messages=[
                         {
                             "role": "system",
@@ -3041,7 +3041,7 @@ CRITICAL: The DecisionSummary block at the end is REQUIRED for this synthesis to
 
         for attempt in range(max_retries + 1):
             synthesis_response = client.chat.completions.create(
-                model="gpt-5-mini",
+                model="gpt-5.2",
                 messages=[
                     {
                         "role": "system",
@@ -3479,8 +3479,7 @@ def _impl_summarize_conversation_task(self, conversation_id, user_id=None):
         ),
         agent_name='PersonalAssistant',
         task_type='conversation_summary',
-        max_tokens=2000,
-        temperature=0.3,
+        max_completion_tokens=2000,
     )
 
     summary = result.get('response', 'Summary generation failed.')

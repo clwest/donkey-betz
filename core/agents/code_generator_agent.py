@@ -767,7 +767,7 @@ Requirements:
 Return the code in a properly formatted code block."""
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": f"You are an expert {language} developer. Generate clean, efficient, well-documented code."},
                 {"role": "user", "content": prompt}
@@ -843,7 +843,7 @@ content
 ```"""
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": "You are an expert software architect. Create well-structured, production-ready project scaffolds."},
                 {"role": "user", "content": prompt}
@@ -938,7 +938,7 @@ Provide:
 4. Severity rating (critical/high/medium/low) for each issue"""
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": f"You are a senior {language} code reviewer with expertise in security, performance, and best practices."},
                 {"role": "user", "content": prompt}
@@ -989,7 +989,7 @@ Provide:
 4. Any breaking changes (if API was modified)"""
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": f"You are a {language} refactoring expert. Improve code while maintaining correctness."},
                 {"role": "user", "content": prompt}
@@ -1044,7 +1044,7 @@ Requirements:
 Generate complete, runnable test code."""
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": f"You are a test engineering expert specializing in {test_framework}. Generate thorough, maintainable tests."},
                 {"role": "user", "content": prompt}

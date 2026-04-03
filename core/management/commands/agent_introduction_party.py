@@ -175,7 +175,7 @@ class Command(BaseCommand):
         """Generate a fun introduction for an agent."""
         try:
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5.2",
                 messages=[{
                     "role": "user",
                     "content": f"""You are {agent.name}, an AI agent with this description:
@@ -185,7 +185,7 @@ Write a brief, fun introduction of yourself (2-3 sentences) for an Agent Introdu
 Be friendly and mention what you're passionate about or good at.
 Keep it under 100 words."""
                 }],
-                max_tokens=150
+                max_completion_tokens=150
             )
             return response.choices[0].message.content.strip()
         except Exception as e:
@@ -195,7 +195,7 @@ Keep it under 100 words."""
         """Generate a conversation topic between two agents."""
         try:
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5.2",
                 messages=[{
                     "role": "user",
                     "content": f"""Two AI agents are meeting at a party:
@@ -205,7 +205,7 @@ Keep it under 100 words."""
 Suggest ONE brief topic (5-10 words) they might find interesting to discuss together.
 Just give the topic, nothing else."""
                 }],
-                max_tokens=30
+                max_completion_tokens=30
             )
             return response.choices[0].message.content.strip()
         except Exception:
@@ -215,7 +215,7 @@ Just give the topic, nothing else."""
         """Generate a brief exchange between two agents."""
         try:
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5.2",
                 messages=[{
                     "role": "user",
                     "content": f"""Write a brief, friendly exchange (4 lines total) between:
@@ -232,7 +232,7 @@ Format:
 
 Keep it brief and natural."""
                 }],
-                max_tokens=200
+                max_completion_tokens=200
             )
             return response.choices[0].message.content.strip()
         except Exception:
@@ -243,7 +243,7 @@ Keep it brief and natural."""
         other_agents = [a.name for a in all_agents if a.id != agent.id][:5]
         try:
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5.2",
                 messages=[{
                     "role": "user",
                     "content": f"""You are {agent.name}. Write a brief dream (3-4 sentences) about the
@@ -252,7 +252,7 @@ Agent Introduction Party you just attended. You met agents like: {', '.join(othe
 Make it creative, slightly surreal like a dream, but positive about
 collaboration and future possibilities. Keep it under 75 words."""
                 }],
-                max_tokens=120
+                max_completion_tokens=120
             )
             return response.choices[0].message.content.strip()
         except Exception:

@@ -180,7 +180,7 @@ class TTSTextOptimizer:
             # - Uses max_completion_tokens instead of max_tokens
             # - No temperature parameter (reasoning models don't support it)
             response = client.chat.completions.create(
-                model="gpt-5-mini",
+                model="gpt-5.2",
                 messages=[
                     {
                         "role": "system",

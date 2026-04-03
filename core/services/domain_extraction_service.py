@@ -369,7 +369,7 @@ Example for "AI-powered fitness coaching app":
 }}"""
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[{"role": "user", "content": prompt}],
             max_completion_tokens=500
             # Note: gpt-5-mini reasoning models don't support temperature

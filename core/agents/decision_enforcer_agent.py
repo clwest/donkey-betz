@@ -369,10 +369,9 @@ Respond with ONLY valid JSON. No markdown, no explanation outside JSON.
         ]
 
         response = client.chat.completions.create(
-            model="gpt-4o",  # Use GPT-4 for decision quality
+            model="gpt-5.2",  # Use GPT-4 for decision quality
             messages=messages,
-            max_tokens=2000,
-            temperature=0.3,  # Low temperature for consistency
+            max_completion_tokens=2000,
         )
 
         content = response.choices[0].message.content.strip()

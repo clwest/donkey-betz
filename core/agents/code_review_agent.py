@@ -698,7 +698,7 @@ For each issue found:
 End with a summary score (1-10) and overall assessment."""
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": "You are a thorough, constructive code reviewer. Be specific and actionable."},
                 {"role": "user", "content": prompt}
@@ -776,7 +776,7 @@ Also provide:
 
         try:
             response = client.chat.completions.create(
-                model="gpt-5-mini",
+                model="gpt-5.2",
                 messages=[
                     {"role": "system", "content": "You are a security expert. Be concise but thorough. Identify vulnerabilities and provide actionable fixes."},
                     {"role": "user", "content": prompt}
@@ -865,7 +865,7 @@ For each issue:
 Provide overall performance score and optimization priority list."""
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": "You are a performance optimization expert. Identify inefficiencies and provide optimized solutions."},
                 {"role": "user", "content": prompt}
@@ -941,7 +941,7 @@ List each violation with:
 End with style compliance percentage."""
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": f"You are a {language} style expert familiar with {style_guide} conventions."},
                 {"role": "user", "content": prompt}
@@ -1000,7 +1000,7 @@ Provide:
    - Further improvements possible"""
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": f"You are a {language} refactoring expert. Improve code while maintaining correctness."},
                 {"role": "user", "content": prompt}

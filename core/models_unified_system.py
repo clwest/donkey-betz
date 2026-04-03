@@ -11389,7 +11389,7 @@ Respond in JSON format:
         try:
             client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
             response = client.chat.completions.create(
-                model="gpt-5-mini",
+                model="gpt-5.2",
                 messages=[{"role": "user", "content": prompt}],
                 max_completion_tokens=200,
                 reasoning_effort="low",

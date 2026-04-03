@@ -165,7 +165,7 @@ If the artifact lacks detail, note that in open_questions and reduce confidence 
 
         try:
             response = self.client.chat.completions.create(
-                model="gpt-5-mini",
+                model="gpt-5.2",
                 messages=[
                     {
                         "role": "system",
@@ -462,7 +462,7 @@ Consider: Is this dream actionable? Does it align with platform goals? What's th
 
         try:
             response = self.client.chat.completions.create(
-                model="gpt-5-mini",
+                model="gpt-5.2",
                 messages=[
                     {
                         "role": "system",

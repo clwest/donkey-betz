@@ -347,7 +347,7 @@ if st.button('Generate Content'):
     if topic and openai.api_key:
         try:
             response = openai.chat.completions.create(
-                model="gpt-5-mini",
+                model="gpt-5.2",
                 messages=[
                     {"role": "system", "content": "You are a professional content writer."},
                     {"role": "user", "content": f"Create a {content_type.lower()} about {topic}"}
@@ -421,7 +421,7 @@ def chat():
         message = request.json.get('message')
 
         response = openai.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": "You are a helpful AI assistant."},
                 {"role": "user", "content": message}
@@ -500,7 +500,7 @@ def main():
 
         try:
             response = openai.chat.completions.create(
-                model="gpt-5-mini",
+                model="gpt-5.2",
                 messages=[
                     {{"role": "system", "content": "You are an AI assistant."}},
                     {{"role": "user", "content": user_input}}

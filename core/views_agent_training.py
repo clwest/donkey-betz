@@ -350,7 +350,7 @@ Current conversation context: You are chatting directly with a user through the 
         client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=messages,
             max_completion_tokens=2000
         )
@@ -437,7 +437,7 @@ Execute the following task with precision and detail:
         client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=messages,
             max_completion_tokens=3000
         )

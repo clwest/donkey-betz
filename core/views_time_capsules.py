@@ -493,7 +493,7 @@ Write in first person as the agent reflecting on your past self's words."""
 
         # Session 749: GPT-5-mini needs higher token limit for reasoning
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[{"role": "user", "content": prompt}],
             max_completion_tokens=2000
         )
@@ -664,7 +664,7 @@ MESSAGE: [your message]"""
                 try:
                     # Session 749: GPT-5-mini needs higher token limit for reasoning
                     response = client.chat.completions.create(
-                        model="gpt-5-mini",
+                        model="gpt-5.2",
                         messages=[{"role": "user", "content": prompt}],
                         max_completion_tokens=2000
                     )

@@ -424,7 +424,7 @@ Make it compelling and producible."""
         try:
             if self.openai_client:
                 response = self.openai_client.chat.completions.create(
-                    model="gpt-5-mini",
+                    model="gpt-5.2",
                     messages=[
                         {"role": "system", "content": "You are a creative copywriter and content strategist."},
                         {"role": "user", "content": script_prompt}

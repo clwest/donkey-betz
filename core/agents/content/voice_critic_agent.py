@@ -458,13 +458,12 @@ Return this exact JSON structure:
 }}"""
 
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5.2",
                 messages=[
                     {"role": "system", "content": self.system_prompt},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=1000,
-                temperature=0.3,  # Lower temperature for consistent scoring
+                max_completion_tokens=1000,
             )
 
             response_text = response.choices[0].message.content or ""

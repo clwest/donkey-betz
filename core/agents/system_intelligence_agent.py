@@ -237,7 +237,7 @@ and only important ones should be promoted. Don't treat this as a crisis."""
                 # Session 919: Increase max_completion_tokens for GPT-5-mini
                 # Reasoning models need more headroom for reasoning_tokens
                 response = client.chat.completions.create(
-                    model="gpt-5-mini",
+                    model="gpt-5.2",
                     messages=messages,
                     tools=self.get_tools_with_delegation(),
                     tool_choice="auto",
@@ -295,7 +295,7 @@ and only important ones should be promoted. Don't treat this as a crisis."""
                     # Session 919: Increase max_completion_tokens for GPT-5-mini reasoning model
                     # Reasoning tokens consume part of the budget, so we need more headroom
                     final_response = client.chat.completions.create(
-                        model="gpt-5-mini",
+                        model="gpt-5.2",
                         messages=messages,
                         max_completion_tokens=4000
                     )

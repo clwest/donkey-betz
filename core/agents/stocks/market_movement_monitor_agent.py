@@ -223,7 +223,7 @@ Focus on stocks without corresponding news explanations for moves."""
             client = OpenAI()
 
             response = client.chat.completions.create(
-                model="gpt-5-mini",
+                model="gpt-5.2",
                 messages=messages,
                 tools=self.get_tools_with_delegation(),
                 tool_choice="auto",
@@ -273,7 +273,7 @@ Focus on stocks without corresponding news explanations for moves."""
 
                 # Get final synthesis from LLM
                 final_response = client.chat.completions.create(
-                    model="gpt-5-mini",
+                    model="gpt-5.2",
                     messages=messages,
                     max_completion_tokens=3000
                 )

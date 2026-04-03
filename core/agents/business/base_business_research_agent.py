@@ -604,7 +604,7 @@ Research Type: {self.research_type}""")
             # Session 338: Use gpt-4o-mini for cost efficiency
             response = self._call_openai_with_retry(
                 messages=messages,
-                model="gpt-4o-mini",
+                model="gpt-5.2",
                 tools=self.get_tools_with_delegation(),
                 tool_choice="auto",
                 max_completion_tokens=6000,  # High for reasoning + output

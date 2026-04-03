@@ -781,10 +781,9 @@ Generate the complete document now:"""
             # Use GPT-4 for high-quality technical writing
             # Session 814: Increased max_tokens to handle large context + response
             response = client.chat.completions.create(
-                model="gpt-4o",  # or gpt-4-turbo for cost savings
+                model="gpt-5.2",  # or gpt-4-turbo for cost savings
                 messages=messages,
-                max_tokens=8000,
-                temperature=0.3,  # Lower temperature for consistent, formal output
+                max_completion_tokens=8000,
             )
 
             return response.choices[0].message.content

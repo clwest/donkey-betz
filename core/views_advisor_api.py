@@ -86,7 +86,7 @@ def advisor_consult(request):
         guidance = enforcer.generate_completion(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
-            model="gpt-5-mini",
+            model="gpt-5.2",
             max_completion_tokens=4000,
         )
     except Exception as llm_error:  # noqa: BLE001 (we want to log & fallback)

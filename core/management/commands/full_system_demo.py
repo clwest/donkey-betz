@@ -242,9 +242,9 @@ What patterns do you see emerging? What excites you about being part of this col
 Generate a creative, insightful dream (2-3 paragraphs)."""
 
                 response = client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model="gpt-5.2",
                     messages=[{"role": "user", "content": prompt}],
-                    max_tokens=500
+                    max_completion_tokens=500
                 )
 
                 dream_content = response.choices[0].message.content
@@ -298,9 +298,9 @@ Write a brief 2-3 sentence contribution to a brainstorming discussion about "How
 Speak from your unique perspective based on your role. Be concise and insightful."""
 
                 response = client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model="gpt-5.2",
                     messages=[{"role": "user", "content": prompt}],
-                    max_tokens=200
+                    max_completion_tokens=200
                 )
 
                 message_content = response.choices[0].message.content
@@ -368,9 +368,9 @@ CONCLUSION: [closing paragraph]
 TAGS: [comma-separated tags]"""
 
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5.2",
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=2000
+                max_completion_tokens=2000
             )
 
             content = response.choices[0].message.content
@@ -484,28 +484,28 @@ Provide your analysis from your agent perspective."""
 
             # TopicMiner analysis
             topic_response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5.2",
                 messages=[{"role": "system", "content": "You are TopicMiner, analyzing trending potential."},
                          {"role": "user", "content": debate_prompt}],
-                max_tokens=600
+                max_completion_tokens=600
             )
             topic_miner = topic_response.choices[0].message.content
 
             # Contrarian analysis
             contrarian_response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5.2",
                 messages=[{"role": "system", "content": "You are Contrarian, providing counter-perspectives."},
                          {"role": "user", "content": debate_prompt}],
-                max_tokens=600
+                max_completion_tokens=600
             )
             contrarian = contrarian_response.choices[0].message.content
 
             # Analyst analysis
             analyst_response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5.2",
                 messages=[{"role": "system", "content": "You are Analyst, predicting performance."},
                          {"role": "user", "content": debate_prompt}],
-                max_tokens=600
+                max_completion_tokens=600
             )
             analyst = analyst_response.choices[0].message.content
 
@@ -539,9 +539,9 @@ Create a 3-minute podcast script with:
 Make it conversational and engaging."""
 
             script_response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5.2",
                 messages=[{"role": "user", "content": script_prompt}],
-                max_tokens=1200
+                max_completion_tokens=1200
             )
             script = script_response.choices[0].message.content
 
@@ -593,9 +593,9 @@ Max length: {max_chars} characters
 Include relevant hashtags/mentions."""
 
                 response = client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model="gpt-5.2",
                     messages=[{"role": "user", "content": prompt}],
-                    max_tokens=200
+                    max_completion_tokens=200
                 )
 
                 content = response.choices[0].message.content

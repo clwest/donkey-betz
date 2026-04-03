@@ -580,7 +580,7 @@ Examples:
 Return ONLY the JSON, no explanation."""
 
             response = self.openai_client.chat.completions.create(
-                model="gpt-5-mini",
+                model="gpt-5.2",
                 messages=[
                     {"role": "system", "content": "Extract search parameters from business ideas. Return only valid JSON."},
                     {"role": "user", "content": prompt}
@@ -822,7 +822,7 @@ You MUST respond with ONLY valid JSON in this exact format (no markdown, no expl
 
             # Session 876: Increased tokens for GPT-5-mini reasoning headroom
             response = self.openai_client.chat.completions.create(
-                model="gpt-5-mini",
+                model="gpt-5.2",
                 messages=[
                     {"role": "system", "content": "You are a business analyst scoring opportunities. Always respond with valid JSON only."},
                     {"role": "user", "content": prompt}
@@ -1139,7 +1139,7 @@ Return this as a structured analysis. Be specific and actionable, not generic.""
             # Reasoning models need max_completion_tokens (not max_tokens)
             # and allocate tokens for internal reasoning + visible output
             response = self.openai_client.chat.completions.create(
-                model="gpt-5-mini",
+                model="gpt-5.2",
                 messages=[{"role": "user", "content": prompt}],
                 max_completion_tokens=6000,  # High enough for reasoning + output
             )

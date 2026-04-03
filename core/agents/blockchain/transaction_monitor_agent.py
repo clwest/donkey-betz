@@ -574,7 +574,7 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
 5. Recommended action"""
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": "You are a blockchain transaction analyst. Analyze transactions for security risks and attack patterns."},
                 {"role": "user", "content": prompt}
@@ -637,7 +637,7 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
 5. Related addresses to monitor"""
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": "You are an expert at detecting blockchain attack patterns. Analyze transaction sequences for known exploits."},
                 {"role": "user", "content": prompt}
@@ -695,7 +695,7 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
 4. Final destination analysis"""
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": "You are a blockchain forensics expert. Trace value flows to identify money laundering, attack profits, or suspicious activity."},
                 {"role": "user", "content": prompt}
@@ -752,7 +752,7 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
 5. Recommended monitoring level"""
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": "You are a blockchain address reputation analyst. Assess addresses for risk and known malicious associations."},
                 {"role": "user", "content": prompt}
