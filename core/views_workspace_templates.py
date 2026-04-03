@@ -449,3 +449,69 @@ def pipeline_history(request, workspace_id):
             'created_at': r.created_at.isoformat(),
         } for r in runs],
     })
+
+
+# ── Workspace Members ────────────────────────────────────────────────────────
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_workspace_member(request, workspace_id):
+    """
+    Add a user to a workspace with a role.
+
+    Body:
+        username: str (required)
+        role: str (owner/editor/reviewer/viewer, default: viewer)
+
+    Auto-sends onboarding DM to the new member via Rigby.
+    """
+    from core.models_skin_layer import ProjectWorkspace
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+
+    try:
+        workspace = ProjectWorkspace.objects.get(id=workspace_id, user=request.user)
+    except ProjectWorkspace.DoesNotExist:
+        return Response({'success': False, 'error': 'Workspace not found or not owner'}, status=404)
+
+    username = request.data.get('username', '').strip()
+    role = request.data.get('role', 'viewer')
+
+    if not username:
+        return Response({'success': False, 'error': 'username is required'}, status=400)
+
+    try:
+        member_user = User.objects.get(username=username)
+    except User.DoesNotExist:
+        return Response({'success': False, 'error': f'User "{username}" not found'}, status=404)
+
+    # Store membership in workspace config metadata
+    config = getattr(workspace, 'config', None)
+    if config:
+        members = config.settings.get('members', [])
+        # Check if already a member
+        if any(m.get('username') == username for m in members):
+            return Response({'success': False, 'error': f'{username} is already a member'}, status=409)
+        members.append({
+            'username': username,
+            'user_id': str(member_user.id),
+            'role': role,
+            'added_at': timezone.now().isoformat(),
+            'added_by': request.user.username,
+        })
+        config.settings['members'] = members
+        config.save(update_fields=['settings'])
+
+    # Send onboarding DM
+    from core.services.user_onboarding_service import onboard_to_workspace
+    onboard_result = onboard_to_workspace(member_user, workspace, role)
+
+    return Response({
+        'success': True,
+        'username': username,
+        'role': role,
+        'workspace': workspace.name,
+        'onboarding': onboard_result,
+        'message': f'{username} added to {workspace.name} as {role}',
+    }, status=201)

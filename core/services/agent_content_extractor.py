@@ -129,11 +129,15 @@ def _extract_research(data: dict, message: str) -> str:
     """ResearchAgent stores in data['results'] + data['key_insights']."""
     parts = ["# Research Findings\n"]
 
-    # Key insights (top 5)
+    # Key insights (top 5) — filter out junk (single words, task description fragments)
     insights = data.get('key_insights', [])
-    if insights:
+    real_insights = [
+        ins for ins in insights
+        if isinstance(ins, str) and len(ins) > 20 and ' ' in ins
+    ]
+    if real_insights:
         parts.append("## Key Insights\n")
-        for i, insight in enumerate(insights, 1):
+        for i, insight in enumerate(real_insights, 1):
             parts.append(f"{i}. {insight}")
         parts.append("")
 
@@ -222,18 +226,27 @@ def _extract_trend_analysis(data: dict, message: str) -> str:
     if isinstance(provenance, dict):
         parts.append(f"**Data window:** {provenance.get('data_window', 'N/A')}")
         sources = provenance.get('sources', {})
-        if sources:
+        if isinstance(sources, dict):
             parts.append(f"**Sources:** {', '.join(f'{k} ({v} records)' for k, v in sources.items() if isinstance(v, (int, float)))}")
+        elif isinstance(sources, list):
+            parts.append(f"**Sources:** {len(sources)} sources")
         parts.append("")
 
-    # Tool results
-    for tr in data.get('tool_results', []):
-        if isinstance(tr, dict):
-            tool_name = tr.get('tool', tr.get('name', ''))
-            result_data = tr.get('result', tr)
-            if tool_name:
-                parts.append(f"## {tool_name}\n")
-            parts.append(_format_dict_as_markdown(result_data, depth=0))
+    # Tool results — may be a list of dicts OR a list of lists
+    tool_results = data.get('tool_results', [])
+    if isinstance(tool_results, list):
+        for tr in tool_results:
+            if isinstance(tr, dict):
+                tool_name = tr.get('tool', tr.get('name', ''))
+                result_data = tr.get('result', tr)
+                if tool_name:
+                    parts.append(f"## {tool_name}\n")
+                parts.append(_format_dict_as_markdown(result_data, depth=0))
+            elif isinstance(tr, list):
+                for item in tr[:10]:
+                    parts.append(f"- {str(item)[:200]}")
+            elif isinstance(tr, str):
+                parts.append(f"- {tr[:300]}")
 
     # If message has the provenance block, use it
     if message and len(message) > 200:

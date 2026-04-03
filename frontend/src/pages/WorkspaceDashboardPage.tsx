@@ -393,11 +393,15 @@ export default function WorkspaceDashboardPage() {
         <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 mb-6">
           {/* Quality gate failure banner */}
           {pipelineRun?.error_message && pipelineRun.error_message.includes('Quality gate') && (
-            <div className="mb-4 p-3 bg-red-900/30 border border-red-800/50 rounded-lg">
-              <div className="text-sm font-medium text-red-300 mb-1">Topic Alignment Failed</div>
-              <div className="text-xs text-red-400">{pipelineRun.error_message}</div>
-              <div className="text-xs text-gray-500 mt-1">
-                Tip: Make your workspace brief topic more specific, or add focus areas that match what you want researched.
+            <div className="mb-4 p-4 bg-red-900/30 border border-red-800/50 rounded-lg">
+              <div className="text-sm font-medium text-red-300 mb-2">Research didn't match your topic</div>
+              <div className="text-xs text-red-400 mb-3">{pipelineRun.error_message}</div>
+              <div className="text-xs text-gray-400 space-y-1">
+                <p className="font-medium text-gray-300">To fix this, try:</p>
+                <p>1. Add more **Focus Areas** in your brief (keywords the agents should search for)</p>
+                <p>2. Make the topic more specific — instead of a question, try a statement with key terms</p>
+                <p>3. Add **Additional Notes** with specific sources or angles to research</p>
+                <p>4. Click **Retry Pipeline** after updating your brief</p>
               </div>
             </div>
           )}
