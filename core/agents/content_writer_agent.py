@@ -728,11 +728,17 @@ For this {content_type}, ensure:
         # Session 1103: If pipeline provided research evidence, inject it as highest-priority
         # context so GPT uses it instead of generic spider data
         research_content = context.get('research', '')
-        if research_content and len(research_content) > 200:
-            self._evidence_context_override = research_content
-            logger.info("📝 [Session 1103] Evidence-first mode: %d chars of research injected as primary source", len(research_content))
+        logger.info(
+            "📝 [Session 1103] ContentWriterAgent research check: context keys=%s, research_len=%d, content_keys=%s",
+            list(context.keys())[:10], len(research_content) if research_content else 0,
+            list(context.get('content', {}).keys())[:5] if isinstance(context.get('content'), dict) else type(context.get('content')).__name__,
+        )
+        if research_content and len(str(research_content)) > 200:
+            self._evidence_context_override = str(research_content)
+            logger.info("📝 [Session 1103] Evidence-first mode ACTIVE: %d chars injected as primary source", len(str(research_content)))
         else:
             self._evidence_context_override = ''
+            logger.info("📝 [Session 1103] Evidence-first mode SKIPPED: research_content=%s", repr(research_content)[:100] if research_content else 'EMPTY')
 
         # Session 529: Build intelligent prompt with full context
         self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
