@@ -676,7 +676,7 @@ Generate a prediction in the following JSON format:
 Make your prediction specific enough to be verifiable. Avoid vague statements."""
 
         response = client.chat.completions.create(
-            model="gpt-5.2",
+            model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": "You are an AI agent making predictions. Respond only with valid JSON."},
                 {"role": "user", "content": prompt}

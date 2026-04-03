@@ -405,7 +405,7 @@ Provide a brief root cause analysis (2-3 sentences) and confidence level (0.0-1.
 Format: ROOT_CAUSE: <analysis> | CONFIDENCE: <0.0-1.0>"""
 
             response = client.chat.completions.create(
-                model="gpt-5.2",
+                model="gpt-5-mini",
                 messages=[{"role": "user", "content": prompt}],
                 max_completion_tokens=200,
             )

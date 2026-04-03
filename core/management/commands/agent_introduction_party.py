@@ -175,7 +175,7 @@ class Command(BaseCommand):
         """Generate a fun introduction for an agent."""
         try:
             response = client.chat.completions.create(
-                model="gpt-5.2",
+                model="gpt-5-mini",
                 messages=[{
                     "role": "user",
                     "content": f"""You are {agent.name}, an AI agent with this description:
@@ -195,7 +195,7 @@ Keep it under 100 words."""
         """Generate a conversation topic between two agents."""
         try:
             response = client.chat.completions.create(
-                model="gpt-5.2",
+                model="gpt-5-mini",
                 messages=[{
                     "role": "user",
                     "content": f"""Two AI agents are meeting at a party:
@@ -215,7 +215,7 @@ Just give the topic, nothing else."""
         """Generate a brief exchange between two agents."""
         try:
             response = client.chat.completions.create(
-                model="gpt-5.2",
+                model="gpt-5-mini",
                 messages=[{
                     "role": "user",
                     "content": f"""Write a brief, friendly exchange (4 lines total) between:
@@ -243,7 +243,7 @@ Keep it brief and natural."""
         other_agents = [a.name for a in all_agents if a.id != agent.id][:5]
         try:
             response = client.chat.completions.create(
-                model="gpt-5.2",
+                model="gpt-5-mini",
                 messages=[{
                     "role": "user",
                     "content": f"""You are {agent.name}. Write a brief dream (3-4 sentences) about the

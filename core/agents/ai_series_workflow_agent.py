@@ -1471,7 +1471,7 @@ Script:"""
             try:
                 # Session 876: Increased tokens for GPT-5-mini reasoning headroom
                 response = self.client.chat.completions.create(
-                    model="gpt-5.2",
+                    model="gpt-5-mini",
                     messages=[{"role": "user", "content": script_prompt}],
                     max_completion_tokens=4000
                 )

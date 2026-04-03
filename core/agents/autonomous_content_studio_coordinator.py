@@ -767,7 +767,7 @@ Create a 3-5 minute podcast script with:
 Make it conversational and engaging. Use natural speech patterns."""
 
             response = client.chat.completions.create(
-                model="gpt-5.2",
+                model="gpt-5-mini",
                 messages=[{"role": "user", "content": script_prompt}],
                 max_completion_tokens=2000
             )
@@ -790,7 +790,7 @@ Script excerpt:
 Reply with ONLY the title, nothing else. Do not include the show name prefix."""
 
             title_response = client.chat.completions.create(
-                model="gpt-5.2",
+                model="gpt-5-mini",
                 messages=[{"role": "user", "content": title_prompt}],
                 max_completion_tokens=50
             )

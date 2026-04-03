@@ -196,7 +196,7 @@ Return ONLY valid JSON, no markdown fences."""
 
         client = OpenAI(api_key=django_settings.OPENAI_API_KEY)
         response = client.chat.completions.create(
-            model="gpt-5.2",  # Session 1103: upgraded from gpt-4o-mini
+            model="gpt-5-mini",  # Session 1103: upgraded from gpt-4o-mini
             messages=[
                 {"role": "system", "content": "You are a video content strategist. Generate structured metadata for videos based on their transcripts. Always return valid JSON."},
                 {"role": "user", "content": prompt},
@@ -819,7 +819,7 @@ Create a 3-5 minute podcast script with:
 Make it conversational and engaging. Use natural speech patterns."""
 
             response = client.chat.completions.create(
-                model="gpt-5.2",  # Session 1103: upgraded from gpt-4o-mini
+                model="gpt-5-mini",  # Session 1103: upgraded from gpt-4o-mini
                 messages=[{"role": "user", "content": script_prompt}],
                 max_completion_tokens=2000
             )

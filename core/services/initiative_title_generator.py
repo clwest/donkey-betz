@@ -278,7 +278,7 @@ Rules:
 Return ONLY the title, nothing else."""
 
         response = client.chat.completions.create(
-            model="gpt-5.2",
+            model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": "You are a title generator. Output only the title."},
                 {"role": "user", "content": prompt}

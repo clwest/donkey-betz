@@ -589,7 +589,7 @@ content
 ```"""
 
         response = client.chat.completions.create(
-            model="gpt-5.2",
+            model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": "You are a senior full-stack developer. Generate complete, production-ready code."},
                 {"role": "user", "content": prompt}
@@ -643,7 +643,7 @@ Generate:
 5. Example usage with curl"""
 
         response = client.chat.completions.create(
-            model="gpt-5.2",
+            model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": f"You are a {framework} backend expert. Generate clean, secure API code."},
                 {"role": "user", "content": prompt}
@@ -693,7 +693,7 @@ Generate:
 5. Error boundary handling"""
 
         response = client.chat.completions.create(
-            model="gpt-5.2",
+            model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": f"You are a {framework} frontend expert. Generate modern, accessible components."},
                 {"role": "user", "content": prompt}
@@ -746,7 +746,7 @@ Generate:
 5. Example queries for common operations"""
 
         response = client.chat.completions.create(
-            model="gpt-5.2",
+            model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": f"You are a database architect expert in {orm}. Design efficient, normalized schemas."},
                 {"role": "user", "content": prompt}
@@ -796,7 +796,7 @@ Generate:
 6. Error handling utilities"""
 
         response = client.chat.completions.create(
-            model="gpt-5.2",
+            model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": f"You are a {frontend_framework} integration expert. Generate clean, type-safe API clients."},
                 {"role": "user", "content": prompt}

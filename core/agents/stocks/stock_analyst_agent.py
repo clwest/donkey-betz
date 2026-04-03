@@ -322,7 +322,7 @@ Alert on:
             client = OpenAI()
 
             response = client.chat.completions.create(
-                model="gpt-5.2",
+                model="gpt-5-mini",
                 messages=messages,
                 tools=self.get_tools_with_delegation(),
                 tool_choice="auto",
@@ -372,7 +372,7 @@ Alert on:
 
                 # Get final synthesis from LLM
                 final_response = client.chat.completions.create(
-                    model="gpt-5.2",
+                    model="gpt-5-mini",
                     messages=messages,
                     max_completion_tokens=3000
                 )
@@ -709,7 +709,7 @@ Provide:
             client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
             # Session 494: Use gpt-5-mini (reasoning model)
             response = client.chat.completions.create(
-                model="gpt-5.2",
+                model="gpt-5-mini",
                 messages=[
                     {"role": "system", "content": self.system_prompt},
                     {"role": "user", "content": prompt}

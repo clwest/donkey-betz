@@ -2262,7 +2262,7 @@ Consider these trends when crafting the response to maximize relevance and engag
 
         try:
             response = self.client.chat.completions.create(
-                model="gpt-5.2",
+                model="gpt-5-mini",
                 messages=messages,
                 tools=effective_tools if effective_tools else None,
                 tool_choice="auto" if effective_tools else None,

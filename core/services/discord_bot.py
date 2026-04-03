@@ -7225,7 +7225,7 @@ Spoken response:"""
                 try:
                     # Session 494: Use gpt-5-mini (reasoning model)
                     response = client.chat.completions.create(
-                        model="gpt-5.2",
+                        model="gpt-5-mini",
                         messages=[{"role": "user", "content": prompt}],
                         max_completion_tokens=2000  # Reasoning model needs more tokens
                     )
@@ -7573,7 +7573,7 @@ Conversational response:"""
 
                 # Session 494: Use gpt-5-mini (reasoning model)
                 response = client.chat.completions.create(
-                    model="gpt-5.2",
+                    model="gpt-5-mini",
                     messages=[{"role": "user", "content": prompt}],
                     max_completion_tokens=2000  # Reasoning model needs more tokens
                 )
@@ -7773,7 +7773,7 @@ Keep the response concise but insightful (max 300 words)."""
                 client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
                 # Session 494: Use gpt-5-mini (reasoning model)
                 response = client.chat.completions.create(
-                    model="gpt-5.2",
+                    model="gpt-5-mini",
                     messages=[
                         {"role": "system", "content": advisor_prompt},
                         {"role": "user", "content": question}

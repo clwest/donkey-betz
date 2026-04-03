@@ -1371,7 +1371,7 @@ Your job is to keep this system running smoothly and surfacing valuable narrativ
 
             # Call OpenAI with tools
             response = client.chat.completions.create(
-                model="gpt-5.2",
+                model="gpt-5-mini",
                 messages=messages,
                 tools=self.get_tools_with_delegation(),
                 tool_choice="auto",

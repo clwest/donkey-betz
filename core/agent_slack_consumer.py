@@ -623,7 +623,7 @@ Respond helpfully and concisely, drawing on your specialized knowledge."""
             client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
             response = client.responses.create(
-                model="gpt-5.2",
+                model="gpt-5-mini",
                 input=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}

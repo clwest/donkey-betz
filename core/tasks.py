@@ -2665,7 +2665,7 @@ Create a detailed FEATURE SPECIFICATION that includes:
 Write in a professional, actionable format. Be specific and creative."""
 
     response = client.chat.completions.create(
-        model="gpt-5.2",
+        model="gpt-5-mini",
         messages=[{"role": "user", "content": prompt}],
         max_completion_tokens=4000  # Higher for reasoning models
     )
@@ -2699,7 +2699,7 @@ Create a detailed CONTENT STRATEGY that includes:
 Write in a professional, actionable format. Be creative and specific."""
 
     response = client.chat.completions.create(
-        model="gpt-5.2",
+        model="gpt-5-mini",
         messages=[{"role": "user", "content": prompt}],
         max_completion_tokens=2500  # Higher for reasoning models
     )
@@ -2730,7 +2730,7 @@ Create a comprehensive RESEARCH REPORT that includes:
 Write in a professional research format. Be thorough and analytical."""
 
     response = client.chat.completions.create(
-        model="gpt-5.2",
+        model="gpt-5-mini",
         messages=[{"role": "user", "content": prompt}],
         max_completion_tokens=2500  # Higher for reasoning models
     )
@@ -2761,7 +2761,7 @@ Create an EXPERIMENT REPORT that includes:
 Write in a scientific format. Be creative but rigorous."""
 
     response = client.chat.completions.create(
-        model="gpt-5.2",
+        model="gpt-5-mini",
         messages=[{"role": "user", "content": prompt}],
         max_completion_tokens=2500  # Higher for reasoning models
     )
@@ -2792,7 +2792,7 @@ Create a comprehensive IMPLEMENTATION DOCUMENT that includes:
 Write in a professional, actionable format."""
 
     response = client.chat.completions.create(
-        model="gpt-5.2",
+        model="gpt-5-mini",
         messages=[{"role": "user", "content": prompt}],
         max_completion_tokens=2500  # Higher for reasoning models
     )

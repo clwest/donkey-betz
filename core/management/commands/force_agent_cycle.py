@@ -121,7 +121,7 @@ class Command(BaseCommand):
                         # GPT-5-mini is a reasoning model: use max_completion_tokens, no temperature
                         # Needs ~1500 tokens for reasoning + output
                         response = client.chat.completions.create(
-                            model="gpt-5.2",
+                            model="gpt-5-mini",
                             messages=[
                                 {
                                     "role": "system",
@@ -141,7 +141,7 @@ class Command(BaseCommand):
 
                         # Generate a short title
                         title_response = client.chat.completions.create(
-                            model="gpt-5.2",
+                            model="gpt-5-mini",
                             messages=[
                                 {
                                     "role": "system",
@@ -231,7 +231,7 @@ class Command(BaseCommand):
                     # Note: GPT-5-mini is a reasoning model - needs high max_completion_tokens
                     # because tokens are split between internal reasoning + visible output
                     response = client.chat.completions.create(
-                        model="gpt-5.2",
+                        model="gpt-5-mini",
                         messages=[
                             {
                                 "role": "system",
@@ -328,7 +328,7 @@ class Command(BaseCommand):
                     # Generate a knowledge insight
                     # GPT-5-mini needs high token count for reasoning + output
                     response = client.chat.completions.create(
-                        model="gpt-5.2",
+                        model="gpt-5-mini",
                         messages=[
                             {
                                 "role": "system",
@@ -348,7 +348,7 @@ class Command(BaseCommand):
 
                     # Generate title
                     title_response = client.chat.completions.create(
-                        model="gpt-5.2",
+                        model="gpt-5-mini",
                         messages=[
                             {
                                 "role": "system",
