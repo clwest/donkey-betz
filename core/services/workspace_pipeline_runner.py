@@ -2,33 +2,32 @@
 Workspace Pipeline Runner
 ==========================
 
-Executes a workspace's pipeline stages sequentially, dispatching
-each stage's agent via AgentRouter and tracking progress in PipelineRun.
+Executes a workspace's pipeline stages, dispatching agents via AgentRouter.
 
 Key behaviors:
-- Each stage saves a Deliverable to the workspace with its output
-- Previous stage output is passed as context to the next stage
+- Stages with the same parallel_group run concurrently
+- Each stage saves a Deliverable with its output
+- Previous stage/group outputs flow forward as context
 - Per-stage wall-clock timeout prevents hung agents (default 10 min)
-- Stages continue after failure — one bad stage doesn't cancel the rest
+- Stages continue after failure
 
-Usage (via Celery task):
+Usage:
     from core.tasks import execute_workspace_pipeline
     execute_workspace_pipeline.delay(str(run.id))
 """
 
 import logging
 import os
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as _FuturesTimeout
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as _FuturesTimeout, as_completed
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
-# Default per-stage timeout in seconds (env-configurable)
-STAGE_TIMEOUT_SECONDS = int(os.environ.get('PIPELINE_STAGE_TIMEOUT', '600'))  # 10 min
+STAGE_TIMEOUT_SECONDS = int(os.environ.get('PIPELINE_STAGE_TIMEOUT', '600'))
 
 
 def execute_pipeline_run(run_id: str) -> dict:
-    """Execute an existing PipelineRun with deliverable creation and output threading."""
+    """Execute a PipelineRun — supports parallel stage groups."""
     from core.models_workspace_templates import PipelineRun
     from core.agent_router import AgentRouter
 
@@ -40,7 +39,6 @@ def execute_pipeline_run(run_id: str) -> dict:
     workspace = run.workspace
     config = getattr(workspace, 'config', None)
 
-    # Check governance mode
     if config:
         gov_mode = config.effective_governance_mode
         if gov_mode in ('freeze', 'safe_mode'):
@@ -54,106 +52,27 @@ def execute_pipeline_run(run_id: str) -> dict:
     run.started_at = timezone.now()
     run.save(update_fields=['status', 'started_at'])
 
-    logger.info(
-        "Pipeline run %s started for workspace %s (%d stages)",
-        run.id, workspace.name, len(run.pipeline_snapshot),
-    )
+    logger.info("Pipeline %s started (%d stages)", run.id, len(run.pipeline_snapshot))
 
     router = AgentRouter()
     brief = config.workspace_brief if config else {}
+    previous_outputs = []  # Accumulates outputs from completed stages
 
-    # Track outputs from previous stages so they flow forward
-    previous_stage_output = None  # {stage_name, summary, deliverable_id}
+    # Group stages by parallel_group (None = sequential)
+    stage_groups = _group_stages(run.pipeline_snapshot)
 
-    for i, stage in enumerate(run.pipeline_snapshot):
-        stage_name = stage.get('name', f'Stage {i+1}')
-        agent_name = stage.get('agent')
-        is_auto = stage.get('auto', False)
-        requires_approval = stage.get('requires_approval', False)
-
-        run.current_stage_index = i
-        _update_stage(run, i, 'running')
-
-        # No agent or manual stage
-        if not agent_name or not is_auto:
-            status = 'awaiting_approval' if requires_approval else 'skipped'
-            _update_stage(run, i, status, output={'reason': 'Manual stage' if not is_auto else 'No agent'})
-            continue
-
-        # Build task description with brief + previous stage context
-        task_desc = _build_task_description(stage, brief, workspace.name, previous_stage_output)
-
-        context = {
-            'workspace_id': str(workspace.id),
-            'workspace_name': workspace.name,
-            'pipeline_run_id': str(run.id),
-            'stage_name': stage_name,
-            'stage_index': i,
-            'workspace_brief': brief,
-        }
-        if config:
-            context['deliverable_categories'] = config.deliverable_categories
-        if previous_stage_output:
-            context['previous_stage'] = previous_stage_output
-            # Some agents (e.g., EditorAgent) expect 'content' directly in context
-            if previous_stage_output.get('full_content'):
-                context['content'] = previous_stage_output['full_content']
-
-        # Execute agent with wall-clock timeout
-        timeout = stage.get('timeout_seconds', STAGE_TIMEOUT_SECONDS)
-        try:
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(
-                    router.route,
-                    task=task_desc,
-                    agent_name=agent_name,
-                    context=context,
-                )
-                result = future.result(timeout=timeout)
-
-            if result and result.success:
-                # Extract the content from the agent result
-                content = _extract_content(result)
-                summary = content[:300] if content else ''
-
-                # Save a deliverable with the stage output
-                deliverable_id = _save_stage_deliverable(
-                    workspace=workspace,
-                    stage_name=stage_name,
-                    agent_name=agent_name,
-                    content=content,
-                    brief=brief,
-                    run_id=str(run.id),
-                    user=run.triggered_by,
-                )
-
-                # Thread output forward to next stage
-                previous_stage_output = {
-                    'stage_name': stage_name,
-                    'agent': agent_name,
-                    'summary': summary,
-                    'deliverable_id': str(deliverable_id) if deliverable_id else None,
-                    'full_content': content[:2000] if content else '',  # Cap for context size
-                }
-
-                _update_stage(run, i, 'completed', output={
-                    'message': summary[:500],
-                    'agent': agent_name,
-                    'deliverable_id': str(deliverable_id) if deliverable_id else None,
-                })
-                logger.info("Pipeline %s stage %d (%s) completed, deliverable=%s", run.id, i, stage_name, deliverable_id)
-            else:
-                error_msg = str(result.message)[:500] if result and result.message else 'Agent returned no result'
-                _update_stage(run, i, 'failed', error=error_msg)
-                # Don't update previous_stage_output — next stage gets the last successful one
-
-        except _FuturesTimeout:
-            _update_stage(run, i, 'failed', error=f'Stage timed out after {timeout}s')
-            logger.error("Pipeline %s stage %d (%s) TIMED OUT after %ds", run.id, i, stage_name, timeout)
-
-        except Exception as e:
-            _update_stage(run, i, 'failed', error=str(e)[:500])
-            logger.error("Pipeline %s stage %d (%s) error: %s", run.id, i, stage_name, e)
+    for group in stage_groups:
+        if len(group) == 1:
+            # Sequential stage
+            stage_idx, stage = group[0]
+            _execute_single_stage(
+                run, stage_idx, stage, router, workspace, config, brief, previous_outputs,
+            )
+        else:
+            # Parallel group — run all stages concurrently
+            _execute_parallel_group(
+                run, group, router, workspace, config, brief, previous_outputs,
+            )
 
     # Finalize
     statuses = [s.get('status') for s in run.stage_results]
@@ -176,35 +95,182 @@ def execute_pipeline_run(run_id: str) -> dict:
     }
 
 
+def _group_stages(stages):
+    """Group stages by parallel_group. Returns list of groups, each a list of (index, stage)."""
+    groups = []
+    current_group = []
+    current_key = '__NONE__'
+
+    for i, stage in enumerate(stages):
+        group_key = stage.get('parallel_group')
+        if group_key and group_key == current_key:
+            current_group.append((i, stage))
+        else:
+            if current_group:
+                groups.append(current_group)
+            current_group = [(i, stage)]
+            current_key = group_key or f'__SEQ_{i}__'
+
+    if current_group:
+        groups.append(current_group)
+
+    return groups
+
+
+def _execute_single_stage(run, stage_idx, stage, router, workspace, config, brief, previous_outputs):
+    """Execute a single pipeline stage."""
+    stage_name = stage.get('name', f'Stage {stage_idx+1}')
+    agent_name = stage.get('agent')
+    is_auto = stage.get('auto', False)
+    requires_approval = stage.get('requires_approval', False)
+
+    run.current_stage_index = stage_idx
+    _update_stage(run, stage_idx, 'running')
+
+    if not agent_name or not is_auto:
+        status = 'awaiting_approval' if requires_approval else 'skipped'
+        _update_stage(run, stage_idx, status, output={'reason': 'Manual stage' if not is_auto else 'No agent'})
+        return
+
+    result_output = _run_agent_with_timeout(
+        run, stage_idx, stage, router, workspace, config, brief, previous_outputs,
+    )
+    if result_output:
+        previous_outputs.append(result_output)
+
+
+def _execute_parallel_group(run, group, router, workspace, config, brief, previous_outputs):
+    """Execute a group of stages in parallel."""
+    # Mark all as running
+    for stage_idx, stage in group:
+        run.current_stage_index = stage_idx
+        _update_stage(run, stage_idx, 'running')
+
+    # Filter to auto stages with agents
+    runnable = [(idx, s) for idx, s in group if s.get('agent') and s.get('auto', False)]
+    manual = [(idx, s) for idx, s in group if not s.get('agent') or not s.get('auto', False)]
+
+    # Mark manual stages
+    for idx, s in manual:
+        status = 'awaiting_approval' if s.get('requires_approval') else 'skipped'
+        _update_stage(run, idx, status, output={'reason': 'Manual stage'})
+
+    if not runnable:
+        return
+
+    # Run agents in parallel
+    max_workers = min(len(runnable), 4)
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_map = {}
+        for stage_idx, stage in runnable:
+            future = executor.submit(
+                _run_agent_with_timeout,
+                run, stage_idx, stage, router, workspace, config, brief, previous_outputs,
+            )
+            future_map[future] = (stage_idx, stage)
+
+        for future in as_completed(future_map):
+            stage_idx, stage = future_map[future]
+            try:
+                result_output = future.result()
+                if result_output:
+                    previous_outputs.append(result_output)
+            except Exception as e:
+                _update_stage(run, stage_idx, 'failed', error=str(e)[:500])
+
+
+def _run_agent_with_timeout(run, stage_idx, stage, router, workspace, config, brief, previous_outputs):
+    """Run a single agent with timeout. Returns output dict or None."""
+    stage_name = stage.get('name', f'Stage {stage_idx+1}')
+    agent_name = stage.get('agent')
+    timeout = stage.get('timeout_seconds', STAGE_TIMEOUT_SECONDS)
+
+    # Build task description with brief + all previous outputs
+    task_desc = _build_task_description(stage, brief, workspace.name, previous_outputs)
+
+    context = {
+        'workspace_id': str(workspace.id),
+        'workspace_name': workspace.name,
+        'pipeline_run_id': str(run.id),
+        'stage_name': stage_name,
+        'stage_index': stage_idx,
+        'workspace_brief': brief,
+    }
+    if config:
+        context['deliverable_categories'] = config.deliverable_categories
+
+    # Inject previous stage content for agents that read context['content']
+    if previous_outputs:
+        last = previous_outputs[-1]
+        if last.get('full_content'):
+            context['content'] = last['full_content']
+        context['previous_stage'] = last
+
+    try:
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(router.route, task=task_desc, agent_name=agent_name, context=context)
+            result = future.result(timeout=timeout)
+
+        if result and result.success:
+            content = _extract_content(result)
+            summary = content[:300] if content else ''
+
+            deliverable_id = _save_stage_deliverable(
+                workspace=workspace, stage_name=stage_name, agent_name=agent_name,
+                content=content, brief=brief, run_id=str(run.id), user=run.triggered_by,
+            )
+
+            output = {
+                'stage_name': stage_name,
+                'agent': agent_name,
+                'summary': summary,
+                'deliverable_id': str(deliverable_id) if deliverable_id else None,
+                'full_content': content[:2000] if content else '',
+            }
+
+            _update_stage(run, stage_idx, 'completed', output={
+                'message': summary[:500],
+                'agent': agent_name,
+                'deliverable_id': str(deliverable_id) if deliverable_id else None,
+            })
+            logger.info("Pipeline %s stage %d (%s) completed", run.id, stage_idx, stage_name)
+            return output
+        else:
+            error_msg = str(result.message)[:500] if result and result.message else 'No result'
+            _update_stage(run, stage_idx, 'failed', error=error_msg)
+
+    except _FuturesTimeout:
+        _update_stage(run, stage_idx, 'failed', error=f'Timed out after {timeout}s')
+        logger.error("Pipeline %s stage %d (%s) TIMED OUT", run.id, stage_idx, stage_name)
+
+    except Exception as e:
+        _update_stage(run, stage_idx, 'failed', error=str(e)[:500])
+        logger.error("Pipeline %s stage %d (%s) error: %s", run.id, stage_idx, stage_name, e)
+
+    return None
+
+
 def _extract_content(result) -> str:
-    """Extract the actual content from an AgentResult."""
-    # AgentResult.data may have full_text or content
-    if result.data:
-        if isinstance(result.data, dict):
-            # ContentWriterAgent stores content in data['content']['full_text']
-            content = result.data.get('content', {})
-            if isinstance(content, dict):
-                full_text = content.get('full_text', '')
-                if full_text:
-                    return full_text
-            # Other agents may put content directly in data
-            for key in ('full_text', 'text', 'output', 'report', 'findings', 'outline'):
-                if key in result.data and isinstance(result.data[key], str):
-                    return result.data[key]
-    # Fall back to message
+    """Extract content from an AgentResult."""
+    if result.data and isinstance(result.data, dict):
+        content = result.data.get('content', {})
+        if isinstance(content, dict):
+            full_text = content.get('full_text', '')
+            if full_text:
+                return full_text
+        for key in ('full_text', 'text', 'output', 'report', 'findings', 'outline', 'enhanced_content'):
+            if key in result.data and isinstance(result.data[key], str):
+                return result.data[key]
     return str(result.message) if result.message else ''
 
 
 def _save_stage_deliverable(workspace, stage_name, agent_name, content, brief, run_id, user):
-    """Save the stage output as a workspace-scoped Deliverable."""
+    """Save stage output as a workspace-scoped Deliverable."""
     try:
         from core.models_deliverables import Deliverable
-
         topic = brief.get('topic', workspace.name) if brief else workspace.name
-        title = f"{stage_name}: {topic}"
-
         deliverable = Deliverable.objects.create(
-            title=title[:255],
+            title=f"{stage_name}: {topic}"[:255],
             deliverable_type='document',
             category=f'Pipeline — {stage_name}',
             agent_name=agent_name,
@@ -213,11 +279,8 @@ def _save_stage_deliverable(workspace, stage_name, agent_name, content, brief, r
             workspace=workspace,
             user=user,
             is_saved=True,
-            metadata={
-                'pipeline_run_id': run_id,
-                'stage_name': stage_name,
-                'workspace_brief_topic': brief.get('topic', '') if brief else '',
-            },
+            metadata={'pipeline_run_id': run_id, 'stage_name': stage_name,
+                      'workspace_brief_topic': brief.get('topic', '') if brief else ''},
         )
         return deliverable.id
     except Exception as e:
@@ -225,32 +288,30 @@ def _save_stage_deliverable(workspace, stage_name, agent_name, content, brief, r
         return None
 
 
-def _build_task_description(stage, brief, workspace_name, previous_output=None):
-    """Build a rich task description from stage config + brief + previous stage output."""
+def _build_task_description(stage, brief, workspace_name, previous_outputs=None):
+    """Build task description from stage + brief + all previous outputs."""
     parts = [stage.get('description', f"Execute {stage.get('name', 'stage')} for {workspace_name}")]
 
     if brief:
-        if brief.get('topic'):
-            parts.append(f"Topic/Focus: {brief['topic']}")
-        if brief.get('audience'):
-            parts.append(f"Target audience: {brief['audience']}")
-        if brief.get('tone'):
-            parts.append(f"Tone: {brief['tone']}")
-        if brief.get('focus_areas'):
-            areas = brief['focus_areas']
-            if isinstance(areas, list):
-                parts.append(f"Focus areas: {', '.join(areas)}")
-        if brief.get('notes'):
-            parts.append(f"Additional context: {brief['notes']}")
+        for key, label in [('topic', 'Topic/Focus'), ('audience', 'Target audience'),
+                           ('tone', 'Tone'), ('notes', 'Additional context')]:
+            if brief.get(key):
+                parts.append(f"{label}: {brief[key]}")
+        if brief.get('focus_areas') and isinstance(brief['focus_areas'], list):
+            parts.append(f"Focus areas: {', '.join(brief['focus_areas'])}")
 
-    # Thread previous stage output as input
-    if previous_output:
-        prev_name = previous_output.get('stage_name', 'Previous stage')
-        prev_content = previous_output.get('full_content', previous_output.get('summary', ''))
-        if prev_content:
-            parts.append(f"\n\n--- {prev_name} Output ---\n{prev_content}")
+    # Thread ALL previous outputs as context (not just the last one)
+    if previous_outputs:
+        context_parts = []
+        for prev in previous_outputs:
+            prev_name = prev.get('stage_name', 'Previous')
+            prev_content = prev.get('full_content', prev.get('summary', ''))
+            if prev_content:
+                context_parts.append(f"--- {prev_name} Output ---\n{prev_content[:1500]}")
+        if context_parts:
+            parts.append("\n\n" + "\n\n".join(context_parts))
 
-    return '. '.join(parts[:6]) + ('\n\n' + parts[-1] if len(parts) > 6 and previous_output else '')
+    return '. '.join(parts[:6]) + (parts[-1] if len(parts) > 6 else '')
 
 
 def _update_stage(run, index, status, output=None, error=None):
