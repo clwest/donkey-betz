@@ -273,8 +273,8 @@ def extract_topic_from_task(task_text: str) -> str:
         r'Topic/Focus:\s*(.+?)(?:\.|Target audience|Audience|Tone:|Additional context|$)',
         r'Topic:\s*(.+?)(?:\.|Target audience|Audience|Tone:|Additional context|$)',
         r'Focus:\s*(.+?)(?:\.|Target audience|Audience|Tone:|Additional context|$)',
-        r'research (?:on|about|into|regarding)\s+(.+?)(?:\.|Target audience|Tone:|$)',
-        r'Research:\s*(.+?)(?:\.|$)',
+        r'(?:Research Task|Research):\s*(.+?)(?:\.(?:\s+[A-Z])|Target audience|Tone:|$)',
+        r'research (?:on|about|into|regarding)\s+(.+?)(?:\.(?:\s+[A-Z])|Target audience|Tone:|$)',
     ]
     for pattern in topic_patterns:
         match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
@@ -294,11 +294,14 @@ def extract_topic_from_task(task_text: str) -> str:
         '', cleaned, flags=re.IGNORECASE
     )
 
-    # Strip trailing metadata (workspace IDs, audience, instructions)
+    # Strip trailing metadata (workspace IDs, audience, instructions, pipeline boilerplate)
     cleaned = re.sub(r'\s*(?:Target audience|Audience|Tone|Additional context|Canary workspace|workspace \w{8}).*$',
                      '', cleaned, flags=re.IGNORECASE | re.DOTALL)
     cleaned = re.sub(r'\s*\[User Context:.*$', '', cleaned, flags=re.DOTALL)
     cleaned = re.sub(r'\s*—\s*(?:produce|run|return|this run).*$', '', cleaned, flags=re.IGNORECASE | re.DOTALL)
+    # Strip pipeline instruction sentences
+    cleaned = re.sub(r'\.\s+(?:Produce|Include|Return|Use|Run|Generate|Create)\s+.+$', '',
+                     cleaned, flags=re.IGNORECASE | re.DOTALL)
 
     # Strip UUID-like patterns and hex IDs
     cleaned = re.sub(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', '', cleaned)
