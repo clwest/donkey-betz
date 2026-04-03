@@ -126,8 +126,35 @@ def _extract_editor(data: dict, message: str) -> str:
 
 
 def _extract_research(data: dict, message: str) -> str:
-    """ResearchAgent stores in data['results'] + data['key_insights']."""
+    """ResearchAgent stores in data['results'] + data['key_insights'] + data['evidence_claims']."""
     parts = ["# Research Findings\n"]
+
+    # Session 1103: Evidence claims (structured citations from iterative search)
+    # These are the highest-quality output — use them first
+    evidence_claims = data.get('evidence_claims', [])
+    if isinstance(evidence_claims, list) and evidence_claims:
+        parts.append("## Evidence\n")
+        for claim in evidence_claims[:12]:
+            if not isinstance(claim, dict):
+                continue
+            claim_text = claim.get('claim_text', '')
+            source_url = claim.get('source_url', '')
+            source_title = claim.get('source_title', '')
+            evidence_type = claim.get('evidence_type', 'finding')
+            confidence = claim.get('confidence', 0)
+
+            if evidence_type == 'statistic':
+                parts.append(f"- **STAT:** {claim_text}")
+            elif evidence_type == 'quote':
+                parts.append(f'- **QUOTE:** "{claim_text}"')
+            else:
+                parts.append(f"- {claim_text}")
+
+            if source_title:
+                parts.append(f"  *Source: {source_title}*")
+            if source_url:
+                parts.append(f"  *URL: {source_url}*")
+            parts.append("")
 
     # Key insights (top 5) — filter out junk (single words, task description fragments)
     insights = data.get('key_insights', [])
@@ -149,21 +176,37 @@ def _extract_research(data: dict, message: str) -> str:
             parts.append(f"**Blocked on:** {contract['blocked_on']}")
         parts.append("")
 
-    # Results (sources/findings)
+    # Results (sources/findings) — handle both old format and new iterative format
     results = data.get('results', [])
     if isinstance(results, list) and results:
         parts.append("## Sources & Findings\n")
         for r in results[:10]:
             if isinstance(r, dict):
-                title = r.get('title', r.get('query', 'Finding'))
-                content = r.get('content', r.get('snippet', r.get('text', '')))
-                url = r.get('url', r.get('source', ''))
-                parts.append(f"### {title}")
-                if content:
-                    parts.append(str(content)[:500])
-                if url:
-                    parts.append(f"*Source: {url}*")
-                parts.append("")
+                # New iterative format: {'source': 'iterative_search', 'data': [...]}
+                if r.get('source') == 'iterative_search' and isinstance(r.get('data'), list):
+                    for item in r['data'][:10]:
+                        if isinstance(item, dict):
+                            title = item.get('title', item.get('headline', ''))
+                            snippet = item.get('snippet', item.get('description', ''))
+                            url = item.get('url', item.get('link', ''))
+                            if title:
+                                parts.append(f"### {title}")
+                            if snippet:
+                                parts.append(str(snippet)[:300])
+                            if url:
+                                parts.append(f"*Source: {url}*")
+                            parts.append("")
+                else:
+                    # Old format: direct result dict
+                    title = r.get('title', r.get('query', 'Finding'))
+                    content = r.get('content', r.get('snippet', r.get('text', '')))
+                    url = r.get('url', r.get('source', ''))
+                    parts.append(f"### {title}")
+                    if content:
+                        parts.append(str(content)[:500])
+                    if url:
+                        parts.append(f"*Source: {url}*")
+                    parts.append("")
             elif isinstance(r, str):
                 parts.append(f"- {r[:300]}")
 
@@ -173,6 +216,11 @@ def _extract_research(data: dict, message: str) -> str:
         parts.append("## AI Analysis\n")
         for insight in ml['ml_insights']:
             parts.append(f"- {insight}")
+
+    # Session 1103: Include GPT synthesis if message has citations
+    if message and ('[E' in message or 'http' in message) and len(message) > 200:
+        parts.append("\n## Synthesis\n")
+        parts.append(message)
 
     assembled = '\n'.join(parts)
     return assembled if len(assembled) > 100 else message
