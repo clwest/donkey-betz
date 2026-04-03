@@ -504,6 +504,11 @@ def execute_workspace_pipeline(self, run_id: str):
     """Execute a workspace pipeline run (dispatched from trigger_pipeline API)."""
     from core.services.workspace_pipeline_runner import execute_pipeline_run
     return execute_pipeline_run(run_id)
+@shared_task(bind=True, soft_time_limit=300, time_limit=330)
+def execute_demo_pipeline_task(self, run_id: str, topic: str, user_id: int):
+    """Execute a demo pipeline for onboarding (fast, 3 stages)."""
+    from core.views_demo_pipeline import _execute_demo_pipeline
+    return _execute_demo_pipeline(run_id, topic, user_id)
 @shared_task
 def cleanup_expired_boardroom_items(days_old: int = 7):
     from core.tasks_misc import _impl_cleanup_expired_boardroom_items

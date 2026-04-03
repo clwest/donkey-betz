@@ -17,6 +17,7 @@ import {
 import { cn } from '@/lib/cn'
 import { api } from '@/lib/api'
 import { usePAStore } from '@/stores/paStore'
+import DemoPipelineCard from '@/components/DemoPipelineCard'
 import { useAssistantContextStore } from '@/stores/assistantContextStore'
 
 interface HomeTabProps {
@@ -134,6 +135,9 @@ export default function HomeTab({ activeWorkspace, onNavigateTab }: HomeTabProps
           </div>
         </div>
       )}
+
+      {/* First Win — demo pipeline for new users */}
+      <DemoPipelineCard />
 
       {/* My Business Workspaces */}
       <MyBusinessWorkspaces />

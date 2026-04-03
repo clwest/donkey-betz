@@ -4767,6 +4767,15 @@ if settings.DEBUG:
 # (Workspace Templates URLs moved BEFORE the workspace router — see line ~4031)
 
 # =========================================================================
+# Demo Pipeline — "First Win" for onboarding
+# =========================================================================
+from core.views_demo_pipeline import run_demo_pipeline, demo_pipeline_status
+urlpatterns += [
+    path('api/demo-pipeline/run/', run_demo_pipeline, name='demo-pipeline-run'),
+    path('api/demo-pipeline/status/<str:run_id>/', demo_pipeline_status, name='demo-pipeline-status'),
+]
+
+# =========================================================================
 # In-App Messaging / Inbox
 # =========================================================================
 from core.views_inbox import inbox_threads, thread_messages, mark_thread_read, unread_count
