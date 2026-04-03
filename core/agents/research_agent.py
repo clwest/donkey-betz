@@ -376,6 +376,7 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
         self._spider_service = None
         self._search_service = None
         self._iterative_attempts = []  # Track search attempts for provenance
+        self._evidence_cards = []  # Session 1103: Citation cards for ClaimsPack bridge
 
     @property
     def spider_service(self):
@@ -797,12 +798,22 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                 )
 
                 if iterative_results:
-                    # Format pre-gathered results for GPT synthesis
-                    results_summary = self._format_results_for_synthesis(iterative_results, task)
+                    # Format pre-gathered results as structured evidence cards
+                    evidence_block = self._format_results_for_synthesis(iterative_results, task)
                     synthesis_prompt = (
                         f"{full_prompt}\n\n"
-                        f"[PRE-GATHERED RESEARCH RESULTS — analyze and synthesize these, do NOT search again:]\n"
-                        f"{results_summary}"
+                        f"{evidence_block}\n\n"
+                        f"[SYNTHESIS INSTRUCTIONS]\n"
+                        f"You have been given evidence cards [E1], [E2], etc. from real sources.\n"
+                        f"Produce a structured research brief with these REQUIREMENTS:\n"
+                        f"1. Executive summary (2-3 sentences)\n"
+                        f"2. Key findings — cite at least 3 evidence cards by ID (e.g. [E1], [E3])\n"
+                        f"3. Include at least 2 direct quotes or statistics from the evidence cards\n"
+                        f"4. For each claim you make, reference the evidence card that supports it\n"
+                        f"5. Include source URLs for your top 3 citations\n"
+                        f"6. Identify 1-2 gaps or areas needing deeper research\n"
+                        f"DO NOT make claims not supported by the evidence cards.\n"
+                        f"DO NOT search for additional information — use only what is provided.\n"
                     )
                     # Call GPT without tools — synthesis only (no tool_choice)
                     saved_tools = self.tools
@@ -876,6 +887,12 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                             tool_calls_made=tool_calls_made
                         )
 
+                        # Session 1103: Build ClaimsPack-compatible claims from evidence
+                        research_claims = self._build_claims_from_evidence(
+                            iterative_results if iterative_results else [],
+                            task,
+                        )
+
                         result_data = {
                             'results': all_results,
                             'query': task,
@@ -884,6 +901,8 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                             'contract': research_contract,
                             # Session 1103: Include iterative search attempts for provenance
                             'attempts': self._iterative_attempts,
+                            # Session 1103: Evidence cards for ClaimsPack bridge
+                            'evidence_claims': research_claims,
                         }
 
                         # Add ML analysis if performed
@@ -1107,48 +1126,148 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
 
     def _format_results_for_synthesis(self, results: List[Dict[str, Any]], task: str) -> str:
         """
-        Session 1103: Format pre-gathered search results into a text block for GPT synthesis.
+        Session 1103: Build structured evidence cards from search results for GPT synthesis.
 
-        Extracts titles, snippets, URLs from raw search results and formats
-        them into a concise summary GPT can analyze without needing to search.
+        Instead of passing raw blobs, extracts the best quote/stat from each result
+        and formats as citation cards with URLs. GPT synthesizes from these cards,
+        producing output with real citations.
         """
-        formatted = []
+        cards = []
         seen_urls = set()
+        card_idx = 0
 
-        for i, item in enumerate(results[:30]):  # Cap at 30 results
+        for item in results[:30]:
             if not isinstance(item, dict):
                 continue
 
-            title = item.get('title') or item.get('headline') or item.get('name', '')
-            snippet = item.get('snippet') or item.get('description') or item.get('content', '')
-            url = item.get('url') or item.get('link') or item.get('source_url', '')
+            title = str(item.get('title') or item.get('headline') or item.get('name', '')).strip()
+            snippet = str(item.get('snippet') or item.get('description') or item.get('content', '')).strip()
+            url = str(item.get('url') or item.get('link') or item.get('source_url', '')).strip()
 
-            # Deduplicate by URL
-            if url and url in seen_urls:
+            if not snippet and not title:
                 continue
-            if url:
-                seen_urls.add(url)
 
-            # Truncate snippet
-            if snippet and len(snippet) > 300:
-                snippet = snippet[:300] + '...'
+            # Deduplicate by canonical URL (strip UTM params)
+            canonical_url = re.sub(r'[?&]utm_\w+=[^&]*', '', url).rstrip('?&') if url else ''
+            if canonical_url and canonical_url in seen_urls:
+                continue
+            if canonical_url:
+                seen_urls.add(canonical_url)
 
-            parts = []
-            if title:
-                parts.append(f"**{title}**")
-            if snippet:
-                parts.append(snippet)
-            if url:
-                parts.append(f"Source: {url}")
+            # Extract the best quote or statistic from the snippet
+            evidence = self._extract_best_evidence(snippet)
+            card_idx += 1
 
-            if parts:
-                formatted.append(f"{i+1}. " + '\n   '.join(parts))
+            card = f"[E{card_idx}] "
+            if evidence['type'] == 'statistic':
+                card += f'STAT: "{evidence["text"]}"'
+            elif evidence['type'] == 'quote':
+                card += f'QUOTE: "{evidence["text"]}"'
+            else:
+                card += f'FINDING: {evidence["text"]}'
 
-        if not formatted:
-            return "(No structured results found — raw data was returned from search)"
+            card += f'\n  Source: {title}' if title else ''
+            card += f'\n  URL: {url}' if url else ''
+            cards.append(card)
 
-        header = f"Found {len(formatted)} results for: {task[:100]}"
-        return f"{header}\n\n" + '\n\n'.join(formatted[:20])  # Cap display at 20
+        # Store cards for ClaimsPack bridge
+        self._evidence_cards = cards
+
+        if not cards:
+            return "(No evidence found from search results)"
+
+        from core.services.search_strategy_service import extract_topic_from_task
+        clean_topic = extract_topic_from_task(task)
+
+        header = f"=== {len(cards)} EVIDENCE CARDS for: {clean_topic[:100]} ==="
+        footer = "=== END EVIDENCE CARDS ==="
+        return f"{header}\n\n" + '\n\n'.join(cards[:12]) + f"\n\n{footer}"
+
+    def _extract_best_evidence(self, text: str) -> Dict[str, Any]:
+        """
+        Session 1103: Extract the best quote, statistic, or key finding from a snippet.
+
+        Prioritizes: numbers/statistics > quoted text > key claims.
+        """
+        if not text:
+            return {'type': 'finding', 'text': '(no content)'}
+
+        # Look for statistics (numbers with context)
+        stat_patterns = [
+            r'(\d+(?:\.\d+)?%[^.]*\.)',           # "26% more completed tasks."
+            r'(\$[\d,.]+\s*(?:billion|million|trillion)[^.]*\.)',  # "$2.5 billion market."
+            r'(\d+(?:\.\d+)?x\s+[^.]*\.)',          # "3.5x faster than..."
+            r'(\d{1,3}(?:,\d{3})+\s+[^.]*\.)',     # "4,867 developers..."
+        ]
+        for pattern in stat_patterns:
+            match = re.search(pattern, text)
+            if match and len(match.group(1)) > 15:
+                return {'type': 'statistic', 'text': match.group(1).strip()[:250]}
+
+        # Look for quoted text
+        quote_match = re.search(r'"([^"]{20,200})"', text)
+        if quote_match:
+            return {'type': 'quote', 'text': quote_match.group(1).strip()}
+
+        # Fall back to first meaningful sentence
+        sentences = re.split(r'(?<=[.!?])\s+', text)
+        for sent in sentences:
+            sent = sent.strip()
+            if len(sent) > 30 and not sent.lower().startswith(('click', 'subscribe', 'sign up', 'learn more')):
+                return {'type': 'finding', 'text': sent[:250]}
+
+        return {'type': 'finding', 'text': text[:250]}
+
+    def _build_claims_from_evidence(self, results: List[Dict[str, Any]], task: str) -> List[Dict[str, Any]]:
+        """
+        Session 1103: Bridge evidence cards to ClaimsPack-compatible claims.
+
+        Converts raw search results into SpiderClaim-shaped dicts that
+        ContentWriterAgent can use for citation in the content pipeline.
+        """
+        from core.services.content_claims import make_claim_id
+        from core.services.search_strategy_service import extract_topic_from_task
+
+        claims = []
+        seen_urls = set()
+        clean_topic = extract_topic_from_task(task)
+
+        for item in results[:15]:
+            if not isinstance(item, dict):
+                continue
+
+            title = str(item.get('title') or item.get('headline') or '').strip()
+            snippet = str(item.get('snippet') or item.get('description') or item.get('content', '')).strip()
+            url = str(item.get('url') or item.get('link') or item.get('source_url', '')).strip()
+
+            if not snippet or not url:
+                continue
+
+            canonical = re.sub(r'[?&]utm_\w+=[^&]*', '', url).rstrip('?&')
+            if canonical in seen_urls:
+                continue
+            seen_urls.add(canonical)
+
+            evidence = self._extract_best_evidence(snippet)
+            claim_id = make_claim_id(url, title)
+
+            # Map evidence type to claim_type
+            claim_type = 'factual' if evidence['type'] == 'statistic' else 'analytical'
+            confidence = 0.7 if evidence['type'] == 'statistic' else 0.5
+
+            claims.append({
+                'claim_id': claim_id,
+                'claim_text': evidence['text'],
+                'source_url': url,
+                'source_title': title,
+                'evidence_excerpt': snippet[:300],
+                'confidence': confidence,
+                'claim_type': claim_type,
+                'evidence_type': evidence['type'],
+            })
+
+        logger.info("[ClaimsBridge] Built %d claims from research for: %s", len(claims), clean_topic[:60])
+        return claims
 
     def _extract_search_query(self, task: str) -> str:
         """Extract a concise web search query from a verbose task description."""
