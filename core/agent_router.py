@@ -196,6 +196,7 @@ from core.agents.ai_series_workflow_agent import AISeriesWorkflowAgent
 # Session 466: Autonomous Content Studio
 from core.agents.autonomous_content_studio_coordinator import AutonomousContentStudioCoordinator
 from core.agents.content import TopicMinerAgent, ContrarianAgent, PerformanceAnalystAgent, VoiceCriticAgent
+from core.agents.distribution_agent import DistributionAgent
 # Session 743: Content Diversity Orchestrator
 from core.agents.content_diversity_orchestrator import ContentDiversityOrchestrator
 
@@ -376,6 +377,7 @@ class AgentRouter:
         "TopicMinerAgent": TopicMinerAgent,
         "ContrarianAgent": ContrarianAgent,
         "PerformanceAnalystAgent": PerformanceAnalystAgent,
+        "DistributionAgent": DistributionAgent,
         # Session 784: Voice Critic Agent
         "VoiceCriticAgent": VoiceCriticAgent,
         # Session 743: Content Diversity Orchestrator

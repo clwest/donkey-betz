@@ -57,6 +57,12 @@ NEWSLETTER_PIPELINE = [
         'description': 'Challenge claims, verify facts, flag anything that needs evidence or correction',
     },
     {
+        'name': 'Hooks & Distribution',
+        'agent': 'DistributionAgent',
+        'auto': True,
+        'description': 'Generate subject line variants, optimize hooks, create CTAs, build distribution plan with social media snippets',
+    },
+    {
         'name': 'Review & Approve',
         'agent': None,
         'auto': False,
@@ -75,14 +81,16 @@ NEWSLETTER_AGENTS = [
     'TopicMinerAgent', 'TrendAnalysisAgent', 'ResearchAgent',
     'ContentStrategyAgent', 'ContentWriterAgent',
     'EditorAgent', 'SEOOptimizerAgent', 'ContrarianAgent',
+    'DistributionAgent',
 ]
 
 NEWSLETTER_CATEGORIES = [
     'Pipeline — Topic Mining', 'Pipeline — Trend Analysis', 'Pipeline — Deep Research',
     'Pipeline — Content Strategy', 'Pipeline — Write Draft',
     'Pipeline — Edit & Polish', 'Pipeline — SEO & Headlines', 'Pipeline — Fact Check',
+    'Pipeline — Hooks & Distribution',
     'Newsletter Draft', 'Newsletter HTML', 'Newsletter Markdown',
-    'Subject Lines', 'Publish Checklist',
+    'Subject Lines', 'Social Snippets', 'Distribution Plan', 'Publish Checklist',
 ]
 
 
