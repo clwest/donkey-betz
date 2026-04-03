@@ -73,17 +73,19 @@ def list_deliverables(request):
 
         # Security: scope deliverables by user/workspace
         workspace_id = request.GET.get('workspace')
-        if not request.user.is_authenticated:
-            return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+        is_authed = hasattr(request, 'user') and request.user.is_authenticated
 
         if workspace_id:
+            # Workspace-scoped query — requires auth
+            if not is_authed:
+                return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
             # Verify user owns the workspace before showing its deliverables
             from core.models_skin_layer import ProjectWorkspace
             if not request.user.is_staff:
                 if not ProjectWorkspace.objects.filter(id=workspace_id, user=request.user).exists():
                     return JsonResponse({'success': False, 'error': 'Workspace not found'}, status=404)
             queryset = queryset.filter(workspace_id=workspace_id)
-        elif request.user.is_authenticated:
+        elif is_authed:
             if request.user.is_staff:
                 # Staff sees their own + NULL-user deliverables (system-created)
                 queryset = queryset.filter(

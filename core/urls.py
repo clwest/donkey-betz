@@ -1062,6 +1062,7 @@ from core.views_personal_assistant import (
     trigger_boardroom_maintenance,  # Session 977: On-demand boardroom cleanup
     pa_conversation_post_message, pa_conversation_messages,  # 3-way chat: store-only + message polling
     pa_activity_feed,  # Rigby accountability: actual tool call activity
+    session_health,  # Context-aware session management
 )
 from core.views_assistant_bypass import assistant_chat_bypass, get_task_progress
 if settings.DEBUG:
@@ -2433,6 +2434,8 @@ urlpatterns = [
     path('api/pa/conversations/<str:conversation_id>/messages/', pa_conversation_messages, name='pa-conversation-messages'),
     # Rigby activity feed — accountability dashboard
     path('api/pa/activity/', pa_activity_feed, name='pa-activity-feed'),
+    # Session health — context-aware session management
+    path('api/pa/conversations/<str:conversation_id>/health/', session_health, name='pa-session-health'),
     # Session 977: On-demand boardroom maintenance trigger
     path('api/pa/boardroom/maintenance/', trigger_boardroom_maintenance, name='boardroom-maintenance'),
 

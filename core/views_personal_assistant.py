@@ -1508,6 +1508,28 @@ def create_pa_conversation(request):
 
 
 # =============================================================================
+# Session Health — Context-Aware Session Management
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def session_health(request, conversation_id):
+    """
+    Get the health/freshness score for a conversation.
+
+    Returns a score (0-100), recommendation, reasons, auto-summary,
+    and a starter prompt for creating a fresh session.
+    """
+    try:
+        from core.services.session_health_service import get_session_health
+        health = get_session_health(conversation_id, request.user.id)
+        return Response({'success': True, **health})
+    except Exception as e:
+        logger.error(f"Error checking session health: {e}")
+        return Response({'success': False, 'error': str(e)}, status=500)
+
+
+# =============================================================================
 # SESSION 977: Boardroom Maintenance Trigger
 # =============================================================================
 
