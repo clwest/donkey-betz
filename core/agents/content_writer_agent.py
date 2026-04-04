@@ -456,7 +456,8 @@ Tailor the content to match these preferences.""")
 
         # Session 886: Add performance context for feedback loop
         # Session 990: Wrapped with timeout to prevent context builders from hanging
-        if PERFORMANCE_CONTEXT_AVAILABLE and get_blog_performance_context:
+        # Session 1103: Skip when evidence-first mode — these inject spider URLs
+        if PERFORMANCE_CONTEXT_AVAILABLE and get_blog_performance_context and not evidence:
             try:
                 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
                 with ThreadPoolExecutor(max_workers=1) as executor:
@@ -479,7 +480,8 @@ Tailor the content to match these preferences.""")
 
         # Session 891: Add domain-specific content context (finance, sports, AI, crypto, etc.)
         # Session 990: Wrapped with timeout
-        if DOMAIN_CONTEXT_AVAILABLE and get_domain_content_context:
+        # Session 1103: Skip when evidence-first mode — domain context injects spider URLs
+        if DOMAIN_CONTEXT_AVAILABLE and get_domain_content_context and not evidence:
             try:
                 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
                 with ThreadPoolExecutor(max_workers=1) as executor:
@@ -840,7 +842,8 @@ For this {content_type}, ensure:
                 )
 
                 # Session 854: Add Flagship template injection for distinctive content
-                use_flagship = context.get('flagship', True)  # Default to flagship
+                # Session 1103: Skip flagship when evidence-first — it injects spider-based content
+                use_flagship = context.get('flagship', True) and not self._evidence_context_override
                 cta_type = context.get('cta_type', 'newsletter')
 
                 if use_flagship and content_type in ['blog_post', 'article', 'newsletter']:
