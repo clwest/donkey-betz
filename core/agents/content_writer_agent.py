@@ -806,6 +806,14 @@ For this {content_type}, ensure:
                 content_type = context.get('content_type', 'blog_post')
                 research = context.get('research', '')
 
+                # Use Evidence Cards if available (structured, citable evidence)
+                evidence_cards_formatted = context.get('evidence_cards_formatted', '')
+                if evidence_cards_formatted:
+                    # Replace raw research with structured Evidence Cards
+                    research = evidence_cards_formatted
+                    logger.info("ContentWriterAgent: using %d Evidence Cards instead of raw research",
+                                len(context.get('evidence_cards', [])))
+
                 # Session 858: Use user's preferred communication style as default tone
                 default_tone = user_context.get('communication_style', 'professional')
                 tone = context.get('tone') or workspace_brief.get('tone', default_tone)
