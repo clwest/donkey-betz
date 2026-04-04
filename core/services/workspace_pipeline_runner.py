@@ -209,8 +209,8 @@ def _run_agent_with_timeout(run, stage_idx, stage, router, workspace, config, br
     agent_name = stage.get('agent')
     timeout = stage.get('timeout_seconds', STAGE_TIMEOUT_SECONDS)
 
-    # Build task description with brief + all previous outputs
-    task_desc = _build_task_description(stage, brief, workspace.name, previous_outputs)
+    # GPT-crafted task description — replaces rigid templates with intelligent prompts
+    task_desc = _craft_intelligent_prompt(stage, brief, workspace.name, agent_name, previous_outputs)
 
     context = {
         'workspace_id': str(workspace.id),
@@ -299,7 +299,7 @@ def _run_agent_with_timeout(run, stage_idx, stage, router, workspace, config, br
                 'agent': agent_name,
                 'summary': summary,
                 'deliverable_id': str(deliverable_id) if deliverable_id else None,
-                'full_content': content[:2000] if content else '',
+                'full_content': content[:8000] if content else '',
                 'quality_score': validation['quality_score'],
             }
 
@@ -357,8 +357,102 @@ def _save_stage_deliverable(workspace, stage_name, agent_name, content, brief, r
         return None
 
 
-def _build_task_description(stage, brief, workspace_name, previous_outputs=None):
-    """Build task description from stage + brief + all previous outputs."""
+def _craft_intelligent_prompt(stage, brief, workspace_name, agent_name, previous_outputs=None):
+    """
+    Use GPT to craft an intelligent, conversational task description for the agent.
+
+    Instead of rigid template assembly ("Topic: X. Audience: Y. Previous output..."),
+    GPT writes the actual task prompt — like a creative director briefing a specialist.
+    This produces the same quality as WorkflowAgent's GPT-orchestrated prompts while
+    keeping the pipeline runner's structure, quality gates, and deliverable saving.
+
+    Falls back to template assembly if the LLM call fails (resilient).
+    """
+    stage_name = stage.get('name', 'stage')
+    stage_description = stage.get('description', f'Execute {stage_name}')
+
+    # Build the context summary for GPT
+    brief_block = ''
+    if brief:
+        brief_parts = []
+        if brief.get('topic'):
+            brief_parts.append(f"Topic: {brief['topic']}")
+        if brief.get('audience'):
+            brief_parts.append(f"Target audience: {brief['audience']}")
+        if brief.get('tone'):
+            brief_parts.append(f"Tone: {brief['tone']}")
+        if brief.get('focus_areas') and isinstance(brief['focus_areas'], list):
+            brief_parts.append(f"Focus areas: {', '.join(brief['focus_areas'])}")
+        if brief.get('distribution_hook'):
+            brief_parts.append(f"Distribution angle: {brief['distribution_hook']}")
+        if brief.get('notes'):
+            brief_parts.append(f"Notes: {brief['notes']}")
+        brief_block = '\n'.join(brief_parts)
+
+    previous_block = ''
+    if previous_outputs:
+        prev_parts = []
+        for prev in previous_outputs:
+            prev_name = prev.get('stage_name', 'Previous stage')
+            prev_agent = prev.get('agent', '')
+            prev_content = prev.get('full_content', prev.get('summary', ''))
+            quality = prev.get('quality_score', '')
+            if prev_content:
+                # Give GPT more context than the old 1500 char truncation
+                prev_parts.append(
+                    f"=== {prev_name} ({prev_agent}) ===\n"
+                    f"{prev_content[:4000]}"
+                    f"{f' [Quality: {quality}/100]' if quality else ''}"
+                )
+        previous_block = '\n\n'.join(prev_parts)
+
+    crafting_prompt = f"""You are a creative director briefing a specialist agent for a content pipeline.
+
+Write a detailed, conversational task description for {agent_name} to execute the "{stage_name}" stage.
+
+Stage purpose: {stage_description}
+Workspace: {workspace_name}
+
+WORKSPACE BRIEF:
+{brief_block or 'No brief provided.'}
+
+{f'PREVIOUS STAGE OUTPUTS:{chr(10)}{previous_block}' if previous_block else 'This is the first stage — no previous outputs.'}
+
+Write 2-4 paragraphs that:
+1. Clearly state what {agent_name} should produce
+2. Reference specific findings from previous stages (if any)
+3. Specify the target audience, tone, and any constraints from the brief
+4. Set quality expectations (what "great" looks like for this stage)
+5. Include any specific instructions from the brief notes
+
+Write the task as if you're directly briefing the agent. Be specific, not generic.
+Do NOT include meta-instructions about "being a creative director" — just write the task itself."""
+
+    try:
+        from core.llm_enforcer import LLMEnforcer
+        enforcer = LLMEnforcer()
+        result = enforcer.enforce_real_ai(
+            prompt=crafting_prompt,
+            agent_name='PipelinePromptCrafter',
+            task_type='content',
+            max_tokens=800,
+        )
+        crafted = result.get('response', '')
+        if crafted and len(crafted) > 100:
+            logger.info(
+                "Pipeline prompt crafted by GPT for %s/%s (%d chars)",
+                stage_name, agent_name, len(crafted),
+            )
+            return crafted
+    except Exception as e:
+        logger.warning("GPT prompt crafting failed for %s/%s: %s — falling back to template", stage_name, agent_name, e)
+
+    # Fallback: template-based description (old behavior)
+    return _build_template_description(stage, brief, workspace_name, previous_outputs)
+
+
+def _build_template_description(stage, brief, workspace_name, previous_outputs=None):
+    """Fallback template-based task description if GPT crafting fails."""
     parts = [stage.get('description', f"Execute {stage.get('name', 'stage')} for {workspace_name}")]
 
     if brief:
@@ -369,14 +463,13 @@ def _build_task_description(stage, brief, workspace_name, previous_outputs=None)
         if brief.get('focus_areas') and isinstance(brief['focus_areas'], list):
             parts.append(f"Focus areas: {', '.join(brief['focus_areas'])}")
 
-    # Thread ALL previous outputs as context (not just the last one)
     if previous_outputs:
         context_parts = []
         for prev in previous_outputs:
             prev_name = prev.get('stage_name', 'Previous')
             prev_content = prev.get('full_content', prev.get('summary', ''))
             if prev_content:
-                context_parts.append(f"--- {prev_name} Output ---\n{prev_content[:1500]}")
+                context_parts.append(f"--- {prev_name} Output ---\n{prev_content[:3000]}")
         if context_parts:
             parts.append("\n\n" + "\n\n".join(context_parts))
 
