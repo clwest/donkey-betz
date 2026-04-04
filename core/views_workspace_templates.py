@@ -23,6 +23,14 @@ from rest_framework.response import Response
 
 from core.models_workspace_templates import WorkspaceTemplate, WorkspaceConfig, PipelineRun
 
+
+def _get_workspace(workspace_id, user):
+    """Get workspace — owner or superuser can access."""
+    from core.models_skin_layer import ProjectWorkspace
+    if user.is_superuser:
+        return ProjectWorkspace.objects.get(id=workspace_id)
+    return ProjectWorkspace.objects.get(id=workspace_id, user=user)
+
 logger = logging.getLogger(__name__)
 
 
@@ -160,7 +168,7 @@ def workspace_dashboard(request, workspace_id):
     from core.models_deliverables import Deliverable
 
     try:
-        workspace = ProjectWorkspace.objects.get(id=workspace_id, user=request.user)
+        workspace = _get_workspace(workspace_id, request.user)
     except ProjectWorkspace.DoesNotExist:
         return Response({'success': False, 'error': 'Workspace not found'}, status=404)
 
@@ -252,7 +260,7 @@ def workspace_config(request, workspace_id):
     from core.models_skin_layer import ProjectWorkspace
 
     try:
-        workspace = ProjectWorkspace.objects.get(id=workspace_id, user=request.user)
+        workspace = _get_workspace(workspace_id, request.user)
     except ProjectWorkspace.DoesNotExist:
         return Response({'success': False, 'error': 'Workspace not found'}, status=404)
 
@@ -357,7 +365,7 @@ def trigger_pipeline(request, workspace_id):
     from core.models_skin_layer import ProjectWorkspace
 
     try:
-        workspace = ProjectWorkspace.objects.get(id=workspace_id, user=request.user)
+        workspace = _get_workspace(workspace_id, request.user)
     except ProjectWorkspace.DoesNotExist:
         return Response({'success': False, 'error': 'Workspace not found'}, status=404)
 
@@ -424,7 +432,7 @@ def pipeline_status(request, workspace_id):
     from core.models_skin_layer import ProjectWorkspace
 
     try:
-        workspace = ProjectWorkspace.objects.get(id=workspace_id, user=request.user)
+        workspace = _get_workspace(workspace_id, request.user)
     except ProjectWorkspace.DoesNotExist:
         return Response({'success': False, 'error': 'Workspace not found'}, status=404)
 
@@ -463,7 +471,7 @@ def pipeline_history(request, workspace_id):
     from core.models_skin_layer import ProjectWorkspace
 
     try:
-        workspace = ProjectWorkspace.objects.get(id=workspace_id, user=request.user)
+        workspace = _get_workspace(workspace_id, request.user)
     except ProjectWorkspace.DoesNotExist:
         return Response({'success': False, 'error': 'Workspace not found'}, status=404)
 
@@ -492,7 +500,7 @@ def workspace_packets(request, workspace_id):
     from core.models_deliverables import ContentPacket
 
     try:
-        workspace = ProjectWorkspace.objects.get(id=workspace_id, user=request.user)
+        workspace = _get_workspace(workspace_id, request.user)
     except ProjectWorkspace.DoesNotExist:
         return Response({'success': False, 'error': 'Workspace not found'}, status=404)
 
@@ -533,7 +541,7 @@ def pipeline_stage_detail(request, workspace_id, run_id, stage_index):
     from core.models_skin_layer import ProjectWorkspace
 
     try:
-        workspace = ProjectWorkspace.objects.get(id=workspace_id, user=request.user)
+        workspace = _get_workspace(workspace_id, request.user)
     except ProjectWorkspace.DoesNotExist:
         return Response({'success': False, 'error': 'Workspace not found'}, status=404)
 
@@ -636,7 +644,7 @@ def add_workspace_member(request, workspace_id):
     User = get_user_model()
 
     try:
-        workspace = ProjectWorkspace.objects.get(id=workspace_id, user=request.user)
+        workspace = _get_workspace(workspace_id, request.user)
     except ProjectWorkspace.DoesNotExist:
         return Response({'success': False, 'error': 'Workspace not found or not owner'}, status=404)
 
