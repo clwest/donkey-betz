@@ -216,14 +216,35 @@ CRITICAL: Use tools to check actual saturation data. Don't just assume."""
                         tool_input = tool_call['arguments']
 
                         tool_calls_made.append({"name": tool_name, "input": tool_input})
-                        result = self._execute_tool(tool_name, tool_input)
-                        tool_results.append(result)
+                        tool_result = self._execute_tool(tool_name, tool_input)
+                        tool_results.append(tool_result)
+
+                    # Feed tool results BACK to GPT for synthesis/analysis
+                    import json
+                    tool_summary = []
+                    for tc, tr in zip(tool_calls_made, tool_results):
+                        tool_summary.append(
+                            f"Tool: {tc['name']}\nInput: {json.dumps(tc['input'], default=str)[:200]}\n"
+                            f"Result: {json.dumps(tr, default=str)[:500]}"
+                        )
+                    synthesis_prompt = (
+                        f"You called these tools and got these results:\n\n"
+                        f"{'---'.join(tool_summary)}\n\n"
+                        f"Now provide your CONTRARIAN ANALYSIS based on this data. "
+                        f"Do NOT repeat the raw tool output. Instead:\n"
+                        f"1. What does the data tell us about saturation?\n"
+                        f"2. What unique angles should we take?\n"
+                        f"3. What's your recommendation?\n"
+                        f"Be specific and actionable."
+                    )
+                    synthesis_response = self._call_openai(synthesis_prompt)
+                    analysis_text = synthesis_response.get('content') or "Contrarian analysis complete"
 
                     execution_time_ms = int((time.time() - start_time) * 1000)
                     result = AgentResult(
                         success=True,
-                        message=response.get('content') or "Contrarian analysis complete",
-                        data={"tool_results": tool_results},
+                        message=analysis_text,
+                        data={"tool_results": tool_results, "full_text": analysis_text},
                         agent_name=self.name,
                         execution_time_ms=execution_time_ms,
                         tool_calls=tool_calls_made
@@ -245,15 +266,16 @@ CRITICAL: Use tools to check actual saturation data. Don't just assume."""
                     except Exception as e:
                         logger.warning(f"Failed to record learning outcome: {e}")
 
-                    # Session 1006: Persist output to Deliverable
-                    self._save_to_deliverable(
-                        title=f"Contrarian Analysis: {task[:80]}",
-                        content=result.message,
-                        deliverable_type='analysis',
-                        category='Contrarian Analysis',
-                        tags=['contrarian', 'content'],
-                        metadata={'task': task[:200]},
-                    )
+                    # Persist analysis to Deliverable (only real analysis, not tool dumps)
+                    if len(analysis_text) > 100:
+                        self._save_to_deliverable(
+                            title=f"Contrarian Analysis: {task[:80]}",
+                            content=analysis_text,
+                            deliverable_type='analysis',
+                            category='Contrarian Analysis',
+                            tags=['contrarian', 'content'],
+                            metadata={'task': task[:200]},
+                        )
 
                     return result
                 else:
