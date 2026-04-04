@@ -4023,7 +4023,7 @@ workspace_router.register(r'code-artifacts', CodeArtifactViewSet, basename='code
 from core.views_workspace_templates import (
     list_templates, template_detail, create_from_template,
     workspace_dashboard as ws_biz_dashboard, workspace_config,
-    trigger_pipeline, pipeline_status, pipeline_history, pipeline_stage_detail,
+    trigger_pipeline, pipeline_status, pipeline_history, pipeline_stage_detail, workspace_packets,
     add_workspace_member,
 )
 urlpatterns += [
@@ -4042,6 +4042,7 @@ urlpatterns += [
     path('api/workspaces/<uuid:workspace_id>/pipeline/status/', pipeline_status, name='workspace-pipeline-status'),
     path('api/workspaces/<uuid:workspace_id>/pipeline/history/', pipeline_history, name='workspace-pipeline-history'),
     path('api/workspaces/<uuid:workspace_id>/pipeline/<uuid:run_id>/stage/<int:stage_index>/', pipeline_stage_detail, name='workspace-pipeline-stage-detail'),
+    path('api/workspaces/<uuid:workspace_id>/packets/', workspace_packets, name='workspace-packets'),
     path('api/workspaces/<uuid:workspace_id>/members/', add_workspace_member, name='workspace-add-member'),
 
     # Workspace Router URLs (generic patterns last)

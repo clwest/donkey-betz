@@ -486,6 +486,48 @@ def pipeline_history(request, workspace_id):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def workspace_packets(request, workspace_id):
+    """List content packets for a workspace, with their items."""
+    from core.models_skin_layer import ProjectWorkspace
+    from core.models_deliverables import ContentPacket
+
+    try:
+        workspace = ProjectWorkspace.objects.get(id=workspace_id, user=request.user)
+    except ProjectWorkspace.DoesNotExist:
+        return Response({'success': False, 'error': 'Workspace not found'}, status=404)
+
+    packets = ContentPacket.objects.filter(workspace=workspace).prefetch_related(
+        'items__deliverable'
+    )[:20]
+
+    return Response({
+        'success': True,
+        'packets': [{
+            'id': str(p.id),
+            'title': p.title,
+            'status': p.status,
+            'item_count': p.items.count(),
+            'created_at': p.created_at.isoformat(),
+            'items': [{
+                'id': str(item.id),
+                'role': item.role,
+                'order': item.order,
+                'is_primary': item.is_primary,
+                'deliverable': {
+                    'id': str(item.deliverable.id),
+                    'title': item.deliverable.title,
+                    'category': item.deliverable.category,
+                    'agent_name': item.deliverable.agent_name,
+                    'quality_score': item.deliverable.quality_score,
+                    'content_preview': (item.deliverable.content or '')[:200],
+                },
+            } for item in p.items.all()],
+        } for p in packets],
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def pipeline_stage_detail(request, workspace_id, run_id, stage_index):
     """Return detail for a specific pipeline stage: tools used, sources, cost."""
     from core.models_skin_layer import ProjectWorkspace
