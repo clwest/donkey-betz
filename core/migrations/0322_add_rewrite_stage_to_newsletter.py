@@ -92,9 +92,9 @@ def update_newsletter_pipeline(apps, schema_editor):
 
     try:
         template = WorkspaceTemplate.objects.get(slug='newsletter')
-        template.pipeline_config = NEWSLETTER_PIPELINE
+        template.pipeline_stages = NEWSLETTER_PIPELINE
         template.agent_pool = NEWSLETTER_AGENTS
-        template.save(update_fields=['pipeline_config', 'agent_pool'])
+        template.save(update_fields=['pipeline_stages', 'agent_pool'])
 
         # Update all existing newsletter workspace configs
         for config in WorkspaceConfig.objects.filter(template__slug='newsletter'):
