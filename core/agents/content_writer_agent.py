@@ -783,18 +783,24 @@ For this {content_type}, ensure:
                         execution_time_ms=execution_time
                     )
 
-                # Extract parameters
+                # Extract parameters — workspace_brief overrides defaults
+                workspace_brief = context.get('workspace_brief', {})
+                if not isinstance(workspace_brief, dict):
+                    workspace_brief = {}
+
                 content_type = context.get('content_type', 'blog_post')
                 research = context.get('research', '')
 
                 # Session 858: Use user's preferred communication style as default tone
                 default_tone = user_context.get('communication_style', 'professional')
-                tone = context.get('tone', default_tone)
+                tone = context.get('tone') or workspace_brief.get('tone', default_tone)
 
-                target_audience = context.get('target_audience', 'general audience')
+                target_audience = context.get('target_audience') or workspace_brief.get('audience', 'general audience')
                 word_count = context.get('word_count', CONTENT_TYPES.get(content_type, {}).get('default_word_count', 1500))
-                topic = context.get('topic', '')
+                topic = context.get('topic') or workspace_brief.get('topic', '')
                 keywords = context.get('keywords', [])
+                if not keywords and workspace_brief.get('focus_areas'):
+                    keywords = workspace_brief['focus_areas']
 
                 # Validate content type
                 if content_type not in CONTENT_TYPES:
@@ -839,7 +845,8 @@ For this {content_type}, ensure:
                     tone_description=tone_description,
                     target_audience=target_audience,
                     word_count=word_count,
-                    keywords=keywords
+                    keywords=keywords,
+                    workspace_brief=workspace_brief,
                 )
 
                 # Session 854: Add Flagship template injection for distinctive content
@@ -1319,6 +1326,46 @@ Word Count: {word_count} words | Time: {execution_time_ms}ms
         except Exception as e:
             logger.warning(f"Failed to save blog to SelfBlog: {e}")
 
+    def _format_brief_instructions(self, workspace_brief: Dict[str, Any] = None) -> str:
+        """Build non-negotiable writing instructions from the workspace brief."""
+        brief = workspace_brief or {}
+        if not brief:
+            return ''
+
+        parts = ['\n## NON-NEGOTIABLE BRIEF REQUIREMENTS']
+
+        hook = brief.get('distribution_hook', '')
+        if hook:
+            parts.append(f"""
+### HOOK (MUST OPEN THE ARTICLE)
+Your opening paragraph MUST lead with this hook:
+"{hook}"
+Do NOT start with a generic intro. The FIRST SENTENCE must use this hook.
+Reinforce this hook in at least 2 body sections.""")
+
+        audience = brief.get('audience', '')
+        if audience:
+            parts.append(f"""
+### AUDIENCE
+Every section must be written for: {audience}
+Ask yourself: "Would {audience} find this actionable?" If not, rewrite it.""")
+
+        notes = brief.get('notes', '')
+        if notes:
+            parts.append(f"""
+### SPECIFIC INSTRUCTIONS FROM THE USER
+{notes}
+These are direct instructions — follow them exactly.""")
+
+        focus_areas = brief.get('focus_areas', [])
+        if focus_areas and isinstance(focus_areas, list):
+            parts.append(f"""
+### REQUIRED FOCUS AREAS
+The article MUST cover these topics: {', '.join(focus_areas)}
+Do not drift into unrelated areas.""")
+
+        return '\n'.join(parts)
+
     def _build_content_prompt(
         self,
         content_type: str,
@@ -1332,6 +1379,7 @@ Word Count: {word_count} words | Time: {execution_time_ms}ms
         word_count: int,
         keywords: List[str],
         claims_block: str = '',
+        workspace_brief: Dict[str, Any] = None,
     ) -> str:
         """
         Build the GPT prompt for content generation.
@@ -1410,11 +1458,12 @@ Plus these additional fields:
 - Base ALL content on the provided research - do not invent facts
 - When referencing operational metrics (execution times, success rates, health scores), use ONLY the exact numbers from the Operational Telemetry section
 - Do NOT fabricate specific incidents, error messages, or recovery narratives that are not in the provided research
-- CITE YOUR SOURCES! Attribute specific claims to their sources
+- CITE YOUR SOURCES using footnote style [1] [2] [3] — list all sources in a ## Sources section at the bottom
 - Write in a natural, engaging style appropriate for {target_audience}
 - Ensure the content is ready to publish with minimal editing
 - Include practical examples from the provided data where appropriate
 - Make it compelling, valuable, and credible to the reader
+{self._format_brief_instructions(workspace_brief)}
 
 Generate the {content_config['name']} now:"""
 
