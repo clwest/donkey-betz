@@ -421,7 +421,45 @@ def _extract_distribution(data: dict, message: str) -> str:
     full_text = data.get('full_text', '')
     if full_text and len(full_text) > 50:
         return full_text
-    # Fall back to message which is also markdown
+
+    # Format optimization dict as readable markdown if full_text not available
+    opt = data.get('optimization', {})
+    if isinstance(opt, dict) and opt:
+        parts = ["# Distribution & Engagement Plan\n"]
+
+        subjects = opt.get('subject_variants', [])
+        if subjects:
+            parts.append("## Subject Line Variants\n")
+            for s in subjects:
+                if isinstance(s, dict):
+                    parts.append(f"- **{s.get('text', '')}** ({s.get('style', '')})\n")
+                elif isinstance(s, str):
+                    parts.append(f"- {s}\n")
+
+        hook = opt.get('hook_analysis', {})
+        if isinstance(hook, dict) and hook:
+            parts.append(f"\n## Hook Analysis\n")
+            parts.append(f"- Current score: {hook.get('current_score', '?')}/10\n")
+            for rewrite in hook.get('rewrites', []):
+                if isinstance(rewrite, dict):
+                    parts.append(f"- Rewrite: {rewrite.get('text', '')}\n")
+
+        snippets = opt.get('social_snippets', {})
+        if isinstance(snippets, dict) and snippets:
+            parts.append("\n## Social Snippets\n")
+            for platform, text in snippets.items():
+                parts.append(f"**{platform}:** {text}\n\n")
+
+        recs = opt.get('key_recommendations', [])
+        if recs:
+            parts.append("\n## Key Recommendations\n")
+            for r in recs:
+                parts.append(f"- {r}\n")
+
+        assembled = '\n'.join(parts)
+        if len(assembled) > 100:
+            return assembled
+
     return message
 
 
