@@ -422,11 +422,19 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
         all_tool_calls = []
         attempts = []
 
+        # Use the brief topic directly as the seed — don't rely on extracting from task string.
+        # The task string is often generic ("Deep dive research on trending topics") while
+        # the brief has the actual topic ("How small teams use AI agents to automate ops").
+        seed = task
+        if workspace_brief.get('topic'):
+            seed = workspace_brief['topic']
+            logger.info("[IterativeSearch] Using brief topic as seed: %s", seed[:100])
+
         # Round 1: Generate query plan from SearchStrategyService
-        query_plan = generate_query_plan(task, workspace_brief, max_queries=6)
+        query_plan = generate_query_plan(seed, workspace_brief, max_queries=6)
         if not query_plan:
             # Fallback: use task itself as a single query
-            query_plan = [{'query': self._extract_search_query(task), 'strategy': 'fallback', 'priority': 1}]
+            query_plan = [{'query': self._extract_search_query(seed), 'strategy': 'fallback', 'priority': 1}]
 
         round_results = self._execute_search_round(query_plan, all_tool_calls)
         all_results.extend(round_results)
