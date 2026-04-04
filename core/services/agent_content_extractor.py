@@ -99,25 +99,46 @@ def _extract_content_writer(data: dict, message: str) -> str:
 
 
 def _extract_editor(data: dict, message: str) -> str:
-    """EditorAgent stores in data['enhanced_content']."""
+    """EditorAgent stores in data['enhanced_content']. Handles both old and new gatekeeper format."""
     enhanced = data.get('enhanced_content', {})
     if isinstance(enhanced, dict):
         parts = []
+
+        # Show verdict if present (gatekeeper mode)
+        verdict = enhanced.get('verdict', '')
+        if verdict:
+            parts.append(f"**Editor Verdict: {verdict}**\n")
+            score = enhanced.get('score', '')
+            if score:
+                parts.append(f"**Score: {score}/100**\n")
+
         if enhanced.get('title'):
             parts.append(f"# {enhanced['title']}\n")
         if enhanced.get('intro'):
             parts.append(enhanced['intro'])
         for section in enhanced.get('sections', []):
             if isinstance(section, dict):
-                if section.get('heading'):
-                    parts.append(f"\n## {section['heading']}\n")
-                if section.get('body'):
-                    parts.append(section['body'])
+                # Support both field name conventions
+                heading = section.get('heading') or section.get('header', '')
+                body = section.get('body') or section.get('content', '')
+                if heading:
+                    parts.append(f"\n## {heading}\n")
+                if body:
+                    parts.append(body)
         if enhanced.get('conclusion'):
             parts.append(f"\n## Conclusion\n{enhanced['conclusion']}")
-        changes = data.get('changes_made', [])
+
+        # Show sections removed/added (gatekeeper mode)
+        removed = enhanced.get('sections_removed', [])
+        if removed:
+            parts.append(f"\n---\n**Sections removed:** {', '.join(str(r) for r in removed)}")
+        added = enhanced.get('sections_added', [])
+        if added:
+            parts.append(f"\n**Sections added:** {', '.join(str(a) for a in added)}")
+
+        changes = enhanced.get('changes_made', data.get('changes_made', []))
         if changes:
-            parts.append(f"\n---\n**Changes made:** {', '.join(str(c) for c in changes)}")
+            parts.append(f"\n**Changes made:** {', '.join(str(c) for c in changes)}")
         if parts:
             return '\n'.join(parts)
     if isinstance(enhanced, str) and len(enhanced) > 50:
