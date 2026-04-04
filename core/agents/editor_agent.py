@@ -327,7 +327,7 @@ Output Format:
                 temperature=0.7,
             )
 
-            response = registry.complete('openai', 'gpt-4o-mini', request)
+            response = registry.complete('openai', 'gpt-5.2', request)
 
             if not response.success:
                 logger.error(f"LLM enhancement failed: {response.error}")

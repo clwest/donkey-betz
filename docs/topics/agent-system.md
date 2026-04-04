@@ -1,8 +1,8 @@
 # Agent System
 
-92 agents organized by category, routed deterministically via dictionary lookup, with automatic tool call recording and provenance tracking. Session 1000: 4 Intelligence Desks run 21 agents daily. Session 1029: Agent health audit — 35 thriving, 6 bounded, 3 waste paths closed. Session 1034: RAG user documents wired into all 92 agents, media task guard blocks non-generative tasks.
+84 agents in AGENT_MAP (+ ~139 DB persona agents via DynamicPersonaAgent), routed deterministically via dictionary lookup, with automatic tool call recording and provenance tracking. Session 1000: 4 Intelligence Desks run 21 agents daily. Session 1029: Agent health audit — 35 thriving, 6 bounded, 3 waste paths closed. Session 1034: RAG user documents wired into all 84 AGENT_MAP agents, media task guard blocks non-generative tasks.
 
-## Agent Categories (82 Total)
+## Agent Categories (84 in AGENT_MAP)
 
 | Category | Count | Agents |
 |----------|-------|--------|
@@ -49,7 +49,7 @@ Deterministic dictionary lookup — no LLM involved in routing:
 1. `AGENT_MAP` maps agent name strings to classes
 2. Router receives `agent_name` + `task` + `context`
 3. Validates agent exists, instantiates fresh per request
-4. Injects context layers (10 types), executes, returns `AgentResult`
+4. Injects context layers (12 types), executes, returns `AgentResult`
 
 **Optional semantic routing:** Embeddings-based for natural language queries (cosine similarity threshold 0.35, falls back to keyword matching).
 
@@ -83,7 +83,7 @@ Every agent automatically receives 3 shared tools in its LLM tool schema via `Ba
 |------|---------|---------|
 | `web_search` | `BaseAgent._execute_tool_call()` | Real-time web search via Tavily |
 | `spider_query` | `BaseAgent._execute_tool_call()` | Query SpiderData via `SpiderIntelligenceService` |
-| `delegate_to_specialist` | `BaseAgent._execute_tool_call()` | Route sub-tasks to any of 81 discoverable agents |
+| `delegate_to_specialist` | `BaseAgent._execute_tool_call()` | Route sub-tasks to any of 84 discoverable agents |
 
 **Injection paths:**
 - `_call_openai()` / `_call_llm_with_tools()` — automatic via `_get_tools_with_shared()`

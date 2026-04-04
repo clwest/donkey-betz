@@ -214,7 +214,7 @@ class BaseBusinessResearchAgent(BaseAgent):
     def _call_openai_with_retry(
         self,
         messages: List[Dict],
-        model: str = "gpt-4o-mini",
+        model: str = "gpt-5.2",
         tools: List = None,
         tool_choice: str = "auto",
         max_completion_tokens: int = 6000,
