@@ -12,6 +12,7 @@ import {
   ArrowLeft, Play, CheckCircle2, XCircle, Clock, Loader2,
   BarChart3, FileText, Bot, Zap, Pause, AlertCircle,
   Save, MessageSquare, PenLine, History, X, ChevronDown,
+  Package, Star, Eye,
 } from 'lucide-react'
 import { usePAStore } from '@/stores/paStore'
 
@@ -84,6 +85,20 @@ export default function WorkspaceDashboardPage() {
   const [pipelineRun, setPipelineRun] = useState<PipelineRun | null>(null)
   const [loading, setLoading] = useState(true)
   const [runningPipeline, setRunningPipeline] = useState(false)
+
+  // Content packets
+  const [packets, setPackets] = useState<Array<Record<string, unknown>>>([])
+  const [expandedPacket, setExpandedPacket] = useState<string | null>(null)
+
+  const fetchPackets = useCallback(async () => {
+    if (!workspaceId) return
+    try {
+      const res = await api.get(`/workspaces/${workspaceId}/packets/`)
+      if (res.data.success && res.data.packets) {
+        setPackets(res.data.packets)
+      }
+    } catch { /* no packets */ }
+  }, [workspaceId])
 
   // Stage detail expansion
   const [expandedStage, setExpandedStage] = useState<number | null>(null)
@@ -226,7 +241,8 @@ export default function WorkspaceDashboardPage() {
     fetchPipelineStatus()
     fetchConfig()
     fetchRunHistory()
-  }, [fetchDashboard, fetchPipelineStatus, fetchConfig, fetchRunHistory])
+    fetchPackets()
+  }, [fetchDashboard, fetchPipelineStatus, fetchConfig, fetchRunHistory, fetchPackets])
 
   // Poll pipeline status while running
   useEffect(() => {
@@ -723,17 +739,106 @@ export default function WorkspaceDashboardPage() {
           )}
         </div>
 
-        {/* Deliverable Categories */}
-        {Object.keys(metrics.by_category).length > 0 && (
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Output by Category</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {Object.entries(metrics.by_category).map(([cat, count]) => (
-                <div key={cat} className="flex items-center justify-between bg-gray-800/50 rounded-lg px-3 py-2">
-                  <span className="text-sm text-gray-300">{cat || 'Uncategorized'}</span>
-                  <span className="text-sm font-semibold text-white">{count}</span>
-                </div>
-              ))}
+        {/* Content Packets */}
+        {packets.length > 0 && (
+          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Package className="text-purple-400" size={18} />
+              <h2 className="text-lg font-semibold text-white">Content Packets</h2>
+              <span className="text-xs text-gray-500">{packets.length} runs</span>
+            </div>
+            <div className="space-y-3">
+              {packets.map(packet => {
+                const pid = packet.id as string
+                const isOpen = expandedPacket === pid
+                const items = (packet.items as Array<Record<string, unknown>>) || []
+                const primary = items.find(i => i.is_primary)
+                const primaryTitle = primary
+                  ? ((primary.deliverable as Record<string, unknown>)?.title as string || '').replace(/^(Final Rewrite|Write Draft): /, '')
+                  : ''
+
+                const ROLE_COLORS: Record<string, string> = {
+                  research: 'bg-blue-900/30 text-blue-300',
+                  strategy: 'bg-indigo-900/30 text-indigo-300',
+                  draft: 'bg-green-900/30 text-green-300',
+                  edit_review: 'bg-yellow-900/30 text-yellow-300',
+                  fact_check: 'bg-orange-900/30 text-orange-300',
+                  rewrite: 'bg-emerald-900/30 text-emerald-300',
+                  seo: 'bg-cyan-900/30 text-cyan-300',
+                  distribution: 'bg-purple-900/30 text-purple-300',
+                  brief: 'bg-pink-900/30 text-pink-300',
+                  other: 'bg-gray-800 text-gray-400',
+                }
+
+                const ROLE_LABELS: Record<string, string> = {
+                  research: 'Research',
+                  strategy: 'Strategy',
+                  draft: 'Draft',
+                  edit_review: 'Editor Review',
+                  fact_check: 'Fact Check',
+                  rewrite: 'Final Version',
+                  seo: 'SEO',
+                  distribution: 'Distribution',
+                  brief: 'Brief',
+                  other: 'Other',
+                }
+
+                return (
+                  <div key={pid}>
+                    <div
+                      onClick={() => setExpandedPacket(isOpen ? null : pid)}
+                      className="flex items-center gap-3 p-3 rounded-lg bg-gray-800/30 hover:bg-gray-800/50 cursor-pointer transition-colors"
+                    >
+                      <Package size={16} className="text-purple-400" />
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-white">{packet.title as string}</div>
+                        {primaryTitle && (
+                          <div className="text-xs text-gray-400 mt-0.5">{primaryTitle}</div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500">{items.length} items</span>
+                        <span className={`text-xs px-2 py-0.5 rounded ${
+                          packet.status === 'approved' ? 'bg-green-900/30 text-green-300' :
+                          packet.status === 'review' ? 'bg-yellow-900/30 text-yellow-300' :
+                          'bg-gray-800 text-gray-500'
+                        }`}>{packet.status as string}</span>
+                        <ChevronDown size={14} className={`text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                      </div>
+                    </div>
+                    {isOpen && (
+                      <div className="bg-gray-900/80 border border-gray-800 border-t-0 rounded-b-lg p-3 space-y-1.5">
+                        {items.map(item => {
+                          const d = item.deliverable as Record<string, unknown>
+                          const role = item.role as string
+                          return (
+                            <div
+                              key={item.id as string}
+                              className="flex items-center gap-2 p-2 rounded hover:bg-gray-800/50 transition-colors"
+                            >
+                              {item.is_primary && <Star size={12} className="text-yellow-400" />}
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded ${ROLE_COLORS[role] || ROLE_COLORS.other}`}>
+                                {ROLE_LABELS[role] || role}
+                              </span>
+                              <span className="text-xs text-gray-300 flex-1 truncate">{d?.title as string}</span>
+                              {d?.quality_score != null && (d.quality_score as number) > 0 && (
+                                <span className="text-[10px] text-gray-600">{((d.quality_score as number) * 100).toFixed(0)}%</span>
+                              )}
+                              <Link
+                                to={`/workspace?tab=deliverables&workspace=${workspaceId}`}
+                                onClick={e => e.stopPropagation()}
+                                className="text-[10px] px-1.5 py-0.5 rounded bg-blue-900/30 text-blue-300 hover:bg-blue-900/50"
+                              >
+                                <Eye size={10} className="inline mr-0.5" /> View
+                              </Link>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
