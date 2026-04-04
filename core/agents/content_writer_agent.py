@@ -310,7 +310,8 @@ Always delegate tasks you cannot perform yourself rather than refusing or making
 
 ## PRIMARY SOURCE MATERIAL — YOU MUST USE THIS
 The following evidence was gathered by research agents from real sources.
-You MUST base your article on this evidence. Cite sources by URL.
+You MUST base your article on this evidence. Use footnote references [1], [2], etc.
+Do NOT put full URLs inline — list all sources in a ## Sources section at the bottom.
 Do NOT ignore this evidence in favor of spider data or other context below.
 If the evidence contradicts other context, USE THE EVIDENCE.
 
@@ -1341,24 +1342,26 @@ Word Count: {word_count} words | Time: {execution_time_ms}ms
         # Content-type specific instructions
         type_instructions = self._get_type_instructions(content_type, content_config)
 
-        # Session 523: Extract sources from research for citation
-        sources_instruction = ""
-        if research and ("Source:" in research or "Published:" in research):
-            sources_instruction = """
+        # Footnote-style citation instructions — clean reading experience
+        sources_instruction = """
 
-## SOURCE CITATION REQUIREMENTS (Session 523)
-The research above includes REAL sources with publication dates. You MUST:
-1. Reference specific data, statistics, or quotes from the sources
-2. Attribute claims like "According to [Source]..." or "As reported by [Source]..."
-3. Include a 'sources' array in your JSON output with all sources used
-4. When mentioning numbers or facts, cite where they came from
+## SOURCE CITATION FORMAT
+Use FOOTNOTE-STYLE references — NOT inline URLs. This keeps the text clean and readable.
 
-Example attributions:
-- "According to TechCrunch, the AI market is projected to reach $X billion..."
-- "A recent MIT Technology Review article notes that..."
-- "As reported by Reuters on December 21, 2025..."
+IN THE TEXT: Use numbered references like [1], [2], [3] next to claims.
+- "The AI market is projected to reach $X billion [1]"
+- "According to MIT Technology Review, teams of 3 are outperforming teams of 30 [2]"
+- Do NOT put full URLs in the body text
+- Do NOT use "(Source: https://...)" inline — it destroys readability
 
-This builds credibility and allows readers to verify the information."""
+AT THE BOTTOM: Add a "## Sources" section listing all numbered references:
+## Sources
+[1] TechCrunch — "AI Market Report 2026" — https://techcrunch.com/...
+[2] MIT Technology Review — "Small Teams, Big Impact" — https://www.technologyreview.com/...
+[3] SHRM — "HR Technology Trends" — https://www.shrm.org/...
+
+Each source line: [N] Publication — "Article Title" — URL
+Include a 'sources' array in your JSON output with all sources used."""
 
         # Session 1103: When evidence is available, label it clearly and add URL instructions
         has_evidence = research and ('Evidence' in research or 'URL:' in research or 'http' in research)
@@ -1370,7 +1373,8 @@ This builds credibility and allows readers to verify the information."""
 You MUST cite URLs from the VERIFIED RESEARCH EVIDENCE section above.
 Do NOT cite URLs from spider data, trending feeds, or any other context.
 Every URL in your article must come from the evidence block above.
-If you cannot find a URL in the evidence, do not include one — never invent URLs."""
+If you cannot find a URL in the evidence, do not include one — never invent URLs.
+Use FOOTNOTE [1] [2] [3] style in the body — list all sources at the bottom."""
         else:
             research_header = "## RESEARCH CONTEXT (Real-Time Data from Spider Network)"
             url_instruction = sources_instruction
