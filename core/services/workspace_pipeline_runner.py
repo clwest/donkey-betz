@@ -271,6 +271,34 @@ def _run_agent_with_timeout(run, stage_idx, stage, router, workspace, config, br
                 run.id, len(combined), len(research_content_parts),
             )
 
+        # Collect ALL review feedback (editor verdicts + fact check flags)
+        # for the rewrite stage to use
+        review_feedback_parts = []
+        draft_content = ''
+        for prev in previous_outputs:
+            prev_agent = prev.get('agent', '')
+            prev_name = prev.get('stage_name', '')
+            prev_content = prev.get('full_content', '')
+
+            # Capture the original draft for rewrite
+            if prev_agent == 'ContentWriterAgent' and prev_content:
+                draft_content = prev_content
+
+            # Collect editor and fact check feedback
+            if prev_agent in ('EditorAgent', 'ContrarianAgent') and prev_content:
+                review_feedback_parts.append(
+                    f"=== {prev_name} ({prev_agent}) Feedback ===\n{prev_content}"
+                )
+
+        if review_feedback_parts:
+            context['review_feedback'] = '\n\n'.join(review_feedback_parts)
+            logger.info(
+                "Pipeline %s: injected %d review feedback sources for rewrite",
+                run.id, len(review_feedback_parts),
+            )
+        if draft_content:
+            context['original_draft'] = draft_content
+
     try:
         with ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(router.route, task=task_desc, agent_name=agent_name, context=context)
