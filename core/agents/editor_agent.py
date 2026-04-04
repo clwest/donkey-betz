@@ -115,43 +115,77 @@ class EditorAgent(BaseAgent):
     output_category = OutputCategory.CONTENT
     default_quality_tier = QualityTier.SILVER
 
-    system_prompt = """You are a professional content editor specializing in digital publishing.
+    system_prompt = """You are an execution-focused product editor that ENFORCES INTENT.
 
-Your role is to take existing content and enhance its STRUCTURE while preserving the core message.
+You are NOT a grammar checker. You are a GATEKEEPER. Your job is to verify that the draft
+actually delivers what the workspace brief asked for, and either FIX it or FAIL it.
 
-Focus areas:
-1. HOOKS: Add compelling opening statements that grab attention
-2. HEADERS: Make section titles engaging and action-oriented
-3. ENGAGEMENT: Add questions, statistics, quotes, and callouts
-4. FLOW: Improve transitions between sections
-5. CONCLUSION: Create memorable, actionable endings
+## YOUR 5 NON-NEGOTIABLE CHECKS
 
-Rules:
-- Preserve the original voice and core message
-- Do not add fictional statistics - use placeholders like [X%] if needed
-- Keep the same word count range (+/- 10%)
-- Output must be structured JSON matching the SelfBlog model
-- Add specific annotations for changes made
+### 1. TOPIC ALIGNMENT (MOST IMPORTANT)
+Does EVERY section directly support the Topic/Focus from the brief?
+- If a section drifts off-topic (e.g., brief says "AI agents for ops" but section covers "funding trends"), MARK IT FOR REMOVAL or REWRITE.
+- Sections that are well-written but wrong for THIS article must be cut.
 
-Output Format:
+### 2. HOOK ENFORCEMENT
+The brief's Distribution Hook must:
+- Open the article (first paragraph)
+- Be reinforced in at least 2 sections
+- If the hook is missing or buried, REWRITE the intro to lead with it.
+
+### 3. AUDIENCE ALIGNMENT
+Every section must answer: "Would the target audience care about this?"
+- If a section reads like an analyst report but the audience is solo devs → rewrite for operators
+- If it reads like an investor memo but the audience is founders → make it actionable
+
+### 4. ACTIONABILITY
+Each section must include at least one CONCRETE takeaway the reader can act on.
+- Not "consider your options" → instead "Set up X this week using Y"
+- If a section is purely informational with no action → add one or flag for rewrite
+
+### 5. EVIDENCE INTEGRITY
+- Are claims tied to citations?
+- Are there at least 2 real, cited examples?
+- If claims are unsupported → flag them
+
+## PASS / FAIL BEHAVIOR
+
+After your 5 checks, give a verdict:
+
+PASS (score >= 70): Polish the draft — improve hooks, headers, transitions, flow. Output the improved version.
+FAIL (score < 70): Return a structured rejection with:
+- Which checks failed
+- Which sections to cut, rewrite, or add
+- Specific instructions for the previous stage to fix
+
+## OUTPUT FORMAT (JSON)
+
 {
-    "title": "Enhanced title (or original if good)",
-    "intro": "Enhanced introduction with hook",
+    "verdict": "PASS" or "FAIL",
+    "score": 0-100,
+    "checks": {
+        "topic_alignment": {"pass": true/false, "issues": ["..."], "sections_to_cut": ["..."]},
+        "hook_enforcement": {"pass": true/false, "issues": ["..."]},
+        "audience_relevance": {"pass": true/false, "issues": ["..."]},
+        "actionability": {"pass": true/false, "issues": ["..."]},
+        "evidence_quality": {"pass": true/false, "issues": ["..."]}
+    },
+    "title": "Improved title",
+    "intro": "Improved intro (hook-first)",
     "sections": [
-        {
-            "header": "Improved section header",
-            "content": "Enhanced section content with engagement elements"
-        }
+        {"header": "...", "content": "..."}
     ],
-    "conclusion": "Enhanced conclusion with CTA",
-    "changes_made": [
-        "Added opening hook: statistical question",
-        "Improved header for section 2",
-        "Added callout box in section 3"
-    ],
-    "structure_score_improvement": "Estimated improvement from X to Y"
+    "conclusion": "Improved conclusion with CTA",
+    "sections_removed": ["Section name — reason"],
+    "sections_added": ["Section name — reason"],
+    "changes_made": ["What changed and why"]
 }
-"""
+
+If verdict is FAIL, still include the checks and specific fix instructions but DO NOT produce
+a full rewrite — that wastes tokens. Just explain what needs to change and who should fix it.
+
+CRITICAL: Read the workspace brief (topic, audience, tone, hook) BEFORE reading the draft.
+The brief is your rubric. The draft is what you're grading."""
 
     def __init__(self, user=None, **kwargs):
         """Initialize the EditorAgent."""
@@ -216,8 +250,13 @@ Output Format:
             # Determine focus areas
             focus_areas = context.get('focus_areas', ['hooks', 'headers', 'engagement', 'structure', 'conclusion'])
 
-            # Build enhancement prompt
-            enhancement_prompt = self._build_enhancement_prompt(content, focus_areas)
+            # Get workspace brief — this is the rubric for the 5 quality checks
+            workspace_brief = context.get('workspace_brief', {})
+            if not isinstance(workspace_brief, dict):
+                workspace_brief = {}
+
+            # Build enhancement prompt with brief as rubric
+            enhancement_prompt = self._build_enhancement_prompt(content, focus_areas, workspace_brief)
 
             # Call LLM for enhancement
             enhanced_content = self._enhance_with_llm(enhancement_prompt, content)
@@ -273,38 +312,59 @@ Output Format:
                 execution_time_ms=int((time.time() - start_time) * 1000),
             )
 
-    def _build_enhancement_prompt(self, content: Dict[str, Any], focus_areas: List[str]) -> str:
-        """Build the enhancement prompt based on focus areas."""
-        prompt_parts = [
-            "Enhance the following content for publication readiness.\n",
-            "## Focus Areas:\n"
-        ]
+    def _build_enhancement_prompt(self, content: Dict[str, Any], focus_areas: List[str], workspace_brief: Dict[str, Any] = None) -> str:
+        """Build the enhancement prompt with the workspace brief as the rubric."""
+        brief = workspace_brief or {}
+        prompt_parts = []
 
-        for area in focus_areas:
-            if area in ENHANCEMENT_STRATEGIES:
-                strategy = ENHANCEMENT_STRATEGIES[area]
-                prompt_parts.append(f"\n### {strategy['name']}\n{strategy['prompt_addition']}\n")
+        # THE RUBRIC — brief comes FIRST so the editor knows what to grade against
+        if brief:
+            prompt_parts.append("## WORKSPACE BRIEF (Your Rubric — grade the draft against this)\n")
+            if brief.get('topic'):
+                prompt_parts.append(f"**Topic/Focus:** {brief['topic']}\n")
+            if brief.get('audience'):
+                prompt_parts.append(f"**Target Audience:** {brief['audience']}\n")
+            if brief.get('tone'):
+                prompt_parts.append(f"**Tone:** {brief['tone']}\n")
+            if brief.get('distribution_hook'):
+                prompt_parts.append(f"**Distribution Hook (must appear in intro + 2 sections):** {brief['distribution_hook']}\n")
+            if brief.get('focus_areas') and isinstance(brief['focus_areas'], list):
+                prompt_parts.append(f"**Focus Areas:** {', '.join(brief['focus_areas'])}\n")
+            if brief.get('notes'):
+                prompt_parts.append(f"**Notes:** {brief['notes']}\n")
+            prompt_parts.append("\n---\n\n")
 
-        prompt_parts.append("\n## Original Content:\n")
-        prompt_parts.append(f"Title: {content.get('title', 'Untitled')}\n\n")
-        prompt_parts.append(f"Introduction:\n{content.get('intro', '')}\n\n")
+        prompt_parts.append("## DRAFT TO REVIEW\n\n")
 
-        sections = content.get('sections', [])
-        if sections:
-            prompt_parts.append("Sections:\n")
-            for i, section in enumerate(sections):
+        # Handle content as either dict (structured) or string (plain text)
+        if isinstance(content, dict):
+            prompt_parts.append(f"Title: {content.get('title', 'Untitled')}\n\n")
+            if content.get('intro'):
+                prompt_parts.append(f"{content['intro']}\n\n")
+            for section in content.get('sections', []):
                 if isinstance(section, dict):
-                    prompt_parts.append(f"\n### {section.get('header', f'Section {i+1}')}\n")
-                    prompt_parts.append(f"{section.get('content', '')}\n")
-
-        prompt_parts.append(f"\nConclusion:\n{content.get('conclusion', '')}\n")
+                    prompt_parts.append(f"### {section.get('header', section.get('heading', 'Section'))}\n")
+                    prompt_parts.append(f"{section.get('content', section.get('body', ''))}\n\n")
+                elif isinstance(section, str):
+                    prompt_parts.append(f"{section}\n\n")
+            if content.get('conclusion'):
+                prompt_parts.append(f"Conclusion:\n{content['conclusion']}\n\n")
+        elif isinstance(content, str):
+            prompt_parts.append(f"{content}\n\n")
 
         prompt_parts.append("""
-## Instructions:
-1. Enhance the content following the focus areas above
-2. Preserve the original voice and core message
-3. Return ONLY valid JSON in the specified format
-4. List all changes made in the 'changes_made' array
+## YOUR TASK
+
+Run your 5 non-negotiable checks against the brief above:
+1. **Topic Alignment** — Does every section support the Topic/Focus? Cut off-topic sections.
+2. **Hook Enforcement** — Is the Distribution Hook in the intro and reinforced in 2+ sections?
+3. **Audience Relevance** — Would the target audience care about each section?
+4. **Actionability** — Does each section have a concrete takeaway?
+5. **Evidence Quality** — Are claims cited? At least 2 real examples?
+
+Then give your verdict (PASS/FAIL) and return the JSON output.
+If PASS: include the improved/polished content.
+If FAIL: explain what needs to change and which stage should fix it.
 """)
 
         return ''.join(prompt_parts)
