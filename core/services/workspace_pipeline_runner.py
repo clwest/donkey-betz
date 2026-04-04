@@ -58,6 +58,24 @@ def execute_pipeline_run(run_id: str) -> dict:
     brief = config.workspace_brief if config else {}
     previous_outputs = []  # Accumulates outputs from completed stages
 
+    # Create a content packet to group all deliverables from this run
+    packet = None
+    try:
+        from core.models_deliverables import ContentPacket
+        topic = brief.get('topic', workspace.name) if brief else workspace.name
+        packet = ContentPacket.objects.create(
+            workspace=workspace,
+            pipeline_run=run,
+            title=f"Newsletter: {topic[:200]}",
+            status='draft',
+            created_by=run.triggered_by,
+        )
+        run._packet_id = str(packet.id)  # Stash for stage deliverable linking
+        logger.info("Pipeline %s: created content packet %s", run.id, packet.id)
+    except Exception as e:
+        run._packet_id = None
+        logger.warning("Pipeline %s: failed to create content packet: %s", run.id, e)
+
     # Group stages by parallel_group (None = sequential)
     stage_groups = _group_stages(run.pipeline_snapshot)
 
@@ -329,6 +347,7 @@ def _run_agent_with_timeout(run, stage_idx, stage, router, workspace, config, br
             deliverable_id = _save_stage_deliverable(
                 workspace=workspace, stage_name=stage_name, agent_name=agent_name,
                 content=content, brief=brief, run_id=str(run.id), user=run.triggered_by,
+                packet_id=getattr(run, '_packet_id', None),
             )
 
             output = {
@@ -370,10 +389,23 @@ def _extract_content(result) -> str:
     return extract_deliverable_content(result)
 
 
-def _save_stage_deliverable(workspace, stage_name, agent_name, content, brief, run_id, user):
-    """Save stage output as a workspace-scoped Deliverable."""
+STAGE_TO_ROLE = {
+    'Topic Mining': 'research',
+    'Deep Research': 'research',
+    'Content Strategy': 'strategy',
+    'Write Draft': 'draft',
+    'Edit & Polish': 'edit_review',
+    'Fact Check': 'fact_check',
+    'Final Rewrite': 'rewrite',
+    'SEO & Headlines': 'seo',
+    'Hooks & Distribution': 'distribution',
+}
+
+
+def _save_stage_deliverable(workspace, stage_name, agent_name, content, brief, run_id, user, packet_id=None):
+    """Save stage output as a workspace-scoped Deliverable and link to content packet."""
     try:
-        from core.models_deliverables import Deliverable
+        from core.models_deliverables import Deliverable, ContentPacketItem, ContentPacket
         topic = brief.get('topic', workspace.name) if brief else workspace.name
         deliverable = Deliverable.objects.create(
             title=f"{stage_name}: {topic}"[:255],
@@ -388,6 +420,24 @@ def _save_stage_deliverable(workspace, stage_name, agent_name, content, brief, r
             metadata={'pipeline_run_id': run_id, 'stage_name': stage_name,
                       'workspace_brief_topic': brief.get('topic', '') if brief else ''},
         )
+
+        # Link to content packet if available
+        if packet_id:
+            try:
+                packet = ContentPacket.objects.get(id=packet_id)
+                role = STAGE_TO_ROLE.get(stage_name, 'other')
+                order = list(STAGE_TO_ROLE.keys()).index(stage_name) if stage_name in STAGE_TO_ROLE else 99
+                is_primary = (role == 'rewrite') or (role == 'draft' and stage_name == 'Write Draft')
+                ContentPacketItem.objects.create(
+                    packet=packet,
+                    deliverable=deliverable,
+                    role=role,
+                    order=order,
+                    is_primary=is_primary,
+                )
+            except Exception as e:
+                logger.warning("Failed to link deliverable to packet: %s", e)
+
         return deliverable.id
     except Exception as e:
         logger.error("Failed to save stage deliverable: %s", e)
