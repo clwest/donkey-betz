@@ -438,6 +438,15 @@ You orchestrate. You don't create content directly."""
                         agent_name = arguments.get('agent_name')
                         subtask = arguments.get('task', '')
                         subtask_context = arguments.get('context', {})
+                        if not isinstance(subtask_context, dict):
+                            subtask_context = {}
+
+                        # Inject workspace context from the workflow's own context
+                        # so sub-agents (especially ResearchAgent) can use the brief topic
+                        if context.get('workspace_brief') and 'workspace_brief' not in subtask_context:
+                            subtask_context['workspace_brief'] = context['workspace_brief']
+                        if context.get('workspace_id') and 'workspace_id' not in subtask_context:
+                            subtask_context['workspace_id'] = context['workspace_id']
 
                         self.record_decision(
                             decision_type="delegation",
