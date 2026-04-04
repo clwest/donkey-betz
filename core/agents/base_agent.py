@@ -2213,6 +2213,43 @@ Consider these trends when crafting the response to maximize relevance and engag
             # Never let tracking break agent execution
             logger.debug(f"Intelligent prompt tracking failed (non-critical): {e}")
 
+    def _synthesize_tool_results(self, tool_calls_made: list, tool_results: list, task: str = '') -> str:
+        """
+        Feed tool results back to GPT for synthesis instead of returning raw output.
+
+        Many agents call tools then build AgentResult directly from the raw tool
+        output. When GPT chose to call tools, response.content is often None,
+        so the deliverable ends up as garbage like "Count: 0".
+
+        This method sends tool results back to GPT with a synthesis prompt
+        to produce actual analysis.
+        """
+        import json as _json
+        tool_summary_parts = []
+        for tc, tr in zip(tool_calls_made, tool_results):
+            name = tc.get('name', tc.get('tool', ''))
+            inp = tc.get('input', tc.get('arguments', {}))
+            tool_summary_parts.append(
+                f"Tool: {name}\n"
+                f"Input: {_json.dumps(inp, default=str)[:300]}\n"
+                f"Result: {_json.dumps(tr, default=str)[:800]}"
+            )
+        tool_block = '\n---\n'.join(tool_summary_parts)
+
+        synthesis_prompt = (
+            f"You just executed these tools for the task: {task[:200]}\n\n"
+            f"{tool_block}\n\n"
+            f"Now provide your ANALYSIS and RECOMMENDATIONS based on this data. "
+            f"Do NOT repeat the raw tool output. Synthesize the findings into "
+            f"clear, actionable insights. Be specific."
+        )
+        try:
+            synthesis = self._call_openai(synthesis_prompt)
+            return synthesis.get('content') or ''
+        except Exception as e:
+            logger.warning(f"{self.name}: synthesis call failed: {e}")
+            return ''
+
     def _call_openai(
         self,
         prompt: str,
