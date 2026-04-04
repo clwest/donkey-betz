@@ -166,6 +166,17 @@ Rules:
 
         try:
             content = context.get('content', '')
+
+            # If no content but deliverable_id is provided, fetch deliverable content
+            if not content and context.get('deliverable_id'):
+                try:
+                    from core.models_deliverables import Deliverable
+                    deliverable = Deliverable.objects.get(id=context['deliverable_id'])
+                    content = deliverable.content or ''
+                    logger.info(f"DistributionAgent: Loaded content from deliverable {context['deliverable_id']} ({len(content)} chars)")
+                except Exception as e:
+                    logger.warning(f"DistributionAgent: Failed to fetch deliverable {context.get('deliverable_id')}: {e}")
+
             if not content:
                 # Try to get from task description
                 content = task if len(task) > 200 else ''
@@ -173,15 +184,32 @@ Rules:
             if not content:
                 return AgentResult(
                     success=False,
-                    message="No content provided. Include 'content' in context.",
+                    message="No content provided. Include 'content' or 'deliverable_id' in context.",
                     error="No content to optimize",
                     agent_name=self.name,
                 )
 
-            content_type = context.get('content_type', 'general')
-            audience = context.get('audience', 'general readers')
+            # Load workspace brief for defaults if available
+            workspace_brief = context.get('workspace_brief', {})
+            if not workspace_brief and context.get('workspace_id'):
+                try:
+                    from core.models_workspace_templates import WorkspaceConfig
+                    config = WorkspaceConfig.objects.filter(
+                        workspace_id=context['workspace_id']
+                    ).first()
+                    if config and config.workspace_brief:
+                        workspace_brief = config.workspace_brief
+                        logger.info(f"DistributionAgent: Loaded brief from workspace {context['workspace_id']}")
+                except Exception as e:
+                    logger.warning(f"DistributionAgent: Failed to load workspace brief: {e}")
+
+            content_type = context.get('content_type') or workspace_brief.get('tone', '') or 'general'
+            # Map brief tone to content_type if it matches
+            if content_type not in CONTENT_TYPE_PROMPTS:
+                content_type = 'general'
+            audience = context.get('audience') or workspace_brief.get('audience', '') or 'general readers'
             goal = context.get('goal', 'engagement')
-            tone = context.get('tone', '')
+            tone = context.get('tone') or workspace_brief.get('tone', '')
 
             # Build the optimization prompt
             type_prompt = CONTENT_TYPE_PROMPTS.get(content_type, CONTENT_TYPE_PROMPTS['general'])
