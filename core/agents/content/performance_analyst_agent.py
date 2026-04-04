@@ -299,11 +299,15 @@ Always use tools to get real performance data. Never make up statistics."""
                         result = self._execute_tool(tool_name, tool_input)
                         tool_results.append(result)
 
+                    # Synthesize tool results into actual analysis
+                    analysis = self._synthesize_tool_results(tool_calls_made, tool_results, task)
+                    message = analysis or response.get('content') or "Performance analysis complete"
+
                     execution_time_ms = int((time.time() - start_time) * 1000)
                     result = AgentResult(
                         success=True,
-                        message=response.get('content') or "Performance analysis complete",
-                        data={"tool_results": tool_results},
+                        message=message,
+                        data={"tool_results": tool_results, "full_text": message},
                         agent_name=self.name,
                         execution_time_ms=execution_time_ms,
                         tool_calls=tool_calls_made
@@ -325,15 +329,15 @@ Always use tools to get real performance data. Never make up statistics."""
                     except Exception as e:
                         logger.warning(f"Failed to record learning outcome: {e}")
 
-                    # Session 1006: Persist output to Deliverable
-                    self._save_to_deliverable(
-                        title=f"Performance Analysis: {task[:80]}",
-                        content=result.message,
-                        deliverable_type='analysis',
-                        category='Performance Analysis',
-                        tags=['performance', 'content'],
-                        metadata={'task': task[:200]},
-                    )
+                    if len(message) > 100:
+                        self._save_to_deliverable(
+                            title=f"Performance Analysis: {task[:80]}",
+                            content=message,
+                            deliverable_type='analysis',
+                            category='Performance Analysis',
+                            tags=['performance', 'content'],
+                            metadata={'task': task[:200]},
+                        )
 
                     return result
                 else:
