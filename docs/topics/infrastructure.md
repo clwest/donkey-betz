@@ -7,7 +7,7 @@ Django web application deployed on Railway with Redis, PostgreSQL (pgvector), an
 - **Backend:** Django 4.2+ with Daphne (ASGI)
 - **Database:** PostgreSQL with pgvector extension (386+ models)
 - **Cache/Broker:** Redis (DB0: channels, DB1: cache, DB2: broker, DB3: results)
-- **Task Queue:** Celery with 7 worker types (see celery-workers.md)
+- **Task Queue:** Celery with 9 worker processes (see celery-workers.md)
 - **Frontend:** React + TypeScript + Vite + Tailwind
 - **LLM Providers:** OpenAI (GPT-5), Anthropic (Claude 4), Together AI, Ollama, DeepSeek, Gemini
 
