@@ -16,6 +16,8 @@ __all__ = [
     'DeliverableExport',
     'DeliverableCollection',
     'DeliverableEvent',
+    'ContentPacket',
+    'ContentPacketItem',
 ]
 
 import uuid
@@ -521,3 +523,108 @@ class DeliverableEvent(models.Model):
 
     def __str__(self):
         return f"{self.event_type} on {self.deliverable_id} at {self.created_at}"
+
+
+class ContentPacket(models.Model):
+    """
+    Groups deliverables from a single pipeline run into a packet.
+
+    A content packet is like a folder — it contains all the artifacts
+    from one newsletter production run: brief, research, draft, edits,
+    fact check, final rewrite, SEO, distribution plan.
+
+    Future: packets can be emailed to customers as PDF bundles.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    workspace = models.ForeignKey(
+        'core.ProjectWorkspace',
+        on_delete=models.CASCADE,
+        related_name='content_packets',
+    )
+    pipeline_run = models.ForeignKey(
+        'core.PipelineRun',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='content_packet',
+    )
+    title = models.CharField(max_length=255)
+    status = models.CharField(
+        max_length=20,
+        default='draft',
+        choices=[
+            ('draft', 'Draft'),
+            ('review', 'In Review'),
+            ('approved', 'Approved'),
+            ('sent', 'Sent'),
+        ],
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        db_table = 'core_content_packet'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.title} ({self.status})"
+
+    @property
+    def primary_deliverable(self):
+        """The main deliverable in this packet (is_primary=True)."""
+        item = self.items.filter(is_primary=True).select_related('deliverable').first()
+        return item.deliverable if item else None
+
+    @property
+    def item_count(self):
+        return self.items.count()
+
+
+class ContentPacketItem(models.Model):
+    """Links a deliverable to a content packet with a role and order."""
+    ROLE_CHOICES = [
+        ('brief', 'Workspace Brief'),
+        ('research', 'Research'),
+        ('strategy', 'Content Strategy'),
+        ('draft', 'Draft'),
+        ('edit_review', 'Editor Review'),
+        ('fact_check', 'Fact Check'),
+        ('rewrite', 'Final Rewrite'),
+        ('seo', 'SEO & Headlines'),
+        ('distribution', 'Distribution Plan'),
+        ('other', 'Other'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    packet = models.ForeignKey(
+        ContentPacket,
+        on_delete=models.CASCADE,
+        related_name='items',
+    )
+    deliverable = models.ForeignKey(
+        Deliverable,
+        on_delete=models.CASCADE,
+        related_name='packet_items',
+    )
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='other')
+    order = models.IntegerField(default=0)
+    is_primary = models.BooleanField(
+        default=False,
+        help_text="The main deliverable (final newsletter) — shown prominently",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        db_table = 'core_content_packet_item'
+        ordering = ['order']
+        unique_together = [('packet', 'deliverable')]
+
+    def __str__(self):
+        return f"{self.role}: {self.deliverable.title[:50]}"

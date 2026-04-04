@@ -72,6 +72,8 @@ from ..models_deliverables import (
     Deliverable,
     DeliverableExport,
     DeliverableCollection,
+    ContentPacket,
+    ContentPacketItem,
 )
 
 # Import audit tracking models (Session 819 - Audit Tracking System)
