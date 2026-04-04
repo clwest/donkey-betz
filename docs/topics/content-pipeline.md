@@ -27,7 +27,33 @@ Each claim gets a deterministic ID: `C-{sha256(normalize_url(url) + title)[:10]}
 
 ## ContentWriterAgent (Step 2)
 
-Generates draft with mandatory `[C-xxxxxxxxxx]` citations. The agent's system prompt includes:
+Generates draft with mandatory `[C-xxxxxxxxxx]` citations.
+
+### Three Prompt Construction Methods
+
+ContentWriterAgent has its OWN prompt-building system, separate from `BaseAgent._build_intelligent_prompt()`:
+
+| Method | Type | Location | Purpose |
+|--------|------|----------|---------|
+| `_build_intelligent_system_prompt()` | System prompt | line ~280 | Evidence injection, platform summary, spider intelligence, domain context, performance feedback, temporal awareness |
+| `_build_content_prompt()` | User prompt | line ~1321 | Content type instructions, research data, citation requirements, tone/audience/word count |
+| `generate_flagship_injection()` | User prompt append | line ~851 | Distinctive voice injection from agent recoveries, dreams, learnings — skipped when evidence-first mode active |
+
+**Important:** `BaseAgent._build_intelligent_prompt()` is used by most agents but NOT by ContentWriterAgent for content generation. ContentWriterAgent calls its own `_build_intelligent_system_prompt()` instead. Evidence injected into BaseAgent's method will NOT reach ContentWriterAgent.
+
+### Spider Data Injection (4 Paths)
+
+Spider URLs and data enter ContentWriterAgent through 4 separate paths:
+
+1. **`_format_spider_intelligence()`** (line ~558) — formats `spider_context` dict into citable markdown (trends, discussions, articles, market data). Injected into system prompt.
+2. **`BlogPerformanceContextBuilder`** — injects past blog performance metrics including blog URLs. Via enrichment pipeline.
+3. **`get_domain_content_context()`** (line ~484) — injects domain-specific spider data (finance, sports, crypto, etc.). **Skipped when evidence exists** (Session 1103).
+4. **`generate_flagship_injection()`** (line ~851) — injects spider-based content for distinctive voice. **Skipped when evidence-first mode active** (Session 1103).
+
+Session 1103 added evidence-first suppression for paths 1 (via `_evidence_context_override`), 3, and 4. Path 2 (blog performance) can still surface spider URLs.
+
+### System Prompt Includes
+- **Evidence override** (Session 1103): Research evidence injected at top, overrides all other context
 - **Performance feedback** (Session 886): Recent quality scores, strengths/weaknesses, learning rules
 - **Domain context** (Session 891): Finance/sports/crypto/AI-specific platform data from 9 domains
 - **User preferences** and platform capabilities
@@ -161,7 +187,7 @@ draft → evaluate_unscored_blogs → needs_enhancement
 - Finds oldest `needs_enhancement` blogs, limit 5 per run
 - Runs `EditorAgent.execute()` with `save=True` — enhanced content saved directly to SelfBlog
 - Blog status moves to `pending_review` after enhancement
-- Each enhancement takes ~18s via OpenAI gpt-4o-mini
+- Each enhancement takes ~18s via OpenAI (EditorAgent still uses gpt-4o-mini — candidate for upgrade)
 
 **EditorAgent LLM fix (PR #1308):** EditorAgent's `_enhance_with_llm()` imported from nonexistent `core.services.llm_service`. Fixed to use `LLMProviderRegistry` + `LLMRequest` from `core.services.llm_provider_registry`.
 

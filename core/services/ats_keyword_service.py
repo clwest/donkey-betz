@@ -314,7 +314,7 @@ Return format: ["keyword1", "keyword2", ...]"""
 
             response = self.llm_client.execute(
                 prompt=prompt,
-                model='gpt-4o-mini',
+                model='gpt-5.2',
                 max_tokens=500
             )
 
@@ -560,7 +560,7 @@ Keep it under 75 words for ATS scannability."""
 
                 response = self.llm_client.execute(
                     prompt=prompt,
-                    model='gpt-4o-mini',
+                    model='gpt-5.2',
                     max_tokens=200
                 )
 
