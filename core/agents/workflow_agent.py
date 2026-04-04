@@ -462,12 +462,20 @@ You orchestrate. You don't create content directly."""
                                 'result': agent_result.to_dict()
                             })
 
+                            # Save deliverable for successful content-producing agents
+                            deliverable_id = None
+                            if agent_result.success:
+                                deliverable_id = self._save_workflow_deliverable(
+                                    agent_name, subtask, agent_result, subtask_context
+                                )
+
                             workflow_results.append({
                                 'agent': agent_name,
                                 'task': subtask,
                                 'success': agent_result.success,
                                 'summary': agent_result.message[:200] if agent_result.message else str(agent_result.data)[:200],
-                                'data': agent_result.data
+                                'data': agent_result.data,
+                                'deliverable_id': str(deliverable_id) if deliverable_id else None,
                             })
 
                             self.mark_decision_outcome(
@@ -663,3 +671,70 @@ You orchestrate. You don't create content directly."""
                 'success': False,
                 'error': str(e)
             }
+
+    def _save_workflow_deliverable(self, agent_name, task, agent_result, context):
+        """
+        Save sub-agent output as a Deliverable when it produces meaningful content.
+
+        Uses the same content extractor as the pipeline runner so both paths
+        produce identical deliverables.
+        """
+        try:
+            from core.services.agent_content_extractor import extract_deliverable_content
+            content = extract_deliverable_content(agent_result)
+
+            # Only save if there's substantial content (not just a summary line)
+            if not content or len(content) < 100:
+                return None
+
+            from core.models_deliverables import Deliverable
+
+            # Derive title from agent result or task
+            title = ''
+            if agent_result.data and isinstance(agent_result.data, dict):
+                title = agent_result.data.get('title', '')
+            if not title:
+                title = task[:200] if task else f'{agent_name} output'
+
+            # Get workspace info from context if available
+            workspace_id = None
+            if isinstance(context, dict):
+                workspace_id = context.get('workspace_id')
+            # Also check self context from the workflow task
+            if not workspace_id and hasattr(self, '_current_delegation_context'):
+                workspace_id = getattr(self, '_current_delegation_context', {}).get('workspace_id')
+
+            workspace = None
+            if workspace_id:
+                try:
+                    from core.models_skin_layer import ProjectWorkspace
+                    workspace = ProjectWorkspace.objects.get(id=workspace_id)
+                except Exception:
+                    pass
+
+            deliverable = Deliverable.objects.create(
+                title=f"{agent_name}: {title}"[:255],
+                deliverable_type='document',
+                category=f'Workflow — {agent_name}',
+                agent_name=agent_name,
+                content=content,
+                content_format='markdown',
+                workspace=workspace,
+                user=self.user,
+                is_saved=True,
+                metadata={
+                    'source': 'workflow_agent',
+                    'task': task[:500] if task else '',
+                    'quality_tier': agent_result.data.get('metadata', {}).get('quality_tier', '')
+                    if isinstance(agent_result.data, dict) else '',
+                },
+            )
+            logger.info(
+                "WorkflowAgent: saved deliverable %s for %s (%d chars)",
+                deliverable.id, agent_name, len(content),
+            )
+            return deliverable.id
+
+        except Exception as e:
+            logger.warning("WorkflowAgent: failed to save deliverable for %s: %s", agent_name, e)
+            return None
