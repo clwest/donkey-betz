@@ -476,15 +476,21 @@ function MyBusinessWorkspaces() {
     updated_at: string
   }>
 
-  // Filter to sandbox (template-created) workspaces
-  const bizWorkspaces = workspaces.filter(w => w.workspace_type === 'sandbox')
+  // Show all workspaces (not just sandbox)
+  const bizWorkspaces = workspaces.filter(w => w.is_active)
 
   if (isLoading || bizWorkspaces.length === 0) return null
+
+  const TYPE_COLORS: Record<string, string> = {
+    sandbox: 'bg-blue-900/30 text-blue-300',
+    production: 'bg-green-900/30 text-green-300',
+    default: 'bg-purple-900/30 text-purple-300',
+  }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">My Business Workspaces</h3>
+        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">My Workspaces</h3>
         <a href="/workspace/new" className="text-xs text-blue-400 hover:text-blue-300">+ New</a>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -497,9 +503,11 @@ function MyBusinessWorkspaces() {
             <div className="flex items-center gap-2 mb-1">
               <Zap size={14} className="text-blue-400" />
               <span className="font-medium text-white group-hover:text-blue-300 transition-colors">{ws.name}</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded ${TYPE_COLORS[ws.workspace_type] || TYPE_COLORS.default}`}>
+                {ws.workspace_type}
+              </span>
             </div>
             <div className="flex items-center gap-2 text-xs text-gray-500">
-              {ws.is_active && <span className="text-green-400">Active</span>}
               <span>Updated {new Date(ws.updated_at).toLocaleDateString()}</span>
             </div>
           </a>
