@@ -1591,7 +1591,7 @@ CITATION RULES:
                     {"role": "system", "content": intelligent_system_prompt},
                     {"role": "user", "content": prompt}
                 ],
-                max_completion_tokens=8000,  # GPT-5.2: NOT max_tokens, NO temperature
+                max_completion_tokens=16000,  # GPT-5.2: generous budget for full newsletter + JSON structure
                 timeout=120.0  # Session 767: Explicit request timeout
             )
 
@@ -1607,19 +1607,25 @@ CITATION RULES:
             else:
                 self._last_generation_truncated = False
 
+            # Save original response BEFORE any JSON extraction attempts
+            original_response = content_text or ''
+
             # Try to parse as JSON
             try:
                 # Find JSON in the response
+                json_candidate = content_text
                 if '```json' in content_text:
                     json_start = content_text.find('```json') + 7
                     json_end = content_text.find('```', json_start)
-                    content_text = content_text[json_start:json_end].strip()
+                    if json_end > json_start:
+                        json_candidate = content_text[json_start:json_end].strip()
                 elif '```' in content_text:
                     json_start = content_text.find('```') + 3
                     json_end = content_text.find('```', json_start)
-                    content_text = content_text[json_start:json_end].strip()
+                    if json_end > json_start:
+                        json_candidate = content_text[json_start:json_end].strip()
 
-                content_data = json.loads(content_text)
+                content_data = json.loads(json_candidate)
 
                 # Ensure we have full_text
                 if 'full_text' not in content_data:
@@ -1630,13 +1636,33 @@ CITATION RULES:
 
                 return content_data
 
-            except json.JSONDecodeError:
-                # If not valid JSON, return as plain text
-                logger.warning("Could not parse content as JSON, returning as plain text")
+            except (json.JSONDecodeError, ValueError):
+                # JSON parsing failed — recover the content as plain text
+                # Use the ORIGINAL response, not the sliced json_candidate
+                recovered = original_response.strip()
+
+                # Strip markdown code fences if present
+                if recovered.startswith('```'):
+                    lines = recovered.split('\n')
+                    # Remove first line (```json or ```) and last line (```)
+                    if lines[-1].strip() == '```':
+                        lines = lines[1:-1]
+                    else:
+                        lines = lines[1:]
+                    recovered = '\n'.join(lines).strip()
+
+                if recovered:
+                    logger.warning(
+                        "JSON parse failed but recovered %d chars of content as plain text",
+                        len(recovered),
+                    )
+                else:
+                    logger.error("JSON parse failed AND no content to recover from response")
+
                 return {
-                    'full_text': content_text,
-                    'raw_content': content_text,
-                    'parse_error': 'Content was not valid JSON',
+                    'full_text': recovered,
+                    'raw_content': recovered,
+                    'parse_error': 'Content was not valid JSON — recovered as plain text',
                     '_truncated': was_truncated
                 }
 
