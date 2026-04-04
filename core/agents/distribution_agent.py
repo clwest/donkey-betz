@@ -165,7 +165,22 @@ Rules:
         start_time = time.time()
 
         try:
-            content = context.get('content', '')
+            content = context.get('content_text') or context.get('content', '')
+
+            # If content is a dict (EditorAgent format), extract the text
+            if isinstance(content, dict):
+                sections = content.get('sections', [])
+                parts = []
+                if content.get('title'):
+                    parts.append(str(content['title']))
+                for s in sections:
+                    if isinstance(s, dict):
+                        parts.append(str(s.get('body', '')))
+                    else:
+                        parts.append(str(s))
+                if content.get('conclusion'):
+                    parts.append(str(content['conclusion']))
+                content = '\n\n'.join(parts)
 
             # If no content but deliverable_id is provided, fetch deliverable content
             if not content and context.get('deliverable_id'):
