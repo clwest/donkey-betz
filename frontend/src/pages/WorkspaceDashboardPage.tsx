@@ -85,6 +85,30 @@ export default function WorkspaceDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [runningPipeline, setRunningPipeline] = useState(false)
 
+  // Stage detail expansion
+  const [expandedStage, setExpandedStage] = useState<number | null>(null)
+  const [stageDetail, setStageDetail] = useState<Record<string, unknown> | null>(null)
+  const [loadingStageDetail, setLoadingStageDetail] = useState(false)
+
+  const toggleStageDetail = async (index: number) => {
+    if (expandedStage === index) {
+      setExpandedStage(null)
+      setStageDetail(null)
+      return
+    }
+    setExpandedStage(index)
+    setStageDetail(null)
+    if (!pipelineRun || !workspaceId) return
+    setLoadingStageDetail(true)
+    try {
+      const res = await api.get(`/workspaces/${workspaceId}/pipeline/${pipelineRun.id}/stage/${index}/`)
+      if (res.data.success) {
+        setStageDetail(res.data)
+      }
+    } catch { /* no detail available */ }
+    setLoadingStageDetail(false)
+  }
+
   // Pipeline history + dismiss state
   const [runHistory, setRunHistory] = useState<PipelineRun[]>([])
   const [showHistory, setShowHistory] = useState(false)
@@ -565,73 +589,128 @@ export default function WorkspaceDashboardPage() {
               const snapshotStage = dashboard.pipeline[i] || {} as Record<string, unknown>
               const parallelGroup = (stage as Record<string, unknown>).parallel_group || (snapshotStage as Record<string, unknown>).parallel_group
 
+              const isExpanded = expandedStage === i && isRunResult
+              const canExpand = isRunResult && (status === 'completed' || status === 'failed')
+
               return (
-                <div
-                  key={i}
-                  className={`flex items-center gap-3 p-3 rounded-lg ${
-                    status === 'running' ? 'bg-blue-950/30 border border-blue-800/30' :
-                    status === 'completed' ? 'bg-green-950/20' :
-                    status === 'failed' ? 'bg-red-950/20' :
-                    status === 'awaiting_approval' ? 'bg-yellow-950/20 border border-yellow-800/30' :
-                    'bg-gray-800/30'
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-sm font-bold text-gray-400">
-                    {STAGE_ICONS[status] || <span>{i + 1}</span>}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-white">{stageName}</span>
-                      {parallelGroup && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-900/30 text-indigo-300 border border-indigo-800/30">
-                          parallel
-                        </span>
+                <div key={i}>
+                  <div
+                    onClick={() => canExpand && toggleStageDetail(i)}
+                    className={`flex items-center gap-3 p-3 rounded-lg ${canExpand ? 'cursor-pointer' : ''} ${
+                      status === 'running' ? 'bg-blue-950/30 border border-blue-800/30' :
+                      status === 'completed' ? 'bg-green-950/20' :
+                      status === 'failed' ? 'bg-red-950/20' :
+                      status === 'awaiting_approval' ? 'bg-yellow-950/20 border border-yellow-800/30' :
+                      'bg-gray-800/30'
+                    } ${isExpanded ? 'rounded-b-none' : ''}`}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-sm font-bold text-gray-400">
+                      {STAGE_ICONS[status] || <span>{i + 1}</span>}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-white">{stageName}</span>
+                        {parallelGroup && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-900/30 text-indigo-300 border border-indigo-800/30">
+                            parallel
+                          </span>
+                        )}
+                        {canExpand && (
+                          <ChevronDown size={12} className={`text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                        )}
+                      </div>
+                      {agentName && (
+                        <div className="text-xs text-gray-500">{agentName}</div>
+                      )}
+                      {error && (
+                        <div className="text-xs text-red-400 mt-0.5">{error}</div>
+                      )}
+                      {output?.message && status === 'completed' && !isExpanded && (
+                        <div className="text-xs text-gray-400 mt-0.5 truncate max-w-md">
+                          {(output.message as string).slice(0, 100)}...
+                        </div>
                       )}
                     </div>
-                    {agentName && (
-                      <div className="text-xs text-gray-500">{agentName}</div>
-                    )}
-                    {error && (
-                      <div className="text-xs text-red-400 mt-0.5">{error}</div>
-                    )}
-                    {output?.message && status === 'completed' && (
-                      <div className="text-xs text-gray-400 mt-0.5 truncate max-w-md">
-                        {(output.message as string).slice(0, 100)}...
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {deliverableId && (
+                        <Link
+                          to={`/workspace?tab=deliverables&workspace=${workspaceId}`}
+                          onClick={e => e.stopPropagation()}
+                          className="text-xs px-2 py-1 rounded bg-blue-900/30 text-blue-300 hover:bg-blue-900/50 transition-colors"
+                        >
+                          View
+                        </Link>
+                      )}
+                      {status === 'awaiting_approval' && (
+                        <button
+                          onClick={e => { e.stopPropagation(); window.location.href = `/workspace?tab=deliverables&workspace=${workspaceId}` }}
+                          className="text-xs px-3 py-1 rounded bg-green-600 hover:bg-green-500 text-white transition-colors"
+                        >
+                          Review & Approve
+                        </button>
+                      )}
+                      <span className={`text-xs px-2 py-0.5 rounded ${
+                        status === 'completed' ? 'bg-green-900/30 text-green-300' :
+                        status === 'running' ? 'bg-blue-900/30 text-blue-300' :
+                        status === 'failed' ? 'bg-red-900/30 text-red-300' :
+                        status === 'awaiting_approval' ? 'bg-yellow-900/30 text-yellow-300' :
+                        'bg-gray-800 text-gray-500'
+                      }`}>
+                        {status === 'awaiting_approval' ? 'needs review' : status}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {/* View deliverable link for completed stages */}
-                    {deliverableId && (
-                      <Link
-                        to={`/workspace?tab=deliverables&workspace=${workspaceId}`}
-                        className="text-xs px-2 py-1 rounded bg-blue-900/30 text-blue-300 hover:bg-blue-900/50 transition-colors"
-                      >
-                        View
-                      </Link>
-                    )}
-                    {/* Approve button for review stages */}
-                    {status === 'awaiting_approval' && (
-                      <button
-                        onClick={() => {
-                          // Mark as approved by navigating to deliverables to review
-                          window.location.href = `/workspace?tab=deliverables&workspace=${workspaceId}`
-                        }}
-                        className="text-xs px-3 py-1 rounded bg-green-600 hover:bg-green-500 text-white transition-colors"
-                      >
-                        Review & Approve
-                      </button>
-                    )}
-                    <span className={`text-xs px-2 py-0.5 rounded ${
-                      status === 'completed' ? 'bg-green-900/30 text-green-300' :
-                      status === 'running' ? 'bg-blue-900/30 text-blue-300' :
-                      status === 'failed' ? 'bg-red-900/30 text-red-300' :
-                      status === 'awaiting_approval' ? 'bg-yellow-900/30 text-yellow-300' :
-                      'bg-gray-800 text-gray-500'
-                    }`}>
-                      {status === 'awaiting_approval' ? 'needs review' : status}
-                    </span>
-                  </div>
+                  {/* Expandable stage detail panel */}
+                  {isExpanded && (
+                    <div className="bg-gray-900/80 border border-gray-800 border-t-0 rounded-b-lg p-4 space-y-3">
+                      {loadingStageDetail ? (
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <Loader2 size={12} className="animate-spin" /> Loading stage details...
+                        </div>
+                      ) : stageDetail ? (
+                        <>
+                          {/* Tool calls */}
+                          {(stageDetail.tool_count as number) > 0 && (
+                            <div>
+                              <div className="text-xs font-medium text-gray-400 mb-1">Tools Used ({stageDetail.tool_count as number})</div>
+                              <div className="space-y-1">
+                                {(stageDetail.tool_calls as Array<Record<string, unknown>>).map((tc, j) => (
+                                  <div key={j} className="flex items-center gap-2 text-xs">
+                                    {tc.success ? <CheckCircle2 size={10} className="text-green-400" /> : <XCircle size={10} className="text-red-400" />}
+                                    <span className="text-gray-300 font-mono">{tc.tool_name as string}</span>
+                                    {tc.latency_ms && <span className="text-gray-600">{tc.latency_ms as number}ms</span>}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {/* Deliverable preview */}
+                          {stageDetail.deliverable && (
+                            <div>
+                              <div className="text-xs font-medium text-gray-400 mb-1">Output</div>
+                              <div className="bg-gray-800/50 rounded p-2">
+                                <div className="text-xs text-white font-medium">{(stageDetail.deliverable as Record<string, unknown>).title as string}</div>
+                                <div className="text-[11px] text-gray-500 mt-1">
+                                  {(stageDetail.deliverable as Record<string, unknown>).word_count as number} words
+                                  {' | Quality: '}
+                                  {(((stageDetail.deliverable as Record<string, unknown>).quality_score as number) * 100).toFixed(0)}%
+                                </div>
+                                <div className="text-xs text-gray-400 mt-2 line-clamp-3">
+                                  {(stageDetail.deliverable as Record<string, unknown>).content_preview as string}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          {/* No tools and no deliverable */}
+                          {(stageDetail.tool_count as number) === 0 && !stageDetail.deliverable && (
+                            <div className="text-xs text-gray-600">No tool calls or deliverables recorded for this stage.</div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="text-xs text-gray-600">No detail available for this stage.</div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )
             })}
