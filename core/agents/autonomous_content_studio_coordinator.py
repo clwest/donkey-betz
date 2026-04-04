@@ -322,12 +322,15 @@ CRITICAL: Always use tools to interact with the system. Never simulate or make u
                         result = self._execute_tool(tool_name, tool_input)
                         tool_results.append(result)
 
-                    # Return with tool results
+                    # Synthesize tool results
+                    analysis = self._synthesize_tool_results(tool_calls_made, tool_results, task)
+                    message = analysis or response.get('content') or "Coordination complete"
+
                     execution_time = int((time.time() - start_time) * 1000)
                     result = AgentResult(
                         success=True,
-                        message=response.get('content') or "Coordination complete",
-                        data={"tool_results": tool_results},
+                        message=message,
+                        data={"tool_results": tool_results, "full_text": message},
                         agent_name=self.name,
                         execution_time_ms=execution_time,
                         tool_calls=tool_calls_made

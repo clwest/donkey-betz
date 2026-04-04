@@ -228,11 +228,15 @@ CRITICAL: Always use tools to get real spider data. Never make up trends or fake
                         result = self._execute_tool(tool_name, tool_input)
                         tool_results.append(result)
 
+                    # Synthesize tool results into actual analysis
+                    analysis = self._synthesize_tool_results(tool_calls_made, tool_results, task)
+                    message = analysis or response.get('content') or "Topic mining complete"
+
                     execution_time_ms = int((time.time() - start_time) * 1000)
                     result = AgentResult(
                         success=True,
-                        message=response.get('content') or "Topic mining complete",
-                        data={"tool_results": tool_results},
+                        message=message,
+                        data={"tool_results": tool_results, "full_text": message},
                         agent_name=self.name,
                         execution_time_ms=execution_time_ms,
                         tool_calls=tool_calls_made
@@ -254,15 +258,16 @@ CRITICAL: Always use tools to get real spider data. Never make up trends or fake
                     except Exception as e:
                         logger.warning(f"Failed to record learning outcome: {e}")
 
-                    # Session 1006: Persist output to Deliverable
-                    self._save_to_deliverable(
-                        title=f"Topic Mining: {task[:80]}",
-                        content=result.message,
-                        deliverable_type='analysis',
-                        category='Topic Mining',
-                        tags=['topics', 'content'],
-                        metadata={'task': task[:200]},
-                    )
+                    # Persist synthesized analysis to Deliverable
+                    if len(message) > 100:
+                        self._save_to_deliverable(
+                            title=f"Topic Mining: {task[:80]}",
+                            content=message,
+                            deliverable_type='analysis',
+                            category='Topic Mining',
+                            tags=['topics', 'content'],
+                            metadata={'task': task[:200]},
+                        )
 
                     return result
                 else:
