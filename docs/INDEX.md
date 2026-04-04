@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-04-03 19:13
+**Generated:** 2026-04-04 17:24
 **Current Session:** 784
 **Total Documentation:** 1836 files | 627,194 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,219 |
+| Total cross-references | 2,218 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/plans/README.md` | 60 | 📋 Strategic Plans & Roadmaps |
+| `docs/archive/SYSTEM_CAPABILITIES-original/07_Neural_Visualization/README.md` | 60 | 🎭 NEURAL ORCHESTRA VISUALIZATION - Living AI Symph |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -156,7 +156,7 @@
 | [FRONTEND_BACKEND_DATA_FLOW_AUDIT.md](FRONTEND_BACKEND_DATA_FLOW_AUDIT.md) | 402 | 2026-02-15 |
 | [FRONTEND_INTEGRATION_NOTE.md](FRONTEND_INTEGRATION_NOTE.md) | 128 | 2026-01-21 |
 | [GOLDEN_GOOSE_STRATEGY.md](GOLDEN_GOOSE_STRATEGY.md) | 751 | 2026-01-21 |
-| [INDEX.md](INDEX.md) | 362 | 2026-04-03 |
+| [INDEX.md](INDEX.md) | 362 | 2026-04-04 |
 | [INTELLIGENCE_SYSTEMS.md](INTELLIGENCE_SYSTEMS.md) | 530 | 2026-01-21 |
 | [KNOWLEDGE_PIPELINE.md](KNOWLEDGE_PIPELINE.md) | 475 | 2026-01-21 |
 | [LEGAL_ASSISTANT.md](LEGAL_ASSISTANT.md) | 442 | 2026-01-21 |
@@ -218,12 +218,12 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| infrastructure.md | topics | 76 | 2026-04-03 19:13 |
-| INDEX.md | docs | 362 | 2026-04-03 19:12 |
-| content-pipeline.md | topics | 240 | 2026-04-03 19:04 |
-| frontend.md | topics | 94 | 2026-04-03 19:03 |
-| celery-workers.md | topics | 204 | 2026-04-03 19:03 |
-| agent-system.md | topics | 201 | 2026-04-03 19:03 |
+| INDEX.md | docs | 362 | 2026-04-04 13:30 |
+| infrastructure.md | topics | 76 | 2026-04-03 19:14 |
+| frontend.md | topics | 94 | 2026-04-03 19:14 |
+| content-pipeline.md | topics | 240 | 2026-04-03 19:14 |
+| celery-workers.md | topics | 204 | 2026-04-03 19:14 |
+| agent-system.md | topics | 201 | 2026-04-03 19:14 |
 | EXECUTIVE_SUMMARY_WS4.md | patents | 49 | 2026-03-16 17:32 |
 | DISCLOSURE_L_SELF_TUNING_EXPERIMENTATION.md | patents | 367 | 2026-03-16 17:32 |
 | DISCLOSURE_K_BUDGET_AWARE_SCHEDULING.md | patents | 295 | 2026-03-16 17:32 |
