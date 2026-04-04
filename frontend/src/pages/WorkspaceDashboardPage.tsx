@@ -11,7 +11,7 @@ import { api } from '@/lib/api'
 import {
   ArrowLeft, Play, CheckCircle2, XCircle, Clock, Loader2,
   BarChart3, FileText, Bot, Zap, Pause, AlertCircle,
-  Save, MessageSquare, PenLine,
+  Save, MessageSquare, PenLine, History, X, ChevronDown,
 } from 'lucide-react'
 import { usePAStore } from '@/stores/paStore'
 
@@ -85,12 +85,21 @@ export default function WorkspaceDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [runningPipeline, setRunningPipeline] = useState(false)
 
+  // Pipeline history + dismiss state
+  const [runHistory, setRunHistory] = useState<PipelineRun[]>([])
+  const [showHistory, setShowHistory] = useState(false)
+  const [dismissedRunId, setDismissedRunId] = useState<string | null>(() => {
+    if (!workspaceId) return null
+    return localStorage.getItem(`pipeline_dismissed_${workspaceId}`)
+  })
+
   // Workspace brief state
   const [brief, setBrief] = useState<Record<string, string | string[]>>({
     topic: '', audience: '', tone: '', focus_areas: [], notes: '',
   })
   const [briefDirty, setBriefDirty] = useState(false)
   const [savingBrief, setSavingBrief] = useState(false)
+  const [briefSaved, setBriefSaved] = useState(false)
 
   const fetchDashboard = useCallback(async () => {
     if (!workspaceId) return
@@ -109,10 +118,53 @@ export default function WorkspaceDashboardPage() {
     try {
       const res = await api.get(`/workspaces/${workspaceId}/pipeline/status/`)
       if (res.data.success && res.data.run) {
-        setPipelineRun(res.data.run)
+        const run = res.data.run as PipelineRun
+        // Don't show dismissed runs unless they're actively running
+        if (dismissedRunId === run.id && run.status !== 'running' && run.status !== 'pending') {
+          setPipelineRun(null)
+        } else {
+          setPipelineRun(run)
+          // Clear dismissal if a new run appeared
+          if (dismissedRunId && dismissedRunId !== run.id) {
+            setDismissedRunId(null)
+            localStorage.removeItem(`pipeline_dismissed_${workspaceId}`)
+          }
+        }
       }
     } catch { /* no runs yet */ }
+  }, [workspaceId, dismissedRunId])
+
+  const fetchRunHistory = useCallback(async () => {
+    if (!workspaceId) return
+    try {
+      const res = await api.get(`/workspaces/${workspaceId}/pipeline/history/`)
+      if (res.data.success && res.data.runs) {
+        setRunHistory(res.data.runs)
+      }
+    } catch { /* no history */ }
   }, [workspaceId])
+
+  const dismissRun = () => {
+    if (!pipelineRun || !workspaceId) return
+    localStorage.setItem(`pipeline_dismissed_${workspaceId}`, pipelineRun.id)
+    setDismissedRunId(pipelineRun.id)
+    setPipelineRun(null)
+    setShowHistory(false)
+  }
+
+  const selectHistoryRun = async (runId: string) => {
+    if (!workspaceId) return
+    try {
+      const res = await api.get(`/workspaces/${workspaceId}/pipeline/status/?run_id=${runId}`)
+      if (res.data.success && res.data.run) {
+        setPipelineRun(res.data.run)
+        // Clear dismissal when user explicitly selects a run
+        setDismissedRunId(null)
+        localStorage.removeItem(`pipeline_dismissed_${workspaceId}`)
+      }
+    } catch { /* failed to load run */ }
+    setShowHistory(false)
+  }
 
   // Load brief from config on first load
   const fetchConfig = useCallback(async () => {
@@ -131,6 +183,8 @@ export default function WorkspaceDashboardPage() {
     try {
       await api.patch(`/workspaces/${workspaceId}/config/`, { workspace_brief: brief })
       setBriefDirty(false)
+      setBriefSaved(true)
+      setTimeout(() => setBriefSaved(false), 3000)
     } catch (err) {
       console.error('Failed to save brief:', err)
     } finally {
@@ -147,7 +201,8 @@ export default function WorkspaceDashboardPage() {
     fetchDashboard()
     fetchPipelineStatus()
     fetchConfig()
-  }, [fetchDashboard, fetchPipelineStatus, fetchConfig])
+    fetchRunHistory()
+  }, [fetchDashboard, fetchPipelineStatus, fetchConfig, fetchRunHistory])
 
   // Poll pipeline status while running
   useEffect(() => {
@@ -156,12 +211,25 @@ export default function WorkspaceDashboardPage() {
     return () => clearInterval(interval)
   }, [pipelineRun?.status, fetchPipelineStatus])
 
+  // Close history dropdown when clicking outside
+  useEffect(() => {
+    if (!showHistory) return
+    const close = () => setShowHistory(false)
+    const timer = setTimeout(() => document.addEventListener('click', close), 0)
+    return () => { clearTimeout(timer); document.removeEventListener('click', close) }
+  }, [showHistory])
+
   const handleRunPipeline = async () => {
     if (!workspaceId) return
     setRunningPipeline(true)
     try {
       const res = await api.post(`/workspaces/${workspaceId}/pipeline/run/`)
       if (res.data.success) {
+        // Clear any previous dismissal
+        if (workspaceId) {
+          localStorage.removeItem(`pipeline_dismissed_${workspaceId}`)
+          setDismissedRunId(null)
+        }
         setPipelineRun({
           id: res.data.run_id,
           status: 'pending',
@@ -174,8 +242,8 @@ export default function WorkspaceDashboardPage() {
           error_message: '',
           created_at: new Date().toISOString(),
         })
-        // Start polling
-        setTimeout(fetchPipelineStatus, 2000)
+        // Start polling + refresh history
+        setTimeout(() => { fetchPipelineStatus(); fetchRunHistory() }, 2000)
       }
     } catch (err) {
       console.error('Failed to start pipeline:', err)
@@ -276,7 +344,12 @@ export default function WorkspaceDashboardPage() {
               >
                 <MessageSquare size={14} /> Ask Rigby
               </button>
-              {briefDirty && (
+              {briefSaved && (
+                <span className="flex items-center gap-1 text-sm text-green-400 animate-pulse">
+                  <CheckCircle2 size={14} /> Saved
+                </span>
+              )}
+              {briefDirty && !briefSaved && (
                 <button
                   onClick={saveBrief}
                   disabled={savingBrief}
@@ -407,18 +480,76 @@ export default function WorkspaceDashboardPage() {
           )}
 
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white">Pipeline</h2>
-            {pipelineRun && (
-              <div className="flex items-center gap-3">
-                <div className="w-32 bg-gray-800 rounded-full h-2">
-                  <div
-                    className="bg-blue-500 h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${pipelineRun.progress_pct}%` }}
-                  />
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold text-white">Pipeline</h2>
+              {/* History dropdown */}
+              {runHistory.length > 0 && (
+                <div className="relative">
+                  <button
+                    onClick={() => { setShowHistory(!showHistory); if (!showHistory) fetchRunHistory() }}
+                    className="flex items-center gap-1 text-xs px-2 py-1 rounded bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+                  >
+                    <History size={12} /> History <ChevronDown size={10} />
+                  </button>
+                  {showHistory && (
+                    <div className="absolute top-8 left-0 z-50 w-72 bg-gray-900 border border-gray-700 rounded-lg shadow-xl overflow-hidden">
+                      <div className="p-2 border-b border-gray-800 text-xs text-gray-500 font-medium">
+                        Recent Runs ({runHistory.length})
+                      </div>
+                      {runHistory.slice(0, 5).map(run => (
+                        <button
+                          key={run.id}
+                          onClick={() => selectHistoryRun(run.id)}
+                          className={`w-full text-left px-3 py-2 hover:bg-gray-800 transition-colors border-b border-gray-800/50 last:border-0 ${
+                            pipelineRun?.id === run.id ? 'bg-gray-800/50' : ''
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className={`text-xs px-1.5 py-0.5 rounded ${
+                              run.status === 'completed' ? 'bg-green-900/30 text-green-300' :
+                              run.status === 'failed' ? 'bg-red-900/30 text-red-300' :
+                              run.status === 'running' ? 'bg-blue-900/30 text-blue-300' :
+                              'bg-gray-800 text-gray-500'
+                            }`}>
+                              {run.status}
+                            </span>
+                            {run.duration_seconds != null && (
+                              <span className="text-[10px] text-gray-600">{Math.round(run.duration_seconds)}s</span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-gray-500 mt-1">
+                            {new Date(run.created_at).toLocaleString()}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <span className="text-sm text-gray-400">{pipelineRun.progress_pct}%</span>
-              </div>
-            )}
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Dismiss/clear button for non-running pipelines */}
+              {pipelineRun && !isPipelineRunning && (
+                <button
+                  onClick={dismissRun}
+                  className="flex items-center gap-1 text-xs px-2 py-1 rounded text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors"
+                  title="Dismiss this run"
+                >
+                  <X size={12} /> Clear
+                </button>
+              )}
+              {pipelineRun && (
+                <>
+                  <div className="w-32 bg-gray-800 rounded-full h-2">
+                    <div
+                      className="bg-blue-500 h-2 rounded-full transition-all duration-500"
+                      style={{ width: `${pipelineRun.progress_pct}%` }}
+                    />
+                  </div>
+                  <span className="text-sm text-gray-400">{pipelineRun.progress_pct}%</span>
+                </>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">
