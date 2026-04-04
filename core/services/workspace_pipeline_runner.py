@@ -228,10 +228,19 @@ def _run_agent_with_timeout(run, stage_idx, stage, router, workspace, config, br
         last = previous_outputs[-1]
         if last.get('full_content'):
             raw = last['full_content']
+            # Extract actual title from content (first line or heading)
+            content_title = ''
+            for line in raw.split('\n'):
+                line = line.strip().lstrip('#').strip()
+                if line and len(line) > 10:
+                    content_title = line[:200]
+                    break
+            content_title = content_title or brief.get('topic', 'Draft') if brief else 'Draft'
+
             # EditorAgent expects content as a dict with title/sections/conclusion
             # Other agents accept a plain string. Provide both formats.
             context['content'] = {
-                'title': last.get('stage_name', 'Draft'),
+                'title': content_title,
                 'sections': [{'heading': 'Content', 'body': raw}],
                 'conclusion': '',
             }
@@ -406,12 +415,24 @@ def _craft_intelligent_prompt(stage, brief, workspace_name, agent_name, previous
                 )
         previous_block = '\n\n'.join(prev_parts)
 
+    # Detect if this is an editing/polishing/review stage (not a creation stage)
+    is_editing_stage = any(kw in stage_name.lower() for kw in ['edit', 'polish', 'review', 'fact check', 'seo', 'headline', 'distribution', 'hook'])
+
+    editing_instruction = ''
+    if is_editing_stage and previous_outputs:
+        editing_instruction = f"""
+CRITICAL: This is an EDITING stage, NOT a writing stage. {agent_name} must work on
+the EXISTING content from previous stages — do NOT write new content from scratch.
+The content to edit/review is provided in the previous stage outputs below.
+Tell {agent_name} to improve, polish, check, or optimize the EXISTING draft."""
+
     crafting_prompt = f"""You are a creative director briefing a specialist agent for a content pipeline.
 
 Write a detailed, conversational task description for {agent_name} to execute the "{stage_name}" stage.
 
 Stage purpose: {stage_description}
 Workspace: {workspace_name}
+{editing_instruction}
 
 WORKSPACE BRIEF:
 {brief_block or 'No brief provided.'}
