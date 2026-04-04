@@ -415,7 +415,9 @@ class ProjectWorkspaceViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        """Filter to user's workspaces only"""
+        """Filter to user's workspaces — superusers see all"""
+        if self.request.user.is_superuser:
+            return ProjectWorkspace.objects.all().select_related('context').order_by('-updated_at')
         return ProjectWorkspace.objects.filter(
             user=self.request.user
         ).select_related('context').order_by('-updated_at')
@@ -1050,10 +1052,13 @@ class WorkspaceOperationViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = OperationPagination
 
     def get_queryset(self):
-        """Filter to user's operations only"""
-        queryset = WorkspaceOperation.objects.filter(
-            user=self.request.user
-        ).select_related('workspace').order_by('-created_at')
+        """Filter to user's operations — superusers see all"""
+        if self.request.user.is_superuser:
+            queryset = WorkspaceOperation.objects.all().select_related('workspace').order_by('-created_at')
+        else:
+            queryset = WorkspaceOperation.objects.filter(
+                user=self.request.user
+            ).select_related('workspace').order_by('-created_at')
 
         # Session 864: Exclude warmups by default (unless explicitly requested)
         # This keeps the Operations tab meaningful by hiding exercise/warmup runs
