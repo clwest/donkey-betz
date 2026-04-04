@@ -370,7 +370,7 @@ export default function WorkspaceDashboardPage() {
               </button>
               {briefSaved && (
                 <span className="flex items-center gap-1 text-sm text-green-400 animate-pulse">
-                  <CheckCircle2 size={14} /> Saved
+                  <CheckCircle2 size={14} /> Saved to deliverables
                 </span>
               )}
               {briefDirty && !briefSaved && (
