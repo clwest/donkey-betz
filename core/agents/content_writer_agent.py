@@ -788,6 +788,21 @@ For this {content_type}, ensure:
                 if not isinstance(workspace_brief, dict):
                     workspace_brief = {}
 
+                # === REWRITE MODE ===
+                # When review_feedback + original_draft are present, this is a rewrite
+                # stage — skip ALL heavy context and focus on the draft + feedback + brief
+                review_feedback = context.get('review_feedback', '')
+                original_draft = context.get('original_draft', '')
+                if review_feedback and original_draft:
+                    logger.info("ContentWriterAgent: REWRITE MODE — skipping heavy context, using draft + feedback + brief")
+                    return self._execute_rewrite(
+                        original_draft=original_draft,
+                        review_feedback=review_feedback,
+                        workspace_brief=workspace_brief,
+                        task=task,
+                        start_time=start_time,
+                    )
+
                 content_type = context.get('content_type', 'blog_post')
                 research = context.get('research', '')
 
@@ -1325,6 +1340,139 @@ Word Count: {word_count} words | Time: {execution_time_ms}ms
 
         except Exception as e:
             logger.warning(f"Failed to save blog to SelfBlog: {e}")
+
+    def _execute_rewrite(
+        self,
+        original_draft: str,
+        review_feedback: str,
+        workspace_brief: Dict[str, Any],
+        task: str,
+        start_time: float,
+    ) -> 'AgentResult':
+        """
+        Focused rewrite mode — NO heavy context injection.
+
+        Only receives: the original draft, editor + fact check feedback, and the brief.
+        This prevents topic drift caused by spider data, platform context, mood, etc.
+        """
+        brief = workspace_brief or {}
+        topic = brief.get('topic', '')
+        audience = brief.get('audience', 'general audience')
+        tone = brief.get('tone', 'professional')
+        hook = brief.get('distribution_hook', '')
+        notes = brief.get('notes', '')
+        focus_areas = brief.get('focus_areas', [])
+
+        system_prompt = f"""You are a professional newsletter writer doing a REWRITE.
+
+You have an original draft that was reviewed by an Editor and a Fact Checker.
+Both found issues. Your job is to produce a CORRECTED version that fixes
+EVERY issue they flagged.
+
+RULES:
+- This is a REWRITE, not a polish. Make STRUCTURAL changes where needed.
+- If the editor said to CUT a section, CUT IT. Do not keep it.
+- If the editor said to ADD something, ADD IT with real content.
+- If the fact checker flagged unsupported claims, either add citations or remove the claims.
+- The hook MUST open the article: "{hook}"
+- Every section must serve the target audience: {audience}
+- Tone: {tone}
+- Topic must stay focused on: {topic}
+{f'- Focus areas: {", ".join(focus_areas)}' if focus_areas else ''}
+{f'- User notes: {notes}' if notes else ''}
+
+OUTPUT FORMAT:
+Return the complete rewritten article as clean markdown text.
+Use footnote citations [1] [2] with a ## Sources section at the bottom.
+Do NOT return JSON. Just write the article."""
+
+        user_prompt = f"""## ORIGINAL DRAFT
+{original_draft[:6000]}
+
+## REVIEW FEEDBACK (fix ALL of these issues)
+{review_feedback[:4000]}
+
+## YOUR TASK
+Rewrite the draft above, fixing every issue from the review feedback.
+The rewrite should be 700-1200 words of clean, publish-ready content.
+Lead with the hook. Cut off-topic sections. Add what's missing.
+This is the FINAL version — make it great."""
+
+        try:
+            from openai import OpenAI
+            import os
+
+            client = OpenAI(
+                api_key=os.getenv('OPENAI_API_KEY'),
+                timeout=120.0,
+            )
+
+            response = client.chat.completions.create(
+                model="gpt-5.2",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                max_completion_tokens=16000,
+            )
+
+            rewritten = response.choices[0].message.content or ''
+            was_truncated = response.choices[0].finish_reason == 'length'
+
+            if was_truncated:
+                logger.warning("Rewrite was truncated at %d chars", len(rewritten))
+
+            execution_time = int((time.time() - start_time) * 1000)
+
+            # Extract title from first line
+            title = topic
+            for line in rewritten.split('\n'):
+                line = line.strip().lstrip('#').strip()
+                if line and len(line) > 10:
+                    title = line[:200]
+                    break
+
+            word_count = len(rewritten.split())
+
+            result = AgentResult(
+                success=True,
+                message=f"{title[:80]} | {word_count} words | rewrite",
+                data={
+                    'content': {
+                        'full_text': rewritten,
+                        '_truncated': was_truncated,
+                    },
+                    'title': title,
+                    'word_count': word_count,
+                    'content_type': 'blog_post',
+                    'tone': tone,
+                    'target_audience': audience,
+                    'metadata': {
+                        'quality_tier': 'gold' if word_count > 500 else 'silver',
+                        'rewrite_mode': True,
+                        'truncated': was_truncated,
+                        'actual_word_count': word_count,
+                    },
+                },
+                agent_name=self.name,
+                execution_time_ms=execution_time,
+            )
+
+            logger.info(
+                "ContentWriterAgent REWRITE completed: %d words, %dms",
+                word_count, execution_time,
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error("ContentWriterAgent rewrite failed: %s", e, exc_info=True)
+            return AgentResult(
+                success=False,
+                error=str(e),
+                agent_name=self.name,
+                execution_time_ms=int((time.time() - start_time) * 1000),
+            )
 
     def _format_brief_instructions(self, workspace_brief: Dict[str, Any] = None) -> str:
         """Build non-negotiable writing instructions from the workspace brief."""
