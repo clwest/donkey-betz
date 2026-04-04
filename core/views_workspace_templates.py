@@ -280,6 +280,39 @@ def workspace_config(request, workspace_id):
         if updated:
             config.save(update_fields=updated + ['updated_at'])
 
+        # Save brief as a versioned deliverable for tracking
+        if 'workspace_brief' in updated and config.workspace_brief:
+            try:
+                from core.models_deliverables import Deliverable
+                brief = config.workspace_brief
+                topic = brief.get('topic', workspace.name) if isinstance(brief, dict) else str(brief)
+
+                # Build readable brief content
+                brief_lines = [f"# Workspace Brief — {workspace.name}\n"]
+                if isinstance(brief, dict):
+                    for key, label in [('topic', 'Topic'), ('audience', 'Audience'),
+                                       ('tone', 'Tone'), ('distribution_hook', 'Hook'),
+                                       ('notes', 'Notes')]:
+                        if brief.get(key):
+                            brief_lines.append(f"**{label}:** {brief[key]}\n")
+                    if brief.get('focus_areas') and isinstance(brief['focus_areas'], list):
+                        brief_lines.append(f"**Focus Areas:** {', '.join(brief['focus_areas'])}\n")
+
+                Deliverable.objects.create(
+                    title=f"Brief: {topic[:100]}",
+                    deliverable_type='document',
+                    category='Workspace Brief',
+                    agent_name='User',
+                    content='\n'.join(brief_lines),
+                    content_format='markdown',
+                    workspace=workspace,
+                    user=request.user,
+                    is_saved=True,
+                    metadata={'brief_version': True, 'workspace_id': str(workspace.id)},
+                )
+            except Exception as e:
+                logger.warning("Failed to save brief as deliverable: %s", e)
+
         return Response({
             'success': True,
             'updated_fields': updated,
