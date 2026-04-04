@@ -226,27 +226,30 @@ CRITICAL: Use research tools to find real evidence. Never fabricate statistics o
                         result = self._handle_tool_call(tool_name, tool_input)
                         tool_results.append(result)
 
+                    # Synthesize tool results into advocacy argument
+                    analysis = self._synthesize_tool_results(tool_calls_made, tool_results, task)
+                    content = analysis or response.get('content') or "Advocacy argument prepared"
+
                     execution_time_ms = int((time.time() - start_time) * 1000)
-                    content = response.get('content') or "Advocacy argument prepared"
                     result = AgentResult(
                         success=True,
                         message=content,
-                        data={"tool_results": tool_results, "role": "ADVOCATE", "voice_id": "Rachel"},
+                        data={"tool_results": tool_results, "role": "ADVOCATE", "voice_id": "Rachel", "full_text": content},
                         agent_name=self.name,
                         execution_time_ms=execution_time_ms,
                         tool_calls=tool_calls_made
                     )
 
-                    # Session 861: Persist script to Deliverable
-                    self._save_to_deliverable(
-                        title=f"Debate Advocacy: {task[:50]}",
-                        content=content,
-                        deliverable_type='script',
-                        category='Content',
-                        tags=['debate', 'advocacy', 'podcast', 'script'],
-                        content_format='markdown',
-                        metadata={'task': task, 'role': 'ADVOCATE'},
-                    )
+                    if len(content) > 100:
+                        self._save_to_deliverable(
+                            title=f"Debate Advocacy: {task[:50]}",
+                            content=content,
+                            deliverable_type='script',
+                            category='Content',
+                            tags=['debate', 'advocacy', 'podcast', 'script'],
+                            content_format='markdown',
+                            metadata={'task': task, 'role': 'ADVOCATE'},
+                        )
                 else:
                     # No tools called, return content directly
                     execution_time_ms = int((time.time() - start_time) * 1000)

@@ -814,23 +814,28 @@ Provide clear, actionable analysis with specific recommendations."""
 
             # Process tool calls if any
             tool_results = []
+            tool_calls_made = []
             for tc in tool_calls:
+                tool_calls_made.append({'name': tc['name'], 'input': tc['arguments']})
                 tool_result = self._handle_tool_call(tc['name'], tc['arguments'])
                 tool_results.append(tool_result)
 
-            # Build result
+            # Synthesize tool results if GPT content was empty
+            if tool_results and not content:
+                content = self._synthesize_tool_results(tool_calls_made, tool_results, task)
+            message = content or "Cultural impact analysis complete"
+
             result = AgentResult(
                 success=True,
-                message=content or "Cultural impact analysis complete",
-                data={'tool_results': tool_results, 'analysis': content},
+                message=message,
+                data={'tool_results': tool_results, 'analysis': message, 'full_text': message},
                 agent_name=self.name
             )
 
-            # Session 861: Persist analysis to Deliverable
-            if content:
+            if message and len(message) > 100:
                 self._save_to_deliverable(
                     title=f"Cultural Impact Analysis: {task[:50]}",
-                    content=content,
+                    content=message,
                     deliverable_type='analysis',
                     category='Analysis',
                     tags=['cultural', 'impact', 'analysis', 'narrative'],

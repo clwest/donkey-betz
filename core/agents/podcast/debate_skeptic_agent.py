@@ -228,27 +228,29 @@ Be critical but fair - acknowledge valid points from the other side."""
                         result = self._handle_tool_call(tool_name, tool_input)
                         tool_results.append(result)
 
+                    analysis = self._synthesize_tool_results(tool_calls_made, tool_results, task)
+                    content = analysis or response.get('content') or "Skeptic argument prepared"
+
                     execution_time_ms = int((time.time() - start_time) * 1000)
-                    content = response.get('content') or "Skeptic argument prepared"
                     result = AgentResult(
                         success=True,
                         message=content,
-                        data={"tool_results": tool_results, "role": "SKEPTIC", "voice_id": "Clyde"},
+                        data={"tool_results": tool_results, "role": "SKEPTIC", "voice_id": "Clyde", "full_text": content},
                         agent_name=self.name,
                         execution_time_ms=execution_time_ms,
                         tool_calls=tool_calls_made
                     )
 
-                    # Session 861: Persist script to Deliverable
-                    self._save_to_deliverable(
-                        title=f"Debate Skepticism: {task[:50]}",
-                        content=content,
-                        deliverable_type='script',
-                        category='Content',
-                        tags=['debate', 'skeptic', 'podcast', 'script'],
-                        content_format='markdown',
-                        metadata={'task': task, 'role': 'SKEPTIC'},
-                    )
+                    if len(content) > 100:
+                        self._save_to_deliverable(
+                            title=f"Debate Skepticism: {task[:50]}",
+                            content=content,
+                            deliverable_type='script',
+                            category='Content',
+                            tags=['debate', 'skeptic', 'podcast', 'script'],
+                            content_format='markdown',
+                            metadata={'task': task, 'role': 'SKEPTIC'},
+                        )
                 else:
                     # No tools called, return content directly
                     execution_time_ms = int((time.time() - start_time) * 1000)

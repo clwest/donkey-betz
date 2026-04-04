@@ -755,15 +755,21 @@ Provide clear, analytical responses about narrative shifts."""
 
             # Process tool calls if any
             tool_results = []
+            tool_calls_made = []
             for tc in tool_calls:
+                tool_calls_made.append({'name': tc['name'], 'input': tc['arguments']})
                 tool_result = self._handle_tool_call(tc['name'], tc['arguments'])
                 tool_results.append(tool_result)
 
-            # Build result
+            # Synthesize tool results if GPT content was empty
+            if tool_results and not content:
+                content = self._synthesize_tool_results(tool_calls_made, tool_results, task)
+            message = content or "Trend break detection complete"
+
             result = AgentResult(
                 success=True,
-                message=content or "Trend break detection complete",
-                data={'tool_results': tool_results, 'analysis': content},
+                message=message,
+                data={'tool_results': tool_results, 'analysis': message, 'full_text': message},
                 agent_name=self.name
             )
         except Exception as e:
@@ -788,14 +794,14 @@ Provide clear, analytical responses about narrative shifts."""
         except Exception as le:
             logger.warning(f"Failed to record learning outcome: {le}")
 
-        # Session 1006: Persist output to Deliverable
-        self._save_to_deliverable(
-            title=f"Trend Break Detection: {task[:80]}",
-            content=result.message,
-            deliverable_type='analysis',
-            category='Trend Analysis',
-            tags=['trend_break', 'narrative'],
-            metadata={'task': task[:200]},
-        )
+        if result.success and len(result.message) > 100:
+            self._save_to_deliverable(
+                title=f"Trend Break Detection: {task[:80]}",
+                content=result.message,
+                deliverable_type='analysis',
+                category='Trend Analysis',
+                tags=['trend_break', 'narrative'],
+                metadata={'task': task[:200]},
+            )
 
         return result
