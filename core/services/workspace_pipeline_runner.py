@@ -116,6 +116,45 @@ def execute_pipeline_run(run_id: str) -> dict:
                         'gate_details': gate_result,
                     }
 
+                # Generate Evidence Cards ONCE after discovery gate passes
+                # Runs at pipeline level with its own timeout — not inside stage timeout
+                try:
+                    from core.services.evidence_cardifier import generate_evidence_cards, format_cards_for_writer
+                    from concurrent.futures import ThreadPoolExecutor, TimeoutError as _CardTimeout
+
+                    research_text = '\n\n---\n\n'.join(
+                        p.get('full_content', '') for p in previous_outputs
+                        if p.get('agent') in ('ResearchAgent', 'TopicMinerAgent') and p.get('full_content')
+                    )
+                    if research_text:
+                        with ThreadPoolExecutor(max_workers=1) as card_executor:
+                            card_future = card_executor.submit(
+                                generate_evidence_cards,
+                                research_output=research_text,
+                                brief_topic=brief.get('topic', '') if brief else '',
+                                brief=brief,
+                                max_cards=12,
+                            )
+                            try:
+                                cards = card_future.result(timeout=60)  # 60s max for card generation
+                                if cards:
+                                    run._evidence_cards = cards
+                                    run._evidence_cards_formatted = format_cards_for_writer(
+                                        cards, research_summary=research_text[:600],
+                                    )
+                                    logger.info("Pipeline %s: generated %d Evidence Cards", run.id, len(cards))
+                                else:
+                                    run._evidence_cards = []
+                                    run._evidence_cards_formatted = ''
+                            except _CardTimeout:
+                                logger.warning("Pipeline %s: Evidence Card generation timed out (60s) — proceeding without cards", run.id)
+                                run._evidence_cards = []
+                                run._evidence_cards_formatted = ''
+                except Exception as e:
+                    logger.warning("Pipeline %s: Evidence Card generation failed: %s — proceeding without", run.id, e)
+                    run._evidence_cards = []
+                    run._evidence_cards_formatted = ''
+
     # Finalize
     statuses = [s.get('status') for s in run.stage_results]
     completed_count = sum(1 for s in statuses if s == 'completed')
@@ -289,27 +328,11 @@ def _run_agent_with_timeout(run, stage_idx, stage, router, workspace, config, br
                 run.id, len(combined), len(research_content_parts),
             )
 
-            # Generate Evidence Cards from research for the writer
-            try:
-                from core.services.evidence_cardifier import generate_evidence_cards, format_cards_for_writer
-                cards = generate_evidence_cards(
-                    research_output=combined,
-                    brief_topic=brief.get('topic', '') if brief else '',
-                    brief=brief,
-                    max_cards=12,
-                )
-                if cards:
-                    context['evidence_cards'] = cards
-                    context['evidence_cards_formatted'] = format_cards_for_writer(
-                        cards,
-                        research_summary=combined[:600],
-                    )
-                    logger.info(
-                        "Pipeline %s: generated %d Evidence Cards for writer",
-                        run.id, len(cards),
-                    )
-            except Exception as e:
-                logger.warning("Pipeline %s: Evidence Card generation failed: %s", run.id, e)
+            # Evidence Cards are generated once at the pipeline level (not per-stage)
+            # and cached in run._evidence_cards_formatted. See execute_pipeline_run().
+            if hasattr(run, '_evidence_cards_formatted') and run._evidence_cards_formatted:
+                context['evidence_cards'] = run._evidence_cards
+                context['evidence_cards_formatted'] = run._evidence_cards_formatted
 
         # Collect ALL review feedback (editor verdicts + fact check flags)
         # for the rewrite stage to use
