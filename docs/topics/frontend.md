@@ -24,7 +24,7 @@ React + TypeScript single-page application with 9 workspace tabs, collapsible si
 
 ## Route Structure
 
-26 routes (24 pages + 2 redirects). Key routes:
+69 route definitions in App.tsx. Key routes:
 - `/` — Command Center (home, PA chat)
 - `/workspace` — 9-tab modular workspace
 - `/stocks` — Stock Intelligence dashboard

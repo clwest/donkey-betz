@@ -1,6 +1,6 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** March 26, 2026
+**Last Updated:** April 3, 2026
 
 ## Working with Rigby (PA)
 
@@ -27,21 +27,21 @@ open http://localhost:8000/ai-studio/
 
 | Component | Count | Details |
 |-----------|-------|---------|
-| **Agents** | 218 | 82 AGENT_MAP (72 enabled, 8 rerouted, 2 blocked) + ~139 DB persona agents (via DynamicPersonaAgent), 26 provenance-tracked |
+| **Agents** | 218 | 84 AGENT_MAP (74 enabled, 8 rerouted, 2 blocked) + ~139 DB persona agents (via DynamicPersonaAgent), 26 provenance-tracked |
 | **Spiders** | 79 | 74 working, 5 need API keys |
 | **PA Tools** | 130+ | GPT-5.2 function calling, 130+ tool handlers, 85+ schemas, 8 enrichment services |
 | **LLM Providers** | 6 | OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini |
 | **Database Models** | 397+ | PostgreSQL + pgvector |
-| **Celery Tasks** | 269 | 7 workers, dedicated PA queue |
+| **Celery Tasks** | 269 | 9 worker processes (7 Celery + code-worker + web), dedicated PA queue |
 | **Services** | 135 | Signal aggregation, content scoring, content deliberation, auto-spawning |
 | **Body Systems** | 9 | HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR, BRAIN, SKIN |
 | **Advisors** | 25 | Famous figures + domain experts |
-| **Frontend** | ~2,500 KB | 9 workspace tabs, 26 routes, 12-tab betting dashboard |
+| **Frontend** | ~2,500 KB | 9 workspace tabs, 69 routes, 12-tab betting dashboard |
 
 ## Project Structure
 
 ### Key Directories
-- `core/agents/` - 92 agents with learning hooks
+- `core/agents/` - 84 AGENT_MAP agents with learning hooks
 - `core/services/` - 134 service classes
 - `ai_core/spiders/` - 77 spiders
 - `docs/topics/` - Embedding-optimized subsystem docs (current state)
@@ -71,9 +71,9 @@ Detailed current-state docs for each subsystem (designed for embedding):
 |------------|--------|
 | [docs/topics/personal-assistant.md](docs/topics/personal-assistant.md) | PA GPT-5.2 function calling, 53 tools, enrichment, async flow |
 | [docs/topics/content-pipeline.md](docs/topics/content-pipeline.md) | ClaimsPack, deliberation, reviewers, PublishGate |
-| [docs/topics/agent-system.md](docs/topics/agent-system.md) | 92 agents, routing, ToolCallRecord, provenance |
+| [docs/topics/agent-system.md](docs/topics/agent-system.md) | 84 AGENT_MAP agents, routing, ToolCallRecord, provenance |
 | [docs/topics/initiative-pipeline.md](docs/topics/initiative-pipeline.md) | Dreams, 5-stage pipeline, signals, action items |
-| [docs/topics/celery-workers.md](docs/topics/celery-workers.md) | 7 workers, queues, memory management, observability |
+| [docs/topics/celery-workers.md](docs/topics/celery-workers.md) | 9 worker processes, queues, memory management, observability |
 | [docs/topics/body-systems.md](docs/topics/body-systems.md) | 9 health systems, coordinator, scoring |
 | [docs/topics/spider-network.md](docs/topics/spider-network.md) | 77 spiders, data types, signal aggregation |
 | [docs/topics/stock-intelligence.md](docs/topics/stock-intelligence.md) | Dashboard, briefs, alerts, predictions |

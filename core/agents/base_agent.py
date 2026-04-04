@@ -2398,7 +2398,7 @@ Consider these trends when crafting the response to maximize relevance and engag
     def _call_completion_with_retry(
         self,
         messages: List[Dict[str, str]],
-        model: str = "gpt-4o-mini",
+        model: str = "gpt-5.2",
         max_completion_tokens: int = 6000,
         max_retries: int = 3,
         base_delay: float = 1.0,
@@ -2415,7 +2415,7 @@ Consider these trends when crafting the response to maximize relevance and engag
 
         Args:
             messages: List of message dicts (role, content)
-            model: Model to use (default: gpt-4o-mini)
+            model: Model to use (default: gpt-5.2)
             max_completion_tokens: Max tokens for response
             max_retries: Maximum retry attempts (default: 3)
             base_delay: Initial delay in seconds (default: 1.0)
