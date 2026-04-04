@@ -1684,8 +1684,11 @@ def _impl_process_document_async(self, document_id: int, generate_embeddings: bo
 
             # Generate embeddings if requested
             if generate_embeddings:
-                from core.tasks import generate_document_embeddings
-                generate_document_embeddings.delay(document_id, embedding_model)
+                from celery import current_app
+                current_app.send_task(
+                    'core.tasks.generate_document_embeddings',
+                    args=[str(document_id), embedding_model],
+                )
 
             return {
                 'status': 'success',

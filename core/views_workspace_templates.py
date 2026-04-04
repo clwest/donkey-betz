@@ -451,6 +451,96 @@ def pipeline_history(request, workspace_id):
     })
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def pipeline_stage_detail(request, workspace_id, run_id, stage_index):
+    """Return detail for a specific pipeline stage: tools used, sources, cost."""
+    from core.models_skin_layer import ProjectWorkspace
+
+    try:
+        workspace = ProjectWorkspace.objects.get(id=workspace_id, user=request.user)
+    except ProjectWorkspace.DoesNotExist:
+        return Response({'success': False, 'error': 'Workspace not found'}, status=404)
+
+    try:
+        run = PipelineRun.objects.get(id=run_id, workspace=workspace)
+    except PipelineRun.DoesNotExist:
+        return Response({'success': False, 'error': 'Pipeline run not found'}, status=404)
+
+    if stage_index < 0 or stage_index >= len(run.stage_results):
+        return Response({'success': False, 'error': 'Stage index out of range'}, status=404)
+
+    stage = run.stage_results[stage_index]
+    agent_name = stage.get('agent', '')
+    deliverable_id = (stage.get('output') or {}).get('deliverable_id')
+
+    # Gather tool calls for this stage's agent execution
+    tool_calls = []
+    agent_execution = None
+    try:
+        from core.models import AgentExecution
+        # Find the execution that matches this stage (by agent name + time window)
+        execs = AgentExecution.objects.filter(
+            agent__name=agent_name,
+            created_at__gte=run.started_at or run.created_at,
+        ).order_by('-created_at')[:3]
+
+        if execs:
+            agent_execution = execs[0]
+            # Get tool call records if available
+            try:
+                from core.models_tool_calls import ToolCallRecord
+                records = ToolCallRecord.objects.filter(
+                    agent_name=agent_name,
+                    created_at__gte=run.started_at or run.created_at,
+                ).order_by('created_at')[:20]
+                tool_calls = [{
+                    'tool_name': r.tool_name,
+                    'parameters': r.parameters if isinstance(r.parameters, dict) else {},
+                    'success': r.success,
+                    'latency_ms': r.latency_ms,
+                    'error': r.error_message if hasattr(r, 'error_message') else '',
+                } for r in records]
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    # Get deliverable content preview
+    deliverable_preview = None
+    if deliverable_id:
+        try:
+            from core.models_deliverables import Deliverable
+            d = Deliverable.objects.get(id=deliverable_id)
+            deliverable_preview = {
+                'id': str(d.id),
+                'title': d.title,
+                'content_preview': (d.content or '')[:500],
+                'quality_score': d.quality_score,
+                'word_count': len((d.content or '').split()),
+            }
+        except Exception:
+            pass
+
+    return Response({
+        'success': True,
+        'stage': {
+            'index': stage_index,
+            'name': stage.get('name', ''),
+            'agent': agent_name,
+            'status': stage.get('status', 'unknown'),
+            'started_at': stage.get('started_at'),
+            'finished_at': stage.get('finished_at'),
+            'error': stage.get('error'),
+            'output_message': (stage.get('output') or {}).get('message', ''),
+        },
+        'tool_calls': tool_calls,
+        'tool_count': len(tool_calls),
+        'deliverable': deliverable_preview,
+        'execution_id': str(agent_execution.id) if agent_execution else None,
+    })
+
+
 # ── Workspace Members ────────────────────────────────────────────────────────
 
 @api_view(['POST'])
