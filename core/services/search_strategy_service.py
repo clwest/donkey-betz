@@ -92,8 +92,12 @@ def generate_query_plan(
     queries = []
     priority = 1
 
-    # Session 1103: Extract actual topic from verbose task text before keyword extraction
-    clean_topic = extract_topic_from_task(seed_text)
+    # Use brief topic as primary seed if available (it's the actual user intent)
+    brief_topic = brief.get('topic', '').strip()
+    if brief_topic:
+        clean_topic = brief_topic
+    else:
+        clean_topic = extract_topic_from_task(seed_text)
 
     # Extract keywords from the CLEAN topic (not the full task string)
     keywords = _extract_keywords(clean_topic)
@@ -108,17 +112,28 @@ def generate_query_plan(
         focus_areas = [focus_areas]
     audience = brief.get('audience', '')
 
-    # Strategy 1: Direct seed using CLEAN topic (priority 1)
+    # Strategy 1: Direct brief topic as-is (highest priority — exact user intent)
     queries.append({
         'query': clean_topic[:200],
-        'strategy': 'direct_seed',
+        'strategy': 'direct_brief_topic',
         'priority': priority,
         'source_hint': 'news',
     })
     priority += 1
 
-    # Strategy 2: Keyword extract (priority 2)
-    if topic_keywords and topic_keywords != seed_text[:50]:
+    # Strategy 2: Brief topic + focus areas (combine topic with each focus area)
+    for area in focus_areas[:3]:
+        if isinstance(area, str) and area.strip():
+            queries.append({
+                'query': f"{clean_topic[:100]} {area.strip()}",
+                'strategy': 'topic_plus_focus',
+                'priority': priority,
+                'source_hint': 'search',
+            })
+            priority += 1
+
+    # Strategy 3: Keyword extract (priority 3+)
+    if topic_keywords and topic_keywords != clean_topic[:50]:
         queries.append({
             'query': topic_keywords,
             'strategy': 'keyword_extract',
@@ -127,7 +142,7 @@ def generate_query_plan(
         })
         priority += 1
 
-    # Strategy 3: Paraphrases (priority 3-5)
+    # Strategy 4: Paraphrases (priority 4-6)
     for template in PARAPHRASE_TEMPLATES[:3]:
         query = template.format(topic_keywords=topic_keywords)
         queries.append({
@@ -138,27 +153,10 @@ def generate_query_plan(
         })
         priority += 1
 
-    # Strategy 4: Focus area narrowing (priority 6+)
-    for area in focus_areas[:2]:
-        if isinstance(area, str) and area.strip():
-            for template in NARROW_TEMPLATES[:1]:
-                query = template.format(
-                    topic_keywords=topic_keywords,
-                    focus_area=area.strip(),
-                    audience=audience or 'professionals',
-                )
-                queries.append({
-                    'query': query,
-                    'strategy': 'narrow_focus',
-                    'priority': priority,
-                    'source_hint': 'search',
-                })
-                priority += 1
-
     # Strategy 5: Audience-specific (if audience provided)
     if audience:
         queries.append({
-            'query': f"{topic_keywords} {audience}",
+            'query': f"{clean_topic[:100]} for {audience}",
             'strategy': 'audience_targeted',
             'priority': priority,
             'source_hint': 'search',
