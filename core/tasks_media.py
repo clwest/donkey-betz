@@ -417,8 +417,11 @@ def _impl_process_url_async(self, url: str, title: str = None, user_id: int = No
 
         # Generate embeddings if requested
         if generate_embeddings:
-            from core.tasks import generate_document_embeddings
-            generate_document_embeddings.delay(document.id)
+            from celery import current_app
+            current_app.send_task(
+                'core.tasks.generate_document_embeddings',
+                args=[str(document.id)],
+            )
 
         return {
             'status': 'success',
@@ -679,8 +682,11 @@ def _impl_ingest_video_task(self, document_id, tmp_video_path, original_filename
         })
 
         # --- Stage 5: Dispatch embedding generation ---
-        from core.tasks import generate_document_embeddings
-        generate_document_embeddings.delay(str(document.id))
+        from celery import current_app
+        current_app.send_task(
+            'core.tasks.generate_document_embeddings',
+            args=[str(document.id)],
+        )
         document.add_processing_log('embedding_dispatched', 'success')
 
         logger.info(f"🎥 Video ingest complete for {document_id}: {len(segments)} segments, {document.word_count} words")
@@ -859,8 +865,11 @@ def _impl_youtube_whisper_task(self, document_id, youtube_url, user_id, language
         ])
 
         # --- Stage 4: Dispatch embedding generation ---
-        from core.tasks import generate_document_embeddings
-        generate_document_embeddings.delay(str(document.id))
+        from celery import current_app
+        current_app.send_task(
+            'core.tasks.generate_document_embeddings',
+            args=[str(document.id)],
+        )
 
         logger.info(f"🎤 YouTube Whisper ingest complete for {document_id}: {len(segments)} segments, {document.word_count} words")
 
