@@ -289,6 +289,28 @@ def _run_agent_with_timeout(run, stage_idx, stage, router, workspace, config, br
                 run.id, len(combined), len(research_content_parts),
             )
 
+            # Generate Evidence Cards from research for the writer
+            try:
+                from core.services.evidence_cardifier import generate_evidence_cards, format_cards_for_writer
+                cards = generate_evidence_cards(
+                    research_output=combined,
+                    brief_topic=brief.get('topic', '') if brief else '',
+                    brief=brief,
+                    max_cards=12,
+                )
+                if cards:
+                    context['evidence_cards'] = cards
+                    context['evidence_cards_formatted'] = format_cards_for_writer(
+                        cards,
+                        research_summary=combined[:600],
+                    )
+                    logger.info(
+                        "Pipeline %s: generated %d Evidence Cards for writer",
+                        run.id, len(cards),
+                    )
+            except Exception as e:
+                logger.warning("Pipeline %s: Evidence Card generation failed: %s", run.id, e)
+
         # Collect ALL review feedback (editor verdicts + fact check flags)
         # for the rewrite stage to use
         review_feedback_parts = []
