@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-04-05 13:41
+**Generated:** 2026-04-05 15:01
 **Current Session:** 784
 **Total Documentation:** 1839 files | 627,730 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,216 |
+| Total cross-references | 2,219 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/00-START-HERE/README.md` | 60 | 🚀 START HERE - Unified Donkey Betz Platform |
+| `docs/archive/old-structure/capabilities/06_Decision_Systems/README.md` | 60 | 🎯 DECISION COMMAND SYSTEMS - AI-Powered Decision I |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -219,8 +219,8 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| DATA_FLOW_DEAD_ENDS_AUDIT.md | audits | 250 | 2026-04-05 13:39 |
-| INDEX.md | docs | 363 | 2026-04-05 13:28 |
+| INDEX.md | docs | 363 | 2026-04-05 13:41 |
+| DATA_FLOW_DEAD_ENDS_AUDIT.md | audits | 250 | 2026-04-05 13:41 |
 | PA_IDENTITY_FRAGMENTATION_AUDIT.md | audits | 158 | 2026-04-05 13:28 |
 | APP_INTEGRATION_MAP.md | docs | 82 | 2026-04-05 12:01 |
 | infrastructure.md | topics | 76 | 2026-04-03 19:14 |

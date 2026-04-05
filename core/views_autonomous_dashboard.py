@@ -21,7 +21,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.db.models import Count
 
-from core.models_autonomous_situations import AutonomousSituationSession
+from core.models_autonomous_situations import (
+    AutonomousSituationSession,
+    ViralContentPrediction,
+    SkillGapAnalysis,
+)
 from core.models_situation_triggers import (
     SituationTrigger,
     TriggerEvent
@@ -1087,4 +1091,79 @@ def trigger_analytics(request, trigger_id):
         return JsonResponse({'success': False, 'error': 'Trigger not found'}, status=404)
     except Exception as e:
         logger.exception(f"Error getting trigger analytics: {trigger_id}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# =============================================================================
+# ORPHAN DATA SURFACES — Predictions & Analyses
+# =============================================================================
+
+@require_http_methods(["GET"])
+def viral_predictions_api(request):
+    """GET /api/autonomous/viral-predictions/ — Surface ViralContentPrediction data."""
+    try:
+        limit = min(int(request.GET.get('limit', 50)), 200)
+        offset = int(request.GET.get('offset', 0))
+        min_score = float(request.GET.get('min_score', 0))
+
+        qs = ViralContentPrediction.objects.all()
+        if min_score > 0:
+            qs = qs.filter(viral_score__gte=min_score)
+
+        total = qs.count()
+        items = list(
+            qs.order_by('-viral_score', '-created_at')[offset:offset + limit]
+            .values(
+                'id', 'title', 'content_type', 'topic', 'keywords',
+                'viral_score', 'engagement_potential', 'shareability_score',
+                'timing_score', 'trend_alignment', 'emotional_trigger',
+                'recommended_platforms', 'suggested_hashtags',
+                'created_at', 'prediction_expires', 'content_created',
+            )
+        )
+
+        return JsonResponse({
+            'success': True,
+            'total': total,
+            'items': items,
+            'offset': offset,
+            'limit': limit,
+        })
+    except Exception as e:
+        logger.exception("Error fetching viral predictions")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def skill_gap_api(request):
+    """GET /api/autonomous/skill-gaps/ — Surface SkillGapAnalysis data."""
+    try:
+        limit = min(int(request.GET.get('limit', 50)), 200)
+        offset = int(request.GET.get('offset', 0))
+        category = request.GET.get('category', '')
+
+        qs = SkillGapAnalysis.objects.all()
+        if category:
+            qs = qs.filter(category=category)
+
+        total = qs.count()
+        items = list(
+            qs.order_by('-demand_score')[offset:offset + limit]
+            .values(
+                'id', 'skill_name', 'category', 'demand_score',
+                'demand_trend', 'avg_salary_premium', 'gap_score',
+                'estimated_learning_time', 'source_spiders',
+                'analyzed_at',
+            )
+        )
+
+        return JsonResponse({
+            'success': True,
+            'total': total,
+            'items': items,
+            'offset': offset,
+            'limit': limit,
+        })
+    except Exception as e:
+        logger.exception("Error fetching skill gaps")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
