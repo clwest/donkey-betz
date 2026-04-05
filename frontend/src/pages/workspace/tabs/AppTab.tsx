@@ -48,6 +48,11 @@ const APP_URLS: Record<string, { dev: string; prod?: string; port: number; descr
     port: 5180,
     description: 'Regulatory compliance monitoring — track policy changes and alerts',
   },
+  'Ironwood Protocol': {
+    dev: 'http://localhost:5181',
+    port: 5181,
+    description: 'Sci-fi RTS game — build bases, train units, and conquer the battlefield',
+  },
 }
 
 export function getAppUrl(workspaceName: string): string | null {
