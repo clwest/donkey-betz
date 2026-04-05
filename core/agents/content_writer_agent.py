@@ -788,6 +788,22 @@ For this {content_type}, ensure:
                 if not isinstance(workspace_brief, dict):
                     workspace_brief = {}
 
+                # === DEBUG: Log context keys for mode detection ===
+                context_keys = list(context.keys()) if isinstance(context, dict) else []
+                logger.info(
+                    "[ContentWriterAgent MODE DETECTION] context keys: %s | "
+                    "has review_feedback: %s | has original_draft: %s | "
+                    "has research_summary: %s | has editor_feedback: %s | "
+                    "has required_checks: %s | workspace_brief type: %s",
+                    context_keys,
+                    bool(context.get('review_feedback')),
+                    bool(context.get('original_draft')),
+                    bool(context.get('research_summary')),
+                    bool(context.get('editor_feedback')),
+                    bool(context.get('required_checks')),
+                    type(workspace_brief).__name__,
+                )
+
                 # === REWRITE MODE ===
                 # When review_feedback + original_draft are present, this is a rewrite
                 # stage — skip ALL heavy context and focus on the draft + feedback + brief
