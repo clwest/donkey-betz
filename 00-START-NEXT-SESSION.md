@@ -1,103 +1,102 @@
 # Next Session — Start Here
 
-**Date:** April 4, 2026
-**Previous Session:** Massive pipeline overhaul — 25 PRs, Evidence Cards, Content Packets, focused rewrite, editor gatekeeper
-**PA Conversation:** Ask Chris for conversation ID
-**Status:** 218 Agents | 80 Spiders | 25 Advisors | PA function calling LIVE (GPT-5.2) | Workspaces LIVE | Newsletter Pipeline LIVE with Evidence Cards
+**Date:** April 5, 2026
+**Previous Session:** Business plan fixes + Ironwood Protocol gameplay overhaul
+**PA Conversation:** pa-c95ff6e96bd6
+**Status:** 218 Agents | 80 Spiders | 25 Advisors | PA function calling LIVE (GPT-5.2) | 9 standalone apps + RTS game
 
 ---
 
-## What Was Built Last Session (25 PRs)
+## What Was Done This Session
 
-### Pipeline Overhaul (PRs #1788-1812)
-- **Docs audit** — fixed stale counts across 8 docs (agents 92→84, workers 7→9, routes 26→69)
-- **LLM upgrade** — gpt-4o-mini → gpt-5.2 in 4 live code files
-- **Pipeline UX** — dismiss/clear stale runs, history dropdown, brief save confirmation, workspace list all types
-- **Stage detail API** — expandable stages showing tools, sources, deliverable preview
-- **DistributionAgent fixes** — slice crash on dict content, context defaults, deliverable fetch
-- **WorkflowAgent deliverable saving** — sub-agent results now saved as deliverables
-- **Tool synthesis** — 9 agents now synthesize tool results instead of dumping raw "Count: 0"
-- **GPT-crafted pipeline prompts** — replaces rigid templates with intelligent briefings
-- **ResearchAgent brief topic** — searches the actual brief topic, not generic task string
-- **Footnote citations** — [1] [2] style with Sources section at bottom
-- **EditorAgent gatekeeper** — 5 quality checks (topic alignment, hook enforcement, audience relevance, actionability, evidence quality) with PASS/FAIL behavior
-- **ContentWriterAgent brief enforcement** — hook MUST open the article, audience/tone/notes as NON-NEGOTIABLE requirements
-- **Content Packets** — deliverables grouped by pipeline run (ContentPacket + ContentPacketItem models, API, frontend UI)
-- **Final Rewrite stage** — receives editor + fact check feedback, produces corrected draft
-- **Focused rewrite mode** — skips heavy context injection, uses only draft + feedback + brief
-- **JSON recovery** — writer recovers content as plain text when JSON parse fails, 16k token limit
-- **Evidence Cards MVP** — extracts structured citable evidence from research (claim + excerpt + source + confidence)
-- **Evidence Cards timeout fix** — card generation runs at pipeline level with 60s cap, not inside stage timeout
-- **Brief saves as deliverable** — versioned tracking of workspace briefs
-- **Superuser workspace access** — Jessica/Jeremy can see all workspaces
+### Business Plans — ALL 9 COMPLETE
+- Fixed MentorForge, SignalStudio, Ironwood Protocol, ComplianceSentinel business plans (had placeholder text)
+- ScoutPlays was already good (12K chars)
+- All 4 fixed plans now have real content + correct workspace FK assignments
+- PR #1816: Added workspace_id to deliverable detail API response
 
-### New Workspace
-- **Operator Edge — AI Newsletter Studio** (id: 4b5d4df8) — first run completed successfully with Rigby's voice
+### Ironwood Protocol — Major Gameplay Overhaul (5 commits)
+1. **A* pathfinding** — units navigate around water/rocks instead of getting stuck
+2. **All 5 modules working:**
+   - Pulse: AoE damage to all enemies in range
+   - EMP: disables target 20 ticks (can't move/attack) + visual indicator
+   - Support: deploys temporary auto-turrets every 200 ticks
+   - Repair: heals ALL nearby allies + buildings (not just one)
+   - Ballistic: can now target buildings too
+3. **Strategic AI:** build orders, counter-picks, retreat logic, defensive turrets, double production
+4. **Resource economy fix:** generators work for players (+4E +2B/tick), faster tick rate (3s), visible income
+5. **Mission 1 instant-win bug FIXED:** enemyHadHQ flag persisted from createGameState default
+6. **Resource UX overhaul:** bigger HUD, node capture notifications, contextual progressive hints
+7. **Guided gameplay:** step-by-step hints panel, better briefing, training UI with tooltips, SUP module button added
 
-### Pipeline Architecture (Current)
-```
-Topic Mining + Deep Research (parallel, discovery group)
-  → Quality Gate (topic alignment + research depth)
-  → Evidence Cards (60s timeout, pipeline level)
-  → Content Strategy
-  → Write Draft (brief enforcement, Evidence Cards, 16k tokens)
-  → Edit & Polish + Fact Check (parallel, review group)
-  → Final Rewrite (focused mode — draft + feedback + brief only)
-  → SEO & Headlines
-  → Hooks & Distribution
-  → Review & Approve (human)
-  → Publish
-```
+### Sprite Generation — COMPLETE
+- 15/15 sprites generated via SD3 (digital sci-fi style), all clean top-down views
+- Management command: `python manage.py generate_ironwood_sprites` (reusable)
+- Manifest: `ironwood_sprite_manifest.json` with all URLs
+- Sprites integrated into Ironwood engine with team-color multiply tinting
+- New files: `sprites.ts` (loader + tinter), modified `engine.ts` + `App.tsx`
+- TypeScript clean, Vite build passes
+- Sprites are 1024x1024 originals — need downsizing to 64x64 for production
 
 ## Accounts
 
 - `donkeyking` (Chris) — superuser/owner
-- `jessica` — superuser, business side, now has access to all workspaces
+- `jessica` — superuser, business side
 - `jeremy` — superuser, patent lawyer
+- All apps: demo user with password `demo123`
 
-## Key Rules (from memory)
+## PRIORITY 1: Ironwood Protocol Sprites — DONE
+- ~~Pull manifest~~ DONE — 15/15 sprites generated and manifest saved
+- ~~Integrate into game engine~~ DONE — sprites.ts + engine.ts + App.tsx modified
+- Remaining: downsize 1024x1024 originals to 64x64, convert to WebP, playtest tinting
 
-- **Vertical slice:** Every feature ships backend + API + frontend + demo. Nothing is done until visible in UI.
-- **Last mile UI:** If Chris can't see it in the browser, it's not done.
-- **Rigby collaboration:** Read Rigby's FULL responses, answer every question, agree on plan BEFORE building.
-- **Workspace assignment:** All deliverables go to a workspace (default: Donkey Betz).
-- **Rigby-first comms:** Route questions through Rigby via `python tools/pa_chat.py`.
+## PRIORITY 2: Ironwood Protocol Polish
+- Playtest remaining campaign missions (2-6)
+- AI balance tuning
+- Audio system (SFX + music)
+- Multiplayer testing with 2 browser tabs
 
-## How to Work with Rigby (CRITICAL — read this)
+## PRIORITY 3: Platform Carryover
+- Content Packets UI — packet detail page
+- Evidence Cards monitoring
+- Rewrite quality improvements
+- Duplicate dispatch rate limiting
 
-Rigby is the PA (Personal Assistant). She runs on GPT-5.2 with 130+ tools.
+## Known Issues
 
-**How to communicate:**
+### Sprite Pipeline — RESOLVED
+- ~~ImageAgent generates concept art sheets~~ FIXED: bypass GPT prompt rewriting, call _execute_generate_image directly with strict prompts
+- ~~1 image per run~~ SOLVED: management command loops through 15 entities individually
+- Sprites at 1024x1024 need downsizing for production (bandwidth)
+
+### Apps — Deployment Parked
+- All 9 apps run locally only — no Railway/Vercel deploys yet
+- GitHub repos created and pushed but no CI/CD
+
+## How to Start Ironwood Protocol
+
 ```bash
-python tools/pa_chat.py "your message" --tools --conversation <conversation_id>
+cd ~/development/ironwood-protocol
+bash start.sh
+# Backend: http://localhost:8009
+# Frontend: http://localhost:5181
+# Demo: demo@ironwood.dev / demo123
 ```
 
-## Known Issues / Next Steps
+## How to Work with Rigby
 
-- **Content Packets UI** — packets display on dashboard but "View" links go to flat deliverables list instead of packet detail view. Needs dedicated packet detail page.
-- **Editor FAIL → Rewrite loop** — editor fails draft, rewrite stage runs, but rewrite only makes editorial changes, not structural. Need stronger rewrite instructions or iterative retry.
-- **Evidence Cards validation** — Rigby setting up gates (cards >= 6, unique domains >= 3). Monitor first 10 runs for card quality.
-- **Rigby's voice** — Operator Edge newsletter uses Rigby's POV. She should sound human, not AI. No "As an AI..." disclaimers.
-- **Pipeline stage UI** — stages show on dashboard but deliverable viewing experience needs work. Content Packets should be the primary way to browse pipeline output.
-- **Distribution deliverables** — sometimes show raw JSON instead of formatted markdown. Content extractor updated but needs verification.
+```bash
+python tools/pa_chat.py "your message" --tools --conversation pa-c95ff6e96bd6
+```
 
 ## Troubleshooting
 
 ```bash
-# Full restart
+# Kill all app servers
+pkill -f uvicorn; pkill -f vite
+
+# Full platform restart
 pkill -f daphne; pkill -f redis; pkill -f celery
 rm -f .daphne.pid .celery.pid .celery-beat.pid
 make start && make celery
-
-# Kill stuck pipeline run
-railway run python manage.py shell -c "
-from core.models_workspace_templates import PipelineRun
-from django.utils import timezone
-runs = PipelineRun.objects.filter(workspace_id='WORKSPACE_ID', status='running')
-for r in runs:
-    r.status = 'failed'
-    r.error_message = 'Manually killed'
-    r.finished_at = timezone.now()
-    r.save(update_fields=['status', 'error_message', 'finished_at'])
-"
 ```
