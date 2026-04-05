@@ -1853,6 +1853,14 @@ self,
 
         router = AgentRouter(user=_route_user)
 
+        # Debug: log context keys entering route() for directed mode debugging
+        directed_keys = ['research_summary', 'editor_feedback', 'required_checks', 'review_feedback', 'original_draft']
+        found_directed = {k: bool(context.get(k)) for k in directed_keys}
+        logger.info(
+            "[execute_agent_task] %s context directed-mode keys: %s | total context keys: %s",
+            agent_name, found_directed, list(context.keys())[:20],
+        )
+
         from concurrent.futures import ThreadPoolExecutor as _TPE, TimeoutError as _FuturesTimeout
         def _run_route():
             from django.db import close_old_connections
