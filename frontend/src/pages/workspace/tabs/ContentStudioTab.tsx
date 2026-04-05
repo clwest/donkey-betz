@@ -158,12 +158,13 @@ function GallerySubTab() {
   const [selectedSeries, setSelectedSeries] = useState<AISeries | null>(null)
 
   // Session 865: Use contentApi which includes auth token in headers
+  // Show all user media in Gallery (workspace tagging happens at creation time,
+  // not filtering time — most historical media has no workspace link yet)
   const { data: galleryData, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ['gallery-stats-tab', wsId],
+    queryKey: ['gallery-stats-tab'],
     queryFn: async () => {
       try {
-        const params = wsId ? `?workspace=${wsId}` : ''
-        const response = await api.get(`/v1/gallery/all/${params}`)
+        const response = await contentApi.unifiedGallery()
         return response.data || { results: [], count: 0 }
       } catch {
         return { results: [], count: 0 }
