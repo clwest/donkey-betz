@@ -68,12 +68,71 @@ def create_deliverable(
     """
     from core.models_deliverables import Deliverable
 
+    # --- Provenance dedupe guard ---
+    # If a parent_execution_id is provided, check for existing deliverable
+    # from the same execution to prevent duplicates from retries/replays.
+    if parent_execution_id:
+        existing = Deliverable.objects.filter(
+            parent_object_type=parent_object_type or 'agent_execution',
+            parent_object_id=parent_execution_id,
+        ).first()
+        if existing:
+            logger.info(
+                f"[DeliverableFactory] Dedupe: returning existing {existing.id} "
+                f"for execution {parent_execution_id}"
+            )
+            # Update content if newer (idempotent upsert)
+            if content and content != existing.content:
+                existing.content = content
+                existing.preview_content = content[:500]
+                existing.quality_score = quality_score or existing.quality_score
+                existing.confidence_score = confidence_score or existing.confidence_score
+                existing.save(update_fields=[
+                    'content', 'preview_content', 'quality_score',
+                    'confidence_score', 'updated_at',
+                ])
+                logger.info(f"[DeliverableFactory] Updated content for {existing.id}")
+            return existing
+
+    # --- Title-based dedupe (4h window) ---
+    # Same agent + same title within 4 hours = update instead of duplicate
+    from django.utils import timezone as tz
+    from datetime import timedelta
+    dedup_window = tz.now() - timedelta(hours=4)
+    title_existing = Deliverable.objects.filter(
+        title=title[:500],
+        agent_name=agent_name,
+        created_at__gte=dedup_window,
+    ).order_by('-created_at').first()
+    if title_existing:
+        title_existing.content = content or title_existing.content
+        title_existing.preview_content = (content[:500] if content else '')
+        title_existing.quality_score = quality_score or title_existing.quality_score
+        title_existing.confidence_score = confidence_score or title_existing.confidence_score
+        title_existing.metadata = metadata or title_existing.metadata
+        title_existing.save(update_fields=[
+            'content', 'preview_content', 'quality_score',
+            'confidence_score', 'metadata', 'updated_at',
+        ])
+        logger.info(
+            f"[DeliverableFactory] Title dedupe: updated {title_existing.id} "
+            f"'{title[:60]}' by {agent_name}"
+        )
+        return title_existing
+
     # Auto-assign workspace if not provided
     if not workspace_id and user:
         workspace_id = _get_active_workspace_id(user)
 
     # Build preview
     preview = content[:500] if content else ''
+
+    # Auto-generate slug if not provided
+    if 'slug' not in extra_fields:
+        from django.utils.text import slugify
+        import uuid as _uuid
+        base_slug = slugify(title[:100]) if title else 'untitled'
+        extra_fields['slug'] = f"{base_slug}-{_uuid.uuid4().hex[:8]}"
 
     # Build creation kwargs
     kwargs = {

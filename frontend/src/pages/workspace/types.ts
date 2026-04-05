@@ -75,7 +75,7 @@ export type ContentStudioSubTab = 'gallery' | 'channels' | 'blogs' | 'podcast' |
 
 // Session 971b: New merged tab sub-tab types
 export type SystemSubTab = 'health' | 'integration' | 'services' | 'llm' | 'monitor' | 'workflows' | 'hivemind' | 'triggers' | 'toolcalls'
-export type DataIntelSubTab = 'spiders' | 'feed' | 'learning' | 'reasoning' | 'collective' | 'safety'
+export type DataIntelSubTab = 'spiders' | 'feed' | 'learning' | 'reasoning' | 'collective' | 'safety' | 'predictions' | 'skills'
 
 /**
  * Session 1035: Normalize platform tab params (legacy or current).

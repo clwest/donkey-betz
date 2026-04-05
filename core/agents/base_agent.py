@@ -3896,18 +3896,12 @@ Consider this current data when formulating your response."""
             )
         """
         try:
-            from core.models_deliverables import Deliverable
             from core.services.data_scrubber import guard_persistence
-            from django.utils.text import slugify
-            from django.utils import timezone as tz
-            from datetime import timedelta
-            import uuid
+            from core.services.deliverable_factory import create_deliverable
 
             # Session 1077: Skip deliverable creation for scheduled runs
             # if the agent has create_deliverable_on_schedule=False.
-            # The output is still in AgentExecution — just not promoted to Deliverable.
             if not self.create_deliverable_on_schedule:
-                # Check if this is a scheduled/autonomous run (no user-initiated context)
                 is_scheduled = not user and not trace_id
                 if is_scheduled:
                     logger.info(
@@ -3916,7 +3910,7 @@ Consider this current data when formulating your response."""
                     )
                     return None
 
-            # Phase 3: Run content through persistence guard (scrub + provenance)
+            # Run content through persistence guard (scrub + provenance)
             guard_result = guard_persistence(
                 content=content,
                 origin=origin,
@@ -3928,83 +3922,44 @@ Consider this current data when formulating your response."""
 
             resolved_title = title or f"{self.name} Output"
 
-            # Session 1022: Dedup — if same agent produced same title in last 4h, update it
-            dedup_window = tz.now() - timedelta(hours=4)
-            existing = Deliverable.objects.filter(
-                title=resolved_title,
-                agent_name=self.name,
-                created_at__gte=dedup_window,
-            ).order_by('-created_at').first()
-
-            if existing:
-                # Update content in-place instead of creating a duplicate
-                preview = content[:500] if content else ''
-                if len(content or '') > 500:
-                    preview += '...'
-                existing.content = content or ''
-                existing.preview_content = preview
-                existing.metadata = metadata or {}
-                existing.quality_score = quality_score
-                existing.confidence_score = confidence_score
-                existing.agent_task = getattr(self, '_current_task', '')[:1000] if hasattr(self, '_current_task') else ''
-                existing.save(update_fields=['content', 'preview_content', 'metadata', 'quality_score', 'confidence_score', 'agent_task', 'updated_at'])
-                logger.info(f"📦 Session 1022: Updated existing Deliverable {existing.id} (dedup) - {resolved_title[:50]}")
-                return existing
-
-            # Generate unique slug
-            base_slug = slugify(resolved_title[:100]) if resolved_title else 'untitled'
-            unique_slug = f"{base_slug}-{uuid.uuid4().hex[:8]}"
-
             # Determine category if not provided
             if not category:
                 category = self._get_deliverable_category()
 
-            # Build preview content
-            preview = content[:500] if content else ''
-            if len(content or '') > 500:
-                preview += '...'
-
-            # Session 1075: Fall back to self.user so agent-created deliverables
-            # are owned by the real user (not NULL / system_autonomous).
+            # Session 1075: Fall back to self.user
             resolved_user = user or getattr(self, 'user', None)
 
             # Resolve workspace: explicit param > agent context only.
-            # Do NOT fall back to active workspace for scheduled/autonomous runs —
-            # that pollutes user workspaces with unrelated agent output.
-            resolved_workspace = None
             resolved_ws_id = workspace_id or getattr(self, '_workspace_id', None)
-            if resolved_ws_id:
-                try:
-                    from core.models_skin_layer import ProjectWorkspace
-                    resolved_workspace = ProjectWorkspace.objects.filter(id=resolved_ws_id).first()
-                except Exception:
-                    pass
 
             # Auto-save when workspace is resolved (unless explicitly ephemeral)
-            should_save = bool(resolved_workspace) and not force_ephemeral
+            should_save = bool(resolved_ws_id) and not force_ephemeral
 
-            deliverable = Deliverable.objects.create(
+            # Get parent execution ID for provenance dedupe
+            parent_exec_id = getattr(self, '_current_execution_id', None)
+
+            deliverable = create_deliverable(
                 title=resolved_title,
-                slug=unique_slug,
-                deliverable_type=deliverable_type,
-                category=category,
-                tags=tags or [],
-                agent_name=self.name,
-                agent_task=getattr(self, '_current_task', '')[:1000] if hasattr(self, '_current_task') else '',
                 content=content or '',
-                content_format=content_format,
-                preview_content=preview,
-                metadata=metadata or {},
+                agent_name=self.name,
+                category=category,
+                deliverable_type=deliverable_type,
                 user=resolved_user,
-                workspace=resolved_workspace,
-                is_saved=should_save,
-                trace_id=uuid.UUID(trace_id) if trace_id else None,
+                workspace_id=str(resolved_ws_id) if resolved_ws_id else None,
+                trace_id=trace_id,
+                parent_execution_id=str(parent_exec_id) if parent_exec_id else None,
+                parent_object_type='agent_execution',
+                tags=tags or [],
+                content_format=content_format,
                 quality_score=quality_score,
                 confidence_score=confidence_score,
+                is_saved=should_save,
+                agent_task=getattr(self, '_current_task', '')[:1000] if hasattr(self, '_current_task') else '',
+                metadata=metadata or {},
                 status='ready',
             )
 
-            logger.info(f"📦 Saved Deliverable {deliverable.id} - {resolved_title[:50]} | workspace={'yes' if resolved_workspace else 'none'} | is_saved={should_save}")
+            logger.info(f"📦 Saved Deliverable {deliverable.id} - {resolved_title[:50]} | workspace={'yes' if resolved_ws_id else 'none'} | is_saved={should_save}")
 
             # Session 930: Trigger auto-learning from deliverable
             self._trigger_deliverable_learning(deliverable, user)

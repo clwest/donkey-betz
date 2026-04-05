@@ -869,6 +869,8 @@ from core.views_autonomous_dashboard import (
     toggle_trigger,
     reset_trigger_cooldown,
     trigger_analytics,
+    viral_predictions_api,
+    skill_gap_api,
 )
 
 # Session 213: Import workflow API views
@@ -3552,6 +3554,10 @@ urlpatterns = [
     path('api/autonomous/triggers/<uuid:trigger_id>/toggle/', toggle_trigger, name='autonomous-trigger-toggle'),
     path('api/autonomous/triggers/<uuid:trigger_id>/reset-cooldown/', reset_trigger_cooldown, name='autonomous-trigger-reset-cooldown'),
     path('api/autonomous/triggers/<uuid:trigger_id>/analytics/', trigger_analytics, name='autonomous-trigger-analytics'),
+
+    # Orphan data surfaces — predictions & analyses
+    path('api/autonomous/viral-predictions/', viral_predictions_api, name='viral-predictions'),
+    path('api/autonomous/skill-gaps/', skill_gap_api, name='skill-gaps'),
 
     # Session 219 Phase D: Workflow Marketplace API
     path('api/marketplace/workflows/', marketplace_browse, name='marketplace-browse'),
