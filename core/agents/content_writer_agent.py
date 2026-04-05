@@ -803,6 +803,23 @@ For this {content_type}, ensure:
                         start_time=start_time,
                     )
 
+                # === DIRECTED MODE ===
+                # When Rigby (or any orchestrator) sends a complete brief with
+                # research_summary + editor_feedback, skip heavy context injection
+                # and write directly from the curated inputs.
+                research_summary = context.get('research_summary', '')
+                editor_feedback = context.get('editor_feedback', [])
+                if research_summary and (editor_feedback or context.get('required_checks')):
+                    logger.info("ContentWriterAgent: DIRECTED MODE — using curated inputs, skipping heavy context")
+                    return self._execute_directed(
+                        task=task,
+                        research_summary=research_summary,
+                        editor_feedback=editor_feedback,
+                        workspace_brief=workspace_brief,
+                        context=context,
+                        start_time=start_time,
+                    )
+
                 content_type = context.get('content_type', 'blog_post')
                 research = context.get('research', '')
 
@@ -1475,6 +1492,145 @@ This is the FINAL version — make it great."""
 
         except Exception as e:
             logger.error("ContentWriterAgent rewrite failed: %s", e, exc_info=True)
+            return AgentResult(
+                success=False,
+                error=str(e),
+                agent_name=self.name,
+                execution_time_ms=int((time.time() - start_time) * 1000),
+            )
+
+    def _execute_directed(
+        self,
+        task: str,
+        research_summary: str,
+        editor_feedback: list,
+        workspace_brief: Dict[str, Any],
+        context: Dict[str, Any],
+        start_time: float,
+    ) -> 'AgentResult':
+        """
+        Directed mode — Rigby or an orchestrator has already assembled everything.
+
+        Skips ALL heavy context injection. Uses only:
+        - research_summary (curated facts)
+        - editor_feedback (checklist to satisfy)
+        - workspace_brief (topic, audience, tone, hook)
+        - required_checks (must-have items)
+        - path_a_draft (optional — competing draft to improve on)
+        - tool_snippets (optional — exact commands to include)
+        """
+        brief = workspace_brief or {}
+        topic = brief.get('topic', '')
+        audience = brief.get('audience', 'general audience')
+        tone = brief.get('tone', 'professional')
+        hook = brief.get('distribution_hook', brief.get('hook', ''))
+        notes = brief.get('notes', '')
+
+        # Build focused inputs
+        feedback_block = '\n'.join(f'- {f}' for f in editor_feedback) if isinstance(editor_feedback, list) else str(editor_feedback)
+        required_checks = context.get('required_checks', [])
+        checks_block = '\n'.join(f'- [ ] {c}' for c in required_checks) if required_checks else ''
+        path_a_draft = context.get('path_a_draft', '')
+        tool_snippets = context.get('tool_snippets', {})
+        fact_check = context.get('fact_check_summary', '')
+        constraints = context.get('deliverable_constraints', {})
+
+        snippets_block = ''
+        if tool_snippets and isinstance(tool_snippets, dict):
+            snippets_block = '\n'.join(f'- {k}: `{v}`' for k, v in tool_snippets.items())
+
+        system_prompt = f"""You are a newsletter writer receiving a DIRECTED brief from your creative director.
+Everything you need is below. Do NOT search for additional information.
+Do NOT use spider data, platform context, or any other source.
+Write ONLY from the inputs provided.
+
+TOPIC: {topic}
+AUDIENCE: {audience}
+TONE: {tone}
+{f'HOOK (must be the first line): "{hook}"' if hook else ''}
+{f'NOTES: {notes}' if notes else ''}
+
+OUTPUT: Clean markdown newsletter, 800-1200 words.
+Use footnote citations [1] [2] with Sources at bottom.
+{f'Length: {constraints.get("length_min", 800)}-{constraints.get("length_max", 1200)} words' if constraints else ''}"""
+
+        user_prompt_parts = [f"## TASK\n{task}\n"]
+
+        user_prompt_parts.append(f"## RESEARCH (use these facts)\n{research_summary}\n")
+
+        if feedback_block:
+            user_prompt_parts.append(f"## EDITOR FEEDBACK (address ALL of these)\n{feedback_block}\n")
+
+        if fact_check:
+            user_prompt_parts.append(f"## FACT CHECK NOTES\n{fact_check}\n")
+
+        if checks_block:
+            user_prompt_parts.append(f"## REQUIRED CHECKLIST (must include all)\n{checks_block}\n")
+
+        if snippets_block:
+            user_prompt_parts.append(f"## TOOL/COMMAND EXAMPLES (include these verbatim)\n{snippets_block}\n")
+
+        if path_a_draft:
+            user_prompt_parts.append(f"## COMPETING DRAFT (improve on this)\n{path_a_draft[:4000]}\n")
+
+        user_prompt_parts.append("Write the newsletter now. Lead with the hook. Stay on topic. Be specific.")
+
+        user_prompt = '\n'.join(user_prompt_parts)
+
+        try:
+            from openai import OpenAI
+            import os
+
+            client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'), timeout=120.0)
+
+            response = client.chat.completions.create(
+                model="gpt-5.2",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                max_completion_tokens=16000,
+            )
+
+            content = response.choices[0].message.content or ''
+            was_truncated = response.choices[0].finish_reason == 'length'
+            execution_time = int((time.time() - start_time) * 1000)
+
+            title = topic
+            for line in content.split('\n'):
+                line = line.strip().lstrip('#').strip()
+                if line and len(line) > 10:
+                    title = line[:200]
+                    break
+
+            word_count = len(content.split())
+
+            result = AgentResult(
+                success=True,
+                message=f"{title[:80]} | {word_count} words | directed mode",
+                data={
+                    'content': {'full_text': content, '_truncated': was_truncated},
+                    'title': title,
+                    'word_count': word_count,
+                    'content_type': 'blog_post',
+                    'tone': tone,
+                    'target_audience': audience,
+                    'metadata': {
+                        'quality_tier': 'gold' if word_count > 500 else 'silver',
+                        'directed_mode': True,
+                        'truncated': was_truncated,
+                        'actual_word_count': word_count,
+                    },
+                },
+                agent_name=self.name,
+                execution_time_ms=execution_time,
+            )
+
+            logger.info("ContentWriterAgent DIRECTED completed: %d words, %dms", word_count, execution_time)
+            return result
+
+        except Exception as e:
+            logger.error("ContentWriterAgent directed failed: %s", e, exc_info=True)
             return AgentResult(
                 success=False,
                 error=str(e),
