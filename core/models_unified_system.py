@@ -20198,6 +20198,12 @@ class SelfBlog(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
+    # Workspace linkage
+    workspace = models.ForeignKey(
+        'core.ProjectWorkspace', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='blogs', db_index=True,
+    )
+
     # Session 843: Orchestration Contract fields
     trace_id = models.UUIDField(
         null=True, blank=True, db_index=True,

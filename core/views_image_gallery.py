@@ -954,7 +954,7 @@ def unified_gallery(request):
                 file_path__startswith='data:'
             )
 
-            # Filter by workspace if specified
+            # Filter by workspace — strict (only shows workspace-linked media)
             if workspace_id:
                 image_queryset = image_queryset.filter(workspace_id=workspace_id)
 

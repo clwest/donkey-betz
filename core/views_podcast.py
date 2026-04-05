@@ -110,6 +110,14 @@ def podcast_list(request):
         # Session 997B: Only query real PodcastEpisode records
         episodes = PodcastEpisode.objects.filter(user=request.user).order_by('-created_at')
 
+        # Workspace scoping: show workspace content + unlinked
+        workspace_id = request.GET.get('workspace', '').strip()
+        if workspace_id:
+            from django.db.models import Q
+            episodes = episodes.filter(
+                Q(show__workspace_id=workspace_id) | Q(show__workspace__isnull=True)
+            )
+
         if status_filter:
             statuses = [s.strip() for s in status_filter.split(',')]
             episodes = episodes.filter(status__in=statuses)

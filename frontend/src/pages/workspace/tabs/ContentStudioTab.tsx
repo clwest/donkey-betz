@@ -78,6 +78,9 @@ interface ContentStudioTabProps {
 }
 
 export function ContentStudioTab({ initialSubTab, activeWorkspaceId }: ContentStudioTabProps) {
+  const storeWsId = useWorkspaceStore((s) => s.activeWorkspace?.id)
+  const wsId = activeWorkspaceId || storeWsId  // Prop takes precedence, store as fallback
+
   const initial = (initialSubTab && subTabs.some(t => t.id === initialSubTab)
     ? initialSubTab
     : 'gallery') as ContentSubTab
@@ -158,13 +161,12 @@ function GallerySubTab() {
   const [selectedSeries, setSelectedSeries] = useState<AISeries | null>(null)
 
   // Session 865: Use contentApi which includes auth token in headers
-  // Show all user media in Gallery (workspace tagging happens at creation time,
-  // not filtering time — most historical media has no workspace link yet)
+  // Workspace-scoped gallery: backend returns workspace content + unlinked content
   const { data: galleryData, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ['gallery-stats-tab'],
+    queryKey: ['gallery-stats-tab', wsId],
     queryFn: async () => {
       try {
-        const response = await contentApi.unifiedGallery()
+        const response = await contentApi.unifiedGallery(wsId ? { workspace: wsId } : undefined)
         return response.data || { results: [], count: 0 }
       } catch {
         return { results: [], count: 0 }
@@ -355,14 +357,15 @@ interface ContentChannel {
 }
 
 function ChannelsSubTab() {
+  const wsId = useWorkspaceStore((s) => s.activeWorkspace?.id)
   const [selectedChannel, setSelectedChannel] = useState<ContentChannel | null>(null)
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
   const [visibleCount, setVisibleCount] = useState(10)
 
   const { data: channelsData, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ['content-channels-tab'],
+    queryKey: ['content-channels-tab', wsId],
     queryFn: async () => {
-      const res = await contentApi.channels(50)
+      const res = await contentApi.channels(50, wsId)
       return res.data
     },
   })
@@ -513,13 +516,15 @@ function BlogsSubTab() {
   const [enhancingBlogId, setEnhancingBlogId] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
+  const wsId = useWorkspaceStore((s) => s.activeWorkspace?.id)
+
   // Session 860: Added error handling for API responses
   // Session 968: Migrated from raw fetch to blogsApi (auth interceptor)
   const { data: blogsData, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ['blogs-tab'],
+    queryKey: ['blogs-tab', wsId],
     queryFn: async () => {
       try {
-        const response = await blogsApi.list({ per_page: 50, category: 'blog' })
+        const response = await blogsApi.list({ per_page: 50, category: 'blog', workspace: wsId })
         return response.data
       } catch {
         return { blogs: [] as Blog[], pagination: { total: 0 }, category_counts: {} as Record<string, number> }
@@ -794,6 +799,7 @@ function BlogsSubTab() {
 // Session 865: Added to display research briefs, audits, and technical documents
 
 function DocumentsSubTab() {
+  const wsId = useWorkspaceStore((s) => s.activeWorkspace?.id)
   const [selectedDoc, setSelectedDoc] = useState<BlogPost | null>(null)
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
   const [visibleCount, setVisibleCount] = useState(10)
@@ -801,11 +807,11 @@ function DocumentsSubTab() {
 
   // Session 968: Migrated from raw fetch to blogsApi (auth interceptor)
   const { data: docsData, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ['documents-tab', categoryFilter],
+    queryKey: ['documents-tab', categoryFilter, wsId],
     queryFn: async () => {
       try {
         const categoryParam = categoryFilter === 'all' ? 'documents' : categoryFilter
-        const response = await blogsApi.list({ per_page: 500, category: categoryParam })
+        const response = await blogsApi.list({ per_page: 500, category: categoryParam, workspace: wsId })
         return response.data
       } catch {
         return { blogs: [] as Blog[], pagination: { total: 0 }, category_counts: {} as Record<string, number> }

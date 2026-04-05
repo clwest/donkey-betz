@@ -96,6 +96,12 @@ class ContentChannel(models.Model):
         related_name='content_channels'
     )
 
+    # Workspace linkage
+    workspace = models.ForeignKey(
+        'core.ProjectWorkspace', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='content_channels', db_index=True,
+    )
+
     # =========================================================================
     # CHANNEL CONFIGURATION
     # =========================================================================

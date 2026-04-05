@@ -621,8 +621,14 @@ def content_channels_list(request):
     - limit: Max episodes per channel (default 10)
     """
     limit = min(int(request.GET.get('limit', 10)), 50)
+    workspace_id = request.GET.get('workspace', '').strip()
 
     channels = ContentChannel.objects.all().order_by('-created_at')
+
+    # Workspace scoping: show workspace content + unlinked content
+    if workspace_id:
+        from django.db.models import Q
+        channels = channels.filter(Q(workspace_id=workspace_id) | Q(workspace__isnull=True))
 
     channels_data = []
     for channel in channels:
