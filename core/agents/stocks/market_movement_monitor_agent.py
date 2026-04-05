@@ -59,7 +59,7 @@ class MarketMovementMonitorAgent(BaseAgent):
     """
 
     name = "MarketMovementMonitorAgent"
-    create_deliverable_on_schedule = False  # Session 1077: scheduled outputs go to AgentExecution only
+    create_deliverable_on_schedule = True  # Fixed: was False (Session 1077), outputs were lost in AgentExecution
 
     system_prompt = """You are a market movement specialist monitoring for:
 1. Unusual volume spikes (>2x average volume)

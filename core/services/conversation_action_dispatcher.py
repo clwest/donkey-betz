@@ -451,6 +451,24 @@ class ConversationActionDispatcher:
                 f"(task_id={async_result.id})"
             )
 
+            # Link dispatched task back to conversation for traceability
+            try:
+                if conversation_id:
+                    from core.models_unified_system import AgentConversation
+                    conv = AgentConversation.objects.filter(id=conversation_id).first()
+                    if conv and hasattr(conv, 'metadata') and isinstance(conv.metadata, dict):
+                        dispatched = conv.metadata.get('dispatched_tasks', [])
+                        dispatched.append({
+                            'agent': agent_name,
+                            'task_id': str(async_result.id),
+                            'task_preview': task[:100] if task else '',
+                            'dispatched_at': timezone.now().isoformat(),
+                        })
+                        conv.metadata['dispatched_tasks'] = dispatched[-20:]  # Keep last 20
+                        conv.save(update_fields=['metadata'])
+            except Exception:
+                pass  # Fire-and-forget — don't break dispatch
+
             return {
                 'success': True,
                 'agent_name': agent_name,

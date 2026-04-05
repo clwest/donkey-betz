@@ -1,6 +1,7 @@
 """
 ToolDispatcher AgentHandlersMixin — extracted handler methods.
 """
+from core.services.pa_identity import PA_IDENTITY
 
 """
 Tool Dispatcher - Centralized Tool Execution with No Silent Failures
@@ -1439,7 +1440,7 @@ class AgentHandlersMixin:
             tags = payload.get('tags', ['pa-created'])
             if isinstance(tags, str):
                 tags = [t.strip() for t in tags.split(',') if t.strip()]
-            agent_name = payload.get('agent_name', 'PersonalAssistantAgent')
+            agent_name = payload.get('agent_name', PA_IDENTITY)
             data_sensitivity = payload.get('data_sensitivity', 'internal')
             is_pinned = bool(payload.get('is_pinned', False))
 
@@ -2893,7 +2894,7 @@ class AgentHandlersMixin:
                 item_type=item_type,
                 urgency=urgency,
                 source_type='pa',
-                source_agent='PersonalAssistant',
+                source_agent=PA_IDENTITY,
                 status='pending',
             )
             return {
@@ -3665,7 +3666,7 @@ class AgentHandlersMixin:
                 item_type=item_type,
                 urgency=urgency,
                 source_type='pa',
-                source_agent='PersonalAssistant',
+                source_agent=PA_IDENTITY,
                 status='pending',
             )
             return {

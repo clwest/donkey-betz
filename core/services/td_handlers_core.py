@@ -1,6 +1,7 @@
 """
 ToolDispatcher CoreHandlersMixin — extracted handler methods.
 """
+from core.services.pa_identity import PA_IDENTITY
 
 """
 Tool Dispatcher - Centralized Tool Execution with No Silent Failures
@@ -384,7 +385,7 @@ RESEARCH DATA:
                 tags=['pa-created', 'research-and-create', output_type],
                 content=generated_content,
                 content_format='markdown',
-                agent_name='PersonalAssistantAgent',
+                agent_name=PA_IDENTITY,
                 user=resolved_user,
                 quality_score=0.7,
                 confidence_score=0.7,
@@ -1784,7 +1785,7 @@ RESEARCH DATA:
                 deliverable_type='document',
                 is_pinned=True,
                 is_saved=True,
-                agent_name='PersonalAssistant',
+                agent_name=PA_IDENTITY,
                 content_format='markdown',
                 tags=pin_tags,
                 metadata={'source': 'conversation_tool', 'pinned_by': 'pa'},

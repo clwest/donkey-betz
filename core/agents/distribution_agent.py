@@ -76,7 +76,7 @@ class DistributionAgent(BaseAgent):
     """
 
     name = "DistributionAgent"
-    create_deliverable_on_schedule = False
+    create_deliverable_on_schedule = True  # Fixed: was False (Session 1077), outputs were lost in AgentExecution
     description = (
         "Optimizes content for maximum engagement across channels. "
         "Generates subject line variants, hook analysis, CTA optimization, "

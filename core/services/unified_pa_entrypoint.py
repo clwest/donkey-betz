@@ -46,6 +46,9 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
+# Canonical PA identity — import from pa_identity.py (no circular risk)
+from core.services.pa_identity import PA_IDENTITY  # noqa: E402
+
 # Deterministic memory intent detection patterns (Task D)
 _MEMORY_PATTERNS = [
     re.compile(r'(?:please\s+)?remember\s+(?:that\s+)?(.{10,200})', re.IGNORECASE),
@@ -2094,7 +2097,7 @@ class UnifiedPAEntrypoint:
                 docs_context = await asyncio.wait_for(
                     asyncio.to_thread(
                         self.docs_context_builder.build_context_for_agent,
-                        agent_name='personal_assistant',
+                        agent_name=PA_IDENTITY,
                         task=message,
                         max_docs=8,
                         include_recent_sessions=True,
@@ -3740,7 +3743,7 @@ Only describe features and capabilities that actually exist. Never fabricate con
                         self.llm_enforcer.enforce_real_ai,
                         prompt=f"Analyze and advise on this data: {tool_result}",
                         context=system_prompt,
-                        agent_name="UnifiedPA",
+                        agent_name=PA_IDENTITY,
                         # Session 977: Changed from "analysis" (medium reasoning, slow) to
                         # "conversation" (low reasoning, fast). The structured data is already
                         # computed; the LLM just needs to summarize, not deep-reason.
@@ -3791,7 +3794,7 @@ Address the user by name occasionally."""
                         self.llm_enforcer.enforce_real_ai,
                         prompt=f"Summarize this tool result: {tool_result}",
                         context=system_prompt,
-                        agent_name="UnifiedPA",
+                        agent_name=PA_IDENTITY,
                         task_type="conversation",
                         # Session 977: Reduced from 4000 to 2000 to keep PA responses fast
                         max_tokens=2000
@@ -6598,7 +6601,7 @@ Be concise, conversational, and personalized. Address the user by name."""
                 self.llm_enforcer.enforce_real_ai,
                 prompt=message,
                 context=system_prompt,
-                agent_name="UnifiedPA",
+                agent_name=PA_IDENTITY,
                 task_type="conversation",
                 max_tokens=2000
             )

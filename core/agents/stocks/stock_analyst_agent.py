@@ -68,7 +68,7 @@ class StockAnalystAgent(BaseAgent):
     """
 
     name = "StockAnalystAgent"
-    create_deliverable_on_schedule = False  # Session 1077: scheduled outputs go to AgentExecution only
+    create_deliverable_on_schedule = True  # Fixed: was False (Session 1077), outputs were lost in AgentExecution
 
     system_prompt = """You are a professional stock analyst with expertise in:
 1. SEC filing analysis (10-K, 10-Q, 8-K forms)
