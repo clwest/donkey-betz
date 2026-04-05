@@ -209,7 +209,8 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS(f'  UPDATED: {meta["title"]}'))
                 updated += 1
             else:
-                Deliverable.objects.create(slug=slug, **defaults)
+                from core.services.deliverable_factory import create_deliverable
+                create_deliverable(slug=slug, **defaults)
                 self.stdout.write(self.style.SUCCESS(f'  CREATED: {meta["title"]}'))
                 created += 1
 

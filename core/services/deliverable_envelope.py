@@ -227,27 +227,28 @@ class DeliverableEnvelopeService:
                     pass
 
             # Create the deliverable
-            deliverable = Deliverable.objects.create(
+            from core.services.deliverable_factory import create_deliverable
+            deliverable = create_deliverable(
                 title=title,
-                deliverable_type=deliverable_type,
-                category=category,
-                tags=tags,
-                source_operation=operation,
-                agent_name=agent_name,
-                agent_task=task,
-                user=user,
-                workspace=active_workspace,
-                is_saved=bool(active_workspace),
                 content=content,
+                agent_name=agent_name,
+                category=category,
+                deliverable_type=deliverable_type,
+                user=user,
+                tags=tags,
                 content_format=content_format,
-                preview_content=self._generate_preview(content),
                 quality_score=quality_score,
                 confidence_score=result.get('confidence', 0.0),
+                agent_task=task,
+                is_saved=bool(active_workspace),
+                metadata=kwargs.get('metadata', {}),
+                source_operation=operation,
+                workspace=active_workspace,
+                preview_content=self._generate_preview(content),
                 execution_time_ms=execution_time_ms,
                 llm_cost=llm_cost,
                 tool_calls=tool_calls,
                 raw_output=result,
-                metadata=kwargs.get('metadata', {}),
             )
 
             # Session 843: Attach trace context

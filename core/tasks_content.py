@@ -225,21 +225,22 @@ Return ONLY valid JSON, no markdown fences."""
         ws, ws_saved = resolve_workspace()
 
         # Save as Deliverable
-        deliverable = Deliverable.objects.create(
+        from core.services.deliverable_factory import create_deliverable
+        deliverable = create_deliverable(
             title=f"Content Pack: {video_title[:180]}",
-            deliverable_type='document',
-            category='Video Content',
-            tags=['video', 'content-pack', 'auto-generated'],
-            agent_name='VideoContentPackAgent',
-            agent_task=f"Generate content pack for video: {video_title}",
-            user=user,
-            workspace=ws,
-            is_saved=ws_saved,
             content=json.dumps(content_pack, indent=2),
+            agent_name='VideoContentPackAgent',
+            category='Video Content',
+            deliverable_type='document',
+            user=user,
+            tags=['video', 'content-pack', 'auto-generated'],
+            agent_task=f"Generate content pack for video: {video_title}",
             content_format='json',
-            preview_content=(content_pack.get('summary', '') or '')[:500],
             quality_score=0.8,
             confidence_score=0.85,
+            preview_content=(content_pack.get('summary', '') or '')[:500],
+            workspace=ws,
+            is_saved=ws_saved,
         )
 
         logger.info(f"Content pack generated for video {video_id}: deliverable {deliverable.id}")

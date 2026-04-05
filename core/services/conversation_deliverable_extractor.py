@@ -353,21 +353,18 @@ class ConversationDeliverableExtractor:
             ws, ws_saved = resolve_workspace()
 
             # Create the Deliverable
-            deliverable = Deliverable.objects.create(
+            from core.services.deliverable_factory import create_deliverable
+            deliverable = create_deliverable(
                 title=title,
-                slug=slug,
-                deliverable_type=extracted.content_type,
-                category=extracted.category,
-                tags=extracted.tags,
                 content=extracted.content,
-                content_format='markdown',
                 agent_name=participants[0] if participants else 'ConversationOrchestrator',
+                category=extracted.category,
+                deliverable_type=extracted.content_type,
+                tags=extracted.tags,
+                content_format='markdown',
                 quality_score=extracted.confidence,
                 confidence_score=extracted.confidence,
-                workspace=ws,
                 is_saved=ws_saved,
-                parent_object_type='conversation',
-                parent_object_id=uuid.UUID(conversation_id) if conversation_id else None,
                 metadata={
                     'source': 'conversation_deliverable_extractor',
                     'session': '884',
@@ -375,7 +372,11 @@ class ConversationDeliverableExtractor:
                     'topic': topic,
                     'extracted_at': timezone.now().isoformat(),
                     'source_message_idx': extracted.source_message_idx,
-                }
+                },
+                slug=slug,
+                workspace=ws,
+                parent_object_type='conversation',
+                parent_object_id=uuid.UUID(conversation_id) if conversation_id else None,
             )
 
             result.deliverables_created = 1

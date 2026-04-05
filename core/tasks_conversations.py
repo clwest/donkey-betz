@@ -3485,14 +3485,15 @@ def _impl_summarize_conversation_task(self, conversation_id, user_id=None):
     summary = result.get('response', 'Summary generation failed.')
 
     # Save as pinned Deliverable
-    d = Deliverable.objects.create(
+    from core.services.deliverable_factory import create_deliverable
+    d = create_deliverable(
         title=f"Conversation Summary: {session_title[:150]}",
         content=summary,
+        agent_name='PersonalAssistant',
         category='Memory',
         deliverable_type='document',
         is_pinned=True,
         is_saved=True,
-        agent_name='PersonalAssistant',
         content_format='markdown',
         tags=['conversation-summary', 'pa-memory'],
         metadata={

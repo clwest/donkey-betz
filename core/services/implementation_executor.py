@@ -345,17 +345,15 @@ class WorkflowUpdateHandler(BaseHandler):
             from core.services.deliverable_workspace_resolver import resolve_workspace
             ws, ws_saved = resolve_workspace()
 
-            deliverable = Deliverable.objects.create(
+            from core.services.deliverable_factory import create_deliverable
+            deliverable = create_deliverable(
                 title=template_name,
-                deliverable_type='document',
-                category='Workflow',
                 content=content,
-                preview_content=content[:500],
                 agent_name='WorkflowUpdateHandler',
+                category='Workflow',
+                deliverable_type='document',
                 agent_task=f"Pilot implementation: {decision.topic[:100]}",
-                status='completed',
                 quality_score=0.75,
-                workspace=ws,
                 is_saved=ws_saved,
                 metadata={
                     'source_pilot': str(implementation.pilot.id),
@@ -363,6 +361,9 @@ class WorkflowUpdateHandler(BaseHandler):
                     'impact_area': decision.impact_area,
                     'workflow_steps': workflow_steps,
                 },
+                preview_content=content[:500],
+                status='completed',
+                workspace=ws,
             )
 
             return {
@@ -640,20 +641,21 @@ class ConfigUpdateHandler(BaseHandler):
                 + "\n\n---\n*Requires human review before applying.*"
             )
 
-            Deliverable.objects.create(
+            from core.services.deliverable_factory import create_deliverable
+            create_deliverable(
                 title=f"Config Proposal: {decision.topic[:80]}",
-                deliverable_type='document',
-                category='Config Proposals',
                 content=content,
-                preview_content=content[:500],
                 agent_name='ConfigUpdateHandler',
-                status='completed',
-                workspace=ws,
+                category='Config Proposals',
+                deliverable_type='document',
                 is_saved=ws_saved,
                 metadata={
                     'source_pilot': str(implementation.pilot.id),
                     'requires_human': True,
                 },
+                preview_content=content[:500],
+                status='completed',
+                workspace=ws,
             )
         except Exception as e:
             logger.debug(f"ConfigUpdateHandler deliverable save failed: {e}")

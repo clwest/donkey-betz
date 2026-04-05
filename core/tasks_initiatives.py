@@ -2087,18 +2087,20 @@ Requirements:
                     if not Deliverable.objects.filter(
                         self_blog=blog, initiative=init,
                     ).exists():
-                        Deliverable.objects.create(
+                        from core.services.deliverable_factory import create_deliverable
+                        create_deliverable(
                             title=doc_title,
-                            slug=_del_slug,
-                            deliverable_type='document',
-                            category=f"Initiative — Stage {stage_num}",
-                            tags=['initiative', f'stage-{stage_num}', init.program or 'general'],
                             content=content,
-                            content_format='markdown',
-                            preview_content=content[:500] + ('...' if len(content) > 500 else ''),
                             agent_name=agent_name,
+                            category=f"Initiative — Stage {stage_num}",
+                            deliverable_type='document',
+                            tags=['initiative', f'stage-{stage_num}', init.program or 'general'],
+                            content_format='markdown',
                             quality_score=0.7,
                             confidence_score=0.7,
+                            initiative_id=str(init.id),
+                            slug=_del_slug,
+                            preview_content=content[:500] + ('...' if len(content) > 500 else ''),
                             status='completed',
                             initiative=init,
                             self_blog=blog,
@@ -2703,18 +2705,20 @@ Stage {stage_num} ({config['template']}) should include:
             if not Deliverable.objects.filter(
                 self_blog=document, initiative=initiative,
             ).exists():
-                Deliverable.objects.create(
+                from core.services.deliverable_factory import create_deliverable
+                create_deliverable(
                     title=_doc_title,
-                    slug=_del_slug,
-                    deliverable_type='document',
-                    category=f"Initiative — Stage {stage_num}",
-                    tags=['initiative', f'stage-{stage_num}', initiative.program or 'general'],
                     content=document_content,
-                    content_format='markdown',
-                    preview_content=document_content[:500] + ('...' if len(document_content) > 500 else ''),
                     agent_name=config.get('agent', 'InitiativePipeline'),
+                    category=f"Initiative — Stage {stage_num}",
+                    deliverable_type='document',
+                    tags=['initiative', f'stage-{stage_num}', initiative.program or 'general'],
+                    content_format='markdown',
                     quality_score=0.7,
                     confidence_score=0.7,
+                    initiative_id=str(initiative.id),
+                    slug=_del_slug,
+                    preview_content=document_content[:500] + ('...' if len(document_content) > 500 else ''),
                     status='completed',
                     initiative=initiative,
                     self_blog=document,

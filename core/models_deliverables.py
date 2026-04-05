@@ -66,13 +66,14 @@ class Deliverable(models.Model):
     - Developer traceability (tool calls, raw output)
 
     Example:
-        deliverable = Deliverable.objects.create(
+        from core.services.deliverable_factory import create_deliverable
+        deliverable = create_deliverable(
             title="Blog Post: AI Market Analysis 2026",
-            deliverable_type='document',
-            category='Marketing',
-            agent_name='ContentWriterAgent',
             content='# AI Market Analysis...',
-            content_format='markdown'
+            agent_name='ContentWriterAgent',
+            category='Marketing',
+            deliverable_type='document',
+            content_format='markdown',
         )
     """
 

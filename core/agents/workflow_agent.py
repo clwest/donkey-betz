@@ -721,15 +721,15 @@ You orchestrate. You don't create content directly."""
                 except Exception:
                     pass
 
-            deliverable = Deliverable.objects.create(
+            from core.services.deliverable_factory import create_deliverable
+            deliverable = create_deliverable(
                 title=f"{agent_name}: {title}"[:255],
-                deliverable_type='document',
-                category=f'Workflow — {agent_name}',
-                agent_name=agent_name,
                 content=content,
-                content_format='markdown',
-                workspace=workspace,
+                agent_name=agent_name,
+                category=f'Workflow — {agent_name}',
+                deliverable_type='document',
                 user=self.user,
+                content_format='markdown',
                 is_saved=True,
                 metadata={
                     'source': 'workflow_agent',
@@ -737,6 +737,7 @@ You orchestrate. You don't create content directly."""
                     'quality_tier': agent_result.data.get('metadata', {}).get('quality_tier', '')
                     if isinstance(agent_result.data, dict) else '',
                 },
+                workspace=workspace,
             )
             logger.info(
                 "WorkflowAgent: saved deliverable %s for %s (%d chars)",

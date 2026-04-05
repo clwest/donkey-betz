@@ -377,18 +377,19 @@ RESEARCH DATA:
                 except _User.DoesNotExist:
                     pass
 
-            deliverable = Deliverable.objects.create(
+            from core.services.deliverable_factory import create_deliverable
+            deliverable = create_deliverable(
                 title=title,
-                slug=slug,
-                deliverable_type=deliverable_type,
-                category='PA Research & Create',
-                tags=['pa-created', 'research-and-create', output_type],
                 content=generated_content,
-                content_format='markdown',
                 agent_name=PA_IDENTITY,
+                category='PA Research & Create',
+                deliverable_type=deliverable_type,
                 user=resolved_user,
+                trace_id=trace_id,
+                content_format='markdown',
                 quality_score=0.7,
                 confidence_score=0.7,
+                tags=['pa-created', 'research-and-create', output_type],
                 metadata={
                     'research_query': research_topic,
                     'search_results_count': len(search_data),
@@ -396,6 +397,7 @@ RESEARCH DATA:
                     'source': 'pa_research_and_create',
                     'trace_id': trace_id,
                 },
+                slug=slug,
             )
             deliverable_id = str(deliverable.id)
             logger.info(f"[{trace_id}] Research-and-create saved deliverable: {deliverable_id}")
@@ -1777,15 +1779,15 @@ RESEARCH DATA:
 
             pin_tags = payload.get('pin_tags') or ['pa-memory']
 
-            from core.models_deliverables import Deliverable
-            d = Deliverable.objects.create(
+            from core.services.deliverable_factory import create_deliverable
+            d = create_deliverable(
                 title=pin_title,
                 content=pin_content,
+                agent_name=PA_IDENTITY,
                 category='Memory',
                 deliverable_type='document',
                 is_pinned=True,
                 is_saved=True,
-                agent_name=PA_IDENTITY,
                 content_format='markdown',
                 tags=pin_tags,
                 metadata={'source': 'conversation_tool', 'pinned_by': 'pa'},
@@ -2620,19 +2622,20 @@ RESEARCH DATA:
                     slug = f"{slug_base}-{counter}"
                     counter += 1
 
-                d = Deliverable.objects.create(
+                from core.services.deliverable_factory import create_deliverable
+                d = create_deliverable(
                     title=f"Competitor Analysis: {c.competitor_name}",
-                    slug=slug,
-                    deliverable_type='document',
-                    category='Competitive Intelligence',
-                    tags=['competitor', 'analysis', c.competitor_name.lower()],
-                    agent_name='competitor_comparison_tool',
-                    agent_task=f'Export comparison {c.id}',
                     content=markdown_content,
+                    agent_name='competitor_comparison_tool',
+                    category='Competitive Intelligence',
+                    deliverable_type='document',
+                    tags=['competitor', 'analysis', c.competitor_name.lower()],
+                    agent_task=f'Export comparison {c.id}',
                     content_format='markdown',
-                    preview_content=markdown_content[:500],
                     quality_score=c.quality_score,
                     confidence_score=c.quality_score,
+                    slug=slug,
+                    preview_content=markdown_content[:500],
                     user_id=user_id,
                 )
                 deliverable_id = str(d.id)

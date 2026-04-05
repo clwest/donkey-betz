@@ -756,25 +756,27 @@ class Initiative(models.Model):
         ws, ws_saved = resolve_workspace(initiative=self)
 
         # Create the deliverable
-        deliverable = Deliverable.objects.create(
-            user=user,
+        from core.services.deliverable_factory import create_deliverable
+        deliverable = create_deliverable(
             title=f"Completed: {self.name}",
             content=full_content,
-            deliverable_type='document',
-            content_format='markdown',
-            status='published',
-            initiative=self,
-            dream=source_dream,
-            workspace=ws,
-            is_saved=ws_saved,
-            category='initiative_completion',
             agent_name='InitiativePipeline',
+            category='initiative_completion',
+            deliverable_type='document',
+            user=user,
+            initiative_id=str(self.id),
+            content_format='markdown',
+            is_saved=ws_saved,
             metadata={
                 'stages_completed': 5,
                 'initiative_id': str(self.id),
                 'completed_at': timezone.now().isoformat(),
                 'stage_names': [stage.stage_name for stage in stages],
-            }
+            },
+            status='published',
+            initiative=self,
+            dream=source_dream,
+            workspace=ws,
         )
 
         # Update initiative status
