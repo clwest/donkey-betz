@@ -120,7 +120,21 @@ export default function CockpitInboxPage() {
               <div
                 key={item.id}
                 className="card flex items-start gap-4 px-4 py-3 hover:bg-dark-border/20 cursor-pointer transition-colors"
-                onClick={() => navigate(item.cta.route)}
+                onClick={() => {
+                  // Rewrite cockpit routes to workspace equivalents
+                  let route = item.cta.route as string
+                  if (route.startsWith('/cockpit/')) {
+                    route = route
+                      .replace(/^\/cockpit\/incidents/, '/workspace?tab=system&sub=incidents')
+                      .replace(/^\/cockpit\/alerts/, '/workspace?tab=system&sub=alerts')
+                      .replace(/^\/cockpit\/errors/, '/workspace?tab=system&sub=ops')
+                      .replace(/^\/cockpit\/runs/, '/workspace?tab=system&sub=ops')
+                      .replace(/^\/cockpit\/approvals/, '/workspace?tab=system&sub=boardroom')
+                      .replace(/^\/cockpit\/ops/, '/workspace?tab=system&sub=ops')
+                    if (route.startsWith('/cockpit/')) route = '/workspace?tab=system&sub=ops'
+                  }
+                  navigate(route)
+                }}
               >
                 <div className="mt-0.5 flex-shrink-0">
                   <TypeIcon size={18} className="text-gray-500" />

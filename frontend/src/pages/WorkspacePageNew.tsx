@@ -37,6 +37,14 @@ import {
   Lightbulb,
   Megaphone,
   FlaskConical,
+  ShieldAlert,
+  Bell,
+  DollarSign,
+  Layers,
+  Settings,
+  ScrollText,
+  Bot,
+  Inbox,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
@@ -46,6 +54,16 @@ import { useSystemEvents } from '@/hooks/useWebSocket'
 import { useAuthStore } from '@/stores/authStore'
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
 import SmartOutputRenderer from '@/components/SmartOutputRenderer'
+
+// Cockpit pages migrated to Workspace (Phase 2)
+import CockpitIncidentsPage from '@/pages/cockpit/IncidentsPage'
+import CockpitAlertsPage from '@/pages/cockpit/AlertsPage'
+import CockpitCostPage from '@/pages/cockpit/CostPage'
+import CockpitQueuesPage from '@/pages/cockpit/QueuesPage'
+import CockpitConfigPage from '@/pages/cockpit/ConfigPage'
+import CockpitAuditLogPage from '@/pages/cockpit/AuditLogPage'
+import CockpitAutopilotPage from '@/pages/cockpit/AutopilotPage'
+import CockpitInboxPage from '@/pages/cockpit/InboxPage'
 
 // Import workspace tab components
 import {
@@ -115,7 +133,14 @@ const primaryTabs: PrimaryTab[] = [
     id: 'system', label: 'System', icon: Server,
     subTabs: [
       { id: 'ops', label: 'Operations', icon: History },
+      { id: 'incidents', label: 'Incidents', icon: ShieldAlert },
+      { id: 'alerts', label: 'Alerts', icon: Bell },
       { id: 'boardroom', label: 'Governance', icon: ClipboardList },
+      { id: 'autopilot', label: 'Autopilot', icon: Bot },
+      { id: 'cost', label: 'Cost', icon: DollarSign },
+      { id: 'queues', label: 'Queues', icon: Layers },
+      { id: 'config', label: 'Config', icon: Settings },
+      { id: 'audit', label: 'Audit Log', icon: ScrollText },
       { id: 'triggers', label: 'Automations', icon: Zap },
       { id: 'evaluation', label: 'Quality', icon: FlaskConical },
       { id: 'files', label: 'Files', icon: FolderTree },
@@ -158,6 +183,15 @@ const legacyTabMapping: Record<string, { primary: string; sub?: string }> = {
   intelligence: { primary: 'intelligence', sub: 'dataintel' },
   governance: { primary: 'system', sub: 'boardroom' },
   command: { primary: 'home' },
+  // Cockpit migration aliases
+  incidents: { primary: 'system', sub: 'incidents' },
+  alerts: { primary: 'system', sub: 'alerts' },
+  cost: { primary: 'system', sub: 'cost' },
+  queues: { primary: 'system', sub: 'queues' },
+  config: { primary: 'system', sub: 'config' },
+  audit: { primary: 'system', sub: 'audit' },
+  autopilot: { primary: 'system', sub: 'autopilot' },
+  inbox: { primary: 'home' },
 }
 
 // Default sub-tab for each primary
@@ -1041,10 +1075,16 @@ export default function WorkspacePage() {
 
           {/* HOME */}
           {activePrimary === 'home' && (
-            <HomeTab
-              activeWorkspace={activeWorkspace}
-              onNavigateTab={handleTabChange}
-            />
+            <div className="space-y-8">
+              <HomeTab
+                activeWorkspace={activeWorkspace}
+                onNavigateTab={handleTabChange}
+              />
+              {/* Inbox migrated from Cockpit */}
+              <div className="border-t border-dark-border pt-6">
+                <CockpitInboxPage />
+              </div>
+            </div>
           )}
 
           {/* WORK */}
@@ -1100,6 +1140,28 @@ export default function WorkspacePage() {
           )}
           {activePrimary === 'system' && activeSub === 'boardroom' && (
             <BoardroomTab />
+          )}
+          {/* Cockpit migrations — Phase 2 */}
+          {activePrimary === 'system' && activeSub === 'incidents' && (
+            <CockpitIncidentsPage />
+          )}
+          {activePrimary === 'system' && activeSub === 'alerts' && (
+            <CockpitAlertsPage />
+          )}
+          {activePrimary === 'system' && activeSub === 'autopilot' && (
+            <CockpitAutopilotPage />
+          )}
+          {activePrimary === 'system' && activeSub === 'cost' && (
+            <CockpitCostPage />
+          )}
+          {activePrimary === 'system' && activeSub === 'queues' && (
+            <CockpitQueuesPage />
+          )}
+          {activePrimary === 'system' && activeSub === 'config' && (
+            <CockpitConfigPage />
+          )}
+          {activePrimary === 'system' && activeSub === 'audit' && (
+            <CockpitAuditLogPage />
           )}
           {activePrimary === 'system' && activeSub === 'triggers' && (
             <TriggersTab

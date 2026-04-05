@@ -1,10 +1,15 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { useIncidents, useCreateIncident } from '@/hooks/cockpitQueries'
+import {
+  useIncidents, useCreateIncident,
+  useIncidentDetail, useUpdateIncident, useAddIncidentEvent,
+} from '@/hooks/cockpitQueries'
 import SkeletonRows from '@/components/cockpit/shared/SkeletonRows'
 import StatusPill from '@/components/cockpit/shared/StatusPill'
-import type { HealthTone } from '@/types/cockpit'
-import { ShieldAlert, Plus, X, Search } from 'lucide-react'
+import type { HealthTone, IncidentEvent } from '@/types/cockpit'
+import {
+  ShieldAlert, Plus, X, Search, ArrowLeft,
+  MessageSquare, LinkIcon, RefreshCw, Send, CheckCircle2,
+} from 'lucide-react'
 import { cn } from '@/lib/cn'
 
 const SEVERITY_TONE: Record<string, HealthTone> = {
@@ -35,6 +40,7 @@ export default function IncidentsPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [newSeverity, setNewSeverity] = useState('medium')
+  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null)
 
   const { data, isLoading } = useIncidents({
     status: statusFilter || undefined,
@@ -177,12 +183,12 @@ export default function IncidentsPage() {
                     <StatusPill label={inc.severity} tone={SEVERITY_TONE[inc.severity] ?? 'gray'} />
                   </td>
                   <td className="p-3">
-                    <Link
-                      to={`/cockpit/incidents/${inc.id}`}
-                      className="text-gray-200 hover:text-primary-400 transition-colors"
+                    <button
+                      onClick={() => setSelectedIncidentId(inc.id)}
+                      className="text-gray-200 hover:text-primary-400 transition-colors text-left"
                     >
                       {inc.title}
-                    </Link>
+                    </button>
                   </td>
                   <td className="p-3">
                     <StatusPill label={inc.status} tone={STATUS_TONE[inc.status] ?? 'gray'} />
@@ -198,6 +204,204 @@ export default function IncidentsPage() {
           </table>
         </div>
       )}
+
+      {/* Inline Incident Detail */}
+      {selectedIncidentId && (
+        <IncidentDetailInline
+          incidentId={selectedIncidentId}
+          onBack={() => setSelectedIncidentId(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+/* Inline detail view — replaces the old routed IncidentDetailPage */
+function IncidentDetailInline({ incidentId, onBack }: { incidentId: string; onBack: () => void }) {
+  const { data, isLoading } = useIncidentDetail(incidentId)
+  const updateMutation = useUpdateIncident()
+  const addEventMutation = useAddIncidentEvent()
+  const [noteText, setNoteText] = useState('')
+  const [linkType, setLinkType] = useState('run_id')
+  const [linkId, setLinkId] = useState('')
+  const [linkLabel, setLinkLabel] = useState('')
+  const [composerTab, setComposerTab] = useState<'note' | 'link'>('note')
+
+  if (isLoading || !data) {
+    return (
+      <div className="card p-6 mt-4 border-l-2 border-l-primary-500">
+        <SkeletonRows count={6} />
+      </div>
+    )
+  }
+
+  const inc = data.incident
+  const events = (data.events ?? []) as IncidentEvent[]
+
+  return (
+    <div className="mt-4 space-y-4 border-t border-dark-border pt-4">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <button onClick={onBack} className="text-gray-500 hover:text-gray-300">
+          <ArrowLeft size={18} />
+        </button>
+        <ShieldAlert size={20} className="text-primary-400" />
+        <h2 className="text-xl font-bold text-white flex-1">{inc.title}</h2>
+      </div>
+
+      {/* Status bar */}
+      <div className="card p-4 flex flex-wrap gap-4 items-center">
+        <div>
+          <label className="text-xs text-gray-500 block mb-1">Severity</label>
+          <select
+            value={inc.severity}
+            onChange={(e) => updateMutation.mutate({ incidentId, severity: e.target.value })}
+            className="input text-sm"
+            disabled={updateMutation.isPending}
+          >
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 block mb-1">Status</label>
+          <div className="flex gap-1">
+            {['open', 'mitigating', 'resolved'].map((s) => (
+              <button
+                key={s}
+                onClick={() => updateMutation.mutate({ incidentId, status: s })}
+                disabled={updateMutation.isPending}
+                className={cn(
+                  'px-3 py-1.5 text-xs rounded transition-colors flex items-center gap-1',
+                  inc.status === s ? 'bg-primary-600 text-white' : 'bg-dark-border text-gray-400 hover:text-gray-200',
+                )}
+              >
+                {s === 'resolved' && <CheckCircle2 size={12} />}
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 block mb-1">Owner</label>
+          <span className="text-sm text-gray-300">{inc.owner || 'Unassigned'}</span>
+        </div>
+        <div className="flex gap-2 ml-auto">
+          <StatusPill label={inc.severity} tone={SEVERITY_TONE[inc.severity] ?? 'gray'} />
+          <StatusPill label={inc.status} tone={STATUS_TONE[inc.status] ?? 'gray'} />
+        </div>
+      </div>
+
+      {/* Resolution */}
+      {inc.resolution_summary && (
+        <div className="card p-4 border-l-2 border-l-green-500">
+          <span className="text-xs text-gray-500 block mb-1">Resolution</span>
+          <p className="text-sm text-gray-300 whitespace-pre-wrap">{inc.resolution_summary}</p>
+        </div>
+      )}
+
+      {/* Timeline */}
+      <div>
+        <h3 className="text-sm font-medium text-gray-300 mb-3">Timeline ({events.length} events)</h3>
+        {events.length === 0 ? (
+          <div className="card p-8 text-center text-gray-500">No events yet.</div>
+        ) : (
+          <div className="space-y-3">
+            {events.map((ev) => (
+              <div key={ev.id} className="flex gap-3">
+                <div className="mt-1 flex-shrink-0">
+                  {ev.event_type === 'note' ? <MessageSquare size={14} className="text-blue-400" /> :
+                   ev.event_type === 'link' ? <LinkIcon size={14} className="text-green-400" /> :
+                   <RefreshCw size={14} className="text-amber-400" />}
+                </div>
+                <div className="flex-1 card p-3 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-gray-300">{ev.actor}</span>
+                    <StatusPill label={ev.event_type.replace('_', ' ')} tone="blue" />
+                    <span className="text-xs text-gray-500">{new Date(ev.created_at).toLocaleString()}</span>
+                  </div>
+                  {ev.event_type === 'note' && (
+                    <p className="text-gray-300 text-sm whitespace-pre-wrap">{(ev.content as Record<string, string>).text}</p>
+                  )}
+                  {ev.event_type === 'status_change' && (
+                    <div className="space-y-1">
+                      {Object.entries(ev.content as Record<string, unknown>).map(([key, val]) => {
+                        const v = val as Record<string, string> | string
+                        if (typeof v === 'object' && v !== null && 'from' in v) {
+                          return (
+                            <div key={key} className="text-sm text-gray-400">
+                              <span className="text-gray-500">{key}:</span>{' '}
+                              <span className="text-red-400 line-through">{v.from}</span>{' → '}
+                              <span className="text-green-400">{v.to}</span>
+                            </div>
+                          )
+                        }
+                        return <div key={key} className="text-sm text-gray-400"><span className="text-gray-500">{key}:</span> {String(v)}</div>
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Composer */}
+      <div className="card p-4 space-y-3">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setComposerTab('note')}
+            className={cn('px-3 py-1.5 text-xs rounded transition-colors', composerTab === 'note' ? 'bg-primary-600 text-white' : 'bg-dark-border text-gray-400')}
+          >
+            <MessageSquare size={12} className="inline mr-1" /> Note
+          </button>
+          <button
+            onClick={() => setComposerTab('link')}
+            className={cn('px-3 py-1.5 text-xs rounded transition-colors', composerTab === 'link' ? 'bg-primary-600 text-white' : 'bg-dark-border text-gray-400')}
+          >
+            <LinkIcon size={12} className="inline mr-1" /> Link Evidence
+          </button>
+        </div>
+        {composerTab === 'note' ? (
+          <div className="flex gap-2">
+            <textarea
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              placeholder="Add a note..."
+              className="input text-sm flex-1 min-h-[60px]"
+              onKeyDown={(e) => { if (e.key === 'Enter' && e.metaKey) { if (noteText.trim()) addEventMutation.mutate({ incidentId, event_type: 'note', text: noteText.trim() }, { onSuccess: () => setNoteText('') }) } }}
+            />
+            <button
+              onClick={() => { if (noteText.trim()) addEventMutation.mutate({ incidentId, event_type: 'note', text: noteText.trim() }, { onSuccess: () => setNoteText('') }) }}
+              disabled={!noteText.trim() || addEventMutation.isPending}
+              className="btn-primary text-xs self-end"
+            >
+              <Send size={14} />
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2 items-end">
+            <select value={linkType} onChange={(e) => setLinkType(e.target.value)} className="input text-sm">
+              <option value="run_id">Run</option>
+              <option value="error_signature_id">Error Signature</option>
+              <option value="alert_id">Alert</option>
+              <option value="agent_name">Agent</option>
+            </select>
+            <input value={linkId} onChange={(e) => setLinkId(e.target.value)} placeholder="ID..." className="input text-sm flex-1" />
+            <input value={linkLabel} onChange={(e) => setLinkLabel(e.target.value)} placeholder="Label (optional)" className="input text-sm flex-1" />
+            <button
+              onClick={() => { if (linkId.trim()) addEventMutation.mutate({ incidentId, event_type: 'link', link_type: linkType, link_id: linkId.trim(), label: linkLabel }, { onSuccess: () => { setLinkId(''); setLinkLabel('') } }) }}
+              disabled={!linkId.trim() || addEventMutation.isPending}
+              className="btn-primary text-xs"
+            >
+              <LinkIcon size={14} />
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
