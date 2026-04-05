@@ -80,6 +80,12 @@ class Campaign(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
+    # Workspace linkage
+    workspace = models.ForeignKey(
+        'core.ProjectWorkspace', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='campaigns', db_index=True,
+    )
+
     # Owner
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

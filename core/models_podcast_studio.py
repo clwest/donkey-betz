@@ -26,6 +26,12 @@ class PodcastShow(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='podcast_shows')
 
+    # Workspace linkage
+    workspace = models.ForeignKey(
+        'core.ProjectWorkspace', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='podcast_shows', db_index=True,
+    )
+
     # Show Identity
     name = models.CharField(max_length=200)  # "AI Debates Weekly"
     description = models.TextField(blank=True)

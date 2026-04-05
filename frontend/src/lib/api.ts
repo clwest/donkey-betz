@@ -895,7 +895,7 @@ export const distributionApi = {
 export const contentApi = {
   // Gallery
   gallery: () => api.get('/v1/gallery/list/'),
-  unifiedGallery: () => api.get('/v1/gallery/all/'),
+  unifiedGallery: (params?: { workspace?: string }) => api.get('/v1/gallery/all/', { params }),
   videoGallery: () => api.get('/v1/gallery/videos/'),
   toggleFavorite: (itemId: string) => api.post('/v1/gallery/toggle-favorite/', { item_id: itemId }),
 
@@ -1035,7 +1035,7 @@ export const contentApi = {
   calendarUpcoming: () => api.get('/content-calendar/upcoming/'),
 
   // Session 741: Content Channels API
-  channels: (limit?: number) => api.get('/content-channels/', { params: { limit } }),
+  channels: (limit?: number, workspace?: string) => api.get('/content-channels/', { params: { limit, workspace } }),
   channelDetail: (channelId: string) => api.get(`/content-channels/${channelId}/`),
   episodeDetail: (episodeId: string) => api.get(`/content-channels/episode/${episodeId}/`),
 
@@ -3917,7 +3917,7 @@ export interface BlogListResponse {
 }
 
 export const blogsApi = {
-  list: (params?: { page?: number; per_page?: number; search?: string; category?: string; status?: string }) =>
+  list: (params?: { page?: number; per_page?: number; search?: string; category?: string; status?: string; workspace?: string }) =>
     api.get<BlogListResponse>('/v1/research/self-blog/list/', { params }),
 
   get: (blogId: string) =>

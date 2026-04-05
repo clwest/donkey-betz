@@ -45,6 +45,12 @@ class ConceptForgeRun(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
+    # Workspace linkage
+    workspace = models.ForeignKey(
+        'core.ProjectWorkspace', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='conceptforge_runs', db_index=True,
+    )
+
     # Source content that triggered the pipeline
     source_type = models.CharField(
         max_length=30,

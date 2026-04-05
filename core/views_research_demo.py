@@ -615,6 +615,13 @@ def self_blog_list_api(request):
         # Build query
         queryset = SelfBlog.objects.all().order_by('-created_at')
 
+        # Workspace scoping: show workspace content + unlinked content
+        workspace_id = request.GET.get('workspace', '').strip()
+        if workspace_id:
+            queryset = queryset.filter(
+                models.Q(workspace_id=workspace_id) | models.Q(workspace__isnull=True)
+            )
+
         # Session 814: Filter by category if specified
         if category:
             if category == 'documents':
