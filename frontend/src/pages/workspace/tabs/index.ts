@@ -71,3 +71,6 @@ export { LaunchpadTab } from './LaunchpadTab'
 
 // Session 1078: Home Tab — attention queue + active work + pulse
 export { default as HomeTab } from './HomeTab'
+
+// App Integration: Embedded standalone apps in workspace
+export { default as AppTab, hasApp } from './AppTab'
