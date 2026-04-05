@@ -1,92 +1,117 @@
 # Next Session — Start Here
 
 **Date:** April 5, 2026
-**Previous Session:** Business plan fixes + Ironwood Protocol gameplay overhaul
-**PA Conversation:** pa-c95ff6e96bd6
+**Previous Session:** UI Overhaul + PA Identity Fix + Data Flow Hardening
+**PA Conversation:** pa-09efe1c2b63f
 **Status:** 218 Agents | 80 Spiders | 25 Advisors | PA function calling LIVE (GPT-5.2) | 9 standalone apps + RTS game
 
 ---
 
 ## What Was Done This Session
 
-### Business Plans — ALL 9 COMPLETE
-- Fixed MentorForge, SignalStudio, Ironwood Protocol, ComplianceSentinel business plans (had placeholder text)
-- ScoutPlays was already good (12K chars)
-- All 4 fixed plans now have real content + correct workspace FK assignments
-- PR #1816: Added workspace_id to deliverable detail API response
+### UI Overhaul — Cockpit Consolidated into Workspace (3 phases)
+1. **Phase 1: Hide Cockpit** — removed from sidebar, all `/cockpit/*` routes redirect to Workspace tabs
+2. **Phase 2: Migrate 8 features** — 7 new System sub-tabs (Incidents, Alerts, Autopilot, Cost, Queues, Config, Audit Log) + Inbox on Home tab
+3. **Phase 3: Fix links** — inline Incident Detail view, AlertsPage routes updated, Inbox CTA rewriter
+4. All cockpit code preserved in `pages/cockpit/` — not deleted
 
-### Ironwood Protocol — Major Gameplay Overhaul (5 commits)
-1. **A* pathfinding** — units navigate around water/rocks instead of getting stuck
-2. **All 5 modules working:**
-   - Pulse: AoE damage to all enemies in range
-   - EMP: disables target 20 ticks (can't move/attack) + visual indicator
-   - Support: deploys temporary auto-turrets every 200 ticks
-   - Repair: heals ALL nearby allies + buildings (not just one)
-   - Ballistic: can now target buildings too
-3. **Strategic AI:** build orders, counter-picks, retreat logic, defensive turrets, double production
-4. **Resource economy fix:** generators work for players (+4E +2B/tick), faster tick rate (3s), visible income
-5. **Mission 1 instant-win bug FIXED:** enemyHadHQ flag persisted from createGameState default
-6. **Resource UX overhaul:** bigger HUD, node capture notifications, contextual progressive hints
-7. **Guided gameplay:** step-by-step hints panel, better briefing, training UI with tooltips, SUP module button added
+### PA Identity Consolidation
+1. **Found 6 identity variants** — PersonalAssistant, PersonalAssistantAgent, UnifiedPA, personal_assistant, PA, human_pa
+2. **Created `core/services/pa_identity.py`** with `PA_IDENTITY` constant
+3. **Updated 12 code locations** across 8 service files to use the constant
+4. **Built `migrate_pa_identity` management command** — audits and normalizes all DB records
+5. **Run on Railway pending** — `railway run python manage.py migrate_pa_identity --apply`
 
-### Sprite Generation — COMPLETE
-- 15/15 sprites generated via SD3 (digital sci-fi style), all clean top-down views
-- Management command: `python manage.py generate_ironwood_sprites` (reusable)
-- Manifest: `ironwood_sprite_manifest.json` with all URLs
-- Sprites integrated into Ironwood engine with team-color multiply tinting
-- New files: `sprites.ts` (loader + tinter), modified `engine.ts` + `App.tsx`
-- TypeScript clean, Vite build passes
-- Sprites are 1024x1024 originals — need downsizing to 64x64 for production
+### Data Flow Hardening
+1. **16 agents fixed** — `create_deliverable_on_schedule` flipped from False to True. Scheduled agent outputs now create Deliverables instead of vanishing.
+2. **ConversationActionDispatcher** — now stores dispatched task references in conversation metadata
+3. **DeliverableFactory created** — `core/services/deliverable_factory.py` for centralized Deliverable creation
+4. **Orphan model audit** — SkillGapAnalysis (1,466 rows) and ViralContentPrediction (5,351 rows) contain real data never shown to users
+
+### Audit Documents Created
+- `docs/audits/PA_IDENTITY_FRAGMENTATION_AUDIT.md`
+- `docs/audits/DATA_FLOW_DEAD_ENDS_AUDIT.md`
+
+### Initiatives Created (tracked by Rigby)
+- **PA Identity Consolidation** (c7b6088f) — High priority
+- **Data Flow Hardening** (42079067) — Critical priority
 
 ## Accounts
 
-- `donkeyking` (Chris) — superuser/owner
+- `donkeyking` (Chris) — superuser/owner (Railway username: `admin`)
 - `jessica` — superuser, business side
 - `jeremy` — superuser, patent lawyer
-- All apps: demo user with password `demo123`
 
-## PRIORITY 1: Ironwood Protocol Sprites — DONE
-- ~~Pull manifest~~ DONE — 15/15 sprites generated and manifest saved
-- ~~Integrate into game engine~~ DONE — sprites.ts + engine.ts + App.tsx modified
-- Remaining: downsize 1024x1024 originals to 64x64, convert to WebP, playtest tinting
+## PRIORITY 1: Run PA Identity Migration on Railway
 
-## PRIORITY 2: Ironwood Protocol Polish
-- Playtest remaining campaign missions (2-6)
+```bash
+# Dry run first
+railway run python manage.py migrate_pa_identity --verbose
+
+# Then apply
+railway run python manage.py migrate_pa_identity --apply
+```
+
+## PRIORITY 2: Remaining Data Flow Work
+
+### DeliverableFactory Migration (Next Sprint)
+- Factory exists at `core/services/deliverable_factory.py`
+- 23 existing `Deliverable.objects.create()` call sites need to migrate
+- Start with highest-traffic paths: base_agent.py, tool_dispatcher handlers, tasks_conversations.py
+
+### Orphan Models — Surface or Remove
+| Model | Rows | Action |
+|---|---|---|
+| ViralContentPrediction | 5,351 | Surface in Intelligence tab |
+| SkillGapAnalysis | 1,466 | Surface in Intelligence tab |
+| CaseLawUpdate | 0 | Remove model |
+| RegulatoryChange | 0 | Remove model |
+| EarningsPrediction | 0 | Remove model |
+| ThumbnailVariant | 77 | Low priority |
+
+### Spider Pipeline Documentation
+- SpiderData → bridges → connectors → final tables flow is undocumented
+- Complex multi-hop pipeline could silently lose data
+
+## PRIORITY 3: Ironwood Protocol Polish
+- Playtest campaign missions 2-6
 - AI balance tuning
-- Audio system (SFX + music)
-- Multiplayer testing with 2 browser tabs
+- Resize sprites for production (WebP variants)
 
-## PRIORITY 3: Platform Carryover
+## PRIORITY 4: Platform Carryover
 - Content Packets UI — packet detail page
-- Evidence Cards monitoring
-- Rewrite quality improvements
 - Duplicate dispatch rate limiting
+- Evidence Cards monitoring
 
 ## Known Issues
 
-### Sprite Pipeline — RESOLVED
-- ~~ImageAgent generates concept art sheets~~ FIXED: bypass GPT prompt rewriting, call _execute_generate_image directly with strict prompts
-- ~~1 image per run~~ SOLVED: management command loops through 15 entities individually
-- Sprites at 1024x1024 need downsizing for production (bandwidth)
+### Workspace System
+- `unique_active_workspace_per_user` DB constraint: only 1 workspace can be `is_active=True` per user
+- ProjectWorkspace.save() deactivates all others when activating one
 
-### Apps — Deployment Parked
+### Cockpit Migration
+- Internal links in dormant cockpit pages still reference `/cockpit/*` (not rendered, no runtime risk)
+- Cockpit backend API endpoints (`/cockpit/*`) still live — needed by migrated workspace tabs
+- CreateFlow/CreateHub and ObsPage skipped (zero usage in 90 days)
+
+### Apps — Deployment
 - All 9 apps run locally only — no Railway/Vercel deploys yet
-- GitHub repos created and pushed but no CI/CD
+- App Tab URLs in `AppTab.tsx` are localhost
 
-## How to Start Ironwood Protocol
+## How to Start
 
 ```bash
-cd ~/development/ironwood-protocol
-bash start.sh
-# Backend: http://localhost:8009
-# Frontend: http://localhost:5181
-# Demo: demo@ironwood.dev / demo123
+# Platform
+make start && make celery
+
+# Access AI Studio
+open http://localhost:8000/ai-studio/
 ```
 
 ## How to Work with Rigby
 
 ```bash
-python tools/pa_chat.py "your message" --tools --conversation pa-c95ff6e96bd6
+python tools/pa_chat.py "your message" --tools --conversation pa-09efe1c2b63f
 ```
 
 ## Troubleshooting

@@ -126,14 +126,20 @@ The `async_result` task ID is logged but `.get()` is never called anywhere. The 
 
 ### 6. Orphan Models — Written but Never Read
 
-| Model | Created In | Read In | Status |
-|---|---|---|---|
-| `SkillGapAnalysis` | tasks.py | No reads found | ORPHAN |
-| `CaseLawUpdate` | tasks.py | No reads found | ORPHAN |
-| `RegulatoryChange` | tasks.py | No reads found | ORPHAN |
-| `ThumbnailVariant` | tasks_media.py | tasks_media.py only | No UI |
-| `ViralContentPrediction` | tasks_misc.py | tasks_media.py | No UI |
-| `EarningsPrediction` | tasks_financial.py | Unclear | Questionable |
+| Model | Created In | Read In | Row Count | Latest Record | Status |
+|---|---|---|---|---|---|
+| `SkillGapAnalysis` | tasks.py | No reads found | 1,466 | Dec 2025 | ORPHAN — real data, never surfaced |
+| `CaseLawUpdate` | tasks.py | No reads found | 0 | — | EMPTY — safe to remove |
+| `RegulatoryChange` | tasks.py | No reads found | 0 | — | EMPTY — safe to remove |
+| `ThumbnailVariant` | tasks_media.py | tasks_media.py only | 77 | Jan 2026 | No UI |
+| `ViralContentPrediction` | tasks_misc.py | tasks_media.py | 5,351 | Jan 2026 | ORPHAN — real data, never surfaced |
+| `EarningsPrediction` | tasks_financial.py | Unclear | 0 | — | EMPTY — safe to remove |
+| `TechStackTrend` | tasks.py | Unclear | 12 | Unknown | Low value |
+| `DesignTrend` | tasks_ops.py | discord_bot.py | 13 | Unknown | Has reads |
+
+**Audit run:** April 5, 2026 (local DB). Production counts may differ.
+
+**Key findings:** `ViralContentPrediction` (5,351 rows) and `SkillGapAnalysis` (1,466 rows) contain real, potentially valuable data that has never been shown to users. These could be surfaced in the Intelligence tab.
 
 **Location:** `core/models_autonomous_situations.py` — these models are defined and populated by background tasks but may never be queried by any view or API.
 
