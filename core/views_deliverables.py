@@ -87,12 +87,10 @@ def list_deliverables(request):
             queryset = queryset.filter(workspace_id=workspace_id)
         elif is_authed:
             if request.user.is_staff:
-                # Staff sees their own + NULL-user deliverables (system-created)
-                queryset = queryset.filter(
-                    Q(user=request.user) | Q(user__isnull=True)
-                )
+                # Staff sees ALL deliverables (their own + system + other users')
+                pass  # no filter — staff has full visibility
             else:
-                # Non-staff only sees their own deliverables (no NULL-user globals)
+                # Non-staff only sees their own deliverables
                 queryset = queryset.filter(user=request.user)
 
         # Apply filters
@@ -542,10 +540,8 @@ def get_deliverable_stats(request):
         # Base queryset — exclude archived by default (Session 1077)
         queryset = Deliverable.objects.exclude(status='archived')
 
-        if request.user.is_authenticated:
-            queryset = queryset.filter(
-                Q(user=request.user) | Q(user__isnull=True)
-            )
+        if request.user.is_authenticated and not request.user.is_staff:
+            queryset = queryset.filter(user=request.user)
 
         # Session 1077: Scope stats to workspace when specified
         workspace_id = request.GET.get('workspace')
