@@ -452,18 +452,19 @@ def _save_stage_deliverable(workspace, stage_name, agent_name, content, brief, r
     try:
         from core.models_deliverables import Deliverable, ContentPacketItem, ContentPacket
         topic = brief.get('topic', workspace.name) if brief else workspace.name
-        deliverable = Deliverable.objects.create(
+        from core.services.deliverable_factory import create_deliverable
+        deliverable = create_deliverable(
             title=f"{stage_name}: {topic}"[:255],
-            deliverable_type='document',
-            category=f'Pipeline — {stage_name}',
-            agent_name=agent_name,
             content=content,
-            content_format='markdown',
-            workspace=workspace,
+            agent_name=agent_name,
+            category=f'Pipeline — {stage_name}',
+            deliverable_type='document',
             user=user,
+            content_format='markdown',
             is_saved=True,
             metadata={'pipeline_run_id': run_id, 'stage_name': stage_name,
                       'workspace_brief_topic': brief.get('topic', '') if brief else ''},
+            workspace=workspace,
         )
 
         # Link to content packet if available

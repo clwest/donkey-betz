@@ -306,17 +306,18 @@ def workspace_config(request, workspace_id):
                     if brief.get('focus_areas') and isinstance(brief['focus_areas'], list):
                         brief_lines.append(f"**Focus Areas:** {', '.join(brief['focus_areas'])}\n")
 
-                Deliverable.objects.create(
+                from core.services.deliverable_factory import create_deliverable
+                create_deliverable(
                     title=f"Brief: {topic[:100]}",
-                    deliverable_type='document',
-                    category='Workspace Brief',
-                    agent_name='User',
                     content='\n'.join(brief_lines),
-                    content_format='markdown',
-                    workspace=workspace,
+                    agent_name='User',
+                    category='Workspace Brief',
+                    deliverable_type='document',
                     user=request.user,
+                    content_format='markdown',
                     is_saved=True,
                     metadata={'brief_version': True, 'workspace_id': str(workspace.id)},
+                    workspace=workspace,
                 )
             except Exception as e:
                 logger.warning("Failed to save brief as deliverable: %s", e)

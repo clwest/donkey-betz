@@ -1444,25 +1444,28 @@ class AgentHandlersMixin:
             data_sensitivity = payload.get('data_sensitivity', 'internal')
             is_pinned = bool(payload.get('is_pinned', False))
 
-            obj = Deliverable.objects.create(
+            from core.services.deliverable_factory import create_deliverable
+            obj = create_deliverable(
                 title=title[:255],
-                slug=slug,
-                deliverable_type=dtype,
-                category=category,
-                tags=tags,
                 content=content,
-                content_format=content_format,
-                preview_content=preview,
                 agent_name=agent_name,
+                category=category,
+                deliverable_type=dtype,
                 user=resolved_user,
-                workspace=resolved_workspace,
+                workspace_id=str(resolved_workspace.id) if resolved_workspace else None,
+                trace_id=trace_id,
+                tags=tags,
+                content_format=content_format,
                 quality_score=float(payload.get('quality_score', 0.7)),
                 confidence_score=float(payload.get('confidence_score', 0.8)),
                 is_saved=True,
                 is_pinned=is_pinned,
+                metadata={'source': 'pa_deliverables_tool', 'trace_id': trace_id},
+                slug=slug,
+                preview_content=preview,
                 status='completed',
                 data_sensitivity=data_sensitivity,
-                metadata={'source': 'pa_deliverables_tool', 'trace_id': trace_id},
+                workspace=resolved_workspace,
             )
             return {
                 'action': 'create',

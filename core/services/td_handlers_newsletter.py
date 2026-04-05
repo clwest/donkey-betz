@@ -481,16 +481,17 @@ class NewsletterHandlersMixin:
 
         if updates:
             if not config_del:
-                config_del = Deliverable.objects.create(
+                from core.services.deliverable_factory import create_deliverable
+                config_del = create_deliverable(
                     title=config_title,
-                    deliverable_type='document',
-                    category='Newsletter',
-                    agent_name='NewsletterTool',
                     content='Newsletter configuration — see metadata.',
+                    agent_name='NewsletterTool',
+                    category='Newsletter',
+                    deliverable_type='document',
                     content_format='text',
-                    user_id=user_id,
                     is_saved=True,
                     metadata={'newsletter_config': True, **updates},
+                    user_id=user_id,
                 )
             else:
                 meta = config_del.metadata or {}

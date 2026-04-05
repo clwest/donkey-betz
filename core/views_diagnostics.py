@@ -2318,28 +2318,28 @@ def cockpit_create_incident_note(request):
     content += f"## Resolution\n\n_To be filled in after resolution._\n"
 
     try:
-        from core.models_deliverables import Deliverable
         import uuid
         from django.utils.text import slugify
+        from core.services.deliverable_factory import create_deliverable
 
         slug_base = slugify(title[:60]) or 'incident'
         slug = f"{slug_base}-{uuid.uuid4().hex[:8]}"
 
-        deliverable = Deliverable.objects.create(
+        deliverable = create_deliverable(
             title=title,
-            slug=slug,
-            deliverable_type='document',
-            category='Incident',
-            tags=['incident', source_type],
-            agent_name='cockpit-operator',
             content=content,
+            agent_name='cockpit-operator',
+            category='Incident',
+            deliverable_type='document',
+            tags=['incident', source_type],
             content_format='markdown',
-            status='ready',
             metadata={
                 'source_type': source_type,
                 'source_id': source_id,
                 'created_via': 'cockpit-remediation',
             },
+            slug=slug,
+            status='ready',
         )
         resp = {
             'ok': True,
@@ -3264,19 +3264,21 @@ def _execute_action(proposal, request):
         return {'ok': True, 'action': 'paused'}
 
     elif action == 'create_incident_note':
-        from core.models_deliverables import Deliverable
         import uuid as uuid_mod
         from django.utils.text import slugify
         from django.utils.timezone import now as tz_now
+        from core.services.deliverable_factory import create_deliverable
         title = f"[Autopilot] {proposal.get('target_type', 'Alert')}: {target_id}"
         slug = f"{slugify(title[:60]) or 'autopilot'}-{uuid_mod.uuid4().hex[:8]}"
         content = f"# Autopilot Incident\n\n**Reason:** {reason}\n\n**Target:** {proposal.get('target_type', '')} — {target_id}\n\n**Created:** {tz_now().isoformat()}\n"
-        deliverable = Deliverable.objects.create(
-            title=title, slug=slug, deliverable_type='document',
-            category='Incident', tags=['incident', 'autopilot'],
-            agent_name='cockpit-autopilot', content=content,
-            content_format='markdown', status='ready',
+        deliverable = create_deliverable(
+            title=title, content=content,
+            agent_name='cockpit-autopilot',
+            category='Incident', deliverable_type='document',
+            tags=['incident', 'autopilot'],
+            content_format='markdown',
             metadata={'source': 'autopilot', 'reason': reason},
+            slug=slug, status='ready',
         )
         _audit_log(request, 'autopilot.incident_note', 'Deliverable', str(deliverable.id),
                    {'reason': reason}, {'ok': True})

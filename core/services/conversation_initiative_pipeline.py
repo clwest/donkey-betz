@@ -532,22 +532,19 @@ class ConversationInitiativePipeline:
             from core.services.deliverable_workspace_resolver import resolve_workspace
             ws, ws_saved = resolve_workspace(initiative=initiative)
 
-            deliverable = Deliverable.objects.create(
+            from core.services.deliverable_factory import create_deliverable
+            deliverable = create_deliverable(
                 title=deliverable_title,
-                slug=slug,
-                deliverable_type=content_type,
-                category=content_type.title(),
-                tags=[content_type, 'conversation-generated', 'auto-pipeline'],
                 content=extracted['content'],
-                content_format='markdown',
                 agent_name=participants[0] if participants else 'ConversationOrchestrator',
+                category=content_type.title(),
+                deliverable_type=content_type,
+                tags=[content_type, 'conversation-generated', 'auto-pipeline'],
+                content_format='markdown',
                 quality_score=0.7,
                 confidence_score=0.7,
-                initiative=initiative,
-                workspace=ws,
+                initiative_id=str(initiative.id) if initiative else None,
                 is_saved=ws_saved,
-                parent_object_type='conversation',
-                parent_object_id=uuid.UUID(conversation_id) if conversation_id else None,
                 metadata={
                     'source': 'conversation_initiative_pipeline',
                     'session': '884',
@@ -555,7 +552,12 @@ class ConversationInitiativePipeline:
                     'topic': topic,
                     'content_type': content_type,
                     'pipeline_stage': 1,
-                }
+                },
+                slug=slug,
+                initiative=initiative,
+                workspace=ws,
+                parent_object_type='conversation',
+                parent_object_id=uuid.UUID(conversation_id) if conversation_id else None,
             )
 
             result.deliverable_id = str(deliverable.id)

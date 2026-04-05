@@ -189,16 +189,16 @@ def _execute_demo_pipeline(run_id: str, topic: str, user_id: int):
 
         # Save as deliverable
         try:
-            from core.models_deliverables import Deliverable
+            from core.services.deliverable_factory import create_deliverable
 
-            deliverable = Deliverable.objects.create(
+            deliverable = create_deliverable(
                 title=f"Demo: Quick Insight — {topic}"[:255],
-                deliverable_type='document',
-                category='Demo Run',
-                agent_name='DemoPipeline',
                 content=deliverable_content,
-                content_format='markdown',
+                agent_name='DemoPipeline',
+                category='Demo Run',
+                deliverable_type='document',
                 user=user,
+                content_format='markdown',
                 is_saved=True,
                 metadata={
                     'demo_run': True,

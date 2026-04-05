@@ -237,13 +237,12 @@ class MissionControlExecutor:
                 ws, ws_saved = resolve_workspace()
 
                 # Create the deliverable
-                deliverable = Deliverable.objects.create(
-                    user=user,
+                from core.services.deliverable_factory import create_deliverable
+                deliverable = create_deliverable(
                     title=title,
                     content=body,
-                    content_type=content_type,
-                    status='published',
-                    workspace=ws,
+                    agent_name=attention_item.source_agent or 'MissionControlExecutor',
+                    user=user,
                     is_saved=ws_saved,
                     metadata={
                         'tags': content.get('tags', []),
@@ -251,7 +250,10 @@ class MissionControlExecutor:
                         'meta_description': content.get('meta_description', ''),
                         'source_agent': attention_item.source_agent,
                         'attention_item_id': str(attention_item.id),
-                    }
+                    },
+                    content_type=content_type,
+                    status='published',
+                    workspace=ws,
                 )
                 content_id = str(deliverable.id)
                 logger.info(f"Created deliverable {content_id} from attention item {attention_item.id}")
