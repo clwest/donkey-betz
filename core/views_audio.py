@@ -93,6 +93,7 @@ def _execute_generate_voice(user, parameters, session=None):
 
         audio_id = None
         from content.models import AudioHistory
+        from core.services.workspace_resolver import get_active_workspace
         audio_record = AudioHistory.objects.create(
             user=user,
             session=session,
@@ -107,6 +108,7 @@ def _execute_generate_voice(user, parameters, session=None):
                 'autonomous': is_autonomous
             },
             voice_id=voice_id,
+            workspace=get_active_workspace(user),
             voice_name=voice,
             model_used='eleven_monolingual_v1',
             file_size_bytes=len(audio_data),

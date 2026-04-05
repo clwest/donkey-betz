@@ -925,6 +925,7 @@ def unified_gallery(request):
         sort_by = request.query_params.get('sort_by', '-created_at')
         limit = int(request.query_params.get('limit', 20))
         offset = int(request.query_params.get('offset', 0))
+        workspace_id = request.query_params.get('workspace')  # Filter by workspace
 
         # Collect results from different media types
         all_items = []
@@ -952,6 +953,10 @@ def unified_gallery(request):
             ).exclude(
                 file_path__startswith='data:'
             )
+
+            # Filter by workspace if specified
+            if workspace_id:
+                image_queryset = image_queryset.filter(workspace_id=workspace_id)
 
             # Apply filters
             if is_favorite is not None:
@@ -1056,6 +1061,10 @@ def unified_gallery(request):
                 # Only exclude Google Storage URLs (truly expired)
                 Q(video_url__icontains='storage.googleapis.com')
             )
+
+            # Filter by workspace if specified
+            if workspace_id:
+                video_queryset = video_queryset.filter(workspace_id=workspace_id)
 
             # Apply filters
             if is_favorite is not None:
@@ -1219,6 +1228,10 @@ def unified_gallery(request):
             audio_queryset = AudioHistory.objects.filter(
                 Q(user=user) | Q(user__username__in=['system_autonomous', 'system', 'admin'])
             ).order_by('-created_at')
+
+            # Filter by workspace if specified
+            if workspace_id:
+                audio_queryset = audio_queryset.filter(workspace_id=workspace_id)
 
             # Apply filters
             if is_favorite is not None:

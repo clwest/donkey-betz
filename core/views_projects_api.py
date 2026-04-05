@@ -1976,6 +1976,7 @@ def generate_brand_assets(request, project_id):
                         if isinstance(img, dict) and 'url' in img:
                             try:
                                 # Create ImageHistory record
+                                from core.services.workspace_resolver import get_active_workspace
                                 image_record = ImageHistory.objects.create(
                                     user=user,
                                     project=project,
@@ -1990,7 +1991,8 @@ def generate_brand_assets(request, project_id):
                                         'asset_type': asset_type,
                                         'brand_asset_pack': True,
                                         'generated_via': 'research_to_creative_pipeline'
-                                    }
+                                    },
+                                    workspace=get_active_workspace(user),
                                 )
                                 saved_image_ids.append(str(image_record.id))
                                 logger.info(f"✅ Saved brand asset: {asset_type} ({image_record.id})")

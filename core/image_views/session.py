@@ -386,6 +386,7 @@ def save_to_history(user, file_path, image_type, prompt='', parameters=None,
             logger.info(f"📁 Assigning image to project (from session): {session.project.name}")
 
         # Create history record
+        from core.services.workspace_resolver import get_active_workspace
         history = ImageHistory.objects.create(
             user=user,
             filename=os.path.basename(file_path),
@@ -401,7 +402,8 @@ def save_to_history(user, file_path, image_type, prompt='', parameters=None,
             parent_image=parent_image,
             seed=seed,
             session=session,
-            project=image_project
+            project=image_project,
+            workspace=get_active_workspace(user),
         )
 
         # Session 142: Track agent contribution

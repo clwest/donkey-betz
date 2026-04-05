@@ -1851,11 +1851,13 @@ def _execute_generate_video(user, parameters, session=None):
             except CreativeProject.DoesNotExist:
                 logger.warning(f"⚠️ Project {parameters['project_id']} not found")
 
+        from core.services.workspace_resolver import get_active_workspace
         video = VideoHistory.objects.create(
             user=user,
             video_id=result.task_id,
             video_url='',  # Will be populated when video completes
             video_type=video_type,  # Session 119: BUGFIX - Dynamic type based on image reference
+            workspace=get_active_workspace(user),
             prompt=prompt,
             parameters={
                 'duration': duration,
@@ -2015,6 +2017,7 @@ def _execute_inpaint(user, parameters):
 
         # Save to ImageHistory
         from content.models import ImageHistory
+        from core.services.workspace_resolver import get_active_workspace
         history_record = ImageHistory.objects.create(
             user=user,
             prompt=f"Inpaint: {prompt}",
@@ -2023,7 +2026,8 @@ def _execute_inpaint(user, parameters):
             model_used='sdxl',
             style='inpaint',
             image_width=1024,
-            image_height=1024
+            image_height=1024,
+            workspace=get_active_workspace(user),
         )
 
         # Session 142: Track agent contribution
@@ -2187,12 +2191,14 @@ def _execute_search_replace(user, parameters, session=None):
 
         # Create new image history entry
         from content.models import ImageHistory
+        from core.services.workspace_resolver import get_active_workspace
         new_image = ImageHistory.objects.create(
             user=user,
             prompt=f"Edited from image #{seq_num}: replaced {search_prompt} with {replace_prompt}",
             file_path=saved_path,
             filename=filename,
             model_used="stability-search-replace",
+            workspace=get_active_workspace(user),
         )
 
         logger.info(f"✅ Agent search-replace complete: {new_image.id}")

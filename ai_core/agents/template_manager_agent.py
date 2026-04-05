@@ -359,6 +359,7 @@ class TemplateManagerAgent:
             )
 
             # Create ImageHistory record
+            from core.services.workspace_resolver import get_active_workspace
             image_history = ImageHistory.objects.create(
                 user=self.user,
                 prompt=prompt,
@@ -367,7 +368,8 @@ class TemplateManagerAgent:
                 style=template.style,
                 width=template.width,
                 height=template.height,
-                seed=generation_seed
+                seed=generation_seed,
+                workspace=get_active_workspace(self.user),
             )
 
             self.memory.log_agent_action(
