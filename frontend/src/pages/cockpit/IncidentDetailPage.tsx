@@ -44,8 +44,8 @@ function EventCard({ event }: { event: IncidentEvent }) {
       const linkType = c.link_type as string
       const linkId = c.link_id as string
       const label = (c.label as string) || `${linkType}: ${linkId}`
-      const linkUrl = linkType === 'run_id' ? `/cockpit/runs/${linkId}` :
-        linkType === 'error_signature_id' ? `/cockpit/errors/${linkId}` : null
+      const linkUrl = linkType === 'run_id' ? `/workspace?tab=system&sub=ops` :
+        linkType === 'error_signature_id' ? `/workspace?tab=system&sub=ops` : null
       return (
         <div className="text-sm">
           <span className="text-gray-500 mr-1">{linkType}:</span>
@@ -153,7 +153,7 @@ export default function IncidentDetailPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link to="/cockpit/incidents" className="text-gray-500 hover:text-gray-300">
+        <Link to="/workspace?tab=system&sub=incidents" className="text-gray-500 hover:text-gray-300">
           <ArrowLeft size={18} />
         </Link>
         <ShieldAlert size={20} className="text-primary-400" />

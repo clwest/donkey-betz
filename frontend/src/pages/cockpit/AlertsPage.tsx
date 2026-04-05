@@ -16,10 +16,10 @@ const SEVERITY_TONE: Record<string, Tone> = {
 }
 
 const KIND_CONFIG: Record<string, { icon: typeof AlertTriangle; label: string; route?: string }> = {
-  error_spike: { icon: AlertTriangle, label: 'Error Spike', route: '/cockpit/errors' },
-  agent_failure: { icon: Bot, label: 'Agent Failure', route: '/cockpit/ops' },
-  health: { icon: HeartPulse, label: 'Health', route: '/cockpit/ops' },
-  approvals: { icon: ShieldCheck, label: 'Approvals', route: '/cockpit/approvals' },
+  error_spike: { icon: AlertTriangle, label: 'Error Spike', route: '/workspace?tab=system&sub=ops' },
+  agent_failure: { icon: Bot, label: 'Agent Failure', route: '/workspace?tab=system&sub=ops' },
+  health: { icon: HeartPulse, label: 'Health', route: '/workspace?tab=system&sub=ops' },
+  approvals: { icon: ShieldCheck, label: 'Approvals', route: '/workspace?tab=system&sub=boardroom' },
 }
 
 function AlertCard({ alert }: { alert: AlertItem }) {

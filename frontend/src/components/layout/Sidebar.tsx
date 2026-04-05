@@ -30,7 +30,6 @@ import {
   FileUp,
   HelpCircle,
   Play,
-  Zap,
   Package,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
@@ -54,9 +53,6 @@ import {
 // Session 931: Unified Command Center replaces Home, AI Assistant, Human
 // Session 857: Workspace is the modular content hub
 const navItems = [
-  // Focus Cockpit — solo-operator flow
-  { path: '/cockpit', label: 'Focus Cockpit', icon: Zap },
-
   // Session 931: Command Center - Unified AI interface + controls
   { path: '/', label: 'Command Center', icon: Command },
 

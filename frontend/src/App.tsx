@@ -44,33 +44,8 @@ import ExecutorPage from '@/pages/ExecutorPage'  // Session 1076: Executor runs 
 import MediaPage from '@/pages/MediaPage'
 import VipAcceptPage from '@/pages/VipAcceptPage'
 
-// Focus Cockpit
-import CockpitLayout from '@/components/cockpit/CockpitLayout'
-import CockpitHomePage from '@/pages/cockpit/HomePage'
-import CockpitInboxPage from '@/pages/cockpit/InboxPage'
-import CockpitCreateHubPage from '@/pages/cockpit/CreateHubPage'
-import CockpitCreateFlowPage from '@/pages/cockpit/CreateFlowPage'
-import CockpitRunsPage from '@/pages/cockpit/RunsPage'
-import CockpitRunDetailPage from '@/pages/cockpit/RunDetailPage'
-import CockpitLibraryPage from '@/pages/cockpit/LibraryPage'
-import CockpitErrorsPage from '@/pages/cockpit/ErrorsPage'
-import CockpitErrorDetailPage from '@/pages/cockpit/ErrorDetailPage'
-import CockpitOpsPage from '@/pages/cockpit/OpsPage'
-import CockpitApprovalsPage from '@/pages/cockpit/ApprovalsPage'
-import CockpitAlertsPage from '@/pages/cockpit/AlertsPage'
-import CockpitAuditLogPage from '@/pages/cockpit/AuditLogPage'
-import CockpitAgentsPage from '@/pages/cockpit/AgentsPage'
-import CockpitQueuesPage from '@/pages/cockpit/QueuesPage'
-import CockpitCostPage from '@/pages/cockpit/CostPage'
-import CockpitAutopilotPage from '@/pages/cockpit/AutopilotPage'
-import CockpitRunTracePage from '@/pages/cockpit/RunTracePage'
-import CockpitConfigPage from '@/pages/cockpit/ConfigPage'
-import CockpitIncidentsPage from '@/pages/cockpit/IncidentsPage'
-import CockpitIncidentDetailPage from '@/pages/cockpit/IncidentDetailPage'
-import CockpitOpsRunsPage from '@/pages/cockpit/OpsRunsPage'
-import CockpitLearningLoopPage from '@/pages/cockpit/LearningLoopPage'
-import CockpitOpsRunDetailPage from '@/pages/cockpit/OpsRunDetailPage'
-import CockpitObsPage from '@/pages/cockpit/ObsPage'
+// Focus Cockpit — imports preserved for potential admin-bypass restore (Phase 1 consolidation)
+// All cockpit routes now redirect to Workspace tabs. See cockpit/ directory for original pages.
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, user } = useAuthStore()
@@ -154,34 +129,25 @@ function App() {
         <Route path="executor" element={<ExecutorPage />} />
       </Route>
 
-      {/* Focus Cockpit — solo-operator flow */}
-      <Route path="/cockpit" element={<ProtectedRoute><CockpitLayout /></ProtectedRoute>}>
-        <Route index element={<CockpitHomePage />} />
-        <Route path="inbox" element={<CockpitInboxPage />} />
-        <Route path="create" element={<CockpitCreateHubPage />} />
-        <Route path="create/:recipeId" element={<CockpitCreateFlowPage />} />
-        <Route path="runs" element={<CockpitRunsPage />} />
-        <Route path="runs/:runId" element={<CockpitRunDetailPage />} />
-        <Route path="runs/:runId/trace" element={<CockpitRunTracePage />} />
-        <Route path="library" element={<CockpitLibraryPage />} />
-        <Route path="errors" element={<CockpitErrorsPage />} />
-        <Route path="errors/:signatureId" element={<CockpitErrorDetailPage />} />
-        <Route path="ops" element={<CockpitOpsPage />} />
-        <Route path="approvals" element={<CockpitApprovalsPage />} />
-        <Route path="alerts" element={<CockpitAlertsPage />} />
-        <Route path="audit" element={<CockpitAuditLogPage />} />
-        <Route path="agents" element={<CockpitAgentsPage />} />
-        <Route path="queues" element={<CockpitQueuesPage />} />
-        <Route path="cost" element={<CockpitCostPage />} />
-        <Route path="autopilot" element={<CockpitAutopilotPage />} />
-        <Route path="config" element={<CockpitConfigPage />} />
-        <Route path="incidents" element={<CockpitIncidentsPage />} />
-        <Route path="incidents/:incidentId" element={<CockpitIncidentDetailPage />} />
-        <Route path="obs" element={<CockpitObsPage />} />
-        <Route path="ops-runs" element={<CockpitOpsRunsPage />} />
-        <Route path="ops-runs/:runId" element={<CockpitOpsRunDetailPage />} />
-        <Route path="learning" element={<CockpitLearningLoopPage />} />
-      </Route>
+      {/* Focus Cockpit — hidden (Phase 1 of UI consolidation).
+          Targeted redirects for high-priority pages, blanket catch-all for the rest.
+          Cockpit code preserved in pages/cockpit/ — routes can be restored. */}
+      <Route path="/cockpit/incidents/*" element={<Navigate to="/workspace?tab=system&sub=incidents" replace />} />
+      <Route path="/cockpit/alerts" element={<Navigate to="/workspace?tab=system&sub=alerts" replace />} />
+      <Route path="/cockpit/autopilot" element={<Navigate to="/workspace?tab=system&sub=autopilot" replace />} />
+      <Route path="/cockpit/cost" element={<Navigate to="/workspace?tab=system&sub=cost" replace />} />
+      <Route path="/cockpit/queues" element={<Navigate to="/workspace?tab=system&sub=queues" replace />} />
+      <Route path="/cockpit/ops*" element={<Navigate to="/workspace?tab=system&sub=ops" replace />} />
+      <Route path="/cockpit/errors/*" element={<Navigate to="/workspace?tab=system&sub=ops" replace />} />
+      <Route path="/cockpit/runs/*" element={<Navigate to="/workspace?tab=system&sub=ops" replace />} />
+      <Route path="/cockpit/library" element={<Navigate to="/workspace?tab=work&sub=deliverables" replace />} />
+      <Route path="/cockpit/agents" element={<Navigate to="/workspace?tab=system&sub=ops" replace />} />
+      <Route path="/cockpit/learning" element={<Navigate to="/workspace?tab=intelligence&sub=knowledge" replace />} />
+      <Route path="/cockpit/config" element={<Navigate to="/workspace?tab=system&sub=config" replace />} />
+      <Route path="/cockpit/audit" element={<Navigate to="/workspace?tab=system&sub=audit" replace />} />
+      <Route path="/cockpit/approvals" element={<Navigate to="/workspace?tab=system&sub=boardroom" replace />} />
+      <Route path="/cockpit/inbox" element={<Navigate to="/workspace?tab=home" replace />} />
+      <Route path="/cockpit/*" element={<Navigate to="/workspace" replace />} />
     </Routes>
   )
 }
