@@ -72,6 +72,8 @@ import {
   LearningJourneyTab,
   CampaignTab,
   Stage3EvaluationTab,
+  AppTab,
+  hasApp,
 } from './workspace/tabs'
 import { Toast } from './workspace/components'
 import type { Workspace, WorkspaceTab, ActionResult } from './workspace/types'
@@ -123,7 +125,7 @@ const primaryTabs: PrimaryTab[] = [
 ]
 
 // All valid primary + sub tab IDs for URL validation
-const validPrimaryIds = new Set(primaryTabs.map(t => t.id))
+const validPrimaryIds = new Set([...primaryTabs.map(t => t.id), 'app'])
 const allSubTabIds = new Map<string, string>() // sub-id → parent-id
 primaryTabs.forEach(p => p.subTabs?.forEach(s => allSubTabIds.set(s.id, p.id)))
 
@@ -818,6 +820,12 @@ export default function WorkspacePage() {
   const activeWorkspace = activeWorkspaceData?.data as Workspace | undefined
   const workspaces = (workspacesData?.data?.results || workspacesData?.data || []) as Workspace[]
 
+  // Dynamically add App tab if workspace has an embedded app
+  const showAppTab = activeWorkspace && hasApp(activeWorkspace.name)
+  const effectiveTabs: PrimaryTab[] = showAppTab
+    ? [{ id: 'app', label: 'Launch App', icon: Zap } as PrimaryTab, ...primaryTabs]
+    : primaryTabs
+
   // Sync active workspace to global store (used by PA dock for chat context)
   const setGlobalWorkspace = useWorkspaceStore(s => s.setActiveWorkspace)
   useEffect(() => {
@@ -986,7 +994,7 @@ export default function WorkspacePage() {
         <>
           {/* Primary Tab Navigation — 5 tabs */}
           <div className="flex items-center gap-1 border-b border-dark-border pb-2">
-            {primaryTabs.map((tab) => (
+            {effectiveTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
@@ -1025,6 +1033,11 @@ export default function WorkspacePage() {
           )}
 
           {/* ── Tab Content ────────────────────────────────────── */}
+
+          {/* APP — embedded standalone app */}
+          {activePrimary === 'app' && (
+            <AppTab />
+          )}
 
           {/* HOME */}
           {activePrimary === 'home' && (
