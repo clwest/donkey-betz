@@ -12,7 +12,6 @@ Every tool call goes through this dispatcher which:
 
 Usage:
     from core.services.tool_dispatcher import get_tool_dispatcher
-
     dispatcher = get_tool_dispatcher()
     result = await dispatcher.execute(
         tool_name="human_decisions_tool",
@@ -160,6 +159,7 @@ from core.services.td_handlers_gateway import GatewayHandlersMixin
 from core.services.td_handlers_codejobs import CodeJobHandlersMixin
 from core.services.td_handlers_railway import RailwayToolMixin
 from core.services.td_handlers_newsletter import NewsletterHandlersMixin
+from core.services.pa_identity import PA_IDENTITY
 
 
 class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin, CoreHandlersMixin, GatewayHandlersMixin, CodeJobHandlersMixin, RailwayToolMixin, NewsletterHandlersMixin):
@@ -612,7 +612,7 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                     op_type='tool_call',
                     title=f"{tool_name}.{action}",
                     actor_type='system',
-                    actor_id='PersonalAssistant',
+                    actor_id=PA_IDENTITY,
                     success=True,
                     execution_time_ms=latency_ms,
                     metadata={'tool': tool_name, 'action': action},
@@ -704,7 +704,7 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                 desk=desk,
                 value_usd=0,
                 impact_points=ImpactEvent.points_for_type('content_action'),
-                agent_name='PersonalAssistant',
+                agent_name=PA_IDENTITY,
                 source_object_type=f'pa_tool:{tool_name}',
                 trace_id=uuid.UUID(trace_id) if trace_id and len(trace_id) == 36 else None,
                 user_id=user_id,

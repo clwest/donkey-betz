@@ -1,6 +1,7 @@
 """
 ToolDispatcher ContentHandlersMixin — extracted handler methods.
 """
+from core.services.pa_identity import PA_IDENTITY
 
 """
 Tool Dispatcher - Centralized Tool Execution with No Silent Failures
@@ -2324,7 +2325,7 @@ class ContentHandlersMixin:
                 initiative, created = svc.get_or_create_initiative(
                     topic=name,
                     description=description,
-                    created_by='human_pa',
+                    created_by=PA_IDENTITY,
                     bypass_circuit_breaker=True,
                 )
             except InitiativeCreationBlocked as e:

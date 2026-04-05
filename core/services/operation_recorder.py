@@ -12,12 +12,13 @@ Usage:
         op_type='tool_call',
         title='ops_tool.slo_status',
         actor_type='system',
-        actor_id='PersonalAssistant',
+        actor_id=PA_IDENTITY,
     )
 """
 
 import logging
 import uuid
+from core.services.pa_identity import PA_IDENTITY
 from typing import Optional
 
 logger = logging.getLogger(__name__)

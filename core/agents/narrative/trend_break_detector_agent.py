@@ -55,7 +55,7 @@ class TrendBreakDetectorAgent(BaseAgent):
     """
 
     name = "TrendBreakDetectorAgent"
-    create_deliverable_on_schedule = False  # Session 1077: scheduled outputs go to AgentExecution only
+    create_deliverable_on_schedule = True  # Fixed: was False (Session 1077), outputs were lost in AgentExecution
     description = "Detects when narratives shift or break from established patterns"
     system_prompt = """You are the Trend Break Detector Agent - an expert at identifying when narratives shift or change direction.
 

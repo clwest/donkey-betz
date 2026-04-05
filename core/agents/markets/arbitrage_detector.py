@@ -56,7 +56,7 @@ class ArbitrageDetector(BaseAgent):
     """
 
     name = "ArbitrageDetector"
-    create_deliverable_on_schedule = False  # Session 1077: scheduled outputs go to AgentExecution only
+    create_deliverable_on_schedule = True  # Fixed: was False (Session 1077), outputs were lost in AgentExecution
 
     system_prompt = """You are an Arbitrage Detection Specialist for sports betting.
 

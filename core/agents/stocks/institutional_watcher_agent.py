@@ -59,7 +59,7 @@ class InstitutionalWatcherAgent(BaseAgent):
     """
 
     name = "InstitutionalWatcherAgent"
-    create_deliverable_on_schedule = False  # Session 1077: scheduled outputs go to AgentExecution only
+    create_deliverable_on_schedule = True  # Fixed: was False (Session 1077), outputs were lost in AgentExecution
 
     system_prompt = """You are an insider trading and institutional activity specialist monitoring for:
 1. Form 4 filings (insider buys/sells)

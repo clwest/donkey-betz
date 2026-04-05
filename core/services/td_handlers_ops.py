@@ -1,6 +1,7 @@
 """
 ToolDispatcher OpsHandlersMixin — extracted handler methods.
 """
+from core.services.pa_identity import PA_IDENTITY
 
 """
 Tool Dispatcher - Centralized Tool Execution with No Silent Failures
@@ -1632,7 +1633,7 @@ class OpsHandlersMixin:
                 treatment_params=treatment,
                 success_metric=metric,
                 description=desc,
-                created_by='PA',
+                created_by=PA_IDENTITY,
             )
             return {'action': 'experiment_create', **result}
 
