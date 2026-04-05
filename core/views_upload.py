@@ -138,6 +138,7 @@ def upload_image(request):
     # Create ImageHistory record
     project_id = request.POST.get('project_id')
 
+    from core.services.workspace_resolver import get_active_workspace
     image = ImageHistory.objects.create(
         user=request.user,
         source_type=MediaSourceType.UPLOADED,
@@ -152,6 +153,7 @@ def upload_image(request):
         image_height=height,
         prompt=request.POST.get('title', f'Uploaded: {uploaded_file.name}'),
         project_id=project_id if project_id else None,
+        workspace=get_active_workspace(request.user),
     )
 
     # Generate thumbnail
@@ -259,6 +261,7 @@ def upload_video(request):
     # Create VideoHistory record
     project_id = request.POST.get('project_id')
 
+    from core.services.workspace_resolver import get_active_workspace
     video = VideoHistory.objects.create(
         user=request.user,
         source_type=MediaSourceType.UPLOADED,
@@ -275,6 +278,7 @@ def upload_video(request):
         video_height=metadata.get('height'),
         fps=metadata.get('fps'),
         codec=metadata.get('codec'),
+        workspace=get_active_workspace(request.user),
         status='completed',
     )
 
@@ -586,6 +590,7 @@ def cloudinary_upload_register(request):
     original_filename = data.get('original_filename', '')
     title = data.get('title') or f'Uploaded: {original_filename}' if original_filename else 'Uploaded video'
 
+    from core.services.workspace_resolver import get_active_workspace
     video = VideoHistory.objects.create(
         user=request.user,
         source_type=MediaSourceType.UPLOADED,
@@ -600,6 +605,7 @@ def cloudinary_upload_register(request):
         video_width=int(data.get('width', 0)) or None,
         video_height=int(data.get('height', 0)) or None,
         status='completed',
+        workspace=get_active_workspace(request.user),
     )
 
     logger.info(f"User {request.user.username} registered Cloudinary upload: {public_id}")

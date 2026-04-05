@@ -1872,6 +1872,17 @@ class ImageHistory(UnifiedBaseModel):
         help_text="Optional project this image belongs to"
     )
 
+    # Workspace linkage — connects images to project workspaces
+    workspace = models.ForeignKey(
+        'core.ProjectWorkspace',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='images',
+        db_index=True,
+        help_text="Workspace this image belongs to"
+    )
+
     # Session 96: Weekend Project - Link images to AI conversation sessions
     session = models.ForeignKey(
         'AISession',
@@ -2214,6 +2225,17 @@ class VideoHistory(UnifiedBaseModel):
         blank=True,
         related_name='project_videos',
         help_text="Optional project this video belongs to"
+    )
+
+    # Workspace linkage — connects videos to project workspaces
+    workspace = models.ForeignKey(
+        'core.ProjectWorkspace',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='videos',
+        db_index=True,
+        help_text="Workspace this video belongs to"
     )
 
     # Session 96: Weekend Project - Link videos to AI conversation sessions
@@ -2578,6 +2600,17 @@ class AudioHistory(UnifiedBaseModel):
         blank=True,
         related_name='project_audio',
         help_text="Optional project this audio belongs to"
+    )
+
+    # Workspace linkage — connects audio to project workspaces
+    workspace = models.ForeignKey(
+        'core.ProjectWorkspace',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='audio',
+        db_index=True,
+        help_text="Workspace this audio belongs to"
     )
 
     # Link to AI sessions

@@ -285,6 +285,7 @@ class TalkingCharacterPipeline:
             if self.user:
                 from content.models import VideoHistory
                 try:
+                    from core.services.workspace_resolver import get_active_workspace
                     video_history = VideoHistory.objects.create(
                         user=self.user,
                         video_id=video_result.task_id,  # Use Runway task_id
@@ -292,6 +293,7 @@ class TalkingCharacterPipeline:
                         model_used='runway_gen4_turbo',
                         video_type='talking_character',
                         status='pending',
+                        workspace=get_active_workspace(self.user),
                         parameters={
                             'text': text,
                             'voice': voice,

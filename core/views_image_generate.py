@@ -431,6 +431,7 @@ def generate_image_with_stability(prompt, model, style, user):
             image_url = result.images[0]
 
             # Save to ImageHistory
+            from core.services.workspace_resolver import get_active_workspace
             image_history = ImageHistory.objects.create(
                 user=user,
                 filename=image_url.split('/')[-1][:255],  # Session 63: Truncate to 255 chars for database constraint
@@ -438,7 +439,8 @@ def generate_image_with_stability(prompt, model, style, user):
                 prompt=prompt,
                 model_used=model,  # Session 63: Fixed field name
                 style=style,
-                image_type='generated'  # Session 64: Fixed - 'generated' not 'generation' to match model choices
+                image_type='generated',  # Session 64: Fixed - 'generated' not 'generation' to match model choices
+                workspace=get_active_workspace(user),
             )
 
             logger.info(f"✅ Generated and saved image {image_history.id}")

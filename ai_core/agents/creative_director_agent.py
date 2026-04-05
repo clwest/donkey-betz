@@ -195,6 +195,7 @@ class CreativeDirectorAgent:
                 # Session 96: Extract session from kwargs if provided
                 session = kwargs.get('session')
 
+                from core.services.workspace_resolver import get_active_workspace
                 image_history = ImageHistory.objects.create(
                     user=self.user,
                     filename=filename,
@@ -209,7 +210,8 @@ class CreativeDirectorAgent:
                     generation_batch_id=batch_id,
                     option_number=i + 1,
                     was_selected=False,
-                    session=session  # Session 96: Link to AI session for tracking
+                    session=session,  # Session 96: Link to AI session for tracking
+                    workspace=get_active_workspace(self.user),
                 )
 
                 # Session 96: Update session counter for auto-project creation

@@ -2192,6 +2192,7 @@ class InteractiveCommands(commands.Cog):
                             )
 
                         # Create ImageHistory record
+                        from core.services.workspace_resolver import get_active_workspace
                         history = ImageHistory.objects.create(
                             user=discord_user,
                             filename=os.path.basename(file_path_for_db),
@@ -2205,6 +2206,7 @@ class InteractiveCommands(commands.Cog):
                             },
                             model_used=first_image.get('model', 'stable-diffusion'),
                             style=first_image.get('style', ''),
+                            workspace=get_active_workspace(discord_user),
                         )
                         history_id = history.id
                         logger.info(f"/create saved to ImageHistory: {history.id}")

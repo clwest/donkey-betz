@@ -7,6 +7,7 @@
 
 import { useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import {
@@ -144,6 +145,7 @@ interface AISeries {
 }
 
 function GallerySubTab() {
+  const wsId = useWorkspaceStore((s) => s.activeWorkspace?.id)
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
   const [visibleCount, setVisibleCount] = useState<Record<string, number>>({
     images: 5,
@@ -157,10 +159,11 @@ function GallerySubTab() {
 
   // Session 865: Use contentApi which includes auth token in headers
   const { data: galleryData, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ['gallery-stats-tab'],
+    queryKey: ['gallery-stats-tab', wsId],
     queryFn: async () => {
       try {
-        const response = await contentApi.unifiedGallery()
+        const params = wsId ? `?workspace=${wsId}` : ''
+        const response = await api.get(`/v1/gallery/all/${params}`)
         return response.data || { results: [], count: 0 }
       } catch {
         return { results: [], count: 0 }

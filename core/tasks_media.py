@@ -964,6 +964,7 @@ def _impl_assemble_chunked_upload(upload_id: str):
             from core.views_upload import _extract_video_metadata, _generate_video_thumbnail
             metadata = _extract_video_metadata(str(final_path))
 
+            from core.services.workspace_resolver import get_active_workspace
             video = VideoHistory.objects.create(
                 user=session.user,
                 source_type=MediaSourceType.UPLOADED,
@@ -981,6 +982,7 @@ def _impl_assemble_chunked_upload(upload_id: str):
                 fps=metadata.get('fps'),
                 codec=metadata.get('codec'),
                 status='completed',
+                workspace=get_active_workspace(session.user),
             )
 
             _generate_video_thumbnail(video, str(final_path))
@@ -1002,6 +1004,7 @@ def _impl_assemble_chunked_upload(upload_id: str):
             except Exception as e:
                 logger.warning(f"Could not get image dimensions: {e}")
 
+            from core.services.workspace_resolver import get_active_workspace
             image = ImageHistory.objects.create(
                 user=session.user,
                 source_type=MediaSourceType.UPLOADED,
@@ -1016,6 +1019,7 @@ def _impl_assemble_chunked_upload(upload_id: str):
                 image_height=height,
                 prompt=f'Uploaded: {session.filename}',
                 project=session.project,
+                workspace=get_active_workspace(session.user),
             )
 
             # Generate thumbnail

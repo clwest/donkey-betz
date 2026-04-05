@@ -1438,15 +1438,18 @@ def video_to_video_endpoint(request):
 
         # Save to history if successful
         if result.success and result.task_id:
+            from core.services.workspace_resolver import get_active_workspace
+            _user = request.user if request.user.is_authenticated else None
             video_history = VideoHistory.objects.create(
                 video_id=result.task_id,
-                user=request.user if request.user.is_authenticated else None,
+                user=_user,
                 video_type='video_to_video',
                 prompt=prompt or f"{mode} mode transformation",
                 duration=duration,
                 model_used=getattr(result, 'model_used', 'gen4_aleph'),
                 ratio="1280:720",
-                status='pending'
+                status='pending',
+                workspace=get_active_workspace(_user) if _user else None,
             )
 
             # Session 142: Track agent contribution
@@ -1542,14 +1545,17 @@ def video_upscale_endpoint(request):
 
         # Save to history if successful
         if result.success and result.task_id:
+            from core.services.workspace_resolver import get_active_workspace
+            _user = request.user if request.user.is_authenticated else None
             video_history = VideoHistory.objects.create(
                 video_id=result.task_id,
-                user=request.user if request.user.is_authenticated else None,
+                user=_user,
                 video_type='upscale_video',
                 prompt=prompt,
                 model_used=getattr(result, 'model_used', 'upscale_v1'),
                 ratio="3840:2160",  # 4K
-                status='pending'
+                status='pending',
+                workspace=get_active_workspace(_user) if _user else None,
             )
 
             # Session 142: Track agent contribution
@@ -1641,16 +1647,19 @@ def extend_video_endpoint(request):
 
         # Save to history if successful
         if result.success and result.task_id:
+            from core.services.workspace_resolver import get_active_workspace
+            _user = request.user if request.user.is_authenticated else None
             video_history = VideoHistory.objects.create(
                 video_id=result.task_id,
-                user=request.user if request.user.is_authenticated else None,
+                user=_user,
                 video_type='extend_video',
                 prompt=prompt or f"Extended by {extension_seconds}s",
                 duration=extension_seconds,
                 model_used='gen4_aleph',
                 ratio="1280:720",
                 status='pending',
-                parent_video_url=video_url  # Track which video was extended
+                parent_video_url=video_url,  # Track which video was extended
+                workspace=get_active_workspace(_user) if _user else None,
             )
 
             # Session 142: Track agent contribution
@@ -1794,15 +1803,18 @@ def character_performance_endpoint(request):
 
         # Save to history if successful
         if result.success and result.task_id:
+            from core.services.workspace_resolver import get_active_workspace
+            _user = request.user if request.user.is_authenticated else None
             video_history = VideoHistory.objects.create(
                 video_id=result.task_id,
-                user=request.user if request.user.is_authenticated else None,
+                user=_user,
                 video_type='character_performance',
                 prompt=prompt,
                 duration=duration,
                 model_used=getattr(result, 'model_used', 'gen4_character'),
                 ratio="1280:720",
-                status='pending'
+                status='pending',
+                workspace=get_active_workspace(_user) if _user else None,
             )
 
             # Session 142: Track agent contribution
@@ -2005,6 +2017,7 @@ def upscale_video(request):
                 logger.warning(f"⚠️ [Session 156] Project {project_id} not found")
 
         # Create new VideoHistory record for upscaled video
+        from core.services.workspace_resolver import get_active_workspace
         upscaled_video = VideoHistory.objects.create(
             user=request.user,
             video_type='upscaled',
@@ -2015,7 +2028,8 @@ def upscale_video(request):
             status='completed',
             video_url=f'/media/{output_filename}',
             generation_completed=timezone.now(),
-            project=project  # Session 156: Associate with project
+            project=project,  # Session 156: Associate with project
+            workspace=get_active_workspace(request.user),
         )
 
         logger.info(f"✅ [Session 154] Video upscaled: {video.id} → {upscaled_video.id} ({scale_factor}x)")
@@ -2211,6 +2225,7 @@ def apply_video_effect(request):
         logger.info(f"✅ Effect applied: {output_path} ({file_size / 1024 / 1024:.2f} MB)")
 
         # Create new VideoHistory record
+        from core.services.workspace_resolver import get_active_workspace
         effect_video = VideoHistory.objects.create(
             user=request.user,
             video_type='enhanced',
@@ -2220,7 +2235,8 @@ def apply_video_effect(request):
             ratio=video.ratio,
             status='completed',
             video_url=f'/media/{output_filename}',
-            generation_completed=timezone.now()
+            generation_completed=timezone.now(),
+            workspace=get_active_workspace(request.user),
         )
 
         logger.info(f"✅ [Session 154] Effect applied: {video.id} → {effect_video.id} ({effect})")
@@ -2479,6 +2495,7 @@ def extract_video_frame(request):
 
         # Create ImageHistory record for the extracted frame
         # Use the correct field names for ImageHistory model
+        from core.services.workspace_resolver import get_active_workspace
         extracted_image = ImageHistory.objects.create(
             user=request.user,
             prompt=f"Frame extracted at {timestamp}s from video {video.id}",
@@ -2486,7 +2503,8 @@ def extract_video_frame(request):
             filename=os.path.basename(output_filename),
             file_path=f'/media/{output_filename}',
             parameters={'source_video_id': str(video.id), 'timestamp': timestamp, 'operation': 'frame_extraction'},
-            project=project
+            project=project,
+            workspace=get_active_workspace(request.user),
         )
 
         logger.info(f"✅ [Session 159] Frame extracted: video {video.id} @ {timestamp}s → image {extracted_image.id}")
@@ -2717,6 +2735,7 @@ def reverse_video(request):
             logger.info(f"🔗 [Session 179] Inheriting project from source video: {project.name}")
 
         # Create VideoHistory record for the reversed video
+        from core.services.workspace_resolver import get_active_workspace
         reversed_video = VideoHistory.objects.create(
             user=request.user,
             video_type='reversed',
@@ -2727,7 +2746,8 @@ def reverse_video(request):
             status='completed',
             video_url=f'/media/{output_filename}',
             generation_completed=tz.now(),
-            project=project
+            project=project,
+            workspace=get_active_workspace(request.user),
         )
 
         logger.info(f"✅ [Session 159] Video reversed: {video.id} → {reversed_video.id}")
@@ -2985,6 +3005,7 @@ def trim_video(request):
             logger.info(f"🔗 [Session 179] Inheriting project from source video: {project.name}")
 
         # Create VideoHistory record
+        from core.services.workspace_resolver import get_active_workspace
         trimmed_video = VideoHistory.objects.create(
             user=request.user,
             video_type='trimmed',
@@ -2995,7 +3016,8 @@ def trim_video(request):
             status='completed',
             video_url=f'/media/{output_filename}',
             generation_completed=tz.now(),
-            project=project
+            project=project,
+            workspace=get_active_workspace(request.user),
         )
 
         logger.info(f"✅ [Session 159] Video trimmed: {video.id} → {trimmed_video.id} ({duration_trimmed}s)")
@@ -3262,6 +3284,7 @@ def change_video_speed(request):
             logger.info(f"🔗 [Session 179] Inheriting project from source video: {project.name}")
 
         # Create VideoHistory record
+        from core.services.workspace_resolver import get_active_workspace
         speed_video = VideoHistory.objects.create(
             user=request.user,
             video_type='speed_change',
@@ -3272,7 +3295,8 @@ def change_video_speed(request):
             status='completed',
             video_url=f'/media/{output_filename}',
             generation_completed=tz.now(),
-            project=project
+            project=project,
+            workspace=get_active_workspace(request.user),
         )
 
         speed_description = "slow motion" if speed < 1.0 else "sped up" if speed > 1.0 else "normal speed"
@@ -3520,6 +3544,7 @@ def concatenate_videos(request):
             logger.info(f"🔗 [Session 160] Using first video's project: {project.name}")
 
         # Create VideoHistory record
+        from core.services.workspace_resolver import get_active_workspace
         concat_video = VideoHistory.objects.create(
             user=request.user,
             video_type='concatenated',
@@ -3530,7 +3555,8 @@ def concatenate_videos(request):
             status='completed',
             video_url=f'/media/{output_filename}',
             generation_completed=tz.now(),
-            project=project
+            project=project,
+            workspace=get_active_workspace(request.user),
         )
 
         logger.info(f"✅ [Session 160] Videos concatenated: {[str(v.id) for v in videos]} → {concat_video.id}")
@@ -3748,6 +3774,7 @@ def rotate_flip_video(request):
             project = video.project
 
         # Create VideoHistory record
+        from core.services.workspace_resolver import get_active_workspace
         rotated_video = VideoHistory.objects.create(
             user=request.user,
             video_type='edited',
@@ -3758,7 +3785,8 @@ def rotate_flip_video(request):
             status='completed',
             video_url=f'/media/{output_filename}',
             generation_completed=tz.now(),
-            project=project
+            project=project,
+            workspace=get_active_workspace(request.user),
         )
 
         logger.info(f"✅ [Session 161] Video rotated: {video.id} → {rotated_video.id} ({rotation_desc})")
@@ -3992,6 +4020,7 @@ def fade_video(request):
             project = video.project
 
         # Create VideoHistory record
+        from core.services.workspace_resolver import get_active_workspace
         faded_video = VideoHistory.objects.create(
             user=request.user,
             video_type='edited',
@@ -4002,7 +4031,8 @@ def fade_video(request):
             status='completed',
             video_url=f'/media/{output_filename}',
             generation_completed=tz.now(),
-            project=project
+            project=project,
+            workspace=get_active_workspace(request.user),
         )
 
         logger.info(f"✅ [Session 161] Video faded: {video.id} → {faded_video.id} ({fade_description})")
@@ -4279,6 +4309,7 @@ def crop_resize_video(request):
             project = video.project
 
         # Create VideoHistory record
+        from core.services.workspace_resolver import get_active_workspace
         edited_video = VideoHistory.objects.create(
             user=request.user,
             video_type='edited',
@@ -4289,7 +4320,8 @@ def crop_resize_video(request):
             status='completed',
             video_url=f'/media/{output_filename}',
             generation_completed=tz.now(),
-            project=project
+            project=project,
+            workspace=get_active_workspace(request.user),
         )
 
         logger.info(f"✅ [Session 161] Video edited: {video.id} → {edited_video.id} ({operation_desc})")
@@ -4539,6 +4571,7 @@ def audio_controls(request):
             })
 
         # For volume/mute, create VideoHistory record
+        from core.services.workspace_resolver import get_active_workspace
         edited_video = VideoHistory.objects.create(
             user=request.user,
             video_type='edited',
@@ -4549,7 +4582,8 @@ def audio_controls(request):
             status='completed',
             video_url=f'/media/{output_filename}',
             generation_completed=tz.now(),
-            project=project
+            project=project,
+            workspace=get_active_workspace(request.user),
         )
 
         logger.info(f"✅ [Session 161] Video audio edited: {video.id} → {edited_video.id} ({operation_desc})")
@@ -4790,6 +4824,7 @@ def picture_in_picture(request):
             project = bg_video.project
 
         # Create VideoHistory record
+        from core.services.workspace_resolver import get_active_workspace
         pip_video = VideoHistory.objects.create(
             user=request.user,
             video_type='edited',
@@ -4800,7 +4835,8 @@ def picture_in_picture(request):
             status='completed',
             video_url=f'/media/{output_filename}',
             generation_completed=tz.now(),
-            project=project
+            project=project,
+            workspace=get_active_workspace(request.user),
         )
 
         logger.info(f"✅ [Session 161] PiP video created: {pip_video.id}")
@@ -5112,6 +5148,7 @@ def add_watermark(request):
             project = video.project
 
         # Create VideoHistory record
+        from core.services.workspace_resolver import get_active_workspace
         watermarked_video = VideoHistory.objects.create(
             user=request.user,
             video_type='edited',
@@ -5122,7 +5159,8 @@ def add_watermark(request):
             status='completed',
             video_url=f'/media/{output_filename}',
             generation_completed=tz.now(),
-            project=project
+            project=project,
+            workspace=get_active_workspace(request.user),
         )
 
         logger.info(f"✅ [Session 163] Video watermarked: {video.id} → {watermarked_video.id}")
@@ -5407,6 +5445,7 @@ def blur_region(request):
             time_desc = f" from {start_time or 0}s to {end_time or 'end'}s"
 
         # Create VideoHistory record
+        from core.services.workspace_resolver import get_active_workspace
         blurred_video = VideoHistory.objects.create(
             user=request.user,
             video_type='edited',
@@ -5417,7 +5456,8 @@ def blur_region(request):
             status='completed',
             video_url=f'/media/{output_filename}',
             generation_completed=tz.now(),
-            project=project
+            project=project,
+            workspace=get_active_workspace(request.user),
         )
 
         logger.info(f"✅ [Session 163] Video blurred: {video.id} → {blurred_video.id}")
@@ -5696,8 +5736,10 @@ def stabilize_video(request):
             project = video.project
 
         # Create VideoHistory record
+        from core.services.workspace_resolver import get_active_workspace
+        _user = request.user if request.user.is_authenticated else None
         stabilized_video = VideoHistory.objects.create(
-            user=request.user if request.user.is_authenticated else None,
+            user=_user,
             prompt=f"Stabilized video {video.id} (shakiness={shakiness}, smoothing={smoothing}, crop={crop_mode})",
             duration=video.duration,
             model_used='ffmpeg_vidstab',
@@ -5705,7 +5747,8 @@ def stabilize_video(request):
             status='completed',
             video_url=f'/media/{output_filename}',
             generation_completed=tz.now(),
-            project=project
+            project=project,
+            workspace=get_active_workspace(_user) if _user else None,
         )
 
         logger.info(f"✅ [Session 164] Video stabilized: {video.id} → {stabilized_video.id}")
@@ -6035,8 +6078,10 @@ def add_text_animation(request):
             project = video.project
 
         # Create VideoHistory record
+        from core.services.workspace_resolver import get_active_workspace
+        _user = request.user if request.user.is_authenticated else None
         animated_video = VideoHistory.objects.create(
-            user=request.user if request.user.is_authenticated else None,
+            user=_user,
             prompt=f"Added '{animation}' text animation: '{text[:30]}...' to video {video.id}",
             duration=video.duration,
             model_used='ffmpeg_drawtext',
@@ -6044,7 +6089,8 @@ def add_text_animation(request):
             status='completed',
             video_url=f'/media/{output_filename}',
             generation_completed=tz.now(),
-            project=project
+            project=project,
+            workspace=get_active_workspace(_user) if _user else None,
         )
 
         logger.info(f"✅ [Session 164] Text animation added: {video.id} → {animated_video.id}")
@@ -6550,8 +6596,10 @@ def chroma_key(request):
             project = video.project
 
         # Create VideoHistory record
+        from core.services.workspace_resolver import get_active_workspace
+        _user = request.user if request.user.is_authenticated else None
         keyed_video = VideoHistory.objects.create(
-            user=request.user if request.user.is_authenticated else None,
+            user=_user,
             prompt=f"Chroma key ({key_color}) applied to video {video.id}, background: {bg_description}",
             duration=video.duration,
             model_used='ffmpeg_chromakey',
@@ -6559,7 +6607,8 @@ def chroma_key(request):
             status='completed',
             video_url=f'/media/{output_filename}',
             generation_completed=tz.now(),
-            project=project
+            project=project,
+            workspace=get_active_workspace(_user) if _user else None,
         )
 
         logger.info(f"✅ [Session 165] Chroma key applied: {video.id} → {keyed_video.id}")
@@ -6899,8 +6948,10 @@ def export_for_platform(request):
             project = video.project
 
         # Create VideoHistory record
+        from core.services.workspace_resolver import get_active_workspace
+        _user = request.user if request.user.is_authenticated else None
         exported_video = VideoHistory.objects.create(
-            user=request.user if request.user.is_authenticated else None,
+            user=_user,
             prompt=f"Exported for {platform}: {preset['description']}",
             duration=final_duration,
             model_used=f'ffmpeg_export_{platform}',
@@ -6908,7 +6959,8 @@ def export_for_platform(request):
             status='completed',
             video_url=f'/media/{output_filename}',
             generation_completed=tz.now(),
-            project=project
+            project=project,
+            workspace=get_active_workspace(_user) if _user else None,
         )
 
         logger.info(f"✅ [Session 166] Export complete: {video.id} → {exported_video.id}")
@@ -7208,8 +7260,10 @@ def video_transition(request):
             project = video1.project or video2.project
 
         # Create VideoHistory record
+        from core.services.workspace_resolver import get_active_workspace
+        _user = request.user if request.user.is_authenticated else None
         transition_video = VideoHistory.objects.create(
-            user=request.user if request.user.is_authenticated else None,
+            user=_user,
             prompt=f"{transition} transition: video {video_id_1} → video {video_id_2}",
             duration=final_duration,
             model_used=f'ffmpeg_xfade_{transition}',
@@ -7217,7 +7271,8 @@ def video_transition(request):
             status='completed',
             video_url=f'/media/{output_filename}',
             generation_completed=tz.now(),
-            project=project
+            project=project,
+            workspace=get_active_workspace(_user) if _user else None,
         )
 
         logger.info(f"✅ [Session 166] Transition complete: {video1.id} + {video2.id} → {transition_video.id}")
@@ -7556,8 +7611,10 @@ def auto_caption(request):
 
         # Create VideoHistory record if we burned subtitles
         if burn_in:
+            from core.services.workspace_resolver import get_active_workspace
+            _user = request.user if request.user.is_authenticated else None
             captioned_video = VideoHistory.objects.create(
-                user=request.user if request.user.is_authenticated else None,
+                user=_user,
                 prompt=f"Auto-captioned video with {subtitle_count} subtitles ({language})",
                 duration=video.duration,
                 model_used='ffmpeg_whisper_subtitles',
@@ -7565,7 +7622,8 @@ def auto_caption(request):
                 status='completed',
                 video_url=video_url,
                 generation_completed=tz.now(),
-                project=project
+                project=project,
+                workspace=get_active_workspace(_user) if _user else None,
             )
             result_video_id = str(captioned_video.id)
         else:
@@ -7864,6 +7922,7 @@ def lip_sync_status(request, prediction_id):
                             lipsync_model_used = 'bytedance_latentsync'
 
                     # Create VideoHistory record
+                    from core.services.workspace_resolver import get_active_workspace
                     video_history = VideoHistory.objects.create(
                         user=request.user,
                         video_id=video_id,
@@ -7872,6 +7931,7 @@ def lip_sync_status(request, prediction_id):
                         model_used=lipsync_model_used,
                         video_type='lip_synced_talking_character',
                         status='completed',
+                        workspace=get_active_workspace(request.user),
                         parameters={
                             'prediction_id': prediction_id,
                             'original_video_url': result['video_url'],
@@ -8270,12 +8330,14 @@ def render_professional(request):
 
         if result.success:
             # Create VideoHistory record
+            from core.services.workspace_resolver import get_active_workspace
             new_video = VideoHistory.objects.create(
                 user=request.user,
                 prompt=f"Professional render ({codec}) of video {video.id}",
                 video_url=f'/media/videos/{output_filename}',
                 status='completed',
-                project=video.project if hasattr(video, 'project') else None
+                project=video.project if hasattr(video, 'project') else None,
+                workspace=get_active_workspace(request.user),
             )
 
             return JsonResponse({
@@ -8393,12 +8455,14 @@ def apply_lut(request):
         )
 
         if result.success:
+            from core.services.workspace_resolver import get_active_workspace
             new_video = VideoHistory.objects.create(
                 user=request.user,
                 prompt=f"Applied {lut_name} LUT to video {video.id}",
                 video_url=f'/media/videos/{output_filename}',
                 status='completed',
-                project=video.project if hasattr(video, 'project') else None
+                project=video.project if hasattr(video, 'project') else None,
+                workspace=get_active_workspace(request.user),
             )
 
             return JsonResponse({
@@ -8457,12 +8521,14 @@ def _apply_color_grade_fallback(request, video, video_path, style, project_id):
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
 
     if result.returncode == 0:
+        from core.services.workspace_resolver import get_active_workspace
         new_video = VideoHistory.objects.create(
             user=request.user,
             prompt=f"Applied {style} grade to video {video.id}",
             video_url=f'/media/videos/{output_filename}',
             status='completed',
-            project=video.project if hasattr(video, 'project') else None
+            project=video.project if hasattr(video, 'project') else None,
+            workspace=get_active_workspace(request.user),
         )
 
         return JsonResponse({
@@ -8553,12 +8619,14 @@ def color_grade_professional(request):
         )
 
         if result.success:
+            from core.services.workspace_resolver import get_active_workspace
             new_video = VideoHistory.objects.create(
                 user=request.user,
                 prompt=f"Professional {grade_type} grade on video {video.id}",
                 video_url=f'/media/videos/{output_filename}',
                 status='completed',
-                project=video.project if hasattr(video, 'project') else None
+                project=video.project if hasattr(video, 'project') else None,
+                workspace=get_active_workspace(request.user),
             )
 
             return JsonResponse({
@@ -8791,12 +8859,14 @@ def add_voiceover_view(request):
         logger.info(f"   ✅ Audio mixed successfully!")
 
         # Step 4: Create new video record
+        from core.services.workspace_resolver import get_active_workspace
         new_video = VideoHistory.objects.create(
             user=request.user,
             prompt=f"Voiceover ({voice}) added to video {video.id}",
             video_url=f'/media/videos/{output_filename}',
             status='completed',
-            project=video.project if hasattr(video, 'project') else None
+            project=video.project if hasattr(video, 'project') else None,
+            workspace=get_active_workspace(request.user),
         )
 
         logger.info(f"✅ [Session 171] Voiceover added successfully!")
@@ -8981,12 +9051,14 @@ def add_sfx_to_video_view(request):
         logger.info(f"   ✅ SFX mixed successfully!")
 
         # Step 4: Create new video record
+        from core.services.workspace_resolver import get_active_workspace
         new_video = VideoHistory.objects.create(
             user=request.user,
             prompt=f"SFX ({description[:40]}) added to video {video.id}",
             video_url=f'/media/videos/{output_filename}',
             status='completed',
-            project=video.project if hasattr(video, 'project') else None
+            project=video.project if hasattr(video, 'project') else None,
+            workspace=get_active_workspace(request.user),
         )
 
         logger.info(f"✅ [Session 1013] SFX added successfully!")

@@ -706,6 +706,7 @@ def control_unified(request):
                     pass
 
             # Create ImageHistory record with project association
+            from core.services.workspace_resolver import get_active_workspace
             new_image = ImageHistory.objects.create(
                 user=request.user,
                 prompt=f"Control {control_type}: {prompt} (from #{source_image.get_sequential_number() if source_image else 'unknown'})",
@@ -714,7 +715,8 @@ def control_unified(request):
                 model_used=f'stability-control-{control_type}',
                 image_type=f'{control_type}_control',
                 project=project,
-                session=source_image.session if source_image else None
+                session=source_image.session if source_image else None,
+                workspace=get_active_workspace(request.user),
             )
 
             logger.info(f"✅ Created ImageHistory: {new_image.id}, project: {project.id if project else 'none'}")
@@ -934,13 +936,15 @@ def create_variations_view(request):
                 saved_path = default_storage.save(filepath, ContentFile(result_image_data))
                 image_url = default_storage.url(saved_path)
 
+                from core.services.workspace_resolver import get_active_workspace
                 new_image = ImageHistory.objects.create(
                     user=request.user,
                     prompt=f"Variation {i+1} of image #{seq_num}",
                     file_path=saved_path,  # Save FILE PATH, not data URI!
                     filename=filename,
                     model_used="stability-structure-control",
-                    project=project
+                    project=project,
+                    workspace=get_active_workspace(request.user),
                 )
 
                 # Session 142: Track agent contribution
@@ -1237,6 +1241,7 @@ def erase_object(request):
                     pass
 
             # Create ImageHistory record with project association
+            from core.services.workspace_resolver import get_active_workspace
             new_image = ImageHistory.objects.create(
                 user=request.user,
                 prompt=f"Erased from image #{source_image.get_sequential_number() if source_image else 'unknown'}",
@@ -1245,7 +1250,8 @@ def erase_object(request):
                 model_used='stability-erase',
                 image_type='erased',
                 project=project,
-                session=source_image.session if source_image else None
+                session=source_image.session if source_image else None,
+                workspace=get_active_workspace(request.user),
             )
 
             logger.info(f"✅ Created ImageHistory: {new_image.id}, project: {project.id if project else 'none'}")
@@ -2793,6 +2799,7 @@ def inpaint_image(request):
                     pass
 
             # Create ImageHistory record with project association
+            from core.services.workspace_resolver import get_active_workspace
             new_image = ImageHistory.objects.create(
                 user=request.user,
                 prompt=f"Inpainted: {prompt} (from #{source_image.get_sequential_number() if source_image else 'unknown'})",
@@ -2801,7 +2808,8 @@ def inpaint_image(request):
                 model_used='stability-inpaint',
                 image_type='inpainted',
                 project=project,
-                session=source_image.session if source_image else None
+                session=source_image.session if source_image else None,
+                workspace=get_active_workspace(request.user),
             )
 
             logger.info(f"✅ Created ImageHistory: {new_image.id}, project: {project.id if project else 'none'}")
@@ -3585,6 +3593,7 @@ def save_to_history(user, file_path, image_type, prompt='', parameters=None,
 
         # Create history record
         # Session 752: Now includes agent field for proper contribution tracking
+        from core.services.workspace_resolver import get_active_workspace
         history = ImageHistory.objects.create(
             user=user,
             filename=os.path.basename(file_path),
@@ -3601,7 +3610,8 @@ def save_to_history(user, file_path, image_type, prompt='', parameters=None,
             seed=seed,  # Session 95: Save seed for reproducibility
             session=session,  # Session 96 Weekend Project: Link to AI conversation
             project=image_project,  # Session 119: BUGFIX - Assign project if session has one
-            agent=image_agent  # Session 752: Set agent for contribution tracking
+            agent=image_agent,  # Session 752: Set agent for contribution tracking
+            workspace=get_active_workspace(user),
         )
 
         # Session 142/752: Track agent contribution
@@ -3755,13 +3765,15 @@ def search_and_replace_view(request):
                 pass
 
         prompt_desc = f"Removed '{search_prompt}'" if not replace_prompt else f"Replaced '{search_prompt}' with '{replace_prompt}'"
+        from core.services.workspace_resolver import get_active_workspace
         new_image = ImageHistory.objects.create(
             user=request.user,
             prompt=f"{prompt_desc} from image #{seq_num}",
             file_path=saved_path,  # Save FILE PATH, not data URI!
             filename=filename,
             model_used="stability-search-replace",
-            project=project
+            project=project,
+            workspace=get_active_workspace(request.user),
         )
 
         # Session 142: Track agent contribution
@@ -4278,6 +4290,7 @@ def upload_image(request):
         # Create ImageHistory record
         relative_path = f"uploaded_images/{filename}"
 
+        from core.services.workspace_resolver import get_active_workspace
         image_record = ImageHistory.objects.create(
             user=request.user,
             filename=filename,
@@ -4289,7 +4302,8 @@ def upload_image(request):
             image_width=width,
             image_height=height,
             file_size_bytes=len(image_data),
-            project=project
+            project=project,
+            workspace=get_active_workspace(request.user),
         )
 
         logger.info(f"📤 Image uploaded: {filename} (ID: {image_record.id})")

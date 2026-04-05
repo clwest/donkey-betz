@@ -493,6 +493,7 @@ def chain_videos_simple(request):
                 logger.info(f"📦 Copied video to: {destination}")
 
                 # Create VideoHistory record (Session 70: Use video_url not file_path!)
+                from core.services.workspace_resolver import get_active_workspace
                 video_history = VideoHistory.objects.create(
                     user=request.user,  # Required field!
                     prompt=f"Chained video: {project_name} ({len(video_clips)} clips)",
@@ -500,7 +501,8 @@ def chain_videos_simple(request):
                     video_type="chained_video",  # New type for chained videos
                     duration=total_duration,
                     status='completed',
-                    video_url=f"/media/generated_videos/{filename}"  # Local media URL
+                    video_url=f"/media/generated_videos/{filename}",  # Local media URL
+                    workspace=get_active_workspace(request.user),
                 )
 
                 # Session 142: Track agent contribution
@@ -694,6 +696,7 @@ def add_text_overlay_endpoint(request):
 
             shutil.copy2(output_path, destination)
 
+            from core.services.workspace_resolver import get_active_workspace
             video_history = VideoHistory.objects.create(
                 user=request.user,
                 prompt=f"Text overlay: '{text}' on {video.prompt[:50]}",
@@ -701,7 +704,8 @@ def add_text_overlay_endpoint(request):
                 video_type="text_overlay",
                 duration=video.duration or 8,
                 status='completed',
-                video_url=f"/media/generated_videos/{filename}"
+                video_url=f"/media/generated_videos/{filename}",
+                workspace=get_active_workspace(request.user),
             )
 
             # Session 142: Track agent contribution
@@ -875,6 +879,7 @@ def apply_color_grading_endpoint(request):
 
             shutil.copy2(output_path, destination)
 
+            from core.services.workspace_resolver import get_active_workspace
             video_history = VideoHistory.objects.create(
                 user=request.user,
                 prompt=f"{style} color grading on {video.prompt[:50]}",
@@ -882,7 +887,8 @@ def apply_color_grading_endpoint(request):
                 video_type="color_graded",
                 duration=video.duration or 8,
                 status='completed',
-                video_url=f"/media/generated_videos/{filename}"
+                video_url=f"/media/generated_videos/{filename}",
+                workspace=get_active_workspace(request.user),
             )
 
             # Session 142: Track agent contribution
@@ -1048,6 +1054,7 @@ def add_audio_to_video_endpoint(request):
 
             shutil.copy2(output_path, destination)
 
+            from core.services.workspace_resolver import get_active_workspace
             video_history = VideoHistory.objects.create(
                 user=request.user,
                 prompt=f"Audio mixing: {audio_file.name} on {video.prompt[:50]}",
@@ -1055,7 +1062,8 @@ def add_audio_to_video_endpoint(request):
                 video_type="audio_mixed",
                 duration=video.duration or 8,
                 status='completed',
-                video_url=f"/media/generated_videos/{filename}"
+                video_url=f"/media/generated_videos/{filename}",
+                workspace=get_active_workspace(request.user),
             )
 
             # Session 142: Track agent contribution

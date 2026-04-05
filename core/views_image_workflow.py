@@ -651,12 +651,14 @@ def execute_workflow_step(request):
 
                     # Save to history
                     from content.models import ImageHistory
+                    from core.services.workspace_resolver import get_active_workspace
                     image_history = ImageHistory.objects.create(
                         user=request.user,
                         filename=filename,
                         file_path=saved_path,
                         image_type='upscaled_fast',
-                        prompt='Fast Upscale (4x)'
+                        prompt='Fast Upscale (4x)',
+                        workspace=get_active_workspace(request.user),
                     )
 
                     # Session 142: Track agent contribution
@@ -721,12 +723,14 @@ def execute_workflow_step(request):
 
                     # Save to history
                     from content.models import ImageHistory
+                    from core.services.workspace_resolver import get_active_workspace
                     image_history = ImageHistory.objects.create(
                         user=request.user,
                         filename=filename,
                         file_path=saved_path,
                         image_type='upscaled_conservative',
-                        prompt='Conservative Upscale (4K)'
+                        prompt='Conservative Upscale (4K)',
+                        workspace=get_active_workspace(request.user),
                     )
 
                     # Session 142: Track agent contribution
@@ -802,12 +806,14 @@ def execute_workflow_step(request):
 
                             # Save to history
                             from content.models import ImageHistory
+                            from core.services.workspace_resolver import get_active_workspace
                             image_history = ImageHistory.objects.create(
                                 user=request.user,
                                 filename=filename,
                                 file_path=saved_path,
                                 image_type='upscaled_creative',
-                                prompt=config.get('prompt', 'enhance quality')
+                                prompt=config.get('prompt', 'enhance quality'),
+                                workspace=get_active_workspace(request.user),
                             )
 
                             # Session 142: Track agent contribution
@@ -864,12 +870,14 @@ def execute_workflow_step(request):
                     image_url = default_storage.url(saved_path)
 
                     from content.models import ImageHistory
+                    from core.services.workspace_resolver import get_active_workspace
                     image_history = ImageHistory.objects.create(
                         user=request.user,
                         filename=filename,
                         file_path=saved_path,
                         image_type='background_removed',
-                        prompt='Remove Background'
+                        prompt='Remove Background',
+                        workspace=get_active_workspace(request.user),
                     )
 
                     # Session 142: Track agent contribution
@@ -944,12 +952,14 @@ def execute_workflow_step(request):
                     image_url = default_storage.url(saved_path)
 
                     from content.models import ImageHistory
+                    from core.services.workspace_resolver import get_active_workspace
                     image_history = ImageHistory.objects.create(
                         user=request.user,
                         filename=filename,
                         file_path=saved_path,
                         image_type='recolored',
-                        prompt=f"Recolor {config.get('search_prompt', 'object')} to {config.get('prompt', 'red')}"
+                        prompt=f"Recolor {config.get('search_prompt', 'object')} to {config.get('prompt', 'red')}",
+                        workspace=get_active_workspace(request.user),
                     )
 
                     # Session 142: Track agent contribution
@@ -1042,12 +1052,14 @@ def execute_workflow_step(request):
                     image_url = default_storage.url(saved_path)
 
                     from content.models import ImageHistory
+                    from core.services.workspace_resolver import get_active_workspace
                     image_history = ImageHistory.objects.create(
                         user=request.user,
                         filename=filename,
                         file_path=saved_path,
                         image_type='outpainted',
-                        prompt=config.get('prompt', 'Extend image')
+                        prompt=config.get('prompt', 'Extend image'),
+                        workspace=get_active_workspace(request.user),
                     )
 
                     # Session 142: Track agent contribution
@@ -1131,12 +1143,14 @@ def execute_workflow_step(request):
 
                     # Save to history
                     from content.models import ImageHistory
+                    from core.services.workspace_resolver import get_active_workspace
                     image_history = ImageHistory.objects.create(
                         user=request.user,
                         filename=filename,
                         file_path=saved_path,
                         image_type='erased',
-                        prompt='Erase Object'
+                        prompt='Erase Object',
+                        workspace=get_active_workspace(request.user),
                     )
 
                     # Session 142: Track agent contribution
@@ -1231,12 +1245,14 @@ def execute_workflow_step(request):
 
                     # Save to history
                     from content.models import ImageHistory
+                    from core.services.workspace_resolver import get_active_workspace
                     image_history = ImageHistory.objects.create(
                         user=request.user,
                         filename=filename,
                         file_path=saved_path,
                         image_type='inpainted',
-                        prompt=prompt
+                        prompt=prompt,
+                        workspace=get_active_workspace(request.user),
                     )
 
                     # Session 142: Track agent contribution
@@ -1327,12 +1343,14 @@ def execute_workflow_step(request):
 
                     # Save to history
                     from content.models import ImageHistory
+                    from core.services.workspace_resolver import get_active_workspace
                     image_history = ImageHistory.objects.create(
                         user=request.user,
                         filename=filename,
                         file_path=saved_path,
                         image_type='generated',
-                        prompt=prompt
+                        prompt=prompt,
+                        workspace=get_active_workspace(request.user),
                     )
 
                     # Session 142: Track agent contribution

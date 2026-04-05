@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-04-05 15:27
+**Generated:** 2026-04-05 15:44
 **Current Session:** 784
 **Total Documentation:** 1840 files | 627,812 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,220 |
+| Total cross-references | 2,218 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 140 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/capabilities/10_Integration_APIs/README.md` | 60 | 🔌 INTEGRATION APIS - The Nervous System of AI |
+| `docs/archive/experimental/super_system/README.md` | 59 | 🌐 THE SUPER SYSTEM |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -219,8 +219,8 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| CONNECTIVITY_SWEEP_PLAN.md | audits | 82 | 2026-04-05 15:23 |
-| INDEX.md | docs | 363 | 2026-04-05 15:01 |
+| INDEX.md | docs | 363 | 2026-04-05 15:27 |
+| CONNECTIVITY_SWEEP_PLAN.md | audits | 82 | 2026-04-05 15:27 |
 | DATA_FLOW_DEAD_ENDS_AUDIT.md | audits | 250 | 2026-04-05 13:41 |
 | PA_IDENTITY_FRAGMENTATION_AUDIT.md | audits | 158 | 2026-04-05 13:28 |
 | APP_INTEGRATION_MAP.md | docs | 82 | 2026-04-05 12:01 |

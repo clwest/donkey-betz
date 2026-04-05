@@ -765,6 +765,7 @@ Remember: Enhance their vision, don't replace it!
                         filename = f"workflow_v2_{uuid.uuid4().hex[:8]}.png"
 
                         # Create ImageHistory entry with correct field names
+                        from core.services.workspace_resolver import get_active_workspace
                         history = ImageHistory.objects.create(
                             user=self.user,
                             filename=filename,
@@ -778,7 +779,8 @@ Remember: Enhance their vision, don't replace it!
                                 'generation_time_ms': result.generation_time_ms,
                                 'cost': result.cost,
                                 'workflow_engine': 'v2'
-                            }
+                            },
+                            workspace=get_active_workspace(self.user),
                         )
 
                         images.append({

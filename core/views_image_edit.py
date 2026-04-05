@@ -455,6 +455,7 @@ def _execute_process_image(user, arguments):
 
         # Create new ImageHistory record
         from content.models import ImageHistory
+        from core.services.workspace_resolver import get_active_workspace
         new_image = ImageHistory.objects.create(
             user=user,
             prompt=f"Processed from image #{seq_num}: {', '.join(ops_applied)}",
@@ -463,6 +464,7 @@ def _execute_process_image(user, arguments):
             model_used="pil-process",
             image_width=img.width,
             image_height=img.height,
+            workspace=get_active_workspace(user),
         )
 
         logger.info(f"Processed image {image.id} -> {new_image.id}: {', '.join(ops_applied)}")
@@ -545,12 +547,14 @@ def _execute_recolor(user, parameters, session=None):
 
         # Create new image history entry
         from content.models import ImageHistory
+        from core.services.workspace_resolver import get_active_workspace
         new_image = ImageHistory.objects.create(
             user=user,
             prompt=f"Recolored from image #{seq_num}: {target_color} → {new_color}",
             file_path=saved_path,
             filename=filename,
             model_used="stability-recolor",
+            workspace=get_active_workspace(user),
         )
 
         logger.info(f"✅ Agent recolored image: {new_image.id}")
@@ -622,12 +626,14 @@ def _execute_remove_background(user, parameters, session=None):
 
         # Create new image history entry
         from content.models import ImageHistory
+        from core.services.workspace_resolver import get_active_workspace
         new_image = ImageHistory.objects.create(
             user=user,
             prompt=f"Background removed from image #{seq_num}",
             file_path=saved_path,
             filename=filename,
             model_used="stability-remove-bg",
+            workspace=get_active_workspace(user),
         )
 
         logger.info(f"✅ Agent removed background: {new_image.id}")
@@ -876,12 +882,14 @@ def _execute_upscale(user, parameters, session=None):
 
         # Create new image history entry
         from content.models import ImageHistory
+        from core.services.workspace_resolver import get_active_workspace
         new_image = ImageHistory.objects.create(
             user=user,
             prompt=f"Upscaled from image #{seq_num}",
             file_path=saved_path,
             filename=filename,
             model_used="stability-upscale-4x",
+            workspace=get_active_workspace(user),
         )
 
         logger.info(f"✅ Agent upscaled image: {new_image.id}")
@@ -1006,13 +1014,15 @@ def creative_upscale_view(request):
             except CreativeProject.DoesNotExist:
                 pass
 
+        from core.services.workspace_resolver import get_active_workspace
         new_image = ImageHistory.objects.create(
             user=request.user,
             prompt=f"Creative upscale from image #{seq_num}: {prompt}",
             file_path=saved_path,
             filename=filename,
             model_used="stability-creative-upscale",
-            project=project
+            project=project,
+            workspace=get_active_workspace(request.user),
         )
 
         # Session 142: Track agent contribution
@@ -1236,12 +1246,14 @@ def recolor_image_view(request):
             except CreativeProject.DoesNotExist:
                 pass
 
+        from core.services.workspace_resolver import get_active_workspace
         new_image = ImageHistory.objects.create(
             user=request.user,
             prompt=f"Recolored '{select_prompt}' to '{color}' from image #{seq_num}",
             file_path=f"data:image/png;base64,{image_base64}",
             model_used="stability-search-recolor",
-            project=project
+            project=project,
+            workspace=get_active_workspace(request.user),
         )
 
         # Session 142: Track agent contribution
@@ -1451,13 +1463,15 @@ def remove_background_view(request):
             except CreativeProject.DoesNotExist:
                 pass
 
+        from core.services.workspace_resolver import get_active_workspace
         new_image = ImageHistory.objects.create(
             user=request.user,
             prompt=f"Background removed from image #{seq_num}",
             file_path=saved_path,  # Save FILE PATH, not data URI!
             filename=filename,
             model_used="stability-remove-bg",
-            project=project
+            project=project,
+            workspace=get_active_workspace(request.user),
         )
 
         # Session 142: Track agent contribution
@@ -1815,13 +1829,15 @@ def upscale_image_view(request):
             except CreativeProject.DoesNotExist:
                 pass
 
+        from core.services.workspace_resolver import get_active_workspace
         new_image = ImageHistory.objects.create(
             user=request.user,
             prompt=f"Upscaled from image #{seq_num}",
             file_path=saved_path,  # Save FILE PATH, not data URI!
             filename=filename,
             model_used="stability-upscale-4x",
-            project=project
+            project=project,
+            workspace=get_active_workspace(request.user),
         )
 
         # Session 142: Track agent contribution

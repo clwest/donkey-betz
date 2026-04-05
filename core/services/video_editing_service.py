@@ -123,6 +123,7 @@ def _save_edited_video(user, output_path, output_filename, source_video,
 
     project = getattr(source_video, 'project', None)
 
+    from core.services.workspace_resolver import get_active_workspace
     new_video = VideoHistory.objects.create(
         user=user,
         video_type=video_type,
@@ -134,6 +135,7 @@ def _save_edited_video(user, output_path, output_filename, source_video,
         video_url=f'/media/{output_filename}',
         generation_completed=timezone.now(),
         project=project,
+        workspace=get_active_workspace(user),
     )
 
     # Best-effort agent contribution tracking
@@ -464,6 +466,7 @@ def extract_frame(user, video_id, time=0, output_format='png'):
         from content.models import ImageHistory
         project = getattr(video, 'project', None)
 
+        from core.services.workspace_resolver import get_active_workspace
         extracted_image = ImageHistory.objects.create(
             user=user,
             prompt=f"Frame extracted at {timestamp}s from video {video.id}",
@@ -476,6 +479,7 @@ def extract_frame(user, video_id, time=0, output_format='png'):
                 'operation': 'frame_extraction',
             },
             project=project,
+            workspace=get_active_workspace(user),
         )
 
         # Best-effort contribution tracking
@@ -607,6 +611,7 @@ def concatenate_videos(user, video_ids, transition='none', transition_duration=0
         from content.models import VideoHistory
         project = getattr(videos[0], 'project', None)
 
+        from core.services.workspace_resolver import get_active_workspace
         concat_video = VideoHistory.objects.create(
             user=user,
             video_type='concatenated',
@@ -618,6 +623,7 @@ def concatenate_videos(user, video_ids, transition='none', transition_duration=0
             video_url=f'/media/{output_filename}',
             generation_completed=timezone.now(),
             project=project,
+            workspace=get_active_workspace(user),
         )
 
         try:

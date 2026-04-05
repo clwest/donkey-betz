@@ -2459,11 +2459,13 @@ class EPAToolHandlersMixin:
                     continue
 
                 # Store in VideoHistory
+                from core.services.workspace_resolver import get_active_workspace
                 video = VideoHistory.objects.create(
                     user=self.user,
                     prompt=prompt,
                     task_id=result.task_id,
                     status='processing',
+                    workspace=get_active_workspace(self.user),
                     parameters={
                         'duration': 8,
                         'quality': 'veo3.1_fast',

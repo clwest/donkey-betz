@@ -312,13 +312,15 @@ def execute_save_assets_step(run: CreativePipelineRun, step: Dict):
     saved_count = 0
     for img in images:
         try:
+            from core.services.workspace_resolver import get_active_workspace
             ImageHistory.objects.create(
                 user=run.user,
                 file_path=img['url'],
                 image_type='pipeline',
                 prompt=img.get('prompt', ''),
                 parameters={'pipeline_run_id': str(run.id), 'index': img.get('index')},
-                session=session
+                session=session,
+                workspace=get_active_workspace(run.user),
             )
             saved_count += 1
         except Exception as e:
