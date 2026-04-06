@@ -573,6 +573,40 @@ class BaseAgent(ABC, TimeTravelMixin):
                 logger.warning(f"Could not get/create Agent model: {e}")
         return self._agent_model
 
+    def _get_execution_budget(self) -> dict:
+        """
+        Session 1085: Build execution budget from XP evolution bonuses.
+
+        Reads speed_bonus and quality_bonus from the agent's AgentEvolution
+        record and adjusts execution parameters accordingly:
+        - speed_bonus: increases max_completion_tokens (more output budget)
+        - quality_bonus: increases LLM timeout (more thinking time)
+
+        Returns dict with adjusted parameters.
+        """
+        budget = {
+            'max_completion_tokens': 6000,
+            'llm_timeout': self.llm_timeout,
+            'speed_bonus': 0.0,
+            'quality_bonus': 0.0,
+        }
+        try:
+            if self.agent_model:
+                from core.models_unified_system import AgentEvolution
+                evo = AgentEvolution.objects.filter(agent=self.agent_model).first()
+                if evo:
+                    budget['speed_bonus'] = evo.speed_bonus or 0.0
+                    budget['quality_bonus'] = evo.quality_bonus or 0.0
+                    # Speed bonus: higher-level agents get more output tokens (up to +2000)
+                    token_boost = min(int(budget['speed_bonus'] * 200), 2000)
+                    budget['max_completion_tokens'] = 6000 + token_boost
+                    # Quality bonus: higher-level agents get more thinking time (up to +60s)
+                    timeout_boost = min(budget['quality_bonus'] * 6.0, 60.0)
+                    budget['llm_timeout'] = self.llm_timeout + timeout_boost
+        except Exception as e:
+            logger.debug(f"Could not load evolution bonuses: {e}")
+        return budget
+
     @property
     def sharpened_system_prompt(self) -> str:
         """
@@ -2298,12 +2332,15 @@ Consider these trends when crafting the response to maximize relevance and engag
             effective_tools = self._get_tools_with_shared()
 
         try:
+            # Session 1085: Apply XP evolution bonuses to execution budget
+            budget = self._get_execution_budget()
+
             response = self.client.chat.completions.create(
                 model="gpt-5-mini",
                 messages=messages,
                 tools=effective_tools if effective_tools else None,
                 tool_choice="auto" if effective_tools else None,
-                max_completion_tokens=6000,  # High enough for reasoning + output
+                max_completion_tokens=budget['max_completion_tokens'],
             )
 
             # Session 536: Track analytics (cost, tokens, performance)
