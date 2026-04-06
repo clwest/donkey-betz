@@ -5,7 +5,7 @@
 // Session 861: Enhanced BlogDetailModal with full content viewing, approve/publish actions
 // Session 971b B2: Added Dossiers (ConceptForge), Voices, Files sub-tabs
 
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import ReactMarkdown from 'react-markdown'
@@ -38,18 +38,13 @@ import {
   Send,
   AlertCircle,
   Sparkles,  // Session 865: For Enhance button
-  Megaphone,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { api, contentApi, podcastApi, distributionApi, blogsApi, voiceMarketplaceApi, type Blog } from '@/lib/api'
 import { ErrorState } from '@/components/ErrorState'
 import { PanelStatusBanner } from '@/components/PanelStatusBanner'
 import { PanelDebugDrawer } from '@/components/PanelDebugDrawer'
-import { ConceptForgeTab } from './ConceptForgeTab'
-import { VoiceMarketplaceTab } from './VoiceMarketplaceTab'
-import { FilesTab } from './FilesTab'
-import { CampaignTab } from './CampaignTab'
-import { DeliverablesTab } from './DeliverablesTab'
+// Session 1085: Removed duplicate tab imports — accessible as top-level Build/System sub-tabs
 import type { ContentStudioSubTab } from '../types'
 
 // Sub-tab configuration
@@ -57,19 +52,15 @@ import type { ContentStudioSubTab } from '../types'
 // 'documents' kept as internal-only ID (not in ContentStudioSubTab union) for backwards compat
 type ContentSubTab = ContentStudioSubTab | 'documents'
 
+// Session 1085: Removed duplicates (dossiers, voices, files, campaigns, deliverables)
+// — these are accessible as top-level Build or System sub-tabs
 const subTabs: Array<{ id: ContentSubTab; label: string; icon: typeof Image; description: string }> = [
   { id: 'gallery', label: 'Gallery', icon: Image, description: 'AI-generated visuals' },
-  { id: 'channels', label: 'Channels', icon: MessageSquare, description: 'Content channels' },
   { id: 'blogs', label: 'Blogs', icon: BookOpen, description: 'AI-written articles' },
+  { id: 'channels', label: 'Channels', icon: MessageSquare, description: 'Content channels' },
   { id: 'documents', label: 'Documents', icon: FileText, description: 'Research & technical docs' },
   { id: 'podcast', label: 'Podcast', icon: Mic, description: 'Generated episodes' },
   { id: 'distribution', label: 'Distribution', icon: Share2, description: 'Platform publishing' },
-  // Session 971b B2: Absorbed from standalone tabs
-  { id: 'dossiers', label: 'Dossiers', icon: Sparkles, description: 'ConceptForge pipeline' },
-  { id: 'voices', label: 'Voices', icon: Music, description: 'Voice marketplace' },
-  { id: 'files', label: 'Files', icon: FileText, description: 'Workspace file browser' },
-  { id: 'campaigns', label: 'Campaigns', icon: Megaphone, description: 'Marketing campaign orchestrator' },
-  { id: 'deliverables', label: 'Deliverables', icon: FileText, description: 'Agent output library' },
 ]
 
 interface ContentStudioTabProps {
@@ -117,11 +108,7 @@ export function ContentStudioTab({ initialSubTab, activeWorkspaceId }: ContentSt
       {activeSubTab === 'distribution' && <DistributionSubTab />}
 
       {/* Session 971b B2: Delegated tabs (absorbed from standalone) */}
-      {activeSubTab === 'dossiers' && <ConceptForgeTab />}
-      {activeSubTab === 'voices' && <VoiceMarketplaceTab />}
-      {activeSubTab === 'files' && <FilesTab activeWorkspaceId={activeWorkspaceId} />}
-      {activeSubTab === 'campaigns' && <CampaignTab />}
-      {activeSubTab === 'deliverables' && <DeliverablesTab />}
+      {/* Session 1085: Removed — accessible as top-level Build/System sub-tabs */}
 
       <PanelDebugDrawer scope="workspace:content" />
     </div>
@@ -211,6 +198,23 @@ function GallerySubTab() {
   return (
     <div className="space-y-4">
       <InlineHeaderRow title="Content Gallery" onRefresh={refetch} isFetching={isFetching} />
+
+      {/* Session 1085: Empty gallery guidance */}
+      {allItems.length === 0 && (
+        <div className="text-center py-12 max-w-md mx-auto">
+          <Image size={40} className="mx-auto text-cyan-400 mb-4" />
+          <h3 className="text-lg font-semibold text-gray-200 mb-2">Your creative workspace</h3>
+          <p className="text-gray-400 text-sm mb-4">
+            Create images, videos, audio, and blogs. Start with a prompt or use the PA to generate content.
+          </p>
+          <div className="text-left bg-dark-card border border-dark-border rounded-lg p-4 space-y-2">
+            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-2">Get started</p>
+            <p className="text-sm text-gray-400">Generate images from a text prompt</p>
+            <p className="text-sm text-gray-400">Draft an AI blog on any topic</p>
+            <p className="text-sm text-gray-400">Preview and publish to channels</p>
+          </div>
+        </div>
+      )}
 
       {/* Media Stats - Expandable */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
