@@ -36,17 +36,19 @@ function getAge(dateStr?: string): string {
 }
 
 export default function HomeTab({ activeWorkspace, onNavigateTab }: HomeTabProps) {
+  const wsId = activeWorkspace?.id
+
   // Primary data source — home boot endpoint
   const bootQuery = useQuery({
-    queryKey: ['home-boot'],
-    queryFn: () => api.get('/home/boot/').then(r => r.data),
+    queryKey: ['home-boot', wsId],
+    queryFn: () => api.get('/home/boot/', { params: wsId ? { workspace: wsId } : undefined }).then(r => r.data),
     refetchInterval: 60000,
   })
 
-  // Deliverable stats
+  // Deliverable stats — scoped to active workspace
   const delivStatsQuery = useQuery({
-    queryKey: ['home-deliv-stats'],
-    queryFn: () => api.get('/deliverables/stats/').then(r => r.data),
+    queryKey: ['home-deliv-stats', wsId],
+    queryFn: () => api.get('/deliverables/stats/', { params: wsId ? { workspace: wsId } : undefined }).then(r => r.data),
     refetchInterval: 60000,
   })
 
@@ -476,8 +478,10 @@ function MyBusinessWorkspaces() {
     updated_at: string
   }>
 
-  // Show all workspaces (not just sandbox)
-  const bizWorkspaces = workspaces.filter(w => w.is_active)
+  // Show recent workspaces — sort active first, then by updated_at
+  const bizWorkspaces = workspaces
+    .sort((a, b) => (b.is_active ? 1 : 0) - (a.is_active ? 1 : 0) || new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+    .slice(0, 6)
 
   if (isLoading || bizWorkspaces.length === 0) return null
 
