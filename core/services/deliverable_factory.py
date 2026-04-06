@@ -120,6 +120,10 @@ def create_deliverable(
         )
         return title_existing
 
+    # Auto-assign user if not provided (agent/Celery context)
+    if not user:
+        user = _get_default_user()
+
     # Auto-assign workspace if not provided
     if not workspace_id and user:
         workspace_id = _get_active_workspace_id(user)
@@ -186,6 +190,16 @@ def create_deliverable(
             f"(title='{title[:60]}', agent={agent_name})"
         )
         raise
+
+
+def _get_default_user():
+    """Get the default user for agent/Celery-created deliverables (first superuser)."""
+    try:
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        return User.objects.filter(is_superuser=True).order_by('date_joined').first()
+    except Exception:
+        return None
 
 
 def _get_active_workspace_id(user) -> Optional[str]:

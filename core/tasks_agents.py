@@ -4534,7 +4534,26 @@ agent_name: str,
     from core.models_skin_layer import ProjectWorkspace, WorkspaceOperation
     from core.services.workspace_manager import WorkspaceManager
     from datetime import datetime
+    import hashlib
     import importlib
+
+    # ==========================================================================
+    # DEDUP GUARD: Prevent duplicate dispatch of same agent+topic
+    # ==========================================================================
+    # Only applies to scheduled/auto triggers — user-initiated runs bypass.
+    # Uses Django cache (Redis on Railway) with a 10-minute lock.
+    _auto_triggers = {'schedule', 'warmup', 'initiative', None}
+    from django.core.cache import cache
+    if trigger_source in _auto_triggers:
+        topic_hash = hashlib.md5((topic or '').encode()).hexdigest()[:12]
+        dedup_key = f"agent_dedup:{agent_name}:{topic_hash}"
+        if cache.get(dedup_key):
+            logger.info(
+                f"⏭️ [DEDUP] Skipping duplicate dispatch: {agent_name} "
+                f"(topic_hash={topic_hash}, key={dedup_key})"
+            )
+            return {'success': False, 'skipped': True, 'reason': 'duplicate_dispatch'}
+        cache.set(dedup_key, True, timeout=600)  # 10-minute lock
 
     # ==========================================================================
     # SESSION 864 PHASE 0: DETERMINE RUN MODE
