@@ -715,12 +715,19 @@ export function ConceptForgeTab() {
               </button>
             </div>
           ) : runs.length === 0 ? (
-            <div className="bg-dark-card border border-dark-border rounded-lg p-8 text-center">
-              <Sparkles size={32} className="mx-auto mb-3 text-gray-500" />
-              <p className="text-gray-400">No ConceptForge dossiers yet</p>
-              <p className="text-sm text-gray-500 mt-1">
-                Publish high-quality content with strategic tags to trigger the pipeline
+            <div className="bg-dark-card border border-dark-border rounded-lg p-10 text-center max-w-lg mx-auto">
+              <Sparkles size={40} className="mx-auto mb-4 text-amber-400" />
+              <h3 className="text-lg font-semibold text-gray-200 mb-2">Automated creative pipelines</h3>
+              <p className="text-gray-400 text-sm mb-6">
+                ConceptForge runs a 6-stage analysis pipeline on published content — research, debate, feasibility, risk, market analysis, and synthesis — producing comprehensive dossiers.
               </p>
+              <div className="text-left space-y-2 mb-4">
+                <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-2">How it works</p>
+                <p className="text-sm text-gray-400 flex items-start gap-2"><span className="text-amber-400/80 shrink-0">1.</span> Publish a blog with quality score above 80%</p>
+                <p className="text-sm text-gray-400 flex items-start gap-2"><span className="text-amber-400/80 shrink-0">2.</span> The pipeline auto-triggers and runs 6 analysis stages</p>
+                <p className="text-sm text-gray-400 flex items-start gap-2"><span className="text-amber-400/80 shrink-0">3.</span> Review the dossier with insights, risks, and market analysis</p>
+              </div>
+              <p className="text-xs text-gray-500 mt-4">Dossiers will appear here once the pipeline runs on your published content.</p>
             </div>
           ) : (
             runs.map((run) => (

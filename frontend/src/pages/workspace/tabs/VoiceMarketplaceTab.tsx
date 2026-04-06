@@ -1066,10 +1066,24 @@ export function VoiceMarketplaceTab() {
                 <Loader2 className="animate-spin text-primary-500" size={32} />
               </div>
             ) : browseData?.voices.length === 0 ? (
-              <div className="text-center py-16">
-                <Mic size={48} className="mx-auto mb-4 text-gray-600" />
-                <p className="text-gray-400">No voices found</p>
-                <p className="text-sm text-gray-500 mt-1">Try adjusting your filters</p>
+              <div className="text-center py-16 max-w-md mx-auto">
+                <Mic size={40} className="mx-auto mb-4 text-violet-400" />
+                <h3 className="text-lg font-semibold text-gray-200 mb-2">Voice Marketplace</h3>
+                <p className="text-gray-400 text-sm mb-6">
+                  Discover, import, and manage AI voices for text-to-speech and talking-head videos.
+                </p>
+                <button
+                  onClick={() => setSubTab('clone')}
+                  className="px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-sm font-medium transition-colors mb-6"
+                >
+                  Clone your first voice
+                </button>
+                <div className="text-left bg-dark-card border border-dark-border rounded-lg p-4 space-y-2">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-2">What you can do</p>
+                  <p className="text-sm text-gray-400">Try a 10-second sample before committing</p>
+                  <p className="text-sm text-gray-400">Clone your own voice from a recording</p>
+                  <p className="text-sm text-gray-400">Use voices in TTS and talking-head videos</p>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1096,10 +1110,16 @@ export function VoiceMarketplaceTab() {
                 <Loader2 className="animate-spin text-primary-500" size={32} />
               </div>
             ) : myVoicesData?.voices.length === 0 ? (
-              <div className="text-center py-16">
-                <Mic size={48} className="mx-auto mb-4 text-gray-600" />
-                <p className="text-gray-400">You don't have any voices yet</p>
-                <p className="text-sm text-gray-500 mt-1">Browse the marketplace to find voices</p>
+              <div className="text-center py-16 max-w-sm mx-auto">
+                <Mic size={40} className="mx-auto mb-4 text-violet-400" />
+                <h3 className="text-lg font-semibold text-gray-200 mb-2">No voices yet</h3>
+                <p className="text-gray-400 text-sm mb-4">
+                  Clone your own voice or browse the marketplace to get started.
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <button onClick={() => setSubTab('clone')} className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-sm font-medium transition-colors">Clone a voice</button>
+                  <button onClick={() => setSubTab('browse')} className="px-4 py-2 bg-dark-card border border-dark-border hover:border-gray-600 text-gray-300 rounded-lg text-sm font-medium transition-colors">Browse marketplace</button>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
