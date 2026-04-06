@@ -2339,10 +2339,23 @@ export function InitiativesTab() {
     enabled: activeTab === 'health', // Only fetch when on health tab
   })
 
+  const [populateMessage, setPopulateMessage] = useState<string | null>(null)
+
   const populateMutation = useMutation({
     mutationFn: () => platformApi.populateInitiatives(),
-    onSuccess: () => {
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['initiatives'] })
+      const data = res.data as { message?: string; created_count?: number }
+      if (data.created_count && data.created_count > 0) {
+        setPopulateMessage(data.message || `Created ${data.created_count} initiatives`)
+      } else {
+        setPopulateMessage('No new initiatives to create — all deliverables are already linked or have fewer than 3 items per group.')
+      }
+      setTimeout(() => setPopulateMessage(null), 6000)
+    },
+    onError: (err) => {
+      setPopulateMessage(`Error: ${err instanceof Error ? err.message : 'Failed to populate'}`)
+      setTimeout(() => setPopulateMessage(null), 6000)
     },
   })
 
@@ -2420,7 +2433,19 @@ export function InitiativesTab() {
   }
 
   if (!data?.initiatives?.length) {
-    return <EmptyState onPopulate={() => populateMutation.mutate()} isPopulating={populateMutation.isPending} />
+    return (
+      <div>
+        <EmptyState onPopulate={() => populateMutation.mutate()} isPopulating={populateMutation.isPending} />
+        {populateMessage && (
+          <div className={cn(
+            'mt-4 p-3 rounded-lg text-sm',
+            populateMessage.startsWith('Error') ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+          )}>
+            {populateMessage}
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
