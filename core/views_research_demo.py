@@ -1883,76 +1883,67 @@ def initiative_origin_trace_api(request, initiative_id):
 @require_http_methods(["POST"])
 def populate_initiatives_api(request):
     """
-    Session 622: Auto-populate initiatives from existing deliverables.
-    Creates Initiative records and links existing stage documents.
+    Session 1085: Auto-populate initiatives from unlinked deliverables.
+
+    Groups unlinked deliverables by workspace + category and creates
+    one initiative per group (if no matching initiative already exists).
+    Links the deliverables to the new initiative.
     """
     try:
-        from django.db.models import Q
-        from core.models_unified_system import SelfBlog
-        from core.models_document_registry import Initiative, InitiativeStage
+        from django.db.models import Count
+        from core.models_deliverables import Deliverable
+        from core.models import Initiative
 
-        # Find all unique parent topics from deliverables
-        deliverables = SelfBlog.objects.filter(
-            Q(title__startswith='[Stage 1 -') |
-            Q(title__startswith='[Stage 2 -') |
-            Q(title__startswith='[Stage 3 -') |
-            Q(title__startswith='[Stage 4 -') |
-            Q(title__startswith='[Stage 5 -')
+        # Find deliverables not yet linked to any initiative, grouped by workspace+category
+        unlinked = (
+            Deliverable.objects
+            .filter(initiative__isnull=True, workspace__isnull=False)
+            .exclude(category='')
+            .values('workspace__name', 'workspace_id', 'category')
+            .annotate(count=Count('id'))
+            .filter(count__gte=3)  # Only create initiative if 3+ deliverables
+            .order_by('-count')
         )
 
-        # Group by parent topic
-        topics = {}
-        for doc in deliverables:
-            if doc.stats_snapshot and doc.stats_snapshot.get('parent_topic'):
-                topic = doc.stats_snapshot['parent_topic']
-                if topic not in topics:
-                    topics[topic] = []
-                topics[topic].append(doc)
-
         created_initiatives = []
-        for topic, docs in topics.items():
-            # Create or get initiative
-            initiative, created = Initiative.objects.get_or_create(
-                name=topic,
-                defaults={
-                    'description': f'Auto-populated from {len(docs)} deliverables',
-                    'created_by': 'auto_populate',
-                    'parent_topic': topic,
-                }
+        linked_count = 0
+
+        for group in unlinked:
+            ws_name = group['workspace__name']
+            category = group['category']
+            ws_id = group['workspace_id']
+            name = f"{ws_name}: {category.replace('_', ' ').title()}"
+
+            # Skip if initiative with this name already exists
+            if Initiative.objects.filter(name=name).exists():
+                continue
+
+            initiative = Initiative.objects.create(
+                name=name,
+                description=f"Auto-populated from {group['count']} {category} deliverables in {ws_name}",
+                status='ACTIVE',
+                created_by='auto_populate',
+                current_stage=1,
             )
 
-            if created:
-                # Link documents to stages
-                for doc in docs:
-                    stage_num = doc.stats_snapshot.get('stage') if doc.stats_snapshot else None
-                    if stage_num:
-                        InitiativeStage.objects.get_or_create(
-                            initiative=initiative,
-                            stage=stage_num,
-                            defaults={
-                                'document': doc,
-                                'status': 'APPROVED',
-                                'approved_by': 'auto_populate',
-                                'approved_at': doc.created_at,
-                            }
-                        )
+            # Link the deliverables
+            updated = Deliverable.objects.filter(
+                initiative__isnull=True,
+                workspace_id=ws_id,
+                category=category,
+            ).update(initiative=initiative)
 
-                # Update current stage
-                max_stage = max([d.stats_snapshot.get('stage', 0) for d in docs if d.stats_snapshot])
-                initiative.current_stage = min(max_stage + 1, 5)
-                initiative.save()
-
-                created_initiatives.append({
-                    'name': topic,
-                    'stages_linked': len(docs),
-                    'current_stage': initiative.current_stage,
-                })
+            linked_count += updated
+            created_initiatives.append({
+                'name': name,
+                'deliverables_linked': updated,
+            })
 
         return JsonResponse({
             'success': True,
-            'message': f'Created {len(created_initiatives)} new initiatives',
-            'created': created_initiatives,
-            'existing_topics': [t for t in topics.keys() if t not in [i['name'] for i in created_initiatives]],
+            'message': f'Created {len(created_initiatives)} initiatives, linked {linked_count} deliverables',
+            'created_count': len(created_initiatives),
+            'created_initiatives': created_initiatives,
         })
 
     except Exception as e:
