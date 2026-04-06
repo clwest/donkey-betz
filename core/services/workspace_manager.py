@@ -1793,16 +1793,25 @@ class WorkspaceManager:
         return None
 
     def set_active_workspace(self, workspace_id: UUID) -> ProjectWorkspace:
-        """Set a workspace as the active target for operations."""
-        workspace = ProjectWorkspace.objects.get(id=workspace_id, user=self.user)
+        """Set a workspace as the active target for operations.
+
+        Superusers can activate any workspace; regular users can only
+        activate their own workspaces.
+        """
+        if self.user.is_superuser:
+            workspace = ProjectWorkspace.objects.get(id=workspace_id)
+        else:
+            workspace = ProjectWorkspace.objects.get(id=workspace_id, user=self.user)
         workspace.is_active = True
         workspace.save()  # This triggers deactivation of others via save()
 
-        logger.info(f"🎯 Active workspace: {workspace.name}")
+        logger.info(f"🎯 Active workspace: {workspace.name} (by {self.user.username})")
         return workspace
 
     def list_workspaces(self) -> List[ProjectWorkspace]:
-        """List all workspaces for the user."""
+        """List all workspaces for the user. Superusers see all."""
+        if self.user.is_superuser:
+            return list(ProjectWorkspace.objects.all())
         return list(ProjectWorkspace.objects.filter(user=self.user))
 
     def rescan_workspace(self, workspace: ProjectWorkspace) -> WorkspaceContext:
