@@ -102,25 +102,21 @@ class ConceptForgeOrchestrator:
         if quality_score < self.MIN_QUALITY_SCORE:
             return False, f'quality_score {quality_score:.2f} < {self.MIN_QUALITY_SCORE}', None
 
-        # Check for strategic tags
-        if not tags:
-            return False, 'no tags provided', None
+        # Determine domain from tags if available
+        domain = get_lab_for_tags(tags or [])
 
-        tags_lower = [t.lower() for t in tags]
-        has_strategic_tag = any(
-            tag in self.STRATEGIC_TAGS
-            for tag in tags_lower
-        )
+        # If tags match a strategic tag, use that domain
+        if tags:
+            tags_lower = [t.lower() for t in tags]
+            has_strategic_tag = any(
+                tag in self.STRATEGIC_TAGS
+                for tag in tags_lower
+            )
+            if has_strategic_tag and domain:
+                return True, 'qualifies', domain
 
-        if not has_strategic_tag:
-            return False, 'no strategic tags found', None
-
-        # Determine domain
-        domain = get_lab_for_tags(tags)
-        if not domain:
-            return False, 'no matching domain lab', None
-
-        return True, 'qualifies', domain
+        # Quality alone is sufficient — default to 'tech' domain if no tags match
+        return True, 'qualifies_by_quality', domain or 'tech'
 
     def start_pipeline(
         self,
