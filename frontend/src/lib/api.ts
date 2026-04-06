@@ -3890,7 +3890,7 @@ export interface Blog {
   status: 'draft' | 'approved' | 'published'
   meta_description: string
   intro: string
-  sections?: Array<{ title: string; content: string }>
+  sections?: Array<{ title: string; content: string; header?: string }>
   conclusion?: string
   tags: string[]
   full_text?: string
@@ -3898,6 +3898,12 @@ export interface Blog {
   word_count: number
   stats_snapshot?: Record<string, unknown>
   created_at: string
+  // PublishGate quality scores
+  quality_score?: number | null
+  novelty_score?: number | null
+  structure_score?: number | null
+  publish_ready?: boolean
+  gate_notes?: string | null
 }
 
 export interface BlogListResponse {

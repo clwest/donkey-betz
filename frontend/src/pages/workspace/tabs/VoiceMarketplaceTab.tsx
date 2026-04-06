@@ -16,15 +16,12 @@ import { useCallback, useRef } from 'react'
 import {
   Mic,
   Search,
-  Filter,
   Play,
   Pause,
   Star,
   DollarSign,
   Users,
-  ShoppingCart,
   Upload,
-  TrendingUp,
   RefreshCw,
   Loader2,
   X,
@@ -38,7 +35,7 @@ import {
   CheckCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { api, platformApi } from '@/lib/api'
+import { api } from '@/lib/api'
 
 // Types
 interface Voice {
@@ -222,7 +219,7 @@ function VoiceDetailModal({
   const { data: voice, isLoading } = useQuery({
     queryKey: ['voice-detail', voiceId],
     queryFn: async () => {
-      const res = await platformApi.get(`/api/voice-marketplace/${voiceId}/`)
+      const res = await api.get(`/api/voice-marketplace/${voiceId}/`)
       return res.data as VoiceDetailData
     },
   })
@@ -900,7 +897,7 @@ export function VoiceMarketplaceTab() {
       if (filters.sort) params.append('sort', filters.sort)
       if (searchQuery) params.append('search', searchQuery)
       params.append('limit', '24')
-      const res = await platformApi.get(`/api/voice-marketplace/?${params}`)
+      const res = await api.get(`/api/voice-marketplace/?${params}`)
       return res.data as { voices: Voice[]; total: number }
     },
     enabled: subTab === 'browse',
@@ -910,7 +907,7 @@ export function VoiceMarketplaceTab() {
   const { data: myVoicesData, isLoading: myVoicesLoading } = useQuery({
     queryKey: ['voice-marketplace', 'my-voices'],
     queryFn: async () => {
-      const res = await platformApi.get('/api/voice-marketplace/my-voices/')
+      const res = await api.get('/api/voice-marketplace/my-voices/')
       return res.data as { voices: Voice[]; total: number }
     },
     enabled: subTab === 'my-voices',
@@ -920,7 +917,7 @@ export function VoiceMarketplaceTab() {
   const { data: earningsData, isLoading: earningsLoading } = useQuery({
     queryKey: ['voice-marketplace', 'earnings'],
     queryFn: async () => {
-      const res = await platformApi.get('/api/voice-marketplace/earnings/')
+      const res = await api.get('/api/voice-marketplace/earnings/')
       return res.data
     },
     enabled: subTab === 'earnings',
@@ -930,7 +927,7 @@ export function VoiceMarketplaceTab() {
   const { data: statsData } = useQuery({
     queryKey: ['voice-marketplace', 'stats'],
     queryFn: async () => {
-      const res = await platformApi.get('/api/voice-marketplace/stats/')
+      const res = await api.get('/api/voice-marketplace/stats/')
       return res.data as MarketplaceStats
     },
   })
