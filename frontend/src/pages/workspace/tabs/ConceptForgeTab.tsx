@@ -25,7 +25,7 @@ import {
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { platformApi } from '@/lib/api'
+import { api } from '@/lib/api'
 
 // Stage configuration
 const STAGES = [
@@ -90,7 +90,7 @@ interface RunDetailStage {
   duration_ms: number
 }
 
-interface RunDetail extends ConceptForgeRun {
+interface RunDetail extends Omit<ConceptForgeRun, 'stages'> {
   advisor_panel_snapshot: Record<string, unknown>
   stages: RunDetailStage[]
   artifacts: Array<{
@@ -343,7 +343,7 @@ function RunDetailView({ runId }: { runId: string }) {
   const { data: detail, isLoading, isError, refetch } = useQuery({
     queryKey: ['conceptforge-run', runId],
     queryFn: async () => {
-      const response = await platformApi.get(`/api/conceptforge/runs/${runId}/`)
+      const response = await api.get(`/api/conceptforge/runs/${runId}/`)
       return response.data as RunDetail
     },
     enabled: !!runId,
@@ -633,7 +633,7 @@ export function ConceptForgeTab() {
       const params = new URLSearchParams()
       if (statusFilter) params.append('status', statusFilter)
       params.append('limit', '50')
-      const response = await platformApi.get(`/api/conceptforge/runs/?${params}`)
+      const response = await api.get(`/api/conceptforge/runs/?${params}`)
       return response.data as { runs: ConceptForgeRun[]; total: number }
     },
   })
@@ -642,7 +642,7 @@ export function ConceptForgeTab() {
   const { data: stats } = useQuery({
     queryKey: ['conceptforge-stats'],
     queryFn: async () => {
-      const response = await platformApi.get('/api/conceptforge/stats/')
+      const response = await api.get('/api/conceptforge/stats/')
       return response.data as Stats
     },
   })
