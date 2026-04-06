@@ -38,9 +38,10 @@ import {
   Send,
   AlertCircle,
   Sparkles,  // Session 865: For Enhance button
+  Radio,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { api, contentApi, podcastApi, distributionApi, blogsApi, voiceMarketplaceApi, type Blog } from '@/lib/api'
+import { api, contentApi, podcastApi, distributionApi, blogsApi, voiceMarketplaceApi, type Blog, type BlogListResponse } from '@/lib/api'
 import { ErrorState } from '@/components/ErrorState'
 import { PanelStatusBanner } from '@/components/PanelStatusBanner'
 import { PanelDebugDrawer } from '@/components/PanelDebugDrawer'
@@ -68,10 +69,7 @@ interface ContentStudioTabProps {
   activeWorkspaceId?: string
 }
 
-export function ContentStudioTab({ initialSubTab, activeWorkspaceId }: ContentStudioTabProps) {
-  const storeWsId = useWorkspaceStore((s) => s.activeWorkspace?.id)
-  const wsId = activeWorkspaceId || storeWsId  // Prop takes precedence, store as fallback
-
+export function ContentStudioTab({ initialSubTab }: ContentStudioTabProps) {
   const initial = (initialSubTab && subTabs.some(t => t.id === initialSubTab)
     ? initialSubTab
     : 'gallery') as ContentSubTab
@@ -487,34 +485,10 @@ function ChannelsSubTab() {
 
 // ============ Blogs Sub-Tab ============
 
-// Session 861: Enhanced BlogPost interface with full content fields
-// Session 865: Added PublishGate quality scores for enhancement UI
-interface BlogPost {
-  id: string
-  title: string
-  intro: string
-  status: string
-  word_count: number
-  tags: string[]
-  created_at: string
-  category?: string
-  meta_description?: string
-  tone?: string
-  // Full content fields (fetched on demand)
-  full_text?: string
-  sections?: Array<{ header: string; content: string }>
-  conclusion?: string
-  stats_snapshot?: Record<string, unknown>
-  // Session 865: PublishGate quality scores
-  quality_score?: number | null
-  novelty_score?: number | null
-  structure_score?: number | null
-  publish_ready?: boolean
-  gate_notes?: string | null
-}
+// Session 1085: Removed local Blog — using Blog from @/lib/api instead
 
 function BlogsSubTab() {
-  const [selectedBlog, setSelectedBlog] = useState<BlogPost | null>(null)
+  const [selectedBlog, setSelectedBlog] = useState<Blog | null>(null)
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
   const [visibleCount, setVisibleCount] = useState(10)
   const [enhancingBlogId, setEnhancingBlogId] = useState<string | null>(null)
@@ -531,7 +505,7 @@ function BlogsSubTab() {
         const response = await blogsApi.list({ per_page: 50, category: 'blog', workspace: wsId })
         return response.data
       } catch {
-        return { blogs: [] as Blog[], pagination: { total: 0 }, category_counts: {} as Record<string, number> }
+        return { blogs: [], pagination: { total: 0 }, category_counts: {} } as unknown as BlogListResponse
       }
     },
   })
@@ -572,11 +546,11 @@ function BlogsSubTab() {
 
   const blogs = blogsData?.blogs || []
   const total = blogsData?.category_counts?.blog || blogsData?.pagination?.total || 1004
-  const publishedCount = blogs.filter((b: BlogPost) => b.status === 'published').length
-  const draftCount = blogs.filter((b: BlogPost) => b.status === 'draft' || !b.status).length
+  const publishedCount = blogs.filter((b: Blog) => b.status === 'published').length
+  const draftCount = blogs.filter((b: Blog) => b.status === 'draft' || !b.status).length
   // Session 865: Count blogs that could be enhanced (has scores but not publish-ready)
   const needsEnhancementCount = blogsData?.needs_enhancement_count ??
-    blogs.filter((b: BlogPost) =>
+    blogs.filter((b: Blog) =>
       b.quality_score !== null &&
       b.quality_score !== undefined &&
       !b.publish_ready &&
@@ -685,7 +659,7 @@ function BlogsSubTab() {
           items={blogs}
           visibleCount={visibleCount}
           onLoadMore={() => setVisibleCount((v) => v + 10)}
-          renderItem={(blog: BlogPost) => (
+          renderItem={(blog: Blog) => (
             <BlogRow
               key={blog.id}
               blog={blog}
@@ -701,11 +675,11 @@ function BlogsSubTab() {
         <ExpandedListCard
           title="Published Posts"
           icon={Eye}
-          items={blogs.filter((b: BlogPost) => b.status === 'published')}
+          items={blogs.filter((b: Blog) => b.status === 'published')}
           visibleCount={visibleCount}
           onLoadMore={() => setVisibleCount((v) => v + 10)}
           emptyMessage="No published posts yet"
-          renderItem={(blog: BlogPost) => (
+          renderItem={(blog: Blog) => (
             <BlogRow key={blog.id} blog={blog} onClick={() => setSelectedBlog(blog)} />
           )}
         />
@@ -715,10 +689,10 @@ function BlogsSubTab() {
         <ExpandedListCard
           title="Draft Posts"
           icon={Clock}
-          items={blogs.filter((b: BlogPost) => b.status === 'draft' || !b.status)}
+          items={blogs.filter((b: Blog) => b.status === 'draft' || !b.status)}
           visibleCount={visibleCount}
           onLoadMore={() => setVisibleCount((v) => v + 10)}
-          renderItem={(blog: BlogPost) => (
+          renderItem={(blog: Blog) => (
             <BlogRow
               key={blog.id}
               blog={blog}
@@ -735,7 +709,7 @@ function BlogsSubTab() {
         <ExpandedListCard
           title="Needs Enhancement"
           icon={Sparkles}
-          items={blogs.filter((b: BlogPost) =>
+          items={blogs.filter((b: Blog) =>
             b.quality_score !== null &&
             b.quality_score !== undefined &&
             !b.publish_ready &&
@@ -744,7 +718,7 @@ function BlogsSubTab() {
           visibleCount={visibleCount}
           onLoadMore={() => setVisibleCount((v) => v + 10)}
           emptyMessage="No blogs need enhancement"
-          renderItem={(blog: BlogPost) => (
+          renderItem={(blog: Blog) => (
             <BlogRow
               key={blog.id}
               blog={blog}
@@ -777,7 +751,7 @@ function BlogsSubTab() {
             </div>
           ) : (
             <div className="space-y-3">
-              {blogs.slice(0, 4).map((blog: BlogPost) => (
+              {blogs.slice(0, 4).map((blog: Blog) => (
                 <BlogRow
                   key={blog.id}
                   blog={blog}
@@ -804,7 +778,7 @@ function BlogsSubTab() {
 
 function DocumentsSubTab() {
   const wsId = useWorkspaceStore((s) => s.activeWorkspace?.id)
-  const [selectedDoc, setSelectedDoc] = useState<BlogPost | null>(null)
+  const [selectedDoc, setSelectedDoc] = useState<Blog | null>(null)
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
   const [visibleCount, setVisibleCount] = useState(10)
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
@@ -818,7 +792,7 @@ function DocumentsSubTab() {
         const response = await blogsApi.list({ per_page: 500, category: categoryParam, workspace: wsId })
         return response.data
       } catch {
-        return { blogs: [] as Blog[], pagination: { total: 0 }, category_counts: {} as Record<string, number> }
+        return { blogs: [], pagination: { total: 0 }, category_counts: {} } as unknown as BlogListResponse
       }
     },
   })
@@ -836,9 +810,9 @@ function DocumentsSubTab() {
   const totalDocs = (categoryCounts.all || 0) - (categoryCounts.blog || 0)
 
   // Count by category from the docs we have
-  const researchCount = docs.filter((d: BlogPost) => d.category === 'research_brief').length
-  const auditCount = docs.filter((d: BlogPost) => d.category === 'audit').length
-  const technicalCount = docs.filter((d: BlogPost) => d.category === 'technical_document').length
+  const researchCount = docs.filter((d: Blog) => d.category === 'research_brief').length
+  const auditCount = docs.filter((d: Blog) => d.category === 'audit').length
+  const technicalCount = docs.filter((d: Blog) => d.category === 'technical_document').length
 
   const toggleSection = (section: string) => {
     setExpandedSection(expandedSection === section ? null : section)
@@ -956,11 +930,11 @@ function DocumentsSubTab() {
         <ExpandedListCard
           title="Research Briefs"
           icon={TrendingUp}
-          items={docs.filter((d: BlogPost) => d.category === 'research_brief')}
+          items={docs.filter((d: Blog) => d.category === 'research_brief')}
           visibleCount={visibleCount}
           onLoadMore={() => setVisibleCount((v) => v + 10)}
           emptyMessage="No research briefs yet"
-          renderItem={(doc: BlogPost) => (
+          renderItem={(doc: Blog) => (
             <DocumentRow key={doc.id} doc={doc} onClick={() => setSelectedDoc(doc)} getCategoryIcon={getCategoryIcon} getCategoryLabel={getCategoryLabel} />
           )}
         />
@@ -970,11 +944,11 @@ function DocumentsSubTab() {
         <ExpandedListCard
           title="Audit Reports"
           icon={CheckCircle}
-          items={docs.filter((d: BlogPost) => d.category === 'audit')}
+          items={docs.filter((d: Blog) => d.category === 'audit')}
           visibleCount={visibleCount}
           onLoadMore={() => setVisibleCount((v) => v + 10)}
           emptyMessage="No audit reports yet"
-          renderItem={(doc: BlogPost) => (
+          renderItem={(doc: Blog) => (
             <DocumentRow key={doc.id} doc={doc} onClick={() => setSelectedDoc(doc)} getCategoryIcon={getCategoryIcon} getCategoryLabel={getCategoryLabel} />
           )}
         />
@@ -984,11 +958,11 @@ function DocumentsSubTab() {
         <ExpandedListCard
           title="Technical Documents"
           icon={FileText}
-          items={docs.filter((d: BlogPost) => d.category === 'technical_document')}
+          items={docs.filter((d: Blog) => d.category === 'technical_document')}
           visibleCount={visibleCount}
           onLoadMore={() => setVisibleCount((v) => v + 10)}
           emptyMessage="No technical documents yet"
-          renderItem={(doc: BlogPost) => (
+          renderItem={(doc: Blog) => (
             <DocumentRow key={doc.id} doc={doc} onClick={() => setSelectedDoc(doc)} getCategoryIcon={getCategoryIcon} getCategoryLabel={getCategoryLabel} />
           )}
         />
@@ -1014,7 +988,7 @@ function DocumentsSubTab() {
             </div>
           ) : (
             <div className="space-y-3">
-              {docs.slice(0, 6).map((doc: BlogPost) => (
+              {docs.slice(0, 6).map((doc: Blog) => (
                 <DocumentRow key={doc.id} doc={doc} onClick={() => setSelectedDoc(doc)} getCategoryIcon={getCategoryIcon} getCategoryLabel={getCategoryLabel} />
               ))}
             </div>
@@ -1037,7 +1011,7 @@ function DocumentRow({
   getCategoryIcon,
   getCategoryLabel,
 }: {
-  doc: BlogPost
+  doc: Blog
   onClick: () => void
   getCategoryIcon: (category: string) => React.ReactNode
   getCategoryLabel: (category: string) => string
@@ -1784,7 +1758,7 @@ function ChannelRow({ channel, onClick }: { channel: ContentChannel; onClick: ()
 // Session 840: Blog row with click handler
 // Session 865: Added enhance button support
 interface BlogRowProps {
-  blog: BlogPost
+  blog: Blog
   onClick: () => void
   onEnhance?: (blogId: string, e: React.MouseEvent) => void
   isEnhancing?: boolean
@@ -2203,9 +2177,8 @@ function ChannelDetailModal({ channel, onClose }: { channel: ContentChannel; onC
 }
 
 // Session 861: Enhanced Blog Detail Modal with full content viewing and actions
-function BlogDetailModal({ blog, onClose }: { blog: BlogPost; onClose: () => void }) {
+function BlogDetailModal({ blog, onClose }: { blog: Blog; onClose: () => void }) {
   const [showFullContent, setShowFullContent] = useState(false)
-  const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
@@ -2215,7 +2188,7 @@ function BlogDetailModal({ blog, onClose }: { blog: BlogPost; onClose: () => voi
     queryKey: ['blog-full', blog.id],
     queryFn: async () => {
       const response = await blogsApi.get(blog.id)
-      return response.data.blog as BlogPost
+      return response.data.blog as Blog
     },
     enabled: showFullContent,
   })
