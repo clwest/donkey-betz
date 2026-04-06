@@ -647,6 +647,10 @@ class LearningLoopOrchestrator:
         """
         Session 954: Track when a learning is applied and its outcome.
 
+        DEPRECATED (Session 1085): This method is NOT called in any execution path.
+        The actual tracking happens via LearningPatternEngine.track_pattern_application()
+        which is called from AgentRouter._complete_execution() (agent_router.py:2371).
+
         This updates the times_applied and success_when_applied counters
         on LearningPattern to measure effectiveness.
 

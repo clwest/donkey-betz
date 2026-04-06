@@ -266,7 +266,12 @@ def workspace_config(request, workspace_id):
 
     config = getattr(workspace, 'config', None)
     if not config:
-        return Response({'success': False, 'error': 'No business config for this workspace. Create from a template first.'}, status=404)
+        # Auto-create a default config for workspaces not created from a template
+        from core.models_workspace_templates import WorkspaceConfig
+        config = WorkspaceConfig.objects.create(
+            workspace=workspace,
+            status='active',
+        )
 
     if request.method == 'PATCH':
         # Update allowed fields

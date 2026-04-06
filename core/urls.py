@@ -914,6 +914,7 @@ from core.views_collaboration import (
 )
 
 # Session 215: Import collective intelligence API views
+from core.views_collective_intelligence import get_shared_knowledge
 from core.views_collective_intelligence import (
     aggregate_insights,
     generate_report,
@@ -2225,6 +2226,7 @@ urlpatterns = [
     path('api/collective/stats/', get_collective_stats, name='collective-stats'),
     path('api/collective/dashboard/', get_dashboard_data, name='collective-dashboard'),
     path('api/collective/agents/<str:agent_name>/', get_agent_collective_profile, name='collective-agent-profile'),
+    path('api/v1/collective/shared-knowledge/', get_shared_knowledge, name='collective-shared-knowledge'),
 
     # Domain preferences (catch-all - must be LAST in preferences routes)
     path('api/preferences/<str:domain>/', domain_preferences, name='preferences-domain'),
