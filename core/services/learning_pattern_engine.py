@@ -549,6 +549,62 @@ class LearningPatternEngine:
             logger.error(f"Failed to track pattern application: {e}")
             return {'tracked': 0, 'error': str(e)}
 
+    def decay_stale_patterns(self, inactive_days: int = 30, decay_factor: float = 0.9) -> Dict[str, Any]:
+        """
+        Session 1085: Reduce confidence of patterns that haven't been applied recently.
+
+        Patterns that sit unused for 30+ days lose 10% confidence per cycle.
+        Patterns with <20% effectiveness lose 20% confidence.
+        Patterns with confidence < 0.1 are archived (deleted).
+
+        Args:
+            inactive_days: Days without application before decay starts
+            decay_factor: Multiply confidence by this (0.9 = 10% reduction)
+
+        Returns:
+            Dict with decay stats
+        """
+        from django.utils import timezone
+        from datetime import timedelta
+
+        cutoff = timezone.now() - timedelta(days=inactive_days)
+        decayed = 0
+        archived = 0
+
+        try:
+            # Decay stale patterns (not applied recently)
+            stale = self.LearningPattern.objects.filter(
+                updated_at__lt=cutoff,
+                confidence__gt=0.1,
+            )
+            for pattern in stale:
+                # Extra penalty for ineffective patterns
+                if pattern.times_applied > 5:
+                    effectiveness = pattern.success_when_applied / pattern.times_applied
+                    if effectiveness < 0.2:
+                        pattern.confidence *= (decay_factor * 0.8)  # 28% reduction
+                    else:
+                        pattern.confidence *= decay_factor
+                else:
+                    pattern.confidence *= decay_factor
+
+                pattern.save(update_fields=['confidence', 'updated_at'])
+                decayed += 1
+
+            # Archive patterns with very low confidence
+            archived = self.LearningPattern.objects.filter(confidence__lt=0.1).delete()[0]
+
+            logger.info(
+                f"📉 [Session 1085] Pattern decay: {decayed} decayed, {archived} archived "
+                f"(inactive_days={inactive_days}, decay_factor={decay_factor})"
+            )
+
+            return {'decayed': decayed, 'archived': archived}
+
+        except Exception as e:
+            logger.error(f"Pattern decay failed: {e}")
+            return {'decayed': 0, 'archived': 0, 'error': str(e)}
+
     def mine_patterns(self, days_back: int = 30) -> Dict[str, Any]:
         """
         Mine real performance data to create LearningPattern entries.
