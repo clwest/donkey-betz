@@ -492,6 +492,15 @@ def cleanup_learning_readback_events(retention_days: int = 30):
 
 
 @shared_task
+def decay_learning_patterns():
+    """Session 1085: Weekly decay of stale/ineffective learning patterns."""
+    from core.services.learning_pattern_engine import LearningPatternEngine
+    engine = LearningPatternEngine()
+    result = engine.decay_stale_patterns(inactive_days=30, decay_factor=0.9)
+    return result
+
+
+@shared_task
 def cleanup_boardroom_junk(spider_action_hours: int = 6):
     from core.tasks_ops import _impl_cleanup_boardroom_junk
     return _impl_cleanup_boardroom_junk(spider_action_hours)

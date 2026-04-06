@@ -663,3 +663,33 @@ def get_agent_collective_profile(request, agent_name):
             {'error': str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_shared_knowledge(request):
+    """Return recent shared knowledge entries."""
+    from core.models_unified_system import SharedKnowledge
+
+    limit = int(request.GET.get('limit', 10))
+    entries = SharedKnowledge.objects.order_by('-created_at')[:limit]
+
+    return Response({
+        'success': True,
+        'count': entries.count(),
+        'results': [
+            {
+                'id': str(e.id),
+                'source_agent': e.source_agent,
+                'knowledge_type': e.knowledge_type,
+                'title': e.title,
+                'description': e.description[:300],
+                'domain': e.domain,
+                'tags': e.tags,
+                'applied_count': e.applied_count,
+                'effectiveness_score': e.effectiveness_score,
+                'created_at': e.created_at.isoformat(),
+            }
+            for e in entries
+        ],
+    })

@@ -125,6 +125,12 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0, hour=4),
         'options': {'queue': 'default', 'expires': 3600},
     },
+    # Session 1085: Weekly pattern decay — stale/ineffective patterns lose confidence
+    'decay-learning-patterns': {
+        'task': 'core.tasks.decay_learning_patterns',
+        'schedule': crontab(minute=0, hour=5, day_of_week=0),  # Sunday 5am
+        'options': {'queue': 'default', 'expires': 3600},
+    },
     'clean-stale-data': {
         'task': 'ai_core.tasks.clean_stale_data',
         'schedule': crontab(minute=0, hour=2),
