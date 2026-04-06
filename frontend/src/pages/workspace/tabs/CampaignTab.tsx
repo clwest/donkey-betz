@@ -232,10 +232,25 @@ function CampaignListView({
       {error && <ErrorState error={error as Error} message="Failed to load campaigns" onRetry={() => refetch()} />}
 
       {!isLoading && !error && campaigns.length === 0 && (
-        <div className="text-center py-12">
-          <Megaphone size={32} className="mx-auto text-gray-600 mb-3" />
-          <p className="text-gray-400 text-sm">No campaigns yet</p>
-          <p className="text-gray-500 text-xs mt-1">Create your first marketing campaign to get started</p>
+        <div className="text-center py-16 max-w-md mx-auto">
+          <Megaphone size={40} className="mx-auto text-indigo-400 mb-4" />
+          <h3 className="text-lg font-semibold text-gray-200 mb-2">Turn content into campaigns</h3>
+          <p className="text-gray-400 text-sm mb-6">
+            Package published assets, schedule distribution, and measure impact across platforms.
+          </p>
+          <button
+            onClick={onCreate}
+            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors mb-6"
+          >
+            <Plus size={16} className="inline mr-1.5 -mt-0.5" />
+            Create your first campaign
+          </button>
+          <div className="text-left bg-dark-card border border-dark-border rounded-lg p-4 space-y-2">
+            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-2">What you can do</p>
+            <p className="text-sm text-gray-400 flex items-start gap-2"><Target size={14} className="mt-0.5 text-gray-500 shrink-0" /> Choose assets and target channels</p>
+            <p className="text-sm text-gray-400 flex items-start gap-2"><Clock size={14} className="mt-0.5 text-gray-500 shrink-0" /> Schedule and automate delivery</p>
+            <p className="text-sm text-gray-400 flex items-start gap-2"><Play size={14} className="mt-0.5 text-gray-500 shrink-0" /> Track performance across platforms</p>
+          </div>
         </div>
       )}
 
