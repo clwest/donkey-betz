@@ -144,19 +144,60 @@ What agents produce that users see:
 
 ## Verified Data (April 6, 2026)
 
+### Execution Stats
 - **Total executions**: 2,384 across 73 unique agents (of 222 registered)
 - **Last 30 days**: 0 executions (token conservation mode)
-- **Top agents**: CodeGeneratorAgent (991 runs, 99.6% success), ResearchAgent (240, 94.2%), AutonomousContentStudioCoordinator (124, 91.1%), DevOpsAgent (108, 100%), TrendAnalysisAgent (103, 97.1%)
-- **Agent effectiveness scores**: Real data — only 4.5% at default 85, distribution ranges 50-85 based on actual performance
-- **149 agents have never executed** (registered but dormant)
+- **Top agents**: CodeGeneratorAgent (991 runs, 99.6%), ResearchAgent (240, 94.2%), DevOpsAgent (108, 100%), TrendAnalysisAgent (103, 97.1%)
+- **Total cost**: $52.75 across 10M tokens
+- **Most expensive**: CodeGeneratorAgent ($32.21), DevOpsAgent ($5.49), FullStackDeveloperAgent ($3.34)
 
-## 10. Truth Gaps
+### Knowledge Sources (VERIFIED — active cross-agent knowledge)
+- **5,213 total** knowledge records, 4,949 active
+- **By type**: trend (3,469), competitor (555), user_behavior (377), market (343), best_practice (262), content_idea (84), opportunity (83), tool_discovery (40)
+- **Top knowledge holders**: ResearchAgent (1,035), ContentStrategyAgent (758), WorkflowAgent (341), TrendAnalysisAgent (206)
 
-- **Agent effectiveness scores**: All default to 85 — no real performance data driving these
-- **Knowledge retrieval quality**: Semantic search exists but embedding coverage unknown — need to audit what % of AgentKnowledgeSource records have valid embeddings
-- **Cross-agent learning impact**: _share_knowledge() writes records but unclear if agents actually retrieve and benefit from other agents' knowledge
-- **Persona agent quality**: 139 DB personas use generic DynamicPersonaAgent — quality likely lower than dedicated code agents
-- **Tool call success rate**: ToolCallRecord exists but no aggregate analysis done
+### Cross-Agent Learning (PARTIALLY WORKING)
+- **138 SharedKnowledge records** created by 10+ agents
+- **Top sharers**: ResearchAgent (28), WorkflowAgent (13), ImageAgent (13), TrendAnalysisAgent (11)
+- **applied_count = 0 for ALL records** — knowledge is shared but never marked as consumed
+- **Verdict**: Writing works, reading/tracking does NOT
+
+### Memory Safety Classification (VERIFIED — no poisoning)
+- **1,079 total memories**: 594 approved (55%), 485 candidate (45%)
+- **0 test_only, 0 exploratory** — safety classification is conservative
+- **Only 2 records** with poison_risk_score > 0.5
+- **By type**: success (1,044), interaction (9), insight (9), technique (9), failure (4)
+- **By valence**: positive (936), neutral (139), negative (4)
+
+### Evolution System (VERIFIED — real level variation)
+- **147 agents** have evolution records
+- **Average level**: 7.5 (not all stuck at 1)
+- **Level distribution**: 3 agents at level 20 (max observed), 14 at level 15, spread across 1-20
+- **Top by XP**: TrendAnalysisAgent (779K XP, level 20), ResearchAgent (718K, level 20), CustomerResearchAgent (531K, level 20)
+- **XP bonuses applied**: speed_bonus ranges 0.02-0.38, quality_bonus ranges 0.02-0.38
+- **Verdict**: Evolution IS real, levels DO vary, bonuses ARE calculated
+
+### Tool Calls (VERIFIED — limited tracking)
+- **48 total records**, 100% success rate
+- **Top tools**: web_search (10, avg 1s), create_api_endpoint (9, avg 30s), design_database_schema (5, avg 42s)
+- **Top agents calling tools**: FullStackDeveloperAgent (20), ResearchAgent (13)
+- **Low volume**: Only 48 records suggests ToolCallRecord doesn't capture ALL tool calls (agents make thousands)
+
+### LLM Model Routing (VERIFIED — multi-model active)
+- **Primary**: gpt-5.2 (1,152 calls by InterviewAssistant), gpt-5.1 (734 calls)
+- **Anthropic tested**: claude-sonnet-4 (1 call), claude-3.5-sonnet (1 call), claude-opus-4 (1 call)
+- **Together AI tested**: Meta-Llama-3.1-70B (2 calls by CodeGeneratorAgent)
+- **Verdict**: Multi-model routing IS used, not just OpenAI
+
+## 10. Truth Gaps (Updated)
+
+- ~~Agent effectiveness scores~~: **RESOLVED** — real data, not defaults (4.5% at default 85)
+- ~~Knowledge retrieval quality~~: **RESOLVED** — 5,213 knowledge sources, 4,949 active
+- **Cross-agent learning PARTIAL**: SharedKnowledge written (138 records) but applied_count=0 for all — consumption not tracked
+- ~~Persona agent quality~~: **NEEDS DATA** — import error prevented code vs persona comparison
+- ~~Tool call success rate~~: **RESOLVED** — 100% (48/48) but low tracking volume
+- ~~Evolution system~~: **RESOLVED** — real levels (avg 7.5), real XP (up to 779K), bonuses applied
+- ~~LLM model routing~~: **RESOLVED** — 3 providers actively used (OpenAI, Anthropic, Together)
 - **Prompt composition cost**: 7-layer prompt may exceed context window for some agents — no monitoring
 - **LLM model routing**: AgentLLMRouter exists (Session 697) but unclear if any agents actually use non-OpenAI models
 - **Evolution system**: XP and levels exist but unclear if authority level actually changes agent behavior in practice
