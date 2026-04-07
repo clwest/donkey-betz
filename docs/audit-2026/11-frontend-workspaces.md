@@ -100,8 +100,8 @@ Each has refresh, fullscreen toggle, and external link controls. App detection v
 
 ## 8. Truth Gaps
 
-- **Bundle size**: 2.6MB main chunk — needs code splitting
-- **Tab completeness**: Some tabs show empty/mock data (identified in today's audit)
-- **WebSocket usage**: 30+ WebSocket consumers defined but unclear which ones are actively used in production
-- **Mobile responsiveness**: Not audited — responsive classes used but no mobile testing
-- **Offline capability**: None — fully server-dependent
+- ~~Bundle size~~: **RESOLVED** — 5.6MB total JS (2 main chunks ~2.6MB each + html2canvas 200KB). Needs code splitting.
+- ~~WebSocket usage~~: **RESOLVED** — 110 WebSocket paths defined in routing.py. Many are duplicates or legacy. Significant cleanup needed.
+- **Tab completeness**: CONFIRMED — several tabs show empty/mock data (verified in today's Build tab audit)
+- **Mobile responsiveness**: DESIGN QUESTION — not audited, would need device testing
+- **Offline capability**: CONFIRMED — none, fully server-dependent (by design)
