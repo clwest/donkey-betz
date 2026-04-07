@@ -1670,6 +1670,21 @@ Use delegation when you need expertise outside your specialty. For example:
         if system_learnings:
             parts.append(f"\n\n{system_learnings}")
 
+        # Session 1085: Add advisor context to standard prompt flow
+        advisor_insights = (spider_context or {}).get('advisor_insights')
+        if advisor_insights and isinstance(advisor_insights, dict):
+            advisors = advisor_insights.get('relevant_advisors', [])
+            principles = advisor_insights.get('key_principles', [])
+            if advisors or principles:
+                parts.append("\n\n## Advisor Guidance")
+                if advisors:
+                    names = [a.get('name', '') for a in advisors[:3] if isinstance(a, dict)]
+                    if names:
+                        parts.append(f"Relevant advisors: {', '.join(names)}")
+                if principles:
+                    for p in principles[:3]:
+                        parts.append(f"- {p}")
+
         # Add mood modifier if available - Session 497: Now affects behavior
         if scifi_context:
             mood = scifi_context.get('mood')
