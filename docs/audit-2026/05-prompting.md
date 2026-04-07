@@ -217,14 +217,14 @@ Layer-by-layer verification executed against ResearchAgent with task "What are t
 
 ## 10. Truth Gaps
 
-- **Injection impact measurement**: No A/B testing of prompt layers — unclear which layers actually improve output quality
-- **Token budget management**: No dynamic pruning if total exceeds context window — layers are added regardless of remaining budget
-- **Advisor context unused in standard flow**: 25 advisors defined but NOT injected in `_build_prompt()` — only available if agents explicitly call AdvisorContextBuilder
-- **Mood/Evolution effect on output**: Behavioral directives are injected but no measurement of whether agents actually behave differently at different mood/authority levels
-- **Policy relevance**: Policies are filtered by impact area but no relevance scoring — may inject irrelevant policies
-- **Sharpening side effects**: Regex replacements could modify technical content inside code blocks or quotes
-- **Learning pattern freshness**: System learnings extracted from all-time data — no time weighting for recent vs. old patterns
-- **Memory safety classification distribution**: How many memories are 'test_only' vs 'approved'? If mostly test_only, semantic search returns limited results
+- **Injection impact measurement**: DESIGN QUESTION — No A/B testing of prompt layers — unclear which layers actually improve output quality
+- **Token budget management**: DESIGN QUESTION — No dynamic pruning if total exceeds context window — layers are added regardless of remaining budget
+- **Advisor context unused in standard flow**: **CONFIRMED GAP** — 25 advisors defined but NOT injected in `_build_prompt()` — verified advisors are NOT in the standard prompt flow, only available if agents explicitly call AdvisorContextBuilder
+- **Mood/Evolution effect on output**: DESIGN QUESTION — Behavioral directives are injected but no measurement of whether agents actually behave differently at different mood/authority levels
+- **Policy relevance**: DESIGN QUESTION — Policies are filtered by impact area but no relevance scoring — may inject irrelevant policies
+- **Sharpening side effects**: DESIGN QUESTION — Regex replacements could modify technical content inside code blocks or quotes
+- **Learning pattern freshness**: DESIGN QUESTION — System learnings extracted from all-time data — no time weighting for recent vs. old patterns
+- ~~Memory safety distribution~~: **RESOLVED** — 594 approved, 485 candidate, 0 test_only
 
 ## Key Patent Claims (Prompt Assembly)
 

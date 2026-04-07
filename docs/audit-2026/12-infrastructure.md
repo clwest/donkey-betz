@@ -148,7 +148,7 @@ From `Procfile`:
 ## 11. Truth Gaps
 
 - **Cost breakdown**: No aggregate monthly cost tracking across Railway + OpenAI + Stability + Runway + ElevenLabs
-- **LLM provider usage**: 11 providers configured but unclear which are actively used vs. just configured
+- ~~LLM provider usage~~: **RESOLVED** — 3 active (OpenAI, Anthropic, Together), 8 configured but unused
 - **WebSocket active usage**: 30+ consumers defined but many may be unused legacy endpoints
 - **Redis memory usage**: No monitoring of Redis memory across 3 DBs
 - **Database size**: No tracking of PostgreSQL storage growth over time
