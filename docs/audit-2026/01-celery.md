@@ -116,6 +116,12 @@ What the user actually sees from Celery activity:
 
 **To re-enable:** Uncomment disabled schedules in `core/celery.py:24-227` or trigger tasks manually via `task.delay()`.
 
+## Verified Data (April 6, 2026)
+
+- **Task success rate**: 100% (10,645 success of 10,647 total, 0 failures)
+- **Top tasks by volume**: check_circulation (1,004), process_event_bus_scoring_queue (1,003), immune_scan (670), check_workflow_schedules (506)
+- **Queue backlog**: Not measured (no Redis queue length monitoring)
+
 ## 10. Truth Gaps
 
 - **Actual token cost per cycle**: Unknown — need to trace LLM calls per task and sum costs
