@@ -178,6 +178,7 @@ What users see from spider activity:
 - **Broken spiders**: weworkremotely, producthunt, courtlistener, techcrunch_startups, techcrunch, devto, axios, theverge, freecodecamp, wired
 - **Top producers**: kalshi (485 items/run avg), theodds (58/run), cnn (42/run), findlaw (38/run)
 - **Embedding coverage**: 20.1% (22,007 of 109,716 SpiderData records)
+- **Dedup effectiveness**: Only 84 duplicate spider_name+source_url combos out of 109,716 records (99.9% unique) — dedup is working
 
 ## 10. Truth Gaps
 

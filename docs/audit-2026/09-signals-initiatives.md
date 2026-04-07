@@ -169,6 +169,9 @@ Initiatives have explicit human control parameters:
 - **0 completed** — no initiative has finished all 5 stages
 - **30 past stage 1**: 19 at stage 2, 9 at stage 3, 2 at stage 5
 - **218 stuck at stage 1** — pipeline stall, likely needs auto-approve or batch approval
+- **793 total initiative stages**: 723 PENDING (91%), 43 APPROVED (5.4%), 27 DRAFT (3.4%)
+- **43 stages approved** across all initiatives — some progress is happening
+- **723 PENDING stages** = massive backlog of work waiting for agent execution or approval
 
 ## 9. Truth Gaps
 

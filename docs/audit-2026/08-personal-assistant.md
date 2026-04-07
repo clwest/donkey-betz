@@ -161,6 +161,8 @@ User message arrives
 - **98 tool schemas** registered (was 103 in code — 5 may be dynamically added)
 - **260,235 LLM calls** logged, $1.12 total cost
 - **PA verified working** locally and on production via Celery PA queue
+- **98 tool schemas** with 479 total actions across all schemas
+- **Sample tools**: dream_tool, agent_control_tool, blog_tool, brainstorm_tool, analytics_tool, audit_tool, autopilot_tool, ats_tool, bpaas_tool, agent_memory_tool
 
 ## 10. Truth Gaps
 
