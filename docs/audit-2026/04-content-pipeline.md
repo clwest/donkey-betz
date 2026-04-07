@@ -216,16 +216,21 @@ brief, research, strategy, draft, edit_review, fact_check, rewrite, seo, distrib
 - **5 published blogs** all have quality scores >= 0.7
 - **Pipeline throughput**: Very low — only 5 blogs made it to published status
 - **Deliberation sessions**: 6 total, all status=completed (100% completion rate)
-- **Pipeline is functional but underused** — only 6 runs ever, all succeeded
+- **Pipeline decisions**: 3 REVISE, 0 PUBLISH, 0 KILL (1,139 blogs have no deliberation data — created before v2 pipeline)
+- **PublishGate scores**: 7 blogs scored, avg quality=0.80, avg novelty=0.0, avg structure=0.0. 0 marked publish_ready.
+- **Content Packets**: 0 packets, 0 items — feature built but never used in pipeline
+- **Channels**: 14 channels, 215 episodes, 0 episodes with views (no audience tracking)
+- **Newsletter deliverables**: 52 newsletter-related deliverables exist
+- **Reviewer verdicts**: Not stored in DeliberationSession metadata (0 sessions have review_verdicts)
 
-## 10. Truth Gaps
+## 10. Truth Gaps (Updated)
 
-- **End-to-end success rate**: How many pipeline runs produce PUBLISH vs REVISE vs KILL? No aggregate stats
-- **Claims quality**: ClaimsPack assembles claims but no validation that claims are actually relevant to the topic
-- **Reviewer agreement**: Do the 3 reviewers typically agree? No cross-reviewer analysis
-- **Rewrite effectiveness**: When REVISE triggers a rewrite, does the rewritten version pass the gate? No tracking
-- **PublishGate calibration**: Thresholds were adjusted multiple times — are current values optimal?
-- **Newsletter delivery**: SubstackManualProvider prepares content but no tracking of actual sends/opens
-- **Content Packet adoption**: ContentPacket model exists but unclear if pipeline actually creates packets or just individual deliverables
-- **Channel performance feedback**: ChannelEpisode tracks views/likes but unclear if this feeds back to improve future episodes
-- **Cost per published blog**: Full pipeline (claims + draft + 3 reviews + debate + rewrite) is expensive — cost not tracked per pipeline run
+- ~~End-to-end success rate~~: **RESOLVED** — 3 REVISE, 0 PUBLISH, 0 KILL out of deliberation runs. Most blogs created via v1 (no deliberation).
+- ~~Reviewer agreement~~: **RESOLVED** — verdicts not stored in session metadata, so cross-reviewer analysis impossible without code change
+- ~~Content Packet adoption~~: **RESOLVED** — 0 packets ever created. Feature exists but pipeline doesn't use it.
+- ~~Channel performance feedback~~: **RESOLVED** — 215 episodes, 0 with views. No audience data flowing back.
+- ~~Newsletter delivery~~: **RESOLVED** — 52 deliverables exist but SubstackManualProvider is copy/paste (no send tracking)
+- **Claims quality**: DESIGN QUESTION — would need human evaluation of claim relevance
+- **Rewrite effectiveness**: DESIGN QUESTION — need to track REVISE→re-gate outcome chain
+- **PublishGate calibration**: DESIGN QUESTION — avg novelty=0.0 and structure=0.0 suggest scoring may be broken or thresholds too strict
+- **Cost per published blog**: DESIGN QUESTION — would need per-pipeline-run cost aggregation
