@@ -601,6 +601,53 @@ def pa_activity_feed(request):
     })
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def pa_message_feedback(request):
+    """
+    Session 1085: Submit thumbs up/down feedback on a PA response.
+
+    POST /api/pa/feedback/
+    {
+        "conversation_id": "pa-xxx",
+        "message_index": 3,
+        "rating": 1,       // +1 (thumbs up) or -1 (thumbs down)
+        "note": "optional"  // feedback text
+    }
+    """
+    import uuid
+    from django.db import connection
+
+    conversation_id = request.data.get('conversation_id', '')
+    message_index = request.data.get('message_index', 0)
+    rating = request.data.get('rating', 0)
+    note = request.data.get('note', '')
+
+    if rating not in (1, -1):
+        return Response({'error': 'rating must be 1 or -1'}, status=400)
+
+    feedback_id = str(uuid.uuid4())
+    user_id = str(request.user.id)
+
+    with connection.cursor() as c:
+        # Upsert — update if exists, insert if not
+        c.execute("""
+            INSERT INTO core_pamessagefeedback (id, user_id, conversation_id_str, message_index, rating, note, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW())
+            ON CONFLICT (user_id, conversation_id_str, message_index)
+            DO UPDATE SET rating = %s, note = %s, updated_at = NOW()
+            RETURNING id
+        """, [feedback_id, user_id, conversation_id, message_index, rating, note, rating, note])
+        row = c.fetchone()
+        returned_id = row[0] if row else feedback_id
+
+    return Response({
+        'success': True,
+        'id': returned_id,
+        'rating': rating,
+    })
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def pa_chat_status(request, task_id):
