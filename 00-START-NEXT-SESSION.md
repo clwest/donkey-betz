@@ -1,156 +1,127 @@
 # Next Session — Start Here
 
-**Date:** April 6, 2026
-**Previous Session:** Platform Audit + Founder Toolkit Launch
+**Date:** April 7, 2026
+**Previous Session:** Platform Audit Complete + Founder Toolkit Live + Marketing Prep
 **PA Conversation:** pa-d19c1674b936
-**Status:** 218 Agents | 80 Spiders | 25 Advisors | PA function calling LIVE (GPT-5.2) | 4 Founder Toolkit apps LIVE with Stripe
+**Status:** 226 Agents | 86 Spiders | 25 Advisors | 4 Founder Toolkit apps LIVE with Stripe | Landing page LIVE | 5 more apps ready to deploy
 
 ---
 
-## What Was Done This Session
+## What Was Done (April 6-7, 2026)
 
-### Founder Toolkit — 4 Apps Deployed to Production (FREE hosting)
+### Founder Toolkit — LIVE with Stripe Payments
+| App | URL | Stripe | Status |
+|-----|-----|--------|--------|
+| **PitchDeckForge** | pitchdeckforge.vercel.app | $29/mo Pro, $79/mo Team | LIVE |
+| **MentorForge** | mentorforge.vercel.app | $19/mo Pro, $49/mo Enterprise | LIVE |
+| **DealFlowTracker** | dealflowtracker.vercel.app | $39/mo Pro, $99/mo Fund | LIVE |
+| **Contract Concierge** | contract-concierge-pi.vercel.app | $29/mo Pro, $79/mo Business | LIVE |
+| **Landing Page** | founder-toolkit.vercel.app | $299 Sprint (Stripe Payment Link) | LIVE |
 
-| App | URL | Stripe | Templates/Features |
-|-----|-----|--------|-------------------|
-| **PitchDeckForge** | pitchdeckforge.vercel.app | $29/mo Pro, $79/mo Team | 4 deck templates, PDF export, bonus slides, share links, slide delete |
-| **MentorForge** | mentorforge.vercel.app | $19/mo Pro, $49/mo Enterprise | 12 AI mentor personas (8 tech + 4 fundraising) |
-| **DealFlowTracker** | dealflowtracker.vercel.app | $39/mo Pro, $99/mo Fund | Kanban pipeline, scorecards, AI investment memos, contacts |
-| **Contract Concierge** | contract-concierge on Render/Vercel | $29/mo Pro, $79/mo Business | 12 contract templates (NDA, LOI, Advisor, ToS, Privacy, Invoice, etc.) |
+**All apps share:** One PostgreSQL database, one login (SSO), Founder Toolkit cross-app nav bar, shared SECRET_KEY
 
-**Infrastructure:** Render (backend, free tier) + Vercel (frontend, free) + shared PostgreSQL + shared Stripe + SSO across all 4 apps
+### Apps Ready to Deploy (5 more)
+| App | Repo | Status |
+|-----|------|--------|
+| SellerPilot | clwest/sellerpilot | Ready — pushed to GitHub |
+| SignalStudio | clwest/signal-studio | Ready — pushed to GitHub |
+| ScoutPlays | clwest/scoutplays | Ready — pushed to GitHub |
+| ComplianceSentinel | clwest/compliancesentinel | Ready — pushed to GitHub |
+| Ironwood Protocol | clwest/ironwood-protocol | Ready — deployed to Vercel + Render |
 
-### 12-Dossier Platform Reality Audit (`docs/audit-2026/`)
+### 12-Dossier Platform Audit — COMPLETE
+All 12 dossiers verified. 44 resolved, 31 design questions, 5 confirmed gaps, 0 open.
+Location: `docs/audit-2026/`
 
-Complete ground-up audit of every subsystem for patent lawyer and investors:
+### Key Platform Fixes
+- Learning loop: XP bonuses applied, pattern decay added, SharedKnowledge consumption tracked
+- Model selection: gpt-5.2 for tool-calling agents (gpt-5-mini was failing)
+- Agent dedup guard, superuser workspace access, deliverable ownership
+- PA thumbs up/down feedback, spider dynamic reliability, advisor injection
+- A/B testing command: `python manage.py test_prompt_layer`
+- 226 agents seeded to production (was 39)
 
-| # | Subsystem | Status | Key Finding |
-|---|-----------|--------|-------------|
-| 1 | Celery Orchestration | WORKING | 413 tasks, 48 scheduled, 9 queues |
-| 2 | Agent System | WORKING | 84 code + 139 DB agents, 11-source context injection |
-| 3 | Spider Network | WORKING | 86 spiders, 40+ web sources, 30-min cycle |
-| 4 | Content Pipeline | WORKING | 7-stage deliberation + publish gate |
-| 5 | Prompt Assembly | WORKING | 11 injection layers, mood/evolution modifiers |
-| 6 | Embeddings + RAG | WORKING | 7 embedding stores, pgvector HNSW |
-| 7 | Learning Loops | WORKING | Loop IS closed — 454+ pattern applications, 96.5% effectiveness |
-| 8 | Personal Assistant | WORKING | 103 tools, 162 handlers, GPT-5.2 |
-| 9 | Signals + Initiatives | WORKING | Full spider→signal→initiative chain |
-| 10 | ConceptForge | WORKING | 6-stage pipeline, 18 advisors, gate relaxed |
-| 11 | Frontend + Workspaces | WORKING | 23 tabs, 9 embedded apps |
-| 12 | Infrastructure | WORKING | Django 5, PostgreSQL+pgvector, 11 LLM providers |
+### PitchDeckForge Improvements
+- Target Market + Business Model fields added to brief
+- Bonus slides use gpt-5.2 for clean JSON
+- PDF export: proper text wrapping, Q&A formatting (Q on top, A below), continuation pages
+- Slide delete button
+- 4 deck strategies: Clean, Investor, Growth, Product-Led
 
-### Learning Loop Improvements
-- XP bonuses now applied during execution (speed_bonus → more tokens, quality_bonus → more time)
-- Weekly pattern decay task (stale patterns lose confidence)
-- Deprecated dead code in LearningLoopOrchestrator
+---
 
-### Platform Fixes (7 PRs merged)
-- Deliverable ownership: all deliverables auto-assigned to user
-- Agent dedup guard: 10-min cache lock prevents duplicate dispatch
-- Superuser workspace access: Jessica/Jeremy can now activate any workspace
-- Build tab UX: empty states with CTAs, duplicate sub-tabs removed
-- TypeScript errors: 38→0 in Build tab files
-- Home tab: workspace-scoped data
-- Initiative populate: rewritten to work with real data
-- Workspace config: auto-create default config
-- Shared knowledge endpoint: /api/v1/collective/shared-knowledge/
-- ConceptForge gate: relaxed to quality-only (tags optional)
+## PRIORITY 1: Marketing & Revenue (THIS SESSION)
 
-### Truth Gaps Audit Results
+### Rigby's GTM Strategy
+- **Sell:** "Fundraising Sprint Stack" — $299 one-time or $49/mo
+- **Target:** Pre-seed/seed founders actively raising
+- **Channels:** LinkedIn DMs (50-100/day), partner intros, founder communities
+- **Copy:** "I'll get your raise materials investor-ready in 48h"
+- **Demo video:** Record with OBS, 3 minutes, outcome-first
 
-| Gap | Finding |
-|-----|---------|
-| Spider embeddings | 20.1% coverage (22K of 109K) |
-| Memory embeddings | 97.6% coverage (good) |
-| Agent effectiveness | Real data, not defaults (4.5% at default 85) |
-| LLM providers | 99.2% OpenAI, also Anthropic + Together tested |
-| Spider success rate | 67.7% (32% return 0 items) |
-| Tool call tracking | 100% success but only 48 records |
-| Initiatives | 0 completed of 248 (218 stuck at stage 1) |
+### Landing Page Live
+- URL: https://founder-toolkit.vercel.app
+- $299 Sprint button → Stripe Payment Link (LIVE)
+- Demo video placeholder ready for embed
+- Honest copy (verified claims only)
+
+### Next Steps
+1. **Record demo video** — show PitchDeck → DealFlow → Contract → Mentor flow
+2. **Embed video** on landing page
+3. **Send 30 outbound DMs** to founders raising on LinkedIn
+4. **Post on** r/startups, Indie Hackers, X
+5. **Contact accelerator mentors** for referral partnerships
+
+## PRIORITY 2: Use Rigby as Marketing Assistant
+
+Next session focus: Work WITH Rigby in production (not development) to:
+- Write video scripts
+- Draft DM templates for different audiences
+- Create social media posts
+- Analyze which pitch angles work best
+- Track outreach results
+
+## PRIORITY 3: Platform Improvements (if time)
+
+- Deploy remaining 5 apps to Vercel/Render
+- Spider embedding backlog (20% → target 80%)
+- Re-enable agent scheduled runs
+- Initiative pipeline (0 completed — needs auto-approve)
+- Workspace UI tab fixes (ongoing)
 
 ---
 
 ## Accounts
 
-- `donkeyking` (Chris) — superuser/owner (Railway: `admin`, Local: `admin`)
+- `donkeyking` (Chris) — superuser/owner
 - `jessica` — superuser, business side
 - `jeremy` — superuser, patent lawyer
-
-## Local Development Setup
-
-```bash
-# Main platform
-make start && make celery
-
-# PA worker (separate terminal)
-OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l info --pool=threads -c 2 -Q pa
-
-# All 9 apps (separate terminal)
-for app in pitchdeckforge dealflowtracker mentorforge sellerpilot signal-studio scoutplays compliancesentinel contract-concierge ironwood-protocol; do
-  (cd /Users/donkeyking/development/$app/backend && uvicorn app.main:app --port $(grep port /Users/donkeyking/development/$app/start.sh | grep -o '[0-9]*' | head -1) --host 0.0.0.0 --reload &)
-  (cd /Users/donkeyking/development/$app/frontend && npx vite &)
-done
-
-# Talk to Rigby locally
-PA_API_URL=http://localhost:8000 PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557 python tools/pa_chat.py "message" --tools --conversation pa-d19c1674b936
-```
-
-## PRIORITY 1: Revenue (This Week)
-
-Rigby's GTM strategy — sell "Fundraising Sprint Stack" not 4 individual apps:
-1. **Outbound DMs** (50-100/day) to founders actively raising on LinkedIn/AngelList
-2. **Partner intros** to fractional CFOs, startup lawyers, accelerator mentors
-3. **Community posts** on r/startups, Indie Hackers, LinkedIn (outcome-first, not feature-first)
-4. **Bundle pricing**: "Raise Ready in 72 Hours" trial at $9-19
-
-## PRIORITY 2: Platform Stabilization
-
-- Spider embedding backlog (20% coverage → needs batch backfill)
-- Initiative pipeline stall (0 completed — need auto-approve or batch-approve)
-- Re-enable agent scheduled runs (token conservation mode too aggressive)
-- Audit broken spiders (32% failure rate)
-
-## PRIORITY 3: Remaining Platform Work
-
-- Workspace tabs: Work, Intelligence, System tabs need same audit as Build
-- Content Packets UI: packet detail page
-- Stripe webhooks: subscription status tracking
-- All 9 standalone apps need Stripe integration (4 done, 5 remaining)
-
-## Known Issues
-
-### Founder Toolkit Apps
-- All 4 share one free Render PostgreSQL database
-- Shared SECRET_KEY for SSO (founder-toolkit-shared-secret-2026)
-- Seed scripts check app-specific tables (not users) to avoid skip on shared DB
-- Contract Concierge needs FRONTEND_URL env var for Stripe redirect
-
-### Platform
-- `unique_active_workspace_per_user` DB constraint: only 1 active per user
-- CeleryTaskEvent table had to be manually created on shared DB
-- Token conservation mode: most agent/content scheduled tasks disabled
 
 ## How to Work with Rigby
 
 ```bash
-# Production
+# Production (Railway)
 python tools/pa_chat.py "message" --tools --conversation pa-d19c1674b936
 
 # Local
-PA_API_URL=http://localhost:8000 PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557 python tools/pa_chat.py "message" --tools --conversation pa-d19c1674b936
-
-# Or use the shortcut
 bash tools/pa_local.sh "message"
 ```
 
-## Troubleshooting
+## Local Development Setup
 
 ```bash
-# Kill all app servers
-pkill -f uvicorn; pkill -f vite
-
-# Full platform restart
-pkill -f daphne; pkill -f redis; pkill -f celery
-rm -f .daphne.pid .celery.pid .celery-beat.pid
 make start && make celery
+# PA worker: OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l info --pool=threads -c 2 -Q pa
 ```
+
+## Founder Toolkit Repos
+- Landing: github.com/clwest/founder-toolkit
+- PitchDeck: github.com/clwest/pitchdeckforge
+- MentorForge: github.com/clwest/mentorforge
+- DealFlow: github.com/clwest/dealflowtracker
+- Contracts: github.com/clwest/contract-concierge
+
+## Stripe
+- Payment Link ($299 Sprint): https://buy.stripe.com/5kQ7sM9CwdgAcPIerc14400
+- Dashboard: https://dashboard.stripe.com
+- Price IDs set on each Render service as env vars
