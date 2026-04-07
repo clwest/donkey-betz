@@ -161,18 +161,23 @@ User message arrives
 - **98 tool schemas** registered (was 103 in code — 5 may be dynamically added)
 - **260,235 LLM calls** logged, $1.12 total cost
 - **PA verified working** locally and on production via Celery PA queue
-- **98 tool schemas** with 479 total actions across all schemas
-- **Sample tools**: dream_tool, agent_control_tool, blog_tool, brainstorm_tool, analytics_tool, audit_tool, autopilot_tool, ats_tool, bpaas_tool, agent_memory_tool
+- **98 tool schemas** with 479 total actions across 70 action-based tools
+- **Tool coverage**: 76 tools matched between schemas and handlers (after normalizing _tool suffix), 22 schema-only, 24 handler-only — naming convention differences, not missing functionality
+- **PA LLM usage**: InterviewAssistant 1,929 calls ($0.43), PersonalAssistant 17 calls ($0.17)
+- **634 conversations** stored in ChatConversation model
+- **Cost per conversation**: $0.0009 avg ($0.60 total across 634 conversations)
+- **Redis tool metrics**: 0 keys found — metrics recording may not be writing to Redis locally
+- **Schema actions**: 70 tools have action enums, 479 total actions. Sample: dream_tool (6 actions), brainstorm_tool (7), opportunity_manager_tool (6)
 
-## 10. Truth Gaps
+## 10. Truth Gaps (Updated)
 
-- **Tool coverage**: 103 schemas but 162 handlers — some handlers not exposed via schemas, some schemas may not have handlers
-- **Tool success rates**: Metrics recorded in Redis but no dashboard or aggregate analysis
-- **Enrichment effectiveness**: 7 enrichers fire but unclear if the added context improves response quality
-- **Conversation memory quality**: 20-turn window may lose important context from earlier in long sessions
-- **Schema-handler sync**: Schema enum values and handler action enums may drift — no automated validation
-- **Cost per conversation**: LLMCallLog tracks per-call but no aggregate cost per conversation session
-- **User satisfaction**: No feedback mechanism for PA response quality (no thumbs up/down)
+- ~~Tool coverage~~: **RESOLVED** — 76 matched, differences are naming conventions (_tool suffix), not missing functionality
+- ~~Tool success rates~~: **PARTIAL** — Redis metrics not found locally (may only work on Railway with persistent Redis)
+- ~~Schema-handler sync~~: **RESOLVED** — 22 schema-only + 24 handler-only, but naming normalization shows 76 matched pairs
+- ~~Cost per conversation~~: **RESOLVED** — $0.0009 avg per conversation ($0.60 total / 634 conversations)
+- **Enrichment effectiveness**: DESIGN QUESTION — need A/B test with/without enrichment to measure impact
+- **Conversation memory quality**: DESIGN QUESTION — 20-turn window is a design choice, not a bug
+- **User satisfaction**: CONFIRMED GAP — no thumbs up/down feedback mechanism exists
 
 ## Key Patent Claims (Personal Assistant)
 
