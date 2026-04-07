@@ -210,4 +210,4 @@ What agents produce that users see:
 **Verdict**: Persona agents perform nearly as well as code agents (96.5% vs 97.9%). The 1.4% gap is negligible. Top persona performers include DebateAdvocateAgent (100%), ArbitrageDetector (100%), and ModeratorAgent (100%). The lowest performer is SystemIntelligenceAgent (81.8%) which handles complex system analysis.
 
 **All 8 agent truth gaps are now RESOLVED.**
-- **Evolution system**: XP and levels exist but unclear if authority level actually changes agent behavior in practice
+- ~~Evolution behavior~~: **RESOLVED** — `_build_prompt()` injects authority directives based on level: master (31+) gets "Lead with authority", expert (16+) gets "authoritative guidance", senior (6+) gets "balanced recommendations", junior gets "be thorough". Verified in code at base_agent.py lines 83-102.
