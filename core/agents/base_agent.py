@@ -1281,6 +1281,37 @@ Use delegation when you need expertise outside your specialty. For example:
         except Exception as e:
             logger.warning(f"Failed to retrieve agent knowledge: {e}")
 
+        # Session 1085: Also query SharedKnowledge and track consumption
+        try:
+            from core.models_unified_system import SharedKnowledge
+            from django.db.models import F
+
+            remaining = limit - len(results)
+            if remaining > 0:
+                task_lower = task.lower()
+                sk_keywords = [w for w in task_lower.split() if len(w) > 3][:3]
+                sk_query = SharedKnowledge.objects.filter(effectiveness_score__gte=0.5)
+                if sk_keywords:
+                    from django.db.models import Q
+                    kw_q = Q()
+                    for kw in sk_keywords:
+                        kw_q |= Q(title__icontains=kw) | Q(description__icontains=kw)
+                    sk_query = sk_query.filter(kw_q)
+
+                for sk in sk_query.order_by('-effectiveness_score')[:remaining]:
+                    results.append({
+                        'source_agent': sk.source_agent,
+                        'title': sk.title[:60] if sk.title else '',
+                        'summary': sk.description[:300] if sk.description else '',
+                        'knowledge_type': sk.knowledge_type,
+                        'confidence': sk.effectiveness_score,
+                        'spider_sources': [],
+                    })
+                    # Track that this knowledge was consumed
+                    SharedKnowledge.objects.filter(id=sk.id).update(applied_count=F('applied_count') + 1)
+        except Exception as e:
+            logger.debug(f"SharedKnowledge query failed (non-critical): {e}")
+
         if results:
             logger.debug(f"Found {len(results)} relevant knowledge items for task")
 
@@ -2852,55 +2883,78 @@ Consider these trends when crafting the response to maximize relevance and engag
         Returns:
             Tool execution result
         """
-        # Session 744: Handle delegate_to_specialist tool automatically
-        if tool_name == 'delegate_to_specialist':
-            return self._handle_delegate_to_specialist(
-                specialist_agent=arguments.get('specialist_agent', ''),
-                task=arguments.get('task', ''),
-                context=arguments.get('context', ''),
-                delegation_context=getattr(self, '_current_delegation_context', {})
-            )
+        # Session 1085: Record built-in tool calls (wrapper only catches subclass overrides)
+        import time as _tc_time
+        _tc_start = _tc_time.time()
+        _tc_result = None
+        _tc_success = True
 
-        # Session 988: Handle web_search tool for any agent that includes it
-        if tool_name == 'web_search':
-            try:
-                from core.tools.web_search import WebSearchTool
-                search_tool = WebSearchTool()
-                return search_tool.execute(
-                    query=arguments.get('query', ''),
-                    max_results=arguments.get('num_results', 10),
-                    search_type=arguments.get('search_type', 'text'),
+        try:
+            # Session 744: Handle delegate_to_specialist tool automatically
+            if tool_name == 'delegate_to_specialist':
+                _tc_result = self._handle_delegate_to_specialist(
+                    specialist_agent=arguments.get('specialist_agent', ''),
+                    task=arguments.get('task', ''),
+                    context=arguments.get('context', ''),
+                    delegation_context=getattr(self, '_current_delegation_context', {})
                 )
-            except Exception as e:
-                return {
-                    'success': False,
-                    'error': f"Web search failed: {str(e)}"
-                }
+                return _tc_result
 
-        # Session 1002B: Handle spider_query tool for any agent that includes it
-        if tool_name == 'spider_query':
+            # Session 988: Handle web_search tool for any agent that includes it
+            if tool_name == 'web_search':
+                try:
+                    from core.tools.web_search import WebSearchTool
+                    search_tool = WebSearchTool()
+                    _tc_result = search_tool.execute(
+                        query=arguments.get('query', ''),
+                        max_results=arguments.get('num_results', 10),
+                        search_type=arguments.get('search_type', 'text'),
+                    )
+                    return _tc_result
+                except Exception as e:
+                    _tc_success = False
+                    _tc_result = {'success': False, 'error': f"Web search failed: {str(e)}"}
+                    return _tc_result
+
+            # Session 1002B: Handle spider_query tool for any agent that includes it
+            if tool_name == 'spider_query':
+                try:
+                    from core.services.spider_intelligence import SpiderIntelligenceService
+                    service = SpiderIntelligenceService()
+                    query = arguments.get('query', '')
+                    categories = arguments.get('categories', [])
+                    limit = arguments.get('limit', 20)
+                    results = service.search_spider_data(
+                        query=query,
+                        category=categories[0] if len(categories) == 1 else None,
+                        hours=72,
+                        limit=limit
+                    )
+                    _tc_result = {'success': True, 'discussions': results, 'query': query, 'count': len(results)}
+                    return _tc_result
+                except Exception as e:
+                    _tc_success = False
+                    _tc_result = {'success': False, 'error': f"Spider query failed: {e}", 'discussions': []}
+                    return _tc_result
+
+            # Session 1002C: Return error dict instead of raising
+            _tc_success = False
+            _tc_result = {'success': False, 'error': f"Tool execution for '{tool_name}' not implemented in {self.name}"}
+            return _tc_result
+
+        finally:
+            # Record all built-in tool calls
             try:
-                from core.services.spider_intelligence import SpiderIntelligenceService
-                service = SpiderIntelligenceService()
-                query = arguments.get('query', '')
-                categories = arguments.get('categories', [])
-                limit = arguments.get('limit', 20)
-                results = service.search_spider_data(
-                    query=query,
-                    category=categories[0] if len(categories) == 1 else None,
-                    hours=72,
-                    limit=limit
+                _latency = int((_tc_time.time() - _tc_start) * 1000)
+                self._record_tool_call(
+                    tool_name=tool_name,
+                    arguments=arguments,
+                    result=_tc_result,
+                    latency_ms=_latency,
+                    success=_tc_success,
                 )
-                return {'success': True, 'discussions': results, 'query': query, 'count': len(results)}
-            except Exception as e:
-                return {'success': False, 'error': f"Spider query failed: {e}", 'discussions': []}
-
-        # Session 1002C: Return error dict instead of raising, so subclasses
-        # can safely call super()._execute_tool_call() as a fallback.
-        return {
-            'success': False,
-            'error': f"Tool execution for '{tool_name}' not implemented in {self.name}"
-        }
+            except Exception:
+                pass
 
     def _execute_and_record_tool_call(
         self,
