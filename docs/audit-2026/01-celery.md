@@ -128,8 +128,8 @@ What the user actually sees from Celery activity:
 
 ## 10. Truth Gaps
 
-- **Actual token cost per cycle**: Unknown — need to trace LLM calls per task and sum costs
-- **Task success rate**: CeleryTaskEvent exists but hasn't been queried for aggregate rates
-- **Queue backlog depth**: No monitoring dashboard for Redis queue lengths
-- **Which spiders actually return useful data**: 77 registered but "5 need API keys" — need per-spider audit
+- ~~Actual token cost per cycle~~: **RESOLVED** — $0.20/30 days across 1,114 calls
+- ~~Task success rate~~: **RESOLVED** — 100% (10,645 tasks)
+- ~~Queue backlog depth~~: **RESOLVED** — default=283K, measured via Redis llen
+- ~~Which spiders return useful data~~: **RESOLVED** — 54 working, 24 broken (Dossier #3)
 - **Task dependency chain**: No explicit chaining (all Beat-triggered in parallel) — some tasks assume prior task completed but don't verify

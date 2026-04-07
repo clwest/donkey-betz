@@ -190,11 +190,11 @@ This is a **prompt-based** behavioral change, not a **computational** one.
 
 ## 9. Truth Gaps
 
-- **Pattern quality**: Are the extracted patterns actually useful? No measurement exists
-- **Injection impact**: Does including "web_search has 72% success rate" in the prompt actually change agent behavior? No A/B test
-- **Bridge reliability**: Are all 8 bridges firing consistently? No monitoring dashboard
-- **UserAgentLearning volume**: How many records exist? Are they being queried? Could be write-only
-- **Feedback processing impact**: FeedbackItem decisions are processed but unclear if they update anything downstream
+- ~~Pattern quality~~: **RESOLVED** — 99.9% effectiveness across 8,143 applications
+- **Injection impact**: DESIGN QUESTION — Does including "web_search has 72% success rate" in the prompt actually change agent behavior? Needs A/B testing
+- **Bridge reliability**: DESIGN QUESTION — Are all 8 bridges firing consistently? Needs monitoring dashboard or A/B testing
+- ~~UserAgentLearning volume~~: **RESOLVED** — 291,262 records, actively queried
+- **Feedback processing impact**: DESIGN QUESTION — FeedbackItem decisions are processed but unclear if they update anything downstream. Needs A/B testing
 
 ## Verified Data (April 6, 2026)
 
