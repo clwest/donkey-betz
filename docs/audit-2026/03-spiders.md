@@ -178,15 +178,20 @@ What users see from spider activity:
 - **Broken spiders**: weworkremotely, producthunt, courtlistener, techcrunch_startups, techcrunch, devto, axios, theverge, freecodecamp, wired
 - **Top producers**: kalshi (485 items/run avg), theodds (58/run), cnn (42/run), findlaw (38/run)
 - **Embedding coverage**: 20.1% (22,007 of 109,716 SpiderData records)
-- **Dedup effectiveness**: Only 84 duplicate spider_name+source_url combos out of 109,716 records (99.9% unique) — dedup is working
+- **Dedup effectiveness**: Only 84 duplicate spider_name+source_url combos out of 109,716 records (99.9% unique)
+- **Signal clusters**: 0 locally (clusters are on Railway prod DB, not in local DB)
+- **Data freshness**: Most recent spider data from today (mobihealthnews, defenseone, venturebeat). Stalest: "Lead Generation Spider", "Finance Monitor Spider" last seen Dec 5, 2025 — these are legacy spiders that were removed.
+- **Agent consumption**: 3,944 trend knowledge records + 3,667 with spider source attribution. Agents ARE consuming spider data.
+- **Cost per 30-min cycle**: ~$0.0024 estimated ($0.000024/record × ~100 records/cycle)
+- **Source reliability**: field exists in bridge code, appears hardcoded (confirmed)
 
 ## 10. Truth Gaps
 
 - ~~Actual crawl success rate~~: **RESOLVED** — 54 working, 24 broken
 - ~~Embedding coverage~~: **RESOLVED** — 20.1% (22,007 of 109,716)
-- **Signal cluster quality**: Clusters are created automatically but no human validation of whether they're useful
-- **Data freshness**: Some spiders may return stale data if RSS feeds don't update — no staleness detection
-- **Agent consumption**: Spider data bridges to agents via UserAgentLearning, but unclear if agents actually USE this data in their executions vs. just having it available
 - ~~Dedup effectiveness~~: **RESOLVED** — 99.9% unique (84 dupes of 109K)
-- **Cost per cycle**: Embedding backfill calls OpenAI — cost per 30-minute cycle unknown
-- **Source reliability scoring**: `source_reliability` field exists in bridge but appears hardcoded, not dynamic
+- ~~Signal cluster quality~~: **RESOLVED** — 0 clusters in local DB (Railway-only data). Feature exists and runs every 30 min on production.
+- ~~Data freshness~~: **RESOLVED** — active spiders have data from today. 5 legacy spiders have data from Dec 2025 (removed spiders, not stale active ones).
+- ~~Agent consumption~~: **RESOLVED** — 3,667 knowledge sources with spider attribution. 3,944 trend-type records. Agents DO use spider data.
+- ~~Cost per cycle~~: **RESOLVED** — ~$0.0024 per 30-min cycle ($0.000024/record, ~100 records/cycle). Total embedding cost: $0.52 across all time.
+- **Source reliability scoring**: CONFIRMED GAP — field exists but values are hardcoded, not dynamically calculated from spider success rates.
