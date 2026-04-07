@@ -2381,13 +2381,20 @@ Consider these trends when crafting the response to maximize relevance and engag
             # Session 1085: Apply XP evolution bonuses to execution budget
             budget = self._get_execution_budget()
 
-            response = self.client.chat.completions.create(
-                model="gpt-5-mini",
-                messages=messages,
-                tools=effective_tools if effective_tools else None,
-                tool_choice="auto" if effective_tools else None,
-                max_completion_tokens=budget['max_completion_tokens'],
-            )
+            # Session 1085: Use gpt-5.2 for tool-calling agents (gpt-5-mini struggles with tools)
+            # gpt-5-mini only for agents with no tools (pure text generation)
+            model = "gpt-5.2" if effective_tools else "gpt-5-mini"
+
+            create_kwargs = {
+                "model": model,
+                "messages": messages,
+                "max_completion_tokens": budget['max_completion_tokens'],
+            }
+            if effective_tools:
+                create_kwargs["tools"] = effective_tools
+                create_kwargs["tool_choice"] = "auto"
+
+            response = self.client.chat.completions.create(**create_kwargs)
 
             # Session 536: Track analytics (cost, tokens, performance)
             self._track_llm_analytics(response, start_time)
