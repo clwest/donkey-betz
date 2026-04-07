@@ -151,11 +151,31 @@ export const usePAStore = create<PAState>()(
       },
 
       updateMessageFeedback: (messageId, feedback) => {
-        set((state) => ({
-          messages: state.messages.map((msg) =>
-            msg.id === messageId ? { ...msg, feedback } : msg
+        const state = get()
+        const msg = state.messages.find(m => m.id === messageId)
+        const msgIndex = state.messages.filter(m => m.role === 'assistant').indexOf(msg!)
+
+        // Update local state immediately
+        set((s) => ({
+          messages: s.messages.map((m) =>
+            m.id === messageId ? { ...m, feedback } : m
           ),
         }))
+
+        // Session 1085: Persist to backend
+        try {
+          const token = document.cookie.match(/sessionid=([^;]+)/)?.[1]
+          fetch('/api/pa/feedback/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              conversation_id: state.activeConversationId || '',
+              message_index: msgIndex >= 0 ? msgIndex : 0,
+              rating: feedback === 'positive' ? 1 : -1,
+            }),
+          }).catch(() => {}) // Non-blocking
+        } catch {}
       },
 
       clearMessages: () => set({ messages: [] }),
