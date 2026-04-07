@@ -182,11 +182,11 @@ What users see from spider activity:
 
 ## 10. Truth Gaps
 
-- **Actual crawl success rate**: SpiderExecutionLog exists but no aggregate dashboard — how many of the 86 spiders actually return data each cycle?
-- **Embedding coverage**: What % of SpiderData records have valid embeddings? Backfill runs but coverage unknown
+- ~~Actual crawl success rate~~: **RESOLVED** — 54 working, 24 broken
+- ~~Embedding coverage~~: **RESOLVED** — 20.1% (22,007 of 109,716)
 - **Signal cluster quality**: Clusters are created automatically but no human validation of whether they're useful
 - **Data freshness**: Some spiders may return stale data if RSS feeds don't update — no staleness detection
 - **Agent consumption**: Spider data bridges to agents via UserAgentLearning, but unclear if agents actually USE this data in their executions vs. just having it available
-- **Dedup effectiveness**: Session 616 added dedup but no metrics on how many duplicates are caught
+- ~~Dedup effectiveness~~: **RESOLVED** — 99.9% unique (84 dupes of 109K)
 - **Cost per cycle**: Embedding backfill calls OpenAI — cost per 30-minute cycle unknown
 - **Source reliability scoring**: `source_reliability` field exists in bridge but appears hardcoded, not dynamic
