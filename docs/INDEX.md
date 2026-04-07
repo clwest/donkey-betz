@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-04-06 22:57
+**Generated:** 2026-04-07 11:59
 **Current Session:** 784
 **Total Documentation:** 1853 files | 630,195 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 141 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/letters/README.md` | 60 | LETTERS |
+| `docs/archive/SYSTEM_CAPABILITIES-original/06_Decision_Systems/README.md` | 60 | 🎯 DECISION COMMAND SYSTEMS - AI-Powered Decision I |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -220,8 +220,8 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
+| INDEX.md | docs | 364 | 2026-04-06 23:03 |
 | 03-spiders.md | audit-2026 | 197 | 2026-04-06 19:10 |
-| INDEX.md | docs | 364 | 2026-04-06 19:09 |
 | 12-infrastructure.md | audit-2026 | 162 | 2026-04-06 19:08 |
 | 07-learning-loops.md | audit-2026 | 222 | 2026-04-06 19:08 |
 | 02-agents.md | audit-2026 | 213 | 2026-04-06 19:08 |
