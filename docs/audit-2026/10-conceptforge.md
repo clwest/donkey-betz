@@ -146,11 +146,12 @@ PENDING → RUNNING → COMPLETED (all 6 stages done)
 
 ## 9. Truth Gaps
 
-- **Pipeline execution time**: 6 stages × ~300s each = ~30 minutes total — not verified
-- **Stage failure handling**: If stage 3 fails, does the pipeline retry or abort?
-- **Advisor impact**: Do legendary advisor positions actually improve debate quality vs. generic agents?
-- **Dossier quality**: No human evaluation of produced dossiers
-- **Cost per run**: 6 LLM calls (one per stage) + debate agent — estimated $0.50-2.00 per run, not measured
+- **Pipeline execution time**: DESIGN QUESTION — 0 runs exist to measure, estimated 30 min total
+- **Stage failure handling**: DESIGN QUESTION — no runs to observe failure recovery
+- **Advisor impact**: DESIGN QUESTION — need at least 2 runs with different panels to compare
+- **Dossier quality**: DESIGN QUESTION — no dossiers produced yet to evaluate
+- **Cost per run**: DESIGN QUESTION — estimated $0.50-2.00 per run, 0 actual measurements
+- **All gaps are DESIGN QUESTIONS** because 0 ConceptForge runs have ever executed. Gate was fixed this session — first run will provide real data.
 
 ## Key Patent Claims
 
