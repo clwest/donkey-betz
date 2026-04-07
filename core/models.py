@@ -1609,6 +1609,36 @@ class ChatConversation(models.Model):
         return title
 
 
+class PaMessageFeedback(models.Model):
+    """
+    Session 1085: Thumbs up/down feedback on PA responses.
+    Enables measuring PA response quality and improving over time.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='pa_feedback')
+    conversation = models.ForeignKey(ChatConversation, on_delete=models.CASCADE, related_name='feedback', null=True, blank=True)
+    conversation_id_str = models.CharField(max_length=255, db_index=True, help_text="Conversation ID string for lookup")
+    message_index = models.IntegerField(default=0, help_text="Index of the assistant message in conversation")
+    rating = models.SmallIntegerField(help_text="+1 (thumbs up) or -1 (thumbs down)")
+    note = models.TextField(blank=True, help_text="Optional feedback text (especially for thumbs down)")
+    model_used = models.CharField(max_length=100, blank=True)
+    tool_trace_id = models.CharField(max_length=100, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        unique_together = [('user', 'conversation_id_str', 'message_index')]
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['rating']),
+        ]
+
+    def __str__(self):
+        icon = "👍" if self.rating > 0 else "👎"
+        return f"{icon} {self.user.username} on {self.conversation_id_str}:{self.message_index}"
+
+
 class EnhancedUserProfile(models.Model):
     """
     DEAD CODE — Session 1026: This file (core/models.py) is unreachable because
