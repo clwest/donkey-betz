@@ -163,6 +163,13 @@ Initiatives have explicit human control parameters:
 
 **Production data:** 19 initiatives (2 ACTIVE), multiple signal clusters, action items
 
+## Verified Data (April 6, 2026)
+
+- **248 total initiatives**: 228 ACTIVE, 17 TRIAGE, 3 ARCHIVED
+- **0 completed** — no initiative has finished all 5 stages
+- **30 past stage 1**: 19 at stage 2, 9 at stage 3, 2 at stage 5
+- **218 stuck at stage 1** — pipeline stall, likely needs auto-approve or batch approval
+
 ## 9. Truth Gaps
 
 - **Initiative completion rate**: 0 initiatives have reached COMPLETED — all stuck at Stage 1/TRIAGE

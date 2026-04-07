@@ -171,6 +171,14 @@ What users see from spider activity:
 - ~32 spiders unverified since Session 397 audit (Dec 2025)
 - Semantic search scans max 200 entries to prevent slow queries
 
+## Verified Data (April 6, 2026)
+
+- **78 spiders with execution logs** (of 86 registered)
+- **54 working** (>50% runs return data), **24 broken** (<50% success)
+- **Broken spiders**: weworkremotely, producthunt, courtlistener, techcrunch_startups, techcrunch, devto, axios, theverge, freecodecamp, wired
+- **Top producers**: kalshi (485 items/run avg), theodds (58/run), cnn (42/run), findlaw (38/run)
+- **Embedding coverage**: 20.1% (22,007 of 109,716 SpiderData records)
+
 ## 10. Truth Gaps
 
 - **Actual crawl success rate**: SpiderExecutionLog exists but no aggregate dashboard — how many of the 86 spiders actually return data each cycle?

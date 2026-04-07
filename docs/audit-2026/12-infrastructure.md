@@ -138,6 +138,13 @@ From `Procfile`:
 | Railway | Cloud hosting (8 processes) |
 | Various RSS/APIs | 40+ sources for 86 spiders |
 
+## Verified Data (April 6, 2026)
+
+- **260,235 total LLM calls**: 99.2% OpenAI ($1.12), Anthropic (4 calls, $0.0006), Together AI (2 calls, $0.001)
+- **LLM models used**: text-embedding-3-small (258,292 calls), gpt-5.2 (1,160), gpt-5.1 (737), gpt-5-mini (36)
+- **Total LLM spend**: $1.12 (token conservation mode extremely effective)
+- **Active providers**: OpenAI (primary), Anthropic (tested), Together AI (tested). Other 8 configured but unused.
+
 ## 11. Truth Gaps
 
 - **Cost breakdown**: No aggregate monthly cost tracking across Railway + OpenAI + Stability + Runway + ElevenLabs
