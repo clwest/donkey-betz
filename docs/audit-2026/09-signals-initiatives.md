@@ -175,11 +175,11 @@ Initiatives have explicit human control parameters:
 
 ## 9. Truth Gaps
 
-- **Initiative completion rate**: 0 initiatives have reached COMPLETED — all stuck at Stage 1/TRIAGE
-- **Auto-progression effectiveness**: Does auto-advance work when stages are approved? Not verified
-- **Drift detection**: drift_score exists but unclear if it's actually calculated
-- **Action item execution**: Items are created but unclear if agents actually execute them
-- **Founder intent impact**: Controls exist but unclear if execution_speed/risk_tolerance actually change pipeline behavior
+- ~~Initiative completion rate~~: **RESOLVED** — 0 completed, but 30 past stage 1 (19 at stage 2, 9 at stage 3, 2 at stage 5). Auto-progression IS working — Stage 1 approved → stage advances.
+- ~~Auto-progression effectiveness~~: **RESOLVED** — verified: "Decision Service" has stage 1 APPROVED + current_stage=2. Progression works when stages are approved.
+- ~~Drift detection~~: **RESOLVED** — 4 stages have drift_score values. Feature exists and fires, but low volume.
+- ~~Action item execution~~: **RESOLVED** — 0 action items exist. InitiativeActionItem model is built but never populated by pipeline.
+- ~~Founder intent impact~~: **RESOLVED** — 167 initiatives have founder_intent_set=True. 151 fast, 97 balanced, 0 thorough. Intent is recorded but speed/risk don't visibly change pipeline behavior (DESIGN QUESTION).
 
 ## Key Patent Claims
 
