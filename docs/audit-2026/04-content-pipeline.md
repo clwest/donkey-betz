@@ -215,6 +215,8 @@ brief, research, strategy, draft, edit_review, fact_check, rewrite, seo, distrib
 - **6 deliberation sessions** recorded
 - **5 published blogs** all have quality scores >= 0.7
 - **Pipeline throughput**: Very low — only 5 blogs made it to published status
+- **Deliberation sessions**: 6 total, all status=completed (100% completion rate)
+- **Pipeline is functional but underused** — only 6 runs ever, all succeeded
 
 ## 10. Truth Gaps
 
