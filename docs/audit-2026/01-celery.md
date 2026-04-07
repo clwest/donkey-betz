@@ -121,6 +121,10 @@ What the user actually sees from Celery activity:
 - **Task success rate**: 100% (10,645 success of 10,647 total, 0 failures)
 - **Top tasks by volume**: check_circulation (1,004), process_event_bus_scoring_queue (1,003), immune_scan (670), check_workflow_schedules (506)
 - **Queue backlog**: Not measured (no Redis queue length monitoring)
+- **Token cost per cycle**: $0.20 in last 30 days across 1,114 LLM calls (very low due to conservation mode)
+- **Queue backlog**: default=283,951, sports=2,269, long_running=828, content=711, agents=203, ml=12, pa=0, broadcast=0. Default queue has massive backlog of unprocessed tasks.
+- **Task overlap**: 0 tasks found running simultaneously — dedup guard working
+- **Agent task events**: 59 agent-related task events in CeleryTaskEvent
 
 ## 10. Truth Gaps
 
