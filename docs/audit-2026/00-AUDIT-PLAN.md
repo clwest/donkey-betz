@@ -31,7 +31,7 @@ Each subsystem gets one dossier with these sections:
 | 2 | Agent System | [02-agents.md](02-agents.md) | VERIFIED — 73 agents executed, 2,384 total runs |
 | 3 | Spider Network | [03-spiders.md](03-spiders.md) | VERIFIED — 54 working, 24 broken, 20.1% embedded |
 | 4 | Content Pipeline | [04-content-pipeline.md](04-content-pipeline.md) | VERIFIED — 5 published, 6 deliberation sessions |
-| 5 | Prompt Assembly + Context Injection | [05-prompting.md](05-prompting.md) | COMPLETE (no recent executions to verify injection) |
+| 5 | Prompt Assembly + Context Injection | [05-prompting.md](05-prompting.md) | VERIFIED — 10 of 11 layers active, XP budget applied |
 | 6 | Embeddings + RAG | [06-embeddings-rag.md](06-embeddings-rag.md) | VERIFIED — 20.1% spider, 97.6% memory coverage |
 | 7 | Learning Loops | [07-learning-loops.md](07-learning-loops.md) | VERIFIED — 8,143 applications, 99.9% effectiveness |
 | 8 | Personal Assistant (Rigby) | [08-personal-assistant.md](08-personal-assistant.md) | VERIFIED — 98 schemas, 260K LLM calls, $1.12 total |
@@ -54,6 +54,7 @@ Each subsystem gets one dossier with these sections:
 | "84 agents in AGENT_MAP" | YES | 73 unique agents have executed, 2,384 total runs |
 | "86 spiders crawling" | PARTIAL | 78 have logs, 54 working, 24 broken (need cleanup) |
 | "Learning loop is closed" | YES | 8,143 pattern applications, 99.9% effectiveness |
+| "11-layer prompt injection" | YES | 10 of 11 layers verified active, XP budget applied (+76 tokens, +2.3s) |
 | "Content deliberation pipeline" | YES | 6 deliberation sessions, 5 blogs published with quality gates |
 | "Embeddings for semantic search" | PARTIAL | Memory 97.6% covered, SpiderData only 20.1% (gap) |
 | "103 PA tool schemas" | MOSTLY | 98 verified in code, 5 may be dynamic |

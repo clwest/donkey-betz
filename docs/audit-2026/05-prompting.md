@@ -176,6 +176,32 @@ The prompt assembly itself is invisible to users — its output IS the agent's r
 | Policy injection mismatch | Agent impact area mapping wrong | Irrelevant policies in prompt | AGENT_IMPACT_AREAS dict reviewed per agent |
 | Sharpening over-corrects | Regex matches inside technical terms | Garbled prompts | Word boundary matching in regex |
 
+## Verified Data (April 6, 2026)
+
+Layer-by-layer verification executed against ResearchAgent with task "What are the top 3 AI trends in 2026?":
+
+| Layer | Name | Status | Evidence |
+|-------|------|--------|----------|
+| 1 | Sharpened system prompt | **ACTIVE** | 30+ regex replacements applied, FORBIDDEN PHRASES injected |
+| 2 | Autonomous directive | **ACTIVE** | Hardcoded in _build_intelligent_prompt |
+| 3 | Temporal awareness | **ACTIVE** | Current date injected |
+| 4 | Mood modifier | **ACTIVE** | ResearchAgent mood: "inspired" (50% intensity) |
+| 5 | Evolution/Authority | **ACTIVE** | Level 20, XP 718,208, speed_bonus=0.38, quality_bonus=0.38 |
+| 6 | Learned knowledge | **ACTIVE** | 5 patterns injected, 5 pattern_ids for tracking |
+| 7 | Canonical policies | **ACTIVE** | Policy context present from boardroom decisions |
+| 8 | System learnings | **ACTIVE** | 334 chars: "trend_patterns produces avg +8.49% improvement" |
+| 9 | Spider intelligence | **EMPTY** | 0 items — only 31 spider records in last 30 days (stale) |
+| 10 | Risk-aware docs | **ACTIVE** | 10 docs found including Agent Reference, CLAUDE.md |
+| 11 | User context | **ACTIVE** | 14 keys: user_id, username, profile, skills, etc. |
+
+**XP Budget Applied**: max_tokens=6,076 (base 6,000 + 76 from speed_bonus), timeout=182.3s (base 180 + 2.3 from quality_bonus)
+
+**Key Findings**:
+- 10 of 11 layers actively inject context into prompts
+- Spider intelligence (Layer 9) is empty because spider crawls produce only 31 new records/month in token conservation mode
+- Learning patterns ARE tracked (5 pattern_ids passed) enabling feedback loop closure
+- XP bonuses ARE applied to execution budget (speed_bonus=0.38 → +76 tokens, quality_bonus=0.38 → +2.3s timeout)
+
 ## 9. Current Status: WORKING
 
 **All 11 layers operational:**
