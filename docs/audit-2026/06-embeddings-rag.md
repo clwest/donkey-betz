@@ -190,14 +190,14 @@ Users don't see embeddings directly. They enable:
 
 ## 10. Truth Gaps
 
-- **Embedding coverage**: What % of SpiderData, AgentMemory, AgentKnowledgeSource records have valid embeddings? Backfill runs but no coverage dashboard
-- **Search quality**: No evaluation of whether semantic search returns relevant results — no precision/recall metrics
-- **Cost per month**: LLMCallLog tracks per-call but no aggregate monthly embedding cost report
-- **HNSW index effectiveness**: Indexes exist on DocumentEmbedding and ConversationMemory but SpiderData uses brute-force scan (max 200 entries)
-- **Cache hit rate**: Redis cache logs hits/misses in batch mode but no aggregate dashboard
-- **Stale embedding detection**: No mechanism to detect when content changes but embedding doesn't update
-- **Cross-store search**: Each store has its own search — no unified search across all 7 embedding stores
-- **Embedding model lock-in**: Everything hardcoded to text-embedding-3-small/1536 dims — model upgrade would require full re-embedding
+- ~~Embedding coverage~~: **RESOLVED** — Spider 20.1%, Memory 97.6%
+- **Search quality**: DESIGN QUESTION — No evaluation of whether semantic search returns relevant results — no precision/recall metrics
+- ~~Cost per month~~: **RESOLVED** — $0.52 total embedding cost
+- **HNSW index effectiveness**: DESIGN QUESTION — Indexes exist on DocumentEmbedding and ConversationMemory but SpiderData uses brute-force scan (max 200 entries)
+- **Cache hit rate**: DESIGN QUESTION — Redis cache logs hits/misses in batch mode but no aggregate dashboard
+- **Stale embedding detection**: DESIGN QUESTION — No mechanism to detect when content changes but embedding doesn't update
+- **Cross-store search**: DESIGN QUESTION — Each store has its own search — no unified search across all 7 embedding stores
+- **Embedding model lock-in**: DESIGN QUESTION — Everything hardcoded to text-embedding-3-small/1536 dims — model upgrade would require full re-embedding
 
 ## Key Patent Claims (Embeddings + RAG)
 
