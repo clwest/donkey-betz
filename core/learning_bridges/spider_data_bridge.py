@@ -238,23 +238,35 @@ class SpiderDataLearningLoop:
             return 0.2
 
     def _calculate_source_reliability(self, spider_name: str) -> float:
-        """Calculate reliability of this data source based on historical performance
+        """Calculate reliability from actual crawl execution history.
 
-        Session 400: Updated to use fields available in core SpiderData
+        Session 1085: Now uses SpiderExecutionLog success rate instead of
+        hardcoded relevance_score heuristic. Falls back to relevance if
+        no execution logs exist.
         """
-        # Count successful data from this spider
-        total = SpiderData.objects.filter(spider_name=spider_name).count()
+        try:
+            from core.models_unified_system import SpiderExecutionLog
+            from django.db.models import Count, Q
 
-        if total == 0:
-            return 0.5  # No history, assume average
+            logs = SpiderExecutionLog.objects.filter(spider_name=spider_name)
+            total_runs = logs.count()
 
-        # High relevance data from this spider (relevance_score is 0-100)
-        high_relevance = SpiderData.objects.filter(
-            spider_name=spider_name,
-            relevance_score__gte=70
-        ).count()
+            if total_runs < 5:
+                # Not enough history — fall back to relevance heuristic
+                total = SpiderData.objects.filter(spider_name=spider_name).count()
+                if total == 0:
+                    return 0.5
+                high_relevance = SpiderData.objects.filter(
+                    spider_name=spider_name, relevance_score__gte=70
+                ).count()
+                return high_relevance / total if total > 0 else 0.5
 
-        return high_relevance / total if total > 0 else 0.5
+            # Use execution log success rate (items_collected > 0 = success)
+            successful = logs.filter(items_collected__gt=0).count()
+            return round(successful / total_runs, 3)
+
+        except Exception:
+            return 0.5
 
     def _estimate_opportunity_potential(self, spider_data: SpiderData) -> str:
         """Estimate the potential value of this opportunity
