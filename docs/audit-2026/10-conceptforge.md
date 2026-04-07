@@ -137,6 +137,13 @@ PENDING → RUNNING → COMPLETED (all 6 stages done)
 
 **Expected after fix:** Next published blog with quality >= 0.80 will trigger a full pipeline run.
 
+## Verified Data (April 6, 2026)
+
+- **0 runs** on both production and local databases
+- **Root cause identified**: gate required quality >= 0.80 AND strategic tags, but all qualifying blogs had empty tags
+- **Fix deployed**: quality >= 0.80 alone now triggers pipeline (tags optional)
+- **Expected**: next published blog with quality >= 0.80 will trigger first run
+
 ## 9. Truth Gaps
 
 - **Pipeline execution time**: 6 stages × ~300s each = ~30 minutes total — not verified

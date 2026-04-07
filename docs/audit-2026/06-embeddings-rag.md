@@ -181,6 +181,13 @@ Users don't see embeddings directly. They enable:
 **Not embedding-based (metadata only):**
 - `build_docs_index` — generates JSON index + markdown, NOT vector embeddings
 
+## Verified Data (April 6, 2026)
+
+- **SpiderData**: 20.1% embedded (22,007 of 109,716) — significant gap
+- **AgentMemory**: 97.6% embedded (1,053 of 1,079) — healthy
+- **AgentKnowledgeSource**: 5,213 records (embedding coverage not measured)
+- **LLM embedding cost**: $0.52 total across 258,292 embedding API calls
+
 ## 10. Truth Gaps
 
 - **Embedding coverage**: What % of SpiderData, AgentMemory, AgentKnowledgeSource records have valid embeddings? Backfill runs but no coverage dashboard

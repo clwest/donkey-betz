@@ -196,6 +196,14 @@ This is a **prompt-based** behavioral change, not a **computational** one.
 - **UserAgentLearning volume**: How many records exist? Are they being queried? Could be write-only
 - **Feedback processing impact**: FeedbackItem decisions are processed but unclear if they update anything downstream
 
+## Verified Data (April 6, 2026)
+
+- **120 total patterns**, 15 have been applied (12.5%)
+- **8,143 total applications**, 8,138 successful (99.9% effectiveness)
+- **Pattern types**: learning_type_impact (8,105 applications), application_outcome (34), spider_effectiveness (4)
+- **Unused pattern types**: top_teacher (23 patterns, 0 applied), agent_collaboration (47 patterns, 0 applied)
+- **291,262 AgentLearning records** feeding pattern extraction
+
 ## 10. Assessment for Patent/Investors (CORRECTED)
 
 ### What you CAN claim (proven by production data):

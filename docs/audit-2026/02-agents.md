@@ -142,6 +142,14 @@ What agents produce that users see:
 **Blocked agents:**
 - CodeGeneratorAgent — permanently blocked (no codebase access on Railway)
 
+## Verified Data (April 6, 2026)
+
+- **Total executions**: 2,384 across 73 unique agents (of 222 registered)
+- **Last 30 days**: 0 executions (token conservation mode)
+- **Top agents**: CodeGeneratorAgent (991 runs, 99.6% success), ResearchAgent (240, 94.2%), AutonomousContentStudioCoordinator (124, 91.1%), DevOpsAgent (108, 100%), TrendAnalysisAgent (103, 97.1%)
+- **Agent effectiveness scores**: Real data — only 4.5% at default 85, distribution ranges 50-85 based on actual performance
+- **149 agents have never executed** (registered but dormant)
+
 ## 10. Truth Gaps
 
 - **Agent effectiveness scores**: All default to 85 — no real performance data driving these
