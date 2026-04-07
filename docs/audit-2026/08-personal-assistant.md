@@ -156,6 +156,12 @@ User message arrives
 - Enrichment character caps may truncate important context
 - Intent detection is keyword-based (no semantic understanding of ambiguous requests)
 
+## Verified Data (April 6, 2026)
+
+- **98 tool schemas** registered (was 103 in code — 5 may be dynamically added)
+- **260,235 LLM calls** logged, $1.12 total cost
+- **PA verified working** locally and on production via Celery PA queue
+
 ## 10. Truth Gaps
 
 - **Tool coverage**: 103 schemas but 162 handlers — some handlers not exposed via schemas, some schemas may not have handlers

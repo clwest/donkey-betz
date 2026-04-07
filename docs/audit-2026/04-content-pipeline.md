@@ -209,6 +209,13 @@ brief, research, strategy, draft, edit_review, fact_check, rewrite, seo, distrib
 - Content Packets: Model exists but UI shows flat list (packet detail page not built)
 - Channel episodes: Model exists but no scheduled generation
 
+## Verified Data (April 6, 2026)
+
+- **1,260 total blogs**: 1,227 draft, 25 pending_review, 5 published, 2 needs_enhancement, 1 approved
+- **6 deliberation sessions** recorded
+- **5 published blogs** all have quality scores >= 0.7
+- **Pipeline throughput**: Very low — only 5 blogs made it to published status
+
 ## 10. Truth Gaps
 
 - **End-to-end success rate**: How many pipeline runs produce PUBLISH vs REVISE vs KILL? No aggregate stats
