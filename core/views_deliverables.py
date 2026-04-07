@@ -173,7 +173,7 @@ def get_deliverable(request, deliverable_id):
 
         # Check access permissions
         if deliverable.user and request.user.is_authenticated:
-            if deliverable.user != request.user:
+            if deliverable.user != request.user and not request.user.is_staff:
                 # Allow VIP users to view deliverables in their assigned workspace
                 vip_allowed = False
                 if deliverable.workspace_id:
