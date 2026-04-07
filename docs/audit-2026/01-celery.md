@@ -132,4 +132,4 @@ What the user actually sees from Celery activity:
 - ~~Task success rate~~: **RESOLVED** — 100% (10,645 tasks)
 - ~~Queue backlog depth~~: **RESOLVED** — default=283K, measured via Redis llen
 - ~~Which spiders return useful data~~: **RESOLVED** — 54 working, 24 broken (Dossier #3)
-- **Task dependency chain**: No explicit chaining (all Beat-triggered in parallel) — some tasks assume prior task completed but don't verify
+- **Task dependency chain**: DESIGN QUESTION — all Beat-triggered in parallel with no explicit chaining. Verified 0 task overlap (dedup guard prevents concurrent runs of same task). Architecture works via time-offset scheduling rather than explicit dependencies.

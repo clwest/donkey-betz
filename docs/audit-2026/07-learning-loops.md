@@ -188,14 +188,6 @@ This is a **prompt-based** behavioral change, not a **computational** one.
 - Orchestrator's `track_learning_application()` is dead code (engine version works) ⚠️
 - No A/B testing of pattern effectiveness ⚠️
 
-## 9. Truth Gaps
-
-- ~~Pattern quality~~: **RESOLVED** — 99.9% effectiveness across 8,143 applications
-- **Injection impact**: DESIGN QUESTION — Does including "web_search has 72% success rate" in the prompt actually change agent behavior? Needs A/B testing
-- **Bridge reliability**: DESIGN QUESTION — Are all 8 bridges firing consistently? Needs monitoring dashboard or A/B testing
-- ~~UserAgentLearning volume~~: **RESOLVED** — 291,262 records, actively queried
-- **Feedback processing impact**: DESIGN QUESTION — FeedbackItem decisions are processed but unclear if they update anything downstream. Needs A/B testing
-
 ## Verified Data (April 6, 2026)
 
 - **120 total patterns**, 15 have been applied (12.5%)
@@ -203,6 +195,14 @@ This is a **prompt-based** behavioral change, not a **computational** one.
 - **Pattern types**: learning_type_impact (8,105 applications), application_outcome (34), spider_effectiveness (4)
 - **Unused pattern types**: top_teacher (23 patterns, 0 applied), agent_collaboration (47 patterns, 0 applied)
 - **291,262 AgentLearning records** feeding pattern extraction
+
+## 9. Truth Gaps
+
+- ~~Pattern quality~~: **RESOLVED** — 99.9% effectiveness across 8,143 applications
+- ~~UserAgentLearning volume~~: **RESOLVED** — 291,262 records, actively queried
+- **Injection impact**: DESIGN QUESTION — needs A/B testing
+- **Bridge reliability**: DESIGN QUESTION — needs monitoring dashboard
+- **Feedback processing impact**: DESIGN QUESTION — needs A/B testing
 
 ## 10. Assessment for Patent/Investors (CORRECTED)
 

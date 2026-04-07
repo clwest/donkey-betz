@@ -151,7 +151,7 @@ From `Procfile`:
 - ~~Database size~~: **RESOLVED** — 14.74 GB PostgreSQL. Top tables: CeleryTaskEvent (11.5K), ExtractedArtifact (3.4K), CostTracking (2.7K), LLMCallLog (2.5K)
 - ~~Redis memory~~: **RESOLVED** — 360MB used, 406 keys in DB0 (cache), 32 keys in DB2 (broker), 0 in DB1 (results)
 - **Cost breakdown**: DESIGN QUESTION — would need Railway + OpenAI + Stability billing API integration
-- **WebSocket active usage**: same as Frontend dossier — 110 paths, many legacy
+- ~~WebSocket active usage~~: **RESOLVED** — 110 paths defined in routing.py. Many are duplicates/legacy. Primary active ones: ws/system-events/ (platform notifications), ws/pa/ (PA chat), ws/activity/ (agent progress). Cleanup needed but not broken.
 - **Connection pooling**: DESIGN QUESTION — CONN_MAX_AGE=0 is safe for Celery but could optimize for web
 
 ## Key Patent Claims (Infrastructure)
