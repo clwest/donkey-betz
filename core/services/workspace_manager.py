@@ -1645,6 +1645,12 @@ class WorkspaceManager:
             is_active=True
         ).order_by('-total_operations', '-created_at').first()
 
+        # Session 1085: Superusers can see any active workspace
+        if not workspace and self.user.is_superuser:
+            workspace = ProjectWorkspace.objects.filter(
+                is_active=True
+            ).order_by('-total_operations', '-created_at').first()
+
         # Session 855: Create default workspace for system user if needed
         if not workspace and self.user.username == 'system_autonomous':
             workspace = self._ensure_system_workspace()
