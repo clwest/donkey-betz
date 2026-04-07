@@ -147,12 +147,12 @@ From `Procfile`:
 
 ## 11. Truth Gaps
 
-- **Cost breakdown**: No aggregate monthly cost tracking across Railway + OpenAI + Stability + Runway + ElevenLabs
-- ~~LLM provider usage~~: **RESOLVED** — 3 active (OpenAI, Anthropic, Together), 8 configured but unused
-- **WebSocket active usage**: 30+ consumers defined but many may be unused legacy endpoints
-- **Redis memory usage**: No monitoring of Redis memory across 3 DBs
-- **Database size**: No tracking of PostgreSQL storage growth over time
-- **Connection pooling**: CONN_MAX_AGE=0 is safe but potentially inefficient for high-traffic scenarios
+- ~~LLM provider usage~~: **RESOLVED** — 3 active (OpenAI $1.12, Anthropic $0.0006, Together $0.001), 8 configured but unused
+- ~~Database size~~: **RESOLVED** — 14.74 GB PostgreSQL. Top tables: CeleryTaskEvent (11.5K), ExtractedArtifact (3.4K), CostTracking (2.7K), LLMCallLog (2.5K)
+- ~~Redis memory~~: **RESOLVED** — 360MB used, 406 keys in DB0 (cache), 32 keys in DB2 (broker), 0 in DB1 (results)
+- **Cost breakdown**: DESIGN QUESTION — would need Railway + OpenAI + Stability billing API integration
+- **WebSocket active usage**: same as Frontend dossier — 110 paths, many legacy
+- **Connection pooling**: DESIGN QUESTION — CONN_MAX_AGE=0 is safe for Celery but could optimize for web
 
 ## Key Patent Claims (Infrastructure)
 
