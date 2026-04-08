@@ -1184,8 +1184,24 @@ class AgentHandlersMixin:
             base_qs = base_qs.filter(workspace_id=ws_scope)
             logger.info(f"[deliverables] Filtered to workspace {ws_scope}: {base_qs.count()} items")
         elif user_id:
-            base_qs = base_qs.filter(Q(user_id=user_id) | Q(user__isnull=True))
-            logger.info(f"[deliverables] Filtered to user_id {user_id} + NULL: {base_qs.count()} items")
+            # PA service account and staff/superusers see all deliverables
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            try:
+                requesting_user = User.objects.get(id=user_id)
+                is_pa_or_staff = (
+                    requesting_user.is_staff
+                    or requesting_user.is_superuser
+                    or requesting_user.username == 'pa-service'
+                )
+            except User.DoesNotExist:
+                is_pa_or_staff = False
+
+            if not is_pa_or_staff:
+                base_qs = base_qs.filter(Q(user_id=user_id) | Q(user__isnull=True))
+                logger.info(f"[deliverables] Filtered to user_id {user_id} + NULL: {base_qs.count()} items")
+            else:
+                logger.info(f"[deliverables] Staff/PA user — showing all {base_qs.count()} items")
 
         def _apply_common_filters(qs):
             """Apply category/agent/type/saved/status/date filters."""
