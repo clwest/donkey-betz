@@ -7831,16 +7831,7 @@ AGENT_WORKSPACE_REGISTRY = {
         'default_topic': 'recent content output quality',
     },
 
-    # =========================================================================
-    # PERSONAL ASSISTANT - Special handling
-    # =========================================================================
-    'PersonalAssistantAgent': {
-        'category': 'assistant',
-        'output_dir': 'assistant/logs',
-        'output_type': 'activity_log',
-        'task_template': 'Personal assistant activity summary for {topic}',
-        'default_topic': 'recent interactions and tasks',
-    },
+    # PersonalAssistantAgent removed — deprecated, all PA traffic routes through Rigby
 
     # =========================================================================
     # Session 885: FINANCIAL/STOCK AGENTS - Produce market analysis and stock reviews

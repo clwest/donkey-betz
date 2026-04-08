@@ -190,7 +190,7 @@ class Command(BaseCommand):
         learning_agents = Agent.objects.filter(
             is_active=True,
             name__in=[
-                'PersonalAssistantAgent',
+                'ThinkingAgent',
                 'ContentStrategyAgent',
                 'CreativeDirectorAgent',
                 'ResearchAgent',

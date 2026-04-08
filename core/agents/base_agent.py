@@ -763,10 +763,7 @@ class BaseAgent(ABC, TimeTravelMixin):
         if _AVAILABLE_SPECIALISTS_CACHE is None or (now - _AVAILABLE_SPECIALISTS_CACHE_TIME) > 300:
             try:
                 from core.agent_router import AgentRouter
-                _AVAILABLE_SPECIALISTS_CACHE = [
-                    name for name in AgentRouter.AGENT_MAP.keys()
-                    if name != 'PersonalAssistantAgent'
-                ]
+                _AVAILABLE_SPECIALISTS_CACHE = list(AgentRouter.AGENT_MAP.keys())
             except Exception:
                 _AVAILABLE_SPECIALISTS_CACHE = [
                     'ResearchAgent', 'ContentWriterAgent', 'ImageAgent', 'VideoAgent',

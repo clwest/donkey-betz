@@ -613,7 +613,7 @@ class PAKnowledgeInjector:
                     'Campaign': ['CampaignOrchestratorAgent', 'AISeriesWorkflowAgent'],
                     'Stocks': ['StockAuditCoordinator', 'StockAnalystAgent', 'MarketMovementMonitorAgent', 'InstitutionalWatcherAgent', 'MarketAnomalyDetectorAgent', 'BullCaseAgent', 'BearCaseAgent', 'SignalScannerAgent', 'MarketIntelligenceCoordinator'],
                     'Markets': ['PredictionMarketAnalyst', 'SportsOddsAnalyst', 'ArbitrageDetector'],
-                    'System': ['PersonalAssistantAgent', 'ThinkingAgent', 'SystemIntelligenceAgent'],
+                    'System': ['ThinkingAgent', 'SystemIntelligenceAgent'],
                     'Security': ['MemoryIsolationAgent', 'ContentAuditAgent'],
                     'Training': ['CharacterTrainingAgent', 'TrainedCreationAgent'],
                 }

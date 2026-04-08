@@ -646,7 +646,7 @@ You orchestrate. You don't create content directly."""
                 recommended_stance=arguments.get('recommended_stance', ''),
                 suggested_feature=f"Owner: {arguments.get('owner', 'human')} | Priority: {arguments.get('priority', 'medium')}",
                 rationale=arguments.get('rationale', f"Created by WorkflowAgent triage. Priority: {arguments.get('priority', 'medium')}"),
-                participants=['WorkflowAgent', 'PersonalAssistantAgent'],
+                participants=['WorkflowAgent', 'ThinkingAgent'],
                 status='review',  # Put in review status for human approval
             )
 
