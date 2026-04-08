@@ -1,93 +1,110 @@
 # Next Session — Start Here
 
 **Date:** April 8, 2026
-**Previous Session:** Founder Toolkit Cross-App Flow + Build Planning Mode + UI Polish
-**PA Conversation:** Create fresh — use Rigby's starter template below
-**Status:** 226 Agents | 86 Spiders | 25 Advisors | 4 Founder Toolkit apps LIVE with Stripe | Build Planning mentors added | 21 PRs merged this session
+**Previous Session:** Infrastructure Hardening + Rigby Operational Autonomy + Legacy Cleanup
+**PA Conversation:** Create fresh — Rigby can now create conversations herself via `session_tool action=create_fresh`
+**Status:** 218 Agents | 79 Spiders (all stale since Mar 29) | 25 Advisors | 8 PRs merged this session (#1844-#1851)
 
 ---
 
-## What Was Done (April 7-8, 2026) — 21 PRs Merged
+## What Was Done (April 8, 2026) — 8 PRs Merged
 
-### Main Platform (donkey-betz-platform)
-- **PR #1842** — Fix: staff users (Jessica) can view any deliverable detail (403 fix)
+### Spider Embedding Gap (PR #1844)
+- **Root cause found & fixed:** Dedup hash lookback was 7 days — RSS items persisted longer, causing weekly re-ingestion of identical content. 85k+ duplicate SpiderData rows accumulated.
+- Triaged 86,503 backlogged records → 1,315 survivors (98.5% noise/dupe reduction)
+- Dedup window extended 7 → 90 days, backfill window removed, batch 100 → 500
+- New management command: `triage_spider_embeddings` (reusable)
+- Coverage: 20.1% → 94.2% of embeddable records
 
-### Founder Toolkit — Cross-App Data Flow (all 4 apps)
-- Shared `founder_projects` table connecting MentorForge → PitchDeckForge → DealFlowTracker → Contract Concierge
-- Each app exports/imports via the shared table with stage progression
-- PitchDeckForge import crash fix (brief.project relationship)
+### Session Tool for Rigby (PR #1844)
+- `session_tool` with 3 actions: `health_check`, `create_fresh`, `list_recent`
+- Proactive health notice in system prompt when conversation score < 70
+- Rigby can now check conversation health AND create fresh sessions directly
 
-### MentorForge (7 PRs: #1-7)
-- **Cross-app data flow** — Export to Project button in chat
-- **AI Mentor Recommendation** — "Find Your Perfect Mentor" search box, 40+ keyword mappings, GPT-5-mini rationale, color-coded scores
-- **Chat UX Polish** — Pinned mentor card, live session timer, auto-resize textarea, Shift+Enter
-- **Pro tier fix** — gpt-5.2 streaming params (max_completion_tokens), Chris upgraded to pro
-- **Build Planning Mode** — 2 new mentors (Alex Rivera MVP Architect, Nina Kowalski Product Designer), build_planning session mode, structured JSON spec output
-- **Download Build Spec** — Extracts JSON spec from conversation, downloadable button in chat
-- **Tailwind JIT fix** — Static classes replacing dynamic interpolation
+### Deliverable Dedup (PR #1845)
+- Content-hash dedup in DeliverableFactory (SHA256 of title + content[:2000] + agent_name)
+- 72-hour lookup window prevents duplicate deliverables from recurring tasks
+- New field: `Deliverable.content_hash` (migration 0325)
 
-### PitchDeckForge (6 PRs: #1-6)
-- Cross-app import from founder project
-- Import preview panel (mentor notes + template picker)
-- 5-step progress stepper
-- Tailwind JIT fix
+### Data Quality Fixes (PR #1846)
+- Spider timestamp normalization: `core/utils/time.py` normalize_timestamp() utility
+- Fixed 3 ingestion paths (data_pipeline, agent_data_receiver, spider_data_router)
+- Media metadata: ImageHistory.save() auto-generates filename if empty, 2 existing records fixed
+- Spider count: spider_status_tool response clarified (total_runs + count_note)
 
-### DealFlowTracker (4 PRs: #1-4)
-- Cross-app import from founder project
-- 5-step progress stepper
-- Tailwind JIT fix
+### Deliverable Tool Fixes (PRs #1847-#1850)
+- #1847: Exclude archived from duplicate_excess stats
+- #1848: PA service account can see all deliverables (scoping fix)
+- #1849: `status='all'` filter bug (was matching literal 'all', returning 0 results)
+- #1850: Deliverable update action supports status changes (archive/draft/ready/published)
 
-### Contract Concierge (4 PRs: #1-4)
-- Cross-app import from founder project with contract prefill
-- 5-step progress stepper
-- Tailwind JIT fix
+### PersonalAssistantAgent Deprecated (PR #1851)
+- Marked as DEPRECATED — all PA traffic routes through Rigby (UnifiedPAEntrypoint) since Session 932
+- Fallback paths redirected to ThinkingAgent (semantic routing, classification, artifact execution)
+- Investigation: 6 executions total, 0 deliverables — NOT the source of quality issues
+- Agent left in AGENT_MAP for backward compat
+
+### Rigby Operational Results
+- 132-action tool sweep across 78 tools — 0 hard failures
+- Full pagination sweep — 4 anomalies found, all resolved
+- 20 low-quality stub deliverables archived
+- Top 20 opportunities surfaced (stale — needs spider restart)
 
 ---
 
-## PRIORITY 1: Test the Full Flow (THIS SESSION)
+## PRIORITY 1: Legacy PA Cleanup (THIS SESSION)
+
+### The Problem
+Three legacy PA implementations exist alongside Rigby:
+1. **`PersonalAssistantAgent`** (4,537 lines) — `core/agents/personal_assistant_agent.py` + 4 mixin files. DEPRECATED as of PR #1851. Still in AGENT_MAP but no live traffic.
+2. **`EnhancedPersonalAIAssistant`** (large) — `core/personal_ai_assistant_enhanced.py`. Still imported by `views_image_tools.py` (10+ imports) and `views_personal_assistant_dev.py`.
+3. **`PersonalAIAssistant`** (original) — likely predecessor to both.
+
+### What Needs Doing
+- Audit all imports of legacy PA classes — identify which are dead vs actively called
+- For `EnhancedPersonalAIAssistant`: trace the 10+ image tool imports — do they actually execute, or can they be replaced with Rigby/agent router calls?
+- For `PersonalAssistantAgent`: can it be fully removed from AGENT_MAP now that fallbacks point to ThinkingAgent?
+- Clean up the 4 mixin files: `pa_handlers_tools.py`, `pa_handlers_manage.py`, `pa_handlers_query.py`, `pa_handlers_fetch.py`
+- Goal: one PA (Rigby), zero legacy PA code in active paths
+
+### References
+- 70 references to `PersonalAssistantAgent` across 31 files
+- 10+ imports of `EnhancedPersonalAIAssistant` in views_image_tools.py
+- `classification_integration.py`, `artifact_execution.py` already redirected to ThinkingAgent
+
+## PRIORITY 2: Spider Network Restart
+
+### Status
+- All 78 spiders stale since March 29
+- celery-broadcast was rebuilding (pip timeout on Railway) — may need manual redeploy
+- Once spiders run: fresh data flows to TrendAnalysisAgent, opportunities, content pipeline
+
+### Steps
+1. Verify celery-broadcast is running on Railway
+2. Trigger a spider run: `run_spider_network` task
+3. Verify SpiderData items appear with items_24h > 0
+4. Verify embedding backfill processes new items
+
+## PRIORITY 3: Founder Toolkit Testing (Carried Forward)
 
 ### Steps to test:
-1. **Seed build mentors** — run in browser console on MentorForge:
-   ```javascript
-   fetch('https://mentorforge-bj25.onrender.com/api/admin/seed-build-mentors', {
-     method: 'POST',
-     headers: { Authorization: `Bearer ${localStorage.getItem('mf_token')}` }
-   }).then(r => r.json()).then(console.log)
-   ```
-2. **MentorForge** — Find mentor → Start session → Chat → Export to Project
-3. **PitchDeckForge** — Import from Mentor → Preview → Generate Deck → Export PDF
-4. **DealFlowTracker** — Import from Project → Create Deal
-5. **Contract Concierge** — Import from Project → Create Contract
-6. **Build Planning** — Find Alex Rivera → Start Build Planning session → Describe app → Download Build Spec
+1. Seed build mentors on MentorForge production
+2. MentorForge → Find mentor → Start session → Chat → Export to Project
+3. PitchDeckForge → Import from Mentor → Preview → Generate Deck → Export PDF
+4. DealFlowTracker → Import from Project → Create Deal
+5. Contract Concierge → Import from Project → Create Contract
+6. Build Planning → Find Alex Rivera → Start Build Planning session → Describe app → Download Build Spec
 
 ### Demo Recording
 - Canonical demo script ready (initiative fc0d398b)
-- Teleprompter script + SRT captions prepared by Rigby
 - GreenRoots Community Gardens nonprofit example ($250k seed raise)
 - Target runtime: ~2:55
 
-## PRIORITY 2: AppForge Concept (Future)
-
-### The Big Idea
-Add a "Build MVP" step: ① Mentor → ② **Build** → ③ Deck → ④ Pipeline → ⑤ Contracts
-
-- Near-term: Mentor exports structured build spec → founder brings to Claude Code CLI → app scaffolded and deployed
-- Long-term: claude_code_engineer on Railway does it autonomously (needs Anthropic API credits)
-- Full investigation done with Rigby — see PA conversation pa-d82ae92a6a52
-
-### What's Built for This
-- 2 Build Planning mentors (Alex Rivera, Nina Kowalski)
-- build_planning session mode with JSON spec output
-- Download Build Spec button
-- founder_projects.build_spec field
-- 5-step progress stepper showing Build step
-
-## PRIORITY 3: Backlog
-
+## PRIORITY 4: Backlog
 - Deploy remaining 5 apps (SellerPilot, SignalStudio, ScoutPlays, ComplianceSentinel, Ironwood)
 - Attachments upload for Packs (initiative eb551452 — ON_HOLD)
-- Spider embedding backlog (20% → target 80%)
-- Initiative pipeline (0 completed → needs auto-approve)
+- Initiative pipeline (0 completed recently → needs auto-approve)
+- Opportunity data quality (all score=50, duplicates, needs scoring logic)
 
 ---
 
@@ -100,8 +117,8 @@ Add a "Build MVP" step: ① Mentor → ② **Build** → ③ Deck → ④ Pipeli
 ## How to Work with Rigby
 
 ```bash
-# Create a fresh conversation first, then:
-python tools/pa_chat.py "message" --tools --conversation <NEW_CONVERSATION_ID>
+# Create a fresh conversation (Rigby can now do this herself via session_tool)
+python tools/pa_chat.py "message" --tools --conversation <CONVERSATION_ID>
 
 # Local
 bash tools/pa_local.sh "message"
@@ -113,7 +130,3 @@ bash tools/pa_local.sh "message"
 - PitchDeck: github.com/clwest/pitchdeckforge
 - DealFlow: github.com/clwest/dealflowtracker
 - Contracts: github.com/clwest/contract-concierge
-
-## Stripe
-- Payment Link ($299 Sprint): https://buy.stripe.com/5kQ7sM9CwdgAcPIerc14400
-- Dashboard: https://dashboard.stripe.com
