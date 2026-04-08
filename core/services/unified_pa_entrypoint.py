@@ -2009,6 +2009,24 @@ class UnifiedPAEntrypoint:
                 prompt_parts.insert(1, f"You are speaking with: {vip_name}")
                 prompt_parts.insert(2, "")
 
+        # Proactive session health check — surface recommendation when conversation is degraded
+        if self.conversation_id:
+            try:
+                from core.services.session_health_service import get_session_health
+                health = get_session_health(self.conversation_id)
+                if health.get('recommendation') in ('suggest_fresh', 'strongly_recommend_fresh'):
+                    score = health.get('score', 0)
+                    reasons = '; '.join(health.get('reasons', [])[:3])
+                    prompt_parts.append("")
+                    prompt_parts.append(
+                        f"SESSION HEALTH NOTICE (score: {score}/100): {reasons}. "
+                        "Consider suggesting a fresh conversation using session_tool "
+                        "with action='create_fresh'. Mention this naturally — don't "
+                        "force it if the user is in the middle of something important."
+                    )
+            except Exception as e:
+                logger.debug(f"[PA] Session health check skipped: {e}")
+
         return "\n".join(prompt_parts)
 
     def _infer_intent_from_tools(self, tool_names: List[str]) -> Optional[str]:

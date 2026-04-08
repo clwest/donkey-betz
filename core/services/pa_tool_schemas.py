@@ -3877,6 +3877,50 @@ PA_TOOL_SCHEMAS = [
             "required": ["action"],
         },
     },
+    # ── Session tool: conversation health + fresh session creation ──
+    {
+        "type": "function",
+        "name": "session_tool",
+        "description": (
+            "Manage conversation sessions: check conversation health/freshness, "
+            "create a fresh conversation, or list recent conversations. Use when "
+            "asked about session health, context drift, whether to start fresh, "
+            "creating a new conversation, or listing past conversations. Also use "
+            "proactively when you notice the conversation is getting long or drifting."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["health_check", "create_fresh", "list_recent"],
+                    "description": (
+                        "health_check: analyze current conversation freshness "
+                        "(score 0-100, recommendation, reasons, auto-summary, starter prompt). "
+                        "create_fresh: create a new conversation and return its ID + starter prompt. "
+                        "list_recent: list recent conversations with titles and message counts."
+                    ),
+                },
+                "conversation_id": {
+                    "type": "string",
+                    "description": "Conversation ID to check health for (health_check). Defaults to current conversation.",
+                },
+                "title": {
+                    "type": "string",
+                    "description": "Optional title for the new conversation (create_fresh).",
+                },
+                "carry_forward_summary": {
+                    "type": "string",
+                    "description": "Summary text to carry into the new conversation (create_fresh).",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Number of recent conversations to return (list_recent, default 10).",
+                },
+            },
+            "required": ["action"],
+        },
+    },
 ]
 
 # ── Startup validation: every tool must have name, description, parameters ──
@@ -3990,6 +4034,7 @@ TOOL_ENRICHMENT_MAP = {
     'heartbeat_history_tool': [],
     'infra_health_tool': [],
     'kb_tool': [],
+    'session_tool': [],
 }
 
 # Reverse map: tool name -> canonical intent name for enrichment pipeline
@@ -4097,6 +4142,7 @@ TOOL_TO_INTENT_MAP = {
     'kb_tool': 'knowledge_base',
     'bpaas_tool': 'workspace',
     'claude_code_tool': 'codebase',
+    'session_tool': 'session_management',
 }
 
 

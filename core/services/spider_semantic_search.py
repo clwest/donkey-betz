@@ -422,32 +422,35 @@ class SpiderSemanticSearch:
 
         return 'failed'
 
-    def backfill_embeddings(self, batch_size: int = 100, hours: int = 168) -> Dict[str, int]:
+    def backfill_embeddings(self, batch_size: int = 100, hours: int = None) -> Dict[str, int]:
         """
         Generate embeddings for SpiderData entries that don't have them.
 
         Session 394: Improved to skip already-marked empty entries and use larger batches.
+        Session triage (Apr 2026): Removed default hours=168 window that excluded
+        86k+ historical records. After triage_spider_embeddings deduped the backlog,
+        the remaining records are all worth embedding regardless of age.
 
         Args:
             batch_size: Number of entries to process (default 100)
-            hours: Only process entries from last N hours (default 7 days)
+            hours: Only process entries from last N hours (None = all)
 
         Returns:
             Dict with processing stats
         """
         from core.models_unified_system import SpiderData
 
-        since = timezone.now() - timedelta(hours=hours)
-
         # Find entries without embeddings
         # Session 394: Also exclude entries marked as empty
         # Session 782: Exclude by embedding_text instead of embedding=[] (pgvector error)
-        entries = SpiderData.objects.filter(
-            created_at__gte=since,
+        qs = SpiderData.objects.filter(
             embedding__isnull=True  # Only NULL, not empty list
         ).exclude(
             embedding_text='[NO_ITEMS]'  # Skip already-marked empty entries
-        ).order_by('-created_at')[:batch_size]
+        )
+        if hours is not None:
+            qs = qs.filter(created_at__gte=timezone.now() - timedelta(hours=hours))
+        entries = qs.order_by('-created_at')[:batch_size]
 
         stats = {'processed': 0, 'succeeded': 0, 'failed': 0, 'skipped': 0, 'marked_empty': 0}
 

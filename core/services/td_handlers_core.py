@@ -3401,4 +3401,93 @@ RESEARCH DATA:
         valid = ['send_message', 'list_threads', 'get_thread', 'unread_count']
         return {'error': f'Unknown messaging_tool action: {action}. Valid: {", ".join(valid)}'}
 
+    # ── Session tool: conversation health + fresh session creation ──────────────
+
+    def _handle_session(self, tool_name, payload, user_id, trace_id) -> Dict:
+        """Handle conversation session management: health check, create fresh, list recent."""
+        action = payload.get('action', 'health_check')
+
+        if action == 'health_check':
+            from core.services.session_health_service import get_session_health
+
+            conversation_id = payload.get('conversation_id') or getattr(self, '_current_conversation_id', None)
+            if not conversation_id:
+                return {'error': 'No conversation_id provided and no current conversation context.'}
+
+            health = get_session_health(conversation_id, user_id)
+            return {
+                'action': 'health_check',
+                **health,
+            }
+
+        elif action == 'create_fresh':
+            import uuid
+            from core.models import ChatConversation
+
+            new_id = f"pa-{uuid.uuid4().hex[:16]}"
+            title = payload.get('title', 'New session')
+            carry_forward = payload.get('carry_forward_summary', '')
+
+            # Create the first message in the new conversation to establish it
+            ChatConversation.objects.create(
+                conversation_id=new_id,
+                user_id=user_id,
+                session_title=title,
+                user_message=f"[Session created] {carry_forward}" if carry_forward else "[Session created]",
+                assistant_response=f"Fresh session started. {('Context carried forward: ' + carry_forward[:500]) if carry_forward else 'Ready to go.'}",
+            )
+
+            # Generate a starter prompt from the old conversation if we have one
+            old_conversation_id = getattr(self, '_current_conversation_id', None)
+            starter_prompt = ''
+            if old_conversation_id:
+                try:
+                    from core.services.session_health_service import get_session_health
+                    old_health = get_session_health(old_conversation_id, user_id)
+                    starter_prompt = old_health.get('starter_prompt', '')
+                except Exception:
+                    pass
+
+            return {
+                'action': 'create_fresh',
+                'conversation_id': new_id,
+                'title': title,
+                'starter_prompt': starter_prompt,
+                'message': f'Fresh conversation created: {new_id}',
+            }
+
+        elif action == 'list_recent':
+            from core.models import ChatConversation
+            from django.db.models import Count, Max
+
+            limit = min(payload.get('limit', 10), 25)
+
+            recent = (
+                ChatConversation.objects.filter(user_id=user_id)
+                .values('conversation_id', 'session_title')
+                .annotate(
+                    message_count=Count('id'),
+                    last_message=Max('created_at'),
+                )
+                .order_by('-last_message')[:limit]
+            )
+
+            conversations = []
+            for conv in recent:
+                conversations.append({
+                    'conversation_id': conv['conversation_id'],
+                    'title': conv['session_title'] or 'Untitled',
+                    'message_count': conv['message_count'],
+                    'last_message': conv['last_message'].isoformat() if conv['last_message'] else None,
+                })
+
+            return {
+                'action': 'list_recent',
+                'conversations': conversations,
+                'count': len(conversations),
+            }
+
+        valid = ['health_check', 'create_fresh', 'list_recent']
+        return {'error': f'Unknown session_tool action: {action}. Valid: {", ".join(valid)}'}
+
     # ── Session 1079: Content Tool (gateway) ─────────────────────────────────────
