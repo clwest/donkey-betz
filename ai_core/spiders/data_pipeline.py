@@ -31,6 +31,22 @@ import uuid
 logger = logging.getLogger(__name__)
 
 
+def _safe_parse_timestamp(value) -> Optional[datetime]:
+    """Parse a timestamp string to timezone-aware UTC datetime, or None."""
+    if not value:
+        return None
+    try:
+        from core.utils.time import normalize_timestamp
+        return normalize_timestamp(value)
+    except Exception:
+        if isinstance(value, str):
+            try:
+                return datetime.fromisoformat(value.replace('Z', '+00:00'))
+            except Exception:
+                pass
+        return None
+
+
 class PipelineStatus(Enum):
     """Pipeline status states"""
     INITIALIZING = "initializing"
@@ -440,13 +456,13 @@ class RealTimeDataPipeline:
             content=message_dict.get('content', {}),
             metadata=message_dict.get('metadata', {}),
             quality_score=message_dict.get('quality_score', 0.0),
-            timestamp=datetime.fromisoformat(message_dict.get('timestamp', datetime.now(timezone.utc).isoformat())),
+            timestamp=_safe_parse_timestamp(message_dict.get('timestamp')) or datetime.now(timezone.utc),
             source_url=message_dict.get('source_url', ''),
             relevance_tags=message_dict.get('relevance_tags', []),
             target_agents=message_dict.get('target_agents', []),
             target_advisors=message_dict.get('target_advisors', []),
             priority=message_dict.get('priority', 5),
-            expiry=datetime.fromisoformat(message_dict['expiry']) if message_dict.get('expiry') else None,
+            expiry=_safe_parse_timestamp(message_dict.get('expiry')),
             checksum=message_dict.get('checksum', '')
         )
 

@@ -2137,8 +2137,20 @@ class ImageHistory(UnifiedBaseModel):
     def save(self, *args, **kwargs):
         """
         Session 182: Auto-assign sequential_number on creation.
-        This ensures a permanent, stable ID that never changes.
+        Apr 2026: Auto-generate filename if empty (prevents missing metadata).
         """
+        # Auto-generate filename if missing
+        if not self.filename:
+            ext = 'png'  # default for generated images
+            if self.file_path:
+                import os
+                _, file_ext = os.path.splitext(self.file_path.split('?')[0])
+                if file_ext:
+                    ext = file_ext.lstrip('.')
+            from django.utils import timezone as _tz
+            ts = _tz.now().strftime('%Y%m%d_%H%M%S')
+            self.filename = f"{self.image_type or 'generated'}_{ts}.{ext}"
+
         if self._state.adding and self.sequential_number is None:
             # Get the highest sequential number for this user
             from django.db.models import Max
