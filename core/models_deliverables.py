@@ -297,6 +297,14 @@ class Deliverable(models.Model):
         help_text="Pinned deliverables override retention policies (never auto-deleted)"
     )
 
+    # Content hash for dedup (SHA256 of title + content + agent_name)
+    content_hash = models.CharField(
+        max_length=32,
+        blank=True,
+        db_index=True,
+        help_text="Content hash for dedup prevention (set by DeliverableFactory)"
+    )
+
     # Status
     STATUS_CHOICES = [
         ('draft', 'Draft'),

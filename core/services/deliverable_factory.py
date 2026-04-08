@@ -24,6 +24,7 @@ Usage:
     )
 """
 
+import hashlib
 import logging
 import uuid
 from typing import Optional, List, Any
@@ -31,6 +32,15 @@ from typing import Optional, List, Any
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _content_hash(title: str, content: str, agent_name: str) -> str:
+    """
+    Generate a deterministic hash from deliverable content for dedup.
+    Uses title + first 2000 chars of content + agent_name.
+    """
+    normalized = f"{title.strip().lower()}|{(content or '')[:2000].strip()}|{agent_name.strip().lower()}"
+    return hashlib.sha256(normalized.encode('utf-8')).hexdigest()[:32]
 
 
 def create_deliverable(
@@ -120,6 +130,23 @@ def create_deliverable(
         )
         return title_existing
 
+    # --- Content-hash dedupe (72h window) ---
+    # Catches duplicates that slip past title-based dedupe (e.g., recurring
+    # scheduled tasks producing identical content across runs > 4h apart).
+    if content and len(content) > 50:  # Skip trivially short content
+        c_hash = _content_hash(title, content, agent_name)
+        hash_window = tz.now() - timedelta(hours=72)
+        hash_existing = Deliverable.objects.filter(
+            content_hash=c_hash,
+            created_at__gte=hash_window,
+        ).order_by('-created_at').first()
+        if hash_existing:
+            logger.info(
+                f"[DeliverableFactory] Content-hash dedupe: returning existing "
+                f"{hash_existing.id} '{title[:60]}' (hash={c_hash[:12]})"
+            )
+            return hash_existing
+
     # Auto-assign user if not provided (agent/Celery context)
     if not user:
         user = _get_default_user()
@@ -172,6 +199,10 @@ def create_deliverable(
         kwargs['dream_id'] = dream_id
     if source_operation_id:
         kwargs['source_operation_id'] = source_operation_id
+
+    # Content hash for dedup (stored on model for future lookups)
+    if content and len(content) > 50:
+        kwargs['content_hash'] = _content_hash(title, content, agent_name)
 
     # Merge any extra fields (for backward compat with existing callers)
     kwargs.update(extra_fields)
