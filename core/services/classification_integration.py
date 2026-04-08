@@ -413,7 +413,7 @@ class ClassificationIntegrationService:
             return 'ResearchAgent'
 
         else:
-            return 'PersonalAssistantAgent'
+            return 'ThinkingAgent'  # Apr 2026: was PersonalAssistantAgent (deprecated)
 
     def _extract_count(self, message: str) -> int:
         """Extract count from message like 'create 3 logos'."""
