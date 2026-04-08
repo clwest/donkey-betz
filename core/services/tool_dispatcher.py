@@ -492,6 +492,9 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         # In-app messaging between platform users
         self.register("messaging_tool", self._handle_messaging)
 
+        # Session management (health check, create fresh, list recent)
+        self.register("session_tool", self._handle_session)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):

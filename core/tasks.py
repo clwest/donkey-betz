@@ -833,8 +833,10 @@ def backfill_spider_embeddings(batch_size: int = 200):
     """
     Session 293: Generate embeddings for SpiderData entries that don't have them.
     Session 394: Increased default batch size from 50 to 200 for faster processing.
+    Apr 2026: Removed hours=168 window — triage_spider_embeddings deduped the
+    historical backlog so all remaining unembedded records are worth processing.
 
-    Runs every 10 minutes via Celery Beat to gradually build embedding coverage.
+    Runs every 15 minutes via Celery Beat to gradually build embedding coverage.
     Uses the SpiderSemanticSearch service.
 
     Now also marks entries with no items as 'empty' so they're skipped in future runs.
@@ -845,7 +847,7 @@ def backfill_spider_embeddings(batch_size: int = 200):
         from core.services.spider_semantic_search import get_spider_semantic_search
 
         search = get_spider_semantic_search()
-        stats = search.backfill_embeddings(batch_size=batch_size, hours=168)  # Last 7 days
+        stats = search.backfill_embeddings(batch_size=batch_size)
 
         logger.info(
             f"✅ Embedding backfill complete: "
@@ -3616,15 +3618,15 @@ def collect_training_data_full():
     from core.tasks_ops import _impl_collect_training_data_full
     return _impl_collect_training_data_full()
 @shared_task
-def cleanup_spider_item_hashes(days_to_keep: int = 7):
+def cleanup_spider_item_hashes(days_to_keep: int = 90):
     """
     Session 616: Clean up old spider item hashes to prevent table bloat.
-
-    Removes hash records older than the lookback period since they're
-    no longer needed for deduplication.
+    Apr 2026: Extended from 7→90 days to match dedup lookback window.
+    The 7-day window caused re-ingestion — hashes expired, old RSS items
+    looked "new" again, creating ~85k duplicate SpiderData rows.
 
     Args:
-        days_to_keep: Days of hashes to retain (default: 7)
+        days_to_keep: Days of hashes to retain (default: 90)
 
     Returns:
         Dict with cleanup stats
