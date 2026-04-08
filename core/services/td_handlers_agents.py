@@ -1219,7 +1219,7 @@ class AgentHandlersMixin:
             # Session 1101: Status filter (with aliases for LLM confusion)
             _STATUS_ALIASES = {'approved': 'ready', 'pending_review': 'ready', 'rejected': 'archived'}
             status = payload.get('status')
-            if status:
+            if status and status.lower() != 'all':
                 status = _STATUS_ALIASES.get(status, status)
                 qs = qs.filter(status=status)
             # Session 1101: Date range filters
