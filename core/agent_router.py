@@ -527,19 +527,17 @@ class AgentRouter:
         self,
         query: str,
         context: Optional[Dict[str, Any]] = None,
-        fallback_agent: str = "PersonalAssistantAgent"
+        fallback_agent: str = "ThinkingAgent"
     ) -> AgentResult:
         """
         Session 488: Route a query to the best agent using semantic matching.
-
-        This method uses embeddings to find the most semantically similar agent
-        for the given query. If confidence is high enough, it routes directly
-        to that agent. Otherwise, it falls back to the specified fallback agent.
+        Apr 2026: Fallback changed from PersonalAssistantAgent (deprecated) to
+        ThinkingAgent. All PA traffic routes through UnifiedPAEntrypoint (Rigby).
 
         Args:
             query: The user's natural language query
             context: Optional additional context
-            fallback_agent: Agent to use if semantic matching fails (default: PersonalAssistantAgent)
+            fallback_agent: Agent to use if semantic matching fails (default: ThinkingAgent)
 
         Returns:
             AgentResult from the selected agent
@@ -597,7 +595,7 @@ class AgentRouter:
             logger.error(f"Failed to get semantic suggestion: {e}")
             return {
                 'query': query,
-                'selected_agent': 'PersonalAssistantAgent',
+                'selected_agent': 'ThinkingAgent',
                 'confidence': 0.0,
                 'method': 'error_fallback',
                 'error': str(e)

@@ -32,7 +32,7 @@ class ArtifactExecutionService:
         'experiment': 'ResearchAgent',
         'action_item': 'WorkflowAgent',
         'risk': 'COOAgent',
-        'question': 'PersonalAssistantAgent',
+        'question': 'ThinkingAgent',  # Apr 2026: was PersonalAssistantAgent (deprecated)
         'data_spec': 'FullStackDeveloperAgent',
         'insight': 'ContentStrategyAgent',
     }
