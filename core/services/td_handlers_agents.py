@@ -1550,6 +1550,12 @@ class AgentHandlersMixin:
             if 'data_sensitivity' in payload and payload['data_sensitivity']:
                 obj.data_sensitivity = payload['data_sensitivity']
                 update_fields.append('data_sensitivity')
+            if 'status' in payload and payload['status']:
+                valid_statuses = {'draft', 'ready', 'published', 'archived'}
+                new_status = payload['status'].lower()
+                if new_status in valid_statuses:
+                    obj.status = new_status
+                    update_fields.append('status')
             if 'workspace_id' in payload or 'workspace' in payload:
                 ws_id = payload.get('workspace_id') or payload.get('workspace')
                 if ws_id:
@@ -1561,7 +1567,7 @@ class AgentHandlersMixin:
                         pass
 
             if not update_fields:
-                raise ValueError("update requires at least one of: title, content, prepend, append, type, content_format, tags, category, data_sensitivity, workspace_id")
+                raise ValueError("update requires at least one of: title, content, prepend, append, type, content_format, tags, category, status, data_sensitivity, workspace_id")
 
             obj.save(update_fields=update_fields)
             return {
