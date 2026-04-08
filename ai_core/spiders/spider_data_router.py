@@ -551,7 +551,12 @@ class SpiderDataRouter:
             # Freshness filter
             data_freshness_hours = filters.get('data_freshness_hours')
             if data_freshness_hours:
-                timestamp = datetime.fromisoformat(data.get('timestamp', ''))
+                raw_ts = data.get('timestamp', '')
+                try:
+                    from core.utils.time import normalize_timestamp
+                    timestamp = normalize_timestamp(raw_ts) or datetime.now(timezone.utc)
+                except Exception:
+                    timestamp = datetime.fromisoformat(str(raw_ts).replace('Z', '+00:00'))
                 age_hours = (datetime.now(timezone.utc) - timestamp).total_seconds() / 3600
                 if age_hours > data_freshness_hours:
                     return False
