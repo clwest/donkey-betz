@@ -3773,6 +3773,10 @@ class OpsHandlersMixin:
                     age_hours = (now - last_run).total_seconds() / 3600 if last_run else None
                     items.append({
                         'spider_name': s['spider_name'],
+                        'total_runs': s['total_items'],  # renamed: each SpiderData row = one run
+                        'runs_24h': s['items_24h'],
+                        'runs_7d': s['items_7d'],
+                        # Keep legacy keys for backward compat
                         'total_items': s['total_items'],
                         'items_24h': s['items_24h'],
                         'items_7d': s['items_7d'],
@@ -3780,6 +3784,7 @@ class OpsHandlersMixin:
                         'first_seen': s['first_seen'].isoformat() if s['first_seen'] else None,
                         'age_hours': round(age_hours, 1) if age_hours is not None else None,
                         'status': 'active' if age_hours and age_hours < 48 else 'stale' if age_hours else 'unknown',
+                        'count_note': 'total_runs = SpiderData rows (each contains multiple items)',
                     })
 
                 return {

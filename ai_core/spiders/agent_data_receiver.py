@@ -27,6 +27,22 @@ from abc import ABC, abstractmethod
 from enum import Enum
 import uuid
 
+
+def _safe_parse_ts(value) -> Optional[datetime]:
+    """Parse timestamp to timezone-aware UTC, or None."""
+    if not value:
+        return None
+    try:
+        from core.utils.time import normalize_timestamp
+        return normalize_timestamp(value)
+    except Exception:
+        if isinstance(value, str):
+            try:
+                return datetime.fromisoformat(value.replace('Z', '+00:00'))
+            except Exception:
+                pass
+        return None
+
 logger = logging.getLogger(__name__)
 
 
@@ -230,7 +246,7 @@ class AgentSpiderDataReceiver(ABC):
                 content=data_dict.get('content', {}),
                 metadata=data_dict.get('metadata', {}),
                 quality_score=data_dict.get('quality_score', 0.0),
-                timestamp=datetime.fromisoformat(data_dict.get('timestamp', datetime.now(timezone.utc).isoformat())),
+                timestamp=_safe_parse_ts(data_dict.get('timestamp')) or datetime.now(timezone.utc),
                 source_url=data_dict.get('source_url', ''),
                 relevance_tags=data_dict.get('relevance_tags', []),
                 priority=DataProcessingPriority(data_dict.get('priority', 3)),
