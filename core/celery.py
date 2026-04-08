@@ -192,8 +192,8 @@ app.conf.beat_schedule = {
     'backfill-spider-embeddings': {
         'task': 'core.tasks.backfill_spider_embeddings',
         'schedule': crontab(minute='*/15'),  # Every 15 min
-        'kwargs': {'batch_size': 100},
-        'options': {'queue': 'long_running', 'expires': 900},
+        'kwargs': {'batch_size': 500},
+        'options': {'queue': 'ml', 'expires': 900},
     },
 
     # ── Signal Intelligence ─────────────────────────────────────────────────

@@ -31,7 +31,9 @@ class SpiderDeduplicationService:
     """
 
     # How long to remember seen items (days)
-    DEFAULT_LOOKBACK_DAYS = 7
+    # Was 7 days — but RSS feeds keep items for weeks, so items got re-ingested
+    # after the 7-day hash cleanup. 90 days prevents the cycle.
+    DEFAULT_LOOKBACK_DAYS = 90
 
     # Fields to use for generating item hash, in priority order
     HASH_FIELDS_BY_TYPE = {
