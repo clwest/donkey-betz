@@ -2961,9 +2961,9 @@ class OpportunityTask(models.Model):
 
         # Map opportunity types to agent specialties
         agent_mapping = {
-            'job': ['PersonalAssistantAgent', 'ResearchAgent'],
-            'gig': ['PersonalAssistantAgent', 'ResearchAgent'],
-            'freelance': ['PersonalAssistantAgent', 'ContentStrategyAgent'],
+            'job': ['ThinkingAgent', 'ResearchAgent'],
+            'gig': ['ThinkingAgent', 'ResearchAgent'],
+            'freelance': ['ThinkingAgent', 'ContentStrategyAgent'],
             'product': ['ImageAgent', 'VideoAgent', 'CreativeDirectorAgent'],
             'digital_product': ['ImageAgent', 'ContentStrategyAgent'],
             'content': ['ContentStrategyAgent', 'SEOOptimizerAgent', 'SocialMediaAgent'],
@@ -2971,7 +2971,7 @@ class OpportunityTask(models.Model):
             'tech': ['CTOAgent', 'ResearchAgent'],
         }
 
-        agent_names = agent_mapping.get(opp_type, ['PersonalAssistantAgent'])
+        agent_names = agent_mapping.get(opp_type, ['ThinkingAgent'])
 
         return list(Agent.objects.filter(name__in=agent_names)[:3])
 

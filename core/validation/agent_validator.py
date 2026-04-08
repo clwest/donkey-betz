@@ -24,7 +24,6 @@ CORE_AGENTS = [
     'ImageEditingAgent',
     'VideoEditingAgent',
     'ResearchAgent',
-    'PersonalAssistantAgent',
     'WorkflowAgent',
 ]
 
@@ -89,7 +88,6 @@ class AgentOrchestrationValidator(BaseValidationAgent):
                 'ImageAgent',
                 'VideoAgent',
                 'ResearchAgent',
-                'PersonalAssistantAgent',
             ]
 
             agent_map = router.AGENT_MAP

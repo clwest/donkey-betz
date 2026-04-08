@@ -303,19 +303,19 @@ class PilotImplementation(models.Model):
 def _get_target_agents(impact_area: str) -> list:
     """Get relevant agents for an impact area."""
     agent_mapping = {
-        'agents': ['PersonalAssistantAgent', 'WorkflowAgent'],
+        'agents': ['ThinkingAgent', 'WorkflowAgent'],
         'workflow': ['WorkflowAgent', 'WorkflowOrchestrationAgent'],
         'image': ['ImageAgent', 'ImageEditingAgent'],
         'video': ['VideoAgent', 'VideoEditingAgent'],
         'audio': ['AudioAgent'],
         'research': ['ResearchAgent', 'TrendAnalysisAgent'],
-        'prompting': ['PersonalAssistantAgent'],
+        'prompting': ['ThinkingAgent'],
         'product': ['FullStackDeveloperAgent', 'ContentStrategyAgent'],
         'spider': ['ResearchAgent'],
         'legal': ['LegalDocDrafterAgent'],
-        'memory': ['PersonalAssistantAgent'],
+        'memory': ['ThinkingAgent'],
     }
-    return agent_mapping.get(impact_area, ['PersonalAssistantAgent'])
+    return agent_mapping.get(impact_area, ['ThinkingAgent'])
 
 
 class ImplementationAction(models.Model):

@@ -201,7 +201,7 @@ class ArtifactExecutionService:
         # Option 3: Default by artifact type
         return self.DEFAULT_AGENTS.get(
             artifact.artifact_type,
-            'PersonalAssistantAgent'
+            'ThinkingAgent'  # Apr 2026: was PersonalAssistantAgent (deprecated)
         )
 
     def _build_task(self, artifact) -> str:

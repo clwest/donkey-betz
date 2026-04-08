@@ -1992,13 +1992,11 @@ class InteractiveCommands(commands.Cog):
             # Get conversation history for this user
             history = conversation_history.get_history(user_id)
 
-            # Import and call Personal Assistant
+            # Route through AgentRouter → ThinkingAgent (PersonalAssistantAgent removed)
             @sync_to_async
             def query_assistant(q: str, conv_history: List[Dict[str, str]]) -> Dict[str, Any]:
-                from core.agents.personal_assistant_agent import PersonalAssistantAgent
                 from core.agent_router import AgentRouter
 
-                agent = PersonalAssistantAgent()
                 router = AgentRouter()
 
                 # Build context with conversation history
@@ -2019,12 +2017,11 @@ class InteractiveCommands(commands.Cog):
                     ])
                     task_with_context = f"[Previous conversation]\n{history_summary}\n\n[Current question]\n{q}"
 
-                # Execute the agent
-                result = agent.execute(
+                # Execute through ThinkingAgent via router
+                result = router.route(
+                    agent_name='ThinkingAgent',
                     task=task_with_context,
                     context=context,
-                    scifi_context={},
-                    spider_context={}
                 )
 
                 # Build response - check both message and data

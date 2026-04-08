@@ -217,13 +217,14 @@ class SuperPlatformCoordinator:
 
     @property
     def personal_assistant(self):
-        """Session 268: Lazy load PersonalAssistantAgent for clean architecture."""
+        """Session 268: Lazy load ThinkingAgent for clean architecture.
+        Apr 2026: PersonalAssistantAgent removed, using ThinkingAgent via AgentRouter."""
         if self._personal_assistant is None:
             try:
-                from core.agents.personal_assistant_agent import PersonalAssistantAgent
-                self._personal_assistant = PersonalAssistantAgent(user=self.user)
+                from core.agents.thinking_agent import ThinkingAgent
+                self._personal_assistant = ThinkingAgent(user=self.user)
             except Exception as e:
-                logger.warning(f"Could not load personal assistant: {e}")
+                logger.warning(f"Could not load thinking agent: {e}")
         return self._personal_assistant
 
     @property
@@ -951,15 +952,15 @@ Try:
         """
         Session 268: Process using the clean agent architecture.
 
-        This uses the PersonalAssistantAgent as the entry point, which then
-        routes to specialized agents via the AgentRouter.
+        This uses ThinkingAgent as the entry point, which handles general
+        reasoning and routes to specialized agents via the AgentRouter.
 
         Architecture:
-            User → PersonalAssistantAgent → AgentRouter → Specialized Agent → Tools
+            User → ThinkingAgent → AgentRouter → Specialized Agent → Tools
         """
         try:
             if not self.personal_assistant:
-                logger.warning("PersonalAssistantAgent not available, falling back to legacy")
+                logger.warning("ThinkingAgent not available, falling back to legacy")
                 return self._process_legacy(message, start_time)
 
             # Aggregate context for the agent
@@ -989,7 +990,7 @@ Try:
             if self.scifi_service:
                 try:
                     scifi_ctx = self.scifi_service.get_scifi_context(
-                        agent_name='PersonalAssistantAgent',
+                        agent_name='ThinkingAgent',
                         task=message,
                         user=self.user
                     )
@@ -1006,7 +1007,7 @@ Try:
                     f"{intelligence_context.get('metadata', {}).get('experts_count', 0)} experts"
                 )
 
-            # Execute through PersonalAssistantAgent
+            # Execute through ThinkingAgent
             result = self.personal_assistant.execute(
                 task=message,
                 context={

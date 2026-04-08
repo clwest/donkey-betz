@@ -2737,7 +2737,7 @@ PA_TOOL_SCHEMAS = [
                 "content_offset": {"type": "integer", "description": "For deliverable_detail: start reading content from this char position"},
                 "content_limit": {"type": "integer", "description": "For deliverable_detail: max chars to return (default 8000)"},
                 "workspace_id": {"type": "string", "description": "For deliverable_create/update: workspace UUID to link deliverable to"},
-                "agent_name": {"type": "string", "description": "For deliverable_create: agent name (default PersonalAssistantAgent)"},
+                "agent_name": {"type": "string", "description": "For deliverable_create: agent name (default Rigby)"},
                 "data_sensitivity": {"type": "string", "description": "For deliverable_create/update: public, internal, confidential, restricted"},
                 "is_pinned": {"type": "boolean", "description": "For deliverable_create: pin to prevent auto-cleanup"},
                 "prepend": {"type": "string", "description": "For deliverable_update: text to prepend to existing content"},

@@ -284,7 +284,7 @@ class OrchestrationCreateWorkflowView(View):
                     order=step_data.get('order', idx + 1),
                     name=step_data.get('name', f'Step {idx + 1}'),
                     description=step_data.get('description', ''),
-                    agent=step_data.get('agent', 'PersonalAssistantAgent'),
+                    agent=step_data.get('agent', 'ThinkingAgent'),
                     config={
                         'prompt_template': step_data.get('prompt_template', ''),
                         **step_data.get('config', {}),
