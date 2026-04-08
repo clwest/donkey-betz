@@ -1,127 +1,119 @@
 # Next Session — Start Here
 
-**Date:** April 7, 2026
-**Previous Session:** Platform Audit Complete + Founder Toolkit Live + Marketing Prep
-**PA Conversation:** pa-d19c1674b936
-**Status:** 226 Agents | 86 Spiders | 25 Advisors | 4 Founder Toolkit apps LIVE with Stripe | Landing page LIVE | 5 more apps ready to deploy
+**Date:** April 8, 2026
+**Previous Session:** Founder Toolkit Cross-App Flow + Build Planning Mode + UI Polish
+**PA Conversation:** Create fresh — use Rigby's starter template below
+**Status:** 226 Agents | 86 Spiders | 25 Advisors | 4 Founder Toolkit apps LIVE with Stripe | Build Planning mentors added | 21 PRs merged this session
 
 ---
 
-## What Was Done (April 6-7, 2026)
+## What Was Done (April 7-8, 2026) — 21 PRs Merged
 
-### Founder Toolkit — LIVE with Stripe Payments
-| App | URL | Stripe | Status |
-|-----|-----|--------|--------|
-| **PitchDeckForge** | pitchdeckforge.vercel.app | $29/mo Pro, $79/mo Team | LIVE |
-| **MentorForge** | mentorforge.vercel.app | $19/mo Pro, $49/mo Enterprise | LIVE |
-| **DealFlowTracker** | dealflowtracker.vercel.app | $39/mo Pro, $99/mo Fund | LIVE |
-| **Contract Concierge** | contract-concierge-pi.vercel.app | $29/mo Pro, $79/mo Business | LIVE |
-| **Landing Page** | founder-toolkit.vercel.app | $299 Sprint (Stripe Payment Link) | LIVE |
+### Main Platform (donkey-betz-platform)
+- **PR #1842** — Fix: staff users (Jessica) can view any deliverable detail (403 fix)
 
-**All apps share:** One PostgreSQL database, one login (SSO), Founder Toolkit cross-app nav bar, shared SECRET_KEY
+### Founder Toolkit — Cross-App Data Flow (all 4 apps)
+- Shared `founder_projects` table connecting MentorForge → PitchDeckForge → DealFlowTracker → Contract Concierge
+- Each app exports/imports via the shared table with stage progression
+- PitchDeckForge import crash fix (brief.project relationship)
 
-### Apps Ready to Deploy (5 more)
-| App | Repo | Status |
-|-----|------|--------|
-| SellerPilot | clwest/sellerpilot | Ready — pushed to GitHub |
-| SignalStudio | clwest/signal-studio | Ready — pushed to GitHub |
-| ScoutPlays | clwest/scoutplays | Ready — pushed to GitHub |
-| ComplianceSentinel | clwest/compliancesentinel | Ready — pushed to GitHub |
-| Ironwood Protocol | clwest/ironwood-protocol | Ready — deployed to Vercel + Render |
+### MentorForge (7 PRs: #1-7)
+- **Cross-app data flow** — Export to Project button in chat
+- **AI Mentor Recommendation** — "Find Your Perfect Mentor" search box, 40+ keyword mappings, GPT-5-mini rationale, color-coded scores
+- **Chat UX Polish** — Pinned mentor card, live session timer, auto-resize textarea, Shift+Enter
+- **Pro tier fix** — gpt-5.2 streaming params (max_completion_tokens), Chris upgraded to pro
+- **Build Planning Mode** — 2 new mentors (Alex Rivera MVP Architect, Nina Kowalski Product Designer), build_planning session mode, structured JSON spec output
+- **Download Build Spec** — Extracts JSON spec from conversation, downloadable button in chat
+- **Tailwind JIT fix** — Static classes replacing dynamic interpolation
 
-### 12-Dossier Platform Audit — COMPLETE
-All 12 dossiers verified. 44 resolved, 31 design questions, 5 confirmed gaps, 0 open.
-Location: `docs/audit-2026/`
+### PitchDeckForge (6 PRs: #1-6)
+- Cross-app import from founder project
+- Import preview panel (mentor notes + template picker)
+- 5-step progress stepper
+- Tailwind JIT fix
 
-### Key Platform Fixes
-- Learning loop: XP bonuses applied, pattern decay added, SharedKnowledge consumption tracked
-- Model selection: gpt-5.2 for tool-calling agents (gpt-5-mini was failing)
-- Agent dedup guard, superuser workspace access, deliverable ownership
-- PA thumbs up/down feedback, spider dynamic reliability, advisor injection
-- A/B testing command: `python manage.py test_prompt_layer`
-- 226 agents seeded to production (was 39)
+### DealFlowTracker (4 PRs: #1-4)
+- Cross-app import from founder project
+- 5-step progress stepper
+- Tailwind JIT fix
 
-### PitchDeckForge Improvements
-- Target Market + Business Model fields added to brief
-- Bonus slides use gpt-5.2 for clean JSON
-- PDF export: proper text wrapping, Q&A formatting (Q on top, A below), continuation pages
-- Slide delete button
-- 4 deck strategies: Clean, Investor, Growth, Product-Led
+### Contract Concierge (4 PRs: #1-4)
+- Cross-app import from founder project with contract prefill
+- 5-step progress stepper
+- Tailwind JIT fix
 
 ---
 
-## PRIORITY 1: Marketing & Revenue (THIS SESSION)
+## PRIORITY 1: Test the Full Flow (THIS SESSION)
 
-### Rigby's GTM Strategy
-- **Sell:** "Fundraising Sprint Stack" — $299 one-time or $49/mo
-- **Target:** Pre-seed/seed founders actively raising
-- **Channels:** LinkedIn DMs (50-100/day), partner intros, founder communities
-- **Copy:** "I'll get your raise materials investor-ready in 48h"
-- **Demo video:** Record with OBS, 3 minutes, outcome-first
+### Steps to test:
+1. **Seed build mentors** — run in browser console on MentorForge:
+   ```javascript
+   fetch('https://mentorforge-bj25.onrender.com/api/admin/seed-build-mentors', {
+     method: 'POST',
+     headers: { Authorization: `Bearer ${localStorage.getItem('mf_token')}` }
+   }).then(r => r.json()).then(console.log)
+   ```
+2. **MentorForge** — Find mentor → Start session → Chat → Export to Project
+3. **PitchDeckForge** — Import from Mentor → Preview → Generate Deck → Export PDF
+4. **DealFlowTracker** — Import from Project → Create Deal
+5. **Contract Concierge** — Import from Project → Create Contract
+6. **Build Planning** — Find Alex Rivera → Start Build Planning session → Describe app → Download Build Spec
 
-### Landing Page Live
-- URL: https://founder-toolkit.vercel.app
-- $299 Sprint button → Stripe Payment Link (LIVE)
-- Demo video placeholder ready for embed
-- Honest copy (verified claims only)
+### Demo Recording
+- Canonical demo script ready (initiative fc0d398b)
+- Teleprompter script + SRT captions prepared by Rigby
+- GreenRoots Community Gardens nonprofit example ($250k seed raise)
+- Target runtime: ~2:55
 
-### Next Steps
-1. **Record demo video** — show PitchDeck → DealFlow → Contract → Mentor flow
-2. **Embed video** on landing page
-3. **Send 30 outbound DMs** to founders raising on LinkedIn
-4. **Post on** r/startups, Indie Hackers, X
-5. **Contact accelerator mentors** for referral partnerships
+## PRIORITY 2: AppForge Concept (Future)
 
-## PRIORITY 2: Use Rigby as Marketing Assistant
+### The Big Idea
+Add a "Build MVP" step: ① Mentor → ② **Build** → ③ Deck → ④ Pipeline → ⑤ Contracts
 
-Next session focus: Work WITH Rigby in production (not development) to:
-- Write video scripts
-- Draft DM templates for different audiences
-- Create social media posts
-- Analyze which pitch angles work best
-- Track outreach results
+- Near-term: Mentor exports structured build spec → founder brings to Claude Code CLI → app scaffolded and deployed
+- Long-term: claude_code_engineer on Railway does it autonomously (needs Anthropic API credits)
+- Full investigation done with Rigby — see PA conversation pa-d82ae92a6a52
 
-## PRIORITY 3: Platform Improvements (if time)
+### What's Built for This
+- 2 Build Planning mentors (Alex Rivera, Nina Kowalski)
+- build_planning session mode with JSON spec output
+- Download Build Spec button
+- founder_projects.build_spec field
+- 5-step progress stepper showing Build step
 
-- Deploy remaining 5 apps to Vercel/Render
+## PRIORITY 3: Backlog
+
+- Deploy remaining 5 apps (SellerPilot, SignalStudio, ScoutPlays, ComplianceSentinel, Ironwood)
+- Attachments upload for Packs (initiative eb551452 — ON_HOLD)
 - Spider embedding backlog (20% → target 80%)
-- Re-enable agent scheduled runs
-- Initiative pipeline (0 completed — needs auto-approve)
-- Workspace UI tab fixes (ongoing)
+- Initiative pipeline (0 completed → needs auto-approve)
 
 ---
 
 ## Accounts
 
-- `donkeyking` (Chris) — superuser/owner
+- `donkeyking` (Chris) — superuser/owner, pro tier on MentorForge
 - `jessica` — superuser, business side
 - `jeremy` — superuser, patent lawyer
 
 ## How to Work with Rigby
 
 ```bash
-# Production (Railway)
-python tools/pa_chat.py "message" --tools --conversation pa-d19c1674b936
+# Create a fresh conversation first, then:
+python tools/pa_chat.py "message" --tools --conversation <NEW_CONVERSATION_ID>
 
 # Local
 bash tools/pa_local.sh "message"
 ```
 
-## Local Development Setup
-
-```bash
-make start && make celery
-# PA worker: OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l info --pool=threads -c 2 -Q pa
-```
-
 ## Founder Toolkit Repos
 - Landing: github.com/clwest/founder-toolkit
+- MentorForge: github.com/clwest/mentorforge (Render: mentorforge-bj25.onrender.com)
 - PitchDeck: github.com/clwest/pitchdeckforge
-- MentorForge: github.com/clwest/mentorforge
 - DealFlow: github.com/clwest/dealflowtracker
 - Contracts: github.com/clwest/contract-concierge
 
 ## Stripe
 - Payment Link ($299 Sprint): https://buy.stripe.com/5kQ7sM9CwdgAcPIerc14400
 - Dashboard: https://dashboard.stripe.com
-- Price IDs set on each Render service as env vars
