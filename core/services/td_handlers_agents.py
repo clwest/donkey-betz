@@ -1624,9 +1624,10 @@ class AgentHandlersMixin:
                 .order_by('-count')
                 .values_list('agent_name', 'count')[:10]
             )
-            # Count duplicate excess
+            # Count duplicate excess (exclude archived deliverables)
+            active_qs = base_qs.exclude(status='archived')
             dupe_groups = list(
-                base_qs.values('title')
+                active_qs.values('title')
                 .annotate(count=Count('id'))
                 .filter(count__gt=1)
                 .order_by('-count')[:5]
