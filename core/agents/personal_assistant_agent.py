@@ -363,15 +363,19 @@ from core.agents.pa_handlers_fetch import PAFetchHandlersMixin
 
 class PersonalAssistantAgent(PAToolHandlersMixin, PAManageHandlersMixin, PAQueryHandlersMixin, PAFetchHandlersMixin, BaseAgent):
     """
-    The main entry point agent that routes requests to specialized agents.
+    DEPRECATED — Apr 2026.
 
-    This agent:
-    1. Analyzes the user's message to understand intent
-    2. Determines if it's a question (answer directly) or action request (delegate)
-    3. Routes to the appropriate specialized agent via AgentRouter
-    4. Synthesizes and returns the response
+    This was the original PA agent (keyword-based routing, 4 mixin handlers).
+    All live PA traffic now routes through UnifiedPAEntrypoint (Rigby) in
+    core/services/unified_pa_entrypoint.py, which uses GPT-5.2 function
+    calling with 99+ tool schemas and 130+ tool handlers.
 
-    It is the "traffic cop" of the clean architecture.
+    This class remains in AGENT_MAP as a fallback for:
+    - Semantic routing low-confidence queries
+    - Legacy model mappings (opportunity, implementation pipeline)
+    - Agent test suites
+
+    DO NOT add new features here. Use UnifiedPAEntrypoint instead.
     """
 
     name = "PersonalAssistantAgent"
