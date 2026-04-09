@@ -747,26 +747,29 @@ def check_video_status(request, task_id):
 
                 logger.info(f"✅ Video saved to gallery: {video_history.id}")
 
-                # Session 122: Track generated video in AI Assistant for intelligent chaining
+                # Session 122: Track generated video for intelligent chaining
+                # Apr 2026: Fixed — was calling undefined method on cached PA object.
+                # Now writes directly to cache instead.
                 try:
                     from django.core.cache import cache
-                    cache_key = f'assistant_{request.user.id}'
-                    assistant = cache.get(cache_key)
-                    if assistant and video_history:
-                        # Determine source image ID if this was image-to-video
-                        source_image_id = None
-                        if source_image:
-                            source_image_id = str(source_image.id)
+                    from django.utils import timezone
+                    if video_history:
+                        source_image_id = str(source_image.id) if source_image else None
 
-                        assistant.track_generated_video(
-                            video_id=str(video_history.id),
-                            video_url=local_video_url,
-                            prompt=content.prompt,
-                            source_image_id=source_image_id
-                        )
-                        logger.info(f"🎬 Tracked video {video_history.id} in AI Assistant (source_image: {source_image_id})")
+                        cache_key = f'recent_assets:{request.user.id}'
+                        assets = cache.get(cache_key, {'images': [], 'videos': []})
+                        assets['videos'].append({
+                            'id': str(video_history.id),
+                            'url': local_video_url,
+                            'prompt': content.prompt,
+                            'source_image_id': source_image_id,
+                            'timestamp': timezone.now().isoformat(),
+                        })
+                        assets['videos'] = assets['videos'][-10:]  # Keep last 10
+                        cache.set(cache_key, assets, 3600)  # 1 hour TTL
+                        logger.info(f"Tracked video {video_history.id} (source_image: {source_image_id})")
                 except Exception as e:
-                    logger.warning(f"⚠️ Failed to track video in AI Assistant: {e}")
+                    logger.warning(f"Failed to track video in cache: {e}")
             elif result.status == 'failed':
                 content.status = 'failed'
                 metadata = content.metadata or {}
