@@ -5126,6 +5126,15 @@ def generate_blog_with_topic_task(self, topic, tone='enthusiastic'):
 def generate_self_blog_deliberation_task(self, tone='enthusiastic', word_count=1500, topic_category=None):
     from core.tasks_content import _impl_generate_self_blog_deliberation_task
     return _impl_generate_self_blog_deliberation_task(self, tone, word_count, topic_category)
+
+
+@shared_task(bind=True, soft_time_limit=300, time_limit=360)
+def generate_operator_edge_newsletter(self, hours=72, cluster_limit=5, dry_run=False):
+    """Generate an Operator Edge newsletter from recent signal clusters."""
+    from core.tasks_content import _impl_generate_operator_edge_newsletter
+    return _impl_generate_operator_edge_newsletter(self, hours, cluster_limit, dry_run)
+
+
 @shared_task(bind=True, soft_time_limit=1800, time_limit=1860, ignore_result=True)
 def run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_hours=24):
     from core.tasks_content import _impl_run_autonomous_thinking_cycle
