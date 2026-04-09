@@ -100,7 +100,6 @@ def test_clean_agents():
         ('VideoEditingAgent', 'core.agents.video_editing_agent', 'VideoEditingAgent'),
         ('ResearchAgent', 'core.agents.research_agent', 'ResearchAgent'),
         ('WorkflowAgent', 'core.agents.workflow_agent', 'WorkflowAgent'),
-        ('PersonalAssistantAgent', 'core.agents.personal_assistant_agent', 'PersonalAssistantAgent'),
     ]
 
     for display_name, module_path, class_name in agents_to_test:

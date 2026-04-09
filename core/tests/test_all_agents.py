@@ -164,7 +164,7 @@ class AgentCategoryTest(DjangoTestCase):
             'ContentExecutorAgent', 'CampaignOrchestratorAgent', 'AISeriesWorkflowAgent'
         ],
         'markets': ['PredictionMarketAnalyst', 'SportsOddsAnalyst', 'ArbitrageDetector'],
-        'utility': ['ThinkingAgent', 'TechnicalDocumentAgent', 'PersonalAssistantAgent'],
+        'utility': ['ThinkingAgent', 'TechnicalDocumentAgent'],
     }
 
     @classmethod

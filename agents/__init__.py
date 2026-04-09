@@ -62,7 +62,7 @@ _CLEAN_AGENT_MAP = {
     'VideoEditingAgent': 'core.agents.video_editing_agent.VideoEditingAgent',
     'ResearchAgent': 'core.agents.research_agent.ResearchAgent',
     'WorkflowAgent': 'core.agents.workflow_agent.WorkflowAgent',
-    'PersonalAssistantAgent': 'core.agents.personal_assistant_agent.PersonalAssistantAgent',
+    # PersonalAssistantAgent removed — deprecated, all PA traffic routes through Rigby
     'BaseAgent': 'core.agents.base_agent.BaseAgent',
     'AgentResult': 'core.agents.base_agent.AgentResult',
 
@@ -166,7 +166,6 @@ if TYPE_CHECKING:
         VideoEditingAgent,
         ResearchAgent,
         WorkflowAgent,
-        PersonalAssistantAgent,
     )
 
 __all__ = [
@@ -185,5 +184,4 @@ __all__ = [
     'VideoEditingAgent',
     'ResearchAgent',
     'WorkflowAgent',
-    'PersonalAssistantAgent',
 ]

@@ -12,7 +12,6 @@ import logging
 
 # Import our AI analyzer and agent system
 from core.opportunity_ai_analyzer import OpportunityAIAnalyzer
-from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
 from core.agents.registry import get_agent_registry
 from advisors.registry import get_advisor_registry
 from django.contrib.auth import get_user_model
@@ -256,9 +255,8 @@ def get_opportunities(request):
         user_profile = None
         if request.user.is_authenticated:
             try:
-                from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-                assistant = EnhancedPersonalAIAssistant(request.user)
-                user_profile = assistant.enhanced_profile.get_context_for_ai('opportunity_analysis')
+                from core.agent_context_middleware import get_user_context_for_agent
+                user_profile = get_user_context_for_agent(request.user)
             except Exception as e:
                 logger.warning(f"Could not load user profile for AI analysis: {e}")
 
@@ -609,8 +607,8 @@ def analyze_opportunity_automation(request):
         user_profile = None
         if request.user.is_authenticated:
             try:
-                assistant = EnhancedPersonalAIAssistant(request.user)
-                user_profile = assistant.enhanced_profile.get_context_for_ai('opportunity_analysis')
+                from core.agent_context_middleware import get_user_context_for_agent
+                user_profile = get_user_context_for_agent(request.user)
             except Exception as e:
                 logger.warning(f"Could not load user profile: {e}")
 
@@ -671,35 +669,36 @@ def execute_automated_application(request):
                 'error': 'Authentication required'
             }, status=401)
 
-        # Get Enhanced Personal Assistant for agent communication
-        assistant = EnhancedPersonalAIAssistant(request.user)
+        # Route through AgentRouter instead of legacy EPA
+        from core.agent_router import AgentRouter
+        router = AgentRouter()
 
         # Execute appropriate workflow based on automation level
         if automation_level in ['full', 'substantial'] and user_approval:
-            # Execute multi-agent workflow
-            result = assistant.execute_multi_agent_workflow(
-                'job_application',
-                f"Apply to opportunity {opportunity_id}"
+            # Execute via agent router
+            result = router.route(
+                f"Apply to opportunity {opportunity_id}",
+                user=request.user,
+                context={'workflow': 'job_application'}
             )
 
             return Response({
                 'success': True,
-                'execution_result': result,
+                'execution_result': result.to_dict() if hasattr(result, 'to_dict') else str(result),
                 'message': 'Automated application workflow initiated',
-                'workflow_id': result.get('execution_ids', [])
             })
 
         elif automation_level == 'partial':
-            # Route to specific agents for partial automation
-            research_result = assistant.route_to_agent(
+            # Route to research agent
+            result = router.route(
                 f"Research opportunity {opportunity_id}",
-                agent_type='research',
-                required_capabilities=['web_search', 'data_analysis']
+                user=request.user,
+                context={'agent_type': 'research'}
             )
 
             return Response({
                 'success': True,
-                'execution_result': research_result,
+                'execution_result': result.to_dict() if hasattr(result, 'to_dict') else str(result),
                 'message': 'Partial automation initiated - research phase',
                 'next_steps': ['Review research results', 'Manual application preparation']
             })

@@ -98,8 +98,8 @@ Available Agents (41 total):
     CONTENT EDITING AGENTS (1) - Session 864:
         EditorAgent                 - Enhance content structure for publishing readiness
 
-    ENTRY POINT (1):
-        PersonalAssistantAgent  - Main user interaction and routing
+    ENTRY POINT:
+        PersonalAssistantAgent  - REMOVED (deprecated, all PA traffic routes through Rigby)
 
     BLOCKCHAIN AUDIT AGENTS (5) - Session 461:
         SmartContractAuditorAgent   - Solidity code vulnerability detection
@@ -170,8 +170,7 @@ from core.agents.content_executor_agent import (
     CONTENT_TYPES,
 )
 
-# Entry Point Agent
-from core.agents.personal_assistant_agent import PersonalAssistantAgent
+# PersonalAssistantAgent removed — deprecated, all PA traffic routes through Rigby
 
 # Strategy Agents (Session 280)
 from core.agents.strategy import (
@@ -362,8 +361,7 @@ __all__ = [
     'get_content_executor_agent',
     'CONTENT_TYPES',
 
-    # Entry Point Agent (1)
-    'PersonalAssistantAgent',
+    # PersonalAssistantAgent removed (deprecated)
 
     # Strategy Agents (4) - Session 280
     'ContentStrategyAgent',

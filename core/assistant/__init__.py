@@ -27,10 +27,7 @@ Package Structure:
 Session 184: Refactored from core/personal_ai_assistant_enhanced.py (6,905 lines)
 """
 
-from core.assistant.base import EnhancedPersonalAIAssistant
-from core.personal_ai_assistant import PersonalAIAssistant
+# Legacy PA classes removed — all traffic routes through Rigby
+# EnhancedPersonalAIAssistant and PersonalAIAssistant no longer exported.
 
-__all__ = [
-    'PersonalAIAssistant',
-    'EnhancedPersonalAIAssistant',
-]
+__all__ = []

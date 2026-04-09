@@ -1166,6 +1166,34 @@ Keep responses under 200 words. Be conversational and practical."""
         }, status=500)
 
 
+# Apr 2026: Map legacy tool names to agent names for execute_tool routing
+_AGENT_TOOL_MAP = {
+    'image_editing_agent': 'ImageEditingAgent',
+    'video_editing_agent': 'VideoEditingAgent',
+    'video_generation_agent': 'VideoAgent',
+    'three_d_generation_agent': 'ThreeDAgent',
+    'character_training_agent': 'CharacterTrainingAgent',
+    'coleadership_agent': 'CreativeDirectorAgent',
+    'talking_character_agent': 'TalkingCharacterAgent',
+    'competitor_analysis_agent': 'CompetitorAnalysisAgent',
+    'customer_research_agent': 'CustomerResearchAgent',
+    'brand_strategy_agent': 'BrandStrategyAgent',
+    'content_strategy_agent': 'ContentStrategyAgent',
+    'marketing_strategy_agent': 'MarketingStrategyAgent',
+}
+
+
+def _route_to_agent(user, agent_name, tool_name, parameters, project=None):
+    """Route a tool call through AgentRouter instead of legacy EPA handlers."""
+    from core.agent_router import AgentRouter
+    if project:
+        parameters['project_id'] = str(project.id)
+    task = f"Execute {tool_name}: {parameters}"
+    router = AgentRouter(user=user)
+    result = router.route(agent_name=agent_name, task=task, context=parameters)
+    return result.data if result.data else {'success': True, 'message': result.message}
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def execute_tool(request):
@@ -1344,9 +1372,7 @@ def execute_tool(request):
             result = _execute_create_brand_video(request.user, parameters)
         # Session 189: Create project from research workflow
         elif tool_name == 'create_project_from_research':
-            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-            assistant = EnhancedPersonalAIAssistant(user=request.user)
-            result = assistant._handle_create_project_from_research(parameters)
+            result = _route_to_agent(request.user, 'ThinkingAgent', tool_name, parameters, project)
         # Session 189: Strategic review - co-leadership review BEFORE image generation
         elif tool_name == 'strategic_review':
             result = _execute_strategic_review(request.user, parameters)
@@ -1615,117 +1641,9 @@ def execute_tool(request):
 
             result = meeting_result
 
-        elif tool_name == 'image_editing_agent':
-            # Session 156: Route to enhanced personal assistant's image editing handler
-            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-            assistant = EnhancedPersonalAIAssistant(user=request.user)
-            # Session 156: Inject project_id into parameters for content linking
-            if project:
-                parameters['project_id'] = str(project.id)
-            result = assistant._handle_image_editing_agent(parameters)
-
-        elif tool_name == 'video_editing_agent':
-            # Session 155: Route to enhanced personal assistant's video editing handler
-            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-            assistant = EnhancedPersonalAIAssistant(user=request.user)
-            # Session 156: Inject project_id into parameters for content linking
-            if project:
-                parameters['project_id'] = str(project.id)
-            result = assistant._handle_video_editing_agent(parameters)
-
-        elif tool_name == 'video_generation_agent':
-            # Session 157: Route to enhanced personal assistant's video generation handler
-            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-            assistant = EnhancedPersonalAIAssistant(user=request.user)
-            # Session 157: Set project as instance attribute for VideoAgent
-            if project:
-                assistant.project = project
-                parameters['project_id'] = str(project.id)
-            result = assistant._handle_video_generation_agent(parameters)
-
-        elif tool_name == 'three_d_generation_agent':
-            # Session 172: Route to enhanced personal assistant's 3D generation handler
-            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-            assistant = EnhancedPersonalAIAssistant(user=request.user)
-            # Set project as instance attribute for 3D generation
-            if project:
-                assistant.project = project
-                parameters['project_id'] = str(project.id)
-            result = assistant._handle_three_d_generation_agent(parameters)
-
-        elif tool_name == 'character_training_agent':
-            # Session 173: Route to enhanced personal assistant's character training handler
-            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-            assistant = EnhancedPersonalAIAssistant(user=request.user)
-            # Set project as instance attribute for training context
-            if project:
-                assistant.project = project
-                parameters['project_id'] = str(project.id)
-            result = assistant._handle_character_training_agent(parameters)
-
-        elif tool_name == 'coleadership_agent':
-            # Session 173: Route to enhanced personal assistant's co-leadership handler
-            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-            assistant = EnhancedPersonalAIAssistant(user=request.user)
-            # Set project as instance attribute for decision context
-            if project:
-                assistant.project = project
-                parameters['project_id'] = str(project.id)
-            result = assistant._handle_coleadership_agent(parameters)
-
-        elif tool_name == 'talking_character_agent':
-            # Session 175: Route to enhanced personal assistant's talking character handler
-            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-            assistant = EnhancedPersonalAIAssistant(user=request.user)
-            # Set project as instance attribute for pipeline context
-            if project:
-                assistant.project = project
-                parameters['project_id'] = str(project.id)
-            result = assistant._tool_talking_character(parameters)
-
-        # Session 324: Business Research Agents
-        elif tool_name == 'competitor_analysis_agent':
-            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-            assistant = EnhancedPersonalAIAssistant(user=request.user)
-            if project:
-                assistant.project = project
-                parameters['project_id'] = str(project.id)
-            result = assistant._handle_competitor_analysis_agent(parameters)
-
-        elif tool_name == 'customer_research_agent':
-            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-            assistant = EnhancedPersonalAIAssistant(user=request.user)
-            if project:
-                assistant.project = project
-                parameters['project_id'] = str(project.id)
-            result = assistant._handle_customer_research_agent(parameters)
-
-        # Session 335: Brand Strategy Agent
-        elif tool_name == 'brand_strategy_agent':
-            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-            assistant = EnhancedPersonalAIAssistant(user=request.user)
-            if project:
-                assistant.project = project
-                parameters['project_id'] = str(project.id)
-            result = assistant._handle_brand_strategy_agent(parameters)
-
-        # Session 338: Content Strategy Agent
-        elif tool_name == 'content_strategy_agent':
-            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-            assistant = EnhancedPersonalAIAssistant(user=request.user)
-            if project:
-                assistant.project = project
-                parameters['project_id'] = str(project.id)
-            result = assistant._handle_content_strategy_agent(parameters)
-
-        # Session 338: Marketing Strategy Agent
-        elif tool_name == 'marketing_strategy_agent':
-            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-            assistant = EnhancedPersonalAIAssistant(user=request.user)
-            if project:
-                assistant.project = project
-                parameters['project_id'] = str(project.id)
-            result = assistant._handle_marketing_strategy_agent(parameters)
+        elif tool_name in _AGENT_TOOL_MAP:
+            # Legacy EPA handlers replaced with AgentRouter (Apr 2026)
+            result = _route_to_agent(request.user, _AGENT_TOOL_MAP[tool_name], tool_name, parameters, project)
 
         else:
             return Response({

@@ -88,10 +88,9 @@ class TestImportSmokeTests:
         d = get_tool_dispatcher()
         assert len(d._tool_handlers) > 100, "Expected 100+ registered handlers"
 
-    def test_import_personal_assistant_agent(self):
-        from core.agents.personal_assistant_agent import (  # noqa: F401
-            PersonalAssistantAgent,
-        )
+    def test_import_thinking_agent(self):
+        """PersonalAssistantAgent removed — verify ThinkingAgent loads instead."""
+        from core.agents.thinking_agent import ThinkingAgent  # noqa: F401
 
     def test_import_enhanced_pa(self):
         from core.personal_ai_assistant_enhanced import (  # noqa: F401

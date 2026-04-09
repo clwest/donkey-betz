@@ -97,7 +97,7 @@ from core.agents.image_editing_agent import ImageEditingAgent
 from core.agents.video_editing_agent import VideoEditingAgent
 from core.agents.research_agent import ResearchAgent
 from core.agents.workflow_agent import WorkflowAgent
-from core.agents.personal_assistant_agent import PersonalAssistantAgent
+# PersonalAssistantAgent removed — all PA traffic routes through Rigby (UnifiedPAEntrypoint)
 
 # Session 280: Strategy Agents
 from core.agents.strategy import (
@@ -420,8 +420,7 @@ class AgentRouter:
         # Session 1000: Decision Enforcement Agent
         "DecisionEnforcerAgent": DecisionEnforcerAgent,
 
-        # Entry Point Agent
-        "PersonalAssistantAgent": PersonalAssistantAgent,
+        # PersonalAssistantAgent removed — deprecated, all PA traffic routes through Rigby
     }
 
     def __init__(self, user=None):
@@ -1876,8 +1875,7 @@ class AgentRouter:
     }
 
     AGENT_CATEGORY_MAP = {
-        # Session 877: Personal Assistant gets full user context
-        'PersonalAssistantAgent': 'personal_assistant',
+        # PersonalAssistantAgent removed — was 'personal_assistant' category
 
         # Career agents
         'OpportunityPipelineAgent': 'career',
