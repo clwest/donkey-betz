@@ -43,6 +43,7 @@ import GovernancePage from '@/pages/GovernancePage'  // Session 1067: Full-page 
 import ExecutorPage from '@/pages/ExecutorPage'  // Session 1076: Executor runs UI
 import MediaPage from '@/pages/MediaPage'
 import VipAcceptPage from '@/pages/VipAcceptPage'
+import OperatorEdgePage from '@/pages/OperatorEdgePage'
 
 // Focus Cockpit — imports preserved for potential admin-bypass restore (Phase 1 consolidation)
 // All cockpit routes now redirect to Workspace tabs. See cockpit/ directory for original pages.
@@ -67,6 +68,7 @@ function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/vip/accept" element={<VipAcceptPage />} />
       <Route path="/r/:token" element={<ReviewPortalPage />} />
+      <Route path="/operator-edge" element={<OperatorEdgePage />} />
 
       <Route
         path="/"
