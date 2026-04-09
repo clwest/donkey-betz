@@ -4042,6 +4042,319 @@ def _impl_run_source_pack_workflow(self, run_id):
         run.save()
 
 
+# ── Operator Edge Newsletter Pipeline ────────────────────────────────────────
+
+
+OPERATOR_EDGE_WORKSPACE_ID = '4b5d4df8-c53b-4534-a5d6-63851a2a7cda'
+
+OPERATOR_EDGE_SYSTEM_PROMPT = """You are the writer of Operator Edge, a weekly intelligence briefing for
+builders, founders, and operators. Your voice is direct, analytical, and
+actionable — you respect the reader's time. Every claim must be grounded in
+the signal data and citations provided. Do NOT invent statistics, quote unnamed
+sources, or pad with filler.
+
+Formatting rules:
+- Use markdown (headers, bold, bullet lists).
+- Inline citations as (Source: <name>, <date>) after each factual claim.
+- Keep total length 900-1200 words."""
+
+OPERATOR_EDGE_TEMPLATE = """# Operator Edge — Weekly Intelligence Briefing
+**Week of {date_range}**
+
+Write an 900–1200 word briefing using the signal clusters and source data below.
+
+## Structure (follow exactly)
+1. **TL;DR** — 2-3 sentences summarising the week's most important signals.
+2. **Signal 1: {cluster_1_name}** — What happened, why it matters, what to do.
+3. **Signal 2: {cluster_2_name}** — What happened, why it matters, what to do.
+4. **Signal 3: {cluster_3_name}** — What happened, why it matters, what to do.
+5. **The Takeaway** — One paragraph connecting the dots across all three signals.
+6. **Links & Resources** — Bullet list of the most useful source URLs.
+
+## Source Data (cite these, do NOT invent)
+{evidence_block}
+
+## Rules
+- Every factual claim MUST cite a source from the data above.
+- Include at least 3 actionable recommendations (things the reader can DO).
+- Do NOT fabricate statistics, quotes, or company names.
+- If the data is thin for a signal, say so honestly rather than padding."""
+
+
+def _gather_newsletter_evidence(hours: int = 72, cluster_limit: int = 5):
+    """Gather top signal clusters and supporting SpiderData for the newsletter.
+
+    Returns:
+        dict with 'clusters' (list of dicts) and 'evidence_block' (formatted str)
+    """
+    from core.models import SignalCluster
+    from core.models_unified_system import SpiderData
+
+    cutoff = timezone.now() - timedelta(hours=hours)
+
+    # Top clusters by confidence then strength
+    clusters = list(
+        SignalCluster.objects.filter(
+            detected_at__gte=cutoff,
+        ).order_by('-confidence', '-strength')[:cluster_limit]
+    )
+
+    if not clusters:
+        logger.warning('[OPERATOR_EDGE] No signal clusters in the last %dh', hours)
+        return {'clusters': [], 'evidence_block': '(No signal clusters available.)'}
+
+    evidence_sections = []
+    cluster_data = []
+
+    for cluster in clusters:
+        # Extract keywords from the cluster to search SpiderData
+        keywords = []
+        if cluster.name:
+            # Remove pattern_type suffix from name for better search
+            clean_name = cluster.name
+            for suffix in ('demand spike', 'emerging trend', 'opportunity window',
+                           'skill demand', 'sentiment shift', 'knowledge gap', 'content gap'):
+                clean_name = clean_name.replace(suffix, '').strip()
+            if clean_name:
+                keywords.append(clean_name)
+
+        # Gather supporting SpiderData
+        spider_items = []
+        if keywords:
+            query = keywords[0]
+            spider_qs = SpiderData.objects.filter(
+                created_at__gte=cutoff,
+            ).filter(
+                Q(embedding_text__icontains=query) |
+                Q(raw_data__icontains=query)
+            ).order_by('-created_at')[:5]
+
+            for sd in spider_qs:
+                text = (sd.embedding_text or '')[:300]
+                source = sd.spider_name or 'unknown'
+                url = sd.source_url or ''
+                spider_items.append({
+                    'source': source,
+                    'url': url,
+                    'text': text,
+                    'date': sd.created_at.strftime('%Y-%m-%d'),
+                })
+
+        cluster_info = {
+            'id': str(cluster.id),
+            'name': cluster.name,
+            'pattern_type': cluster.pattern_type,
+            'signal_count': len(cluster.spider_data_ids) if cluster.spider_data_ids else 0,
+            'confidence': float(cluster.confidence),
+            'detected_at': cluster.detected_at.isoformat(),
+            'spider_items': spider_items,
+        }
+        cluster_data.append(cluster_info)
+
+        # Format evidence section
+        signal_count = len(cluster.spider_data_ids) if cluster.spider_data_ids else 0
+        section = f"### Cluster: {cluster.name} (type: {cluster.pattern_type}, "
+        section += f"confidence: {cluster.confidence:.0%}, signals: {signal_count})\n"
+        if spider_items:
+            for item in spider_items:
+                section += f"- [{item['source']}] {item['text'][:200]}"
+                if item['url'] and item['url'] != 'internal':
+                    section += f" ({item['url']})"
+                section += f" — {item['date']}\n"
+        else:
+            section += "- (No supporting spider data found for this cluster)\n"
+        evidence_sections.append(section)
+
+    evidence_block = '\n'.join(evidence_sections)
+
+    return {
+        'clusters': cluster_data,
+        'evidence_block': evidence_block,
+    }
+
+
+def _impl_generate_operator_edge_newsletter(
+    self,
+    hours: int = 72,
+    cluster_limit: int = 5,
+    dry_run: bool = False,
+):
+    """Generate an Operator Edge newsletter issue from recent signal clusters.
+
+    Pipeline:
+    1. Gather top signal clusters + supporting SpiderData
+    2. Build prompt with evidence citations
+    3. Run ContentWriterAgent with Operator Edge template
+    4. Save as Deliverable in Operator Edge workspace
+
+    Args:
+        hours: Look-back window for signal clusters (default 72h)
+        cluster_limit: Max clusters to consider (top 3 used in newsletter)
+        dry_run: If True, gather data and build prompt but don't call LLM
+    """
+    from django.core.cache import cache
+
+    lock_key = 'operator_edge_running'
+    if not cache.add(lock_key, self.request.id if hasattr(self, 'request') else 'manual', timeout=600):
+        logger.info('[OPERATOR_EDGE] Skipping — another generation is running')
+        return {'success': False, 'skipped': True, 'reason': 'concurrent run'}
+
+    try:
+        logger.info(f'[OPERATOR_EDGE] Starting newsletter generation (hours={hours}, dry_run={dry_run})')
+
+        # Step 1: Gather evidence
+        evidence = _gather_newsletter_evidence(hours=hours, cluster_limit=cluster_limit)
+        clusters = evidence['clusters']
+
+        if not clusters:
+            cache.delete(lock_key)
+            return {
+                'success': False,
+                'reason': 'no_clusters',
+                'message': f'No signal clusters found in the last {hours}h.',
+            }
+
+        # Pick top 3 for the newsletter
+        top_clusters = clusters[:3]
+
+        # Step 2: Build the prompt
+        now = timezone.now()
+        week_start = now - timedelta(days=7)
+        date_range = f"{week_start.strftime('%B %d')} – {now.strftime('%B %d, %Y')}"
+
+        prompt = OPERATOR_EDGE_TEMPLATE.format(
+            date_range=date_range,
+            cluster_1_name=top_clusters[0]['name'] if len(top_clusters) > 0 else 'Signal 1',
+            cluster_2_name=top_clusters[1]['name'] if len(top_clusters) > 1 else 'Signal 2',
+            cluster_3_name=top_clusters[2]['name'] if len(top_clusters) > 2 else 'Signal 3',
+            evidence_block=evidence['evidence_block'],
+        )
+
+        if dry_run:
+            cache.delete(lock_key)
+            return {
+                'success': True,
+                'dry_run': True,
+                'clusters_found': len(clusters),
+                'top_clusters': [c['name'] for c in top_clusters],
+                'prompt_length': len(prompt),
+                'evidence_preview': evidence['evidence_block'][:2000],
+            }
+
+        # Step 3: Run ContentWriterAgent
+        from core.agent_router import AgentRouter
+
+        router = AgentRouter()
+        task_prompt = (
+            f"Write the Operator Edge weekly newsletter for the week of {date_range}. "
+            f"Use ONLY the evidence provided below. Do NOT invent sources.\n\n{prompt}"
+        )
+
+        result = router.route(
+            agent_name='ContentWriterAgent',
+            task=task_prompt,
+            context={
+                'content_type': 'newsletter',
+                'tone': 'professional',
+                'word_count': 1100,
+                'system_prompt_override': OPERATOR_EDGE_SYSTEM_PROMPT,
+            },
+        )
+
+        # Extract content from result
+        content = ''
+        if result and result.data:
+            content = (
+                result.data.get('content', {}).get('full_text', '')
+                or result.data.get('content', '')
+                or result.message
+                or ''
+            )
+        if not content and result:
+            content = result.message or ''
+
+        if not content or len(content) < 200:
+            logger.warning('[OPERATOR_EDGE] ContentWriterAgent produced insufficient content (%d chars)', len(content))
+            cache.delete(lock_key)
+            return {
+                'success': False,
+                'reason': 'insufficient_content',
+                'content_length': len(content),
+            }
+
+        # Step 4: Save as Deliverable
+        from core.models_deliverables import Deliverable
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
+        issue_title = f"Operator Edge — {now.strftime('%B %d, %Y')}"
+
+        # Get Chris's user and the workspace
+        user = User.objects.filter(username='donkeyking').first()
+
+        deliverable = Deliverable(
+            title=issue_title,
+            content=content,
+            content_format='markdown',
+            deliverable_type='document',
+            category='Newsletter',
+            agent_name='ContentWriterAgent',
+            agent_task=f'Operator Edge newsletter for {date_range}',
+            quality_score=0.75,  # baseline; scoring task will re-evaluate
+            confidence_score=float(result.confidence) if result and hasattr(result, 'confidence') else 0.7,
+            is_saved=True,
+            status='ready',
+            user=user,
+            tags=['operator-edge', 'newsletter', 'weekly-briefing'],
+            metadata={
+                'newsletter_type': 'operator_edge',
+                'date_range': date_range,
+                'clusters_used': [c['name'] for c in top_clusters],
+                'cluster_ids': [c['id'] for c in top_clusters],
+                'evidence_sources': sum(len(c.get('spider_items', [])) for c in top_clusters),
+                'generated_at': now.isoformat(),
+            },
+        )
+
+        # Assign workspace
+        try:
+            from core.models_skin_layer import ProjectWorkspace
+            workspace = ProjectWorkspace.objects.filter(id=OPERATOR_EDGE_WORKSPACE_ID).first()
+            if workspace:
+                deliverable.workspace = workspace
+                # Activate workspace if needed
+                if not workspace.is_active:
+                    workspace.is_active = True
+                    workspace.save(update_fields=['is_active'])
+        except Exception as ws_err:
+            logger.warning('[OPERATOR_EDGE] Could not assign workspace: %s', ws_err)
+
+        deliverable.save()
+        logger.info(
+            '[OPERATOR_EDGE] Newsletter saved: id=%s title=%s words=%d',
+            deliverable.id, issue_title, len(content.split()),
+        )
+
+        cache.delete(lock_key)
+        return {
+            'success': True,
+            'deliverable_id': str(deliverable.id),
+            'title': issue_title,
+            'word_count': len(content.split()),
+            'clusters_used': [c['name'] for c in top_clusters],
+            'evidence_sources': sum(len(c.get('spider_items', [])) for c in top_clusters),
+        }
+
+    except SoftTimeLimitExceeded:
+        logger.error('[OPERATOR_EDGE] Task timed out')
+        cache.delete(lock_key)
+        return {'success': False, 'reason': 'timeout'}
+    except Exception as e:
+        logger.error('[OPERATOR_EDGE] Failed: %s', e, exc_info=True)
+        cache.delete(lock_key)
+        return {'success': False, 'reason': str(e)}
+
+
 # ── Conversation Summarization ───────────────────────────────────────────────
 
 

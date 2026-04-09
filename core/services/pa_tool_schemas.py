@@ -2668,7 +2668,8 @@ PA_TOOL_SCHEMAS = [
                         "content_stats", "content_list", "content_detail",
                         "content_search", "content_recent",
                         "content_approve", "content_reject",
-                        "generate_blog", "bulk_archive", "bulk_archive_published", "run_cleanup",
+                        "generate_blog", "generate_newsletter",
+                        "bulk_archive", "bulk_archive_published", "run_cleanup",
                         "deliverable_list", "deliverable_detail",
                         "deliverable_search", "deliverable_save",
                         "deliverable_create", "deliverable_update",
@@ -2686,6 +2687,7 @@ PA_TOOL_SCHEMAS = [
                         "content_approve: publish a ready deliverable. "
                         "content_reject: archive a deliverable with feedback. "
                         "generate_blog: create a new blog post via deliberation pipeline. "
+                        "generate_newsletter: generate an Operator Edge newsletter from recent signal clusters (supports dry_run=true for preview). "
                         "bulk_archive: archive multiple deliverables by filter (dry_run preview by default). "
                         "bulk_archive_published: admin-only — archive published deliverables by category (requires categories + created_before + confirm). "
                         "run_cleanup: trigger cleanup_stale_content Celery task (async, returns task_id). "
