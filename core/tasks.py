@@ -10719,9 +10719,9 @@ def rebuild_pa_context_task(self, user_id, reason='fresh_miss'):
         rss_start_mb = _get_rss_mb()
 
         t0 = monotonic()
-        from core.personal_ai_assistant import PersonalAIAssistant
-        assistant = PersonalAIAssistant(user)
-        context = assistant.get_personalized_context()
+        from core.agent_context_middleware import AgentContextMiddleware
+        middleware = AgentContextMiddleware()
+        context = middleware.get_user_context(user)
         build_ms = int((monotonic() - t0) * 1000)
 
         rss_end_mb = _get_rss_mb()

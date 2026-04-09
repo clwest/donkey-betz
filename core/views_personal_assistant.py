@@ -20,13 +20,7 @@ from asgiref.sync import async_to_sync
 
 logger = logging.getLogger(__name__)
 
-# Legacy import for backward compatibility
-try:
-    from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant as PersonalAIAssistant
-    logger.info("Using Enhanced Personal AI Assistant with database access")
-except ImportError:
-    from core.personal_ai_assistant import PersonalAIAssistant
-    logger.info("Using standard Personal AI Assistant")
+PersonalAIAssistant = None  # Legacy PA removed — all traffic routes through Rigby
 
 
 @csrf_exempt
@@ -109,6 +103,8 @@ def chat_with_assistant(request):
 
         # Legacy implementation (fallback or explicit)
         logger.info(f"OLD_PA_SERVING: user={request.user.id} use_legacy={use_legacy}")
+        if PersonalAIAssistant is None:
+            return Response({'error': 'Legacy PA deprecated — use /api/pa/chat/ endpoint'}, status=410)
         assistant = PersonalAIAssistant(request.user)
         response_data = assistant.process_message(message, context)
 
@@ -226,6 +222,8 @@ def get_learning_summary(request):
     """Get summary of what the assistant has learned about the user."""
     try:
         # Create assistant fresh each time (contains unpickleable objects like OpenAI client)
+        if PersonalAIAssistant is None:
+            return Response({'error': 'Legacy PA deprecated — use /api/pa/chat/ endpoint'}, status=410)
         assistant = PersonalAIAssistant(request.user)
 
         # Get learning summary
@@ -796,6 +794,8 @@ def provide_feedback(request):
             return Response({'error': 'Invalid feedback type'}, status=400)
 
         # Create assistant fresh each time (contains unpickleable objects like OpenAI client)
+        if PersonalAIAssistant is None:
+            return Response({'error': 'Legacy PA deprecated — use /api/pa/chat/ endpoint'}, status=410)
         assistant = PersonalAIAssistant(request.user)
 
         # Process feedback (enhance learning)

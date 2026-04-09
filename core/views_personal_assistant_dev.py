@@ -17,12 +17,7 @@ from rest_framework.response import Response
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
-try:
-    from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant as PersonalAIAssistant
-    logger.info("Using Enhanced Personal AI Assistant with database access")
-except ImportError:
-    from core.personal_ai_assistant import PersonalAIAssistant
-    logger.info("Using standard Personal AI Assistant")
+PersonalAIAssistant = None  # Legacy PA removed — all traffic routes through Rigby
 
 
 @never_cache
@@ -72,6 +67,8 @@ def chat_with_assistant_dev(request):
 
         # Create assistant for user (don't cache the object as it contains non-serializable components)
         try:
+            if PersonalAIAssistant is None:
+                return Response({'error': 'Legacy PA deprecated — use /api/pa/chat/ endpoint'}, status=410)
             assistant = PersonalAIAssistant(user)
             logger.info("Assistant created successfully")
 
@@ -221,6 +218,8 @@ def get_assistant_context_dev(request):
 
         # Create assistant for user (don't cache the object as it contains non-serializable components)
         try:
+            if PersonalAIAssistant is None:
+                return Response({'error': 'Legacy PA deprecated — use /api/pa/chat/ endpoint'}, status=410)
             assistant = PersonalAIAssistant(user)
             # Get personalized context
             context = assistant.get_personalized_context()
