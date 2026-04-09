@@ -100,6 +100,13 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=30, hour=3),
         'options': {'queue': 'default', 'expires': 3600},
     },
+    # Apr 2026: SpiderData retention — trim raw_data >7d, delete >30d
+    # Prevents raw JSON blobs (~440KB/row) from filling the database
+    'spider-data-retention': {
+        'task': 'core.tasks.spider_data_retention',
+        'schedule': crontab(minute=0, hour=4),  # Daily at 4 AM
+        'options': {'queue': 'long_running', 'expires': 3600},
+    },
     'cleanup-expired-pa-insights': {
         'task': 'core.tasks.cleanup_expired_pa_insights',
         'schedule': crontab(minute=0, hour=3),
