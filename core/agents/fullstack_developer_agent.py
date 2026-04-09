@@ -453,10 +453,15 @@ Provide complete, working code that can be directly used."""
                             'validation_status': provenance.validation_status,
                         }
 
+                        # Session 1200: Synthesize tool results into real analysis
+                        tool_results_list = [tc.get('result', {}) for tc in tool_calls_made]
+                        synthesis = self._synthesize_tool_results(tool_calls_made, tool_results_list, task)
+                        analysis_msg = synthesis if synthesis else descriptive_msg
+
                         result = AgentResult(
                             success=True,
-                            message=descriptive_msg,
-                            data=result_data,
+                            message=analysis_msg,
+                            data={**result_data, 'content': synthesis},
                             agent_name=self.name,
                             execution_time_ms=execution_time,
                             decisions_made=self._tt_decision_count,
@@ -475,7 +480,7 @@ Provide complete, working code that can be directly used."""
                         # Session 1006: Persist output to Deliverable
                         self._save_to_deliverable(
                             title=f"Full-Stack: {tool_data.get('feature_name', task[:80])}",
-                            content=result.message,
+                            content=analysis_msg,
                             deliverable_type='code',
                             category='Full-Stack Development',
                             tags=['fullstack', tool_used],
