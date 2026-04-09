@@ -978,6 +978,11 @@ class AgentHandlersMixin:
             name_filter = payload.get('name', '').strip()
             if name_filter:
                 workspaces = [ws for ws in workspaces if name_filter.lower() in ws.name.lower()]
+            # Apr 2026: Pagination support — offset/limit to avoid truncation
+            total_count = len(workspaces)
+            offset = int(payload.get('offset', 0))
+            limit = int(payload.get('limit', 50))
+            workspaces = workspaces[offset:offset + limit]
             serialized = []
             for ws in workspaces:
                 ws_data = {
@@ -998,7 +1003,15 @@ class AgentHandlersMixin:
                     ws_data['business_status'] = config.status
                     ws_data['has_brief'] = bool(config.workspace_brief)
                 serialized.append(ws_data)
-            return {'action': 'list', 'workspaces': serialized, 'count': len(serialized)}
+            return {
+                'action': 'list',
+                'workspaces': serialized,
+                'count': len(serialized),
+                'total': total_count,
+                'offset': offset,
+                'limit': limit,
+                'has_more': offset + limit < total_count,
+            }
 
         elif action == 'get':
             # Direct lookup by ID or name
