@@ -3649,6 +3649,114 @@ def cleanup_spider_item_hashes(days_to_keep: int = 90):
         return {'status': 'error', 'error': str(e)}
 
 
+@shared_task(
+    bind=True,
+    name='core.tasks.spider_data_retention',
+    queue='long_running',
+    time_limit=600,
+    soft_time_limit=540,
+    ignore_result=True,
+)
+def spider_data_retention(self, trim_days=7, delete_days=30, batch_size=200):
+    """
+    Apr 2026: Prevent SpiderData table from filling the database.
+
+    Two-phase retention:
+    1. TRIM: Rows older than trim_days — null out raw_data (keeps embedding_text,
+       embedding, metadata for semantic search). Reclaims ~440KB/row.
+    2. DELETE: Rows older than delete_days — remove entirely. Data has been
+       processed into AgentSolution, embeddings, signals by this point.
+
+    Safety: Processes in batches, logs everything, respects soft_time_limit.
+    """
+    from core.models_unified_system import SpiderData
+    from django.utils import timezone
+    from django.db import connection
+
+    now = timezone.now()
+    trim_cutoff = now - timezone.timedelta(days=trim_days)
+    delete_cutoff = now - timezone.timedelta(days=delete_days)
+
+    stats = {'trimmed': 0, 'deleted': 0, 'bytes_before': 0, 'bytes_after': 0}
+
+    # Get current table size
+    try:
+        with connection.cursor() as c:
+            c.execute("SELECT pg_total_relation_size('core_spiderdata')")
+            stats['bytes_before'] = c.fetchone()[0]
+    except Exception:
+        pass
+
+    # Phase 1: DELETE rows older than delete_days
+    try:
+        deleted_total = 0
+        while True:
+            batch_ids = list(
+                SpiderData.objects.filter(created_at__lt=delete_cutoff)
+                .values_list('id', flat=True)[:batch_size]
+            )
+            if not batch_ids:
+                break
+            count, _ = SpiderData.objects.filter(id__in=batch_ids).delete()
+            deleted_total += count
+            logger.info(f"[RETENTION] Deleted {count} SpiderData rows older than {delete_days}d (total: {deleted_total})")
+        stats['deleted'] = deleted_total
+    except Exception as e:
+        logger.error(f"[RETENTION] Delete phase failed: {e}")
+
+    # Phase 2: TRIM raw_data on rows older than trim_days (but newer than delete_days)
+    try:
+        trimmed_total = 0
+        while True:
+            batch_ids = list(
+                SpiderData.objects.filter(
+                    created_at__lt=trim_cutoff,
+                    created_at__gte=delete_cutoff,
+                )
+                .exclude(raw_data={})
+                .values_list('id', flat=True)[:batch_size]
+            )
+            if not batch_ids:
+                break
+            count = SpiderData.objects.filter(id__in=batch_ids).update(
+                raw_data={},
+                item_embeddings={},
+            )
+            trimmed_total += count
+            logger.info(f"[RETENTION] Trimmed raw_data on {count} rows older than {trim_days}d (total: {trimmed_total})")
+        stats['trimmed'] = trimmed_total
+    except Exception as e:
+        logger.error(f"[RETENTION] Trim phase failed: {e}")
+
+    # Get post-cleanup size
+    try:
+        with connection.cursor() as c:
+            c.execute("SELECT pg_total_relation_size('core_spiderdata')")
+            stats['bytes_after'] = c.fetchone()[0]
+    except Exception:
+        pass
+
+    saved_mb = round((stats['bytes_before'] - stats['bytes_after']) / 1024 / 1024, 1)
+    logger.info(
+        f"[RETENTION] Complete: deleted={stats['deleted']}, trimmed={stats['trimmed']}, "
+        f"saved={saved_mb}MB ({stats['bytes_before'] // 1024 // 1024}MB -> {stats['bytes_after'] // 1024 // 1024}MB)"
+    )
+
+    # Also clean up persistence_spiderdata (duplicate table, 251MB)
+    try:
+        with connection.cursor() as c:
+            c.execute("SELECT COUNT(*) FROM persistence_spiderdata")
+            persist_count = c.fetchone()[0]
+            if persist_count > 0:
+                c.execute("DELETE FROM persistence_spiderdata WHERE created_at < %s", [delete_cutoff])
+                persist_deleted = c.cursor.rowcount if hasattr(c, 'cursor') else 0
+                logger.info(f"[RETENTION] persistence_spiderdata: deleted rows older than {delete_days}d")
+    except Exception as e:
+        logger.debug(f"[RETENTION] persistence_spiderdata cleanup skipped: {e}")
+
+    return stats
+
+
 # Session 1064: Telemetry cleanup — prevent unbounded table growth
 @shared_task
 def cleanup_celery_task_events(days_to_keep: int = None):

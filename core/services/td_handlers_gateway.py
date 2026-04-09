@@ -763,6 +763,8 @@ class GatewayHandlersMixin:
                 ALLOWED_TASKS = {
                     'core.tasks.sync_congress_data',
                     'core.tasks.run_all_spiders',
+                    'core.tasks.run_spider_network',
+                    'core.tasks.spider_data_retention',
                     'core.tasks.check_system_health',
                     'core.tasks.run_signal_aggregation',
                     'core.tasks.generate_self_blog_deliberation_task',
