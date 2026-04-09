@@ -486,6 +486,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
 
         # Status overview (used by /demo page)
         '/api/status/overview/',
+
+        # Newsletter signup (public landing page — Operator Edge)
+        '/api/newsletter/',
     ]
 
     # Session 830: Exact match public paths (don't use prefix matching)
