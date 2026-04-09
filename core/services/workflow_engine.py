@@ -662,7 +662,7 @@ class WorkflowEngine:
         - New: "User wants X style. What colors/moods would enhance it?" (executives enhance)
         """
         try:
-            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
+            from core.agent_router import AgentRouter
 
             # Build enhancement-focused question
             style_desc = f"{intent.style} style" if intent.style else "the user's chosen style"
@@ -686,8 +686,9 @@ Trending context: {', '.join(spider_trends.get('trending_terms', [])[:5])}
 Remember: Enhance their vision, don't replace it!
 """
 
-            assistant = EnhancedPersonalAIAssistant(user=self.user)
-            response = assistant.get_coleadership_opinion(question)
+            router = AgentRouter(user=self.user)
+            result = router.route(agent_name='CreativeDirectorAgent', task=question)
+            response = result.data if result.data else {}
 
             # Parse response for specific enhancements
             return self._parse_executive_response(response)
@@ -843,7 +844,7 @@ Remember: Enhance their vision, don't replace it!
         Returns (enhancements, thinking_list) tuple.
         """
         try:
-            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
+            from core.agent_router import AgentRouter
 
             # Build enhancement-focused question
             style_desc = f"{intent.style} style" if intent.style else "the user's chosen style"
@@ -866,14 +867,9 @@ Based on current trends ({trending}), recommend:
 Remember: Enhance their vision, don't replace it!
 """
 
-            assistant = EnhancedPersonalAIAssistant(user=self.user)
-
-            # Try to get co-leadership opinion with full thinking
-            try:
-                response = assistant.get_coleadership_opinion(question)
-            except AttributeError:
-                # Fallback if method doesn't exist
-                response = {'opinions': []}
+            router = AgentRouter(user=self.user)
+            result = router.route(agent_name='CreativeDirectorAgent', task=question)
+            response = result.data if result.data else {'opinions': []}
 
             # Extract thinking process for display
             thinking = []

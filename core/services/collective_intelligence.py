@@ -1124,13 +1124,8 @@ class CollectiveIntelligenceService:
                 avg=Avg('quality_score')
             )['avg'] or 0
 
-            # Session 313: Count connected tools (agents accessible via chat)
-            try:
-                from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-                assistant = EnhancedPersonalAIAssistant(self.user)
-                connected_tools = len(assistant.get_tool_definitions())
-            except Exception:
-                connected_tools = 27  # Default to known count from Session 313
+            # PA tool count (previously dynamic via EPA, hardcoded after deprecation)
+            connected_tools = 130
 
             # Spider connection stats (Session 242) - graceful fallback if table missing
             try:

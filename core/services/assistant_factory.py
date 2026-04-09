@@ -16,21 +16,12 @@ logger = logging.getLogger(__name__)
 
 
 def get_assistant(user, mode='default'):
-    """Create a properly wired PA instance.
+    """DEPRECATED: Legacy PA factory — all traffic routes through Rigby.
 
-    Args:
-        user: Django User object
-        mode: 'default' (PersonalAIAssistant) or 'enhanced' (EnhancedPersonalAIAssistant)
-
-    Returns:
-        An assistant instance with registries properly injected.
+    Returns None. Callers should use /api/pa/chat/ endpoint instead.
     """
-    if mode == 'enhanced':
-        try:
-            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-            return EnhancedPersonalAIAssistant(user)
-        except Exception as e:
-            logger.warning(f"Enhanced assistant failed, falling back to default: {e}")
-
-    from core.personal_ai_assistant import PersonalAIAssistant
-    return PersonalAIAssistant(user)
+    logger.warning(
+        "get_assistant() is deprecated — legacy PA removed. "
+        "All PA traffic routes through Rigby via /api/pa/chat/"
+    )
+    return None

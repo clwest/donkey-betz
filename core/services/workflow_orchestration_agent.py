@@ -1688,27 +1688,12 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         logger.info(f"🏢 Co-leadership question: {question[:100]}...")
 
         try:
-            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-            assistant = EnhancedPersonalAIAssistant(user=context['user'])
+            from core.agent_router import AgentRouter
 
-            # Set project context if available
-            if context.get('project_id'):
-                from content.models import CreativeProject
-                try:
-                    project = CreativeProject.objects.get(id=context['project_id'])
-                    assistant.project = project
-                except CreativeProject.DoesNotExist:
-                    pass
-
-            parameters = {
-                'question': question,
-                'context': f"Research findings: {research_summary}. User topic: {topic}.",
-                'participants': ['CTOAgent', 'COOAgent', 'CreativeDirectorAgent', 'CFOAgent', 'DataAnalystAgent'],
-                'image_ids': [],
-            }
-
-            result = assistant._handle_coleadership_agent(parameters)
-            return result
+            task = f"{question}\n\nResearch findings: {research_summary}. User topic: {topic}."
+            router = AgentRouter(user=context.get('user'))
+            result = router.route(agent_name='CreativeDirectorAgent', task=task)
+            return result.data if result.data else {'success': True, 'message': result.message}
 
         except Exception as e:
             logger.error(f"Co-leadership failed: {e}")
@@ -2200,8 +2185,7 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         )
 
         try:
-            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-            assistant = EnhancedPersonalAIAssistant(user=context['user'])
+            from content.models import CreativeProject
 
             # Session 201: Extract colors and tags from executive direction and research
             extracted_colors = self._extract_colors_from_direction(executive_direction)
@@ -2264,7 +2248,27 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                 'suggested_next_steps': dynamic_next_steps
             }
 
-            result = assistant._handle_create_project_from_research(parameters)
+            # Inline project creation (previously via EPA handler)
+            project = CreativeProject.objects.create(
+                user=context['user'],
+                name=parameters.get('project_name', clean_topic),
+                description=parameters.get('description', project_description),
+                goal=parameters.get('goal', project_goal),
+                category=parameters.get('category', category),
+                colors=parameters.get('colors', extracted_colors),
+                tags=parameters.get('tags', extracted_tags),
+                status='in_progress',
+                metadata={
+                    'auto_generated': True,
+                    'source': 'research_workflow',
+                    'research_summary': research_summary,
+                    'executive_direction': executive_direction,
+                    'research_links': research_links,
+                    'agent_recommendations': agent_recommendations,
+                    'suggested_next_steps': dynamic_next_steps,
+                }
+            )
+            result = {'success': True, 'project_id': str(project.id), 'project_name': project.name}
 
             # =====================================================================
             # SESSION 299: LINK STORED RESEARCH TO PROJECT
@@ -2884,20 +2888,16 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         logger.info(f"🎬 Video generation: animating image {image_id}")
 
         try:
-            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-            assistant = EnhancedPersonalAIAssistant(user=context['user'])
+            from core.agent_router import AgentRouter
 
-            parameters = {
+            task = f"Generate a 5-second professional logo animation from image {image_id}. Motion: {motion_prompt}"
+            router = AgentRouter(user=context.get('user'))
+            result = router.route(agent_name='VideoAgent', task=task, context={
                 'image_id': image_id,
                 'motion_prompt': motion_prompt,
-                'duration': 5,  # 5 second logo animation
-            }
-
-            if context.get('project_id'):
-                parameters['project_id'] = context['project_id']
-
-            result = assistant._handle_video_generation_agent(parameters)
-            return result
+                'project_id': context.get('project_id'),
+            })
+            return result.data if result.data else {'success': True, 'message': result.message}
 
         except Exception as e:
             logger.error(f"Video generation failed: {e}")
@@ -2912,26 +2912,8 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
 
         logger.info(f"🔊 Audio generation: creating sound for logo")
 
-        try:
-            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-            assistant = EnhancedPersonalAIAssistant(user=context['user'])
-
-            parameters = {
-                'text': f"Professional sound effect for {topic}",
-                'voice': 'sound_effect',  # or could be a jingle
-                'style': 'corporate',
-            }
-
-            if context.get('project_id'):
-                parameters['project_id'] = context['project_id']
-
-            # For now, return success - audio can be optional
-            # result = assistant._handle_audio_generation_agent(parameters)
-            return {'success': True, 'message': 'Audio step skipped (optional)'}
-
-        except Exception as e:
-            logger.error(f"Audio generation failed: {e}")
-            return {'success': True, 'message': f'Audio skipped: {e}'}  # Non-critical
+        # Audio generation is optional and was already no-op (handler was commented out)
+        return {'success': True, 'message': 'Audio step skipped (optional)'}
 
     def _execute_image_selection_step(self, context: Dict) -> Dict[str, Any]:
         """Select an image for animation from existing project images."""

@@ -1,6 +1,10 @@
 """
-Enhanced Personal AI Assistant - Base Module
-=============================================
+Enhanced Personal AI Assistant - Base Module (DEPRECATED)
+=========================================================
+
+DEPRECATED: This module is no longer actively used. All PA traffic routes
+through Rigby via UnifiedPAEntrypoint. Kept for backward compatibility
+with any remaining internal references.
 
 Core assistant class with modular tool execution capabilities.
 This serves as the central coordinator for all AI assistant functionality.
