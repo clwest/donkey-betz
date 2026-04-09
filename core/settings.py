@@ -997,6 +997,7 @@ CELERY_TASK_ROUTES = {
     # Session 885: Content generation tasks - dedicated content worker
     'core.tasks.generate_self_blog_task': {'queue': 'content'},
     'core.tasks.generate_self_blog_deliberation_task': {'queue': 'content'},
+    'core.tasks.generate_operator_edge_newsletter': {'queue': 'content'},
     'core.tasks.generate_blog_with_topic_task': {'queue': 'content'},  # Session 1057
     'core.tasks.summarize_conversation_task': {'queue': 'content'},
     'core.tasks.execute_initiative_stage_task': {'queue': 'long_running'},  # Session 1040: Heavy LLM pipeline execution

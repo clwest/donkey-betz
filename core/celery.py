@@ -237,6 +237,14 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=9, minute=0),  # Daily 9 AM
         'options': {'queue': 'default', 'expires': 3600},
     },
+
+    # ── Operator Edge Newsletter ───────────────────────────────────────────
+    # Weekly newsletter from signal clusters + spider data
+    'generate-operator-edge-newsletter': {
+        'task': 'core.tasks.generate_operator_edge_newsletter',
+        'schedule': crontab(hour=13, minute=0, day_of_week='friday'),  # Friday 6 AM MST = 13:00 UTC
+        'options': {'queue': 'content', 'expires': 3600},
+    },
 }
 
 # Task routing configuration
