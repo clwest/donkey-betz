@@ -236,8 +236,10 @@ class AgentMonitor:
                 execution_time=self.metrics['execution_time'],
                 status='completed' if not self.metrics['errors'] else 'failed'
             )
-        except:
-            pass  # Model might not exist
+        except ImportError:
+            pass  # Model not available
+        except Exception as e:
+            logger.warning(f"Failed to save execution metrics for {self.execution_id}: {e}")
     
     def get_metrics(self):
         """Get current metrics"""
@@ -355,8 +357,10 @@ class PerformanceAnalyzer:
                     time_period=timedelta(hours=24)
                 )
                 metrics['agents'][template.name] = agent_stats
-        except:
-            pass
+        except ImportError:
+            pass  # Model not available
+        except Exception as e:
+            logger.warning(f"Failed to collect agent metrics: {e}")
         
         # Get system metrics
         try:

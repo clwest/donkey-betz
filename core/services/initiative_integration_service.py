@@ -599,8 +599,10 @@ class InitiativeIntegrationService:
                 if stage_age > 7:
                     health = 'blocked'
                     health_issues.append(f'Stage {initiative.current_stage} needs document')
-        except:
-            pass
+        except initiative.stages.model.DoesNotExist:
+            pass  # Stage not created yet
+        except Exception as e:
+            logger.warning(f"Initiative {initiative.id} stage health check failed: {e}")
 
         return {
             'initiative_id': str(initiative.id),

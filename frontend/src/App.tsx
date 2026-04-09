@@ -98,7 +98,7 @@ function App() {
 
         {/* Session 1067: Boardroom + governance now in Workspace tabs */}
         <Route path="boardroom" element={<Navigate to="/workspace?tab=boardroom" replace />} />
-        <Route path="governance" element={<Navigate to="/workspace?tab=boardroom" replace />} />
+        <Route path="governance" element={<Navigate to="/workspace?tab=system" replace />} />
 
         {/* In-app messaging */}
         <Route path="inbox" element={<InboxPage />} />
