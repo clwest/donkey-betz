@@ -149,7 +149,6 @@ AGENT_TESTS = {
     # Utility Agents
     "ThinkingAgent": "Think through the implications of AGI development",
     "TechnicalDocumentAgent": "Create technical documentation outline for an API",
-    "PersonalAssistantAgent": "Help me plan my day tomorrow",
 }
 
 def test_agent(agent_name: str, task: str, timeout: int = 120) -> dict:
@@ -287,7 +286,7 @@ AGENT_CATEGORIES = {
     "orchestration": ["WorkflowAgent", "WorkflowOrchestrationAgent", "OpportunityPipelineAgent",
                       "ContentExecutorAgent", "CampaignOrchestratorAgent", "AISeriesWorkflowAgent"],
     "markets": ["PredictionMarketAnalyst", "SportsOddsAnalyst", "ArbitrageDetector"],
-    "utility": ["ThinkingAgent", "TechnicalDocumentAgent", "PersonalAssistantAgent"],
+    "utility": ["ThinkingAgent", "TechnicalDocumentAgent"],
 }
 
 if __name__ == "__main__":

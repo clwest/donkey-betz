@@ -79,8 +79,7 @@ class PolicyContextService:
         # 3D agents
         'ThreeDAgent': ['image', 'workflow'],
 
-        # Personal Assistant
-        'PersonalAssistantAgent': ['agents', 'workflow', 'prompting'],
+        # PersonalAssistantAgent removed — deprecated
 
         # Specialized
         'BookmakerAgent': ['prompting', 'agents'],

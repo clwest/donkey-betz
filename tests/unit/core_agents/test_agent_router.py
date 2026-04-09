@@ -74,10 +74,10 @@ class TestAgentRouterConfiguration:
         assert 'CreativeDirectorAgent' in router.AGENT_MAP
         assert 'MeetingCoordinatorAgent' in router.AGENT_MAP
 
-    def test_agent_map_has_personal_assistant(self):
-        """Test AGENT_MAP has personal assistant agent."""
+    def test_agent_map_no_personal_assistant(self):
+        """Test PersonalAssistantAgent removed from AGENT_MAP (deprecated)."""
         router = AgentRouter()
-        assert 'PersonalAssistantAgent' in router.AGENT_MAP
+        assert 'PersonalAssistantAgent' not in router.AGENT_MAP
 
 
 class TestAgentRouterRouting:

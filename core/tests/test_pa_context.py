@@ -156,12 +156,12 @@ class PAContextRebuildTaskTests(TransactionTestCase):
         cache.delete(self.stale_key)
         cache.delete(self.lock_key)
 
-    @patch('core.personal_ai_assistant.PersonalAIAssistant')
-    def test_writes_both_cache_keys(self, MockPA):
+    @patch('core.agent_context_middleware.AgentContextMiddleware')
+    def test_writes_both_cache_keys(self, MockMiddleware):
         """Task writes both fresh and stale cache keys on success."""
         mock_instance = MagicMock()
-        mock_instance.get_personalized_context.return_value = {'test': 'context', 'user_id': str(self.user.id)}
-        MockPA.return_value = mock_instance
+        mock_instance.get_user_context.return_value = {'test': 'context', 'user_id': str(self.user.id)}
+        MockMiddleware.return_value = mock_instance
 
         from core.tasks import rebuild_pa_context_task
         result = rebuild_pa_context_task(self.user.id, reason='test')
@@ -172,12 +172,12 @@ class PAContextRebuildTaskTests(TransactionTestCase):
         self.assertEqual(cache.get(self.fresh_key)['test'], 'context')
         self.assertTrue(result.get('cache_write_ok'))
 
-    @patch('core.personal_ai_assistant.PersonalAIAssistant')
-    def test_lock_prevents_stampede(self, MockPA):
+    @patch('core.agent_context_middleware.AgentContextMiddleware')
+    def test_lock_prevents_stampede(self, MockMiddleware):
         """Second rebuild is suppressed while lock is held."""
         mock_instance = MagicMock()
-        mock_instance.get_personalized_context.return_value = {'test': 'context'}
-        MockPA.return_value = mock_instance
+        mock_instance.get_user_context.return_value = {'test': 'context'}
+        MockMiddleware.return_value = mock_instance
 
         # Simulate an existing lock
         cache.set(self.lock_key, '1', timeout=90)
@@ -187,18 +187,18 @@ class PAContextRebuildTaskTests(TransactionTestCase):
 
         self.assertTrue(result.get('skipped'))
         self.assertEqual(result.get('reason'), 'lock_held')
-        # PA should never have been instantiated
-        MockPA.assert_not_called()
+        # Middleware should never have been instantiated
+        MockMiddleware.assert_not_called()
 
-    @patch('core.personal_ai_assistant.PersonalAIAssistant')
-    def test_exception_preserves_stale(self, MockPA):
+    @patch('core.agent_context_middleware.AgentContextMiddleware')
+    def test_exception_preserves_stale(self, MockMiddleware):
         """On exception, stale cache is not wiped."""
         stale_ctx = {'preserved': True}
         cache.set(self.stale_key, stale_ctx, 600)
 
         mock_instance = MagicMock()
-        mock_instance.get_personalized_context.side_effect = RuntimeError("boom")
-        MockPA.return_value = mock_instance
+        mock_instance.get_user_context.side_effect = RuntimeError("boom")
+        MockMiddleware.return_value = mock_instance
 
         from core.tasks import rebuild_pa_context_task
         result = rebuild_pa_context_task(self.user.id, reason='test_error')
@@ -207,12 +207,12 @@ class PAContextRebuildTaskTests(TransactionTestCase):
         # Stale should still be there
         self.assertEqual(cache.get(self.stale_key), stale_ctx)
 
-    @patch('core.personal_ai_assistant.PersonalAIAssistant')
-    def test_lock_released_after_exception(self, MockPA):
+    @patch('core.agent_context_middleware.AgentContextMiddleware')
+    def test_lock_released_after_exception(self, MockMiddleware):
         """Lock is released even on failure (finally block)."""
         mock_instance = MagicMock()
-        mock_instance.get_personalized_context.side_effect = RuntimeError("boom")
-        MockPA.return_value = mock_instance
+        mock_instance.get_user_context.side_effect = RuntimeError("boom")
+        MockMiddleware.return_value = mock_instance
 
         from core.tasks import rebuild_pa_context_task
         rebuild_pa_context_task(self.user.id, reason='test_cleanup')
@@ -220,12 +220,12 @@ class PAContextRebuildTaskTests(TransactionTestCase):
         # Lock should be cleared
         self.assertIsNone(cache.get(self.lock_key))
 
-    @patch('core.personal_ai_assistant.PersonalAIAssistant')
-    def test_returns_metrics(self, MockPA):
+    @patch('core.agent_context_middleware.AgentContextMiddleware')
+    def test_returns_metrics(self, MockMiddleware):
         """Successful rebuild returns build_ms and rss_delta_mb."""
         mock_instance = MagicMock()
-        mock_instance.get_personalized_context.return_value = {'test': True}
-        MockPA.return_value = mock_instance
+        mock_instance.get_user_context.return_value = {'test': True}
+        MockMiddleware.return_value = mock_instance
 
         from core.tasks import rebuild_pa_context_task
         result = rebuild_pa_context_task(self.user.id, reason='test_metrics')
