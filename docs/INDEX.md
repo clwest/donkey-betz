@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-04-09 15:09
+**Generated:** 2026-04-09 15:48
 **Current Session:** 1031
 **Total Documentation:** 1854 files | 630,362 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 141 | CLAUDE - AI Session Entry Point |
-| `docs/archive/experimental/the_future_of_ai/README.md` | 60 | 🚀 The Future of AI: Physical Products Documentatio |
+| `docs/archive/SYSTEM_CAPABILITIES-original/08_Sports_Analytics/README.md` | 60 | 🏆 SPORTS ANALYTICS PLATFORM - AI-Powered Betting I |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -220,7 +220,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 364 | 2026-04-09 08:30 |
+| INDEX.md | docs | 364 | 2026-04-09 15:10 |
 | HALF_BUILT_FEATURES_AUDIT.md | audit-2026 | 186 | 2026-04-09 07:43 |
 | 03-spiders.md | audit-2026 | 197 | 2026-04-06 19:10 |
 | 12-infrastructure.md | audit-2026 | 162 | 2026-04-06 19:08 |
