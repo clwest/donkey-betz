@@ -364,22 +364,28 @@ export default function ContentPage() {
             <h3 className="font-semibold mb-1">{title}</h3>
             <p className="text-sm text-gray-400 mb-3">{description}</p>
             <div className="flex flex-wrap gap-2">
-              {actions.map((action) => (
-                <button
-                  key={action}
-                  className="text-xs px-2 py-1 rounded bg-dark-bg text-gray-400 hover:text-white hover:bg-dark-border transition-colors"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    if (action === 'Generate' || action === 'Text to Video' || action === 'Text to 3D') {
-                      openGenerateModal(id)
-                    } else {
-                      setActionResult({ type: 'success', message: `${action} - Coming soon!` })
-                    }
-                  }}
-                >
-                  {action}
-                </button>
-              ))}
+              {actions.map((action) => {
+                const isImplemented = ['Generate', 'Text to Video', 'Text to 3D'].includes(action)
+                return (
+                  <button
+                    key={action}
+                    className={`text-xs px-2 py-1 rounded transition-colors ${
+                      isImplemented
+                        ? 'bg-dark-bg text-gray-400 hover:text-white hover:bg-dark-border'
+                        : 'bg-dark-bg text-gray-600 cursor-not-allowed opacity-50'
+                    }`}
+                    disabled={!isImplemented}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (isImplemented) {
+                        openGenerateModal(id)
+                      }
+                    }}
+                  >
+                    {action}
+                  </button>
+                )
+              })}
             </div>
           </div>
         ))}

@@ -474,13 +474,13 @@ def gallery_generate(request):
                         logger.error(f"❌ Failed to create agent contribution: {e}")
                         # Don't fail image creation if contribution tracking fails
 
-                    # Session 122: Track generated image in AI Assistant for intelligent chaining
+                    # Session 122: Track generated image for intelligent chaining
+                    # Apr 2026: Fixed — was calling undefined method on cached PA object.
+                    # Now writes directly to cache instead.
                     try:
                         from django.core.cache import cache
-                        cache_key = f'assistant_{user.id}'
-                        assistant = cache.get(cache_key)
-                        if assistant and history:
-                            # Determine asset type based on context
+                        from django.utils import timezone
+                        if history:
                             asset_type = 'image'
                             if 'logo' in prompt.lower():
                                 asset_type = 'logo'
@@ -489,15 +489,20 @@ def gallery_generate(request):
                             elif any(word in prompt.lower() for word in ['product', 'merchandise']):
                                 asset_type = 'product'
 
-                            assistant.track_generated_image(
-                                image_id=str(history.id),
-                                image_url=url,
-                                prompt=prompt,
-                                asset_type=asset_type
-                            )
-                            logger.info(f"📸 Tracked image {history.id} as {asset_type} in AI Assistant")
+                            cache_key = f'recent_assets:{user.id}'
+                            assets = cache.get(cache_key, {'images': [], 'videos': []})
+                            assets['images'].append({
+                                'id': str(history.id),
+                                'url': url,
+                                'prompt': prompt,
+                                'type': asset_type,
+                                'timestamp': timezone.now().isoformat(),
+                            })
+                            assets['images'] = assets['images'][-10:]  # Keep last 10
+                            cache.set(cache_key, assets, 3600)  # 1 hour TTL
+                            logger.info(f"Tracked image {history.id} as {asset_type}")
                     except Exception as e:
-                        logger.warning(f"⚠️ Failed to track image in AI Assistant: {e}")
+                        logger.warning(f"Failed to track image in cache: {e}")
 
                     # Save image record (works for both base64 and HTTP URLs)
                     saved_images.append({

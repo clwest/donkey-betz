@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import {
   ClipboardList,
   Users,
@@ -14,6 +15,7 @@ import {
   Youtube,
 } from 'lucide-react'
 import Breadcrumb from '@/components/Breadcrumb'
+import { api } from '@/lib/api'
 
 const buildLoopSteps = [
   {
@@ -53,15 +55,28 @@ const buildLoopSteps = [
   },
 ]
 
-const platformStats = [
-  { value: '218', label: 'Agents', icon: Bot },
-  { value: '79', label: 'Spiders', icon: Bug },
-  { value: '25', label: 'Advisors', icon: Users },
-  { value: '9', label: 'Body Systems', icon: Heart },
-  { value: '104', label: 'PA Tools', icon: Wrench },
+const DEFAULT_STATS = [
+  { value: '218', label: 'Agents', icon: Bot, key: 'total_agents' },
+  { value: '79', label: 'Spiders', icon: Bug, key: 'active_spiders' },
+  { value: '25', label: 'Advisors', icon: Users, key: '' },
+  { value: '9', label: 'Body Systems', icon: Heart, key: '' },
+  { value: '130', label: 'PA Tools', icon: Wrench, key: '' },
 ]
 
 export default function HowItWorksPage() {
+  const [platformStats, setPlatformStats] = useState(DEFAULT_STATS)
+
+  useEffect(() => {
+    api.get('/ecosystem/stats/').then(({ data }) => {
+      setPlatformStats(prev => prev.map(stat => {
+        if (stat.key && data[stat.key]) {
+          return { ...stat, value: String(data[stat.key]) }
+        }
+        return stat
+      }))
+    }).catch(() => {})  // Keep defaults on error
+  }, [])
+
   return (
     <div className="space-y-8 p-6 max-w-5xl mx-auto">
       <Breadcrumb currentPage="How it Works" />
