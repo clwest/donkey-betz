@@ -1170,7 +1170,7 @@ class UnifiedPAEntrypoint:
                     fresh_messages = self._build_messages_array(message, context)
                     tool_summary = json.dumps(
                         [{'tool': r.get('tool', ''), 'ok': r.get('ok'),
-                          'result': str(r.get('result', ''))[:500]}
+                          'result': str(r.get('result', ''))[:4000]}
                          for r in tool_runs],
                         default=str
                     )[:4000]
@@ -1227,7 +1227,7 @@ class UnifiedPAEntrypoint:
                         logger.info(f"[{trace_id}] Attempting clean summary of {len(successful_runs)} successful tool runs")
                         fresh_messages = self._build_messages_array(message, context)
                         tool_summary = json.dumps(
-                            [{'tool': r.get('tool', ''), 'ok': r.get('ok'), 'result': str(r.get('result', ''))[:500]}
+                            [{'tool': r.get('tool', ''), 'ok': r.get('ok'), 'result': str(r.get('result', ''))[:4000]}
                              for r in tool_runs],
                             default=str
                         )[:4000]
@@ -1331,7 +1331,7 @@ class UnifiedPAEntrypoint:
                 # Also inject tool results as user context so the LLM can summarize.
                 fresh_messages = self._build_messages_array(message, context)
                 tool_summary = json.dumps(
-                    [{'tool': r.get('tool', ''), 'ok': r.get('ok'), 'result': str(r.get('result', ''))[:500]}
+                    [{'tool': r.get('tool', ''), 'ok': r.get('ok'), 'result': str(r.get('result', ''))[:4000]}
                      for r in tool_runs],
                     default=str
                 )[:4000]
@@ -1468,7 +1468,7 @@ class UnifiedPAEntrypoint:
                 tool_result_inputs.append({
                     "type": "function_call_output",
                     "call_id": call_id,
-                    "output": self._truncate_tool_output(output, 8000),
+                    "output": self._truncate_tool_output(output, 16000),
                 })
 
             # Log tool output token budget for this iteration
