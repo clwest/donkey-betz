@@ -613,9 +613,13 @@ Return a comprehensive brand strategy report that builds on existing project res
                                             'source': data_item['source']
                                         })
 
+                    # Session 1200: Use synthesis content as message
+                    analysis_text = synthesis.get('strategy', synthesis.get('analysis', '')) if isinstance(synthesis, dict) else str(synthesis)
+                    analysis_msg = analysis_text if analysis_text else f"Brand strategy completed with {len(all_brand_data)} data sources"
+
                     result = AgentResult(
                         success=True,
-                        message=f"Brand strategy completed with {len(all_brand_data)} data sources",
+                        message=analysis_msg,
                         data={
                             'analysis': synthesis.get('strategy', synthesis.get('analysis', str(synthesis))),
                             'visual_direction': synthesis.get('visual_direction', {}),

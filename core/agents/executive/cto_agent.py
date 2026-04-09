@@ -250,12 +250,18 @@ You CANNOT execute code or make changes - only analyze and plan."""
                     )
                     provenance.disclaimer = "Technical analysis and recommendations. Verify with engineering team before implementation."
 
+                    # Session 1200: Synthesize tool results into real analysis
+                    tool_results_list = [tc.get('result', {}) for tc in tool_calls_made]
+                    synthesis = self._synthesize_tool_results(tool_calls_made, tool_results_list, task)
+                    analysis_msg = synthesis if synthesis else "Technical analysis completed"
+
                     result = AgentResult(
                         success=True,
-                        message="Technical analysis completed",
+                        message=analysis_msg,
                         data={
                             'task': task,
                             'tool_results': tool_calls_made,
+                            'content': synthesis,
                             # Session 954: Add provenance
                             'provenance': provenance.to_dict(),
                             'publishable': provenance.publishable,
@@ -270,7 +276,7 @@ You CANNOT execute code or make changes - only analyze and plan."""
                     # Session 1006: Persist output to Deliverable
                     self._save_to_deliverable(
                         title=f"CTO Analysis: {task[:80]}",
-                        content=result.message,
+                        content=analysis_msg,
                         deliverable_type='analysis',
                         category='Executive Technical',
                         tags=['cto', 'technical'],

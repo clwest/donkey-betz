@@ -368,12 +368,18 @@ the user should use ImageAgent, VideoAgent, etc."""
 
                     execution_time = int((time.time() - start_time) * 1000)
 
+                    # Session 1200: Synthesize tool results into real analysis
+                    tool_results_list = [tc.get('result', {}) for tc in tool_calls_made]
+                    synthesis = self._synthesize_tool_results(tool_calls_made, tool_results_list, task)
+                    analysis_msg = synthesis if synthesis else "Brand identity operation completed"
+
                     result = AgentResult(
                         success=True,
-                        message="Brand identity operation completed",
+                        message=analysis_msg,
                         data={
                             'task': task,
                             'tool_results': tool_calls_made,
+                            'content': synthesis,
                         },
                         agent_name=self.name,
                         execution_time_ms=execution_time,

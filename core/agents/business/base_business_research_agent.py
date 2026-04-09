@@ -482,9 +482,13 @@ Research Type: {self.research_type}""")
 
                 logger.info(f"{self.name}: Completed in {execution_time}ms with {len(all_data)} data sources")
 
+                # Session 1200: Use synthesis content as message (not hardcoded count)
+                analysis_text = synthesis.get('analysis', '') if isinstance(synthesis, dict) else str(synthesis)
+                analysis_msg = analysis_text if analysis_text else f"{self.name} completed with {len(all_data)} data sources"
+
                 return AgentResult(
                     success=True,
-                    message=f"{self.name} completed with {len(all_data)} data sources",
+                    message=analysis_msg,
                     data={
                         'analysis': synthesis.get('analysis', str(synthesis)),
                         'recommendations': synthesis.get('recommendations', []),

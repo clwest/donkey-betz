@@ -263,12 +263,18 @@ You CANNOT execute changes - only analyze and recommend."""
                     )
                     provenance.disclaimer = "Operational analysis and planning. Verify timelines and resources with team leads."
 
+                    # Session 1200: Synthesize tool results into real analysis
+                    tool_results_list = [tc.get('result', {}) for tc in tool_calls_made]
+                    synthesis = self._synthesize_tool_results(tool_calls_made, tool_results_list, task)
+                    analysis_msg = synthesis if synthesis else "Operational analysis completed"
+
                     result = AgentResult(
                         success=True,
-                        message="Operational analysis completed",
+                        message=analysis_msg,
                         data={
                             'task': task,
                             'tool_results': tool_calls_made,
+                            'content': synthesis,
                             # Session 954: Add provenance
                             'provenance': provenance.to_dict(),
                             'publishable': provenance.publishable,
@@ -283,7 +289,7 @@ You CANNOT execute changes - only analyze and recommend."""
                     # Session 1006: Persist output to Deliverable
                     self._save_to_deliverable(
                         title=f"COO Analysis: {task[:80]}",
-                        content=result.message,
+                        content=analysis_msg,
                         deliverable_type='analysis',
                         category='Executive Operations',
                         tags=['coo', 'operations'],
