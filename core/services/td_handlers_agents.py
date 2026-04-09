@@ -1152,6 +1152,19 @@ class AgentHandlersMixin:
         """Handle deliverables library tool."""
         from core.models_deliverables import Deliverable
         from django.db.models import Count
+        import uuid as _uuid_mod
+
+        # Apr 2026: Sanitize UUID fields — GPT-5.2 sometimes injects its tool
+        # call ID (e.g. "tool-1-6a55c355") into UUID fields like id, workspace_id,
+        # initiative_id, causing Django ORM validation errors.
+        for uuid_field in ('id', 'workspace_id', 'workspace', 'initiative_id', 'deliverable_id'):
+            val = payload.get(uuid_field, '')
+            if val and isinstance(val, str):
+                try:
+                    _uuid_mod.UUID(val)
+                except ValueError:
+                    logger.warning(f"[deliverables] Sanitized invalid UUID in '{uuid_field}': {val}")
+                    payload[uuid_field] = ''
 
         action = payload.get('action', 'list')
 
