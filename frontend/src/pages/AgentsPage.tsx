@@ -3217,8 +3217,7 @@ export default function AgentsPage() {
                   <button
                     key={emoji}
                     onClick={() => {
-                      // TODO: Call dreamsApi.react when implemented
-                      console.log('React to dream:', selectedDream.id, emoji)
+                      dreamsApi.react(selectedDream.id, emoji).catch(() => {})
                     }}
                     className={cn(
                       'text-xl p-2 rounded-lg transition-all hover:bg-dark-card hover:scale-110',

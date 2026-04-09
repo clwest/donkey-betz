@@ -192,7 +192,10 @@ class AgentLLMRouter:
             from core.models import SystemConfiguration
             config = SystemConfiguration.objects.get(key='llm_routing_mode', is_active=True)
             mode = config.value if config.value in ('off', 'conservative', 'balanced', 'aggressive') else 'off'
-        except Exception:
+        except SystemConfiguration.DoesNotExist:
+            mode = 'off'
+        except Exception as e:
+            logger.warning(f"LLM routing mode lookup failed, defaulting to off: {e}")
             mode = 'off'
 
         self._routing_mode_cache = mode
@@ -234,8 +237,10 @@ class AgentLLMRouter:
             if tracker.is_provider_degraded('together'):
                 logger.info("Economy provider 'together' is degraded, falling back to premium")
                 return 'premium'
-        except Exception:
-            pass
+        except ImportError:
+            pass  # provider_health_tracker not installed
+        except Exception as e:
+            logger.warning(f"Economy health check failed, defaulting to economy: {e}")
         return 'economy'
 
     def _get_agent_category(self, agent_name: str) -> str:
@@ -468,8 +473,8 @@ class AgentLLMRouter:
                         'success': response.success,
                         'was_fallback': was_fallback,
                     })
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"LLM call tracking failed: {e}")
 
             # Update agent config stats
             try:
@@ -493,8 +498,10 @@ class AgentLLMRouter:
                     'total_calls', 'successful_calls', 'total_tokens_used',
                     'total_cost', 'avg_latency_ms', 'updated_at'
                 ])
-            except Exception:
-                pass  # Config may not exist in DB yet
+            except AgentLLMConfig.DoesNotExist:
+                pass  # Config not created yet for this agent
+            except Exception as e:
+                logger.debug(f"LLM config stats update failed for {agent_name}: {e}")
 
         except Exception as e:
             logger.warning(f"Failed to log LLM call: {e}")
