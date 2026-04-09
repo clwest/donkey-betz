@@ -189,7 +189,14 @@ def create_deliverable(
     if workspace_id:
         kwargs['workspace_id'] = workspace_id
     if trace_id:
-        kwargs['trace_id'] = trace_id
+        # Apr 2026: trace_id is a UUIDField on Deliverable but tool_dispatcher
+        # generates non-UUID trace IDs like "tool-1-6a55c355". Validate before passing.
+        import uuid as _uuid_mod
+        try:
+            _uuid_mod.UUID(trace_id)
+            kwargs['trace_id'] = trace_id
+        except (ValueError, AttributeError):
+            pass  # Skip non-UUID trace IDs
     if parent_execution_id:
         kwargs['parent_object_type'] = parent_object_type or 'agent_execution'
         kwargs['parent_object_id'] = parent_execution_id
