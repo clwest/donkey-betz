@@ -275,10 +275,32 @@ The brief is your rubric. The draft is what you're grading."""
 
             execution_time = int((time.time() - start_time) * 1000)
 
-            # Session 1006: Persist output to Deliverable
+            # Session 1006/1200: Persist output to Deliverable
+            # Build full text from enhanced_content fields (enhanced_body key doesn't exist)
+            if isinstance(enhanced_content, dict):
+                _parts = []
+                if enhanced_content.get('title'):
+                    _parts.append(f"# {enhanced_content['title']}\n")
+                if enhanced_content.get('intro'):
+                    _parts.append(enhanced_content['intro'])
+                for section in (enhanced_content.get('sections') or []):
+                    if isinstance(section, dict):
+                        if section.get('heading'):
+                            _parts.append(f"\n## {section['heading']}\n")
+                        _parts.append(section.get('content', section.get('body', '')))
+                    elif isinstance(section, str):
+                        _parts.append(section)
+                if enhanced_content.get('conclusion'):
+                    _parts.append(f"\n## Conclusion\n{enhanced_content['conclusion']}")
+                if enhanced_content.get('changes_made'):
+                    _parts.append(f"\n---\n*Changes made: {', '.join(enhanced_content['changes_made'][:5])}*")
+                deliverable_content = '\n\n'.join(p for p in _parts if p)
+            else:
+                deliverable_content = str(enhanced_content)
+
             self._save_to_deliverable(
                 title=f"Edited Content: {content.get('title', task[:80])}",
-                content=enhanced_content.get('enhanced_body', '') if isinstance(enhanced_content, dict) else str(enhanced_content),
+                content=deliverable_content,
                 deliverable_type='edited_content',
                 category='Content Editing',
                 tags=['editing'] + focus_areas[:3],
