@@ -823,13 +823,26 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                         f"DO NOT make claims not supported by the evidence cards.\n"
                         f"DO NOT search for additional information — use only what is provided.\n"
                     )
-                    # Call GPT without tools — synthesis only (no tool_choice)
-                    saved_tools = self.tools
-                    self.tools = []
+                    # Call GPT for synthesis only — use gpt-5.2 directly (not gpt-5-mini)
+                    # Session 1200: Do NOT empty self.tools — that causes _call_openai to
+                    # pick gpt-5-mini (reasoning model) which returns content=None.
+                    # Instead, call the LLM provider registry directly for text synthesis.
                     try:
-                        gpt_response = self._call_openai(synthesis_prompt)
-                    finally:
-                        self.tools = saved_tools
+                        from core.services.llm_provider_registry import get_llm_provider_registry, LLMRequest
+                        registry = get_llm_provider_registry()
+                        synth_result = registry.complete(
+                            provider='openai',
+                            model_id='gpt-5.2',
+                            request=LLMRequest(
+                                prompt=synthesis_prompt,
+                                max_tokens=4000,
+                                temperature=0.7,
+                            ),
+                        )
+                        gpt_response = {'content': synth_result.content if synth_result else '', 'tool_calls': []}
+                    except Exception as synth_err:
+                        logger.warning(f'[IterativeSearch] Synthesis LLM call failed: {synth_err}')
+                        gpt_response = {'content': '', 'tool_calls': []}
                     # Wrap iterative results into the standard all_results format
                     all_results = [{'source': 'iterative_search', 'data': iterative_results}]
                 else:
