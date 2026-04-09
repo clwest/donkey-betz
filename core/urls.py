@@ -4706,6 +4706,16 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Newsletter — Operator Edge (public, no auth)
+# =========================================================================
+from core.views_newsletter import newsletter_subscribe, newsletter_subscriber_count
+
+urlpatterns += [
+    path('api/newsletter/subscribe/', newsletter_subscribe, name='newsletter-subscribe'),
+    path('api/newsletter/count/', newsletter_subscriber_count, name='newsletter-count'),
+]
+
+# =========================================================================
 # Development-only endpoints — never exposed in production
 # =============================================================================
 # Preview System: Workspace Hosted Previews + Magic Links + Feedback
