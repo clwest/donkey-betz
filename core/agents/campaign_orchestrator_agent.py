@@ -306,11 +306,17 @@ Always provide status updates and be transparent about what's being created."""
 
                     execution_time = int((time.time() - start_time) * 1000)
 
+                    # Session 1200: Synthesize tool results into real analysis
+                    tool_results_list = [tc.get('result', {}) for tc in tool_calls_made]
+                    synthesis = self._synthesize_tool_results(tool_calls_made, tool_results_list, task)
+                    analysis_msg = synthesis if synthesis else f"Campaign orchestration completed with {len(all_results)} actions"
+
                     result = AgentResult(
                         success=True,
-                        message=f"Campaign orchestration completed with {len(all_results)} actions",
+                        message=analysis_msg,
                         data={
                             'results': all_results,
+                            'content': synthesis,
                             'task': task
                         },
                         agent_name=self.name,

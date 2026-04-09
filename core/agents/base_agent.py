@@ -2321,8 +2321,21 @@ Consider these trends when crafting the response to maximize relevance and engag
             f"clear, actionable insights. Be specific."
         )
         try:
-            synthesis = self._call_openai(synthesis_prompt)
-            return synthesis.get('content') or ''
+            # Session 1200: Use LLMProviderRegistry with explicit gpt-5.2 for synthesis.
+            # _call_openai picks gpt-5-mini when self.tools is empty (reasoning model
+            # returns content=None). Synthesis needs a text model, not a reasoning model.
+            from core.services.llm_provider_registry import get_llm_provider_registry, LLMRequest
+            registry = get_llm_provider_registry()
+            result = registry.complete(
+                provider='openai',
+                model_id='gpt-5.2',
+                request=LLMRequest(
+                    prompt=synthesis_prompt,
+                    max_tokens=4000,
+                    temperature=0.7,
+                ),
+            )
+            return result.content if result else ''
         except Exception as e:
             logger.warning(f"{self.name}: synthesis call failed: {e}")
             return ''

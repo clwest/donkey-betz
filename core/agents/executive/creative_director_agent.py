@@ -305,12 +305,18 @@ You CANNOT create content - just provide creative direction."""
 
                     execution_time = int((time.time() - start_time) * 1000)
 
+                    # Session 1200: Synthesize tool results into real analysis
+                    tool_results = [tc.get('result', {}) for tc in tool_calls_made]
+                    synthesis = self._synthesize_tool_results(tool_calls_made, tool_results, task)
+                    analysis_msg = synthesis if synthesis else "Creative direction completed"
+
                     result = AgentResult(
                         success=True,
-                        message="Creative direction completed",
+                        message=analysis_msg,
                         data={
                             'task': task,
                             'tool_results': tool_calls_made,
+                            'content': synthesis,
                         },
                         agent_name=self.name,
                         execution_time_ms=execution_time,
@@ -321,7 +327,7 @@ You CANNOT create content - just provide creative direction."""
                     # Session 1006: Persist output to Deliverable
                     self._save_to_deliverable(
                         title=f"Creative Direction: {task[:80]}",
-                        content=result.message,
+                        content=analysis_msg,
                         deliverable_type='analysis',
                         category='Creative Direction',
                         tags=['creative', 'direction'],
