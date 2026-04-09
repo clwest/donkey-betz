@@ -381,12 +381,18 @@ You CANNOT create content - just optimize for discoverability."""
                     except Exception as e:
                         logger.warning(f"ML integration in execute failed: {e}")
 
+                    # Session 1200: Synthesize tool results into real analysis
+                    tool_results_list = [tc.get('result', {}) for tc in tool_calls_made]
+                    synthesis = self._synthesize_tool_results(tool_calls_made, tool_results_list, task)
+                    analysis_msg = synthesis if synthesis else "SEO optimization completed"
+
                     result = AgentResult(
                         success=True,
-                        message="SEO optimization completed",
+                        message=analysis_msg,
                         data={
                             'task': task,
                             'tool_results': tool_calls_made,
+                            'content': synthesis,
                             'ml_analysis': ml_analysis,  # Session 683: ML insights
                         },
                         agent_name=self.name,

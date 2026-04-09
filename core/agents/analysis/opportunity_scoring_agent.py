@@ -374,12 +374,18 @@ You score and analyze - you do NOT create content or execute workflows."""
                     provenance.disclaimer = format_disclaimer('analysis')
                     provenance_block = provenance.to_markdown_block()
 
+                    # Session 1200: Synthesize tool results into real analysis
+                    tool_results_list = [tc.get('result', {}) for tc in tool_calls_made]
+                    synthesis = self._synthesize_tool_results(tool_calls_made, tool_results_list, task)
+                    analysis_msg = synthesis if synthesis else "Opportunity scoring completed"
+
                     result = AgentResult(
                         success=True,
-                        message=provenance_block + "\n\nOpportunity scoring completed",
+                        message=provenance_block + "\n\n" + analysis_msg,
                         data={
                             'task': task,
                             'tool_results': tool_calls_made,
+                            'content': synthesis,
                             'ml_analysis': ml_insights,  # Session 683: Add RL optimization
                             'provenance': provenance.to_dict(),
                             'publishable': provenance.publishable,
@@ -391,13 +397,10 @@ You score and analyze - you do NOT create content or execute workflows."""
                         tool_calls=tool_calls_made
                     )
 
-                    # Session 861: Persist analysis to Deliverable
-                    analysis_content = f"# Opportunity Scoring Analysis\n\n**Task:** {task}\n\n"
-                    for tc in tool_calls_made:
-                        analysis_content += f"## {tc.get('tool', 'Tool')}\n{tc.get('result', {})}\n\n"
+                    # Session 861/1200: Persist synthesis to Deliverable
                     self._save_to_deliverable(
                         title=f"Opportunity Analysis: {task[:50]}",
-                        content=analysis_content,
+                        content=analysis_msg,
                         deliverable_type='analysis',
                         category='Business',
                         tags=['opportunity', 'scoring', 'analysis'],
