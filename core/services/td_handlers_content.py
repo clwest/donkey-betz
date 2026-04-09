@@ -3922,6 +3922,42 @@ class ContentHandlersMixin:
                 result['action'] = action
             return result
 
+        # ── Operator Edge Newsletter ──
+        if action == 'generate_newsletter':
+            from core.tasks import generate_operator_edge_newsletter
+            hours = int(payload.get('hours', 72))
+            cluster_limit = int(payload.get('cluster_limit', 5))
+            dry_run = bool(payload.get('dry_run', False))
+
+            if dry_run:
+                # Synchronous dry run — just gather data, no LLM call
+                from core.tasks_content import _gather_newsletter_evidence
+                evidence = _gather_newsletter_evidence(hours=hours, cluster_limit=cluster_limit)
+                clusters = evidence['clusters']
+                return {
+                    'gateway': 'content_tool',
+                    'action': 'generate_newsletter',
+                    'mode': 'dry_run',
+                    'clusters_found': len(clusters),
+                    'top_clusters': [c['name'] for c in clusters[:3]],
+                    'evidence_preview': evidence['evidence_block'][:2000],
+                    'message': f'Dry run: found {len(clusters)} clusters. '
+                               f'Run with dry_run=false to generate the newsletter.',
+                }
+
+            task = generate_operator_edge_newsletter.apply_async(
+                kwargs={'hours': hours, 'cluster_limit': cluster_limit, 'dry_run': False},
+                queue='content',
+            )
+            return {
+                'gateway': 'content_tool',
+                'action': 'generate_newsletter',
+                'mode': 'async',
+                'task_id': str(task.id),
+                'message': 'Operator Edge newsletter generation queued. '
+                           'Typically takes 2-4 minutes. Check deliverables for the result.',
+            }
+
         # ── deliverables_tool actions ──
         DELIVERABLE_MAP = {
             'deliverable_list': 'list',
@@ -4074,7 +4110,7 @@ class ContentHandlersMixin:
                 return {'gateway': 'content_tool', 'action': action, 'error': str(e)}
 
         all_actions = sorted(
-            list(CONTENT_REVIEW_MAP) + ['generate_blog', 'bulk_archive', 'bulk_archive_published', 'run_cleanup'] + list(DELIVERABLE_MAP)
+            list(CONTENT_REVIEW_MAP) + ['generate_blog', 'generate_newsletter', 'bulk_archive', 'bulk_archive_published', 'run_cleanup'] + list(DELIVERABLE_MAP)
             + ['podcasts', 'series', 'content_studio', 'initiative_doc']
         )
         return {'error': f'Unknown content_tool action: {action}. Valid: {", ".join(all_actions)}'}
