@@ -861,6 +861,11 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                             elif tool_result.get('data'):
                                 all_results.append({'source': tool_name, 'data': tool_result.get('data'), 'partial': True})
 
+                # Session 1200: Capture GPT synthesis text (was being discarded)
+                synthesis_text = ''
+                if gpt_response and isinstance(gpt_response, dict):
+                    synthesis_text = gpt_response.get('content', '') or ''
+
                 if all_results:
                     execution_time = int((time.time() - start_time) * 1000)
 
@@ -911,6 +916,8 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                             'attempts': self._iterative_attempts,
                             # Session 1103: Evidence cards for ClaimsPack bridge
                             'evidence_claims': research_claims,
+                            # Session 1200: GPT synthesis — the actual written analysis
+                            'content': synthesis_text,
                         }
 
                         # Add ML analysis if performed
@@ -999,6 +1006,11 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
 
                         research_summary = ". ".join(summary_parts)
 
+                        # Session 1200: Use synthesis text as message when available
+                        # (message is what the PA and deliverable pipeline see as primary output)
+                        if synthesis_text and len(synthesis_text) > 200:
+                            research_summary = synthesis_text
+
                         result = AgentResult(
                             success=True,
                             message=research_summary,
@@ -1043,18 +1055,23 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                         # Session 763: Create Mission Control attention item
                         self._maybe_create_attention_item(result, task, context)
 
-                        # Session 861: Persist research findings to Deliverable
-                        research_content = f"# Research: {task}\n\n"
-                        research_content += f"**Sources:** {len(all_results)}\n\n"
-                        if key_insights:
-                            research_content += "## Key Insights\n"
-                            for i, insight in enumerate(key_insights, 1):
-                                research_content += f"{i}. {insight}\n"
-                            research_content += "\n"
-                        if ml_analysis.get('sentiment') and ml_analysis['sentiment'] != 'unknown':
-                            research_content += f"**Sentiment:** {ml_analysis['sentiment']}\n"
-                        if ml_analysis.get('topics_detected'):
-                            research_content += f"**Topics:** {', '.join(ml_analysis['topics_detected'])}\n"
+                        # Session 861/1200: Persist research findings to Deliverable
+                        # Session 1200: Use GPT synthesis as primary content when available
+                        if synthesis_text and len(synthesis_text) > 200:
+                            research_content = synthesis_text
+                        else:
+                            # Fallback: build content from key_insights (pre-1200 behavior)
+                            research_content = f"# Research: {task}\n\n"
+                            research_content += f"**Sources:** {len(all_results)}\n\n"
+                            if key_insights:
+                                research_content += "## Key Insights\n"
+                                for i, insight in enumerate(key_insights, 1):
+                                    research_content += f"{i}. {insight}\n"
+                                research_content += "\n"
+                            if ml_analysis.get('sentiment') and ml_analysis['sentiment'] != 'unknown':
+                                research_content += f"**Sentiment:** {ml_analysis['sentiment']}\n"
+                            if ml_analysis.get('topics_detected'):
+                                research_content += f"**Topics:** {', '.join(ml_analysis['topics_detected'])}\n"
 
                         self._save_to_deliverable(
                             title=f"Research: {task[:100]}",
