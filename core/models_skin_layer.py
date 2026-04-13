@@ -135,6 +135,15 @@ class ProjectWorkspace(models.Model):
         default=False,
         help_text="Require human approval before applying changes"
     )
+    allow_autonomous_writes = models.BooleanField(
+        default=True,
+        help_text=(
+            "Allow autonomous/scheduled agents to write deliverables into "
+            "this workspace as a fallback. Set False for personal, game, or "
+            "tool workspaces that should only receive content from explicit "
+            "user-initiated runs."
+        ),
+    )
 
     # Current State
     is_active = models.BooleanField(
