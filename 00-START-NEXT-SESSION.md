@@ -1,70 +1,65 @@
 # Next Session — Start Here
 
-**Date:** April 10, 2026
-**Previous Session:** Silent Failure Stress Testing + Operator Edge Newsletter + Agent Synthesis Fix
-**PA Conversation:** `pa-1410235adf59` (or create fresh via `session_tool action=create_fresh`)
-**Status:** 218 Agents (83 in AGENT_MAP) | 79 Spiders (RUNNING) | 25 Advisors | 5 PRs merged this session (#1861-#1865)
+**Date:** April 12, 2026
+**Previous Session:** Operator Edge Landing Page + Newsletter Validation + Patent Strategy
+**PA Conversation:** `pa-223d084d4b9f` (or create fresh via `session_tool action=create_fresh`)
+**Status:** 218 Agents (83 in AGENT_MAP) | 79 Spiders (RUNNING) | 25 Advisors | 7 PRs merged recent (#1861-#1868)
 
 ---
 
-## What Was Done (April 9, 2026) — 5 PRs Merged
+## What Was Done (April 9-12, 2026) — 2 PRs Merged This Session
 
-### PR #1861: Operator Edge Newsletter Pipeline
-- New Celery task `generate_operator_edge_newsletter` — signal clusters + SpiderData citations + ContentWriterAgent = weekly newsletter deliverable
-- PA tool action: `content_tool action=generate_newsletter` (supports `dry_run=true`)
-- Beat schedule: weekly Friday 6 AM MST (13:00 UTC)
-- First issue generated: "Operator Edge — April 09, 2026" (7,043 chars, quality 0.75)
-- Saved to Operator Edge workspace with full metadata
+### PR #1867: Operator Edge Landing Page + Subscriber API
+- `NewsletterSubscriber` model with email, name, source, UTM tracking, referral codes
+- `POST /api/newsletter/subscribe/` — public, no auth, dedup + re-subscribe handling
+- `GET /api/newsletter/count/` — public subscriber count for social proof
+- `/operator-edge` public route (no login required) with:
+  - Hero section, email signup form, 6 feature cards (Top Signal, What Broke, Autopilot Move, Cost Watch, What Changed, Deep Dive)
+  - Platform stats (79 spiders, 218 agents, 3 reviewers, 72h freshness)
+  - Audience targeting (SREs, AI Product Leads, Founders & Builders)
+  - Dark theme, indigo/emerald gradient branding, UTM capture
+- Migration 0326 applied on Railway
 
-### PRs #1862-#1863: ResearchAgent Synthesis Fix
-- **Bug 1:** GPT synthesis response was captured but never saved to `result_data` or deliverables — content field empty
-- **Bug 2:** Synthesis call used `gpt-5-mini` (reasoning model, returns `content=None`) instead of `gpt-5.2` — caused by `self.tools = []` triggering wrong model selection
-- Fixed to use `LLMProviderRegistry.complete()` with explicit `gpt-5.2`
-- ResearchAgent now produces 5K+ char synthesized briefs with evidence citations
+### PR #1868: Newsletter Auth Bypass
+- Added `/api/newsletter/` to auth middleware `PUBLIC_PATHS`
+- Newsletter endpoints were returning 401 — now publicly accessible
+- Smoke tested on production: subscribe + count both working
 
-### PR #1864: Batch Agent Synthesis Fix (13 agents)
-- **Bug 1 (base class):** `_synthesize_tool_results()` in `base_agent.py` used `_call_openai()` which picks `gpt-5-mini` when tools empty. Fixed with `LLMProviderRegistry`. Affects 10 agents.
-- **Bug 2 (hardcoded messages):** 9 agents returned "Operation completed" instead of GPT analysis. Fixed to call `_synthesize_tool_results()`.
-- Files: base_agent, 4 executive, 3 strategy, 2 business, 2 analysis, campaign_orchestrator
+### Rigby: Issue #1 Validation + Publish Prep
+- Found Issue #1 deliverable (`c73a507a`) on production
+- Validated against Template v1 — identified 6 missing sections
+- Drafted all missing sections: Top Signal, What Broke, Autopilot Move, Cost Watch, What Changed, Forward CTA
+- Added sponsor slot placeholder with UTM tracking template
+- Created 3 subject line options
+- Updated deliverable with publish-ready markdown
+- Created Sponsor One-Pager deliverable (`f76cbd95`) for outreach
 
-### PR #1865: EditorAgent Empty Deliverables + DevOps/FullStack Synthesis
-- EditorAgent: `_save_to_deliverable` looked for `enhanced_body` key that doesn't exist. LLM returns `title/intro/sections/conclusion`. Fixed to reconstruct full markdown.
-- DevOpsAgent + FullStackDeveloperAgent: single-line messages → synthesis
-
-### Beat Task Re-enablement (77 tasks)
-- 229 tasks were disabled since March 29. Re-enabled 77 selectively:
-  - Body systems (10), Signal pipeline (3), Content pipeline (14), Sports pipeline (10), Infrastructure (40)
-- 155 agent exercise tasks deliberately kept disabled (agents need real tasks, not noise)
-- Signal clusters flowing again (50 active, was 0 for 10 days)
-- SKIN system DB columns fixed (`total_files_tracked`, `total_operations_all_time`)
-
-### DBZ-Ebook-Launch Cleanup
-- Deleted 12 empty deliverables (10 EditorAgent stubs + 2 test deliverables)
-- 22 deliverables remain, all with real content
+### Patent Strategy Discussion
+- 12 patent disclosures already written (Disclosures A-L) + 4 executive summaries
+- Strongest candidates: Claims-based deliberation (D), Structured debate + decision enforcement (F), Signal-to-initiative provenance (G)
+- Strategic opportunities: licensing revenue, competitive moat, partnership leverage, valuation impact, PaaS possibilities
+- Jeremy (patent lawyer, superuser account) ready to move forward
 
 ---
 
-## PRIORITY 1: Operator Edge Launch
+## PRIORITY 1: Operator Edge Launch (Continued)
 
-### Status
+### Done
 - Pipeline built and tested end-to-end
-- First issue generated with real content
-- Market research completed: $50-$100 CPM for DevOps/AI audience
-- Revenue projection: ~$2K/month at 5K subscribers
+- First issue generated, validated, and publish-ready
+- Landing page live at `/operator-edge` on production
+- Subscriber API working (smoke tested)
+- Sponsor One-Pager drafted
+- Beat schedule set for weekly Friday 6 AM MST
 
 ### Next Steps
-1. **Set up Substack/Beehiiv** — Create the Operator Edge publication with free + paid tiers
-2. **Publish Issue #1** — Review and publish the generated newsletter (deliverable `caea3c21`)
-3. **Build subscriber base** — Share via existing channels, lead magnet, social
-4. **Sponsor prospecting** — Target DevOps/SRE/cloud tooling companies (Datadog, PagerDuty, Grafana, etc.)
-5. **Automate weekly production** — Beat schedule already set for Friday 6 AM MST
+1. **Create Beehiiv account** — Rigby recommends Beehiiv over Substack for growth + sponsor revenue
+2. **Publish Issue #1** — Soft-launch to seed list first, monitor 24-48h, then public push
+3. **Build subscriber base** — Referral program, signup popups, social distribution
+4. **Sponsor prospecting** — Use Sponsor One-Pager, target DevOps/SRE/cloud tooling companies
+5. **Automate subscriber sync** — Connect Beehiiv API to NewsletterSubscriber model
 
 ## PRIORITY 2: Agent Quality Monitoring
-
-### What was fixed
-- 16 agent files now produce real synthesis instead of empty/hardcoded messages
-- ResearchAgent produces structured research briefs with citations and BLOCKED markers
-- EditorAgent now saves full reconstructed markdown to deliverables
 
 ### Remaining items
 - TrendAnalysisAgent has a `NoneType.__format__` error in its trend-search tool — needs null-guard fix
@@ -81,12 +76,19 @@
 
 ## PRIORITY 4: Revenue Plays (Strategy from Rigby)
 
-1. **Operator Edge Newsletter** — IN PROGRESS (see Priority 1)
+1. **Operator Edge Newsletter** — Landing page live, Issue #1 ready to publish
 2. **Deliverable Packages** — Bundle high-quality deliverables into sellable kits ($1.5K-$4.5K)
 3. **Betting Intelligence** — 676 predictions, needs accuracy validation (sports pipeline re-enabled)
 4. **Build-for-Hire** — Founder Toolkit proves capability ($8K-$25K per engagement)
 
-## PRIORITY 5: Backlog (Carried Forward)
+## PRIORITY 5: Patent Process
+
+- 12 disclosures ready (A-L), 4 executive summaries
+- Jeremy has superuser account — coordinate with him
+- Focus on Disclosures D, F, G first (most novel, broadest defensibility)
+- Opens up: licensing, PaaS, partnership leverage, valuation lift
+
+## PRIORITY 6: Backlog (Carried Forward)
 
 - Deploy remaining 5 apps (SellerPilot, SignalStudio, ScoutPlays, ComplianceSentinel, Ironwood)
 - Content Packets UI — packet detail page showing items grouped by role
@@ -120,7 +122,7 @@
 
 ```bash
 # Use existing conversation
-python tools/pa_chat.py "message" --tools --conversation pa-1410235adf59
+python tools/pa_chat.py "message" --tools --conversation pa-223d084d4b9f
 
 # Or create fresh
 python tools/pa_chat.py "message" --tools
