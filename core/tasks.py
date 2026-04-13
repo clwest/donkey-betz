@@ -7270,6 +7270,9 @@ def _execute_gate_repair(blog, repair_action: str) -> bool:
                 'gate_notes': (blog.gate_notes or '')[:300],
                 'repair_type': repair_action,
                 'save': True,
+                # Pin edited deliverable to the source blog's workspace so
+                # autonomous runs never inherit user.is_active as a default.
+                'workspace_id': str(blog.workspace_id) if blog.workspace_id else None,
             },
             scifi_context={},
             spider_context={},

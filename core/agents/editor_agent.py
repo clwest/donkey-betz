@@ -218,6 +218,10 @@ The brief is your rubric. The draft is what you're grading."""
             blog = None
             content = context.get('content')
             blog_id = context.get('blog_id')
+            # Explicit workspace context — callers MUST pass this for autonomous
+            # runs so the edited deliverable lands in the same workspace as the
+            # source blog. Falls back to blog.workspace_id when loading from DB.
+            workspace_id = context.get('workspace_id')
 
             if blog_id and not content:
                 # Load from database
@@ -231,6 +235,8 @@ The brief is your rubric. The draft is what you're grading."""
                         'conclusion': blog.conclusion,
                         'meta_description': blog.meta_description,
                     }
+                    if not workspace_id and blog.workspace_id:
+                        workspace_id = str(blog.workspace_id)
                 except SelfBlog.DoesNotExist:
                     return AgentResult(
                         success=False,
@@ -305,6 +311,7 @@ The brief is your rubric. The draft is what you're grading."""
                 category='Content Editing',
                 tags=['editing'] + focus_areas[:3],
                 metadata={'task': task[:200], 'focus_areas': focus_areas, 'blog_id': str(blog_id) if blog_id else None},
+                workspace_id=workspace_id,
             )
 
             return AgentResult(

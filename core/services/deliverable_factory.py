@@ -151,9 +151,20 @@ def create_deliverable(
     if not user:
         user = _get_default_user()
 
-    # Auto-assign workspace if not provided
+    # Auto-assign workspace if not provided — filters by allow_autonomous_writes
+    # so autonomous/scheduled agents never silently inherit a personal/game
+    # workspace just because the user marked it is_active in the UI.
+    explicit_workspace = bool(workspace_id)
     if not workspace_id and user:
         workspace_id = _get_active_workspace_id(user)
+
+    if not explicit_workspace and not workspace_id:
+        logger.warning(
+            "[DeliverableFactory] No eligible autonomous workspace for "
+            "agent=%s title=%r — deliverable will be created without "
+            "workspace. Caller should pass workspace_id explicitly.",
+            agent_name, title[:80],
+        )
 
     # Build preview
     preview = content[:500] if content else ''
@@ -241,17 +252,25 @@ def _get_default_user():
 
 
 def _get_active_workspace_id(user) -> Optional[str]:
-    """Get the user's active workspace ID, or default workspace."""
+    """Get the user's active workspace ID for autonomous fallback writes.
+
+    Only returns workspaces flagged ``allow_autonomous_writes=True`` so
+    personal/game/tool workspaces (Ironwood, MentorForge, etc.) can't
+    accidentally receive scheduled agent output when they happen to be
+    the user's currently-active workspace. Returns None if no eligible
+    workspace exists — callers must handle the None case explicitly
+    rather than silently landing deliverables somewhere wrong.
+    """
     try:
         from core.models_skin_layer import ProjectWorkspace
         ws = ProjectWorkspace.objects.filter(
-            user=user, is_active=True
+            user=user, is_active=True, allow_autonomous_writes=True,
         ).values_list('id', flat=True).first()
         if ws:
             return str(ws)
-        # Fallback: any workspace owned by user
+        # Secondary fallback: any content-safe workspace owned by user
         ws = ProjectWorkspace.objects.filter(
-            user=user
+            user=user, allow_autonomous_writes=True,
         ).values_list('id', flat=True).first()
         return str(ws) if ws else None
     except Exception:
