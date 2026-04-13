@@ -1411,6 +1411,7 @@ class AgentHandlersMixin:
                 'is_template': obj.is_template,
                 'status': obj.status,
                 'tags': obj.tags or [],
+                'workspace_id': str(obj.workspace_id) if obj.workspace_id else None,
                 'created_at': obj.created_at.isoformat() if obj.created_at else None,
             })
 
@@ -1463,7 +1464,7 @@ class AgentHandlersMixin:
                 except _DUser.DoesNotExist:
                     pass
 
-            # Resolve workspace
+            # Resolve workspace — try by ID first, then by name match
             resolved_workspace = None
             ws_id = payload.get('workspace_id') or payload.get('workspace')
             if ws_id:
@@ -1471,7 +1472,17 @@ class AgentHandlersMixin:
                     from core.models_skin_layer import ProjectWorkspace
                     resolved_workspace = ProjectWorkspace.objects.get(id=ws_id)
                 except Exception:
-                    pass
+                    # ID didn't match — try finding by name (handles CodeWorkspace → ProjectWorkspace mismatch)
+                    try:
+                        from core.models_skin_layer import ProjectWorkspace as _PW
+                        # Look up the CodeWorkspace name and find matching ProjectWorkspace
+                        ws_name = payload.get('workspace_name', '').strip()
+                        if ws_name:
+                            resolved_workspace = _PW.objects.filter(name__icontains=ws_name).first()
+                            if resolved_workspace:
+                                logger.info(f"[deliverables] Resolved workspace by name '{ws_name}' → {resolved_workspace.id}")
+                    except Exception:
+                        pass
 
             preview = content[:500]
             if len(content) > 500:
