@@ -6,24 +6,22 @@ import GlobalAlertBanner, { useAlertBannerHeight } from '@/components/GlobalAler
 import GlobalPADock from '@/components/GlobalPADock'
 import { useSystemEvents } from '@/hooks/useWebSocket'
 import { useUnifiedStore } from '@/stores/unifiedStore'
-import { usePageTracking } from '@/hooks/usePageTracking'  // Session 971b: Route telemetry
+import { usePageTracking } from '@/hooks/usePageTracking'
 
 export default function Layout() {
-  // Session 971b: Track all route changes for telemetry
   usePageTracking()
 
   const location = useLocation()
   const bannerHeight = useAlertBannerHeight()
 
+  // Hide floating PA dock on Command Center — it has its own built-in chat
   const hideGlobalDock = location.pathname === '/'
 
-  // Session 715: Wire system events to unified store
   const fetchAttentionStats = useUnifiedStore((s) => s.fetchAttentionStats)
   const fetchRunningPilots = useUnifiedStore((s) => s.fetchRunningPilots)
   const fetchCriticalGates = useUnifiedStore((s) => s.fetchCriticalGates)
   const fetchTopOpportunities = useUnifiedStore((s) => s.fetchTopOpportunities)
 
-  // Event handlers that refresh unified store
   const handlePilotEvent = useCallback(() => {
     fetchRunningPilots()
     fetchCriticalGates()
@@ -35,11 +33,9 @@ export default function Layout() {
   }, [fetchCriticalGates, fetchAttentionStats])
 
   const handleAgentExecution = useCallback(() => {
-    // Agent executions may affect opportunities
     fetchTopOpportunities()
   }, [fetchTopOpportunities])
 
-  // Subscribe to system events for real-time store updates
   useSystemEvents({
     onPilotStarted: handlePilotEvent,
     onPilotCompleted: handlePilotEvent,
@@ -49,7 +45,6 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Session 713: Global Body Health Alert Banner */}
       <GlobalAlertBanner />
 
       <Sidebar />
@@ -65,7 +60,6 @@ export default function Layout() {
         </main>
       </div>
 
-      {/* Session 948: Global PA Dock - hidden on Command Center (has built-in chat) */}
       {!hideGlobalDock && <GlobalPADock />}
     </div>
   )
