@@ -472,7 +472,15 @@ class BudgetController:
             or AutopilotConfig.BUDGET_HOURLY_CAP_USD
         )
 
-        # Current mode
+        # Current mode.
+        # Session 1103c: was 'except Exception: pass' which silently
+        # left mode='normal' (no constraints) when SystemConfiguration
+        # lookup failed. That's fail-OPEN on budget enforcement —
+        # exactly when the DB/config layer is unhealthy, the system
+        # should fail-CLOSED to 'freeze' (assume constrained) rather
+        # than fail-open to 'normal' (assume unconstrained), to
+        # prevent runaway LLM spend during incidents. Now logs ERROR
+        # and flips to 'freeze' as the safe default.
         from core.models.system import SystemConfiguration
         mode = 'normal'
         try:
@@ -481,8 +489,14 @@ class BudgetController:
             ).values_list('value', flat=True).first()
             if mode_entry:
                 mode = mode_entry
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.error(
+                "ops_autopilot.budget: SystemConfiguration lookup for "
+                "'budget_mode' failed (%s: %s) — failing CLOSED to "
+                "'freeze' to prevent runaway spend during incidents",
+                type(_e).__name__, _e,
+            )
+            mode = 'freeze'
 
         return {
             'mode': mode,
