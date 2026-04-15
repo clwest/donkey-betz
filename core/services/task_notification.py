@@ -35,8 +35,17 @@ def _get_redis():
         redis_url = getattr(settings, 'REDIS_URL', None)
         if redis_url:
             return redis.from_url(redis_url)
-    except Exception:
-        pass
+    except Exception as e:
+        # Session 1103c: silently swallowing here meant every
+        # register_task_notification call returned False with no
+        # visible cause. The whole task-notification system (dispatch
+        # receipts for PA "your task is running" toasts) was
+        # effectively dark whenever Redis had a hiccup — now loud.
+        logger.warning(
+            "task_notification: Redis connection failed "
+            "(%s: %s) — task dispatch receipts will be dropped",
+            type(e).__name__, e,
+        )
     return None
 
 
