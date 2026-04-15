@@ -192,8 +192,16 @@ def create_project_from_packet(workspace, packet: dict, created_by=None) -> dict
             actor_type='system', actor_id='BPaaS',
             entity_type='magic_link', entity_id=str(magic_link.id),
         )
-    except Exception:
-        pass
+    except Exception as e:
+        # Session 1103c: loud on failure so BPaaS packet creation
+        # activity is traceable through the Ops Run timeline.
+        logger.warning(
+            "bpaas.packet_service: record_op chain failed for "
+            "preview_env=%s (%s: %s) — Ops Run timeline entries "
+            "for repo/env/magic_link may be incomplete",
+            getattr(preview_env, 'id', '<unknown>'),
+            type(e).__name__, e,
+        )
 
     return result
 
