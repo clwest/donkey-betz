@@ -218,8 +218,15 @@ def handle_validation_queued_event(event: Event):
                 channel_name='system-status',
                 message=f"High priority validation needed for opportunity (confidence: {confidence:.1f}%)"
             )
-        except ImportError:
-            pass
+        except ImportError as e:
+            # Session 1103c: loud so we know if discord_notifications
+            # is missing from the image and high-priority alerts are
+            # being silently dropped.
+            logger.warning(
+                "event_handlers: discord_notifications module unavailable "
+                "(%s: %s) — high-priority validation alert dropped",
+                type(e).__name__, e,
+            )
         except Exception as e:
             logger.warning(f"Could not send Discord notification: {e}")
 
@@ -322,8 +329,12 @@ def handle_model_trained_event(event: Event):
             message=f"ML Scoring Model v{model_version} trained on {training_samples} samples. "
                     f"Test R2: {metrics.get('test_r2', 'N/A')}"
         )
-    except ImportError:
-        pass
+    except ImportError as e:
+        logger.warning(
+            "event_handlers: discord_notifications unavailable "
+            "(%s: %s) — ML model train notification dropped",
+            type(e).__name__, e,
+        )
     except Exception as e:
         logger.warning(f"Could not send Discord notification: {e}")
 
@@ -350,7 +361,11 @@ def handle_system_alert_event(event: Event):
     else:
         logger.warning(f"📡 [ALERT] {severity.upper()}: {message}")
 
-    # Send notification for errors and critical
+    # Send notification for errors and critical.
+    # Session 1103c: upgraded ImportError to a loud warning — this is
+    # the worst one of the three event_handlers notifications because
+    # it's the critical/error alert path. If the discord_notifications
+    # module ever breaks, system alerts go dark silently. Now loud.
     if severity in ('error', 'critical'):
         try:
             from core.services.discord_notifications import send_to_channel
@@ -358,8 +373,12 @@ def handle_system_alert_event(event: Event):
                 channel_name='system-status',
                 message=f"[{severity.upper()}] {message}"
             )
-        except ImportError:
-            pass
+        except ImportError as e:
+            logger.error(
+                "event_handlers: discord_notifications unavailable "
+                "(%s: %s) — CRITICAL system alert dropped: %s",
+                type(e).__name__, e, message[:200],
+            )
         except Exception as e:
             logger.warning(f"Could not send Discord notification: {e}")
 
