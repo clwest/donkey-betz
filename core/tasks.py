@@ -547,7 +547,11 @@ def cleanup_halted_experiments(days_old: int = 7):
 
 
 @shared_task
-def cleanup_stale_running_experiments(hours_old: int = 72, dry_run: bool = False):
+def cleanup_stale_running_experiments(
+    hours_old: int = 72,
+    dry_run: bool = False,
+    max_per_run: int = 200,
+):
     """
     Session 1103c: auto-halt Experiments stuck in status='running' with
     outcome_classification='pending' for longer than `hours_old`.
@@ -572,6 +576,10 @@ def cleanup_stale_running_experiments(hours_old: int = 72, dry_run: bool = False
             Experiments created more recently than this are left alone.
         dry_run: If True, log what would be completed without touching
             the DB.
+        max_per_run: Safety cap (Rigby's request) — never complete more
+            than this many experiments per invocation. Prevents
+            accidental mass-mutation if the threshold query blows up.
+            Default 200. Set to 0 or negative to disable the cap.
     """
     from django.utils import timezone as _tz
     from datetime import timedelta
@@ -582,7 +590,7 @@ def cleanup_stale_running_experiments(hours_old: int = 72, dry_run: bool = False
         status='running',
         outcome_classification='pending',
         created_at__lt=cutoff,
-    )
+    ).order_by('created_at')  # oldest first — clear the backlog predictably
     total = stale.count()
     if total == 0:
         logger.info(
@@ -593,11 +601,22 @@ def cleanup_stale_running_experiments(hours_old: int = 72, dry_run: bool = False
 
     logger.warning(
         "[cleanup_stale_running_experiments] found %d experiments "
-        "running+pending > %dh old (dry_run=%s)",
-        total, hours_old, dry_run,
+        "running+pending > %dh old (dry_run=%s, max_per_run=%d)",
+        total, hours_old, dry_run, max_per_run,
     )
     if dry_run:
-        return {'found': total, 'completed': 0, 'dry_run': True}
+        return {
+            'found': total,
+            'completed': 0,
+            'dry_run': True,
+            'max_per_run': max_per_run,
+        }
+
+    # Safety cap — slice the queryset so we process at most max_per_run
+    # rows per invocation. If the backlog is larger, the next beat tick
+    # will pick up where we left off.
+    if max_per_run > 0:
+        stale = stale[:max_per_run]
 
     completed = 0
     errors = 0
@@ -622,15 +641,18 @@ def cleanup_stale_running_experiments(hours_old: int = 72, dry_run: bool = False
                 exp.id, type(e).__name__, e,
             )
 
+    remaining = max(0, total - completed)
     logger.warning(
         "[cleanup_stale_running_experiments] completed=%d errors=%d "
-        "(of %d stale)",
-        completed, errors, total,
+        "(of %d stale, %d remaining for next tick)",
+        completed, errors, total, remaining,
     )
     return {
         'found': total,
         'completed': completed,
         'errors': errors,
+        'remaining': remaining,
+        'max_per_run': max_per_run,
         'dry_run': False,
     }
 
