@@ -396,6 +396,18 @@ class MLPWrapper(BaseModelWrapper):
 
     def _get_engine(self):
         if self._ml_engine is None:
+            # Session 1083 round 43: same SKIP_NLP_MODELS guard as
+            # RandomForestWrapper / DistilBERTWrapper. MLPWrapper
+            # was the third MLEngine()-instantiating wrapper I missed
+            # in round 41 — it loaded ml.core.ml_engine (triggering
+            # the MLX warning) and then deadlocked on sports LSTM/NN.
+            import os
+            if os.environ.get('SKIP_NLP_MODELS') == '1':
+                logger.debug(
+                    "[model_registry] SKIP_NLP_MODELS=1 — MLPWrapper "
+                    "reports unavailable to avoid MLEngine mutex deadlock"
+                )
+                return None
             try:
                 from ml.core.ml_engine import MLEngine
                 self._ml_engine = MLEngine()
