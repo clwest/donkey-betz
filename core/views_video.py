@@ -4715,7 +4715,11 @@ def picture_in_picture(request):
                     resolved_uuid = videos[numeric_id - 1].id
                     logger.info(f"🔄 [Session 162] PiP: Resolved hybrid ID {numeric_id} → {resolved_uuid} (scope: {scope})")
                     return resolved_uuid
-                except Exception:
+                except Exception as _e:
+                    logger.warning(
+                        "views_video.resolve_video_id: swallowed (%s: %s) — returning default",
+                        type(_e).__name__, _e,
+                    )
                     return None
 
         bg_uuid = resolve_video_id(bg_video_id, request.user, project_id)

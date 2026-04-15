@@ -451,7 +451,11 @@ class OpportunityCategorizationSystem:
                 return float(clean_str[:-1]) * 1000
 
             return float(clean_str)
-        except:
+        except Exception as _e:
+            logger.warning(
+                "opportunity_categorizer._parse_amount: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return None
 
     def _extract_payment_info(self, text: str) -> Dict[str, str]:

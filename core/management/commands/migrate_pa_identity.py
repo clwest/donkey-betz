@@ -23,6 +23,9 @@ from core.services.pa_identity import PA_IDENTITY, PA_IDENTITY_VARIANTS
 
 
 # Non-canonical variants to normalize (exclude the canonical one)
+import logging
+logger = logging.getLogger(__name__)
+
 VARIANTS_TO_FIX = PA_IDENTITY_VARIANTS - {PA_IDENTITY}
 
 # Every model + field pair that could contain PA identity strings.
@@ -166,5 +169,9 @@ class Command(BaseCommand):
         try:
             app_label, model_name = model_path.split('.')
             return apps.get_model(app_label, model_name)
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "migrate_pa_identity._get_model: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return None

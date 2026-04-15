@@ -12,6 +12,9 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 def _load_index():
     """Load the documentation index from disk."""
     index_path = Path(settings.BASE_DIR) / 'docs' / '_index.json'
@@ -21,7 +24,11 @@ def _load_index():
     try:
         with open(index_path, 'r') as f:
             return json.load(f)
-    except Exception:
+    except Exception as _e:
+        logger.warning(
+            "views_docs_index._load_index: swallowed (%s: %s) — returning default",
+            type(_e).__name__, _e,
+        )
         return None
 
 

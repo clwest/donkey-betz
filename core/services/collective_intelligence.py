@@ -662,7 +662,11 @@ class CollectiveIntelligenceService:
             registry = get_agent_registry()
             agents = registry.list_agents(specialization=domain)
             return [a['name'] for a in agents]
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "collective_intelligence._get_agents_by_domain: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return []
 
     # =========================================================================

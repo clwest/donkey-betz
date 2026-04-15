@@ -310,7 +310,11 @@ class PersonalAssistantIntegration:
         try:
             from core.models.agents_registry import UnifiedAgentTemplate
             return UnifiedAgentTemplate.objects.filter(is_active=True).count()
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "personal_assistant_integration._get_active_agent_count: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return 0
 
     def _get_related_components(self, primary_component: str) -> List[str]:

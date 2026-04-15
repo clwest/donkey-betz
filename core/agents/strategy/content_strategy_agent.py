@@ -355,7 +355,11 @@ the user should use ImageAgent, VideoAgent, etc."""
                             'description': f'Content cluster {cluster_id}'
                         })
             return clusters
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "content_strategy_agent._extract_content_clusters: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return []
 
     def _predict_content_performance(self, ml_result, niche: str) -> Dict[str, Any]:

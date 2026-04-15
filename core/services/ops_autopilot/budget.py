@@ -1004,7 +1004,11 @@ class ROIEnforcer:
                 return None
 
             return entry
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "budget.check_throttle: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return None
 
     def get_roi_report(self, now) -> dict:

@@ -494,7 +494,11 @@ class LearningEmbeddingGenerator:
             norm2 = sum(b * b for b in vec2) ** 0.5
 
             return dot_product / (norm1 * norm2) if norm1 * norm2 > 0 else 0
-        except:
+        except Exception as _e:
+            logger.warning(
+                "embedding_generator._calculate_cosine_similarity: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return 0
 
     def get_embedding_stats(self) -> Dict[str, Any]:

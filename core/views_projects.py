@@ -55,7 +55,11 @@ def find_project_directory(base_dir, project_name):
     # If no exact match, do fuzzy matching on existing directories
     try:
         existing_dirs = [d for d in base_dir.iterdir() if d.is_dir()]
-    except Exception:
+    except Exception as _e:
+        logger.warning(
+            "views_projects.find_project_directory: swallowed (%s: %s) — returning default",
+            type(_e).__name__, _e,
+        )
         return None
 
     # Fuzzy matching - find directories that contain the project name or vice versa

@@ -269,5 +269,9 @@ def _get_user(request):
     User = get_user_model()
     try:
         return User.objects.filter(is_superuser=True).first()
-    except Exception:
+    except Exception as _e:
+        logger.warning(
+            "views_income_action._get_user: swallowed (%s: %s) — returning default",
+            type(_e).__name__, _e,
+        )
         return None

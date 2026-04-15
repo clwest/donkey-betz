@@ -1473,7 +1473,11 @@ class PolicyArbitrator:
                     })
 
             return flaps
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "governance._detect_flaps: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return []
 
     def _detect_hold_violations(self, now) -> list[dict]:

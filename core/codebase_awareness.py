@@ -62,7 +62,11 @@ class CodebaseAwareness:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
                 return hashlib.md5(content.encode()).hexdigest()
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "codebase_awareness.get_file_hash: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return ""
     
     def ingest_codebase(self, force_update: bool = False) -> Dict[str, int]:

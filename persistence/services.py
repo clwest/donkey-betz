@@ -50,7 +50,11 @@ def _get_tokenizer_for_embeddings(model_name: str):
         return None
     try:
         return tiktoken.get_encoding("cl100k_base")
-    except Exception:
+    except Exception as _e:
+        logger.warning(
+            "services._get_tokenizer_for_embeddings: swallowed (%s: %s) — returning default",
+            type(_e).__name__, _e,
+        )
         return None
 
 

@@ -20,7 +20,11 @@ def _get_rss_mb():
     """Return current process RSS in MB, or None on failure."""
     try:
         return psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
-    except Exception:
+    except Exception as _e:
+        logger.warning(
+            "celery_telemetry._get_rss_mb: swallowed (%s: %s) — returning default",
+            type(_e).__name__, _e,
+        )
         return None
 
 

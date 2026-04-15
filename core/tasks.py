@@ -8879,7 +8879,11 @@ def _get_agent_class(agent_name: str):
         from core.agent_router import AgentRouter
         router = AgentRouter()
         return router.get_agent_class(agent_name)
-    except Exception:
+    except Exception as _e:
+        logger.warning(
+            "tasks._get_agent_class: swallowed (%s: %s) — returning default",
+            type(_e).__name__, _e,
+        )
         return None
 
 
@@ -11029,7 +11033,11 @@ def rebuild_pa_context_task(self, user_id, reason='fresh_miss'):
             import resource
             rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
             return round(rss / (1024 * 1024), 1) if os.uname().sysname == 'Darwin' else round(rss / 1024, 1)
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "tasks._get_rss_mb: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return None
 
     # Stampede lock — skip if another rebuild is already running

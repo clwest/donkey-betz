@@ -403,7 +403,11 @@ async def get_user_total_earnings(user_id: int) -> float:
     try:
         profile = await UserProfile.objects.aget(user_id=user_id)
         return getattr(profile, 'total_earnings', 0.0)
-    except Exception:
+    except Exception as _e:
+        logger.warning(
+            "views_unified_bridge.op: swallowed (%s: %s) — returning default",
+            type(_e).__name__, _e,
+        )
         return 0.0
 
 

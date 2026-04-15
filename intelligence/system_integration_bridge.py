@@ -461,7 +461,11 @@ class SystemIntegrationBridge:
         try:
             self.redis_client.ping()
             return True
-        except:
+        except Exception as _e:
+            logger.warning(
+                "system_integration_bridge.__init__: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return False
 
     # ===============================

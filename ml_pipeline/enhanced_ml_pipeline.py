@@ -260,7 +260,11 @@ class EnhancedMLPipeline:
         """Check if model has been trained"""
         try:
             return hasattr(model, 'n_features_in_') or hasattr(model, 'feature_importances_')
-        except:
+        except Exception as _e:
+            logger.warning(
+                "enhanced_ml_pipeline._is_model_trained: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return False
 
     async def update_model(self, training_data: Dict[str, Any]):

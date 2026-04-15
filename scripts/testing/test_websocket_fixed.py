@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+import logging
+logger = logging.getLogger(__name__)
+
 """
 🔌 TEST WEBSOCKET CONNECTION (FIXED FOR COMPATIBILITY)
 Test WebSocket connection using actual configured endpoints
@@ -124,7 +127,11 @@ def check_server_type():
             print("   For WebSocket support, use:")
             print("   daphne -b 0.0.0.0 -p 8000 backend.asgi:application")
             return False
-    except:
+    except Exception as _e:
+        logger.warning(
+            "test_websocket_fixed.check_server_type: swallowed (%s: %s) — returning default",
+            type(_e).__name__, _e,
+        )
         return None
 
 def main():

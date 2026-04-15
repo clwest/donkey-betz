@@ -605,7 +605,11 @@ class TheOddsSpider:
                 return 100 / (odds + 100)
             else:
                 return abs(odds) / (abs(odds) + 100)
-        except:
+        except Exception as _e:
+            logger.warning(
+                "theodds_spider._american_to_probability: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return None
 
     def _teams_match(self, outcome_name: str, team_name: str) -> bool:
@@ -684,7 +688,11 @@ class TheOddsSpider:
             now = datetime.now(dt.tzinfo)
             # Consider live if started within last 4 hours
             return dt <= now <= dt + timedelta(hours=4)
-        except:
+        except Exception as _e:
+            logger.warning(
+                "theodds_spider._is_live: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return False
 
     def _generate_tags(self, event: Dict, odds_data: Dict, favorite_prob: float) -> List[str]:

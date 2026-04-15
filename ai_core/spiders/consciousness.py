@@ -19,6 +19,9 @@ from collections import defaultdict
 import redis
 import psutil
 
+import logging
+logger = logging.getLogger(__name__)
+
 @dataclass
 class Capability:
     """Represents a single capability of the system"""
@@ -384,7 +387,11 @@ class ConsciousnessBridge:
 
             return capability
 
-        except Exception as e:
+        except Exception as _e:
+            logger.warning(
+                "consciousness._analyze_module: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return None
 
     def _extract_imports(self, tree: ast.AST) -> List[str]:
