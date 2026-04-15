@@ -13,6 +13,8 @@ No API key required - uses yfinance library.
 """
 
 import yfinance as yf
+
+from core.utils.yfinance_safe import make_timeout_session, fetch_with_timeout
 from typing import Dict, List, Any
 from datetime import datetime
 import logging
@@ -75,11 +77,19 @@ class YahooFinanceSpider:
         all_data = []
 
         # Fetch quotes using yfinance
+        # Session 1084: Inject a timeout-enforcing requests.Session to
+        # prevent CLOSE_WAIT hangs. yfinance 0.2.65 uses requests with no
+        # default timeout, so a half-closed upstream connection blocks
+        # recv() forever and wedges the entire Celery worker process. The
+        # session forces (connect=5s, read=30s) on every underlying HTTP
+        # call. Per-ticker info lookups are also wrapped in a hard
+        # executor timeout as a backstop.
+        safe_session = make_timeout_session(timeout=30.0)
         try:
             logger.info(f"Fetching {len(target_symbols)} symbols from Yahoo Finance")
 
             # Use yfinance Tickers to batch fetch
-            tickers = yf.Tickers(" ".join(target_symbols))
+            tickers = yf.Tickers(" ".join(target_symbols), session=safe_session)
 
             for symbol in target_symbols:
                 try:
@@ -87,7 +97,10 @@ class YahooFinanceSpider:
                     if not ticker:
                         continue
 
-                    info = ticker.info
+                    # Session 1084: ticker.info can make many network calls;
+                    # wrap in a hard backstop timeout so a single bad symbol
+                    # can't hang the whole fetch batch.
+                    info = fetch_with_timeout(lambda t=ticker: t.info, timeout=45.0)
 
                     # Get price data
                     price = info.get('regularMarketPrice') or info.get('currentPrice', 0)
