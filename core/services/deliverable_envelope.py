@@ -210,21 +210,50 @@ class DeliverableEnvelopeService:
 
             # Session 843: Get trace context from kwargs or result (moved earlier for citation gate)
 
-            # Resolve workspace: explicit kwarg > active workspace fallback
+            # Resolve workspace: explicit kwarg > active workspace fallback.
+            # Session 1103c: silent exception swallowing here was one of
+            # the ways orphan deliverables slipped through — if both
+            # lookups raised silently, active_workspace stayed None,
+            # is_saved became False, and the deliverable was created
+            # unscoped. That directly violates the "always assign
+            # workspace" rule. Now loud on every failure so orphan
+            # creations are visible in logs.
             active_workspace = None
             ws_id = kwargs.get('workspace_id')
             if ws_id:
                 try:
                     from core.models_skin_layer import ProjectWorkspace
                     active_workspace = ProjectWorkspace.objects.filter(id=ws_id).first()
-                except Exception:
-                    pass
+                    if not active_workspace:
+                        logger.warning(
+                            "deliverable_envelope: explicit workspace_id=%s "
+                            "passed but no matching ProjectWorkspace exists "
+                            "— will try active fallback",
+                            ws_id,
+                        )
+                except Exception as e:
+                    logger.error(
+                        "deliverable_envelope: failed to resolve explicit "
+                        "workspace_id=%s (%s: %s) — will try active fallback",
+                        ws_id, type(e).__name__, e,
+                    )
             if not active_workspace:
                 try:
                     from core.models_skin_layer import ProjectWorkspace
                     active_workspace = ProjectWorkspace.objects.filter(is_active=True).first()
-                except Exception:
-                    pass
+                    if not active_workspace:
+                        logger.error(
+                            "deliverable_envelope: no is_active ProjectWorkspace "
+                            "exists — deliverable will be created UNSCOPED "
+                            "(orphan). Check ProjectWorkspace.is_active state."
+                        )
+                except Exception as e:
+                    logger.error(
+                        "deliverable_envelope: active workspace lookup "
+                        "failed (%s: %s) — deliverable will be created "
+                        "UNSCOPED (orphan)",
+                        type(e).__name__, e,
+                    )
 
             # Create the deliverable
             from core.services.deliverable_factory import create_deliverable

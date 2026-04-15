@@ -122,8 +122,11 @@ def resolve_workspace_context(
             if ws:
                 workspace = ws
                 source = 'opportunity'
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                "[workspace-resolver] opportunity.workspace lookup failed "
+                "(%s: %s)", type(e).__name__, e,
+            )
 
     # Priority 5: User's active workspace (server-side, user-bound)
     if not workspace and user and fallback_to_active:
@@ -134,7 +137,10 @@ def resolve_workspace_context(
             if workspace:
                 source = 'user_active'
         except Exception as e:
-            logger.debug(f"[workspace-resolver] User active workspace lookup failed: {e}")
+            logger.warning(
+                "[workspace-resolver] user active workspace lookup failed "
+                "(%s: %s)", type(e).__name__, e,
+            )
 
     # Priority 6: Global active workspace fallback (for system operations without user)
     if not workspace and fallback_to_active:
@@ -143,14 +149,27 @@ def resolve_workspace_context(
             workspace = ProjectWorkspace.objects.filter(is_active=True).order_by('-total_operations', '-created_at').first()
             if workspace:
                 source = 'global_active'
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                "[workspace-resolver] global active workspace lookup failed "
+                "(%s: %s)", type(e).__name__, e,
+            )
 
     is_saved = bool(workspace)
 
     if workspace:
         logger.debug(f"[workspace-resolver] Resolved: {workspace.name} (source={source})")
     else:
-        logger.debug(f"[workspace-resolver] No workspace resolved (source=none)")
+        # Session 1103c: upgrade from debug to warning so orphan
+        # deliverable creations are visible. Was previously hidden at
+        # debug level, which meant orphans slipped in unnoticed unless
+        # DEBUG logging was on.
+        logger.warning(
+            "[workspace-resolver] No workspace resolved — caller will "
+            "create UNSCOPED deliverable. priorities: conversation=%s, "
+            "initiative=%s, opportunity=%s, user=%s, fallback_to_active=%s",
+            bool(conversation_id), bool(initiative or initiative_id),
+            bool(opportunity), bool(user), fallback_to_active,
+        )
 
     return workspace, is_saved, source
