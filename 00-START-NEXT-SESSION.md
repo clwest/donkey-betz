@@ -105,9 +105,10 @@ If APITimeoutError hits appear, report to Rigby and consider bumping the factory
 
 ## 📋 Longer-term queue (pick from as time permits)
 
-5. **D) Neural Orchestra mock data audit** — section 6 of the half-built features audit. Never touched in Session 1084.
-6. **E) Operator Edge Issue #1 publish plumbing** — Beehiiv account + weekly newsletter delivery. Still waiting.
-7. **F) Video demo idea** — from Session 1083's prior note. Agents + real-time data demo, not an app build.
+5. **Agent governance — Rigby as priority-aware router** — Chris raised this at the end of Session 1084. The reliability gaps are closed; the next bottleneck is alignment. Right now ~77 enabled beat tasks fire blind without checking whether their work matches Rigby's current priorities. MVP design: new `ActivePriority` model that Rigby owns + a pre-route check in `agent_router.route()` (60s cached, fail-open) that logs/routes mismatches to a `low_priority` queue. Tracked in Rigby initiative `2dcb79d7-6f2b-4e67-a366-a54e96d7870f` (TRIAGE). Needs design discussion before implementation — this is a 4-6 hour build, not a mechanical sweep.
+6. **D) Neural Orchestra mock data audit** — section 6 of the half-built features audit. Never touched in Session 1084.
+7. **E) Operator Edge Issue #1 publish plumbing** — Beehiiv account + weekly newsletter delivery. Still waiting.
+8. **F) Video demo idea** — from Session 1083's prior note. Agents + real-time data demo, not an app build.
 
 ---
 
