@@ -1190,15 +1190,26 @@ class CapacityEngine:
         )
         p95 = p95_vals[0] if p95_vals else 0
 
-        # Current governance mode
+        # Current governance mode.
+        # Session 1083 (Rigby audit): was `except Exception: pass` which
+        # silently returned 'normal' on any DB error. If real mode was
+        # 'freeze' or 'halt', the intelligence layer would still emit
+        # normal-mode recommendations while enforcement was clamped.
+        # Sibling fix: ops_autopilot/governance.get_tuning_recommendations.
         gov_mode = 'normal'
+        gov_mode_degraded = False
         try:
             from core.models_governance import GovernanceState
             gs = GovernanceState.objects.filter(scope='global').first()
             if gs:
                 gov_mode = gs.effective_mode
-        except Exception:
-            pass
+        except Exception as e:
+            gov_mode_degraded = True
+            logger.warning(
+                "ops_autopilot intelligence: GovernanceState lookup failed "
+                "(%s: %s) — recommendations will use 'normal' fallback",
+                type(e).__name__, e,
+            )
 
         # Generate recommendations
         recommendations = []
@@ -1285,8 +1296,16 @@ class CapacityEngine:
         # LLM spend if available
         spend = self._get_spend_projection(window, now, days * 24)
 
-        # Budget cap from config
+        # Budget cap from config.
+        # Session 1083 (Rigby audit): was `except Exception: pass` which
+        # silently fell back to the generous 5.0 default whenever the
+        # SystemConfiguration read failed. If the real cap was tighter
+        # (e.g. 1.0 during a cost incident), callers of this method would
+        # see the wrong cap and potentially approve spend over the real
+        # limit. Log loud + flag as degraded. Matches sibling fix in
+        # ops_autopilot/budget.py:get_budget_status.
         budget_cap = 5.0  # default
+        budget_cap_degraded = False
         try:
             from core.models.system import SystemConfiguration
             cap_entry = SystemConfiguration.objects.filter(
@@ -1298,8 +1317,14 @@ class CapacityEngine:
                     budget_cap = float(val.get('value', 5.0))
                 else:
                     budget_cap = float(val)
-        except Exception:
-            pass
+        except Exception as e:
+            budget_cap_degraded = True
+            logger.warning(
+                "ops_autopilot intelligence: BUDGET_DAILY_CAP_USD lookup "
+                "failed (%s: %s) — using fallback $%.2f, actual cap may "
+                "be different",
+                type(e).__name__, e, budget_cap,
+            )
 
         daily_spend = spend.get('daily_avg_usd', 0)
         projected_monthly = round(daily_spend * 30, 2)

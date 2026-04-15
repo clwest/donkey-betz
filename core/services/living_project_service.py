@@ -206,12 +206,27 @@ class LivingProjectService:
 
             relevance, matched = self.calculate_relevance(full_text, topics, title)
 
-            # Check threshold
+            # Check threshold.
+            # Session 1083 (Rigby audit): was `except Exception: pass`, which
+            # silently reverted to the 0.6 default whenever project.living_config
+            # was missing, the related table hit an error, or the attribute
+            # resolved to an unexpected type. Since this threshold gates whether
+            # spider data becomes a ProjectInsight at all, a bad fallback here
+            # means some projects silently lose their insight feed while
+            # the service logs zero warnings. Narrow to the expected
+            # "config simply not present" case and log anything else.
             min_relevance = 0.6
             try:
                 min_relevance = project.living_config.min_relevance_score
-            except Exception:
-                pass
+            except (AttributeError, ObjectDoesNotExist):
+                pass  # No living_config configured — use default
+            except Exception as e:
+                logger.warning(
+                    "living_project_service: failed to read min_relevance_score "
+                    "for project %s (%s: %s) — falling back to 0.6",
+                    getattr(project, 'id', 'unknown'),
+                    type(e).__name__, e,
+                )
 
             if relevance >= min_relevance:
                 # Create insight
