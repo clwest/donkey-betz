@@ -653,7 +653,8 @@ class ProposalManager:
                     "error": "Set OPENAI_API_KEY environment variable to enable real documentation generation"
                 }
 
-            client = OpenAI(api_key=api_key)
+            from core.services.openai_client_factory import get_openai_client
+            client = get_openai_client(api_key=api_key)
 
             # Generate documentation using GPT-4
             prompt = f"""Create comprehensive documentation for: {proposal.title}
@@ -924,7 +925,8 @@ deterministic_random = DeterministicRandom()
                     "error": "Set OPENAI_API_KEY to enable real feature generation"
                 }
 
-            client = OpenAI(api_key=api_key)
+            from core.services.openai_client_factory import get_openai_client
+            client = get_openai_client(api_key=api_key)
 
             # Generate React component for the dashboard
             prompt = f"""Create a complete React component for: {proposal.title}

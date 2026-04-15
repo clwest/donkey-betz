@@ -35,6 +35,7 @@ warnings.warn(
 )
 
 # Re-export everything from the canonical location
+# (Session 1086: openai_client removed — now lazy via _get_openai_client() in canonical module)
 from ai_core.intelligence.income_builder import (
     # Classes
     WorkflowStep,
@@ -46,7 +47,6 @@ from ai_core.intelligence.income_builder import (
     UserProfile,
     AIIncomeBuilder,
     # Module-level objects
-    openai_client,
     OPENAI_AVAILABLE,
     logger,
     income_builder,
@@ -62,7 +62,6 @@ __all__ = [
     'IncomeOpportunity',
     'UserProfile',
     'AIIncomeBuilder',
-    'openai_client',
     'OPENAI_AVAILABLE',
     'logger',
     'income_builder',
