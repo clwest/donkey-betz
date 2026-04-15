@@ -1032,10 +1032,14 @@ def run_spider_network(self):
     from core.tasks_spiders import _impl_run_spider_network
     return _impl_run_spider_network(self)
 @shared_task(ignore_result=True)
-def backfill_spider_embeddings(batch_size: int = 200):
+def backfill_spider_embeddings(batch_size: int = 50):
     """
     Session 293: Generate embeddings for SpiderData entries that don't have them.
     Session 394: Increased default batch size from 50 to 200 for faster processing.
+    Session 1083 (Rigby audit): Reduced 200→50 after observing 1.37GB memory
+    spike per run in celery telemetry (start=669MB → end=2042MB). Combined
+    with the .only() column filter in spider_semantic_search.backfill_embeddings,
+    this should keep the task's RSS delta under 300MB.
     Apr 2026: Removed hours=168 window — triage_spider_embeddings deduped the
     historical backlog so all remaining unembedded records are worth processing.
 
