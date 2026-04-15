@@ -157,7 +157,15 @@ class AutonomousRemediationOrchestrator:
             return None
 
     def _get_workspace_manager(self):
-        """Get WorkspaceManager for file operations."""
+        """Get WorkspaceManager for file operations.
+
+        Session 1103c: was returning None silently when neither
+        'system' nor 'admin' user existed in the DB. The
+        autonomous remediation orchestrator would then proceed
+        without a workspace manager and silently fail to write
+        any files. Now logs WARNING when no system user exists
+        so the remediation cycle's failure has a named cause.
+        """
         if self._workspace_manager:
             return self._workspace_manager
 
@@ -174,6 +182,12 @@ class AutonomousRemediationOrchestrator:
 
             if system_user:
                 self._workspace_manager = WorkspaceManager(user=system_user)
+            else:
+                self.logger.warning(
+                    "autonomous_remediation: no 'system' or 'admin' "
+                    "user found — WorkspaceManager cannot be created, "
+                    "remediation cycle will not be able to write files"
+                )
 
             return self._workspace_manager
 
