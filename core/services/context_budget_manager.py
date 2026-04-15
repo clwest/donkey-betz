@@ -170,7 +170,18 @@ class ContextBudgetManager:
         try:
             return len(self._encoder.encode(text))
         except Exception as e:
-            logger.debug(f"Token counting failed: {e}, using approximation")
+            # Session 1103c: was logger.debug which is off in prod,
+            # so token counting failures silently triggered the
+            # 4-chars-per-token approximation with zero visibility.
+            # Token miscounting can cascade into prompt truncation,
+            # over-budget errors, or bad context packing — all of
+            # which are hard to debug without seeing this fired.
+            logger.warning(
+                "context_budget_manager: tiktoken encode failed "
+                "(%s: %s) — falling back to chars/4 approximation. "
+                "Repeated failures may indicate encoder corruption.",
+                type(e).__name__, e,
+            )
             return len(text) // 4
 
     def start_request(self, request_id: Optional[str] = None) -> None:

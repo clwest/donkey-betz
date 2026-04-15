@@ -36,7 +36,15 @@ def status_overview(request):
     minutes, secs = divmod(remainder, 60)
     uptime_str = f"{hours}h {minutes}m {secs}s"
 
-    # Worker + queue health (lightweight — no celery inspect call)
+    # Worker + queue health (lightweight — no celery inspect call).
+    # Session 1103c: each of the four 'except Exception: ...' blocks
+    # below was silently masking real DB / import / schema failures
+    # and returning a "perfectly clean zero state" to status callers.
+    # The /status/ endpoint feeds dashboards + automated monitors; a
+    # silent zero looks identical to "system idle" and breaks
+    # incident detection. Each block now logs WARNING with the
+    # subsystem name + exception type while keeping the safe
+    # zero-default behavior so the endpoint never 500s.
     try:
         from core.models_celery_telemetry import CeleryTaskEvent
         last_24h = timezone.now() - timedelta(hours=24)
@@ -44,13 +52,23 @@ def status_overview(request):
             started_at__gte=last_24h
         ).values("status").annotate(count=Count("id"))
         tasks_24h = {s["status"]: s["count"] for s in task_stats}
-    except Exception:
+    except Exception as e:
+        logger.warning(
+            "views_status_api: CeleryTaskEvent 24h stats failed "
+            "(%s: %s) — returning empty tasks_24h",
+            type(e).__name__, e,
+        )
         tasks_24h = {}
 
     # Active beat tasks
     try:
         beat_count = PeriodicTask.objects.filter(enabled=True).count()
-    except Exception:
+    except Exception as e:
+        logger.warning(
+            "views_status_api: PeriodicTask count failed "
+            "(%s: %s) — returning beat_count=0",
+            type(e).__name__, e,
+        )
         beat_count = 0
 
     # Revenue snapshot
@@ -64,7 +82,12 @@ def status_overview(request):
             "total": Opportunity.objects.count(),
             "new": Opportunity.objects.filter(status="new").count(),
         }
-    except Exception:
+    except Exception as e:
+        logger.warning(
+            "views_status_api: Revenue/Opportunity snapshot failed "
+            "(%s: %s) — returning zero revenue + zero opportunities",
+            type(e).__name__, e,
+        )
         total_revenue = 0
         opportunity_counts = {"total": 0, "new": 0}
 
@@ -75,7 +98,12 @@ def status_overview(request):
         active_envs = PreviewEnvironment.objects.filter(
             status__in=["provisioning", "ready"]
         ).count()
-    except Exception:
+    except Exception as e:
+        logger.warning(
+            "views_status_api: Preview system snapshot failed "
+            "(%s: %s) — returning zero projects + zero active envs",
+            type(e).__name__, e,
+        )
         project_count = 0
         active_envs = 0
 
