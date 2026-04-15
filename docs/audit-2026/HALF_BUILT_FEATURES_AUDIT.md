@@ -80,6 +80,19 @@ Backend endpoints wired in `urls.py` that the frontend NEVER calls:
 ### Other Dead Endpoints (~33)
 - Agent testing/debugging, spider diagnostics, partnership health, session status, dashboard health, learning status (various), interview status, LLM routing status, etc.
 
+**UPDATE (Session 1083 round 44, PR #1879):** 20 of ~33 candidates removed in commit `058207ce`:
+- `api/neural-orchestra/debug/`, `api/internal/debug-raise-500/`, `api/v1/auth/debug/`
+- `api/agents/test/`, `api/agents/debug-registry/`, `api/agents/run-tests/`, `api/agents/test-status/`
+- `api/v1/prompting/test/`, `api/v1/prompt-diagnostics/dashboard/`, `api/v1/prompt-diagnostics/analyses/`, `api/v1/prompt-diagnostics/templates/`
+- `api/v1/agents/test-execution/`, `api/v1/video/test-runway/`, `api/v1/gallery/test/`, `api/v1/push/test/`
+- `api/llm-routing/status/`, `api/llm-routing/cost-analytics/`
+- `api/v1/workflows/queue-diagnostic/`, `api/agent-dashboard/health/`, `api/spider-intelligence/test/`
+
+Also removed 4 dead frontend API methods from `frontend/src/lib/api.ts`:
+`llmRoutingApi.status`, `llmRoutingApi.costAnalytics`, `llmRoutingApi.updateAgentConfig`, `neuralOrchestraApi.debug`.
+
+**Still remaining (~13):** partnership API routes, journey-status, diagnostic-master endpoint, remaining LLM routing variants. Next sweep target.
+
 ---
 
 ## 3. Orphaned Celery Tasks
