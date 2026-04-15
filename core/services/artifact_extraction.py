@@ -102,6 +102,25 @@ class ArtifactExtractionService:
             )
             return []
 
+        # Session 1103c: distinguish "parse failure → None" from
+        # "valid empty extraction → []". Both used to log
+        # status='success' artifacts_found=0 which masked LLM output
+        # format failures as legitimate empty extractions.
+        if extraction_result is None:
+            logger.error(
+                "artifact_extraction: LLM extraction returned None for "
+                "conversation %s — JSON parse failed or unexpected "
+                "shape (see prior warning). Logging as failed.",
+                conversation_id,
+            )
+            ArtifactExtractionLog.objects.create(
+                conversation=conversation,
+                status='failed',
+                error_message='LLM output JSON parse failed (see warning log)',
+                extraction_time_ms=int((time.time() - start_time) * 1000),
+            )
+            return []
+
         if not extraction_result:
             logger.info(f"No artifacts found in conversation {conversation_id}")
             ArtifactExtractionLog.objects.create(
@@ -255,7 +274,16 @@ JSON array only, no other text:"""
 
             content = response.choices[0].message.content.strip()
 
-            # Parse JSON
+            # Parse JSON.
+            # Session 1103c: was returning [] on JSONDecodeError, which
+            # was the SAME SHAPE as "model legitimately returned empty
+            # array — no artifacts here." The caller could not
+            # distinguish parse failure from "no artifacts present"
+            # and logged both as status='success' artifacts_found=0,
+            # producing a fake-success liar pattern at the artifact
+            # extraction layer (front of the decision pipeline).
+            # Now returns None on parse failure so the caller can
+            # detect and log it as a real failure.
             try:
                 result = json.loads(content)
                 # Handle both array and object with 'artifacts' key
@@ -266,10 +294,20 @@ JSON array only, no other text:"""
                 elif isinstance(result, dict):
                     # Single artifact
                     return [result] if result.get('type') else []
-                return []
+                # Unexpected shape — treat as parse failure
+                logger.warning(
+                    "artifact_extraction: LLM returned unexpected JSON "
+                    "type=%s — treating as extraction failure",
+                    type(result).__name__,
+                )
+                return None
             except json.JSONDecodeError as e:
-                logger.warning(f"Failed to parse extraction JSON: {e}")
-                return []
+                logger.warning(
+                    "artifact_extraction: JSON parse failed (%s: %s) "
+                    "— first 200 chars of LLM output: %r",
+                    type(e).__name__, e, content[:200],
+                )
+                return None
 
         except Exception as e:
             logger.error(f"GPT extraction call failed: {e}")
