@@ -225,7 +225,17 @@ class APIConnectorTool:
 
                         try:
                             response_data['data'] = await response.json()
-                        except:
+                        except (ValueError, TypeError, aiohttp.ContentTypeError) as e:
+                            # Session 1103c: was a BARE 'except:' —
+                            # narrowed to JSON-parse-specific errors
+                            # so we don't accidentally swallow
+                            # KeyboardInterrupt or unrelated
+                            # exceptions during async body read.
+                            self.logger.debug(
+                                "api_connector: JSON parse failed for "
+                                "%s %s (%s: %s) — falling back to text",
+                                method, endpoint, type(e).__name__, e,
+                            )
                             response_data['data'] = await response.text()
 
                         if response.status < 400:

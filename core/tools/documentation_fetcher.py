@@ -95,8 +95,15 @@ class DocumentationFetcherTool:
             cache.ping()
             logger.info("Documentation cache initialized")
             return cache
-        except:
-            logger.warning("Redis not available, using in-memory cache")
+        except Exception as e:
+            # Session 1103c: was BARE 'except:' which would catch
+            # KeyboardInterrupt + SystemExit. Now narrow + log the
+            # exception type so misconfigured Redis is visible.
+            logger.warning(
+                "documentation_fetcher: Redis unavailable "
+                "(%s: %s) — using in-memory cache",
+                type(e).__name__, e,
+            )
             return {}
 
     async def _get_session(self):
@@ -118,7 +125,14 @@ class DocumentationFetcherTool:
         try:
             key = self._cache_key(url)
             return self.cache.get(key)
-        except:
+        except Exception as e:
+            # Session 1103c: BARE except → narrow + debug-level log
+            # (cache misses on Redis errors are common enough that
+            # warning would be noisy, but we still want a trail).
+            logger.debug(
+                "documentation_fetcher: cache get failed for %s "
+                "(%s: %s)", url, type(e).__name__, e,
+            )
             return None
 
     def _set_cached(self, url: str, content: str):
@@ -129,8 +143,11 @@ class DocumentationFetcherTool:
             try:
                 key = self._cache_key(url)
                 self.cache.setex(key, self.cache_ttl, content)
-            except:
-                pass
+            except Exception as e:
+                logger.debug(
+                    "documentation_fetcher: cache set failed for %s "
+                    "(%s: %s)", url, type(e).__name__, e,
+                )
 
     async def fetch_documentation(self,
                                  framework: str,

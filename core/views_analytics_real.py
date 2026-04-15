@@ -3,12 +3,15 @@ Session 780: Real Analytics Implementation
 Replaces stub endpoints with actual data from the database
 """
 
+import logging
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Count, Sum, Avg, Q
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
+
+logger = logging.getLogger(__name__)
 
 
 @api_view(['GET'])
@@ -44,20 +47,32 @@ def analytics_overview(request):
     ).count()
     success_rate = (successful_executions / executions_30d * 100) if executions_30d > 0 else 0
 
-    # Content stats
+    # Content stats.
+    # Session 1103c: both blocks were BARE 'except:' which silently
+    # undercounted total_content if either query broke. Analytics
+    # dashboards then reported deceptively low content totals. Now
+    # narrow to Exception and log.
     total_content = 0
     try:
         from core.models import SelfBlog
         total_content += SelfBlog.objects.count()
-    except:
-        pass
+    except Exception as e:
+        logger.warning(
+            "views_analytics_real: SelfBlog count failed "
+            "(%s: %s) — total_content undercounted",
+            type(e).__name__, e,
+        )
 
     try:
         total_content += ContentChannel.objects.aggregate(
             total=Count('episodes')
         )['total'] or 0
-    except:
-        pass
+    except Exception as e:
+        logger.warning(
+            "views_analytics_real: ContentChannel episodes aggregate "
+            "failed (%s: %s) — total_content undercounted",
+            type(e).__name__, e,
+        )
 
     # Spider data stats
     spider_data_30d = SpiderData.objects.filter(created_at__gte=last_30d).count()
