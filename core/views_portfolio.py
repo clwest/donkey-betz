@@ -270,8 +270,11 @@ def extract_tags_from_project(project_data):
             tags.append('High Value')
         elif value >= 200:
             tags.append('Medium Value')
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_portfolio.extract_tags_from_project: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     # Complexity tags
     lines_of_code = project_data.get('lines_of_code', 0)

@@ -2040,8 +2040,11 @@ Use these insights to personalize and improve the response.""")
 {chr(10).join(pref_items)}
 
 Tailor the response to match these preferences.""")
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "base_agent._build_intelligent_prompt: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
         # 7. Add Spider Intelligence Summary
         if spider_context:
@@ -2130,8 +2133,11 @@ Consider these trends when crafting the response to maximize relevance and engag
             policy_context = policy_service.get_policies_for_agent(self.name, max_policies=3)
             if policy_context:
                 prompt_parts.append(policy_context)
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "base_agent._build_intelligent_prompt: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         # 9.5 Session 946: Add System Learnings from execution data
         # These learnings come from analyzing ToolCallRecord and DecisionRecord
@@ -2985,8 +2991,11 @@ Consider these trends when crafting the response to maximize relevance and engag
                     latency_ms=_latency,
                     success=_tc_success,
                 )
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "base_agent._execute_tool_call: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
     def _execute_and_record_tool_call(
         self,

@@ -556,8 +556,11 @@ the user should use ImageAgent, VideoAgent, etc."""
                         'success': True,
                         'profile': {'colors': user.preferences['brand_colors']}
                     }
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "brand_identity_agent._get_brand_profile: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
         # Return default
         return {

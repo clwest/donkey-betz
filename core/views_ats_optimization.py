@@ -82,8 +82,11 @@ class ATSAnalyzeView(View):
                         profile = ExtendedUserProfile.objects.filter(user=request.user).first()
                         if profile and profile.skills:
                             user_skills = [s.get('name', '') for s in profile.skills]
-                    except Exception:
-                        pass
+                    except Exception as _e:
+                        logger.warning(
+                            "views_ats_optimization.post: swallowed (%s: %s) — degraded",
+                            type(_e).__name__, _e,
+                        )
 
                 suggestions = ats_keyword_service.get_optimization_suggestions(
                     resume_text, job_description, user_skills
@@ -206,8 +209,11 @@ class ATSOptimizeSuggestionsView(View):
                     profile = ExtendedUserProfile.objects.filter(user=request.user).first()
                     if profile and profile.skills:
                         user_skills = [s.get('name', '') for s in profile.skills]
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "views_ats_optimization.post: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
             suggestions = ats_keyword_service.get_optimization_suggestions(
                 resume_text, job_description, user_skills
@@ -334,8 +340,11 @@ class ATSGenerateSummaryView(View):
                             'skills': [s.get('name', '') for s in (profile.skills or [])],
                             'industry': profile.industry,
                         }
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "views_ats_optimization.post: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
             if not user_profile:
                 user_profile = {

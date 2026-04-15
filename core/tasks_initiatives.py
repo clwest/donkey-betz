@@ -425,8 +425,11 @@ self,
                 agent_name=agent_name,
                 task_result={'success': False, 'error': 'Celery soft_time_limit exceeded (60 min)'},
             )
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "tasks_initiatives._impl_execute_initiative_stage_task: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
         return {
             'success': False,
             'agent_name': agent_name,
@@ -2334,8 +2337,11 @@ def _impl_process_initiative_auto_progression(self):
                 try:
                     from core.models_document_registry import Initiative
                     Initiative.objects.get(id=initiative_id).update_activity()
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "tasks_initiatives._impl_process_initiative_auto_progression: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
                 logger.info(
                     f"📊 [AUTO-PROGRESSION] ✅ Progressed {item['initiative_name']} "
                     f"from Stage {result.get('previous_stage')} to Stage {result.get('new_stage')}"
@@ -2780,8 +2786,11 @@ Stage {stage_num} ({config['template']}) should include:
             stage.status = 'PENDING'
             stage.notes = (stage.notes or '') + f"\n[Timeout] Generation exceeded 10 minute limit"
             stage.save()
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "tasks_initiatives.is_name_incomplete: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
         return {'success': False, 'error': f'Stage {stage_num} generation timed out (600s)'}
 
     except Exception as e:

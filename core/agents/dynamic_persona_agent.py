@@ -234,8 +234,11 @@ class DynamicPersonaAgent(BaseAgent):
                             'tools_used': [tc['name'] for tc in tool_calls_made],
                         }
                     )
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "dynamic_persona_agent.execute: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
                 self._save_to_deliverable(
                     title=f"{self._persona_name}: {task[:80]}",

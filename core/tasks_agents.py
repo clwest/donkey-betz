@@ -1800,8 +1800,11 @@ self,
             try:
                 from django.contrib.auth import get_user_model
                 _route_user = get_user_model().objects.filter(id=_route_user_id).first()
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "tasks_agents._impl_execute_agent_task: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
         # Session 1076: Per-agent-type wall-clock timeout.
         # Media agents (AudioAgent, ImageAgent, etc.) should complete in <5min.
@@ -1848,8 +1851,11 @@ self,
             if _override:
                 _wall_timeout = int(_override)
                 logger.info(f"[execute_agent_task] Using override timeout {_wall_timeout}s for {agent_name}")
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "tasks_agents._impl_execute_agent_task: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         router = AgentRouter(user=_route_user)
 
@@ -4743,8 +4749,11 @@ Trigger: {trigger}
             )
             if stuck:
                 logger.info(f"🤖 [SKIN LAYER] Marked {stuck} execution(s) as failed for {agent_name}")
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "tasks_agents._impl_universal_agent_workspace_output: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
         return {'success': False, 'agent': agent_name, 'error': 'Celery soft_time_limit exceeded (60 min)', 'run_mode': run_mode}
 
     except Exception as e:

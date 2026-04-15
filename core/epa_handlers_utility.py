@@ -20,8 +20,11 @@ def _ensure_assets_dict(assistant):
         existing = {'images': [], 'videos': [], 'last_updated': None}
         try:
             setattr(assistant, 'recently_generated_assets', existing)
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "epa_handlers_utility._ensure_assets_dict: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
     existing.setdefault('images', [])
     existing.setdefault('videos', [])
     return existing
@@ -2583,8 +2586,11 @@ class EPAUtilityMixin:
                     if isinstance(conv.agents_used, str):
                         try:
                             agents_used.extend(json.loads(conv.agents_used))
-                        except Exception:
-                            pass
+                        except Exception as _e:
+                            logger.warning(
+                                "epa_handlers_utility._analyze_user_patterns: swallowed (%s: %s) — degraded",
+                                type(_e).__name__, _e,
+                            )
                     elif isinstance(conv.agents_used, list):
                         agents_used.extend(conv.agents_used)
 

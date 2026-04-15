@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(__name__)
+
 """
 Dashboard Statistics API - The Heart of the Unified System
 This aggregates REAL data from all 149 agents, 25 advisors, and user activities
@@ -353,8 +356,11 @@ def dashboard_summary(request):
         while_away['new_spider_data'] = SpiderData.objects.filter(
             created_at__gte=last_visit
         ).count()
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_dashboard_stats.dashboard_summary: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     try:
         # Agent dreams since last visit
@@ -362,8 +368,11 @@ def dashboard_summary(request):
         while_away['agent_dreams'] = AgentDream.objects.filter(
             created_at__gte=last_visit
         ).count()
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_dashboard_stats.dashboard_summary: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     try:
         # Agent conversations since last visit
@@ -371,16 +380,22 @@ def dashboard_summary(request):
         while_away['agent_conversations'] = AgentConversation.objects.filter(
             created_at__gte=last_visit
         ).count()
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_dashboard_stats.dashboard_summary: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     try:
         # New opportunities since last visit
         while_away['new_opportunities'] = Opportunity.objects.filter(
             created_at__gte=last_visit
         ).count()
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_dashboard_stats.dashboard_summary: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     try:
         # Images created by this user since last visit
@@ -388,8 +403,11 @@ def dashboard_summary(request):
             user=user,
             created_at__gte=last_visit
         ).count()
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_dashboard_stats.dashboard_summary: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     return JsonResponse({
         'success': True,

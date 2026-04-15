@@ -254,8 +254,11 @@ class AgentRouter:
                         'score': 0.5,  # Lower confidence for general match
                         'agent_id': str(general_agent.id)
                     }
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "agent_integration._find_agent_without_registry: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
                 
         except Exception as e:
             logger.error(f"Error in fallback agent finding: {e}")
@@ -464,8 +467,11 @@ Please complete this task using your specialized capabilities.
                     execution.error_message = str(e)
                     execution.completed_at = timezone.now()
                     execution.save()
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "agent_integration._execute_agent_directly: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
                 
             return {
                 'success': False,

@@ -39,8 +39,11 @@ def _get_blog_for_session(session_id):
                 'structure_score': blog.structure_score,
                 'publish_ready': blog.publish_ready,
             }
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_deliberation._get_blog_for_session: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
     return None
 
 

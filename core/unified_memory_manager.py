@@ -384,8 +384,11 @@ class UnifiedMemoryManager:
             profile = EnhancedUserProfile.objects.get(user=user)
             context['communication_style'] = profile.communication_style
             context['current_projects'] = profile.current_projects or []
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "unified_memory_manager.get_assistant_context_for_agents: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         return context
 
@@ -455,8 +458,11 @@ class UnifiedMemoryManager:
                 'content': memory.content[:100],
                 'source': memory.source
             })
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "unified_memory_manager._notify_memory_consumers: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
     def _clear_user_cache(self, user: User):
         """Clear cache entries for a user."""

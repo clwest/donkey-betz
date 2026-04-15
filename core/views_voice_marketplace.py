@@ -869,8 +869,11 @@ def clone_voice_upload(request):
         # Clean up temp file
         try:
             os.unlink(temp_path)
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_voice_marketplace.clone_voice_upload: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         if response.status_code != 200:
             error_detail = response.text[:300]

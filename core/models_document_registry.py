@@ -668,8 +668,11 @@ class Initiative(models.Model):
                     if self.pk:
                         try:
                             old_status = Initiative.objects.filter(pk=self.pk).values_list('status', flat=True).first()
-                        except Exception:
-                            pass
+                        except Exception as _e:
+                            logger.warning(
+                                "models_document_registry.save: swallowed (%s: %s) — degraded",
+                                type(_e).__name__, _e,
+                            )
 
                     if is_new or (old_status and old_status != 'ACTIVE'):
                         from core.services.initiative_circuit_breaker import can_promote_to_active

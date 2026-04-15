@@ -288,8 +288,11 @@ def voice_dubbing(request):
         # Clean up temp file
         try:
             default_storage.delete(file_path)
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_audio.voice_dubbing: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         return JsonResponse(result)
 
@@ -338,8 +341,11 @@ def speech_to_speech(request):
         # Clean up temp file
         try:
             default_storage.delete(file_path)
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_audio.speech_to_speech: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         return JsonResponse(result)
 
@@ -383,8 +389,11 @@ def voice_isolation(request):
         # Clean up temp file
         try:
             default_storage.delete(file_path)
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_audio.voice_isolation: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         return JsonResponse(result)
 

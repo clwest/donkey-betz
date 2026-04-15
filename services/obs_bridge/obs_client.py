@@ -92,6 +92,9 @@ class OBSClient:
         if self._client is not None:
             try:
                 self._client.disconnect()
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "obs_client.disconnect: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
             self._client = None

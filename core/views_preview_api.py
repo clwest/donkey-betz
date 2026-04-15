@@ -540,8 +540,11 @@ def review_feedback(request, token):
             entity_type='feedback_item',
             entity_id=str(feedback.id),
         )
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_preview_api.review_feedback: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     return Response(
         {"id": str(feedback.id), "status": "submitted"},

@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(__name__)
+
 """
 Neural Orchestra Reality Bridge
 ==============================
@@ -1017,8 +1020,11 @@ class NeuralOrchestraRealityBridge:
                     'total_executions': total_execs,
                     'successful_executions': successful_execs
                 }
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "neural_orchestra_reality_bridge.get_learning_feed_api_data: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
             # Content creation counts
             images_count = ImageHistory.objects.count()

@@ -590,10 +590,16 @@ def pipeline_stage_detail(request, workspace_id, run_id, stage_index):
                     'latency_ms': r.latency_ms,
                     'error': r.error_message if hasattr(r, 'error_message') else '',
                 } for r in records]
-            except Exception:
-                pass
-    except Exception:
-        pass
+            except Exception as _e:
+                logger.warning(
+                    "views_workspace_templates.pipeline_stage_detail: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
+    except Exception as _e:
+        logger.warning(
+            "views_workspace_templates.pipeline_stage_detail: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     # Get deliverable content preview
     deliverable_preview = None
@@ -608,8 +614,11 @@ def pipeline_stage_detail(request, workspace_id, run_id, stage_index):
                 'quality_score': d.quality_score,
                 'word_count': len((d.content or '').split()),
             }
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_workspace_templates.pipeline_stage_detail: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
     return Response({
         'success': True,

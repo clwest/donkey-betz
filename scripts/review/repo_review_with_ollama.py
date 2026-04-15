@@ -1,5 +1,8 @@
 
 import os, json, time, signal, sys
+import logging
+logger = logging.getLogger(__name__)
+
 print('[repo-review] starting', flush=True)
 from pathlib import Path
 from typing import Dict, Any, List
@@ -24,8 +27,11 @@ def load_progress() -> Dict[str, Any]:
     if CHECKPOINT.exists():
         try:
             return json.loads(CHECKPOINT.read_text())
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "repo_review_with_ollama.load_progress: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
     return {"completed": {}, "failed": {}, "started_at": time.time()}
 
 def save_progress(state: Dict[str, Any]) -> None:
