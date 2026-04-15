@@ -214,8 +214,11 @@ class SportsContentContextBuilder:
                     streak_type = "win" if stats.current_streak > 0 else "loss"
                     streak_len = abs(stats.current_streak)
                     context_parts.append(f"- Current streak: {streak_len} {streak_type}s")
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "sports_content_context.get_platform_betting_stats: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
         except Exception as e:
             logger.debug(f"Could not fetch betting stats: {e}")

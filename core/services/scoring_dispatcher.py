@@ -32,8 +32,11 @@ def _publish_scoring_event(spider_data, result, mode: str, latency_ms: float):
             ).first()
             if opportunity:
                 opportunity_id = str(opportunity.id)
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "scoring_dispatcher._publish_scoring_event: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         publish_opportunity_scored_event(
             opportunity_id=opportunity_id,

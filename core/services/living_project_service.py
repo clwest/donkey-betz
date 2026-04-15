@@ -309,8 +309,11 @@ class LivingProjectService:
                 participants = []
                 try:
                     participants = list(conversation.participants.values_list('name', flat=True))
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "living_project_service.process_agent_conversation: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
                 insight = ProjectInsight.objects.create(
                     project=project,

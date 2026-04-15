@@ -694,8 +694,11 @@ def change_speed(user, video_id, speed_factor=1.0, preserve_audio_pitch=True):
                 probe_cmd, capture_output=True, text=True, timeout=30
             )
             has_audio = 'audio' in probe_result.stdout
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "video_editing_service.change_speed: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         if preserve_audio_pitch and has_audio:
             # Build atempo chain — atempo only supports 0.5–2.0
