@@ -3855,6 +3855,24 @@ class ContentHandlersMixin:
         """
         action = payload.get('action', '')
 
+        # Session 1103c: aliases for natural-name guesses that GPT-5.2
+        # keeps emitting. Same pattern as work_tool stats / ops_tool
+        # overview / governance_tool stats fixes earlier this session.
+        ACTION_ALIASES = {
+            'recent': 'content_recent',
+            'list': 'content_list',
+            'search': 'content_search',
+            'stats': 'content_stats',
+            'detail': 'content_detail',
+            'details': 'content_detail',
+            'approve': 'content_approve',
+            'reject': 'content_reject',
+        }
+        if action in ACTION_ALIASES:
+            action = ACTION_ALIASES[action]
+            payload = dict(payload)
+            payload['action'] = action
+
         # Session 1077: Smart action inference — GPT-5.2 sometimes omits the
         # action field. Infer from other params present in the payload.
         if not action:
