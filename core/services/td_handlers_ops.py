@@ -1115,8 +1115,19 @@ class OpsHandlersMixin:
                 report_lines.append(f"- Failed verification: {verif_failed}")
                 report_lines.append(f"- Auto-rolled back: {rolled_back}")
                 report_lines.append(f"- Auto-remediations applied: {remediations}")
-            except Exception:
-                pass
+            except Exception as e:
+                # Session 1083 (Rigby audit): was bare pass — verification
+                # section would silently vanish from ops digest on any DB
+                # error, false-greening the operator. Now the report itself
+                # shows the degradation and the log carries full context.
+                logger.warning(
+                    "ops digest: verification/safety section failed "
+                    "(%s: %s)", type(e).__name__, e,
+                )
+                report_lines.append(
+                    f"\n### Verification & Safety (24h) — DEGRADED "
+                    f"(query failed: {type(e).__name__})"
+                )
 
             # Remediation playbook stats
             try:
@@ -1135,8 +1146,15 @@ class OpsHandlersMixin:
                             f"({top_playbook.success_rate:.0%} success, "
                             f"{top_playbook.times_applied}x applied)"
                         )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    "ops digest: remediation playbook section failed "
+                    "(%s: %s)", type(e).__name__, e,
+                )
+                report_lines.append(
+                    f"\n### Remediation Playbook — DEGRADED "
+                    f"(query failed: {type(e).__name__})"
+                )
 
             # Self-tuning status
             try:
@@ -1160,8 +1178,15 @@ class OpsHandlersMixin:
                     report_lines.append(f"\n### Active Config Overrides ({len(overrides)})")
                     for param, val in overrides.items():
                         report_lines.append(f"- {param}: {val}")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    "ops digest: self-tuning section failed (%s: %s)",
+                    type(e).__name__, e,
+                )
+                report_lines.append(
+                    f"\n### Self-Tuning — DEGRADED "
+                    f"(PolicyOptimizer failed: {type(e).__name__})"
+                )
 
             # QROI attribution section
             try:
@@ -1188,8 +1213,15 @@ class OpsHandlersMixin:
                             f"\n**Would throttle {len(recs)} agents** "
                             f"under budget pressure"
                         )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    "ops digest: QROI attribution section failed "
+                    "(%s: %s)", type(e).__name__, e,
+                )
+                report_lines.append(
+                    f"\n### QROI Attribution — DEGRADED "
+                    f"(ROIEnforcer failed: {type(e).__name__})"
+                )
 
             return {
                 'action': 'dry_run_report',
@@ -2592,6 +2624,13 @@ class OpsHandlersMixin:
         # Autopilot status
         autopilot_last = 'never'
         total_cycles = 0
+        # Session 1083 (Rigby audit): ops digest builds were bare-passing
+        # every query, so the digest JSON would silently return zeros or
+        # empty lists on DB incident — classic false-green for the "how's
+        # production" question. Collect degraded fields into a list so the
+        # PA can surface "partial data" in its reply to Chris.
+        degraded_fields: list[str] = []
+
         blocks_24h = 0
         try:
             last_cycle = AutopilotAction.objects.filter(
@@ -2603,15 +2642,24 @@ class OpsHandlersMixin:
                 action_type='block_agent', dry_run=False,
                 created_at__gte=now - timedelta(hours=24),
             ).count()
-        except Exception:
-            pass
+        except Exception as e:
+            degraded_fields.append('autopilot_last_cycle')
+            logger.warning(
+                "ops digest: autopilot cycle stats failed (%s: %s)",
+                type(e).__name__, e,
+            )
 
         # Blocked agents
         blocked_names = []
         try:
             blocked_names = sorted(AgentControlEntry.get_blocked_names())
-        except Exception:
-            pass
+        except Exception as e:
+            degraded_fields.append('blocked_agents')
+            logger.warning(
+                "ops digest: AgentControlEntry.get_blocked_names failed "
+                "(%s: %s) — digest will show empty blocked list",
+                type(e).__name__, e,
+            )
 
         # Recent activity (agent executions + celery tasks in window)
         agent_runs = 0
@@ -2625,8 +2673,13 @@ class OpsHandlersMixin:
             task_failures = CeleryTaskEvent.objects.filter(
                 started_at__gte=cutoff, status='FAILURE',
             ).count()
-        except Exception:
-            pass
+        except Exception as e:
+            degraded_fields.append('activity')
+            logger.warning(
+                "ops digest: activity counts failed (%s: %s) — agent_runs, "
+                "celery_tasks, task_failures will all report 0",
+                type(e).__name__, e,
+            )
 
         # Failure signatures (top 3 in window)
         top_failures = []
@@ -2643,8 +2696,12 @@ class OpsHandlersMixin:
                 )
             )
             top_failures = sigs
-        except Exception:
-            pass
+        except Exception as e:
+            degraded_fields.append('top_failures')
+            logger.warning(
+                "ops digest: top failure signatures query failed "
+                "(%s: %s)", type(e).__name__, e,
+            )
 
         # ── Build digest ─────────────────────────────────────────────
         digest = {
@@ -2664,6 +2721,7 @@ class OpsHandlersMixin:
                 'task_failures': task_failures,
             },
             'top_failures': top_failures,
+            'degraded_fields': degraded_fields,
         }
 
         # Render markdown
@@ -3124,8 +3182,16 @@ class OpsHandlersMixin:
                 snapshot['ops']['slo_breaches'] = 1
             else:
                 snapshot['ops']['slo_breaches'] = 0
-        except Exception:
-            pass
+        except Exception as e:
+            # Session 1083: was bare pass — SLO breach count silently
+            # reported as missing instead of degraded. Now flag the
+            # snapshot as partial so the UI can show a warning indicator.
+            logger.warning(
+                "status_snapshot: SLO breach calc failed (%s: %s) — "
+                "ops.slo_breaches will be unset",
+                type(e).__name__, e,
+            )
+            snapshot.setdefault('ops', {})['slo_calc_degraded'] = True
 
         cache.set(cache_key, snapshot, 60)
         logger.info(f"[{trace_id}] Status snapshot generated and cached")
@@ -3230,8 +3296,17 @@ class OpsHandlersMixin:
                     {'name': name, 'reason': _REROUTE_REASON.get(name, 'Non-specialist — rerouted to best-fit agent')}
                     for name in (_NON_SPECIALIST - _BLOCKED)
                 ], key=lambda x: x['name'])
-            except Exception:
-                pass
+            except Exception as e:
+                # Session 1083: was bare pass — if AGENT_MAP / _BLOCKED /
+                # _NON_SPECIALIST import failed, the agent introspection
+                # response would silently report zero blocked + zero
+                # rerouted agents, making it look like all agents were
+                # enabled during a config incident.
+                logger.warning(
+                    "agent_introspection: blocked/rerouted agent list "
+                    "build failed (%s: %s) — response will show zero "
+                    "counts", type(e).__name__, e,
+                )
 
             blocked_count = len(blocked_agents)
             rerouted_count = len(rerouted_agents)
@@ -3319,8 +3394,14 @@ class OpsHandlersMixin:
                         t.get('function', {}).get('name', 'unknown')
                         for t in tools if isinstance(t, dict)
                     ]
-        except Exception:
-            pass
+        except Exception as e:
+            # Session 1083: was bare pass — router lookup failure would
+            # silently hide system_prompt + tools from introspection
+            # output, making it look like agents had no prompt or tools.
+            logger.debug(
+                "agent_introspection: agent class lookup for %s failed "
+                "(%s: %s)", agent.name, type(e).__name__, e,
+            )
 
         return {
             'found': True,
