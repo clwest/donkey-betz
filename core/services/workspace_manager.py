@@ -781,15 +781,26 @@ class WorkspaceScanner:
                     f"{stderr_tail}"
                 )
 
-            # Success — write .clone.ok, remove .clone.in_progress
+            # Success — write .clone.ok, remove .clone.in_progress.
+            # Session 1083 (Rigby audit): was `except Exception: pass`, which
+            # would silently leave head_sha='' in the .clone.ok sentinel if
+            # git rev-parse hit any error post-clone. Downstream code that
+            # compares head_sha to detect "new commits since last scan"
+            # would then see an empty value and re-treat the clone as stale
+            # forever. Narrowed to SubprocessError + FileNotFoundError and
+            # log a warning so Chris can see when HEAD resolution fails.
             head_sha = ''
             try:
                 head_sha = subprocess.run(
                     ['git', '-C', str(repo_dir), 'rev-parse', 'HEAD'],
                     capture_output=True, text=True, timeout=5,
                 ).stdout.strip()
-            except Exception:
-                pass
+            except (subprocess.SubprocessError, FileNotFoundError) as e:
+                logger.warning(
+                    "workspace_manager: failed to resolve HEAD sha after "
+                    "clone of %s (%s: %s) — .clone.ok will record empty sha",
+                    workspace.git_remote_url, type(e).__name__, e,
+                )
 
             self._write_sentinel(ws_dir, '.clone.ok', {
                 'ok_at': datetime.now(timezone.utc).isoformat(),
@@ -901,7 +912,9 @@ class WorkspaceScanner:
                 workspace.refresh_from_db()
                 return {'ready': True}
 
-        # Still not ready after waiting — return 202 info
+        # Still not ready after waiting — return 202 info.
+        # Session 1083: was bare pass; narrowed to JSON + OSError so a
+        # malformed sentinel file logs a warning instead of vanishing.
         clone_started_at = None
         in_progress = ws_dir / '.clone.in_progress'
         if in_progress.exists():
@@ -909,8 +922,11 @@ class WorkspaceScanner:
                 import json
                 data = json.loads(in_progress.read_text())
                 clone_started_at = data.get('started_at')
-            except Exception:
-                pass
+            except (json.JSONDecodeError, OSError) as e:
+                logger.warning(
+                    "workspace_manager: corrupt .clone.in_progress sentinel "
+                    "at %s (%s: %s)", in_progress, type(e).__name__, e,
+                )
 
         return {'ready': False, 'clone_started_at': clone_started_at}
 
@@ -1578,7 +1594,10 @@ class WorkspaceManager:
                 self.set_active_workspace(existing.id)
             return existing
 
-        # Detect git remote if available
+        # Detect git remote if available.
+        # Session 1083: narrowed from bare Exception: pass — git not
+        # installed / not a repo is legitimate (→ empty string), every
+        # other error logs so Chris can see when detection misfires.
         git_remote = ''
         try:
             result = subprocess.run(
@@ -1590,8 +1609,13 @@ class WorkspaceManager:
             )
             if result.returncode == 0:
                 git_remote = result.stdout.strip()
-        except Exception:
-            pass
+        except FileNotFoundError:
+            pass  # git binary not installed
+        except subprocess.SubprocessError as e:
+            logger.warning(
+                "workspace_manager: git remote detection failed for %s "
+                "(%s: %s)", path, type(e).__name__, e,
+            )
 
         # Get current branch
         current_branch = ''
@@ -1605,8 +1629,13 @@ class WorkspaceManager:
             )
             if result.returncode == 0:
                 current_branch = result.stdout.strip()
-        except Exception:
-            pass
+        except FileNotFoundError:
+            pass  # git binary not installed
+        except subprocess.SubprocessError as e:
+            logger.warning(
+                "workspace_manager: git branch detection failed for %s "
+                "(%s: %s)", path, type(e).__name__, e,
+            )
 
         # Create workspace
         workspace = ProjectWorkspace.objects.create(
