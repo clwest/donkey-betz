@@ -10,13 +10,11 @@ import json
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timezone
 
-# OpenAI for embeddings
-try:
-    import openai
-    from openai import OpenAI
-except ImportError:
-    openai = None
-    OpenAI = None
+# OpenAI client factory is imported lazily inside _initialize_client() below.
+# Module-level import would trigger core.services.__init__ → agent_collaboration →
+# models_unified_system → Django apps, which is not ready at import time for any
+# caller that imports embedding_generator before django.setup(). See
+# models_unified_system.py for the same lazy-inline pattern.
 
 # Import models
 try:
@@ -68,14 +66,23 @@ class LearningEmbeddingGenerator:
         }
 
     def _initialize_client(self):
-        """Initialize OpenAI client"""
+        """Initialize OpenAI client via shared factory (centralized timeouts).
+
+        Factory import is lazy/inline to avoid import-time Django app registry
+        cascade through core.services.__init__.
+        """
         try:
             api_key = os.getenv('OPENAI_API_KEY')
-            if api_key and OpenAI:
-                self.client = OpenAI(api_key=api_key)
-                logger.info("✅ OpenAI client initialized for embeddings")
-            else:
-                logger.warning("OpenAI API key not found or OpenAI not installed")
+            if not api_key:
+                logger.warning("OpenAI API key not found")
+                return
+            try:
+                from core.services.openai_client_factory import get_openai_client
+            except ImportError:
+                logger.warning("openai_client_factory unavailable")
+                return
+            self.client = get_openai_client(api_key=api_key)
+            logger.info("OpenAI client initialized for embeddings (factory)")
         except Exception as e:
             logger.error(f"Failed to initialize OpenAI client: {e}")
 
