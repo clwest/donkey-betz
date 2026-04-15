@@ -1872,3 +1872,15 @@ def upscale_image_view(request):
         traceback.print_exc()
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
+
+
+# Session 1083 (Rigby audit): save_to_history called 5 times but never
+# imported. Placed at EOF to sidestep a circular-init cycle between
+# views_image_edit ↔ views_image_misc ↔ image_views.session.
+from core.image_views.session import save_to_history  # noqa: E402
+
+
+# Session 1083 (Rigby audit): save_to_history called 5 times but never
+# imported. Placed at EOF to sidestep a circular-init cycle between
+# views_image_edit ↔ views_image_misc ↔ image_views.session.
+from core.image_views.session import save_to_history  # noqa: E402
