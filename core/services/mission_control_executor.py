@@ -400,8 +400,27 @@ class MissionControlExecutor:
                     message=f"Added {symbol.upper()} to watchlist",
                     data={'symbol': symbol.upper()}
                 )
-            except ImportError:
-                pass
+            except ImportError as e:
+                # Was 'except ImportError: pass' which fell through to a
+                # fake SUCCESS response claiming "Item added to watchlist"
+                # — the worst kind of silent failure because it lied to
+                # the caller. Now report the actual failure so callers
+                # can retry or surface the error to the user.
+                logger.error(
+                    "mission_control: Watchlist model import failed while "
+                    "trying to add %s (%s: %s) — returning FAILED instead "
+                    "of fake success",
+                    symbol, type(e).__name__, e,
+                )
+                return ExecutionResult(
+                    action_id='watchlist',
+                    status=ActionResult.FAILED,
+                    message=(
+                        f"Could not add {symbol.upper()} to watchlist: "
+                        f"Watchlist model unavailable ({type(e).__name__})"
+                    ),
+                    data={'symbol': symbol.upper(), 'error_type': type(e).__name__},
+                )
 
         return ExecutionResult(
             action_id='watchlist',
