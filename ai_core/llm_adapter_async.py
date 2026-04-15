@@ -1,7 +1,10 @@
 from __future__ import annotations
+import logging
 import os
 from typing import List, Dict, Any
 from openai import AsyncOpenAI
+
+_logger = logging.getLogger(__name__)
 
 def _normalize_base_url(url: str | None) -> str | None:
     if not url:
@@ -49,11 +52,33 @@ class AsyncLLMAdapter:
                             for part in getattr(piece, "content", []) or []:
                                 if getattr(part, "type", None) == "output_text":
                                     return getattr(part, "text", "") or ""
+                # Session 1103c: was 'except Exception: return ""'
+                # which silently returned empty string when the
+                # Chat Completions response shape couldn't be parsed.
+                # Caller saw "" and had no idea the model actually
+                # responded — looked identical to "model returned
+                # nothing." Now logs a warning so empty completions
+                # have a named cause.
                 try:
                     return resp.choices[0].message["content"]
-                except Exception:
+                except Exception as e:
+                    _logger.warning(
+                        "llm_adapter_async: response parse failed "
+                        "(%s: %s) — returning empty string",
+                        type(e).__name__, e,
+                    )
                     return ""
-            except Exception:
+            except Exception as e:
+                # Session 1103c: was 'except Exception:' silently
+                # falling through to a fresh chat.completions call
+                # with no log of why the first call failed. The
+                # fallback chain is correct behavior, but the silent
+                # swallow meant Responses API outages were invisible.
+                _logger.warning(
+                    "llm_adapter_async: Responses API call failed "
+                    "(%s: %s) — falling back to chat.completions",
+                    type(e).__name__, e,
+                )
                 resp = await self.client.chat.completions.create(model=model, messages=messages, **_normalize_for_ollama(kwargs))
                 return (resp.choices[0].message.content or "") if resp.choices else ""
 
