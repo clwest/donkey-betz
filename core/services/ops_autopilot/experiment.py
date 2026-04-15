@@ -542,7 +542,14 @@ class ExperimentEngine:
 
         current = dict(defaults.get(policy_name, {}))
 
-        # Override with SystemConfiguration values if present
+        # Override with SystemConfiguration values if present.
+        # Session 1103c: was 'except Exception: pass' which silently
+        # ignored DB read failures during experiment-managed
+        # enforcement parameter loading. The autopilot would then
+        # proceed with stale defaults (potentially overly-permissive
+        # budget thresholds, throttle ROIs) while everyone thought
+        # the experiment system was active. Now logs WARNING so
+        # config-layer drift is visible.
         for param in current:
             key = f"{self.EXPERIMENT_CONFIG_PREFIX}:{policy_name}:{param}"
             try:
@@ -551,8 +558,13 @@ class ExperimentEngine:
                 ).values_list('value', flat=True).first()
                 if entry and isinstance(entry, dict) and 'value' in entry:
                     current[param] = entry['value']
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "ops_autopilot.experiment: SystemConfiguration "
+                    "read failed for %s (%s: %s) — using default "
+                    "value, experiment-managed override may be stale",
+                    key, type(_e).__name__, _e,
+                )
 
         return current
 
@@ -570,8 +582,14 @@ class ExperimentEngine:
             ).values_list('value', flat=True).first()
             if entry and isinstance(entry, dict) and 'value' in entry:
                 return entry['value']
-        except Exception:
-            pass
+        except Exception as _e:
+            # Session 1103c: sibling fix for the same fail-open
+            # pattern in the per-param getter.
+            logger.warning(
+                "ops_autopilot.experiment: get_experiment_param "
+                "failed for %s (%s: %s) — returning default %r",
+                key, type(_e).__name__, _e, default,
+            )
 
         return default
 
