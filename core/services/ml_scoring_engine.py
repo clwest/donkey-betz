@@ -1252,11 +1252,24 @@ class MLScoringEngine:
 
 # Singleton instance
 _ml_scoring_engine = None
+# Session 1083 round 41: lock prevents two threads from racing into
+# MLScoringEngine() concurrently — joblib.load(lightgbm) is NOT
+# reentrant on macOS and the race triggered process-wide Abseil
+# [mutex.cc : 452] RAW: Lock blocking deadlocks. tasks_agents uses
+# ThreadPoolExecutor(max_workers=1) internally so even --pool=solo
+# Celery workers have 2+ Python threads that can race here.
+import threading as _ml_scoring_threading
+_ml_scoring_lock = _ml_scoring_threading.Lock()
 
 
 def get_ml_scoring_engine() -> MLScoringEngine:
-    """Get singleton ML scoring engine instance."""
+    """Get singleton ML scoring engine instance. Thread-safe."""
     global _ml_scoring_engine
     if _ml_scoring_engine is None:
-        _ml_scoring_engine = MLScoringEngine()
+        with _ml_scoring_lock:
+            # Double-checked locking pattern — re-read under the lock
+            # so we don't instantiate twice if two threads both saw None
+            # before either took the lock.
+            if _ml_scoring_engine is None:
+                _ml_scoring_engine = MLScoringEngine()
     return _ml_scoring_engine
