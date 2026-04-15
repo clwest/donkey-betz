@@ -150,8 +150,11 @@ class AgentPreferenceManager:
             if self.redis:
                 try:
                     self.redis.setex(cache_key, 3600, json.dumps(db_prefs))  # 1 hour TTL
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "preferences.get_preferences: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
         return prefs
 
@@ -229,8 +232,11 @@ class AgentPreferenceManager:
             if self.redis:
                 try:
                     self.redis.delete(cache_key)
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "preferences.record_preference: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
             return True
 
@@ -491,8 +497,11 @@ class AgentPreferenceManager:
             if prefs:
                 return prefs.get_learning_stage()
 
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "preferences._get_learning_stage: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         return "new"
 

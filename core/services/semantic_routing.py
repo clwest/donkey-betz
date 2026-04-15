@@ -154,8 +154,11 @@ class SemanticRoutingService:
         if cached is not None:
             try:
                 return np.array(cached)
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "semantic_routing._get_agent_embedding: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
         # Generate embedding
         capability = AGENT_CAPABILITIES.get(agent_name)

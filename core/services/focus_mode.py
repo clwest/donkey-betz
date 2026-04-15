@@ -80,8 +80,11 @@ def get_config() -> dict:
             config = {**_DEFAULT_CONFIG, **cs.details}
             cache.set(_CACHE_KEY, json.dumps(config), _CACHE_TTL)
             return config
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "focus_mode.get_config: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     # Return defaults
     cache.set(_CACHE_KEY, json.dumps(_DEFAULT_CONFIG), _CACHE_TTL)
@@ -292,5 +295,8 @@ def record_block(reason: str):
     try:
         val = cache.get(key, 0)
         cache.set(key, val + 1, 86400)
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "focus_mode.record_block: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
