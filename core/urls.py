@@ -1440,10 +1440,10 @@ from core.views_obs import (
 )
 
 from core.views_diagnostics import (
-    diagnostic_master_endpoint,
-    test_spider_network,
-    test_income_builder,
-    websocket_test_page,
+    # Session 1103c: diagnostic_master_endpoint, test_spider_network,
+    # test_income_builder, and websocket_test_page removed — their
+    # routes were dead (zero frontend callers). The rest of
+    # views_diagnostics.py stays because 70+ other handlers are live.
     config_snapshot,        # Session 1069: Cross-service config comparison
     debug_raise_500,        # Session 1069: Middleware verification endpoint
     cockpit_error_summary,  # Focus Cockpit: error signatures
@@ -1663,12 +1663,8 @@ urlpatterns = [
     # Combined Summary
     path('api/user-learning/summary/', get_user_learning_summary, name='user-learning-summary'),
 
-    # Diagnostic Endpoints - Complete Backend Visibility (API only, redirect above handles page)
-    path('api/diagnostics/', diagnostic_master_endpoint, name='diagnostics-master'),
-    path('api/diagnostics/test-spiders/', test_spider_network, name='diagnostics-test-spiders'),
-    path('api/diagnostics/test-income-builder/', test_income_builder, name='diagnostics-test-income'),
-    path('diagnostics/websocket-test/', websocket_test_page, name='diagnostics-websocket-test'),
-    # Session 1069: Cross-service config snapshot + middleware test
+    # Session 1103c: 4 /api/diagnostics/* + websocket test routes deleted
+    # (zero frontend callers). Session 1069: Cross-service config snapshot + middleware test
     path('api/internal/config-snapshot/', config_snapshot, name='config-snapshot'),
     path('api/internal/debug-raise-500/', debug_raise_500, name='debug-raise-500'),
     # Focus Cockpit API
@@ -2474,7 +2470,8 @@ urlpatterns = [
     path('api/self-awareness/report/', views_self_development.self_awareness_report, name='self-awareness-report'),
     path('api/collaboration/suggest-team/', views_self_development.suggest_team_api, name='suggest-team'),
     path('api/agent/execute/', views_self_development.execute_agent_api, name='execute-agent-api'),
-    path('api/learning/status/', views_self_development.learning_status_api, name='learning-status'),
+    # Session 1103c: /api/learning/status/ removed — zero frontend callers.
+    # Neural Orchestra uses /api/neural-orchestra/learning/status/ (different route).
     path('api/agents/list/', views_self_development.list_agents_api, name='list-agents'),
 
     path('api/v1/assign-job/', views_agent_work_platform.assign_specific_job, name='assign-specific-job'),
@@ -2526,7 +2523,7 @@ urlpatterns = [
     # Session 430: User Interview System
     path('api/interview/start/', start_interview, name='interview-start'),
     path('api/interview/respond/', respond_interview, name='interview-respond'),
-    path('api/interview/status/', interview_status, name='interview-status'),
+    # Session 1103c: /api/interview/status/ removed — zero frontend callers.
     path('api/interview/resume/', resume_interview, name='interview-resume'),
     path('api/profile/summary/', get_user_profile_summary, name='profile-summary'),
 
@@ -3199,7 +3196,9 @@ urlpatterns = [
     path('api/dashboard/learning/', dashboard_learning_data, name='dashboard-learning-data'),
     path('api/dashboard/collaboration/', dashboard_collaboration_data, name='dashboard-collaboration-data'),
     path('api/dashboard/costs/', dashboard_cost_data, name='dashboard-cost-data'),
-    path('api/dashboard/health/', dashboard_health_data, name='dashboard-health-data'),
+    # Session 1103c: /api/dashboard/health/ removed — api.ts declares
+    # dashboardHealth() but no React component imports it. Use
+    # /api/agent-dashboard/health/ (line below) if a caller ever needs it.
     path('api/dashboard/feed/', dashboard_feed_data, name='dashboard-feed-data'),
     path('api/dashboard/verification/', dashboard_verification_data, name='dashboard-verification-data'),
 
@@ -3570,8 +3569,9 @@ urlpatterns = [
 
     # Learning path endpoints
     path('api/learning/trigger/', trigger_learning_query, name='learning-trigger'),
-    # api/learning/status/ — REMOVED: duplicate of line 2465 (learning_status_api wins)
-    path('api/learning/status/<str:session_id>/', get_learning_status, name='learning-status-by-session'),
+    # Session 1103c: /api/learning/status/<session_id>/ removed —
+    # zero frontend callers, complemented the already-removed
+    # /api/learning/status/ route.
     path('api/learning/knowledge-map/<str:agent_id>/', get_agent_knowledge_map, name='agent-knowledge-map'),
     path('api/learning/feed/', get_learning_feed, name='learning-feed'),
     path('api/agents/<str:agent_name>/solutions/recent/', get_agent_solutions_recent, name='agent-solutions-recent'),
@@ -3626,7 +3626,7 @@ urlpatterns = [
     path('api/partnership/complete/<uuid:project_id>/', views_partnership.complete_partnership, name='complete-partnership'),
     path('api/partnership/opportunities/', views_partnership.partnership_opportunities_api, name='partnership-opportunities-api'),
     path('api/partnership/stats/', views_partnership.partnership_stats_api, name='partnership-stats-api'),
-    path('api/partnership/health/', views_partnership.partnership_health_check, name='partnership-health'),
+    # Session 1103c: /api/partnership/health/ removed — zero frontend callers.
     path('api/v1/', include('backend.auto_endpoints.urls')),
 
     # Session 100: Part 11 - Leadership Dashboard Endpoints
