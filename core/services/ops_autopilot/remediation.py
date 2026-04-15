@@ -677,7 +677,11 @@ class RemediationEngine:
 
     def _get_current_timeout(self, agent_name: str) -> int:
         """Get current timeout for an agent (check override first, then default map)."""
-        # Check for existing override
+        # Check for existing override.
+        # Session 1103c: loud on failure so a broken SystemConfiguration
+        # lookup doesn't silently revert an agent to its hardcoded
+        # default timeout — the override system is how ops_autopilot
+        # tunes timeouts adaptively.
         try:
             from core.models.system import SystemConfiguration
             override = SystemConfiguration.objects.filter(
@@ -685,8 +689,13 @@ class RemediationEngine:
             ).first()
             if override:
                 return int(override.value)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                "ops_autopilot.remediation: agent_timeout_override "
+                "lookup failed for %s (%s: %s) — falling back to "
+                "hardcoded default",
+                agent_name, type(e).__name__, e,
+            )
 
         # Fall back to the hardcoded map
         AGENT_TIMEOUT_DEFAULTS = {
@@ -754,14 +763,24 @@ class RemediationEngine:
         result['checks'].append(check)
         result['passed'] = check['passed']
 
-        # Update playbook if this was from one
+        # Update playbook if this was from one.
+        # Session 1103c: loud on DoesNotExist — silent swallow here meant
+        # the playbook learning loop dropped feedback for any deleted/
+        # renamed playbook reference, leaving the playbook outcome
+        # accuracy permanently stale.
         playbook_id = (action.verification_result or {}).get('playbook_id')
         if playbook_id:
             try:
                 playbook = RemediationPlaybook.objects.get(id=playbook_id)
                 playbook.record_outcome(succeeded=check['passed'])
             except RemediationPlaybook.DoesNotExist:
-                pass
+                logger.warning(
+                    "ops_autopilot.remediation: RemediationPlaybook "
+                    "id=%s no longer exists — outcome recording "
+                    "skipped, playbook learning loop will not see "
+                    "this result",
+                    playbook_id,
+                )
 
         # If heuristic succeeded, create a playbook entry for future use
         source = (action.verification_result or {}).get('source', '')
