@@ -1703,8 +1703,16 @@ from core.views_image_edit import (  # noqa: E402
     _execute_apply_color_grade,
     _execute_resize_image_for_format,
 )
-from core.image_views.session import (  # noqa: E402
-    get_or_create_session,
-    update_session_transcript,
-)
+# Session 1083 (Rigby audit): session helpers via lazy proxy to
+# views_image_misc (sibling definition of the same helpers) —
+# importing from core.image_views.session triggers the image_views
+# package __init__ which has a pre-existing circular dependency.
+def get_or_create_session(*args, **kwargs):
+    from core.views_image_misc import get_or_create_session as _f
+    return _f(*args, **kwargs)
+
+def update_session_transcript(*args, **kwargs):
+    from core.views_image_misc import update_session_transcript as _f
+    return _f(*args, **kwargs)
+
 from core.views_creative_director import get_user_preferences  # noqa: E402
