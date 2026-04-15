@@ -1403,10 +1403,6 @@ from core.views_revenue_tracking import (
     update_revenue_status_view,
     revenue_history_view
 )
-# Session 1084 round 50: `from core import views_partnership` removed —
-# all partnership routes deleted, module no longer used in urls.py. The
-# views_partnership module file itself is not touched; if another caller
-# still imports it we leave that alone as a separate concern.
 
 # Session 544: Autonomous Reasoning Engine API
 from core import views_autonomous_reasoning
@@ -3601,11 +3597,6 @@ urlpatterns = [
     # Opportunity and application endpoints (CRITICAL FIX - Session 37-A Priority 5)
     path('api/opportunities/quick-apply/', lambda r: __import__('core.views_opportunities', fromlist=['quick_apply']).quick_apply(r), name='quick-apply'),
 
-    # Session 1084 round 50: Entire PARTNERSHIP SYSTEM (Session 38) route
-    # block removed. All 8 routes (3 page routes + 5 api/partnership/ routes)
-    # had zero frontend callers. The views_partnership module is no longer
-    # imported in urls.py after this removal. Prior round 44 (Session 1083)
-    # already removed /api/partnership/health/ from this block.
     path('api/v1/', include('backend.auto_endpoints.urls')),
 
     # Session 100: Part 11 - Leadership Dashboard Endpoints
