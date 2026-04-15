@@ -593,8 +593,18 @@ class PortfolioAllocator:
                     'impact_points': row['total_points'] or 0,
                     'events': row['event_count'] or 0,
                 }
-        except Exception:
-            pass
+        except Exception as _e:
+            # Session 1103c: was 'except Exception: pass' which
+            # silently dropped per-desk impact aggregation. The IQROI
+            # calculation downstream then ran on empty desk_impact
+            # and produced misleading per-desk ROI numbers with no
+            # signal that the upstream query had broken.
+            logger.warning(
+                "ops_autopilot.impact: desk_impact aggregation failed "
+                "(%s: %s) — IQROI per-desk numbers will be missing "
+                "this slice",
+                type(_e).__name__, _e,
+            )
 
         # Cost by desk (approximate: map agent costs to desks)
         desk_cost = {}
@@ -622,8 +632,18 @@ class PortfolioAllocator:
                 if desk not in desk_cost:
                     desk_cost[desk] = 0
                 desk_cost[desk] += float(ac['total_cost'] or 0)
-        except Exception:
-            pass
+        except Exception as _e:
+            # Session 1103c: sibling fix to the desk_impact swallow
+            # above. Without desk_cost, IQROI per-desk
+            # (impact / cost) divides by an empty dict and produces
+            # zero-cost ROI numbers — making every desk look
+            # infinitely profitable.
+            logger.warning(
+                "ops_autopilot.impact: desk_cost aggregation failed "
+                "(%s: %s) — IQROI per-desk cost basis will be "
+                "missing, ROI numbers will look artificially high",
+                type(_e).__name__, _e,
+            )
 
         # Compute IQROI per desk
         point_value = (
