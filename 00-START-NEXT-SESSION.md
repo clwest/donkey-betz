@@ -17,10 +17,27 @@ PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557 \
 
 ---
 
-**Date:** April 15, 2026 (end of Session 1084)
-**Previous session handoff:** [`docs/handoffs/SESSION_1084_HEARTBEAT_AND_FACTORIES.md`](docs/handoffs/SESSION_1084_HEARTBEAT_AND_FACTORIES.md)
+**Date:** April 15, 2026 (end of Session 1085)
+**Previous session handoff:** [`docs/handoffs/SESSION_1084_HEARTBEAT_AND_FACTORIES.md`](docs/handoffs/SESSION_1084_HEARTBEAT_AND_FACTORIES.md) — Session 1085 handoff not yet written
 **Previous session PA conversation (LOCAL):** `pa-272275b6e125` — Chris creates a new one each session, so ask him for the new ID before your first Rigby message.
-**Status:** Stack is in the cleanest state of the week. All 5 Session 1084 PRs merged and verified. Heartbeat durability has triple empirical proof. CLOSE_WAIT hang class mitigated on Anthropic (#1893) and OpenAI Tier 1 (#1895). 21 dead routes removed (#1894).
+**Status:** Stack is spotless. Session 1085 shipped 6 PRs and merged all of them clean. `core/` is now 100% OpenAI-factory-migrated. 1,306 lines of dead code removed. Tier 4 (`ai_core/`) is the only remaining factory drift and is queued as the primary target for Session 1086.
+
+---
+
+## 🎯 SESSION 1085 — What Was Accomplished (6 PRs merged)
+
+| PR | Title | Commit |
+|----|-------|--------|
+| **#1898** | OpenAI factory Tier 2 (22 files, 25 sites — views + management commands) | 6def84cb |
+| **#1899** | Delete dead `journeyApi.status` stub — initiative 85f279b9 closed | 592ada12 |
+| **#1900** | Delete 3 dead files + round-50 breadcrumbs (1306 deletions) | bd4ccfac |
+| **#1901** | Tier 3a — `conversation_orchestrator` factory migration | 55b560f3 |
+| **#1902** | Tier 3b — `super_platform/coordinator` factory migration | 9ffd7264 |
+| **#1903** | Tier 3c — `agent_slack_consumer` factory migration | 4df41e74 |
+
+**Final `core/` drift audit:** zero hits (only `core/settings.py:1030` comment remains, false positive).
+
+**Retraction:** `core/conversation_orchestrator.py` is **NOT dead code** (flagged in 1084). It has 5 active lazy callers — `agent_conversation_consumer`, `content_review_panel`, `content_deliberation_runner`, `conversation_action_dispatcher`, `verify_surgical_moves`. Do not delete it.
 
 ---
 
@@ -42,30 +59,61 @@ PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557 \
 
 ---
 
-## 🚀 NEXT SESSION WARM-UP (Rigby's recommended priority order)
+## 🚀 SESSION 1086 WARM-UP — OpenAI factory Tier 4 (`ai_core/`)
 
-### 1. OpenAI factory Tier 2 — highest leverage, mechanical
+### Scope
 
-**Scope:** migrate ~27 sites across `core/views*.py` (~18) and `core/management/commands/*.py` (~9).
+8 bare `OpenAI(` sites across 7 files in `ai_core/` — never in scope for Tier 1 (#1895) or Tier 2 (#1898) which were both `core/`-only:
 
-**Why now:** Tier 1 (#1895) addressed the 58 highest-risk worker hot paths. Tier 2 closes the drift on the lower-risk views and CLI commands. Same factory pattern, same verification protocol. Expected ~45 minutes.
+| File | Line | Form | Status |
+|------|------|------|--------|
+| `ai_core/intelligence/income_builder.py` | 28 | `OpenAI(api_key=...)` | active — consumers.py awaits `analyze_user_potential` |
+| `ai_core/intelligence/embedding_generator.py` | 75 | `OpenAI(api_key=...)` | active — persistent_learning_engine singleton |
+| `ai_core/intelligence/proposal_manager.py` | 656, 927 | `OpenAI(api_key=...)` | active — autonomous_executor (incl. codegen templates) |
+| `ai_core/agents/real_content_creator.py` | 27 | `OpenAI(api_key=...)` | active — universal_agent_loader registry |
+| `ai_core/agents/real_job_executor.py` | 35 | `openai.OpenAI(api_key=...)` | active — universal_agent_loader registry |
+| `ai_core/agents/job_application_orchestrator.py` | 291 | `OpenAI(api_key=...)` | **⚠ verify before migrating** — only self-test reference at line 456, may be orphaned |
+| `ai_core/api/freelance_api.py` | 166 | `openai.OpenAI(api_key=...)` | needs entrypoint check |
 
-**Pattern proven in #1895:**
-- Add `from core.services.openai_client_factory import get_openai_client` import (AFTER any multi-line `from X import (...)` blocks — the previous bulk script broke 4 files by inserting inside multi-line imports)
-- Replace `OpenAI(api_key=..., ...)` → `get_openai_client(api_key=..., ...)`
-- Strip any custom `timeout=` kwargs (factory's read=90s is enforced centrally)
-- Keep `import openai` alongside factory import if the file also references `openai.RateLimitError` etc. in except blocks
-- **Never** hoist to module-level import if the file is imported during Django startup from `core.services.agent_collaboration` chain — use lazy inline imports like `models_unified_system.py`
+### Rigby's suggested split (2 PRs)
 
-**Drift audit command (should return zero in core/views + core/management/commands after this PR):**
+**PR 1 — `ai_core/intelligence/*`:** income_builder + embedding_generator + proposal_manager
+**PR 2 — `ai_core/agents/*` + `ai_core/api/freelance_api.py`:** the remaining 4 files (after orchestrator orphan verdict)
+
+Reason: intelligence layer has a cleaner import graph; agents layer touches `universal_agent_loader` which has more runtime surfaces.
+
+### Key landmines Rigby flagged
+
+- **`embedding_generator.py` has a module-level singleton** at line 517: `embedding_generator = LearningEmbeddingGenerator()`. If the class constructor creates the OpenAI client at import time, that's a **startup trap**. Bias toward lazy init — move client creation into a method or explicit initializer.
+- **`income_builder.py` is called from async consumers** (`consumers.py:382` — `await income_builder.analyze_user_potential(profile)`). Don't introduce sync-only code in async paths.
+- **`proposal_manager.py` is referenced inside codegen templates** in `autonomous_executor.py:189`. Do not change the module name or class name — just migrate client instantiation.
+- **`job_application_orchestrator.py` orphan verdict pending** — Rigby's last background task was truncated before she could confirm it has zero production callers. First thing in 1086: finish that check. If orphaned, delete instead of migrate.
+
+### Pattern proven across #1898 + #1901-1903
+
+- `OpenAI(api_key=X)` → `get_openai_client(api_key=X)`
+- `openai.OpenAI(api_key=X)` → `get_openai_client(api_key=X)` + remove `import openai` (after verifying no other `openai.*` refs)
+- `base_url` overrides: `get_openai_client(api_key=X, base_url=Y)` — factory supports this
+- Keep swaps surgical — don't hoist inline imports to module-level in files where the client is called inside a single function
+
+### Drift audit (should return zero for `ai_core/` after Tier 4)
+
 ```bash
-grep -R "OpenAI(" core/views*.py core/management/commands/*.py --include='*.py' | grep -v openai_client_factory | grep -v get_openai_client
+grep -RnE '\bOpenAI\(|\bopenai\.OpenAI\(' ai_core --include='*.py' | grep -v openai_client_factory
 ```
 
-**Pre-PR checks:**
-- `python -c "import ast; [ast.parse(open(f).read()) for f in changed_files]"`
-- `python manage.py check` → 0 issues
-- Live smoke test via `manage.py shell` — import factory + make one real OpenAI call
+### Pre-PR checks (per file)
+
+- AST parse
+- `python manage.py check`
+- Import smoke for the migrated file (Rigby gave these per-file in her background response; the first 4 are captured in [memory/project_session_1085_factory_complete.md](~/.claude/projects/-Users-donkeyking-development-unified-donkey-betz/memory/project_session_1085_factory_complete.md))
+- If touching `embedding_generator.py`, confirm no client instantiation at import time — add a `python -c "from ai_core.intelligence.embedding_generator import embedding_generator; print('OK')"` smoke
+
+### First thing in 1086
+
+1. New LOCAL PA conversation ID from Chris + `platform_config_tool overview` check
+2. Ask Rigby to finish the entrypoint map for `real_job_executor`, `job_application_orchestrator`, and `freelance_api` (her 1085 response was truncated mid-file-D) AND give the orchestrator orphan verdict
+3. Then cut the PR 1 branch
 
 ### 2. Missing `learning_journeys.status()` backend route — quick follow-up
 
