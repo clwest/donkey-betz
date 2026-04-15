@@ -111,6 +111,195 @@ class AgentControlEntry(models.Model):
         return agent_name in cls.get_blocked_names()
 
 
+class ActivePriority(models.Model):
+    """
+    Session 1086 PR 1: Rigby's proactive priority-aware routing — the model layer.
+
+    Each row is a "current priority" that the platform should optimize around
+    right now (e.g. "Platform hardening", "Newsletter Issue 2 ship",
+    "Tier 5 factory audit"). Beat tasks and autonomous dispatches will check
+    in with the active priority set BEFORE they run, and mismatched work gets
+    throttled into a low-concurrency semaphore instead of competing for the
+    same CPU/LLM budget as matched work.
+
+    This PR (PR 1 of 3) delivers only the **schema + PA tool + data migration**.
+    No behavior change. The matching logic lives in ``core/services/priority/``
+    in PR 2, and ``agent_router.route()`` integration + the semaphore land in
+    PR 3. See initiative ``2dcb79d7-6f2b-4e67-a366-a54e96d7870f``.
+
+    Design contract (locked with Rigby in the Session 1086 design review):
+
+    - **Fail-open everywhere.** No active priorities → route normally. All
+      expired → route normally. Matching helper raises → route normally.
+      This model must never cause a production outage.
+    - **Deprioritize, don't drop.** Mismatched work still executes; it just
+      queues behind matched work. The model knows nothing about queues —
+      that lives in PR 3. This class is pure state.
+    - **Matching precedence (implemented in PR 2, documented here as the
+      contract):** whitelist hit → blacklist hit → tag overlap → opt-in
+      keyword match → fail-open MATCH. See ``enable_keyword_match`` below.
+    - **TTL bounds:** default 24h, minimum 10min (anti-flap), maximum 7 days
+      (anti-zombie). Enforced in the PA tool, not here — the model accepts
+      any ``expires_at``.
+    - **Extension point for future governance work:** the JSONField lists
+      (``tags``, ``agent_whitelist``, ``agent_blacklist``) can absorb new
+      matching modes without a schema migration. The future
+      ``enable_beat_tasks`` / ``agent_family_enable`` governance features
+      flagged in Rigby's Q3 response will reuse ``tags`` as the primary key.
+    """
+
+    STATUS_ACTIVE = 'active'
+    STATUS_ARCHIVED = 'archived'
+    STATUS_EXPIRED = 'expired'
+    STATUS_CHOICES = [
+        (STATUS_ACTIVE, 'Active'),
+        (STATUS_ARCHIVED, 'Archived'),
+        (STATUS_EXPIRED, 'Expired'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Human-readable identity
+    name = models.CharField(
+        max_length=120,
+        help_text="Short human label, e.g. 'Platform hardening (Ops/Drift)'.",
+    )
+    description = models.TextField(
+        blank=True,
+        default='',
+        help_text="Free-form intent. What is this priority trying to accomplish?",
+    )
+
+    # Matching inputs (consumed by PriorityRouter in PR 2)
+    tags = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=(
+            "List of tag strings. Matched against derived agent tags "
+            "(agent_name + Agent.category.slug + AGENT_TAG_OVERRIDES dict). "
+            "Primary automatic matching mechanism."
+        ),
+    )
+    agent_whitelist = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=(
+            "List of exact agent_name strings that ALWAYS match this priority "
+            "regardless of tags. Highest precedence in the match algorithm."
+        ),
+    )
+    agent_blacklist = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=(
+            "List of exact agent_name strings that NEVER match this priority "
+            "even if tags overlap. Forces them into the mismatched lane."
+        ),
+    )
+    enable_keyword_match = models.BooleanField(
+        default=False,
+        help_text=(
+            "Opt-in substring keyword match against agent_name + task. "
+            "Off by default per Rigby's design review — keyword matching "
+            "creates false positives ('audit' matches everything), so only "
+            "enable this when the tag list is explicitly narrow."
+        ),
+    )
+
+    # Ranking and ownership
+    priority_rank = models.IntegerField(
+        default=100,
+        help_text=(
+            "Lower = higher priority. Multiple priorities can coexist; the "
+            "router treats any active match as a MATCH. Rank is for future "
+            "tie-breaking in Option B (dedicated queue) routing."
+        ),
+    )
+    owner = models.CharField(
+        max_length=60,
+        default='rigby',
+        help_text="Who owns this priority: 'rigby', 'chris', 'system'.",
+    )
+
+    # Status + lifecycle
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_ACTIVE,
+        db_index=True,
+    )
+    activated_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When the priority was first created and made active.",
+    )
+    expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=(
+            "Optional TTL expiry. If set and in the past, "
+            "get_active_priorities() auto-transitions status → expired."
+        ),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Active Priority'
+        verbose_name_plural = 'Active Priorities'
+        ordering = ['priority_rank', '-activated_at']
+
+    def __str__(self):
+        return f"{self.name} ({self.status}, rank={self.priority_rank})"
+
+    @property
+    def is_expired(self) -> bool:
+        if not self.expires_at:
+            return False
+        from django.utils import timezone
+        return self.expires_at <= timezone.now()
+
+    @classmethod
+    def get_active_priorities(cls) -> list:
+        """
+        Return a list of currently-active priority dicts, auto-expiring any
+        TTL-expired rows as a side effect. Fail-open on DB errors (returns
+        empty list, which the router treats as "no priorities → match all").
+
+        Mirrors ``AgentControlEntry.get_blocked_names()``: same TTL pattern,
+        same update-on-read semantics, same fail-open fallback. PR 2's
+        PriorityRouter will layer a 60s in-process cache on top of this.
+
+        Each returned dict contains the keys PriorityRouter needs for
+        matching (id, name, tags, agent_whitelist, agent_blacklist,
+        enable_keyword_match, priority_rank). Full row access is still
+        available via the ORM for tools that need it.
+        """
+        from django.utils import timezone
+        try:
+            now = timezone.now()
+            active = []
+            for entry in cls.objects.filter(status=cls.STATUS_ACTIVE):
+                if entry.expires_at and entry.expires_at <= now:
+                    entry.status = cls.STATUS_EXPIRED
+                    entry.save(update_fields=['status', 'updated_at'])
+                    continue
+                active.append({
+                    'id': str(entry.id),
+                    'name': entry.name,
+                    'tags': list(entry.tags or []),
+                    'agent_whitelist': list(entry.agent_whitelist or []),
+                    'agent_blacklist': list(entry.agent_blacklist or []),
+                    'enable_keyword_match': entry.enable_keyword_match,
+                    'priority_rank': entry.priority_rank,
+                    'expires_at': entry.expires_at.isoformat() if entry.expires_at else None,
+                })
+            return active
+        except Exception:
+            # DB unavailable / table missing / migration in flight → fail open
+            return []
+
+
 class Agent(models.Model):
     """
     Represents one of the 149 specialized AI agents in the system
