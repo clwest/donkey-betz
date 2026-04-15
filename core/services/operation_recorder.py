@@ -44,6 +44,73 @@ def record_op(
     """
     Record a workspace operation. Fire-and-forget — never raises.
 
+    Session 1103c: detects if called from an async context and dispatches
+    the sync Django ORM work onto a worker thread via asgiref.sync.sync_to_async
+    wrapped in async_to_sync. Previously this entire function was sync
+    Django ORM, and calling it from the PA's async task raised
+    SynchronousOnlyOperation on the very first ProjectWorkspace.objects.get()
+    — which the broad except block caught and logged as a warning,
+    silently dropping every tool_call record from the Ops Run timeline
+    when invoked from PA. After batch 6 added the loud WARNING, this
+    was the first bug surfaced by the new logging.
+    """
+    # Route sync/async appropriately so async callers (PA task loop)
+    # don't trip SynchronousOnlyOperation.
+    try:
+        import asyncio
+        asyncio.get_running_loop()
+        in_async = True
+    except RuntimeError:
+        in_async = False
+
+    if in_async:
+        # Kick the sync body onto a worker thread without blocking.
+        # We can't await from a sync-signature function, so we use
+        # asgiref.sync_to_async and execute via async_to_sync — which
+        # schedules the coroutine on a helper thread and returns.
+        try:
+            from asgiref.sync import sync_to_async, async_to_sync
+            async_to_sync(sync_to_async(_record_op_sync, thread_sensitive=False))(
+                workspace_id, op_type, title, description, actor_type,
+                actor_id, file_path, success, error_message,
+                execution_time_ms, metadata, entity_type, entity_id,
+                correlation_id, content,
+            )
+        except Exception as e:
+            logger.warning(
+                "[record_op] async dispatch failed for %s %s: %s",
+                op_type, title, e,
+            )
+        return
+
+    _record_op_sync(
+        workspace_id, op_type, title, description, actor_type, actor_id,
+        file_path, success, error_message, execution_time_ms, metadata,
+        entity_type, entity_id, correlation_id, content,
+    )
+
+
+def _record_op_sync(
+    workspace_id: Optional[str],
+    op_type: str,
+    title: str,
+    description: str,
+    actor_type: str,
+    actor_id: Optional[str],
+    file_path: str,
+    success: bool,
+    error_message: str,
+    execution_time_ms: int,
+    metadata: Optional[dict],
+    entity_type: Optional[str],
+    entity_id: Optional[str],
+    correlation_id: Optional[str],
+    content: str,
+):
+    """
+    Synchronous worker that actually touches the DB. Do not call directly
+    from async code — go through record_op() which dispatches safely.
+
     Args:
         workspace_id: UUID of the workspace (auto-detects active if None)
         op_type: Operation type (tool_call, bpaas_project_create, deploy, etc.)
