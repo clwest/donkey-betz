@@ -224,6 +224,21 @@ class RandomForestWrapper(BaseModelWrapper):
 
     def _get_engine(self):
         if self._ml_engine is None:
+            # Session 1083 round 41: SKIP_NLP_MODELS=1 on macOS Celery
+            # workers skips ALL heavy ML loads, not just DistilBERT —
+            # instantiating MLEngine() triggers joblib.load of
+            # sports_crypto_lstm / options_betting_nn / user_behavior_rf
+            # which race with ml_scoring_engine's lightgbm joblib load
+            # and hit Abseil RAW: Lock blocking. The env var is
+            # historically misnamed — treat it as SKIP_ALL_ML_MODELS
+            # for macOS worker safety.
+            import os
+            if os.environ.get('SKIP_NLP_MODELS') == '1':
+                logger.debug(
+                    "[model_registry] SKIP_NLP_MODELS=1 — RandomForestWrapper "
+                    "reports unavailable to avoid MLEngine mutex deadlock"
+                )
+                return None
             try:
                 from ml.core.ml_engine import MLEngine
                 self._ml_engine = MLEngine()
@@ -428,6 +443,16 @@ class DistilBERTWrapper(BaseModelWrapper):
 
     def _get_analyzer(self):
         if self._analyzer is None:
+            # Session 1083 round 41: SKIP_NLP_MODELS=1 short-circuits
+            # before MLEngine() instantiation (which loads sports
+            # LSTM/NN and races with lightgbm on macOS Abseil mutex).
+            import os
+            if os.environ.get('SKIP_NLP_MODELS') == '1':
+                logger.debug(
+                    "[model_registry] SKIP_NLP_MODELS=1 — DistilBERTWrapper "
+                    "reports unavailable to avoid MLEngine mutex deadlock"
+                )
+                return None
             try:
                 from ml.core.ml_engine import MLEngine
                 engine = MLEngine()
@@ -1042,20 +1067,30 @@ class ModelRegistry:
 
     def __init__(self):
         self._instances: Dict[str, BaseModelWrapper] = {}
+        # Session 1083 round 41: lock prevents two threads from
+        # concurrently instantiating the same wrapper class. Without
+        # this, RandomForestWrapper/DistilBERTWrapper could both race
+        # into MLEngine() and hit the Abseil mutex deadlock.
+        import threading as _mr_threading
+        self._instances_lock = _mr_threading.Lock()
 
     def get_model(self, model_name: str) -> Optional[BaseModelWrapper]:
         """
         Get a model wrapper instance by name.
 
         Uses lazy loading - models are instantiated on first request.
+        Thread-safe per round 41.
         """
         if model_name not in self.MODEL_CLASSES:
             logger.warning(f"Unknown model: {model_name}")
             return None
 
         if model_name not in self._instances:
-            wrapper_class = self.MODEL_CLASSES[model_name]
-            self._instances[model_name] = wrapper_class()
+            with self._instances_lock:
+                # Double-checked locking — re-read under lock
+                if model_name not in self._instances:
+                    wrapper_class = self.MODEL_CLASSES[model_name]
+                    self._instances[model_name] = wrapper_class()
 
         return self._instances[model_name]
 
@@ -1088,11 +1123,17 @@ class ModelRegistry:
 
 # Singleton instance
 _registry = None
+# Session 1083 round 41: lock for thread-safe singleton init
+import threading as _registry_threading
+_registry_lock = _registry_threading.Lock()
 
 
 def get_model_registry() -> ModelRegistry:
-    """Get the singleton model registry instance."""
+    """Get the singleton model registry instance. Thread-safe per round 41."""
     global _registry
     if _registry is None:
-        _registry = ModelRegistry()
+        with _registry_lock:
+            # Double-checked locking — re-read under lock
+            if _registry is None:
+                _registry = ModelRegistry()
     return _registry
