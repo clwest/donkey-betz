@@ -169,8 +169,15 @@ def get_service_logs(service_name: str, limit: int = 50) -> dict:
                 dep = svc.get('latestDeployment') or {}
                 deployment_id = dep.get('id')
                 break
-    except (KeyError, IndexError):
-        pass
+    except (KeyError, IndexError) as e:
+        # Session 1103c: was 'except (KeyError, IndexError): pass'
+        # which silently dropped Railway API response shape changes.
+        # Now logs which path errored so schema drift is visible.
+        logger.warning(
+            "td_handlers_railway: GraphQL response shape unexpected "
+            "while extracting deployment_id for service=%s (%s: %s)",
+            service_name, type(e).__name__, e,
+        )
 
     if not deployment_id:
         return {'error': f'No deployment found for {service_name}'}

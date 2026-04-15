@@ -269,7 +269,12 @@ class NewsletterHandlersMixin:
         workspace_id = payload.get('workspace_id')
         initiative_id = payload.get('initiative_id')
 
-        # Load sources — from explicit deliverable or from built-in source pack
+        # Load sources — from explicit deliverable or from built-in source pack.
+        # Session 1103c: was 'except Deliverable.DoesNotExist: pass'
+        # which silently fell back to the built-in source pack when a
+        # caller passed an explicit source_pack_id that no longer
+        # existed. The newsletter would generate with the wrong sources
+        # and the caller wouldn't know their pack reference was stale.
         sources = None
         source_pack_id = payload.get('source_pack_id')
         if source_pack_id:
@@ -278,7 +283,12 @@ class NewsletterHandlersMixin:
                 if sp.metadata and sp.metadata.get('sources'):
                     sources = sp.metadata['sources']
             except Deliverable.DoesNotExist:
-                pass
+                logger.warning(
+                    "td_handlers_newsletter: source_pack_id=%s not found "
+                    "— falling back to built-in source pack. Caller "
+                    "passed a stale or invalid pack reference.",
+                    source_pack_id,
+                )
         if not sources:
             from core.services.newsletter_sources import get_sources
             raw = get_sources()
