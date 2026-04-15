@@ -82,6 +82,17 @@ restart: stop celery-stop start celery ## Full restart of Daphne + Celery (use t
 
 restart-daphne: stop start ## Restart only Daphne (keeps Celery running)
 
+frontend-build: ## Build frontend/dist/ (Vite) + run postbuild manifest
+	@echo "==> Building frontend..."
+	cd frontend && npm run build
+
+frontend-ship: frontend-build ## Full UI deploy: build → collectstatic → restart Daphne
+	@echo "==> collectstatic (whitenoise manifest)..."
+	.venv/bin/python manage.py collectstatic --noinput
+	@echo "==> Restarting Daphne so the template loader re-reads frontend/dist/index.html..."
+	$(MAKE) restart-daphne
+	@echo "✓ UI live at http://$(HOST):$(PORT)/ — hard refresh your browser."
+
 status: ## Show process status and health endpoint
 	@echo "==> Service status summary"
 	@echo "Processes matching daphne, redis-server, manage.py:"
