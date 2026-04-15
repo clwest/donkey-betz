@@ -19,6 +19,8 @@ import logging
 import re
 from typing import List, Dict, Set
 
+from django.core.exceptions import ObjectDoesNotExist
+
 logger = logging.getLogger(__name__)
 
 
@@ -78,14 +80,29 @@ class LivingProjectService:
             if project.metadata.get('research_type'):
                 topics.add(project.metadata['research_type'].lower())
 
-        # From living config if exists
+        # From living config if exists.
+        # Session 1103c: was 'except Exception: pass # No config yet'
+        # which silently dropped project topic/keyword/competitor
+        # context whenever the living_config relation raised for any
+        # reason — including DB hiccups or schema drift, not just the
+        # intended "config doesn't exist yet" case. Project agents
+        # would then run with empty watch lists and look like they
+        # were deliberately tracking nothing.
         try:
             config = project.living_config
             topics.update([t.lower() for t in config.watch_topics])
             topics.update([k.lower() for k in config.watch_keywords])
             topics.update([c.lower() for c in config.watch_competitors])
-        except Exception:
-            pass  # No config yet
+        except (AttributeError, ObjectDoesNotExist):
+            pass  # Genuine "no config yet" — silent skip is correct
+        except Exception as e:
+            logger.warning(
+                "living_project_service: living_config lookup failed "
+                "for project %s (%s: %s) — watch topics/keywords/"
+                "competitors will be empty for this project",
+                getattr(project, 'id', '<unknown>'),
+                type(e).__name__, e,
+            )
 
         # Filter out common words
         stop_words = {'the', 'and', 'for', 'with', 'this', 'that', 'from', 'project'}

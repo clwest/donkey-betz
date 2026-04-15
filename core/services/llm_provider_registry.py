@@ -194,8 +194,20 @@ class OpenAIProvider(BaseLLMProvider):
                         error_type = 'server_error'
 
                 record_provider_error('openai', error_type)
-            except ImportError:
-                pass  # Health tracker not available
+            except ImportError as _hi:
+                # Session 1103c: was 'except ImportError: pass' which
+                # silently dropped provider error tracking for OpenAI
+                # if the health tracker module failed to import. The
+                # tracker is what feeds is_provider_degraded() which
+                # in turn feeds agent_llm_router fallback decisions —
+                # without it, the router can't route around degraded
+                # providers, and every error here is invisible.
+                logger.warning(
+                    "llm_provider_registry: provider_health_tracker "
+                    "unavailable for OpenAI error recording (%s) — "
+                    "router cannot react to OpenAI degradation",
+                    _hi,
+                )
 
             logger.error(f"OpenAI API error ({error_type}): {e}")
             return LLMResponse(
@@ -463,8 +475,16 @@ class AnthropicProvider(BaseLLMProvider):
                         error_type = 'server_error'
 
                 record_provider_error('anthropic', error_type)
-            except ImportError:
-                pass  # Health tracker not available
+            except ImportError as _hi:
+                # Session 1103c: same pattern as the OpenAI block
+                # above — silent ImportError on the health tracker
+                # leaves the router blind to Anthropic degradation.
+                logger.warning(
+                    "llm_provider_registry: provider_health_tracker "
+                    "unavailable for Anthropic error recording (%s) — "
+                    "router cannot react to Anthropic degradation",
+                    _hi,
+                )
 
             logger.error(f"Anthropic API error ({error_type}): {e}")
             return LLMResponse(

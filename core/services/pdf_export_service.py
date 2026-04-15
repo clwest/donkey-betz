@@ -914,13 +914,27 @@ def export_deliverable_to_pdf(deliverable_id: str, user_id) -> dict:
     # PDFs must be uploaded as resource_type='raw' on Cloudinary.
     # default_storage (MediaCloudinaryStorage) uses resource_type='image',
     # which makes PDF URLs return 404.
+    # Session 1103c: was 'except ImportError: pass # fall back to
+    # default_storage in dev'. In production, default_storage is
+    # MediaCloudinaryStorage which uses resource_type='image' and
+    # makes PDF URLs return 404. The silent fallback was masking a
+    # real production bug — if cloudinary_storage import broke in
+    # prod, every PDF export would land at a broken URL with no
+    # visible cause. Now logs an ERROR (not warning) when this
+    # happens outside DEBUG.
     storage = default_storage
     if not django_settings.DEBUG:
         try:
             from cloudinary_storage.storage import RawMediaCloudinaryStorage
             storage = RawMediaCloudinaryStorage()
-        except ImportError:
-            pass  # fall back to default_storage in dev
+        except ImportError as _ie:
+            logger.error(
+                "pdf_export_service: RawMediaCloudinaryStorage import "
+                "failed in non-DEBUG mode (%s) — falling back to "
+                "default_storage. PDFs will likely 404 because "
+                "MediaCloudinaryStorage uses resource_type='image'.",
+                _ie,
+            )
 
     saved_path = storage.save(storage_path, ContentFile(pdf_bytes))
     file_url = storage.url(saved_path)
