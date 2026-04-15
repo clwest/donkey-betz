@@ -2094,7 +2094,7 @@ Requirements:
                         create_deliverable(
                             title=doc_title,
                             content=content,
-                            agent_name=agent_name,
+                            agent_name='TechnicalDocumentAgent',
                             category=f"Initiative — Stage {stage_num}",
                             deliverable_type='document',
                             tags=['initiative', f'stage-{stage_num}', init.program or 'general'],
