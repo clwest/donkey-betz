@@ -34,6 +34,7 @@ from openai import OpenAI
 from django.conf import settings
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -193,7 +194,7 @@ class BaseBusinessResearchAgent(BaseAgent):
         self._unified_search = None
         self._current_task = None
         # W004 fix: Use _client backing variable since BaseAgent.client is a read-only property
-        self._client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        self._client = get_openai_client(api_key=settings.OPENAI_API_KEY)
 
         # Validate child class configuration
         if not self.research_type:

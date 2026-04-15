@@ -33,6 +33,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -415,10 +416,8 @@ Output your analysis as structured JSON with scores and reasoning."""
             from openai import OpenAI
             import os
 
-            client = OpenAI(
-                api_key=os.getenv('OPENAI_API_KEY'),
-                timeout=60.0
-            )
+            # Session 1084 round 51: custom 60s timeout dropped — factory enforces 90s read centrally
+            client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))
 
             # Truncate content if too long
             max_content_length = 4000

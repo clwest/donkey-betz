@@ -27,6 +27,7 @@ from core.agents.report_schemas import (
     Claim, Recommendation, RiskFlag, SourceInfo,
     build_provenance, format_disclaimer
 )
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -609,7 +610,7 @@ Remember: Sharp money moves lines. Look for where the line went AGAINST public b
             from openai import OpenAI
             import os
 
-            client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+            client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))
 
             # Prepare event summary
             event_summary = []

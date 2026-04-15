@@ -19,6 +19,7 @@ from typing import Dict, Any
 
 from django.db import transaction
 from openai import OpenAI
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ class ReviewDocumentService:
     """
 
     def __init__(self):
-        self.client = OpenAI()
+        self.client = get_openai_client()
 
     def generate_review_document(self, artifact) -> 'ReviewDocument':
         """

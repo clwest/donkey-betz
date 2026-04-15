@@ -22,6 +22,7 @@ from typing import Any, Dict, List
 from ..base_agent import BaseAgent, AgentResult
 from core.agents.report_schemas import build_provenance, format_disclaimer
 from ml.auto_selection import TaskType
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -537,7 +538,7 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
         """Analyze a blockchain transaction."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         # Format transaction data for analysis
         tx_info = ""
@@ -608,7 +609,7 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
 
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         patterns_to_check = target_patterns or list(SUSPICIOUS_PATTERNS.keys())
 
@@ -664,7 +665,7 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
         """Trace value flow through transactions."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         start_point = starting_address or starting_tx or "Not specified"
 
@@ -720,7 +721,7 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
         """Check address reputation and associations."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         sources = check_sources or ["etherscan_labels", "tornado", "known_attackers", "exchanges"]
 

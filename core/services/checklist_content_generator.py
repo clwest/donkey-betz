@@ -11,6 +11,7 @@ import json
 from typing import Dict, Any, Optional
 from openai import OpenAI
 import os
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ class ChecklistContentGenerator:
     """
 
     def __init__(self):
-        self.client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+        self.client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
 
     def generate_all_items(self, gate) -> Dict[str, str]:
         """

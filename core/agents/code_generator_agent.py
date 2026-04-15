@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional
 
 from .base_agent import BaseAgent, AgentResult
 from ml.auto_selection import TaskType
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -747,7 +748,7 @@ IMPORTANT: You MUST use read_file and edit_file on these specific files. Do NOT 
         """
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         framework_context = f" using {framework}" if framework else ""
         docs_instruction = "Include comprehensive docstrings and comments." if include_docs else "Keep comments minimal."
@@ -817,7 +818,7 @@ Return the code in a properly formatted code block."""
         """Create a project structure with all necessary files."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         prompt = f"""Create a complete project structure for:
 
@@ -913,7 +914,7 @@ content
         """Analyze code for various quality metrics."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         analysis_prompts = {
             "architecture": "Analyze the code architecture, design patterns used, and structural organization.",
@@ -967,7 +968,7 @@ Provide:
         """Refactor code based on specified goals."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         api_note = "IMPORTANT: Preserve the public API/interface - only internal implementation should change." if preserve_api else "You may change the API if it improves the design."
 
@@ -1018,7 +1019,7 @@ Provide:
         """Generate tests for the given code."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         coverage_instructions = {
             "basic": "Cover the main happy path scenarios.",

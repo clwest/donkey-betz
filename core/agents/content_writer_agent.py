@@ -31,6 +31,7 @@ Content Types Supported:
 
 Usage:
     from core.agents.content_writer_agent import ContentWriterAgent
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
     agent = ContentWriterAgent(user=request.user)
     result = agent.execute(
@@ -1443,10 +1444,8 @@ This is the FINAL version — make it great."""
             from openai import OpenAI
             import os
 
-            client = OpenAI(
-                api_key=os.getenv('OPENAI_API_KEY'),
-                timeout=120.0,
-            )
+            # Session 1084 round 51: custom 120s timeout dropped — factory enforces 90s read centrally
+            client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))
 
             response = client.chat.completions.create(
                 model="gpt-5.2",
@@ -1597,7 +1596,8 @@ Use footnote citations [1] [2] with Sources at bottom.
             from openai import OpenAI
             import os
 
-            client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'), timeout=120.0)
+            # Session 1084 round 51: custom 120s timeout dropped — factory enforces 90s read centrally
+            client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))
 
             response = client.chat.completions.create(
                 model="gpt-5.2",
@@ -1892,11 +1892,9 @@ CITATION RULES:
             from openai import OpenAI
             import os
 
-            # Session 767: Add timeout to OpenAI client to prevent hanging
-            client = OpenAI(
-                api_key=os.getenv('OPENAI_API_KEY'),
-                timeout=120.0  # 2 minute timeout for API calls
-            )
+            # Session 767: timeout to OpenAI client to prevent hanging.
+            # Session 1084 round 51: custom 120s timeout dropped — factory enforces 90s read centrally.
+            client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))
 
             # Session 523: Build intelligent system prompt with all context
             # Session 891: Added topic parameter for finance context injection

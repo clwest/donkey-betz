@@ -14,6 +14,7 @@ This is the missing "action layer" between data collection and revenue.
 import logging
 from typing import Dict, List
 from datetime import datetime, timezone
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ class IncomeActionService:
         if self.gpt_client is None:
             try:
                 from openai import OpenAI
-                self.gpt_client = OpenAI()
+                self.gpt_client = get_openai_client()
             except Exception as e:
                 logger.error(f"Failed to initialize GPT client: {e}")
         return self.gpt_client

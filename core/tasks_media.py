@@ -30,6 +30,7 @@ from core.tasks import (  # noqa: F401
     poll_resolve_job_status,
     record_resolve_outcome,
 )
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -292,7 +293,7 @@ def _impl_generate_memory_embedding(memory_id: str):
             embed_text += f"\n\nContext: {memory.context}"
 
         # Generate embedding via OpenAI
-        client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+        client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
 
         response = client.embeddings.create(
             model="text-embedding-3-small",
@@ -471,7 +472,7 @@ def _impl_transcribe_video_task(self, transcript_id):
 
         # Transcribe with OpenAI Whisper
         from openai import OpenAI
-        client = OpenAI(api_key=django_settings.OPENAI_API_KEY)
+        client = get_openai_client(api_key=django_settings.OPENAI_API_KEY)
 
         with open(audio_path, 'rb') as audio_file:
             whisper_result = client.audio.transcriptions.create(
@@ -597,7 +598,7 @@ def _impl_ingest_video_task(self, document_id, tmp_video_path, original_filename
 
         # --- Stage 3: Transcribe with Whisper ---
         from openai import OpenAI
-        client = OpenAI(api_key=django_settings.OPENAI_API_KEY)
+        client = get_openai_client(api_key=django_settings.OPENAI_API_KEY)
 
         with open(audio_path, 'rb') as audio_file:
             transcript = client.audio.transcriptions.create(
@@ -786,7 +787,7 @@ def _impl_youtube_whisper_task(self, document_id, youtube_url, user_id, language
 
         # --- Stage 2: Transcribe with OpenAI Whisper ---
         from openai import OpenAI
-        client = OpenAI(api_key=django_settings.OPENAI_API_KEY)
+        client = get_openai_client(api_key=django_settings.OPENAI_API_KEY)
 
         with open(audio_path, 'rb') as audio_file:
             transcript = client.audio.transcriptions.create(

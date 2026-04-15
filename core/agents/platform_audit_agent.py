@@ -25,6 +25,7 @@ from typing import Dict, Any, List
 
 from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig, OutputCategory, strip_simulated_tool_json
 from ml.auto_selection import TaskType
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -284,7 +285,8 @@ Include counts, categorizations, and actionable findings."""
         """Call OpenAI and handle tool calls."""
         from openai import OpenAI
 
-        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'), timeout=120.0)
+        # Session 1084 round 51: custom 120s timeout dropped — factory enforces 90s read centrally
+        client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))
 
         messages = [
             {"role": "system", "content": self.system_prompt},

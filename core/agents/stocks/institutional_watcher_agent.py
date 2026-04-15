@@ -20,6 +20,7 @@ from datetime import datetime, timedelta, timezone as dt_timezone
 from core.agents.base_agent import BaseAgent, AgentResult, WEB_SEARCH_TOOL, strip_simulated_tool_json
 from core.agents.report_schemas import build_provenance, format_disclaimer
 from ml.auto_selection import TaskType
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -216,7 +217,7 @@ Focus on transactions that diverge from normal patterns."""
 
                 # Session 761: Call LLM with tools enabled
                 from openai import OpenAI
-                client = OpenAI()
+                client = get_openai_client()
 
                 response = client.chat.completions.create(
                     model="gpt-5-mini",

@@ -48,6 +48,7 @@ from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 from openai import OpenAI
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 
 class OutputCategory(Enum):
@@ -527,10 +528,7 @@ class BaseAgent(ABC, TimeTravelMixin):
             # Session 1020: Reduced from 120s to 60s — if OpenAI hasn't responded
             # in 60s it's having issues; agents with tool loops compound this delay
             # Session 1074: Use per-agent llm_timeout class attribute
-            self._client = OpenAI(
-                api_key=settings.OPENAI_API_KEY,
-                timeout=self.llm_timeout,
-            )
+            self._client = get_openai_client(api_key=settings.OPENAI_API_KEY,)
         return self._client
 
     @property

@@ -15,6 +15,7 @@ The goal is to transform generic spider queries into domain-specific ones:
 
 Usage:
     from core.services.domain_extraction_service import DomainExtractionService
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
     service = DomainExtractionService()
     result = service.extract_domains("AI-powered fitness coaching app")
@@ -335,7 +336,7 @@ class DomainExtractionService:
         More accurate but slower than keyword extraction.
         """
         from openai import OpenAI
-        client = OpenAI()
+        client = get_openai_client()
 
         domain_list = list(self.domains.keys())
 

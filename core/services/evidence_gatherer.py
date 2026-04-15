@@ -15,6 +15,7 @@ Evidence Priority (stops at 80% confidence):
 import logging
 from typing import Dict, Any, List, Optional
 from django.utils import timezone
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -396,7 +397,7 @@ class EvidenceGatherer:
             from openai import OpenAI
             from django.conf import settings
 
-            client = OpenAI(api_key=settings.OPENAI_API_KEY)
+            client = get_openai_client(api_key=settings.OPENAI_API_KEY)
 
             # Build context for LLM
             sample_errors = [d.error_message[:200] for d in detections[:3]]
