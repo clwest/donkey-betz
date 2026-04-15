@@ -64,20 +64,33 @@ def record_op(
     try:
         from core.models_skin_layer import ProjectWorkspace, WorkspaceOperation
 
-        # Auto-detect active workspace if not specified
+        # Auto-detect active workspace if not specified.
+        # Session 1103c: explicit workspace_id lookup used to swallow
+        # DoesNotExist silently and fall through to is_active fallback,
+        # which hid stale/wrong workspace IDs being passed by callers.
         ws = None
         if workspace_id:
             try:
                 ws = ProjectWorkspace.objects.get(id=workspace_id)
             except ProjectWorkspace.DoesNotExist:
-                pass
+                logger.warning(
+                    "[record_op] Explicit workspace_id=%s not found — "
+                    "falling back to is_active workspace. Caller passed "
+                    "a stale or invalid workspace ID.",
+                    workspace_id,
+                )
 
         if not ws:
             ws = ProjectWorkspace.objects.filter(is_active=True).first()
 
         if not ws:
-            # No workspace available — log but don't fail
-            logger.debug("[record_op] No workspace for op: %s %s", op_type, title)
+            # No workspace available — upgrade from debug to warning
+            # so operation drops are visible in the Ops Run timeline.
+            logger.warning(
+                "[record_op] No workspace resolved for op %s (title=%r) "
+                "— operation record dropped",
+                op_type, title[:80] if title else '',
+            )
             return
 
         # Map op_type to WorkspaceOperation's operation_type choices
