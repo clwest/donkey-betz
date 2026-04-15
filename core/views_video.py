@@ -843,15 +843,23 @@ def check_video_status(request, task_id):
                             if video_history.source_image:
                                 source_image_id = str(video_history.source_image.id)
 
-                            assistant.track_generated_video(
+                            from core.epa_handlers_utility import track_generated_video_on_assistant
+                            track_generated_video_on_assistant(
+                                assistant,
                                 video_id=str(video_history.id),
                                 video_url=local_video_url,
                                 prompt=video_history.prompt,
-                                source_image_id=source_image_id
+                                source_image_id=source_image_id,
                             )
+                            cache.set(cache_key, assistant, timeout=3600)
                             logger.info(f"🎬 Tracked AI Assistant video {video_history.id} (source_image: {source_image_id})")
                     except Exception as e:
-                        logger.warning(f"⚠️ Failed to track AI Assistant video: {e}")
+                        logger.warning(
+                            "Failed to track AI Assistant video "
+                            "(type=%s): %s",
+                            type(e).__name__,
+                            e,
+                        )
 
                 elif result.status == 'failed':
                     video_history.status = 'failed'

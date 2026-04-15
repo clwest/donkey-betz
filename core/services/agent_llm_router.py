@@ -230,17 +230,33 @@ class AgentLLMRouter:
         return 'premium'
 
     def _economy_if_healthy(self) -> str:
-        """Return 'economy' only if the primary economy provider is healthy."""
+        """Return 'economy' only if the primary economy provider is healthy.
+
+        Fail-safe behavior: if we cannot verify economy health (import error,
+        DB issue, tracker exception) we fall back to 'premium' rather than
+        optimistically routing to a provider we cannot monitor. Previously
+        this swallowed ImportError silently and returned 'economy' anyway,
+        which masked the health-tracker being broken / uninstalled.
+        """
         try:
             from core.services.provider_health_tracker import get_provider_health_tracker
+        except ImportError:
+            logger.warning(
+                "provider_health_tracker module unavailable — routing to premium "
+                "until the health tracker is restored"
+            )
+            return 'premium'
+        try:
             tracker = get_provider_health_tracker()
             if tracker.is_provider_degraded('together'):
                 logger.info("Economy provider 'together' is degraded, falling back to premium")
                 return 'premium'
-        except ImportError:
-            pass  # provider_health_tracker not installed
         except Exception as e:
-            logger.warning(f"Economy health check failed, defaulting to economy: {e}")
+            logger.warning(
+                f"Economy provider health check raised {type(e).__name__}: {e} — "
+                "falling back to premium"
+            )
+            return 'premium'
         return 'economy'
 
     def _get_agent_category(self, agent_name: str) -> str:

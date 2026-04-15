@@ -348,15 +348,25 @@ def gallery_generate(request):
                             elif any(word in prompt.lower() for word in ['product', 'merchandise']):
                                 asset_type = 'product'
 
-                            assistant.track_generated_image(
+                            from core.epa_handlers_utility import track_generated_image_on_assistant
+                            track_generated_image_on_assistant(
+                                assistant,
                                 image_id=str(history.id),
                                 image_url=url,
                                 prompt=prompt,
-                                asset_type=asset_type
+                                asset_type=asset_type,
                             )
+                            # Re-save the mutated assistant back to cache so the
+                            # next request sees the updated recent-assets dict.
+                            cache.set(cache_key, assistant, timeout=3600)
                             logger.info(f"📸 Tracked image {history.id} as {asset_type} in AI Assistant")
                     except Exception as e:
-                        logger.warning(f"⚠️ Failed to track image in AI Assistant: {e}")
+                        logger.warning(
+                            "Failed to track image in AI Assistant "
+                            "(type=%s): %s",
+                            type(e).__name__,
+                            e,
+                        )
 
                     # Save image record (works for both base64 and HTTP URLs)
                     saved_images.append({
