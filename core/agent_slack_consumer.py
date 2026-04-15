@@ -562,7 +562,7 @@ class AgentSlackConsumer(AsyncWebsocketConsumer):
         Uses the agent's learned knowledge and memories to respond.
         """
         from core.models import Agent, AgentKnowledgeSource, AgentMemory
-        from openai import OpenAI
+        from core.services.openai_client_factory import get_openai_client
         import os
 
         # Get the agent
@@ -620,7 +620,7 @@ Posted by: {trigger_message.get('agent_name', 'User')}
 Respond helpfully and concisely, drawing on your specialized knowledge."""
 
         try:
-            client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+            client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))
 
             response = client.responses.create(
                 model="gpt-5-mini",
