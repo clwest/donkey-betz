@@ -1073,13 +1073,10 @@ if settings.DEBUG:
     from core.views_personal_assistant_dev import chat_with_assistant_dev, get_assistant_context_dev
     from core.views_assistant_minimal import chat_minimal_dev, context_minimal_dev
     from core.simple_ping import ping_dev
-# Import Unified Assistant
-from core.views_unified_assistant import (
-    unified_assistant_chat, unified_assistant_context, execute_agent_with_memory,
-    get_agent_recommendations, rate_agent_execution,
-)
-if settings.DEBUG:
-    from core.views_unified_assistant import unified_assistant_chat_dev
+# Session 1103c: legacy Unified Assistant views removed — fully replaced
+# by Rigby at /api/pa/chat/. The 6 /api/unified/* endpoints and their
+# dev /api/unified/dev/chat/ variant had zero frontend callers and
+# were documented as dead in docs/audit-2026/HALF_BUILT_FEATURES_AUDIT.md.
 # Import Enhanced Profile views
 from core.views_enhanced_profile import (
     get_enhanced_profile, update_enhanced_profile,
@@ -1097,7 +1094,6 @@ from core.views_unified_bridge import (
     record_user_revenue, get_opportunity_decision, get_user_dashboard_data,
     trigger_component_sync
 )
-from core.views_unified_metrics import unified_platform_metrics
 from core.views_unified import WebSocketDiagnosticsView
 from core.views_learning_dashboard import (
     learning_dashboard_data, learning_updates_stream
@@ -2445,14 +2441,6 @@ urlpatterns = [
     # Session 977: On-demand boardroom maintenance trigger
     path('api/pa/boardroom/maintenance/', trigger_boardroom_maintenance, name='boardroom-maintenance'),
 
-    # Unified Assistant endpoints (The One True Assistant™)
-    path('api/unified/chat/', unified_assistant_chat, name='unified-assistant-chat'),
-    path('api/unified/context/', unified_assistant_context, name='unified-assistant-context'),
-    path('api/unified/execute-agent/', execute_agent_with_memory, name='unified-execute-agent'),
-    path('api/unified/recommendations/', get_agent_recommendations, name='unified-agent-recommendations'),
-    path('api/unified/rate/', rate_agent_execution, name='unified-rate-execution'),
-    path('api/unified/metrics/', unified_platform_metrics, name='unified-metrics'),
-    
     # Research endpoints
     path('api/v1/research/books/', research_books, name='research-books'),
     path('api/v1/research/documents/', research_documents, name='research-documents'),
@@ -4783,7 +4771,6 @@ if settings.DEBUG:
         path('api/assistant/minimal/chat/', chat_minimal_dev, name='personal-assistant-chat-minimal'),
         path('api/assistant/minimal/context/', context_minimal_dev, name='personal-assistant-context-minimal'),
         path('api/ping/', ping_dev, name='ping-dev'),
-        path('api/unified/dev/chat/', unified_assistant_chat_dev, name='unified-assistant-chat-dev'),
     ]
 
 # (Workspace Templates URLs moved BEFORE the workspace router — see line ~4031)
