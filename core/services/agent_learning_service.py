@@ -437,8 +437,11 @@ class AgentLearningService:
                         positive_signals=pref_data['positive_signals'],
                         negative_signals=pref_data['negative_signals']
                     )
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "agent_learning_service._load_memory_from_redis: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
             return memory
 

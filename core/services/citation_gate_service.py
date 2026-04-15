@@ -400,8 +400,11 @@ class CitationGateService:
                     return source_date >= threshold
                 except ValueError:
                     continue
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "citation_gate_service._is_fresh: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         return False
 

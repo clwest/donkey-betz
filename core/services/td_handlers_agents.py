@@ -1452,8 +1452,11 @@ class AgentHandlersMixin:
                     deliverable=obj, event_type='deliverable_saved',
                     source='pa_tool', metadata={'trace_id': trace_id},
                 )
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "td_handlers_agents._resolve_deliverable: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
             return {'action': 'save', 'id': str(obj.id), 'title': obj.title, 'saved': True}
 
         elif action == 'unsave':
@@ -1496,8 +1499,11 @@ class AgentHandlersMixin:
                 try:
                     from core.models_skin_layer import ProjectWorkspace
                     resolved_workspace = ProjectWorkspace.objects.get(id=ws_id)
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "td_handlers_agents._resolve_deliverable: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
             preview = content[:500]
             if len(content) > 500:
@@ -1615,8 +1621,11 @@ class AgentHandlersMixin:
                         from core.models_skin_layer import ProjectWorkspace
                         obj.workspace = ProjectWorkspace.objects.get(id=ws_id)
                         update_fields.append('workspace')
-                    except Exception:
-                        pass
+                    except Exception as _e:
+                        logger.warning(
+                            "td_handlers_agents._resolve_deliverable: swallowed (%s: %s) — degraded",
+                            type(_e).__name__, _e,
+                        )
 
             if not update_fields:
                 raise ValueError("update requires at least one of: title, content, prepend, append, type, content_format, tags, category, status, data_sensitivity, workspace_id")
