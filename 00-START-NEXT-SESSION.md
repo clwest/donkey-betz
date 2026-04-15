@@ -1,11 +1,57 @@
 # Next Session — Start Here
 
-**Date:** April 14, 2026
-**Previous Session:** Claude–Rigby App Jam #1 — Focus Flow (Pomodoro + task manager) shipped end-to-end from a single prompt; Rigby tool verification + outreach research list
-**PA Conversation:** Create a fresh one for the next app jam via `session_tool action=create_fresh`
-**Status:** 218 Agents (83 in AGENT_MAP) | 79 Spiders (RUNNING) | 25 Advisors | 1 new public repo shipped (focus-flow)
+**Date:** April 14, 2026 (late)
+**Previous Session:** Focus Flow App Jam #1 shipped, Rigby tool verification + outreach list, local Celery MLEngine deadlock fixed (PR #1871)
+**PA Conversation:** Create a fresh one — start with local PA via `bash tools/pa_local.sh "..."`
+**Status:** 218 Agents | 79 Spiders | 25 Advisors | Local stack confirmed working end-to-end after ML fix
 
 ---
+
+## 🚨 NEXT SESSION — PRIORITY 0: Half-Built Features Audit (Local-First with Rigby)
+
+**Before recording any more videos, work through `docs/audit-2026/HALF_BUILT_FEATURES_AUDIT.md` with Rigby running locally.** Chris wants the platform fully healthy locally before the next video, and THEN pick a new real-time-data demo.
+
+Audit categories to knock out (from `HALF_BUILT_FEATURES_AUDIT.md`):
+
+| Category | Count | Severity | Notes |
+|---|---|---|---|
+| Silent method failures (called, undefined) | 2 critical + 10+ high | CRITICAL | `track_generated_image/video` on wrong class; `get_coleadership_opinion` pattern |
+| Broad `except: pass` in critical services | 100+ | HIGH | Worst 6 fixed prior session; `agent_llm_router.py`, `agent_monitoring.py`, etc. remain |
+| Dead API endpoints (backend wired, frontend never calls) | ~75 | MEDIUM | Verification/testing system (7), plus many more — wire them up or delete |
+| Orphaned Celery tasks | 3 dead + 4 blocked | LOW | `remediation pipeline` permanently blocked per Session 1031 |
+| Frontend stubs / "Coming Soon" | 6+ | MEDIUM | |
+| Hidden pages (routed but not in sidebar nav) | 14 | LOW | |
+| Frontend mock data / hardcoded values | 2 pages | MEDIUM | Neural Orchestra lineage |
+
+**Workflow (with Rigby local):**
+1. Start fresh PA conversation, tell Rigby to read `docs/audit-2026/HALF_BUILT_FEATURES_AUDIT.md` and pick 1 category to start with.
+2. Claude Code + Rigby pair on it: Rigby enumerates the broken items + proposes fix order, Claude Code implements, tests locally, commits per-category feature branch + PR.
+3. After each category closes, rerun the audit script (if one exists) or manually verify the fixed items. Update the audit doc with DONE markers.
+4. Keep the Focus Flow outreach list (`d35a22a3`) frozen until audit is clean — don't send the demo until the platform it demos has no silent failures.
+5. Once audit is clean, THEN pick a new video idea per the real-time-data / agent-orchestration angle Chris wants.
+
+## PRIORITY 1: Pick a new video idea (AFTER audit is clean)
+
+Per Chris's guidance: next video is NOT an app build — it's Rigby using **agents + real-time data** to produce something impressive. Candidates:
+- Live Operator Edge weekly issue generation (spiders → signal aggregation → 3-agent debate → EditorAgent → PublishGate → deliverable)
+- Market Intelligence Brief live (stocks desk: 154 alerts, 124 SEC filings, bull/bear debate zone)
+- Signal → Initiative → Deliverable pipeline run on a single hot topic
+
+Do NOT re-pick Pomodoro / task manager territory (Focus Flow owns it).
+
+---
+
+## What Was Done (April 14, 2026 — late session) — Local Celery Fix
+
+### PR #1871: MLEngine lazy `__init__` to avoid worker mutex deadlock
+- **Root cause chain (3 compounding bugs):**
+  1. `MLEngine.__init__` eagerly called `_initialize_nlp_models()` which loaded DistilBERT + PyTorch + MPS device init → `[mutex.cc : 452] RAW: Lock blocking` deadlock in Celery worker parent on macOS
+  2. Celery worker ran 8 days ML-deadlocked while Beat kept scheduling tasks into Redis → **332,964 stale entries in the default queue** alone
+  3. Fresh workers that managed to boot got swamped draining the stale queue; PA tasks sat indefinitely behind 8 days of backlog
+- **Fix:** `ml/core/ml_engine.py` — cheap `__init__` + lazy init via `__getattribute__` guard on `models`, `sport_models`, `scalers`, `user_profile`, `sentiment_analyzer`. Flag flips before init runs so attribute access inside init path doesn't re-enter.
+- **Verified:** `MLEngine()` constructs in 0.67s with `_initialized=False`, fresh Celery worker boots to pingable in 1s (was never responding before), local PA chat round-trip works end-to-end.
+- **Also purged:** 332k stale default queue + all other stale queues except `pa` (via `redis-cli DEL`). Fresh worker drained the backlog cleanly after that.
+- **Merge note:** Needs Railway billing to clear before production deploy.
 
 ## What Was Done (April 13–14, 2026) — App Jam #1
 
