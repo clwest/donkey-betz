@@ -238,6 +238,10 @@ class MLEngine:
 
     def _initialize_nlp_models(self):
         """Initialize NLP models for sentiment analysis"""
+        if os.environ.get('SKIP_NLP_MODELS', '').lower() in ('1', 'true', 'yes'):
+            self.logger.info("SKIP_NLP_MODELS set — skipping DistilBERT sentiment model load")
+            self.sentiment_analyzer = None
+            return
         try:
             import torch
             from transformers import pipeline as hf_pipeline

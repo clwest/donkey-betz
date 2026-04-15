@@ -234,6 +234,7 @@ celery: ## Start Celery workers + beat (background) with multi-queue architectur
 		echo "-> Celery default worker already running"; \
 	else \
 		echo "-> Starting Celery default worker (4 threads, default queue)..."; \
+		SKIP_NLP_MODELS=1 OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES TOKENIZERS_PARALLELISM=false \
 		nohup .venv/bin/celery -A core worker --loglevel=info --pool=threads --concurrency=4 \
 			--queues=default,agents,sports,content,ml,pa \
 			--hostname=default@%h > $(CELERY_LOG) 2>&1 & echo $$! > $(CELERY_PIDFILE); \
@@ -244,6 +245,7 @@ celery: ## Start Celery workers + beat (background) with multi-queue architectur
 		echo "-> Celery long_running worker already running"; \
 	else \
 		echo "-> Starting Celery long_running worker (2 threads)..."; \
+		SKIP_NLP_MODELS=1 OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES TOKENIZERS_PARALLELISM=false \
 		nohup .venv/bin/celery -A core worker --loglevel=info --pool=threads --concurrency=2 \
 			--queues=long_running \
 			--hostname=long_running@%h > $(CELERY_LONG_RUNNING_LOG) 2>&1 & echo $$! > $(CELERY_LONG_RUNNING_PIDFILE); \
@@ -254,6 +256,7 @@ celery: ## Start Celery workers + beat (background) with multi-queue architectur
 		echo "-> Celery broadcast worker already running"; \
 	else \
 		echo "-> Starting Celery broadcast worker (2 threads)..."; \
+		SKIP_NLP_MODELS=1 OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES TOKENIZERS_PARALLELISM=false \
 		nohup .venv/bin/celery -A core worker --loglevel=info --pool=threads --concurrency=2 \
 			--queues=broadcast \
 			--hostname=broadcast@%h > $(CELERY_BROADCAST_LOG) 2>&1 & echo $$! > $(CELERY_BROADCAST_PIDFILE); \
