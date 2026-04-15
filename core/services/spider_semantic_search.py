@@ -422,7 +422,7 @@ class SpiderSemanticSearch:
 
         return 'failed'
 
-    def backfill_embeddings(self, batch_size: int = 100, hours: int = None) -> Dict[str, int]:
+    def backfill_embeddings(self, batch_size: int = 50, hours: int = None) -> Dict[str, int]:
         """
         Generate embeddings for SpiderData entries that don't have them.
 
@@ -430,9 +430,15 @@ class SpiderSemanticSearch:
         Session triage (Apr 2026): Removed default hours=168 window that excluded
         86k+ historical records. After triage_spider_embeddings deduped the backlog,
         the remaining records are all worth embedding regardless of age.
+        Session 1083 (Rigby audit): Reduced default batch_size 100→50 after
+        observing 1.37GB memory spike per run in celery telemetry
+        (start=669MB, end=2042MB). Only load id + raw_data + embedding_text
+        columns via .only() so Django doesn't prefetch every SpiderData
+        field into memory. Beat runs this every 15 min so lower batches
+        still drain the backlog — just with flatter memory profile.
 
         Args:
-            batch_size: Number of entries to process (default 100)
+            batch_size: Number of entries to process (default 50)
             hours: Only process entries from last N hours (None = all)
 
         Returns:
@@ -443,14 +449,16 @@ class SpiderSemanticSearch:
         # Find entries without embeddings
         # Session 394: Also exclude entries marked as empty
         # Session 782: Exclude by embedding_text instead of embedding=[] (pgvector error)
+        # Session 1083: .only() to avoid loading every column (was pulling
+        # large `processed_data` JSONB fields into memory unnecessarily)
         qs = SpiderData.objects.filter(
             embedding__isnull=True  # Only NULL, not empty list
         ).exclude(
             embedding_text='[NO_ITEMS]'  # Skip already-marked empty entries
-        )
+        ).only('id', 'raw_data', 'embedding_text', 'created_at')
         if hours is not None:
             qs = qs.filter(created_at__gte=timezone.now() - timedelta(hours=hours))
-        entries = qs.order_by('-created_at')[:batch_size]
+        entries = list(qs.order_by('-created_at')[:batch_size])
 
         stats = {'processed': 0, 'succeeded': 0, 'failed': 0, 'skipped': 0, 'marked_empty': 0}
 

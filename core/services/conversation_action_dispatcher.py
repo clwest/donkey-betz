@@ -287,12 +287,23 @@ class ConversationActionDispatcher:
             result.errors.append("No next_steps in decision summary")
             return result
 
-        # Session 875: Trace and validate next_steps schema at parser stage
-        from core.services.context_tracing import ContextTracer
+        # Session 875: Trace and validate next_steps schema at parser stage.
+        # Session 1083 (Rigby audit): validate_next_steps is a module-level
+        # function in context_tracing, not a ContextTracer method. Old
+        # code called `tracer.validate_next_steps(...)` which threw
+        # `AttributeError: 'ContextTracer' object has no attribute
+        # 'validate_next_steps'` every time the conversation orchestrator
+        # hit its fallback action dispatch path — surfaced in logs
+        # tonight. Function returns a tuple (valid_directives, schema_errors)
+        # so we unpack instead of using the return as a truthy errors list.
+        from core.services.context_tracing import (
+            ContextTracer,
+            validate_next_steps as _validate_next_steps,
+        )
         tracer = ContextTracer(source=f"dispatch_actions:{conversation_id}")
 
         # Validate next_steps schema (should be List[str])
-        validation_errors = tracer.validate_next_steps(next_steps)
+        _valid_directives, validation_errors = _validate_next_steps(next_steps)
         if validation_errors:
             logger.warning(
                 f"[dispatch_actions] next_steps schema issues: {validation_errors}"
