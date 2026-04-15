@@ -38,6 +38,8 @@ Usage:
 """
 
 import logging
+
+from django.db import OperationalError, ProgrammingError
 import time
 import uuid
 import asyncio
@@ -257,6 +259,11 @@ class AgentHandlersMixin:
                 extras['deliverable_title'] = metadata['deliverable_title']
 
             # --- Deliverable lookup by agent + time window ---
+            # Session 1083 (Rigby audit): was `except Exception: pass` which
+            # silently dropped deliverable linkage whenever the lookup hit a
+            # transient DB error (ProgrammingError on schema drift,
+            # OperationalError on connection issues). Narrowed + logged so
+            # Chris can see when agent executions lose their deliverable tie.
             if not extras.get('deliverable_id'):
                 try:
                     from core.models_deliverables import Deliverable
@@ -273,10 +280,16 @@ class AgentHandlersMixin:
                         if not extras.get('content') and recent_del.content:
                             extras['content'] = recent_del.content[:3000]
                             extras['content_preview'] = recent_del.content[:500]
-                except Exception:
-                    pass
+                except ImportError as e:
+                    logger.warning(f"Deliverable model unavailable for enrichment: {e}")
+                except (OperationalError, ProgrammingError) as e:
+                    logger.warning(
+                        f"DB error fetching deliverable for execution {execution.id}: {e}"
+                    )
 
             # --- Image history fallback ---
+            # Session 1083: same LIAR pattern — silent drop of image_url when
+            # ImageHistory query degrades. Narrowed to import + DB errors.
             if not extras.get('image_url'):
                 try:
                     from content.models import ImageHistory
@@ -288,8 +301,12 @@ class AgentHandlersMixin:
                             extras['image_url'] = recent_img.file_path
                             if hasattr(recent_img, 'prompt') and recent_img.prompt:
                                 extras['image_prompt'] = recent_img.prompt[:200]
-                except Exception:
-                    pass
+                except ImportError as e:
+                    logger.debug(f"ImageHistory model unavailable: {e}")
+                except (OperationalError, ProgrammingError) as e:
+                    logger.warning(
+                        f"DB error fetching image history for execution {execution.id}: {e}"
+                    )
 
         except Exception as e:
             logger.debug(f"_get_agent_execution_output failed: {e}")
