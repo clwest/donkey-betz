@@ -199,10 +199,9 @@ from core.views_projects_api import (
     toggle_project_learning,
     get_project_learning_status,
     trigger_project_learning,
-    # Session 520: PartnershipProject CRUD endpoints
-    update_project as update_partnership_project,
-    delete_project as delete_partnership_project,
-    create_project as create_partnership_project,
+    # Session 1084 round 50: Partnership CRUD aliases removed — routes
+    # at /api/projects/{create,update,delete} had zero frontend callers.
+    # See also: partnership module route block removal below.
     # Session 521: Content Export & Edit
     export_written_content,
     update_written_content,
@@ -1368,10 +1367,12 @@ from core.views_multi_llm import (
     model_performance_analytics as llm_analytics, set_model_preferences
 )
 # Session 699: LLM Routing API endpoints (real database-backed)
+# Session 1084 round 50: dropped llm_routing_status, llm_cost_analytics
+# (orphaned imports left by round 44 route removals) and
+# update_agent_llm_config (route removed this round — zero frontend callers).
 from core.views_llm_routing import (
-    llm_routing_status, llm_providers_list, llm_models_list,
-    agent_llm_configs_list, llm_call_logs_list, llm_cost_analytics,
-    update_agent_llm_config
+    llm_providers_list, llm_models_list,
+    agent_llm_configs_list, llm_call_logs_list,
 )
 from core.views_advanced_workflows import (
     create_advanced_workflow, execute_advanced_workflow, get_workflow_execution_status,
@@ -1402,8 +1403,10 @@ from core.views_revenue_tracking import (
     update_revenue_status_view,
     revenue_history_view
 )
-# Import Partnership views (Session 38)
-from core import views_partnership
+# Session 1084 round 50: `from core import views_partnership` removed —
+# all partnership routes deleted, module no longer used in urls.py. The
+# views_partnership module file itself is not touched; if another caller
+# still imports it we leave that alone as a separate concern.
 
 # Session 544: Autonomous Reasoning Engine API
 from core import views_autonomous_reasoning
@@ -1757,11 +1760,11 @@ urlpatterns = [
     path('api/ecosystem/code-preview/', code_preview, name='code-preview'),
 
     # Project Management APIs (Phase 3: Frontend Reality Fix)
+    # Session 1084 round 50: removed /api/projects/create, /update/, /delete/
+    # partnership-aliased routes — zero frontend callers. See also partnership
+    # route block and aliased import removals in the same PR.
     path('api/projects/', projects_list, name='projects-list'),
-    path('api/projects/create/', create_partnership_project, name='partnership-project-create'),  # Session 520
     path('api/projects/<uuid:project_id>/', project_detail, name='project-detail'),
-    path('api/projects/<uuid:project_id>/update/', update_partnership_project, name='partnership-project-update'),  # Session 520
-    path('api/projects/<uuid:project_id>/delete/', delete_partnership_project, name='partnership-project-delete'),  # Session 520
     path('api/projects/<uuid:project_id>/agents/', project_agents, name='project-agents'),
     path('api/projects/<uuid:project_id>/assign-agent/', assign_agent_to_project, name='assign-agent'),
     path('api/projects/from-research/', create_project_from_research, name='create-project-from-research'),  # Session 302
@@ -3040,7 +3043,9 @@ urlpatterns = [
     path('api/llm-routing/models/', llm_models_list, name='llm-routing-models'),
     path('api/llm-routing/agent-configs/', agent_llm_configs_list, name='llm-routing-agent-configs'),
     path('api/llm-routing/logs/', llm_call_logs_list, name='llm-routing-logs'),
-    path('api/llm-routing/agent-configs/<str:agent_name>/', update_agent_llm_config, name='llm-routing-update-agent-config'),
+    # Session 1084 round 50: PATCH /api/llm-routing/agent-configs/<agent_name>/
+    # removed — frontend llmRoutingApi.updateAgentConfig was deleted in
+    # round 44 (Session 1083) but the backend route was left dangling.
 
     # WorkflowRun API (must be before workflows.urls include to avoid 404)
     path('api/v1/workflows/runs/', views_workflow_run.workflow_run_list, name='workflow-run-list'),
@@ -3564,13 +3569,15 @@ urlpatterns = [
     path('api/learning/progress/', lambda r: __import__('core.views_solution_explorer', fromlist=['get_learning_progress']).get_learning_progress(r), name='learning-progress'),
     path('api/learning/personalize/', lambda r: __import__('core.views_solution_explorer', fromlist=['personalize_learning']).personalize_learning(r), name='personalize-learning'),
 
-    # Learning Journey APIs - Interactive learning paths with progress tracking
-    path('api/journey/start/', lambda r: __import__('core.views_learning_journey', fromlist=['start_learning_journey']).start_learning_journey(r), name='journey-start'),
-    path('api/journey/<str:journey_id>/status/', lambda r, journey_id: __import__('core.views_learning_journey', fromlist=['get_journey_status']).get_journey_status(r, journey_id), name='journey-status'),
-    path('api/journey/<str:journey_id>/step/<int:step_id>/start/', lambda r, journey_id, step_id: __import__('core.views_learning_journey', fromlist=['start_journey_step']).start_journey_step(r, journey_id, step_id), name='journey-step-start'),
-    path('api/journey/<str:journey_id>/step/<int:step_id>/complete/', lambda r, journey_id, step_id: __import__('core.views_learning_journey', fromlist=['complete_journey_step']).complete_journey_step(r, journey_id, step_id), name='journey-step-complete'),
-    path('api/journey/active/', lambda r: __import__('core.views_learning_journey', fromlist=['get_active_journeys']).get_active_journeys(r), name='journey-active'),
-    path('api/journey/<str:journey_id>/reset/', lambda r, journey_id: __import__('core.views_learning_journey', fromlist=['reset_journey']).reset_journey(r, journey_id), name='journey-reset'),
+    # Session 1084 round 50: removed legacy /api/journey/* namespace
+    # (no callers; superseded by /api/learning/journeys/*). 6 routes
+    # deleted: start, <id>/status, <id>/step/<int>/start,
+    # <id>/step/<int>/complete, active, <id>/reset. All lambda-routed
+    # and dynamic-imported from core.views_learning_journey. Frontend
+    # uses /api/learning/journeys/* via learningJourneysApi — see
+    # learning_journeys_* routes below (Session 773). Note separate
+    # gap: learningJourneysApi.status() at api.ts:2550 has no matching
+    # backend route, tracked in initiative 85f279b9.
 
     # AI Ecosystem Visualization APIs
     # api/ecosystem/stats/ — REMOVED: duplicate of line 1741 (ecosystem_stats wins)
@@ -3594,19 +3601,11 @@ urlpatterns = [
     # Opportunity and application endpoints (CRITICAL FIX - Session 37-A Priority 5)
     path('api/opportunities/quick-apply/', lambda r: __import__('core.views_opportunities', fromlist=['quick_apply']).quick_apply(r), name='quick-apply'),
 
-    # ===== PARTNERSHIP SYSTEM (Session 38) =====
-    # Human-AI Partnership tracking and collaboration features
-    path('partnership/', views_partnership.partnership_dashboard, name='partnership-dashboard'),
-    path('partnership/start/<uuid:opportunity_id>/', views_partnership.start_partnership, name='start-partnership'),
-    path('partnership/project/<uuid:project_id>/', views_partnership.partnership_project_detail, name='partnership-project-detail'),
-
-    # Partnership API endpoints
-    path('api/partnership/ai-contribution/<uuid:project_id>/', views_partnership.add_ai_contribution, name='add-ai-contribution'),
-    path('api/partnership/human-contribution/<uuid:project_id>/', views_partnership.add_human_contribution, name='add-human-contribution'),
-    path('api/partnership/complete/<uuid:project_id>/', views_partnership.complete_partnership, name='complete-partnership'),
-    path('api/partnership/opportunities/', views_partnership.partnership_opportunities_api, name='partnership-opportunities-api'),
-    path('api/partnership/stats/', views_partnership.partnership_stats_api, name='partnership-stats-api'),
-    # Session 1103c: /api/partnership/health/ removed — zero frontend callers.
+    # Session 1084 round 50: Entire PARTNERSHIP SYSTEM (Session 38) route
+    # block removed. All 8 routes (3 page routes + 5 api/partnership/ routes)
+    # had zero frontend callers. The views_partnership module is no longer
+    # imported in urls.py after this removal. Prior round 44 (Session 1083)
+    # already removed /api/partnership/health/ from this block.
     path('api/v1/', include('backend.auto_endpoints.urls')),
 
     # Session 100: Part 11 - Leadership Dashboard Endpoints
