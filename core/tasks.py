@@ -5225,7 +5225,12 @@ def execute_single_artifact(artifact_id: str):
 
     except SoftTimeLimitExceeded:
         logger.error(f"[ARTIFACT] {artifact_id} timed out (soft_time_limit=300s)")
-        # Mark execution as failed if one exists
+        # Mark execution as failed if one exists. Session 1103c: was
+        # 'except Exception: pass' which, if the state-transition save
+        # itself failed, left the ArtifactExecution stuck in 'running'
+        # forever — another zombie-execution contributor. Log loudly
+        # now so the zombie can be cleaned up manually instead of
+        # silently piling up.
         try:
             from core.models_conversation_artifacts import ArtifactExecution
             running = ArtifactExecution.objects.filter(
@@ -5236,8 +5241,13 @@ def execute_single_artifact(artifact_id: str):
                 running.error_message = 'Celery soft_time_limit exceeded (300s)'
                 running.completed_at = timezone.now()
                 running.save()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(
+                "[ARTIFACT] %s timed out AND the failed-state transition "
+                "save also failed (%s: %s) — execution is stuck in "
+                "'running' state and will need manual cleanup",
+                artifact_id, type(e).__name__, e,
+            )
         return {'success': False, 'error': 'timeout'}
     except Exception as e:
         logger.error(f"[ARTIFACT] {artifact_id} failed: {e}", exc_info=True)
