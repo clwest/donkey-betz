@@ -709,8 +709,17 @@ class UnifiedPAEntrypoint:
                     else:
                         content = await self._generate_direct_response(message, full_context, trace_id)
 
-            # Session 997: Validate response for mythology/hallucinations
-            content = self._validate_mythology(content, message, trace_id)
+            # Session 997: Validate response for mythology/hallucinations.
+            # Session 1103c: wrap in asyncio.to_thread because the
+            # mythology validator uses sync Django ORM and was raising
+            # SynchronousOnlyOperation on every PA turn, getting
+            # swallowed by the broad except inside _validate_mythology
+            # and logged as "Mythology validation skipped". Every PA
+            # response has been bypassing mythology validation until
+            # now.
+            content = await asyncio.to_thread(
+                self._validate_mythology, content, message, trace_id,
+            )
 
             # Session 1060: Strip leaked internal reasoning from FC responses
             # (e.g. "to=functions.content_review_tool", raw JSON tool call syntax)
@@ -754,11 +763,17 @@ class UnifiedPAEntrypoint:
 
             latency_ms = int((time.time() - start_time) * 1000)
 
-            # Get profile completeness
+            # Get profile completeness.
+            # Session 1103c: wrapped in asyncio.to_thread because
+            # get_completeness_score touches Django ORM and was
+            # raising SynchronousOnlyOperation on every PA turn.
+            # The score was silently None on every reply until now.
             profile_completeness = None
             if self.profile_service:
                 try:
-                    score = self.profile_service.get_completeness_score(self.user)
+                    score = await asyncio.to_thread(
+                        self.profile_service.get_completeness_score, self.user,
+                    )
                     profile_completeness = int(score * 100)
                 except Exception as e:
                     logger.warning(f"Profile completeness score failed: {e}")
