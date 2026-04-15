@@ -282,15 +282,21 @@ class HeartMonitorService:
             # Check recent activity (last hour)
             one_hour_ago = timezone.now() - timedelta(hours=1)
 
-            # Try to get recent agent activity
+            # Try to get recent agent activity.
+            # Session 1083 (Rigby audit): was `from core.models import
+            # AgentActivity` which doesn't exist (never did, or was
+            # removed long ago). The import error was caught and
+            # logged as WARNING every 10 min via the heart pulse
+            # cycle. Swapped to AgentExecution which IS the actual
+            # "agent did something" record type in this codebase.
             recent_activity = 0
             try:
-                from core.models import AgentActivity
-                recent_activity = AgentActivity.objects.filter(
+                from core.models_unified_system import AgentExecution
+                recent_activity = AgentExecution.objects.filter(
                     created_at__gte=one_hour_ago
                 ).count()
             except Exception as e:
-                logger.warning(f"AgentActivity check failed: {e}")
+                logger.warning(f"AgentExecution activity check failed: {e}")
 
             is_healthy = total_agents >= 50
             status_level = 'healthy' if total_agents >= 70 else ('degraded' if total_agents >= 50 else 'critical')
