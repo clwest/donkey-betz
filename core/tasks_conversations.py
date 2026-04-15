@@ -586,11 +586,15 @@ Guidelines:
                                 # Final attempt: fallback to Claude
                                 logger.warning(f"💬 [CONVERSATIONS] OpenAI rate limit persists, falling back to Claude")
                                 try:
-                                    from anthropic import Anthropic
-                                    anthropic_client = Anthropic()
+                                    # Session 1084 round 49: Use shared factory
+                                    # so timeout/retry config is applied. Fix
+                                    # max_completion_tokens (OpenAI-only kwarg)
+                                    # → max_tokens (Anthropic SDK requires).
+                                    from core.services.anthropic_client_factory import get_anthropic_client
+                                    anthropic_client = get_anthropic_client()
                                     claude_response = anthropic_client.messages.create(
                                         model="claude-sonnet-4-20250514",
-                                        max_completion_tokens=1000,
+                                        max_tokens=1000,
                                         system=system_prompt,
                                         messages=[{"role": "user", "content": user_content}]
                                     )
@@ -766,11 +770,12 @@ OUTPUT THE SYNTHESIS AND DECISION SUMMARY NOW:"""
                             elif is_rate_limit and retry_attempt == 2:
                                 # Fallback to Claude
                                 try:
-                                    from anthropic import Anthropic
-                                    anthropic_client = Anthropic()
+                                    # Session 1084 round 49: shared factory + fix Anthropic kwarg
+                                    from core.services.anthropic_client_factory import get_anthropic_client
+                                    anthropic_client = get_anthropic_client()
                                     claude_response = anthropic_client.messages.create(
                                         model="claude-sonnet-4-20250514",
-                                        max_completion_tokens=1200,
+                                        max_tokens=1200,
                                         system=conclusion_system,
                                         messages=[{"role": "user", "content": conclusion_prompt}]
                                     )
@@ -1590,11 +1595,12 @@ VOICE RULES (Session 781):
                                     # Fallback to Claude
                                     logger.warning(f"👥 [MULTI-AGENT] OpenAI rate limit persists, falling back to Claude")
                                     try:
-                                        from anthropic import Anthropic
-                                        anthropic_client = Anthropic()
+                                        # Session 1084 round 49: shared factory + fix Anthropic kwarg
+                                        from core.services.anthropic_client_factory import get_anthropic_client
+                                        anthropic_client = get_anthropic_client()
                                         claude_response = anthropic_client.messages.create(
                                             model="claude-sonnet-4-20250514",
-                                            max_completion_tokens=2000,
+                                            max_tokens=2000,
                                             system=system_prompt,
                                             messages=[{"role": "user", "content": user_prompt}]
                                         )

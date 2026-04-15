@@ -383,9 +383,11 @@ def execute_engineering_task(
     _ensure_git_repo()
 
     try:
-        import anthropic
+        # Session 1084 round 49: shared factory for timeout/retry config.
+        import anthropic  # kept for anthropic.RateLimitError reference below
+        from core.services.anthropic_client_factory import get_anthropic_client
         import time as _time
-        client = anthropic.Anthropic(api_key=api_key)
+        client = get_anthropic_client(api_key=api_key)
 
         messages = [{"role": "user", "content": task_description}]
         files_changed = []
