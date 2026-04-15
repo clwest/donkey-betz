@@ -299,8 +299,8 @@ def bill_search(request):
     limit = min(int(request.query_params.get('limit', 10)), 50)
 
     try:
-        from openai import OpenAI
-        client = OpenAI()
+        from core.services.openai_client_factory import get_openai_client
+        client = get_openai_client()
         emb_resp = client.embeddings.create(input=[query], model="text-embedding-3-small")
         query_vec = emb_resp.data[0].embedding
 

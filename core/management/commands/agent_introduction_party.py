@@ -56,7 +56,7 @@ class Command(BaseCommand):
         try:
             from core.models_unified_system import Agent
             from core.models import AgentConversation, AgentDream
-            import openai
+            from core.services.openai_client_factory import get_openai_client
 
             # Get active agents
             agents = list(Agent.objects.filter(is_active=True)[:max_agents])
@@ -75,7 +75,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.HTTP_INFO("\n\n═══ PHASE 1: INTRODUCTIONS ═══"))
             introductions = {}
 
-            client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+            client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
 
             for agent in agents:
                 intro = self._generate_introduction(client, agent)

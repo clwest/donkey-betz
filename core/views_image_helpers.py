@@ -20,7 +20,7 @@ import uuid
 import json
 import zipfile
 import base64
-from openai import OpenAI
+from core.services.openai_client_factory import get_openai_client
 from io import BytesIO
 from datetime import datetime
 
@@ -2771,7 +2771,7 @@ def _verify_image_with_vision(image_url, expected_text):
             logger.info(f"👁️ Converted to base64 data URI ({len(base64_image)} chars)")
 
         # Get OpenAI client
-        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        client = get_openai_client(api_key=os.environ.get("OPENAI_API_KEY"))
 
         # Build Vision API request
         response = client.chat.completions.create(

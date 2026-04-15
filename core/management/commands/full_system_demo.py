@@ -39,7 +39,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        import openai
+        from core.services.openai_client_factory import get_openai_client
         import os
 
         self.stdout.write(self.style.SUCCESS("""
@@ -58,7 +58,7 @@ class Command(BaseCommand):
         skip_conversations = options['skip_conversations']
         content_only = options['content_only']
 
-        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+        client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
 
         stats = {
             'dreams_created': 0,

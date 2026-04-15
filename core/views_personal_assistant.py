@@ -918,10 +918,10 @@ def voice_to_assistant(request):
         # (Reusing logic from views_image.py:6466)
         try:
             import os
-            from openai import OpenAI
+            from core.services.openai_client_factory import get_openai_client
             from io import BytesIO
 
-            client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+            client = get_openai_client(api_key=os.environ.get("OPENAI_API_KEY"))
 
             # Convert Django InMemoryUploadedFile to BytesIO for OpenAI SDK
             audio_file.seek(0)
@@ -1038,10 +1038,10 @@ def voice_interview_response(request):
         # Step 2: Transcribe audio using OpenAI Whisper
         try:
             import os
-            from openai import OpenAI
+            from core.services.openai_client_factory import get_openai_client
             from io import BytesIO
 
-            client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+            client = get_openai_client(api_key=os.environ.get("OPENAI_API_KEY"))
 
             # Convert Django InMemoryUploadedFile to BytesIO for OpenAI SDK
             audio_file.seek(0)
@@ -1150,10 +1150,10 @@ def transcribe_only(request):
         logger.info(f"🎤 Transcribe-only request from {request.user.username} ({audio_file.size} bytes)")
 
         import os
-        from openai import OpenAI
+        from core.services.openai_client_factory import get_openai_client
         from io import BytesIO
 
-        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        client = get_openai_client(api_key=os.environ.get("OPENAI_API_KEY"))
 
         audio_file.seek(0)
         audio_bytes = audio_file.read()

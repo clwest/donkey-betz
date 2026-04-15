@@ -6,7 +6,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 # Minimal deps only
 import numpy as np
-from openai import OpenAI
+from core.services.openai_client_factory import get_openai_client
 
 DOCS_DIR = Path(os.getenv("RAG_DOCS_DIR", "./docs"))
 CACHE_PATH = Path(os.getenv("RAG_CACHE_PATH", ".rag_cache.pkl"))
@@ -69,7 +69,7 @@ class Command(BaseCommand):
         if not docs_dir.exists():
             raise CommandError(f"Docs dir not found: {docs_dir}")
 
-        client = OpenAI(base_url=BASE_URL, api_key=API_KEY)
+        client = get_openai_client(api_key=API_KEY, base_url=BASE_URL)
 
         # 1) load or build corpus
         corpus = []

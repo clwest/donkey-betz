@@ -52,7 +52,7 @@ class Command(BaseCommand):
         from core.models_unified_system import (
             Agent, AgentDream, HiveMindSession, AgentKnowledgeSource
         )
-        import openai
+        from core.services.openai_client_factory import get_openai_client
         import os
 
         dry_run = options['dry_run']
@@ -88,7 +88,7 @@ class Command(BaseCommand):
             'errors': []
         }
 
-        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+        client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
 
         # =====================================================================
         # PHASE 1: DREAMS
