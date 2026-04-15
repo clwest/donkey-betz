@@ -594,13 +594,23 @@ class HeartMonitorService:
         if self._last_pulse:
             return self._last_pulse.get('is_alive', False)
 
-        # Run quick check
+        # Run quick check.
+        # Session 1103c: was 'except Exception: return False' which
+        # silently flipped HEART to "down" on any DB exception (even
+        # transient connection-pool hiccups), and downstream gates
+        # would block agent execution with no forensic trail. Now
+        # logs the failure type so transient drops are visible.
         try:
             # Just check database
             with connection.cursor() as cursor:
                 cursor.execute("SELECT 1")
             return True
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                "heart.is_alive: DB ping failed (%s: %s) — returning "
+                "False, downstream is_alive gates will block",
+                type(e).__name__, e,
+            )
             return False
 
     def get_vitals(self) -> Dict:

@@ -195,14 +195,26 @@ class HITLValidationService:
         """Create a validation request for human review."""
         from core.models_unified_system import ValidationRequest, ScoringExplanation
 
-        # Find the scoring explanation if it exists
+        # Find the scoring explanation if it exists.
+        # Session 1103c: was 'except Exception: pass' which silently
+        # broke HITL traceability — a DB error here meant the
+        # validation proceeded without ScoringExplanation linkage and
+        # there was no audit trail explaining how the opportunity was
+        # scored. Now logs the failure so missing explanations have a
+        # named cause.
         explanation = None
         try:
             explanation = ScoringExplanation.objects.filter(
                 opportunity=opportunity
             ).first()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                "hitl_validation: ScoringExplanation lookup failed "
+                "for opportunity=%s (%s: %s) — validation request will "
+                "be created without scoring linkage",
+                getattr(opportunity, 'id', '<unknown>'),
+                type(e).__name__, e,
+            )
 
         # Calculate priority based on opportunity value
         priority = self._calculate_priority(opportunity, scoring_result)
