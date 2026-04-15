@@ -230,14 +230,22 @@ class AgentMonitor:
         # Store summary in database (if model exists)
         try:
             from core.models.agents_registry import AgentExecution
-            
+
             AgentExecution.objects.filter(id=self.execution_id).update(
                 performance_metrics=self.metrics,
                 execution_time=self.metrics['execution_time'],
                 status='completed' if not self.metrics['errors'] else 'failed'
             )
-        except ImportError:
-            pass  # Model not available
+        except ImportError as e:
+            # Previously swallowed silently; AgentExecution lives in
+            # core/models/agents_registry and always exists, so an
+            # ImportError here means a transitive dependency failed to
+            # load and that's worth knowing about.
+            logger.warning(
+                "agent_monitoring: AgentExecution import failed (%s: %s) — "
+                "per-execution metrics will not be persisted this run",
+                type(e).__name__, e,
+            )
         except Exception as e:
             logger.warning(f"Failed to save execution metrics for {self.execution_id}: {e}")
     
@@ -357,8 +365,16 @@ class PerformanceAnalyzer:
                     time_period=timedelta(hours=24)
                 )
                 metrics['agents'][template.name] = agent_stats
-        except ImportError:
-            pass  # Model not available
+        except ImportError as e:
+            # Previously swallowed silently. System-wide agent metrics
+            # collection vanishes on any transitive import failure, which
+            # left /api/monitoring/agents/ showing stale data with no
+            # visible cause.
+            logger.warning(
+                "agent_monitoring.get_system_metrics: UnifiedAgentTemplate "
+                "import failed (%s: %s) — agent metrics section will be empty",
+                type(e).__name__, e,
+            )
         except Exception as e:
             logger.warning(f"Failed to collect agent metrics: {e}")
         

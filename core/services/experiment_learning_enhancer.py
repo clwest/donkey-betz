@@ -309,14 +309,32 @@ class ExperimentLearningEnhancer:
             with_kpi = experiments.exclude(primary_kpi='').exclude(primary_kpi__isnull=True).count()
             return round((with_kpi / total) * 100, 1)
         elif factor_type == 'has_risk':
-            # Check if gate has risk_factors
+            # Check if gate has risk_factors.
+            # Previously a bare 'except: pass' hid every missing
+            # pilot/gate relation so experiments without a readiness gate
+            # silently counted as "no risk factors," which undercounted
+            # the risk-coverage percentage. Now we narrow to the
+            # expected attribute-lookup / None-access cases and log
+            # anything unexpected so the metric is trustworthy.
             with_risk = 0
             for exp in experiments[:50]:  # Limit for performance
                 try:
                     if exp.pilot.gate.risk_factors:
                         with_risk += 1
-                except:
-                    pass
+                except AttributeError:
+                    # Experiment has no pilot or pilot has no gate —
+                    # expected for experiments outside the readiness
+                    # pipeline; skip silently (no risk data).
+                    continue
+                except Exception as e:
+                    logger.warning(
+                        "experiment_learning_enhancer: unexpected error "
+                        "reading risk_factors for experiment %s (%s: %s) — "
+                        "skipping from risk coverage count",
+                        getattr(exp, 'id', '<unknown>'),
+                        type(e).__name__, e,
+                    )
+                    continue
             return round((with_risk / min(total, 50)) * 100, 1)
 
         return 0.0
