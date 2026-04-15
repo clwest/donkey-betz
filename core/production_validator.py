@@ -555,8 +555,11 @@ class ProductionValidator:
                     )
                     if response:
                         successful_messages += 1
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "production_validator.__init__: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
             # Clean up connections
             for communicator in communicators:

@@ -2160,8 +2160,11 @@ class DiscordNotificationService:
         file_size_mb = 0
         try:
             file_size_mb = os.path.getsize(audio_file_path) / (1024 * 1024)
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "discord_notifications.send_podcast: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         # Create embed
         embed = {

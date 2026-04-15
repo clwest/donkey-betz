@@ -58,9 +58,9 @@ const buildLoopSteps = [
 const DEFAULT_STATS = [
   { value: '218', label: 'Agents', icon: Bot, key: 'total_agents' },
   { value: '79', label: 'Spiders', icon: Bug, key: 'active_spiders' },
-  { value: '25', label: 'Advisors', icon: Users, key: '' },
-  { value: '9', label: 'Body Systems', icon: Heart, key: '' },
-  { value: '130', label: 'PA Tools', icon: Wrench, key: '' },
+  { value: '25', label: 'Advisors', icon: Users, key: 'total_advisors' },
+  { value: '9', label: 'Body Systems', icon: Heart, key: 'body_systems' },
+  { value: '130', label: 'PA Tools', icon: Wrench, key: 'pa_tools' },
 ]
 
 export default function HowItWorksPage() {

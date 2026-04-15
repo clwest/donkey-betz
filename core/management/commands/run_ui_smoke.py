@@ -10,9 +10,14 @@ Usage:
 """
 
 import json
+import logging
 import os
 
 from django.core.management.base import BaseCommand
+
+# Session 1083 (Rigby audit): module-level logger; earlier injection
+# accidentally placed it inside the docstring.
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -153,8 +158,11 @@ class Command(BaseCommand):
                           if r.get('authRequired', True) and ':' not in r.get('path', '')]
                 if routes:
                     return routes
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "run_ui_smoke._load_routes_from_manifest: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
         return [
             '/', '/dashboard', '/workspace', '/boardroom', '/governance',

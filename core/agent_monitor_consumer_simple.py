@@ -172,8 +172,11 @@ class AgentMonitorConsumer(AsyncWebsocketConsumer):
                     update = json.loads(item)
                     if update.get('type') == 'task_update':
                         tasks.append(update.get('task'))
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "agent_monitor_consumer_simple.__init__: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
             # Get active projects
             project_keys = self.redis_client.keys('freelance:project:*')

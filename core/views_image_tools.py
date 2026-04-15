@@ -1670,3 +1670,49 @@ def execute_tool(request):
 # TOOL EXECUTION HANDLERS (Session 65)
 # ========================================
 
+
+
+# Session 1083 (Rigby audit): pyflakes surfaced 21 undefined names in
+# this file. This view file calls a large fan-out of `_execute_*`
+# helpers for image/video/3D/voice/character operations plus session
+# state helpers, none of which were imported. Every tool call through
+# these routes would throw NameError at dispatch time.
+#
+# Imports deferred to EOF so they don't trigger circular init — several
+# of the target helper modules import from watermark / stability /
+# openai wrappers which transitively touch core.views_image_tools.
+# Keeping the imports at module level (not inside functions) so
+# pyflakes can verify them without a runtime call, while still
+# sidestepping the init cycle.
+from core.views_image_helpers import (  # noqa: E402
+    _execute_generate_image,
+    _execute_generate_video,
+    _execute_inpaint,
+    _execute_web_search,
+    _execute_scrape_website,
+    _execute_send_email,
+    _execute_create_brand_video,
+    _execute_strategic_review,
+    _execute_chain_videos,
+    _execute_show_recent_videos,
+    _execute_create_character_from_prompt,
+    _execute_edit_character_training_image,
+    _execute_edit_video,
+)
+from core.views_image_edit import (  # noqa: E402
+    _execute_apply_color_grade,
+    _execute_resize_image_for_format,
+)
+# Session 1083 (Rigby audit): session helpers via lazy proxy to
+# views_image_misc (sibling definition of the same helpers) —
+# importing from core.image_views.session triggers the image_views
+# package __init__ which has a pre-existing circular dependency.
+def get_or_create_session(*args, **kwargs):
+    from core.views_image_misc import get_or_create_session as _f
+    return _f(*args, **kwargs)
+
+def update_session_transcript(*args, **kwargs):
+    from core.views_image_misc import update_session_transcript as _f
+    return _f(*args, **kwargs)
+
+from core.views_creative_director import get_user_preferences  # noqa: E402

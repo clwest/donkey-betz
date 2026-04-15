@@ -265,7 +265,11 @@ class ExecutorDriver:
         try:
             result = self._shell('git diff HEAD', cwd=str(self.workdir))
             return result.stdout[:500_000]
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "executor_driver._get_diff: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return ''
 
     def _get_changed_files(self) -> list[str]:
@@ -280,7 +284,11 @@ class ExecutorDriver:
                 for line in result.stdout.splitlines()
                 if line.strip()
             ]
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "executor_driver._get_changed_files: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return []
 
     # ── Cleanup ──────────────────────────────────────────────────────────

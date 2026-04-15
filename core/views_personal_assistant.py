@@ -309,8 +309,11 @@ def unified_pa_chat(request):
                     '\n8. Be warm, professional, and concise. You represent Chris and the Donkey Betz brand.'
                     '\n9. If they ask about the technology behind the platform, you can explain at a high level (AI agents, knowledge pipeline, etc) but do NOT expose specific agent names, counts, or internal architecture.'
                 )
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_personal_assistant.unified_pa_chat: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         # Session 1077: Inject workspace context so PA knows which workspace is active
         workspace_id = request.data.get('workspace_id') or workspace_id
@@ -729,8 +732,11 @@ def unified_pa_context(request):
             if pa.profile_service:
                 score = pa.profile_service.get_completeness_score(request.user)
                 profile_completeness = int(score * 100)
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_personal_assistant.unified_pa_context: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         # Get system stats
         system_stats = {}
@@ -743,15 +749,21 @@ def unified_pa_context(request):
                 'advisors': Advisor.objects.count(),
                 'spiders': len(spider_registry.list_spiders()),
             }
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_personal_assistant.unified_pa_context: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         # Get available tools from dispatcher
         available_tools = []
         try:
             available_tools = list(pa.tool_dispatcher.tools.keys())
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_personal_assistant.unified_pa_context: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         return Response({
             'success': True,

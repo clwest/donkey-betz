@@ -188,7 +188,11 @@ class WebRequestLayer:
         try:
             from django.core.cache import cache
             return cache.get(f'{self.CACHE_PREFIX}:{cache_key}')
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "web_request_layer._redis_cache_get: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return None
 
     def _redis_cache_set(self, cache_key: str, data: Dict, status_code: int) -> None:
@@ -213,8 +217,11 @@ class WebRequestLayer:
         try:
             from django.core.cache import cache
             cache.delete(f'{self.FLIGHT_PREFIX}:{cache_key}')
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "web_request_layer._flight_lock_release: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
     async def _enforce_rate_limit(self, domain: str):
         """Enforce per-domain and global rate limiting"""

@@ -646,8 +646,11 @@ Output Format:
                 if arb.get('commence_time'):
                     try:
                         expires_at = parse_datetime(arb['commence_time'])
-                    except Exception:
-                        pass
+                    except Exception as _e:
+                        logger.warning(
+                            "arbitrage_detector._create_attention_items: swallowed (%s: %s) — degraded",
+                            type(_e).__name__, _e,
+                        )
 
                 attention_bridge.create_arbitrage_attention(
                     opportunity={

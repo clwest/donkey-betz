@@ -17,6 +17,9 @@ from sklearn.ensemble import RandomForestRegressor, IsolationForest
 from sklearn.metrics.pairwise import cosine_similarity
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 class RecommendationEngine:
     """
     Collaborative and content-based recommendation system for e-commerce
@@ -371,7 +374,11 @@ class CustomerSegmentation:
         from sklearn.metrics import silhouette_score
         try:
             return float(silhouette_score(X, labels))
-        except:
+        except Exception as _e:
+            logger.warning(
+                "ml_algorithms._calculate_silhouette_score: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return 0.0
 
 

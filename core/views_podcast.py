@@ -12,6 +12,9 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 
 
+import logging
+logger = logging.getLogger(__name__)  # Session 1083
+
 def _podcast_episode_to_dict(ep):
     """Convert a PodcastEpisode to a dictionary for API response."""
     # Extract config values (stored in generation_config JSON field)
@@ -401,8 +404,11 @@ def podcast_script(request, episode_id):
                         'decision_reasoning': debate.decision_reasoning or '',
                         'consensus_reached': debate.consensus_reached,
                     }
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "views_podcast.podcast_script: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
             return JsonResponse({
                 'success': True,

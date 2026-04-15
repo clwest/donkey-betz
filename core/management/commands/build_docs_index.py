@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(__name__)
+
 """
 Management command to generate docs/INDEX.md and docs/_index.json automatically.
 
@@ -411,8 +414,11 @@ class Command(BaseCommand):
                     # Stop after first 50 lines
                     if f.tell() > 5000:
                         break
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "build_docs_index._extract_title: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         # Fallback to filename
         return filepath.stem.replace('_', ' ').replace('-', ' ')
@@ -457,7 +463,11 @@ class Command(BaseCommand):
             except yaml.YAMLError:
                 return None
 
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "build_docs_index._parse_frontmatter: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return None
 
     def _infer_subsystems(self, filepath: Path, meta: dict) -> list:
@@ -607,8 +617,11 @@ class Command(BaseCommand):
                 snippet = content_no_code[start:end].replace('\n', ' ')
                 add_link(doc_path, snippet)
 
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "build_docs_index._extract_links: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         # Convert to list format
         outbound_links = [
@@ -660,7 +673,11 @@ class Command(BaseCommand):
         try:
             with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
                 return sum(1 for _ in f)
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "build_docs_index._count_lines: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return 0
 
     def _gather_stats(self, docs_dir: Path, base_dir: Path, doc_index: dict) -> dict:
@@ -756,8 +773,11 @@ class Command(BaseCommand):
                 match = re.search(r'Session\s+(\d+)', content, re.IGNORECASE)
                 if match:
                     return int(match.group(1))
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "build_docs_index._extract_current_session: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
         return 784
 
     def _extract_platform_stats(self, base_dir: Path) -> dict:
@@ -795,8 +815,11 @@ class Command(BaseCommand):
                     match = re.search(pattern, content)
                     if match:
                         stats[key] = int(match.group(1))
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "build_docs_index._extract_platform_stats: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
         return stats
 

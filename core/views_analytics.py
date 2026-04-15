@@ -318,8 +318,11 @@ def cost_breakdown(request):
                 'usage': f"{agent_cost['total_tokens']} tokens",
                 'percentage': round((estimated_cost / total_revenue * 100) if total_revenue > 0 else 0, 1)
             }
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_analytics.cost_breakdown: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     logger.info(f"✅ Cost breakdown serving REAL data: ${total_revenue} across {len(services)} sources")
 
@@ -1488,8 +1491,11 @@ def get_chart_content_production(request):
             agent_name = exec.agent_name or 'other'
             if agent_name in content_agents:
                 content_by_type[agent_name] = content_by_type.get(agent_name, 0) + 1
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_analytics.get_chart_content_production: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     # Get agent executions that produced content
     executions_by_day = []
@@ -1507,8 +1513,11 @@ def get_chart_content_production(request):
                 'date': day_start.strftime('%Y-%m-%d'),
                 'count': count
             })
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_analytics.get_chart_content_production: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     return Response({
         'success': True,
@@ -1557,8 +1566,11 @@ def get_chart_revenue(request):
                 'date': day_start.strftime('%Y-%m-%d'),
                 'cost': round(day_cost, 4)
             })
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_analytics.get_chart_revenue: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     return Response({
         'success': True,
@@ -1600,15 +1612,21 @@ def get_chart_user_engagement(request):
         engagement_data['conversations'] = AgentConversation.objects.filter(
             created_at__gte=cutoff
         ).count()
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_analytics.get_chart_user_engagement: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     try:
         engagement_data['executions'] = AgentExecution.objects.filter(
             created_at__gte=cutoff
         ).count()
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_analytics.get_chart_user_engagement: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     return Response({
         'success': True,
@@ -1659,8 +1677,11 @@ def get_chart_spider_performance(request):
     except ImportError:
         # SpiderResult model not available, return empty stats
         pass
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_analytics.get_chart_spider_performance: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     return Response({
         'success': True,
@@ -1700,15 +1721,21 @@ def get_chart_learning_progress(request):
         for memory in memories:
             mem_type = memory.memory_type or 'general'
             learning_data['memory_types'][mem_type] = learning_data['memory_types'].get(mem_type, 0) + 1
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_analytics.get_chart_learning_progress: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     try:
         learning_data['knowledge_transfers'] = KnowledgeTransfer.objects.filter(
             transferred_at__gte=cutoff
         ).count()
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_analytics.get_chart_learning_progress: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     return Response({
         'success': True,
@@ -1752,8 +1779,11 @@ def get_chart_collaboration(request):
             participants = conv.participants or []
             if len(participants) > 1:
                 collab_data['multi_agent'] += 1
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_analytics.get_chart_collaboration: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     return Response({
         'success': True,

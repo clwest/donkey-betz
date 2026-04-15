@@ -1,4 +1,7 @@
 """
+import logging
+logger = logging.getLogger(__name__)
+
 DaVinci Resolve Controller
 
 Session 103 - Resolve Render Node Service
@@ -336,8 +339,11 @@ class ResolveController:
                         logger.info(f"Loaded render preset: {preset_name}")
                         preset_loaded = True
                         break
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "resolve_controller.start_render: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
             if not preset_loaded:
                 logger.warning("Could not load any preset, trying manual settings...")

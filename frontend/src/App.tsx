@@ -3,7 +3,6 @@ import { useAuthStore } from '@/stores/authStore'
 import { usePAStore } from '@/stores/paStore'
 import Layout from '@/components/layout/Layout'
 import LoginPage from '@/pages/LoginPage'
-import DashboardPage from '@/pages/DashboardPage'
 import InboxPage from '@/pages/InboxPage'
 import WorkspaceCreatePage from '@/pages/WorkspaceCreatePage'
 import WorkspaceDashboardPage from '@/pages/WorkspaceDashboardPage'
@@ -82,7 +81,8 @@ function App() {
         <Route index element={<CommandCenterPage />} />
         <Route path="assistant" element={<Navigate to="/" replace />} />
         <Route path="human" element={<Navigate to="/" replace />} />
-        <Route path="dashboard" element={<DashboardPage />} />
+        {/* Session 1083: /dashboard redirects to Command Center per Rigby hidden-routes audit */}
+        <Route path="dashboard" element={<Navigate to="/" replace />} />
         <Route path="demo" element={<DemoHomePage />} />
         <Route path="agents" element={<AgentsPage />} />
         <Route path="intelligence" element={<IntelligencePage />} />

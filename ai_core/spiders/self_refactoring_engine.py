@@ -22,6 +22,9 @@ import git
 from dataclasses import dataclass
 
 # Redis URL for production compatibility
+import logging
+logger = logging.getLogger(__name__)
+
 _REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 
 
@@ -550,7 +553,11 @@ deterministic_random = DeterministicRandom()
 
             return True
 
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "self_refactoring_engine.apply_random_abstraction: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return False
 
     def apply_constants_extraction(self, proposal: RefactoringProposal) -> bool:

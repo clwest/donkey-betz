@@ -25,6 +25,20 @@ from core.tasks import (  # noqa: F401 — private helpers from tasks.py
     _route_gate_repair,
     _run_comparison_generation,
     _send_narrative_alerts_to_discord,
+    # Session 1083 (Rigby audit): pyflakes surfaced these six as
+    # undefined in this file. All are @shared_task wrappers defined in
+    # core/tasks.py that the content pipeline calls via .delay() /
+    # .apply_async() but was never importing. Distribution to Etsy /
+    # Gumroad / Shutterstock has therefore been raising NameError on
+    # every content-distribution trigger since these wrappers moved to
+    # tasks.py, and the channel generator + podcast generator +
+    # conceptforge pipeline were in the same boat.
+    process_etsy_distribution,
+    process_gumroad_distribution,
+    process_shutterstock_distribution,
+    generate_content_for_channel,
+    generate_podcast_episode,
+    run_conceptforge_pipeline,
 )
 
 
@@ -2381,8 +2395,11 @@ def _impl_generate_self_blog_deliberation_task(self, tone='enthusiastic', word_c
             cache.delete(lock_key)
             logger.info(f"[Phase 4] Budget preflight: DEFER — {pf['reason']}")
             return {'success': False, 'deferred': True, 'reason': pf['reason']}
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "tasks_content._impl_generate_self_blog_deliberation_task: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     # Session 969: Weight away from 'system' for diversity
     if topic_category is None or topic_category == 'random':
@@ -2529,8 +2546,11 @@ def _impl_generate_self_blog_deliberation_task(self, tone='enthusiastic', word_c
                     'status', 'failure_reason_code', 'failure_detail',
                     'completed_at', 'updated_at',
                 ])
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "tasks_content._impl_generate_self_blog_deliberation_task: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
         return {'success': False, 'error': str(e), 'failure_reason_code': reason_code}
 
     finally:
@@ -2867,8 +2887,11 @@ def _impl_run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_h
                 thought.reflection = "Celery soft_time_limit exceeded"
                 thought.completed_at = timezone.now()
                 thought.save()
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "tasks_content.format_action_result: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
         return {'success': False, 'error': 'Celery soft_time_limit exceeded', 'timed_out': True}
     except Exception as e:
         logger.error(f"🧠 [THINKING] Cycle failed: {e}", exc_info=True)
@@ -3141,8 +3164,11 @@ def _impl_content_autonomy_loop():
         if pf['decision'] == 'defer':
             logger.info(f"[ContentAutonomy] Budget preflight: DEFER — {pf['reason']}")
             return {'success': False, 'deferred': True, 'reason': pf['reason']}
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "tasks_content._impl_content_autonomy_loop: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     now = timezone.now()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -3610,57 +3636,14 @@ self,
         }
 
 
-    """
-    Session 863: Execute a single ConceptForge stage.
-
-    Used for individual stage retries or parallel stage execution.
-
-    Args:
-        run_id: UUID of the ConceptForge run
-        stage_name: Name of stage to execute
-    """
-    from core.models_conceptforge import ConceptForgeRun, ConceptForgeStageRun
-    from core.conceptforge import ConceptForgeOrchestrator, get_lab_config
-
-    logger.info(f"🔮 [CONCEPTFORGE] Running stage '{stage_name}' for run {run_id}")
-
-    try:
-        run = ConceptForgeRun.objects.get(id=run_id)
-        stage = run.stages.get(stage_name=stage_name)
-        lab_config = get_lab_config(run.domain)
-
-        if not lab_config:
-            stage.fail(f"No lab config for domain: {run.domain}")
-            return {'status': 'failed', 'error': 'no lab config'}
-
-        # Get previous outputs
-        previous_outputs = {}
-        for prev_stage in run.stages.filter(status='completed').order_by('stage_order'):
-            if prev_stage.stage_order < stage.stage_order:
-                previous_outputs[prev_stage.stage_name] = prev_stage.output_text
-
-        # Execute stage
-        orchestrator = ConceptForgeOrchestrator(user=run.user)
-        success = orchestrator._execute_stage(
-            run=run,
-            stage=stage,
-            lab_config=lab_config,
-            previous_outputs=previous_outputs,
-        )
-
-        return {
-            'status': 'completed' if success else 'failed',
-            'stage': stage_name,
-            'output_length': len(stage.output_text) if stage.output_text else 0,
-        }
-
-    except Exception as e:
-        logger.exception(f"🔮 [CONCEPTFORGE] Stage {stage_name} failed: {e}")
-        return {
-            'status': 'failed',
-            'stage': stage_name,
-            'error': str(e),
-        }
+# Session 1083 (Rigby audit): orphaned ~50-line function body deleted
+# here. Was the body of an `_impl_execute_conceptforge_stage(self,
+# run_id, stage_name)` task whose def signature was removed in a
+# refactor but left the body at module scope with 4-space indent,
+# producing 7 pyflakes undefined-name errors for stage_name + run_id.
+# Verified via grep that nothing in the repo calls
+# `execute_conceptforge_stage` — orphaned dead code. Same class of bug
+# as the record_agent_memory orphan in tasks_media.py (round 24).
 
 
 # =============================================================================

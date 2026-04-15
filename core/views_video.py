@@ -1444,8 +1444,11 @@ def video_to_video_endpoint(request):
         if file_path:
             try:
                 default_storage.delete(file_path)
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "views_video.video_to_video_endpoint: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
         # Save to history if successful
         if result.success and result.task_id:
@@ -1551,8 +1554,11 @@ def video_upscale_endpoint(request):
         if file_path:
             try:
                 default_storage.delete(file_path)
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "views_video.video_upscale_endpoint: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
         # Save to history if successful
         if result.success and result.task_id:
@@ -1785,8 +1791,11 @@ def character_performance_endpoint(request):
             if image_path:
                 try:
                     default_storage.delete(image_path)
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "views_video.character_performance_endpoint: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
             return JsonResponse({
                 'success': False,
@@ -1809,8 +1818,11 @@ def character_performance_endpoint(request):
                 default_storage.delete(image_path)
             if reference_video_path:
                 default_storage.delete(reference_video_path)
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_video.character_performance_endpoint: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         # Save to history if successful
         if result.success and result.task_id:
@@ -3518,8 +3530,11 @@ def concatenate_videos(request):
         # Clean up concat list
         try:
             os.remove(concat_list_path)
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_video.concatenate_videos: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         if result.returncode != 0:
             logger.error(f"❌ [Session 160] ffmpeg concatenation failed: {result.stderr}")
@@ -4700,7 +4715,11 @@ def picture_in_picture(request):
                     resolved_uuid = videos[numeric_id - 1].id
                     logger.info(f"🔄 [Session 162] PiP: Resolved hybrid ID {numeric_id} → {resolved_uuid} (scope: {scope})")
                     return resolved_uuid
-                except Exception:
+                except Exception as _e:
+                    logger.warning(
+                        "views_video.resolve_video_id: swallowed (%s: %s) — returning default",
+                        type(_e).__name__, _e,
+                    )
                     return None
 
         bg_uuid = resolve_video_id(bg_video_id, request.user, project_id)
@@ -7613,8 +7632,11 @@ def auto_caption(request):
         # Clean up temp audio file
         try:
             os.remove(audio_path)
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_video.auto_caption: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         # Get project from source video if not specified
         if not project and video.project:

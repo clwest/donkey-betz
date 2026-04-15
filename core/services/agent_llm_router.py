@@ -18,6 +18,8 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
+from django.db import models  # Session 1083
+
 from core.services.llm_provider_registry import (
     get_llm_provider_registry,
     LLMRequest,
@@ -288,7 +290,11 @@ class AgentLLMRouter:
                 model_id=primary.get('model_id', ''),
             ).first()
             return model.supports_tools if model else False
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "agent_llm_router._agent_requires_tools: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return False
 
     def _check_budget_ok(self, agent_name: str) -> bool:

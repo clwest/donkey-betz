@@ -29,6 +29,18 @@ from core.tasks import (  # noqa: F401 — private helpers from tasks.py
     _get_overused_markers,
     _handle_conversation_delegation,
     _preflight_gather_agent_data,
+    # Session 1083 (Rigby audit): these six symbols were all being
+    # referenced throughout this file but never imported, causing
+    # NameError on every multi-agent conversation path. Surfaced by
+    # the spider-network stall investigation — the first fix
+    # (validate_agent_output) caused Pyright to flag the remaining
+    # five undefined names in the same file.
+    validate_agent_output,
+    CONVERSATION_DELEGATION_TOOL,
+    broadcast_hive_mind_update,
+    broadcast_hive_mind_status,
+    extract_action_items_from_session,  # Session 1083 — 7th missing import
+    run_triggered_conversation,          # Session 1083 — 8th missing import
 )
 
 
@@ -287,8 +299,11 @@ def _impl_run_agent_conversation(self, max_conversations: int = 3, max_messages:
                 from django.contrib.auth import get_user_model
                 DelegationUser = get_user_model()
                 delegation_user = DelegationUser.objects.filter(username='system_autonomous').first()
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "tasks_conversations._impl_run_agent_conversation: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
             for msg_num in range(max_messages):
                 # Build the conversation context
@@ -1356,8 +1371,11 @@ def _impl_run_multi_agent_conversation(self, max_conversations: int = 2, partici
                 from django.contrib.auth import get_user_model
                 DelegationUser = get_user_model()
                 delegation_user = DelegationUser.objects.filter(username='system_autonomous').first()
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "tasks_conversations._impl_run_multi_agent_conversation: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
             for round_num in range(max_rounds):
                 for agent_idx, current_agent in enumerate(panel_agents):

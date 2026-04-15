@@ -2,6 +2,8 @@
 Enhanced authentication views with full registration, email verification, and remember me functionality.
 """
 
+import logging
+
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -15,6 +17,10 @@ from django.utils import timezone
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.db import transaction
+
+# Session 1083 (Rigby audit): module-level logger — earlier rounds
+# accidentally injected this inside the docstring, so it was a no-op.
+logger = logging.getLogger(__name__)
 import secrets
 from datetime import timedelta
 import re
@@ -31,8 +37,11 @@ def _platform_role(user) -> str:
         profile = EnhancedUserProfile.objects.filter(user=user).first()
         if profile and getattr(profile, 'platform_role', None):
             return profile.platform_role
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "auth_views_enhanced._platform_role: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
     return 'viewer'
 
 
@@ -536,8 +545,11 @@ def logout_enhanced_view(request):
     try:
         # Delete auth token
         request.user.auth_token.delete()
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "auth_views_enhanced.logout_enhanced_view: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
     
     return Response({
         'message': 'Logged out successfully'

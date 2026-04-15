@@ -195,8 +195,11 @@ Focus on:
                             'key_insights': [],
                             'key_points': []
                         }
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "sync_agent_learning.synthesize_knowledge_with_llm: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
             # Final fallback - use raw text but strip any JSON structure
             logger.warning(f"Could not parse LLM response as JSON for {spider_name}/{data_type}")

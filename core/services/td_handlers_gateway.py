@@ -875,8 +875,11 @@ class GatewayHandlersMixin:
                     r = _get_redis()
                     if r:
                         r.delete(f'{_KEY_PREFIX}{task_id}')
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "td_handlers_gateway._handle_cockpit: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
                 return {
                     'action': 'revoke_task',

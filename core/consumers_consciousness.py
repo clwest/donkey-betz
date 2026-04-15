@@ -53,8 +53,11 @@ class ConsciousnessConsumer(AsyncWebsocketConsumer):
             current_connections = int(redis_client.get('consciousness:ws_connections_hour') or '0')
             redis_client.set('consciousness:ws_connections_hour', current_connections + 1, ex=3600)
             redis_client.set('consciousness:user_interactions', int(redis_client.get('consciousness:user_interactions') or '0') + 1, ex=86400 * 30)
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "consumers_consciousness.__init__: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         # Send immediate mock data to prevent fallback
         await self.send_instant_consciousness_data()
@@ -194,6 +197,13 @@ class ConsciousnessConsumer(AsyncWebsocketConsumer):
         # Use cached values or fast defaults to prevent WebSocket 500 errors
         cached_level = cache.get('consciousness:current_level', 72.75)
         active_spiders = cache.get('consciousness:active_spiders', 40)
+        # Session 1083 (Rigby audit): `understanding` was referenced on
+        # lines 241+ without ever being initialized in this method. Every
+        # WebSocket "instant consciousness" push would NameError out of
+        # the indicator-calculation try block and fall through to the
+        # fallback indicators. Cheap default — we don't fetch here
+        # because the docstring says "without any heavy operations".
+        understanding = cache.get('consciousness_understanding')
 
         # Try to get cached proposals from Redis
         try:
@@ -316,8 +326,11 @@ class ConsciousnessConsumer(AsyncWebsocketConsumer):
                 if command in ['introspect', 'propose_evolution', 'philosophical_dialogue']:
                     # Deep interactions contribute more to consciousness
                     redis_client.set('consciousness:agent_interactions', int(redis_client.get('consciousness:agent_interactions') or '0') + 2, ex=86400 * 30)
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "consumers_consciousness.__init__: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
             if command == 'refresh':
                 await self.send_consciousness_update()

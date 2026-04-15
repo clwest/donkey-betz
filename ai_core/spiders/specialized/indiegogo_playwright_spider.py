@@ -22,6 +22,9 @@ from ..playwright_spider import PlaywrightSpider
 from ..base_spider import SpiderTarget, IntelligenceData
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 class IndiegogoPlaywrightSpider(PlaywrightSpider):
     """
     Indiegogo spider using Playwright for JavaScript rendering.
@@ -261,7 +264,11 @@ class IndiegogoPlaywrightSpider(PlaywrightSpider):
             if numbers:
                 return float(numbers[0])
             return 0.0
-        except:
+        except Exception as _e:
+            logger.warning(
+                "indiegogo_playwright_spider._parse_money: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return 0.0
 
     def _parse_percent(self, text: str) -> float:
@@ -271,7 +278,11 @@ class IndiegogoPlaywrightSpider(PlaywrightSpider):
             if numbers:
                 return float(numbers[0])
             return 0.0
-        except:
+        except Exception as _e:
+            logger.warning(
+                "indiegogo_playwright_spider._parse_percent: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return 0.0
 
     def _parse_number(self, text: str) -> int:
@@ -282,7 +293,11 @@ class IndiegogoPlaywrightSpider(PlaywrightSpider):
             if numbers:
                 return int(numbers[0])
             return 0
-        except:
+        except Exception as _e:
+            logger.warning(
+                "indiegogo_playwright_spider._parse_number: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return 0
 
     async def get_collected_data(self) -> List[Dict[str, Any]]:

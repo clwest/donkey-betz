@@ -182,8 +182,11 @@ def get_deliverable(request, deliverable_id):
                         scope = get_vip_scope(request)
                         if scope.is_vip and scope.workspace_id == str(deliverable.workspace_id):
                             vip_allowed = True
-                    except Exception:
-                        pass
+                    except Exception as _e:
+                        logger.warning(
+                            "views_deliverables.get_deliverable: swallowed (%s: %s) — degraded",
+                            type(_e).__name__, _e,
+                        )
                 if not vip_allowed:
                     return JsonResponse({
                         'success': False,

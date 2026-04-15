@@ -33,7 +33,11 @@ def get_active_workspace(user):
             return ws
         # Fallback: any workspace owned by user
         return ProjectWorkspace.objects.filter(user=user).first()
-    except Exception:
+    except Exception as _e:
+        logger.warning(
+            "workspace_resolver.get_active_workspace: swallowed (%s: %s) — returning default",
+            type(_e).__name__, _e,
+        )
         return None
 
 

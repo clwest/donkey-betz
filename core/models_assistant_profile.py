@@ -13,8 +13,14 @@ Roles:
 - customer: TBD (future)
 """
 
+import logging
+
 from django.conf import settings
 from django.db import models
+
+# Session 1083 (Rigby audit): module-level logger — earlier rounds
+# accidentally injected this inside the docstring.
+logger = logging.getLogger(__name__)
 from django.contrib.postgres.fields import ArrayField
 
 from core.models.base import UnifiedBaseModel
@@ -177,6 +183,9 @@ class AssistantProfile(UnifiedBaseModel):
                 content = invite.prospect_profile.content or ''
                 # Cap at 2000 chars to keep system prompt reasonable
                 return content[:2000] if content else None
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "models_assistant_profile._load_prospect_context: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
         return None

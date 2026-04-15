@@ -1861,7 +1861,11 @@ class AgentRouter:
         try:
             from core.services.platform_integration import inject_platform_tools_prompt
             return inject_platform_tools_prompt()
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "agent_router._get_platform_tools_context: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return ''
 
     # ==================== Session 858: User Context Injection ====================
@@ -2245,7 +2249,11 @@ class AgentRouter:
         try:
             from core.services.agent_learning_service import get_learning_service
             return get_learning_service().get_adaptive_context(self.user.id, agent_name)
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "agent_router._get_agent_learning_adaptive_context: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return ''
 
     def _create_execution_record(self, agent_name: str, task: str, context_summary: dict = None, experiment_id=None):
@@ -2293,7 +2301,18 @@ class AgentRouter:
 
             # Session 642: User field is now nullable - always create execution record
             # Create execution record (user can be None for Celery/API tasks)
-            execution = AgentExecution.objects.create(
+            # Session 1083 (Rigby audit): set last_heartbeat_at on create,
+            # matching tasks_agents._impl_execute_agent_task. Without this,
+            # executions born via agent_router.route() directly (bypassing
+            # the execute_agent_task Celery wrapper's heartbeat thread)
+            # show last_heartbeat_at=null forever and the cleanup watchdog
+            # kills them at 60 min with "no heartbeat". This was why
+            # ResearchAgent had 0/11 success in the last 7 days — every
+            # dispatch through the PA universal_agent_tool path (round
+            # 23 fix) creates one record here AND nothing touches its
+            # heartbeat. Graceful fall-back for envs that haven't run
+            # migration 0301 yet.
+            _create_kwargs = dict(
                 agent=agent_record,
                 user=self.user,  # Can be None now
                 task=task[:500],  # Truncate long tasks
@@ -2306,7 +2325,14 @@ class AgentRouter:
                 owner_agent=agent_name,
                 parent_object_type=context.get('parent_object_type', ''),
                 parent_object_id=context.get('parent_object_id'),
+                last_heartbeat_at=timezone.now(),
             )
+            try:
+                execution = AgentExecution.objects.create(**_create_kwargs)
+            except Exception:
+                # Migration 0301 not yet applied — retry without the field
+                _create_kwargs.pop('last_heartbeat_at', None)
+                execution = AgentExecution.objects.create(**_create_kwargs)
 
             return execution
         except Exception as e:

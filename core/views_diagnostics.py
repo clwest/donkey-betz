@@ -34,7 +34,11 @@ def _get_cockpit_workspace_id(request):
         from core.vip_scope import get_vip_scope
         scope = get_vip_scope(request)
         return scope.workspace_id if scope.is_vip else None
-    except Exception:
+    except Exception as _e:
+        logger.warning(
+            "views_diagnostics._get_cockpit_workspace_id: swallowed (%s: %s) — returning default",
+            type(_e).__name__, _e,
+        )
         return None
 
 
@@ -71,7 +75,11 @@ def get_redis_client():
             socket_connect_timeout=2,
             socket_timeout=2,
         )
-    except Exception:
+    except Exception as _e:
+        logger.warning(
+            "views_diagnostics.get_redis_client: swallowed (%s: %s) — returning default",
+            type(_e).__name__, _e,
+        )
         return None
 
 @csrf_exempt
@@ -301,8 +309,11 @@ def diagnostic_master_endpoint(request):
                             'db': db_num,
                             'keys': db_size
                         })
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "views_diagnostics.diagnostic_master_endpoint: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
         else:
             diagnostics['redis_data'] = {'connected': False}
     except Exception as e:
@@ -323,16 +334,22 @@ def diagnostic_master_endpoint(request):
             agents = get_all_agents()
             agent_data['agents'] = agents[:5] if agents else []
             agent_data['total_agents'] = len(agents) if agents else 0
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_diagnostics.diagnostic_master_endpoint: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         try:
             from ai_core.intelligence.advisor_registry import get_all_advisors
             advisors = get_all_advisors()
             agent_data['advisors'] = advisors[:5] if advisors else []
             agent_data['total_advisors'] = len(advisors) if advisors else 0
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_diagnostics.diagnostic_master_endpoint: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         diagnostics['agent_registry'] = agent_data
     except Exception as e:
@@ -797,8 +814,11 @@ def cockpit_error_summary(request):
                 'sample_error': s.get('description', ''),
             })
             total += s['occurrence_count']
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_diagnostics.cockpit_error_summary: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     # Celery task failures
     try:
@@ -824,8 +844,11 @@ def cockpit_error_summary(request):
                 'sample_error': sample[:300],
             })
             total += cf['count']
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_diagnostics.cockpit_error_summary: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     return JsonResponse({
         'hours': hours,
@@ -1343,8 +1366,11 @@ def _attach_media_urls(result: dict, task_id: str) -> None:
                 images = metadata.get('images', [])
                 if images and isinstance(images, list) and images[0].get('url'):
                     result['image_url'] = images[0]['url']
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_diagnostics._attach_media_urls: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
 
 @require_http_methods(["GET"])
@@ -1376,8 +1402,11 @@ def cockpit_job_status(request, job_id):
             if event.status == 'SUCCESS':
                 _attach_media_urls(result, job_id)
             return JsonResponse(result)
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_diagnostics.cockpit_job_status: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     # Check Celery AsyncResult
     try:
@@ -1400,8 +1429,11 @@ def cockpit_job_status(request, job_id):
             result['error'] = str(async_result.result)[:500] if async_result.result else None
         else:
             result['status'] = async_result.state.lower()
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_diagnostics.cockpit_job_status: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     return JsonResponse(result)
 
@@ -1530,8 +1562,11 @@ def cockpit_ops_overview(request):
                 'status': cs.status,
                 'detail': f'Last check: {cs.last_check.strftime("%H:%M")}' if cs.last_check else '',
             })
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_diagnostics.cockpit_ops_overview: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     # Resolve Node
     try:
@@ -2793,8 +2828,11 @@ def cockpit_queue_depths(request):
                     sample_tasks.append(task_name)
                 except Exception:
                     sample_tasks.append('(unparseable)')
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_diagnostics.cockpit_queue_depths: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
     return JsonResponse({
         'generated_at': tz_now().isoformat(),
@@ -3549,8 +3587,11 @@ def cockpit_config_overview(request):
                     'provider': m['provider'],
                     'is_active': True,
                 })
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_diagnostics.cockpit_config_overview: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
     flags = []
     for cfg in SystemConfiguration.objects.filter(is_active=True).order_by('category', 'key'):

@@ -48,8 +48,23 @@ logger = logging.getLogger(__name__)
 #        tool_metrics:{tool}:{action}:latency_sum → cumulative ms
 # Daily keys auto-expire after 48h.
 
+# Session 1083 (Rigby audit): metrics-recorder health is observable at
+# module level so every tool call can surface metrics_ok via dispatcher
+# metadata, and failures get logged at most once per _METRIC_LOG_INTERVAL
+# seconds instead of silently swallowing every Redis/import error.
+_metric_recorder_ok = True
+_last_metric_error_log = 0.0
+_METRIC_LOG_INTERVAL = 60.0  # seconds — rate-limit to avoid log spam
+
+
 def _record_tool_metric(tool_name: str, action: str, status: str, latency_ms: int):
-    """Record a tool call metric in Redis. Fire-and-forget — never raises."""
+    """Record a tool call metric in Redis. Fire-and-forget — never raises.
+
+    Sets module-level _metric_recorder_ok to False on failure and rate-logs
+    the first error at WARNING once per minute so Chris can see when
+    observability is broken without drowning the logs if Redis goes down.
+    """
+    global _metric_recorder_ok, _last_metric_error_log
     try:
         from django.conf import settings
         import redis as redis_lib
@@ -57,6 +72,7 @@ def _record_tool_metric(tool_name: str, action: str, status: str, latency_ms: in
 
         redis_url = getattr(settings, 'REDIS_URL', None)
         if not redis_url:
+            _metric_recorder_ok = False
             return
 
         r = redis_lib.Redis.from_url(redis_url, decode_responses=True, socket_timeout=1)
@@ -64,21 +80,27 @@ def _record_tool_metric(tool_name: str, action: str, status: str, latency_ms: in
         prefix = f"tool_metrics:{day}"
 
         pipe = r.pipeline(transaction=False)
-        # Per-tool:action:status counter
         pipe.hincrby(f"{prefix}:calls", f"{tool_name}:{action}:{status}", 1)
-        # Per-tool total counter
         pipe.hincrby(f"{prefix}:totals", tool_name, 1)
-        # Latency accumulator (for avg calculation)
         pipe.hincrby(f"{prefix}:latency", f"{tool_name}:{action}", latency_ms)
-        # Global counter
         pipe.hincrby(f"{prefix}:calls", "_global_total", 1)
-        # Set 48h expiry on all keys
         for key in [f"{prefix}:calls", f"{prefix}:totals", f"{prefix}:latency"]:
             pipe.expire(key, 172800)
         pipe.execute()
-    except Exception:
-        # Never let metrics recording break tool execution
-        pass
+        _metric_recorder_ok = True
+    except Exception as e:
+        _metric_recorder_ok = False
+        now = time.monotonic()
+        if now - _last_metric_error_log >= _METRIC_LOG_INTERVAL:
+            _last_metric_error_log = now
+            logger.warning(
+                "tool_dispatcher metrics recorder failed — observability "
+                "degraded (metrics_ok=False). tool=%s action=%s error=%s: %s",
+                tool_name,
+                action,
+                type(e).__name__,
+                e,
+            )
 
 
 def get_tool_metrics(day: str = None) -> Dict[str, Any]:

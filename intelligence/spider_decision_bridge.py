@@ -20,9 +20,21 @@ from intelligence.income_builder import income_builder
 
 logger = logging.getLogger(__name__)
 
-# Redis URL for production - use DB 4 for decision bridge
+# Redis URL for production - use DB 4 for decision bridge.
+# Session 1083 (Rigby audit): previous `_REDIS_URL.rsplit('/', 1)[0] + '/4'`
+# was broken when REDIS_URL had no explicit database number. For a URL like
+# `redis://localhost:6379` the rsplit ate one slash of `://` and produced
+# `redis://4`, which parses as host=`4` port=`6379` and threw
+# `Error 65 connecting to 4:6379` on every spider_decision_bridge call.
+# Fixed via urllib.parse to rebuild the URL safely regardless of whether
+# the source URL had a trailing `/db` segment. Surfaced while monitoring
+# a run_spider_network log after unsticking the long_running worker
+# deadlock — had been producing Redis errors for ~30 opportunities/minute
+# for an unknown amount of time.
+from urllib.parse import urlparse, urlunparse
 _REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
-_REDIS_URL_DB4 = _REDIS_URL.rsplit('/', 1)[0] + '/4' if '/' in _REDIS_URL else _REDIS_URL + '/4'
+_parsed_redis = urlparse(_REDIS_URL)
+_REDIS_URL_DB4 = urlunparse(_parsed_redis._replace(path='/4'))
 
 @dataclass
 class OpportunityDecision:

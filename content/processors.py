@@ -1,4 +1,7 @@
 """
+import logging
+logger = logging.getLogger(__name__)
+
 Document Processing Pipeline
 
 Comprehensive document processing system supporting multiple formats,
@@ -775,8 +778,11 @@ class YouTubeProcessor(BaseProcessor):
                         'thumbnail_url': data.get('thumbnail_url', ''),
                         'provider_name': 'YouTube',
                     })
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "processors._get_video_metadata: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
         return metadata
 

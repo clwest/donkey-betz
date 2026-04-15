@@ -876,8 +876,11 @@ RESEARCH DATA:
                     # Enrich with AgentExecution output if available
                     result.update(self._get_agent_execution_output(job_id))
                     return result
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "td_core._handle_studio: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
             # 2. Check Celery AsyncResult (in-flight or recently completed)
             try:
@@ -927,8 +930,11 @@ RESEARCH DATA:
                         'prompt': getattr(img, 'prompt', '')[:100] if getattr(img, 'prompt', '') else '',
                         'created_at': img.created_at.isoformat() if hasattr(img, 'created_at') and img.created_at else None,
                     })
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "td_core._handle_studio: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
             try:
                 from content.models import VideoHistory
                 for vid in VideoHistory.objects.order_by('-created_at')[:limit]:
@@ -938,8 +944,11 @@ RESEARCH DATA:
                         'prompt': getattr(vid, 'prompt', '')[:100] if getattr(vid, 'prompt', '') else '',
                         'created_at': vid.created_at.isoformat() if hasattr(vid, 'created_at') and vid.created_at else None,
                     })
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "td_core._handle_studio: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
             try:
                 from content.models import AudioHistory
                 for aud in AudioHistory.objects.order_by('-created_at')[:limit]:
@@ -949,8 +958,11 @@ RESEARCH DATA:
                         'prompt': getattr(aud, 'text', '')[:100] if getattr(aud, 'text', '') else '',
                         'created_at': aud.created_at.isoformat() if hasattr(aud, 'created_at') and aud.created_at else None,
                     })
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "td_core._handle_studio: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
             # Sort by created_at descending
             jobs.sort(key=lambda j: j.get('created_at') or '', reverse=True)
             return {
@@ -1424,8 +1436,11 @@ RESEARCH DATA:
                             """)
                             row = cursor.fetchone()
                             result['spider_data_rows'] = row[0] if row else 0
-                        except Exception:
-                            pass
+                        except Exception as _e:
+                            logger.warning(
+                                "td_core._handle_db_health: swallowed (%s: %s) — degraded",
+                                type(_e).__name__, _e,
+                            )
 
                         # Vector indexes
                         cursor.execute("""
@@ -3531,8 +3546,11 @@ RESEARCH DATA:
                     from core.services.session_health_service import get_session_health
                     old_health = get_session_health(old_conversation_id, user_id)
                     starter_prompt = old_health.get('starter_prompt', '')
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "td_core._handle_session: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
             return {
                 'action': 'create_fresh',

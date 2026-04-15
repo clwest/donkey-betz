@@ -73,5 +73,9 @@ def is_vip_user(request) -> bool:
         from core.models import EnhancedUserProfile
         profile = EnhancedUserProfile.objects.filter(user=user).first()
         return profile and profile.primary_role == 'vip_demo_viewer'
-    except Exception:
+    except Exception as _e:
+        logger.warning(
+            "vip_scope.is_vip_user: swallowed (%s: %s) — returning default",
+            type(_e).__name__, _e,
+        )
         return False

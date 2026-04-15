@@ -277,8 +277,11 @@ class ContractMonitor:
                     detail=f'Agent "{name}" in DB but not in AGENT_MAP. '
                            f'May be stale or a persona agent.',
                 ))
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "contract_monitor._check_agent_registry_drift: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         return findings
 

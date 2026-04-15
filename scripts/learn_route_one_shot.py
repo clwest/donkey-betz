@@ -2,6 +2,9 @@
 import os, sys, math, argparse
 from datetime import timedelta
 
+import logging
+logger = logging.getLogger(__name__)
+
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 import django
 django.setup()
@@ -192,8 +195,11 @@ def main():
                     sd = SpiderData.objects.get(id=sid)
                     sd.route_to_agent(args.agent, "high")
                     routed += 1
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "learn_route_one_shot.main: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
     print(f"  routed={routed} / {len(winners)}\n")
     print("  [top 20]")

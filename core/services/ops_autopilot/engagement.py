@@ -610,8 +610,11 @@ class MeetingEngine:
                         lines.append(f"- **Need:** {fields['need']}")
                     if fields.get('budget_cues'):
                         lines.append(f"- **Budget cues:** {fields['budget_cues']}")
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "engagement.generate_brief: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
         lines.append(f"\n## Suggested Agenda")
         lines.append("1. Introduction and rapport (2 min)")

@@ -711,7 +711,11 @@ Keep it actionable and under 400 words. All times are MST."""
             dt = datetime.fromisoformat(commence_time.replace('Z', '+00:00'))
             now = datetime.now(dt.tzinfo)
             return now <= dt <= now + timedelta(hours=24)
-        except:
+        except Exception as _e:
+            logger.warning(
+                "sports_odds_analyst._is_upcoming_24h: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return False
 
     def _elapsed_ms(self, start_time: datetime) -> int:

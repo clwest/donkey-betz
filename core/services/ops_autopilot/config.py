@@ -311,11 +311,23 @@ class AutopilotConfig:
     # them once per cycle so policies use the latest values.
 
     _overrides_loaded = False
+    _override_load_failed = False
     _override_cache: dict[str, Any] = {}
 
     @classmethod
     def load_overrides(cls):
-        """Load tuned parameter overrides from SystemConfiguration."""
+        """Load tuned parameter overrides from SystemConfiguration.
+
+        Session 1083 (Rigby audit): previously this bare-excepted every
+        exception and flipped ``_overrides_loaded = True`` so the autopilot
+        would silently run on hardcoded defaults for the rest of the
+        process lifetime if the ``system_configuration`` table was
+        unreachable at cache-build time. Now we log loudly and set
+        ``_override_load_failed`` so downstream code (and observability)
+        can see when the autopilot is running config-blind.
+        """
+        import logging
+        logger = logging.getLogger(__name__)
         try:
             from core.models.system import SystemConfiguration
             overrides = SystemConfiguration.objects.filter(
@@ -326,8 +338,17 @@ class AutopilotConfig:
                 param = key.replace('autopilot_tuning:', '')
                 cls._override_cache[param] = value
             cls._overrides_loaded = True
-        except Exception:
-            cls._overrides_loaded = True  # Don't retry on table-missing errors
+            cls._override_load_failed = False
+        except Exception as e:
+            cls._overrides_loaded = True
+            cls._override_load_failed = True
+            logger.warning(
+                "autopilot config overrides failed to load — running on "
+                "hardcoded defaults. Operator tuning will be ignored until "
+                "the next successful reload. error=%s: %s",
+                type(e).__name__,
+                e,
+            )
 
     @classmethod
     def get(cls, param_name: str):

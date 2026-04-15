@@ -39,8 +39,11 @@ def _safe_parse_ts(value) -> Optional[datetime]:
         if isinstance(value, str):
             try:
                 return datetime.fromisoformat(value.replace('Z', '+00:00'))
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "agent_data_receiver._safe_parse_ts: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
         return None
 
 logger = logging.getLogger(__name__)

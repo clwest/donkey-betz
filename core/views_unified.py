@@ -492,8 +492,11 @@ class SystemHealthAPIView(View):
                 with connection.cursor() as cursor:
                     cursor.execute("SELECT 1")
                 services['postgres'] = True
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "views_unified.get: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
             # Check Redis
             try:
@@ -519,8 +522,11 @@ class SystemHealthAPIView(View):
                         celery_keys = r.keys('celery-task-meta-*')
                         # If there are recent task results, celery is working
                         services['celery'] = len(celery_keys) > 0 if celery_keys else False
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "views_unified.get: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
             health = {
                 'cpu_percent': psutil.cpu_percent(interval=0.1),

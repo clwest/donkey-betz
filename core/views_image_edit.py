@@ -1872,3 +1872,13 @@ def upscale_image_view(request):
         traceback.print_exc()
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
+
+
+# Session 1083 (Rigby audit): save_to_history called 5 times but never
+# imported. Lazy proxy to views_image_misc (which has a sibling
+# definition of the same helper) — importing from core.image_views.session
+# triggers the image_views package __init__ which has a pre-existing
+# circular dependency on views_image.
+def save_to_history(*args, **kwargs):
+    from core.views_image_misc import save_to_history as _f
+    return _f(*args, **kwargs)

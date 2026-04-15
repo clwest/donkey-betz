@@ -1679,8 +1679,11 @@ def live_odds_with_scores(request):
                             'away_score': 0,
                         }
                         live_count += 1
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "views_odds_sports.live_odds_with_scores: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
             # Format bookmakers
             for bookmaker in game.get('bookmakers', []):
@@ -3079,8 +3082,11 @@ def get_todays_games(request):
                 scores = spider.fetch_scores(sport_key=sk, days_from=1)
                 for s in scores:
                     scores_by_event[s['event_id']] = s
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "views_odds_sports.get_todays_games: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
         # Generate predictions from moneyline odds consensus (with vig removal)
         predictions_by_event = {}
@@ -3129,8 +3135,11 @@ def get_todays_games(request):
                                 'status_detail': status_type.get('shortDetail', ''),
                                 'status_state': status_type.get('state', 'pre'),
                             }
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "views_odds_sports.get_todays_games: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
         # Build response
         games = []

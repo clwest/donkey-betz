@@ -45,6 +45,13 @@ from core.services.watermark_integration import save_watermarked_image
 # Session 769: Cost tracking for external APIs
 from core.services.api_cost_config import calculate_stability_cost
 
+# Session 1083 (Rigby audit): 5 undefined names — _generate_smart_project_name
+# (from core.views_image_helpers), _enhance_prompt_rule_based (from
+# core.views_image_edit), and ImageHistory (the content model).
+from core.views_image_helpers import _generate_smart_project_name  # noqa: E402
+from core.views_image_edit import _enhance_prompt_rule_based  # noqa: E402
+from content.models import ImageHistory  # noqa: E402
+
 logger = logging.getLogger(__name__)
 
 

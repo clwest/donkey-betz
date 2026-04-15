@@ -16,9 +16,12 @@ import json
 from datetime import datetime, timedelta
 import uuid
 import logging
+logger = logging.getLogger(__name__)  # Session 1083: module-level logger for undefined-name sites
 
 # Session 266: Central prompt registry
 from core.prompts import get_self_awareness_prompt
+
+import os
 
 User = get_user_model()
 
@@ -1294,8 +1297,11 @@ def personal_knowledge_list(request):
                     from core.encryption_service import get_encryption_service
                     service = get_encryption_service()
                     content_text = service.decrypt(content_text) or content_text
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "views.personal_knowledge_list: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
             
             # Create knowledge entry with full content
             knowledge.append({

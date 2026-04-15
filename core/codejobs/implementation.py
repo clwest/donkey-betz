@@ -130,8 +130,11 @@ def _gather_repo_context(workdir, task_prompt, path_filters, log_fn):
                 chunk = f'## {marker}\n```\n{content}\n```\n'
                 if len(marker_text) + len(chunk) <= MARKER_BUDGET:
                     marker_text += chunk
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "implementation._gather_repo_context: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
     if marker_text:
         context_parts.append(marker_text)
         budget_used += len(marker_text)
@@ -160,8 +163,11 @@ def _gather_repo_context(workdir, task_prompt, path_filters, log_fn):
             for f in grep_result.stdout.strip().splitlines():
                 if f.strip():
                     relevant_files.add(f.strip())
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "implementation._gather_repo_context: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
     # Apply path_filters if set
     if path_filters:
@@ -176,8 +182,11 @@ def _gather_repo_context(workdir, task_prompt, path_filters, log_fn):
                 for f in find_result.stdout.strip().splitlines():
                     if f.strip():
                         relevant_files.add(f.strip())
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "implementation._gather_repo_context: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
         relevant_files = {
             f for f in relevant_files
             if any(f.startswith(f'./{pf}') or f.startswith(pf) for pf in path_filters)
@@ -234,8 +243,11 @@ def _gather_repo_context(workdir, task_prompt, path_filters, log_fn):
             context_parts.append(chunk)
             files_budget_used += len(chunk)
             files_read += 1
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "implementation._file_sort_key: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
     log_fn('implement', f'Context: {len(file_tree.splitlines())} files in tree, {files_read} files read ({len(explicit_paths)} explicit), {budget_used + files_budget_used} chars')
 
@@ -1339,8 +1351,11 @@ def _impl_execute_code_job(self, run_id: str):
                 if os.path.exists(cleanup_dir):
                     shutil.rmtree(cleanup_dir)
                     log('cleanup', f'Removed workspace: {cleanup_dir}')
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "implementation.shell: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
 
 # ==================== RAG RETRIEVAL CANARY ====================

@@ -1500,8 +1500,11 @@ def ingest_video_status(request, job_id):
                 result_data['error'] = event.error_message or 'Task failed'
 
             return Response(result_data)
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_rag_embeddings.ingest_video_status: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     # Fallback: AsyncResult
     result = AsyncResult(job_id)
@@ -1560,6 +1563,9 @@ def _video_document_details(event):
                             'duration_seconds': meta.get('duration_seconds'),
                             'word_count': doc.word_count,
                         }
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_rag_embeddings._video_document_details: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
     return None

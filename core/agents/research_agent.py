@@ -688,7 +688,11 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                     # Simple extraction - may need refinement
                     return [explanation.split(':')[-1].strip()[:100]]
             return []
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "research_agent._extract_topics_from_result: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return []
 
     def _extract_sentiment_from_result(self, ml_result) -> str:

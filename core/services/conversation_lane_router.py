@@ -123,8 +123,11 @@ def get_conversation_lane(conversation_id: str) -> Optional[str]:
         )
         if row and isinstance(row, dict):
             return row.get('lane')
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "conv_router.get_conversation_lane: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
     return None
 
 

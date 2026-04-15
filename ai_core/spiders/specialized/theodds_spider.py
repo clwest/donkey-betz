@@ -136,11 +136,22 @@ class TheOddsSpider:
         })
         self.requests_remaining = None
         self.requests_used = None
+        # Session 1083 (Rigby audit): circuit breaker. Once we get a 401
+        # we know the API key is bad — don't hammer the endpoint on every
+        # subsequent call. Every spider cycle was producing 30-50 "Invalid
+        # API key" log lines in hot succession which cost CPU + log volume
+        # for zero value. One log, then short-circuit for the process
+        # lifetime (or until explicit reset).
+        self._auth_failed = False
 
     def _make_request(self, endpoint: str, params: Dict = None) -> Optional[Dict]:
         """Make authenticated API request."""
         if not self.api_key:
             logger.error("THE_ODDS_API_KEY not configured")
+            return None
+
+        # Session 1083: circuit breaker on prior 401
+        if self._auth_failed:
             return None
 
         url = f"{self.base_url}/{endpoint}"
@@ -157,7 +168,13 @@ class TheOddsSpider:
             if response.status_code == 200:
                 return response.json()
             elif response.status_code == 401:
-                logger.error("Invalid API key for The Odds API")
+                # Session 1083: trip the circuit breaker — one log instead of 50+
+                if not self._auth_failed:
+                    logger.error(
+                        "Invalid API key for The Odds API — circuit breaker "
+                        "engaged, remaining calls in this instance will be skipped"
+                    )
+                self._auth_failed = True
                 return None
             elif response.status_code == 429:
                 logger.warning("Rate limit exceeded for The Odds API")
@@ -605,7 +622,11 @@ class TheOddsSpider:
                 return 100 / (odds + 100)
             else:
                 return abs(odds) / (abs(odds) + 100)
-        except:
+        except Exception as _e:
+            logger.warning(
+                "theodds_spider._american_to_probability: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return None
 
     def _teams_match(self, outcome_name: str, team_name: str) -> bool:
@@ -684,7 +705,11 @@ class TheOddsSpider:
             now = datetime.now(dt.tzinfo)
             # Consider live if started within last 4 hours
             return dt <= now <= dt + timedelta(hours=4)
-        except:
+        except Exception as _e:
+            logger.warning(
+                "theodds_spider._is_live: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return False
 
     def _generate_tags(self, event: Dict, odds_data: Dict, favorite_prob: float) -> List[str]:

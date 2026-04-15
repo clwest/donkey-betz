@@ -190,7 +190,11 @@ class ControlCenterConsumer(AsyncWebsocketConsumer):
         """Check Redis connection status"""
         try:
             return await database_sync_to_async(self.redis_client.ping)()
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "control_center_consumer.__init__: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return False
 
     @database_sync_to_async
@@ -222,7 +226,11 @@ class ControlCenterConsumer(AsyncWebsocketConsumer):
             # Check Redis for active agents
             agent_keys = self.redis_client.keys('agent:active:*')
             return len(agent_keys)
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "control_center_consumer.get_active_agent_count: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return 0
 
     @database_sync_to_async
@@ -232,7 +240,11 @@ class ControlCenterConsumer(AsyncWebsocketConsumer):
             # Check Redis for active spiders
             spider_keys = self.redis_client.keys('spider:active:*')
             return len(spider_keys)
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "control_center_consumer.get_active_spider_count: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return 0
 
     @database_sync_to_async

@@ -10,6 +10,9 @@ from django.db import models
 from django.utils import timezone
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 class ImplementationSession(models.Model):
     """Tracks a complete agent implementation session"""
 
@@ -231,7 +234,11 @@ def get_current_git_commit() -> str:
                               capture_output=True, text=True,
                               cwd='/Users/donkeyking/development/unified-donkey-betz')
         return result.stdout.strip() if result.returncode == 0 else ''
-    except:
+    except Exception as _e:
+        logger.warning(
+            "implementation_tracking.get_current_git_commit: swallowed (%s: %s) — returning default",
+            type(_e).__name__, _e,
+        )
         return ''
 
 
@@ -242,7 +249,11 @@ def capture_file_tree() -> list:
                               capture_output=True, text=True,
                               cwd='/Users/donkeyking/development/unified-donkey-betz')
         return result.stdout.strip().split('\n') if result.returncode == 0 else []
-    except:
+    except Exception as _e:
+        logger.warning(
+            "implementation_tracking.capture_file_tree: swallowed (%s: %s) — returning default",
+            type(_e).__name__, _e,
+        )
         return []
 
 
@@ -330,7 +341,11 @@ def get_git_diff(commit_before: str, commit_after: str) -> str:
                               capture_output=True, text=True,
                               cwd='/Users/donkeyking/development/unified-donkey-betz')
         return result.stdout if result.returncode == 0 else ''
-    except:
+    except Exception as _e:
+        logger.warning(
+            "implementation_tracking.get_git_diff: swallowed (%s: %s) — returning default",
+            type(_e).__name__, _e,
+        )
         return ''
 
 
