@@ -233,8 +233,17 @@ class PersonalAssistantIntegration:
                     real_components += 1
                 elif status.status == RealityStatus.PARTIAL:
                     real_components += 0.5
-            except Exception:
-                pass
+            except Exception as e:
+                # Session 1103c: was 'except Exception: pass' which
+                # silently undercounted real_components if any status
+                # object had an unexpected shape. Reality score is
+                # used by ops dashboards to decide system health, so
+                # an undercount could trigger false alarms.
+                logger.warning(
+                    "personal_assistant_integration: reality count "
+                    "skipped %s (%s: %s)",
+                    component_type, type(e).__name__, e,
+                )
 
         return int((real_components / total_components) * 100) if total_components > 0 else 0
 
@@ -247,8 +256,12 @@ class PersonalAssistantIntegration:
             try:
                 if status.status == RealityStatus.MOCK:
                     mock_components.append(component_type.value)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    "personal_assistant_integration: mock detection "
+                    "skipped %s (%s: %s)",
+                    component_type, type(e).__name__, e,
+                )
 
         return mock_components
 
