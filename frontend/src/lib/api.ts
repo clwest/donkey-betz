@@ -2547,7 +2547,6 @@ export const journeyApi = {
   abandon: (id: string) => api.post(`/learning/journeys/${id}/abandon/`),
 
   // Journey Steps
-  status: (id: string) => api.get(`/learning/journeys/${id}/status/`),
   startStep: (journeyId: string, step: number) =>
     api.post(`/learning/journeys/${journeyId}/step/${step}/start/`),
   completeStep: (journeyId: string, step: number, data?: { notes?: string; outcome?: string }) =>
