@@ -87,7 +87,11 @@ def sample_text(file: Path, limit_bytes: int = 4000) -> str:
     try:
         txt = file.read_text(errors="ignore")
         return txt[:limit_bytes]
-    except Exception:
+    except Exception as _e:
+        logger.warning(
+            "repo_review_with_ollama.sample_text: swallowed (%s: %s) — returning default",
+            type(_e).__name__, _e,
+        )
         return ""
 
 def build_repo_outline(root: Path, max_files_per_dir: int = 50) -> str:

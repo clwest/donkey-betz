@@ -96,5 +96,9 @@ class VIPReadOnlyMiddleware:
         try:
             profile = request.user.enhanced_profile
             return profile.primary_role == 'vip_demo_viewer'
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "vip_middleware._is_vip_user: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return False

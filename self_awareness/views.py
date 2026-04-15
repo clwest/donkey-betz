@@ -285,7 +285,11 @@ class CodebaseAnalysisAPIView(APIView):
             else:
                 return 0.0
                 
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "views._calculate_embedding_coverage: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return 0.0
 
 

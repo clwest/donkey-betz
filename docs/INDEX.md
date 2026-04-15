@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-04-15 00:49
+**Generated:** 2026-04-15 05:51
 **Current Session:** 1031
 **Total Documentation:** 1855 files | 631,037 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 141 | CLAUDE - AI Session Entry Point |
-| `docs/archive/SYSTEM_CAPABILITIES-original/03_Revenue_Generation/README.md` | 60 | 💰 REVENUE GENERATION SYSTEMS - Autonomous Money-Ma |
+| `docs/features/README.md` | 60 | Feature Documentation |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -220,7 +220,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 364 | 2026-04-15 00:49 |
+| INDEX.md | docs | 364 | 2026-04-15 05:46 |
 | HALF_BUILT_FEATURES_AUDIT.md | audit-2026 | 224 | 2026-04-15 00:48 |
 | react-fastapi-template.md | topics | 454 | 2026-04-13 14:33 |
 | 03-spiders.md | audit-2026 | 197 | 2026-04-06 19:10 |

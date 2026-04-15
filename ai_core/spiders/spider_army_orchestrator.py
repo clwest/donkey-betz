@@ -987,7 +987,11 @@ class SpiderArmyOrchestrator:
                 collection_frequency_ms=5000,
                 priority=SwarmPriority.HIGH
             )
-        except:
+        except Exception as _e:
+            logger.warning(
+                "spider_army_orchestrator._get_swarm_config_for_type: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return None
 
     def get_bridge_status(self) -> Dict[str, Any]:

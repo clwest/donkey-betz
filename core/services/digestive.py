@@ -813,7 +813,11 @@ class DigestiveSystemService:
             self._cached_pulse = pulse
             self._cache_time = timezone.now()
             return pulse
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "digestive._get_cached_pulse: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return None
 
     def _check_heart_connection(self) -> bool:
@@ -822,7 +826,11 @@ class DigestiveSystemService:
             from core.services.heart import get_heart_monitor
             heart = get_heart_monitor()
             return heart.is_alive()
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "digestive._check_heart_connection: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return False
 
     def _check_circulatory_connection(self) -> bool:
@@ -831,5 +839,9 @@ class DigestiveSystemService:
             from core.services.circulatory import get_circulatory_system
             circulatory = get_circulatory_system()
             return circulatory.is_flowing()
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "digestive._check_circulatory_connection: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return False

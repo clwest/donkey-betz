@@ -150,7 +150,11 @@ class SpiderDataValidator:
         try:
             result = urlparse(url)
             return all([result.scheme, result.netloc])
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "spider_validator._is_valid_url: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return False
 
     @staticmethod

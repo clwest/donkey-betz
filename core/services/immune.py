@@ -878,7 +878,11 @@ class ImmuneSystemService:
             from core.services.spine import get_spine_router
             spine = get_spine_router()
             return spine.is_aligned()
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "immune._check_spine_connection: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return False
 
     def _check_heart_connection(self) -> bool:
@@ -887,5 +891,9 @@ class ImmuneSystemService:
             from core.services.heart import get_heart_monitor
             heart = get_heart_monitor()
             return heart.is_healthy()
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "immune._check_heart_connection: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return False

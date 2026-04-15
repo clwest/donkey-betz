@@ -247,7 +247,11 @@ def _get_default_user():
         from django.contrib.auth import get_user_model
         User = get_user_model()
         return User.objects.filter(is_superuser=True).order_by('date_joined').first()
-    except Exception:
+    except Exception as _e:
+        logger.warning(
+            "deliverable_factory._get_default_user: swallowed (%s: %s) — returning default",
+            type(_e).__name__, _e,
+        )
         return None
 
 
@@ -273,5 +277,9 @@ def _get_active_workspace_id(user) -> Optional[str]:
             user=user, allow_autonomous_writes=True,
         ).values_list('id', flat=True).first()
         return str(ws) if ws else None
-    except Exception:
+    except Exception as _e:
+        logger.warning(
+            "deliverable_factory._get_active_workspace_id: swallowed (%s: %s) — returning default",
+            type(_e).__name__, _e,
+        )
         return None

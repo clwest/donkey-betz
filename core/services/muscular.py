@@ -775,7 +775,11 @@ class MuscularSystemService:
             self._cached_pulse = pulse
             self._cache_time = timezone.now()
             return pulse
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "muscular._get_cached_pulse: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return None
 
     def _check_heart_connection(self) -> bool:
@@ -784,7 +788,11 @@ class MuscularSystemService:
             from core.services.heart import get_heart_monitor
             heart = get_heart_monitor()
             return heart.is_alive()
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "muscular._check_heart_connection: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return False
 
     def _check_digestive_connection(self) -> bool:
@@ -793,5 +801,9 @@ class MuscularSystemService:
             from core.services.digestive import get_digestive_system
             digestive = get_digestive_system()
             return digestive.is_digesting()
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "muscular._check_digestive_connection: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return False

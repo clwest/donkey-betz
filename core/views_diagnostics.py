@@ -34,7 +34,11 @@ def _get_cockpit_workspace_id(request):
         from core.vip_scope import get_vip_scope
         scope = get_vip_scope(request)
         return scope.workspace_id if scope.is_vip else None
-    except Exception:
+    except Exception as _e:
+        logger.warning(
+            "views_diagnostics._get_cockpit_workspace_id: swallowed (%s: %s) — returning default",
+            type(_e).__name__, _e,
+        )
         return None
 
 
@@ -71,7 +75,11 @@ def get_redis_client():
             socket_connect_timeout=2,
             socket_timeout=2,
         )
-    except Exception:
+    except Exception as _e:
+        logger.warning(
+            "views_diagnostics.get_redis_client: swallowed (%s: %s) — returning default",
+            type(_e).__name__, _e,
+        )
         return None
 
 @csrf_exempt

@@ -6719,7 +6719,11 @@ class AgentAccessCommands(commands.Cog):
             def get_linked_user(discord_id):
                 try:
                     return User.objects.filter(discord_id=str(discord_id)).first()
-                except Exception:
+                except Exception as _e:
+                    logger.warning(
+                        "discord_bot.get_linked_user: swallowed (%s: %s) — returning default",
+                        type(_e).__name__, _e,
+                    )
                     return None
 
             user = await get_linked_user(interaction.user.id)
@@ -7161,7 +7165,11 @@ class AgentAccessCommands(commands.Cog):
             def get_linked_user(discord_id):
                 try:
                     return User.objects.filter(discord_id=str(discord_id)).first()
-                except Exception:
+                except Exception as _e:
+                    logger.warning(
+                        "discord_bot.get_linked_user: swallowed (%s: %s) — returning default",
+                        type(_e).__name__, _e,
+                    )
                     return None
 
             user = await get_linked_user(interaction.user.id)
@@ -7414,7 +7422,11 @@ Spoken response:"""
             def get_linked_user(discord_id):
                 try:
                     return User.objects.filter(discord_id=str(discord_id)).first()
-                except Exception:
+                except Exception as _e:
+                    logger.warning(
+                        "discord_bot.get_linked_user: swallowed (%s: %s) — returning default",
+                        type(_e).__name__, _e,
+                    )
                     return None
 
             linked_user = await get_linked_user(interaction.user.id)
@@ -7958,7 +7970,11 @@ Keep the response concise but insightful (max 300 words)."""
             def get_linked_user(discord_id):
                 try:
                     return User.objects.filter(discord_id=str(discord_id)).first()
-                except Exception:
+                except Exception as _e:
+                    logger.warning(
+                        "discord_bot.get_linked_user: swallowed (%s: %s) — returning default",
+                        type(_e).__name__, _e,
+                    )
                     return None
 
             user = await get_linked_user(interaction.user.id)

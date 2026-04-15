@@ -1861,7 +1861,11 @@ class AgentRouter:
         try:
             from core.services.platform_integration import inject_platform_tools_prompt
             return inject_platform_tools_prompt()
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "agent_router._get_platform_tools_context: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return ''
 
     # ==================== Session 858: User Context Injection ====================
@@ -2245,7 +2249,11 @@ class AgentRouter:
         try:
             from core.services.agent_learning_service import get_learning_service
             return get_learning_service().get_adaptive_context(self.user.id, agent_name)
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "agent_router._get_agent_learning_adaptive_context: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return ''
 
     def _create_execution_record(self, agent_name: str, task: str, context_summary: dict = None, experiment_id=None):

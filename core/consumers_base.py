@@ -1141,7 +1141,11 @@ class AgentChannelsConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
                 'channel_type': channel.channel_type,
                 'is_active': channel.is_active,
             }
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "consumers_base.get_channel: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return None
     
     @database_sync_to_async

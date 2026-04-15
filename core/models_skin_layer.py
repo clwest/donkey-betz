@@ -22,6 +22,9 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import ArrayField
 
+import logging
+logger = logging.getLogger(__name__)
+
 User = get_user_model()
 
 
@@ -485,7 +488,11 @@ class WorkspaceOperation(models.Model):
             if execution and execution.execution_time_ms:
                 return execution.execution_time_ms
             return None
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "models_skin_layer.agent_execution_time_ms: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return None
 
     def get_diff(self):

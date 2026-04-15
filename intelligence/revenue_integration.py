@@ -448,7 +448,11 @@ class RevenueIncomeIntegration:
             # Remove currency symbols and convert
             cleaned = budget_str.replace('$', '').replace(',', '').strip()
             return float(cleaned)
-        except:
+        except Exception as _e:
+            logger.warning(
+                "revenue_integration._parse_budget: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return 0.0
 
     async def _get_ml_score(self, features: Dict) -> float:

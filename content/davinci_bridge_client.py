@@ -175,7 +175,11 @@ class DaVinciBridgeClient:
         try:
             response = self._get_client().get("/api/health")
             return response.status_code == 200
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "davinci_bridge_client.health_check: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return False
 
     # =========================================================================

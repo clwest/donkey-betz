@@ -245,7 +245,11 @@ class ClaimsPackBuilder:
             results = DocumentEmbedding.cosine_similarity_search(
                 query_vector=query_vector, limit=10, min_similarity=0.4
             )
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "claims_pack_builder._from_user_documents: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return []
 
         claims: List[SpiderClaim] = []

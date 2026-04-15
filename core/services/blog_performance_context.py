@@ -327,7 +327,11 @@ class BlogPerformanceContextBuilder:
                 confidence=float(insight.confidence),
                 source=insight.insight_type
             )
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "blog_performance_context._insight_to_rule: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return None
 
     def _get_engagement_summary(self) -> Optional[Dict[str, Any]]:
