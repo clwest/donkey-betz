@@ -1603,7 +1603,26 @@ self,
         Dict with execution result including status and output
     """
     from core.agent_router import AgentRouter
-    from core.models_unified_system import Agent, AgentExecution
+    # Session 1084: Explicit import of the canonical AgentExecution model.
+    #
+    # Context: this module already has a module-level import at line 27 —
+    # `from core.models.agents_registry import AgentExecution` — which
+    # resolves to a DIFFERENT model (table `agents_agentexecution`, used
+    # by the outer training/registry functions in this file). That table
+    # is empty in practice.
+    #
+    # The canonical live AgentExecution — the one `ops_tool` reads, the
+    # one `agent_router._create_execution_record` writes, the one
+    # cleanup_watchdog reaps from, and the one this function needs to
+    # coordinate with — lives in `core.models_unified_system` and writes
+    # to table `core_agentexecution`. We import it here with the name
+    # `AgentExecution` explicitly so this function scope shadows the
+    # module-level import intentionally. Do NOT "fix" this by removing
+    # the shadow without migrating the two models — the two tables have
+    # different schemas and different consumers.
+    #
+    # Same rationale for `Agent`.
+    from core.models_unified_system import Agent, AgentExecution  # noqa: F811
     from core.services.context_tracing import ContextTracer, auto_repair_context
     from decimal import Decimal
 
