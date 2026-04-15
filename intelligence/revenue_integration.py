@@ -442,16 +442,28 @@ class RevenueIncomeIntegration:
 
     # Helper methods
 
-    def _parse_budget(self, budget_str: str) -> float:
-        """Parse budget string to float"""
+    def _parse_budget(self, budget_value) -> float:
+        """Parse budget to float.
+
+        Session 1083 (Rigby audit): was typed `budget_str: str` but callers
+        pass floats too (opportunity.get('budget', '0') returns whatever
+        type the spider produced). Every numeric input threw
+        `AttributeError: 'float' object has no attribute 'replace'` which
+        my round-22 swallow logging surfaced at 5+ calls per conversation
+        cycle. Now handles int / float / Decimal / str uniformly.
+        """
+        if budget_value is None:
+            return 0.0
+        if isinstance(budget_value, (int, float)):
+            return float(budget_value)
         try:
             # Remove currency symbols and convert
-            cleaned = budget_str.replace('$', '').replace(',', '').strip()
-            return float(cleaned)
-        except Exception as _e:
+            cleaned = str(budget_value).replace('$', '').replace(',', '').strip()
+            return float(cleaned) if cleaned else 0.0
+        except (ValueError, TypeError) as _e:
             logger.warning(
-                "revenue_integration._parse_budget: swallowed (%s: %s) — returning default",
-                type(_e).__name__, _e,
+                "revenue_integration._parse_budget: could not parse %r (%s: %s) — returning 0.0",
+                budget_value, type(_e).__name__, _e,
             )
             return 0.0
 

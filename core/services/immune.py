@@ -886,11 +886,18 @@ class ImmuneSystemService:
             return False
 
     def _check_heart_connection(self) -> bool:
-        """Check if HEART service is accessible."""
+        """Check if HEART service is accessible.
+
+        Session 1083 (Rigby audit): was calling `heart.is_healthy()` but
+        HeartMonitorService doesn't have an is_healthy method —
+        real method is `is_alive()`. Fired as AttributeError every
+        minute via the immune cycle until round 22's swallow-tightening
+        surfaced the warning; now fixed.
+        """
         try:
             from core.services.heart import get_heart_monitor
             heart = get_heart_monitor()
-            return heart.is_healthy()
+            return heart.is_alive()
         except Exception as _e:
             logger.warning(
                 "immune._check_heart_connection: swallowed (%s: %s) — returning default",
