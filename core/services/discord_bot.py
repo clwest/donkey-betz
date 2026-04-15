@@ -260,12 +260,18 @@ class DatabaseConversationHistory:
 
             conversation_id = self._get_conversation_id(user_id)
 
-            # Try to find linked user
+            # Try to find linked user.
+            # Session 1103c: loud so failed discord→web linkage doesn't
+            # silently revert to anonymous mode for linked users.
             linked_user = None
             try:
                 linked_user = UnifiedUser.objects.filter(discord_id=str(user_id)).first()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    "discord_bot: linked user lookup failed for "
+                    "discord_id=%s (%s: %s) — treating as unlinked",
+                    user_id, type(e).__name__, e,
+                )
 
             # For assistant responses, update the last message instead of creating new
             if role == 'assistant':
@@ -2845,7 +2851,9 @@ class ContentCommands(commands.Cog):
                 except Exception:
                     total_revenue = 0
 
-                # Enhanced profile (if exists)
+                # Enhanced profile (if exists).
+                # Session 1103c: loud so user-profile context drops
+                # are visible in the /whoami discord command output.
                 profile_data = {}
                 try:
                     enhanced = EnhancedUserProfile.objects.filter(user=web_user).first()
@@ -2856,8 +2864,14 @@ class ContentCommands(commands.Cog):
                             'goals': enhanced.goals[:2] if enhanced.goals else [],
                             'completeness': enhanced.profile_completeness or 0,
                         }
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(
+                        "discord_bot: EnhancedUserProfile lookup failed "
+                        "for user=%s (%s: %s) — profile_data will be "
+                        "empty in whoami response",
+                        getattr(web_user, 'username', '<unknown>'),
+                        type(e).__name__, e,
+                    )
 
                 return {
                     'username': web_user.username,
@@ -9742,10 +9756,18 @@ class PodcastCommands(commands.Cog):
     debate, and produce audio content with different voices.
     """
 
-    def __init__(self, client):
-        self.client = client
     podcast = app_commands.Group(name="podcast", description="AI Podcast Studio")
 
+    def __init__(self, client):
+        self.client = client
+        # Session 1103c: repaired indentation — previously the __init__
+        # body was split by a class-level assignment, leaving the
+        # PODCAST_CHANNEL_ID lines dangling outside any function block.
+        # Python actually fails to parse this file as a result; the
+        # PodcastCommands cog has been non-functional for however long
+        # the bug existed. Moved the app_commands.Group to a proper
+        # class attribute position and kept the channel IDs inside
+        # __init__.
         # Podcast channel for creation commands
         self.PODCAST_CHANNEL_ID = 1451578444101058751
         # Podcast library channel for completed episodes with audio
