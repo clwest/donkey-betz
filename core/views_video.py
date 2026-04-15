@@ -7378,7 +7378,7 @@ def auto_caption(request):
     from django.utils import timezone as tz
     from django.core.exceptions import ValidationError
     from content.models import VideoHistory, CreativeProject
-    from openai import OpenAI
+    from core.services.openai_client_factory import get_openai_client
 
     logger.info("🎬 [Session 166] auto_caption() called")
 
@@ -7503,7 +7503,7 @@ def auto_caption(request):
         # Transcribe with Whisper
         logger.info(f"🎤 [Session 166] Transcribing with Whisper...")
 
-        client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        client = get_openai_client(api_key=settings.OPENAI_API_KEY)
 
         with open(audio_path, 'rb') as audio_file:
             transcript = client.audio.transcriptions.create(

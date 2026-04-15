@@ -625,11 +625,11 @@ def generate_agent_prediction(agent, context=None):
     """
     Use GPT-4o-mini to generate a prediction based on agent's specialization.
     """
-    import openai
+    from core.services.openai_client_factory import get_openai_client
     import os
 
     try:
-        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+        client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
 
         # Get agent's recent memories and dreams for context
         from .models_unified_system import AgentMemory

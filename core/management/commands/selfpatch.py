@@ -216,8 +216,8 @@ class Command(BaseCommand):
         user = user_prompt + "\n\nREFERENCE FILES:\n" + "\n\n".join(context_parts)
 
         # OpenAI-compatible client
-        from openai import OpenAI
-        client = OpenAI(base_url=LLM_BASE_URL, api_key=LLM_API_KEY)
+        from core.services.openai_client_factory import get_openai_client
+        client = get_openai_client(api_key=LLM_API_KEY, base_url=LLM_BASE_URL)
         resp = client.chat.completions.create(
             model=LLM_MODEL,
             temperature=float(opts["temperature"]),

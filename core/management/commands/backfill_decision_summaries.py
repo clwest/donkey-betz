@@ -16,7 +16,7 @@ Usage:
 import logging
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from openai import OpenAI
+from core.services.openai_client_factory import get_openai_client
 import os
 
 logger = logging.getLogger(__name__)
@@ -52,7 +52,7 @@ class Command(BaseCommand):
         self.stdout.write(f"Backfilling DecisionSummary blocks (limit={limit}, dry_run={dry_run}, type={conv_type})")
 
         # Initialize OpenAI client
-        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))
 
         total_processed = 0
         total_updated = 0

@@ -590,11 +590,11 @@ def find_similar_clusters(request):
             return JsonResponse({'success': False, 'error': 'Memory not found'}, status=404)
     else:
         # Generate embedding for query
-        import openai
+        from core.services.openai_client_factory import get_openai_client
         import os
 
         try:
-            client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+            client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
             response = client.embeddings.create(
                 model="text-embedding-3-small",
                 input=query

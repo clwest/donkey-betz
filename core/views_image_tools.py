@@ -20,7 +20,7 @@ import uuid
 import json
 import zipfile
 import base64
-from openai import OpenAI
+from core.services.openai_client_factory import get_openai_client
 from io import BytesIO
 from datetime import datetime
 
@@ -1088,7 +1088,7 @@ Keep responses under 200 words. Be conversational and practical."""
         ]
 
         # Call OpenAI GPT-5 using Chat Completions API with function calling
-        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        client = get_openai_client(api_key=os.environ.get("OPENAI_API_KEY"))
 
         logger.info(f"💬 Assistant chat request from {request.user.username}: '{user_message[:50]}...'")
 

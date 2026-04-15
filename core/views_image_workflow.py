@@ -20,7 +20,7 @@ import uuid
 import json
 import zipfile
 import base64
-from openai import OpenAI
+from core.services.openai_client_factory import get_openai_client
 from io import BytesIO
 from datetime import datetime
 
@@ -1887,7 +1887,7 @@ Format your response as a single, cinematic prompt suitable for AI video generat
             }, status=400)
 
         # Call OpenAI GPT-5 for prompt improvement (Session 56: Phase B.1, Session 57: Fixed to use Responses API)
-        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        client = get_openai_client(api_key=os.environ.get("OPENAI_API_KEY"))
 
         logger.info(f"✨ Improving prompt for {workflow_type}: '{user_prompt[:50]}...'")
 

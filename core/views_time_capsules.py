@@ -457,9 +457,9 @@ class RevealTimeCapsuleView(View):
 def generate_capsule_reflection(capsule, comparison):
     """Generate an AI reflection on the time capsule."""
     try:
-        import openai
+        from core.services.openai_client_factory import get_openai_client
 
-        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+        client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
 
         changes_text = ""
         if comparison.get('changes'):
@@ -621,7 +621,8 @@ class GenerateTimeCapsuleView(View):
                     'created': 0
                 })
 
-            client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+            from core.services.openai_client_factory import get_openai_client
+            client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
 
             created_capsules = []
 

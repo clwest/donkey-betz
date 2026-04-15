@@ -53,7 +53,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         from core.models_unified_system import SpiderData
-        import openai
+        from core.services.openai_client_factory import get_openai_client
 
         batch_size = options['batch']
         hours = options['hours']
@@ -77,7 +77,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR('No OpenAI API key found!'))
             return
 
-        client = openai.OpenAI(api_key=api_key)
+        client = get_openai_client(api_key=api_key)
 
         # Get entries needing embeddings
         since = timezone.now() - timedelta(hours=hours)
