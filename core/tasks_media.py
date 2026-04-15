@@ -18,6 +18,19 @@ from django.utils import timezone  # noqa: F401
 
 from core.api_helpers import smart_truncate  # noqa: F401
 
+# Session 1083 (Rigby audit): pyflakes surfaced 15 undefined names in
+# this file. The resolve render pipeline (lines 1132, 1228) was calling
+# poll_resolve_job_status and record_resolve_outcome without importing
+# them from core.tasks where they live as @shared_task wrappers — so
+# every "start a resolve render" call threw NameError at the
+# apply_async / delay call and the render pipeline silently failed.
+# Import them here. generate_memory_embedding is similarly referenced
+# inside an orphaned function body (see deletion below).
+from core.tasks import (  # noqa: F401
+    poll_resolve_job_status,
+    record_resolve_outcome,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -302,48 +315,14 @@ def _impl_generate_memory_embedding(memory_id: str):
         return {'status': 'failed', 'error': str(e)}
 
 
-
-    """
-    Session 251: Record a new memory for an agent.
-
-    This is a convenient task that can be called from anywhere
-    to record memories asynchronously.
-    """
-    logger.info(f"🧠 [MEMORY] Recording memory '{title}' for agent {agent_id}")
-
-    try:
-        from core.models_unified_system import AgentMemory, Agent
-
-        agent = Agent.objects.get(id=agent_id)
-
-        # Create memory
-        memory = AgentMemory.objects.create(
-            agent=agent,
-            title=title,
-            content=content,
-            memory_type=memory_type,
-            valence=valence,
-            importance_score=importance,
-            context=context,
-            source_type=source_type,
-            source_id=source_id
-        )
-
-        # Queue embedding generation
-        generate_memory_embedding.delay(str(memory.id))
-
-        logger.info(f"🧠 [MEMORY] Memory '{title}' recorded for {agent.name}")
-
-        return {
-            'status': 'success',
-            'memory_id': str(memory.id),
-            'agent_name': agent.name
-        }
-
-    except Exception as e:
-        logger.exception(f"🧠 [MEMORY] Failed to record memory: {e}")
-        return {'status': 'failed', 'error': str(e)}
-
+# Session 1083 (Rigby audit): orphaned function body deleted here.
+# The block was the body of what used to be `_impl_record_agent_memory`
+# (Session 251) — the `def` signature was removed in a prior refactor
+# but the body (~40 lines) was left at module level with 4-space indent,
+# making `title`, `agent_id`, `content`, etc. look like module-level
+# names and producing 13 pyflakes undefined-name errors. Nothing in the
+# repo called `record_agent_memory` anymore — verified via grep. If the
+# feature comes back, reimplement from scratch in core/tasks.py.
 
 
 # =============================================================================
