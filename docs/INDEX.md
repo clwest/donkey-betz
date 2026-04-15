@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-04-15 13:19
+**Generated:** 2026-04-15 14:23
 **Current Session:** 1083
 **Total Documentation:** 1856 files | 631,108 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 141 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/handoffs/README.md` | 60 | 🤝 Session Handoffs |
+| `docs/archive/old-structure/audits/README.md` | 60 | AUDITS |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -220,9 +220,9 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| HALF_BUILT_FEATURES_AUDIT.md | audit-2026 | 237 | 2026-04-15 13:18 |
-| SESSION_1083_MARATHON.md | handoffs | 145 | 2026-04-15 13:18 |
-| INDEX.md | docs | 364 | 2026-04-15 11:39 |
+| SESSION_1083_MARATHON.md | handoffs | 145 | 2026-04-15 13:20 |
+| HALF_BUILT_FEATURES_AUDIT.md | audit-2026 | 237 | 2026-04-15 13:20 |
+| INDEX.md | docs | 364 | 2026-04-15 13:20 |
 | react-fastapi-template.md | topics | 454 | 2026-04-13 14:33 |
 | 03-spiders.md | audit-2026 | 197 | 2026-04-06 19:10 |
 | 12-infrastructure.md | audit-2026 | 162 | 2026-04-06 19:08 |
