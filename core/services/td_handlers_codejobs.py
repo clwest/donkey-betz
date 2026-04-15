@@ -229,11 +229,20 @@ class CodeJobHandlersMixin:
         if run.is_terminal:
             return {'error': f'Job already terminal: {run.status}'}
         if run.celery_task_id:
+            # Session 1103c: loud on failure — if we can't revoke the
+            # underlying Celery task, the DB row will still be marked
+            # cancelled but the worker may keep running. That's a
+            # zombie-execution setup and needs to be visible.
             try:
                 from core.celery import app
                 app.control.revoke(run.celery_task_id, terminate=True)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    "td_handlers_codejobs: Celery revoke failed for "
+                    "task_id=%s job=%s (%s: %s) — job marked cancelled "
+                    "in DB but worker may still be running",
+                    run.celery_task_id, run.id, type(e).__name__, e,
+                )
         run.cancel()
         return {'cancelled': True, 'job_id': str(run.id), 'status': 'canceled'}
 
