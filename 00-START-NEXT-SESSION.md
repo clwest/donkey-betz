@@ -4,230 +4,154 @@
 
 ## ⚠️ READ THIS FIRST — LOCAL vs PRODUCTION RIGBY TRAP ⚠️
 
-**Session 1083 burned an hour because Claude Code sent every `pa_chat.py` call to production Rigby by mistake.** Chris caught it because he wasn't seeing any of our activity in his local ChatUI — our "smoke tests" were returning production data (826 deliverables, 10 signal clusters) while the local stack had different numbers (1041 deliverables, 21 clusters).
+`tools/pa_chat.py:38` has `DEFAULT_BASE_URL = "https://donkey-betz-platform-production.up.railway.app"`. If you don't override `PA_API_URL`, every call goes to prod. The `.env` file's `PA_API_TOKEN` is also the **production** token.
 
-### The trap
-`tools/pa_chat.py:38` has `DEFAULT_BASE_URL = "https://donkey-betz-platform-production.up.railway.app"`. If you don't override `PA_API_URL`, every call goes to prod. Every. Single. Call.
-
-### The `.env` file has the WRONG token for LOCAL
-`.env` has `PA_API_TOKEN=0256880456bb65533c759cc02c62160ce1a72444` — that's the **production** token. If you use it, prod Rigby will accept it.
-
-### The correct LOCAL invocation (memorize this)
+### The correct LOCAL invocation
 ```bash
 PA_API_URL=http://localhost:8000 \
 PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557 \
-.venv/bin/python tools/pa_chat.py "message" --conversation pa-3a0db697c2fd
+.venv/bin/python tools/pa_chat.py "message" --conversation <id>
 ```
 
-- **LOCAL URL:** `http://localhost:8000`
-- **LOCAL token:** `19f3b711b2b1995255c5cc0e4182e085423c6557` (different from .env)
-- **LOCAL conversation:** `pa-3a0db697c2fd` (exists on both instances — they're separate conversations with different histories, but Chris can see the LOCAL one in his ChatUI, NOT the prod one — he has no way to search chat IDs in the UI)
-
-### How to verify you're LOCAL before any real work
-Ask Rigby to run `platform_config_tool overview` and confirm the response includes:
-- `service_context: local`
-- `backend_url: http://localhost:8000`
-- `railway_environment: local`
-
-If you see `service_context: production` or any railway URL, you're on the wrong instance. Stop, switch, and replay any work that needs to happen locally.
-
-### Why this matters more than usual
-- Chris runs the LOCAL stack for development and watches his LOCAL ChatUI
-- He can see new conversations in his sidebar, but cannot search by conversation id
-- If our pair-mode chats are going to prod, Chris sees NOTHING in his UI and thinks we're idle
-- Also: any destructive actions via pa_chat tools (deliverable deletes, agent blocks, beat changes) go to the WRONG instance
-
-**Before your first `pa_chat.py` call each session, run the LOCAL invocation once and visually verify Rigby's response mentions `local`.** Don't trust conversation IDs to tell you which instance — both have the same IDs.
+**Before your first `pa_chat.py` call each session, ask Rigby to run `platform_config_tool overview` and confirm the response includes `service_context: local`.** Don't trust conversation IDs to tell you which instance — the same IDs can exist on both prod and local with different histories.
 
 ---
 
-**Date:** April 15, 2026 (end of Session 1083 — ML isolation marathon)
-**Previous Session:** Session 1083 Marathon — **11 PRs merged**, Priority B (macOS MLEngine mutex deadlock) contained after 4 prior failed attempts, 20 dead endpoints removed, 1 live NameError bug fixed, full handoff doc at [`docs/handoffs/SESSION_1083_MARATHON.md`](docs/handoffs/SESSION_1083_MARATHON.md).
-**PA Conversation (LOCAL):** `pa-3a0db697c2fd` (title: *Session 1083 resume*). Lives in LOCAL instance only — there's a same-ID conversation on PRODUCTION Rigby which is a different conversation. **Always export `PA_API_URL=http://localhost:8000` before calling `pa_chat.py` locally** (default URL points at Railway production).
-**Status:** Local 3-worker stack stable, default worker running ML-isolated via 7-round cumulative fix. Priority B effectively done on macOS — ResearchAgent and all other agent paths no longer trigger the `[mutex.cc : 452] RAW: Lock blocking` deadlock.
+**Date:** April 15, 2026 (end of Session 1084)
+**Previous session handoff:** [`docs/handoffs/SESSION_1084_HEARTBEAT_AND_FACTORIES.md`](docs/handoffs/SESSION_1084_HEARTBEAT_AND_FACTORIES.md)
+**Previous session PA conversation (LOCAL):** `pa-272275b6e125` — Chris creates a new one each session, so ask him for the new ID before your first Rigby message.
+**Status:** Stack is in the cleanest state of the week. All 5 Session 1084 PRs merged and verified. Heartbeat durability has triple empirical proof. CLOSE_WAIT hang class mitigated on Anthropic (#1893) and OpenAI Tier 1 (#1895). 21 dead routes removed (#1894).
 
 ---
 
-## 🎯 SESSION 1083 MARATHON — What Was Accomplished
+## 🎯 SESSION 1084 — What Was Accomplished (5 PRs merged)
 
-This was a one-day pair-programming marathon between Claude Code and Rigby (local PA) that shipped 11 PRs and finally put down the Priority B MLEngine deadlock that had defeated 4 prior sessions.
+| PR | Title | Impact |
+|----|-------|--------|
+| **#1891** | heartbeat tick observability | 30s first tick + rowcount logging |
+| **#1892** | heartbeat stomp prevention | `save(update_fields=[...])` at 5 sites |
+| **#1893** | Anthropic client factory | 8 sites migrated + `max_completion_tokens` bug fix |
+| **#1894** | dead endpoint cleanup round 2 | 21 routes removed (partnership + journey + llm-routing) |
+| **#1895** | OpenAI client factory Tier 1 | 58 sites migrated across 59 files |
 
-### 11 PRs merged to main (in order)
-| PR | Round | Title | Impact |
-|----|-------|-------|--------|
-| #1873 | 34 | Half-built frontend sweep | 32 commits, wires HowItWorks stats, fixes fallback LIARs, exposes core routes |
-| #1874 | 39 | `tasks_initiatives.py:2097` agent_name NameError | Every initiative→deliverable link was silently failing via broad-except |
-| #1875 | 40 | `agent_router._create_execution_record` heartbeat thread | Daemon thread writes last_heartbeat_at every 2 min until execution leaves `in_progress`. Architecturally correct — but see "Still Broken" section below |
-| #1876 | 41 | ML singleton locks + 3 skip guards | Thread-safe `get_ml_scoring_engine` + `get_model_registry`, SKIP_NLP_MODELS guard on RandomForest/MLP/DistilBERT wrappers |
-| #1877 | 42 | MLScoringEngine class-level lock on `_load_model` | Catches XGBoostWrapper's direct-instantiation bypass path |
-| #1878 | 43 | MLPWrapper SKIP guard (third MLEngine call site) | Missed by round 41 grep — caught via log tracing |
-| #1879 | 44 | 20 dead endpoints removed | Mechanical sweep of "Other Dead Endpoints" audit bucket; `manage.py check` clean |
-| #1880 | 45 | XGBoostWrapper SKIP guard | Eliminated the duplicate `ml_scoring_engine Loaded` race |
-| #1881 | 46 | SHAP TreeExplainer skip inside `_load_model` | SHAP's OpenMP threads were the last heavy native op in the load path |
-| #1882 | 47 | **Nuclear** `ModelRegistry.get_model` skip | Returns None for every wrapper lookup on `SKIP_NLP_MODELS=1` — eliminates the entire wrapper cascade including `ml_algorithms` imports from Isolation/KMeans wrappers |
-| (in #1873) | 38 | Makefile `default` worker queue reduction | Dropped `sports,ml` from default worker queues to contain deadlock before the real fix landed |
+**Round 40 closed permanently** with triple empirical proof — tick=1 at exactly +30s with `rowcount=1` on 3 independent runs, `last_heartbeat_at` preserved post-completion (stomp fix held on all 3). Full trace and analysis in the session handoff doc.
 
-### Priority B (MLEngine deadlock) — Root cause + fix chain
-**Root cause (new data this session):**
-- `tasks_agents._impl_execute_agent_task` wraps `agent.route()` in `ThreadPoolExecutor(max_workers=1)` for wall-clock timeout enforcement → **2 Python threads on `--pool=solo`**
-- `AgentModelRouter.AGENT_MODEL_MAP['ResearchAgent']` declares `secondary_model='lightgbm'`
-- Router iterates `ModelRegistry.MODEL_CLASSES` (17 wrapper classes) calling `is_available()` on each candidate
-- `LightGBMWrapper → MLScoringEngine()` loads lightgbm via `joblib.load` + creates SHAP `TreeExplainer`
-- `RandomForestWrapper / MLPWrapper / DistilBERTWrapper` each instantiate `ml.core.ml_engine.MLEngine()` → sports LSTM/NN/NFL/NBA/MLB/NHL joblib loads
-- `IsolationForestWrapper / KMeansWrapper` import `core.services.ml_algorithms` (FraudDetector / CustomerSegmentation) which pulls sklearn + numpy native OpenMP
-- Multiple native thread pools (lightgbm, SHAP, sklearn, numpy, PyTorch MPS) all init concurrently and Abseil's process-wide `RAW: Lock blocking` fires — **freezes the entire Python process** including daemon threads
+**Biggest finding:** Session 1083's "heartbeat not writing" claim was partially wrong. The thread WAS writing — full-instance `execution_record.save()` on completion was stomping the heartbeat thread's queryset `update()` by reading stale in-memory `last_heartbeat_at` and writing it back. Three symptoms masqueraded as one; root cause was at the completion path, not the thread. PR #1892 fixes it with `save(update_fields=[...])` at all 5 sites.
 
-**Why 4 prior PRs failed:** they tried to fix MLEngine itself (add locks, lazy init, class-level state cache). The deadlock is not IN MLEngine — it's the CROSS-LIBRARY native mutex race between MLEngine's dependencies and ml_scoring_engine's dependencies when loaded in parallel threads.
-
-**The fix in round 47 (nuclear ModelRegistry skip) is load-bearing.** Rounds 41-46 are defence-in-depth — they still help production workers that don't set SKIP_NLP_MODELS but also don't run on macOS. **Local macOS workers MUST have `SKIP_NLP_MODELS=1` in env** (already set by Makefile).
-
-### Dead endpoint cleanup (round 44)
-Removed 20 backend routes + 4 frontend API methods from `core/urls.py` and `frontend/src/lib/api.ts`. Full list in the round 44 PR description. `manage.py check` passes clean. Audit bucket "Other Dead Endpoints (~33)" now down to ~13 remaining candidates for next sweep.
+**Retraction:** `agent_router._router_heartbeat_loop` is **NOT dead code**. It's live for non-PA dispatches (beat tasks, direct agent dispatches without pre-created rows). WhaleWatcherAgent execution `6a1039bb` was the empirical proof. Do not delete it.
 
 ---
 
-## 🚨 RESUME HERE — What Was NOT Finished (known gaps)
+## 🚀 NEXT SESSION WARM-UP (Rigby's recommended priority order)
 
-### 1. Round 40 heartbeat thread does NOT appear to be writing
-- The daemon thread in `agent_router.py _create_execution_record` SHOULD update `last_heartbeat_at` every 2 min until the execution leaves `in_progress`
-- Rigby's polls consistently show new ResearchAgent executions with `seconds_since_heartbeat == created_at age` — no periodic writes
-- The 4 newest executions (1:01-1:04 MDT, on worker PID 55126) had heartbeat ages 390-560s
-- **Hypothesis:** daemon thread starts but `close_old_connections()` + threadlocal DB state may be preventing writes from a detached Django thread. Or: the thread exits silently on an exception.
-- **Verification needed:** add a log line at the start of `_router_heartbeat_loop` (not just on failure), restart worker, dispatch fresh ResearchAgent, check if the log appears, then check if the 2-min-tick write happens.
+### 1. OpenAI factory Tier 2 — highest leverage, mechanical
 
-### 2. ResearchAgent end-to-end completion not yet observed clean
-- Round 47 verified: 2+ min of zero mutex.cc, zero ml loads — worker cycling through agents normally
-- But no ResearchAgent from the 6 dispatches this session has yet COMPLETED (all 4 newest in_progress, older ones watchdog-killed as zombies)
-- Queue is deep (608/default + 40/agents + 174/content as of session end) — workload pressure, not deadlock
-- **Next session should let the queue drain naturally then re-verify** with a fresh dispatch in a clean queue state
+**Scope:** migrate ~27 sites across `core/views*.py` (~18) and `core/management/commands/*.py` (~9).
 
-### 3. 24h SLO still shows ~30% wall-clock timeout rate
-- As of session end: 30.49% (25/82 in 24h) — unchanged because the window still covers pre-round-47 zombies
-- 1h rate is 0.0% (0/25 in last hour) — clean post-round-47
-- **Should self-heal over the next 23 hours** as the pre-round-47 failures roll out of the window
+**Why now:** Tier 1 (#1895) addressed the 58 highest-risk worker hot paths. Tier 2 closes the drift on the lower-risk views and CLI commands. Same factory pattern, same verification protocol. Expected ~45 minutes.
 
-### 4. CLOSE_WAIT hang (separate bug, seen mid-session)
-- Default worker PID 49924 sat at 0% CPU for 15m on a Anthropic API call stuck in TCP CLOSE_WAIT state
-- NOT the mutex.cc deadlock — a different bug class: HTTP client not handling remote EOF
-- **Root cause file TBD** — likely in `core/services/llm_provider_registry.py` Anthropic client setup or `httpx` timeout config
-- Worth a separate round when you hit it again
+**Pattern proven in #1895:**
+- Add `from core.services.openai_client_factory import get_openai_client` import (AFTER any multi-line `from X import (...)` blocks — the previous bulk script broke 4 files by inserting inside multi-line imports)
+- Replace `OpenAI(api_key=..., ...)` → `get_openai_client(api_key=..., ...)`
+- Strip any custom `timeout=` kwargs (factory's read=90s is enforced centrally)
+- Keep `import openai` alongside factory import if the file also references `openai.RateLimitError` etc. in except blocks
+- **Never** hoist to module-level import if the file is imported during Django startup from `core.services.agent_collaboration` chain — use lazy inline imports like `models_unified_system.py`
 
-### 5. Dead endpoint cleanup not finished
-- ~13 more candidates from the "Other Dead Endpoints" audit bucket
-- Next sweep should target: partnership API routes, journey-status, diagnostic-master endpoint, remaining LLM routing variants
-- Same mechanical pattern: grep frontend, delete route, `manage.py check`, commit
+**Drift audit command (should return zero in core/views + core/management/commands after this PR):**
+```bash
+grep -R "OpenAI(" core/views*.py core/management/commands/*.py --include='*.py' | grep -v openai_client_factory | grep -v get_openai_client
+```
 
-### 6. Round 40 architecturally correct but blocked on item 1
-- If item 1 is fixed, round 40 will actually work end-to-end
-- If it turns out the daemon-thread-writes-to-DB approach is fundamentally flawed on Django + Celery, a cleaner fix might be to touch heartbeat from inside `BaseAgent.execute()` main loop (single-thread, no DB connection issues)
+**Pre-PR checks:**
+- `python -c "import ast; [ast.parse(open(f).read()) for f in changed_files]"`
+- `python manage.py check` → 0 issues
+- Live smoke test via `manage.py shell` — import factory + make one real OpenAI call
+
+### 2. Missing `learning_journeys.status()` backend route — quick follow-up
+
+**Scope:** `frontend/src/lib/api.ts:2550` calls `/api/learning/journeys/<id>/status/` but there's no matching backend route. Gap surfaced during Session 1084 dead-endpoint cleanup (PR #1894) and filed as Rigby initiative `85f279b9-4c57-4cb1-ba2c-a6ac7884d488`.
+
+**Expected work:**
+- Add `learning_journey_status` view function to `core/views_learning_journey_api.py` (mirrors the pattern of the existing `learning_journey_detail` / `learning_journey_pause` / etc.)
+- Wire route in `core/urls.py` near line 3640+ where the other `learning_journeys_*` routes live
+- Grep frontend to confirm what fields it expects in the response shape
+- Expected ~20 minutes
+
+### 3. Dead file cleanup — low risk
+
+**Candidates (grep-verify unreferenced before deletion):**
+- `core/llm_enforcer_backup_20251002_150019.py` — backup file from Oct 2025
+- `core/llm_enforcer_original.py` — original file superseded by `llm_enforcer.py`
+- `core/views_partnership.py` — now that PR #1894 removed all `urls.py` references to the module
+
+**Verification pattern (per file):**
+```bash
+grep -rn "from core.views_partnership\|import views_partnership\|from core import views_partnership" core/ ai_core/ --include='*.py' | grep -v "Session 1084"
+# Should return zero results (ignoring my own session comments)
+```
+
+### 4. Together AI timeout observability — monitoring only, no code
+
+PR #1895 migrated Together AI from a 120s read timeout to the factory's 90s. If large-model calls now time out where they previously succeeded, the correct fix is to bump `OPENAI_READ_TIMEOUT_S` in the factory globally rather than re-drift this one site.
+
+**Watch command:**
+```bash
+grep -i "APITimeoutError\|TogetherAI.*timeout\|together.*timeout" celery.log | tail -20
+```
+
+If APITimeoutError hits appear, report to Rigby and consider bumping the factory constant to 120s or 150s.
 
 ---
 
-## Known gotchas carried from Session 1083 (don't re-learn these)
+## 📋 Longer-term queue (pick from as time permits)
 
-### `pa_chat.py` defaults to PRODUCTION
-- `tools/pa_chat.py:38` `DEFAULT_BASE_URL = "https://donkey-betz-platform-production.up.railway.app"`
-- **ALWAYS** prepend `PA_API_URL=http://localhost:8000 PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557` for LOCAL calls
-- Local token is in 00-START-NEXT-SESSION.md (this file), NOT in `.env` (which has the prod token)
-- The conversation ID `pa-3a0db697c2fd` exists on BOTH local and prod instances — they are different conversations with different history. Verify with `platform_config_tool overview` to see `service_context: local` before trusting results.
+5. **D) Neural Orchestra mock data audit** — section 6 of the half-built features audit. Never touched in Session 1084.
+6. **E) Operator Edge Issue #1 publish plumbing** — Beehiiv account + weekly newsletter delivery. Still waiting.
+7. **F) Video demo idea** — from Session 1083's prior note. Agents + real-time data demo, not an app build.
 
-### Abseil `[mutex.cc : 452] RAW: Lock blocking` is process-wide
-- This is a Google Abseil diagnostic from the RAW lock path. On macOS it freezes ALL threads in the process, not just the holding thread.
-- Daemon threads, heartbeat threads, celery control threads — all frozen simultaneously when this fires.
-- That's why Round 40's daemon heartbeat thread was observed to not fire: the process was OS-locked.
+---
 
-### `--pool=solo` Celery workers still have 2+ Python threads
-- `tasks_agents._impl_execute_agent_task` at line ~1912 does `_pool = _TPE(max_workers=1); _future = _pool.submit(_run_route)` for wall-clock timeout enforcement
-- This spawns a worker thread — the main thread runs the Celery control plane, the TPE thread runs the agent
-- Thread-safety bugs in singletons (ml_scoring_engine, model_registry) can race even on `--pool=solo`
+## 🚨 Known gotchas carried from Session 1084 (don't re-learn these)
+
+### All Anthropic clients must use the factory
+`from core.services.anthropic_client_factory import get_anthropic_client`. Bare `Anthropic()` defaults to 600s timeout with 2 retries = up to 30min hang. See [`feedback_anthropic_client_factory.md`](~/.claude/projects/-Users-donkeyking-development-unified-donkey-betz/memory/feedback_anthropic_client_factory.md).
+
+### All OpenAI clients must use the factory
+`from core.services.openai_client_factory import get_openai_client`. Same reasoning. Forbidden kwargs: `timeout`, `max_retries`, `api_key` — factory raises `ValueError` if you try to pass them. See [`feedback_openai_client_factory.md`](~/.claude/projects/-Users-donkeyking-development-unified-donkey-betz/memory/feedback_openai_client_factory.md).
+
+### `agent_router._router_heartbeat_loop` is live code
+Session 1084 investigation initially claimed it was dead. It's not — beat tasks and direct dispatches still hit it. Both heartbeat code paths (`tasks_agents._heartbeat_loop` and `agent_router._router_heartbeat_loop`) must use `save(update_fields=[...])` on completion. See [`feedback_router_heartbeat_not_dead.md`](~/.claude/projects/-Users-donkeyking-development-unified-donkey-betz/memory/feedback_router_heartbeat_not_dead.md).
+
+### `models_unified_system.py` uses lazy inline factory imports
+5 sites use `from core.services.openai_client_factory import get_openai_client` INLINE inside each method instead of at module top. This is **deliberate** — module-level import triggers a Django startup circular via `core.services.agent_collaboration`. Don't hoist them.
+
+### Auth middleware 401s all `/api/*` paths before URL resolution
+When smoke-testing removed routes with curl, you'll get 401 not 404. That's auth middleware short-circuiting before the URL resolver runs. Use Django's `resolve()` directly via `manage.py shell` to verify route removal — it bypasses middleware and tests the URL dispatcher. PR #1894 verification used this pattern.
 
 ### Pre-commit hook blocks direct commits to `main`
-- Always create a feature branch and PR, even for one-line fixes
-- `gh pr create ... && gh pr merge --squash --delete-branch` is the fast path
-- Round 39 + 42 + 45 + 46 all hit this and had to reroute through a branch
+Always create a feature branch + PR, even for one-line fixes. `gh pr create ... && gh pr merge --squash --delete-branch` is the fast path.
 
 ### `SKIP_NLP_MODELS=1` is load-bearing on macOS
-- Makefile `celery` target already sets this in the worker env
-- Do NOT remove it from the Makefile without first verifying round 47's behavior
-- Production (Linux Railway) workers do NOT set SKIP_NLP_MODELS=1 and continue to use MLEngine+SHAP normally — they don't hit the Abseil deadlock because Linux pthread_mutex semantics differ from macOS
+Makefile `celery` target already sets this in the worker env. Do NOT remove it. Production Linux workers don't need it and don't set it. Session 1083 round 47.
 
 ---
 
-## Next Session — PICK UP FROM HERE
+## 🛠️ Local stack commands
 
-### Short list of high-value targets (choose 1-2, Rigby can rank)
-
-**A) Fix Round 40 heartbeat thread (1-2 rounds, scoped)**
-- Add entry/periodic log lines to `_router_heartbeat_loop` to verify it's starting
-- Restart worker, dispatch fresh ResearchAgent in a cleaned queue
-- If writes work: verify `seconds_since_heartbeat < 180` for in_progress agents over 10+ min
-- If not: consider the alternative of touching heartbeat from inside BaseAgent.execute() main loop
-
-**B) Finish dead endpoint cleanup (1 round, mechanical)**
-- ~13 remaining candidates from audit bucket
-- Same pattern as round 44
-
-**C) CLOSE_WAIT investigation (1-2 rounds, diagnostic)**
-- Trace the `llm_provider_registry.py` Anthropic client setup
-- Check httpx timeout config
-- Either add timeout or retry-on-close-wait logic
-
-**D) Neural Orchestra mock data audit (flagged in audit doc, not yet touched)**
-- 14 hidden pages in audit section 5 already marked RESOLVED this session
-- Section 6 mock/stale data may still need work
-
-**E) Operator Edge Issue #1 publish flow** (user-facing launch)
-- Deliverable `c73a507a` is publish-ready
-- Needs Beehiiv account + soft-launch plumbing
-
-**F) New video idea per 00-START's prior note** — not an app build, an agents+real-time-data demo
-
-### Local stack commands
 ```bash
-make start && make celery       # 3 workers + beat (default solo, pa solo, long_running threads, broadcast threads)
-.venv/bin/celery -A core inspect ping    # verify nodes (expect broadcast/long_running/pa — default busy in solo pool)
+make start && make celery       # Daphne + 3 workers + beat
+.venv/bin/celery -A core inspect ping    # verify nodes
 open http://127.0.0.1:8000/     # UI (donkeyking / Crypto$donkey2026)
 
-# Talk to LOCAL Rigby (must set env vars, pa_chat defaults to prod)
+# Talk to LOCAL Rigby (must set env vars; pa_chat defaults to prod)
 PA_API_URL=http://localhost:8000 PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557 \
-  .venv/bin/python tools/pa_chat.py "message" --conversation pa-3a0db697c2fd
+  .venv/bin/python tools/pa_chat.py "message" --conversation <new_session_id>
 ```
 
-### Branch state (end of session)
-- Main is at commit `d5b0c08f` (round 47 squash merge) — `git log --oneline main -15` shows the full session sequence
-- All feature branches deleted after squash-merge (8 of 8)
-- Working tree has untracked files only (frontend/dist/assets pycache etc) — no pending tracked changes
+## 📦 Stack state at end of Session 1084
 
----
-
-## 🚨 REFERENCE (carried from previous sessions)
-
-### Beat Task Status
-**Enabled (77 tasks):** Body systems (10), Signal pipeline (3), Content pipeline (14), Sports pipeline (10), Infrastructure (40)
-**Deliberately Disabled (155 tasks):** All 13 agent category rotations, autonomous exercises, agent conversations/dreams/thinking cycles, remediation pipeline, HiveMind sessions.
-**Rule:** Do NOT re-enable agent exercises without real bounded tasks. Processing pipelines OK, unsolicited content = noise.
-
-### Accounts
-- `donkeyking` (Chris) — superuser/owner, pro tier on MentorForge, local password `Crypto$donkey2026`
-- `jessica` — superuser, business side
-- `jeremy` — superuser, patent lawyer
-
-### Founder Toolkit Repos
-- Landing: github.com/clwest/founder-toolkit
-- MentorForge: github.com/clwest/mentorforge (Render: mentorforge-bj25.onrender.com)
-- PitchDeck: github.com/clwest/pitchdeckforge
-- DealFlow: github.com/clwest/dealflowtracker
-- Contracts: github.com/clwest/contract-concierge
-
-### Focus Flow (App Jam #1 — recording still pending)
-- Repo: https://github.com/clwest/focus-flow (public)
-- Workspace `4861b057-71b6-4eb7-aac1-72a28e91ef82`, 3 deliverables
-- 60s demo script deliverable `0a4fcd45` — NOT YET RECORDED
-- Outreach list deliverable `d35a22a3` — NOT YET SENT (frozen until platform audit clean)
-
-### Operator Edge
-- Landing page live at `/operator-edge` on production
-- Issue #1 deliverable `c73a507a` publish-ready (6 sections drafted)
-- Sponsor One-Pager `f76cbd95` created
-- Beehiiv account NOT YET CREATED
-- Beat schedule set for weekly Friday 6 AM MST
+- Main branch: fast-forwarded to PR #1895 merge
+- Daphne: PID 87332 (new URL conf from PR #1894)
+- Default celery worker: PID 93103 (all 5 PRs live in worker context)
+- Other workers (pa, long_running, broadcast, beat): untouched from session start
+- Working tree: untracked files only (pycache, logs, workspace scratch) — no staged changes
