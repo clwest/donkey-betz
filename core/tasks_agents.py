@@ -1930,29 +1930,51 @@ self,
         _hb_stop = threading.Event()
         _hb_execution_id = execution_record.id if execution_record else None
 
+        # Session 1084 heartbeat tick proof: first tick at 30s so short runs
+        # (the majority) actually exercise the update() path at least once,
+        # then 120s thereafter for long-running agents. Inline the update()
+        # call (instead of model.touch_heartbeat()) so we can capture rowcount
+        # and prove the write landed — catches the silent no-op case where
+        # the execution_id row has disappeared.
+        _HB_FIRST_TICK_S = 30
+        _HB_TICK_S = 120
+
         def _heartbeat_loop():
             logger.info(
                 f"[heartbeat] thread start agent={agent_name} "
-                f"execution_id={_hb_execution_id} interval=120s"
+                f"execution_id={_hb_execution_id} first_tick={_HB_FIRST_TICK_S}s "
+                f"interval={_HB_TICK_S}s"
             )
             tick_count = 0
+            next_sleep = _HB_FIRST_TICK_S
             try:
-                while not _hb_stop.wait(timeout=120):  # every 2 min
+                while not _hb_stop.wait(timeout=next_sleep):
                     if execution_record:
                         try:
                             _hb_close_old_connections()
-                            execution_record.touch_heartbeat()
+                            rowcount = AgentExecution.objects.filter(
+                                id=_hb_execution_id
+                            ).update(last_heartbeat_at=timezone.now())
                             tick_count += 1
-                            if tick_count == 1 or tick_count % 5 == 0:
+                            if rowcount != 1:
+                                logger.warning(
+                                    f"[heartbeat] tick rowcount mismatch "
+                                    f"agent={agent_name} execution_id={_hb_execution_id} "
+                                    f"tick={tick_count} rowcount={rowcount} "
+                                    f"(expected 1 — row may have been deleted)"
+                                )
+                            else:
                                 logger.info(
                                     f"[heartbeat] tick agent={agent_name} "
-                                    f"execution_id={_hb_execution_id} tick={tick_count}"
+                                    f"execution_id={_hb_execution_id} tick={tick_count} "
+                                    f"rowcount={rowcount} next_sleep={_HB_TICK_S}s"
                                 )
                         except Exception as e:
                             logger.exception(
                                 f"[heartbeat] periodic write failed for {agent_name} "
                                 f"execution_id={_hb_execution_id}: {e}"
                             )
+                    next_sleep = _HB_TICK_S
             finally:
                 logger.info(
                     f"[heartbeat] thread exit agent={agent_name} "
