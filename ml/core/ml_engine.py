@@ -5,6 +5,7 @@ Optimized for Apple M3 with MLX framework
 
 import os
 import logging
+import threading
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 import numpy as np
@@ -106,6 +107,11 @@ class MLEngine:
         self.user_profile = None
         self.sentiment_analyzer = None
         self._initialized = False
+        # Session 1103: instance lock prevents threads-pool workers from
+        # racing through _ensure_initialized concurrently, which caused
+        # mutex.cc deadlocks when multiple threads imported torch/sklearn/MLX
+        # at the same time on macOS.
+        self._init_lock = threading.Lock()
 
         # Initialize logging only — no heavy work here.
         logging.basicConfig(level=logging.INFO)
@@ -114,15 +120,18 @@ class MLEngine:
     def _ensure_initialized(self):
         """Lazily load models + NLP pipelines on first use.
 
-        Idempotent — safe to call from every public method entrypoint.
-        Flag is flipped FIRST so that any self.models / self.user_profile
-        access inside the init path doesn't re-enter via __getattribute__.
+        Thread-safe via double-checked locking. Multiple Celery worker
+        threads can hit a fresh MLEngine simultaneously; without the lock
+        they race through torch/sklearn/MLX init and deadlock on macOS.
         """
         if self._initialized:
             return
-        self._initialized = True
-        self._initialize_ml_stack()
-        self._initialize_user_tracking()
+        with object.__getattribute__(self, '_init_lock'):
+            if self._initialized:
+                return
+            self._initialized = True
+            self._initialize_ml_stack()
+            self._initialize_user_tracking()
 
     def _initialize_ml_stack(self):
         """Initialize the local ML stack"""
