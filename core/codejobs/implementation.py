@@ -63,6 +63,14 @@ def _gather_repo_context(workdir, task_prompt, path_filters, log_fn):
         ('docs/topics/frontend.md', 3_000),
         ('docs/topics/personal-assistant.md', 3_000),
     ]
+    # Session 1103c: was 'except Exception: pass' which silently
+    # dropped highest-priority architecture context (CLAUDE.md +
+    # topic docs) from the CodeJob implementation prompt on any
+    # file read failure (path, encoding, permissions, transient FS
+    # error). Downstream code generation would proceed without the
+    # ground-truth context meant to prevent hallucinated imports
+    # and duplicate subsystems — flying blind without knowing.
+    arch_warnings = []
     for arch_file, max_chars in arch_files:
         arch_path = os.path.join(workdir, arch_file)
         if os.path.isfile(arch_path):
@@ -72,8 +80,23 @@ def _gather_repo_context(workdir, task_prompt, path_filters, log_fn):
                 chunk = f'## {arch_file}\n```\n{content}\n```\n'
                 if len(arch_text) + len(chunk) <= ARCH_BUDGET:
                     arch_text += chunk
-            except Exception:
-                pass
+            except Exception as e:
+                arch_warnings.append(f'{arch_file}: {type(e).__name__}: {e}')
+                log_fn(
+                    'implement',
+                    f'WARNING architecture file read failed: {arch_file} '
+                    f'({type(e).__name__}: {e})',
+                )
+        else:
+            # File doesn't exist — also worth knowing about, since
+            # missing CLAUDE.md or topic docs degrades context quality
+            arch_warnings.append(f'{arch_file}: missing from workdir')
+    if arch_warnings:
+        log_fn(
+            'implement',
+            f'Architecture context degraded: {len(arch_warnings)} '
+            f'files unavailable: {arch_warnings[:5]}',
+        )
     if arch_text:
         context_parts.append('# ARCHITECTURE CONTEXT (read this first)\n' + arch_text)
         budget_used += len(context_parts[-1])
