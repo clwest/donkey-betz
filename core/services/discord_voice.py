@@ -27,6 +27,7 @@ import discord
 from discord.ext import commands
 from openai import OpenAI
 import httpx
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 # Voice receiving extension for discord.py
 try:
@@ -472,7 +473,7 @@ class DiscordVoiceService:
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.sessions: Dict[int, VoiceSession] = {}  # guild_id -> VoiceSession
-        self.openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+        self.openai_client = get_openai_client(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 
         # Check dependencies
         self.elevenlabs_available = bool(ELEVENLABS_API_KEY)

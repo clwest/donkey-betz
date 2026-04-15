@@ -13,6 +13,7 @@ Solution: Smart title extraction with LLM fallback and heuristic cleanup.
 
 Usage:
     from core.services.initiative_title_generator import generate_initiative_title
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
     title = generate_initiative_title(
         content="Long raw text with the actual topic buried somewhere...",
@@ -256,7 +257,7 @@ def _generate_title_with_llm(content: str, topic_hint: Optional[str] = None) -> 
             logger.debug("No OpenAI API key found for title generation")
             return None
 
-        client = OpenAI(api_key=api_key)
+        client = get_openai_client(api_key=api_key)
 
         # Truncate content for token efficiency
         content_preview = content[:1500] if content else ""

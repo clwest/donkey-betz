@@ -26,6 +26,7 @@ from typing import Dict, Any, List
 
 from core.agents.base_agent import BaseAgent, AgentResult, strip_simulated_tool_json
 from ml.auto_selection import TaskType
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -231,7 +232,7 @@ and only important ones should be promoted. Don't treat this as a crisis."""
 
                 # Session 761: Call GPT with tools enabled for LLM-driven tool use
                 from openai import OpenAI
-                client = OpenAI()
+                client = get_openai_client()
 
                 tool_calls_made = []
                 # Session 919: Increase max_completion_tokens for GPT-5-mini

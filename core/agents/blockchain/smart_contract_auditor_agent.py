@@ -23,6 +23,7 @@ from typing import Any, Dict, List, Optional
 from ..base_agent import BaseAgent, AgentResult
 from core.agents.report_schemas import build_provenance, format_disclaimer
 from ml.auto_selection import TaskType
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -539,7 +540,7 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
         """Perform comprehensive smart contract audit."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         # Quick pattern scan for known vulnerabilities
         quick_findings = self._quick_pattern_scan(code)
@@ -620,7 +621,7 @@ Provide a structured audit report with:
         """Deep reentrancy vulnerability analysis."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         focus_text = f"Focus on these functions: {', '.join(focus_functions)}" if focus_functions else ""
 
@@ -680,7 +681,7 @@ Rate overall reentrancy risk: CRITICAL / HIGH / MEDIUM / LOW / SAFE"""
         """Analyze access control patterns."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         roles = expected_roles or ["owner", "admin"]
 
@@ -738,7 +739,7 @@ Rate overall reentrancy risk: CRITICAL / HIGH / MEDIUM / LOW / SAFE"""
         """Analyze for integer overflow/underflow."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         if not solidity_version:
             solidity_version = self._detect_solidity_version(code)
@@ -801,7 +802,7 @@ Rate overall reentrancy risk: CRITICAL / HIGH / MEDIUM / LOW / SAFE"""
         """Generate proof-of-concept exploit code."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         prompt = f"""Generate a proof-of-concept exploit for this vulnerability:
 

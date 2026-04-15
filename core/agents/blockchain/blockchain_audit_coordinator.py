@@ -22,6 +22,7 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeou
 from ..base_agent import BaseAgent, AgentResult
 from core.agents.report_schemas import build_provenance, format_disclaimer
 from ml.auto_selection import TaskType
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 # Session 895: Timeout for sub-agent executions to prevent coordinator hangs
 # Extended to 5 min to accommodate thinking models (GPT-5.1, o1, o3)
@@ -636,7 +637,7 @@ You have access to:
         """Generate security status report."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         sections = include_sections or ["alerts", "whale_activity", "audits", "exploits"]
 

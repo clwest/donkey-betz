@@ -18,6 +18,7 @@ import json
 
 from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig
 from ml.auto_selection import TaskType
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -339,7 +340,7 @@ Remember: Markets are forward-looking. Look for what others are missing."""
             from openai import OpenAI
             import os
 
-            client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+            client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))
 
             # Prepare market summary
             market_summary = []

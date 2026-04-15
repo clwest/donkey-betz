@@ -28,6 +28,7 @@ from core.agents.report_schemas import (
     Claim, Recommendation, RiskFlag, SourceInfo,
     build_provenance, format_disclaimer
 )
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -319,7 +320,7 @@ Alert on:
 
             # Session 761: Call LLM with tools enabled
             from openai import OpenAI
-            client = OpenAI()
+            client = get_openai_client()
 
             response = client.chat.completions.create(
                 model="gpt-5-mini",
@@ -706,7 +707,7 @@ Provide:
             from openai import OpenAI
             import os
 
-            client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+            client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
             # Session 494: Use gpt-5-mini (reasoning model)
             response = client.chat.completions.create(
                 model="gpt-5-mini",

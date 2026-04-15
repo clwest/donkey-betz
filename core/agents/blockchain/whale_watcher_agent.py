@@ -20,6 +20,7 @@ from typing import Any, Dict
 
 from ..base_agent import BaseAgent, AgentResult
 from core.agents.report_schemas import build_provenance, format_disclaimer
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -444,7 +445,7 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
     def _get_llm_client(self):
         """Get an OpenAI client with proper connection-level timeout."""
         from openai import OpenAI
-        return OpenAI(timeout=self._LLM_TIMEOUT)
+        return get_openai_client()
 
     def _monitor_large_transfers(
         self,

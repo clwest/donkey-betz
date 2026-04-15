@@ -73,6 +73,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 from asgiref.sync import sync_to_async
 from django.utils import timezone
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -7228,7 +7229,7 @@ class AgentAccessCommands(commands.Cog):
                 import openai
                 import os
 
-                client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+                client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
 
                 prompt = f"""Convert this research data into a natural, conversational spoken response.
 
@@ -7509,7 +7510,7 @@ Spoken response:"""
             await interaction.edit_original_response(embed=transcribe_embed)
 
             # Transcribe with Whisper
-            openai_client = OpenAI(api_key=OPENAI_API_KEY)
+            openai_client = get_openai_client(api_key=OPENAI_API_KEY)
 
             @sync_to_async
             def transcribe_audio(file_path):
@@ -7585,7 +7586,7 @@ Spoken response:"""
             # Convert to natural speech
             @sync_to_async
             def make_speakable(raw_text, question):
-                client = OpenAI(api_key=OPENAI_API_KEY)
+                client = get_openai_client(api_key=OPENAI_API_KEY)
                 prompt = f"""Convert this data into a natural, conversational spoken response.
 
 Rules:
@@ -7801,7 +7802,7 @@ Keep the response concise but insightful (max 300 words)."""
             # Call OpenAI
             @sync_to_async
             def get_advisor_response():
-                client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+                client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
                 # Session 494: Use gpt-5-mini (reasoning model)
                 response = client.chat.completions.create(
                     model="gpt-5-mini",

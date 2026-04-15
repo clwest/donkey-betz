@@ -14,6 +14,7 @@ from typing import Any, Dict, List
 
 from .base_agent import BaseAgent, AgentResult, ActionableOutputConfig
 from ml.auto_selection import TaskType
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -645,7 +646,7 @@ Be constructive and brief."""
         """Perform comprehensive code review."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         # Truncate very long files to avoid token limits
         code, was_truncated = self._truncate_code(code, max_lines=300)
@@ -736,7 +737,7 @@ End with a summary score (1-10) and overall assessment."""
         """Perform security audit."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         # Truncate very long files to avoid token limits
         code, was_truncated = self._truncate_code(code, max_lines=300)
@@ -818,7 +819,7 @@ Also provide:
         """Analyze performance issues."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         context_text = f"Runtime context: {runtime_context}" if runtime_context else ""
         checks = check_types or ["complexity", "memory", "io", "queries", "caching"]
@@ -892,7 +893,7 @@ Provide overall performance score and optimization priority list."""
         """Check code style and conventions."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         naming_text = "Check naming conventions for variables, functions, and classes." if check_naming else ""
         docs_text = "Check documentation completeness (docstrings, comments, type hints)." if check_documentation else ""
@@ -968,7 +969,7 @@ End with style compliance percentage."""
         """Generate improved version of code."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         preserve_text = "IMPORTANT: Preserve exact functionality - no behavioral changes." if preserve_functionality else "You may change functionality if it improves the design."
         explain_text = "Explain each change made and why." if explain_changes else ""

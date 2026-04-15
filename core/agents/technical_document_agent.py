@@ -24,6 +24,7 @@ Key Differences from ContentWriterAgent:
 
 Usage:
     from core.agents.technical_document_agent import TechnicalDocumentAgent
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
     agent = TechnicalDocumentAgent()
     result = agent.execute(
@@ -776,7 +777,7 @@ Generate the complete document now:"""
             from openai import OpenAI
             from django.conf import settings
 
-            client = OpenAI(api_key=settings.OPENAI_API_KEY)
+            client = get_openai_client(api_key=settings.OPENAI_API_KEY)
 
             # Use GPT-4 for high-quality technical writing
             # Session 814: Increased max_tokens to handle large context + response

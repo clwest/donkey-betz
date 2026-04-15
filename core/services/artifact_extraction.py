@@ -20,6 +20,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from openai import OpenAI
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ class ArtifactExtractionService:
     }
 
     def __init__(self):
-        self.client = OpenAI()
+        self.client = get_openai_client()
 
     def extract_from_conversation(self, conversation_id: str) -> List[Any]:
         """

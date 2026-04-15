@@ -11,6 +11,7 @@ All services that need embeddings should use this instead of calling OpenAI dire
 
 Usage:
     from core.services.embedding_service import get_embedding_service
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
     service = get_embedding_service()
 
@@ -118,7 +119,7 @@ class EmbeddingService:
         """Lazy-load OpenAI client."""
         if self._client is None:
             from openai import OpenAI
-            self._client = OpenAI(api_key=settings.OPENAI_API_KEY)
+            self._client = get_openai_client(api_key=settings.OPENAI_API_KEY)
         return self._client
 
     def create_embedding(

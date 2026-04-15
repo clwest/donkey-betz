@@ -17,6 +17,7 @@ from django.db.models import F, Count, Q  # noqa: F401
 from django.utils import timezone  # noqa: F401
 
 from core.api_helpers import smart_truncate  # noqa: F401
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 from core.tasks import (  # noqa: F401 — private helpers from tasks.py
@@ -208,7 +209,7 @@ Generate a JSON object with these fields:
 
 Return ONLY valid JSON, no markdown fences."""
 
-        client = OpenAI(api_key=django_settings.OPENAI_API_KEY)
+        client = get_openai_client(api_key=django_settings.OPENAI_API_KEY)
         response = client.chat.completions.create(
             model="gpt-5-mini",  # Session 1103: upgraded from gpt-4o-mini
             messages=[
@@ -805,8 +806,10 @@ Call the initiate_content_debate tool NOW with channel_id="{channel.id}" to coor
 
         actual_script = ""
         try:
-            # Session 1003: 60s timeout prevents indefinite OpenAI hangs
-            client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'), timeout=60)
+            # Session 1003: timeout prevents indefinite OpenAI hangs.
+            # Session 1084 round 51: custom timeout dropped — factory
+            # enforces read=90s centrally via get_openai_client.
+            client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
 
             # Build debate context for richer content
             debate_context = f"""

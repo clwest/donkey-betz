@@ -14,6 +14,7 @@ from typing import Any, Dict, List
 
 from .base_agent import BaseAgent, AgentResult, ActionableOutputConfig
 from ml.auto_selection import TaskType
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -469,7 +470,7 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
         """Design a new prompt template."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         model_tips = {
             "gpt-5": "GPT-5 excels at complex reasoning. Use chain-of-thought prompting.",
@@ -551,7 +552,7 @@ Format your response as:
         """Optimize an existing prompt."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         prompt = f"""Optimize the following prompt:
 
@@ -600,7 +601,7 @@ Provide:
         """Create a collection of related prompts."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         prompt = f"""Create a prompt library for the following domain:
 
@@ -648,7 +649,7 @@ Format as a structured library with clear sections for each use case."""
         """Analyze a prompt for effectiveness."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         analysis_prompt = f"""Analyze the following prompt:
 
@@ -705,7 +706,7 @@ Provide an overall effectiveness score (1-10) with justification."""
         """Generate a system prompt for an AI agent."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         prompt = f"""Create a comprehensive system prompt for an AI agent:
 

@@ -23,6 +23,7 @@ from django.utils import timezone
 from openai import OpenAI
 
 from core.models_unified_system import AgentDecisionSummary
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ class AIDecisionPromoterService:
 """
 
     def __init__(self):
-        self.client = OpenAI()
+        self.client = get_openai_client()
         self.model = "gpt-5-mini"
         self.confidence_threshold = 0.7
 

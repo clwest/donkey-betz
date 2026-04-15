@@ -11804,10 +11804,11 @@ FULL EVIDENCE CHUNKS:
 
 Respond ONLY with valid JSON, no markdown fences."""
 
-    import openai as openai_mod
+    # Session 1084 round 51: migrated to shared factory
+    from core.services.openai_client_factory import get_openai_client
     from django.conf import settings as django_settings
 
-    client = openai_mod.OpenAI(api_key=django_settings.AI_PROVIDERS.get('OPENAI_API_KEY'))
+    client = get_openai_client(api_key=django_settings.AI_PROVIDERS.get('OPENAI_API_KEY'))
     llm_response = client.chat.completions.create(
         model='gpt-4.1',
         messages=[

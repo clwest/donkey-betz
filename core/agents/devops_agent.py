@@ -14,6 +14,7 @@ from typing import Any, Dict, List
 
 from .base_agent import BaseAgent, AgentResult, ActionableOutputConfig
 from ml.auto_selection import TaskType
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -552,7 +553,7 @@ Only use these tools when explicitly asked to generate configs. For questions or
         """Create CI/CD pipeline configuration."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         deploy_text = f"Deploy targets: {', '.join(deploy_targets)}" if deploy_targets else "No deployment stage"
         security_text = "Include security scanning (SAST, dependency scanning, container scanning)." if include_security_scans else ""
@@ -616,7 +617,7 @@ Include detailed comments explaining each section."""
         """Generate Docker configuration."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         services = services or []
         services_text = f"Additional services: {', '.join(services)}" if services else ""
@@ -682,7 +683,7 @@ Include comments explaining optimization choices."""
         """Generate Kubernetes deployment manifests."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         resources = resources or {
             "cpu_request": "100m",
@@ -760,7 +761,7 @@ Include namespace, labels, and annotations following Kubernetes best practices."
         """Generate Terraform infrastructure code."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         region = region or self._get_default_region(cloud_provider)
         modules_text = "Organize into reusable Terraform modules" if use_modules else ""
@@ -831,7 +832,7 @@ Follow {cloud_provider} best practices for security and cost optimization."""
         """Set up monitoring and alerting configuration."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         alert_channels = alert_channels or ["slack"]
         dashboard_text = "Include pre-built Grafana/Kibana dashboards" if include_dashboards else ""
