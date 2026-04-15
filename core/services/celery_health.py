@@ -591,7 +591,15 @@ class CeleryHealthService:
             }
 
     def ping_workers(self) -> Dict[str, bool]:
-        """Ping all workers and return response map."""
+        """Ping all workers and return response map.
+
+        Session 1103c: was 'except Exception: return {}' which silently
+        returned empty when the broker auth/timeout/connection failed.
+        Upstream health views interpreted "no workers" ambiguously
+        (could be "actually no workers" or "ping itself broke") with
+        no way to distinguish. Now logs the exception type so the
+        cause is visible in monitoring.
+        """
         try:
             if not self._app:
                 return {}
@@ -603,7 +611,14 @@ class CeleryHealthService:
                 worker: response.get('ok') == 'pong'
                 for worker, response in ping_response.items()
             }
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                "celery_health.ping_workers: inspect.ping failed "
+                "(%s: %s) — returning empty worker map. Upstream "
+                "health view should treat this as 'unknown', not "
+                "'no workers'.",
+                type(e).__name__, e,
+            )
             return {}
 
     def get_task_schedule(self) -> List[Dict]:
