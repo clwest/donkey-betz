@@ -835,19 +835,15 @@ from core.views_proactive import (
     automation_logs,
 )
 
-# Session 235: Import A/B Testing Framework views (Phase 6)
+# Session 1103c: A/B Testing Framework (Session 235) /api/ab-testing/*
+# routes removed — 11 endpoints with zero frontend callers, documented
+# as dead in docs/audit-2026/HALF_BUILT_FEATURES_AUDIT.md under "A/B
+# Testing System (8 endpoints)." The Goals API at /api/goals/* still
+# lives in the same view module (unrelated Session 235 feature) so we
+# keep those imports and leave views_ab_testing.py intact for now —
+# future cleanup should split goals out and then delete the test/
+# variant handler code.
 from core.views_ab_testing import (
-    ab_testing_dashboard,
-    list_tests,
-    create_test,
-    test_detail,
-    start_test,
-    pause_test,
-    complete_test,
-    test_results,
-    add_variant,
-    variant_detail,
-    record_event,
     list_goals,
     create_goal,
     goal_detail,
@@ -2063,19 +2059,6 @@ urlpatterns = [
     path('api/proactive/automations/<uuid:automation_id>/execute/', execute_automation, name='proactive-automation-execute'),
     path('api/proactive/automations/<uuid:automation_id>/toggle/', toggle_automation, name='proactive-automation-toggle'),
     path('api/proactive/automations/<uuid:automation_id>/logs/', automation_logs, name='proactive-automation-logs'),
-
-    # Session 235: A/B Testing Framework APIs (Phase 6)
-    path('api/ab-testing/dashboard/', ab_testing_dashboard, name='ab-testing-dashboard'),
-    path('api/ab-testing/tests/', list_tests, name='ab-testing-tests'),
-    path('api/ab-testing/tests/create/', create_test, name='ab-testing-create'),
-    path('api/ab-testing/tests/<uuid:test_id>/', test_detail, name='ab-testing-detail'),
-    path('api/ab-testing/tests/<uuid:test_id>/start/', start_test, name='ab-testing-start'),
-    path('api/ab-testing/tests/<uuid:test_id>/pause/', pause_test, name='ab-testing-pause'),
-    path('api/ab-testing/tests/<uuid:test_id>/complete/', complete_test, name='ab-testing-complete'),
-    path('api/ab-testing/tests/<uuid:test_id>/results/', test_results, name='ab-testing-results'),
-    path('api/ab-testing/tests/<uuid:test_id>/variants/', add_variant, name='ab-testing-add-variant'),
-    path('api/ab-testing/variants/<uuid:variant_id>/', variant_detail, name='ab-testing-variant-detail'),
-    path('api/ab-testing/variants/<uuid:variant_id>/event/', record_event, name='ab-testing-record-event'),
 
     # Session 264: Super Platform Coordinator API (Phase 1 - Unified Intelligence)
     path('api/super-platform/process/', SuperPlatformProcessView.as_view(), name='super-platform-process'),
