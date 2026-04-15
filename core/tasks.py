@@ -3885,8 +3885,11 @@ def spider_data_retention(self, trim_days=7, delete_days=30, batch_size=200):
         with connection.cursor() as c:
             c.execute("SELECT pg_total_relation_size('core_spiderdata')")
             stats['bytes_before'] = c.fetchone()[0]
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "tasks.spider_data_retention: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     # Phase 1: DELETE rows older than delete_days
     try:
@@ -3934,8 +3937,11 @@ def spider_data_retention(self, trim_days=7, delete_days=30, batch_size=200):
         with connection.cursor() as c:
             c.execute("SELECT pg_total_relation_size('core_spiderdata')")
             stats['bytes_after'] = c.fetchone()[0]
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "tasks.spider_data_retention: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     saved_mb = round((stats['bytes_before'] - stats['bytes_after']) / 1024 / 1024, 1)
     logger.info(

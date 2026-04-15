@@ -2381,8 +2381,11 @@ def _impl_generate_self_blog_deliberation_task(self, tone='enthusiastic', word_c
             cache.delete(lock_key)
             logger.info(f"[Phase 4] Budget preflight: DEFER — {pf['reason']}")
             return {'success': False, 'deferred': True, 'reason': pf['reason']}
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "tasks_content._impl_generate_self_blog_deliberation_task: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     # Session 969: Weight away from 'system' for diversity
     if topic_category is None or topic_category == 'random':
@@ -2529,8 +2532,11 @@ def _impl_generate_self_blog_deliberation_task(self, tone='enthusiastic', word_c
                     'status', 'failure_reason_code', 'failure_detail',
                     'completed_at', 'updated_at',
                 ])
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "tasks_content._impl_generate_self_blog_deliberation_task: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
         return {'success': False, 'error': str(e), 'failure_reason_code': reason_code}
 
     finally:
@@ -2867,8 +2873,11 @@ def _impl_run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_h
                 thought.reflection = "Celery soft_time_limit exceeded"
                 thought.completed_at = timezone.now()
                 thought.save()
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "tasks_content.format_action_result: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
         return {'success': False, 'error': 'Celery soft_time_limit exceeded', 'timed_out': True}
     except Exception as e:
         logger.error(f"🧠 [THINKING] Cycle failed: {e}", exc_info=True)
@@ -3141,8 +3150,11 @@ def _impl_content_autonomy_loop():
         if pf['decision'] == 'defer':
             logger.info(f"[ContentAutonomy] Budget preflight: DEFER — {pf['reason']}")
             return {'success': False, 'deferred': True, 'reason': pf['reason']}
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "tasks_content._impl_content_autonomy_loop: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     now = timezone.now()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
