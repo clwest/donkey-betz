@@ -608,7 +608,11 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
             # Track tool call metrics in Redis
             _record_tool_metric(tool_name, action, 'ok', latency_ms)
 
-            # Record as workspace operation (fire-and-forget)
+            # Record as workspace operation (fire-and-forget).
+            # Was 'except Exception: pass' which dropped op-recording
+            # errors silently — every tool call's workspace operation
+            # trace could vanish and the Ops Run timeline would have
+            # holes with no visible cause.
             try:
                 from core.services.operation_recorder import record_op
                 record_op(
@@ -621,8 +625,12 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                     metadata={'tool': tool_name, 'action': action},
                     correlation_id=trace_id,
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    "tool_dispatcher: record_op failed for %s.%s "
+                    "(%s: %s) — Ops Run timeline will be missing this entry",
+                    tool_name, action, type(e).__name__, e,
+                )
 
             return ToolResult(
                 ok=True,

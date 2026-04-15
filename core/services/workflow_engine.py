@@ -1121,7 +1121,11 @@ Remember: Enhance their vision, don't replace it!
                 logger.info(f"📁 Created FULL project: {project.name}")
 
             # Add images to project - Session 293: Use correct relationship
-            # ImageHistory.project points TO CreativeProject (not vice versa)
+            # ImageHistory.project points TO CreativeProject (not vice versa).
+            # Was 'except ImageHistory.DoesNotExist: pass' which silently
+            # dropped orphaned image references — projects would end up
+            # smaller than the caller asked for with no indication why.
+            missing_image_ids = []
             for img in images:
                 image_id = img.get('id')
                 if image_id:
@@ -1130,7 +1134,14 @@ Remember: Enhance their vision, don't replace it!
                         image.project = project  # Set the FK on the image
                         image.save()
                     except ImageHistory.DoesNotExist:
-                        pass
+                        missing_image_ids.append(image_id)
+            if missing_image_ids:
+                logger.warning(
+                    "workflow_engine: %d image(s) referenced by project '%s' "
+                    "no longer exist in ImageHistory: %s — project created "
+                    "without them",
+                    len(missing_image_ids), project.name, missing_image_ids,
+                )
 
             # Count images using the related_name 'project_images'
             result = {
