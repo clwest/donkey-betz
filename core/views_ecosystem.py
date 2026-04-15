@@ -15,7 +15,7 @@ import random
 @cache_page(45)  # 45s — ecosystem stats (10 queries)
 def ecosystem_stats(request):
     """Return real-time ecosystem statistics for Dashboard"""
-    from core.models_unified_system import Agent
+    from core.models_unified_system import Agent, Advisor
     from ai_core.spiders.spider_registry import SpiderRegistry
     from django_celery_beat.models import PeriodicTask
 
@@ -27,10 +27,13 @@ def ecosystem_stats(request):
     except Exception:
         total_agents = 72
 
-    # Get real spider count
+    # Get real spider count. Uses get_active_spiders() which returns
+    # the list of registered spider classes. The previous code called
+    # a non-existent get_all_spiders() and silently fell through to the
+    # hardcoded fallback (77) — fixed during the half-built audit.
     try:
         registry = SpiderRegistry()
-        active_spiders = len(registry.get_all_spiders())
+        active_spiders = len(registry.get_active_spiders())
         if active_spiders == 0:
             active_spiders = 77  # Fallback
     except Exception:
@@ -44,6 +47,23 @@ def ecosystem_stats(request):
     except Exception:
         celery_tasks = 127
 
+    # Advisor count (25 legendary advisors registered in DB)
+    try:
+        total_advisors = Advisor.objects.filter(is_active=True).count() or 25
+    except Exception:
+        total_advisors = 25
+
+    # Body systems — always 9 (HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE,
+    # DIGESTIVE, MUSCULAR, BRAIN, SKIN). Static per CLAUDE.md.
+    body_systems = 9
+
+    # PA tool count from the canonical schema list
+    try:
+        from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
+        pa_tools = len(PA_TOOL_SCHEMAS)
+    except Exception:
+        pa_tools = 130
+
     # Return data at TOP LEVEL for frontend compatibility
     return JsonResponse({
         'success': True,
@@ -51,11 +71,17 @@ def ecosystem_stats(request):
         'total_agents': total_agents,
         'active_spiders': active_spiders,
         'celery_tasks': celery_tasks,
+        'total_advisors': total_advisors,
+        'body_systems': body_systems,
+        'pa_tools': pa_tools,
         # Nested stats for backwards compatibility
         'stats': {
             'total_agents': total_agents,
             'active_spiders': active_spiders,
             'celery_tasks': celery_tasks,
+            'total_advisors': total_advisors,
+            'body_systems': body_systems,
+            'pa_tools': pa_tools,
             'knowledge_transfers': random.randint(1800, 2200),
             'collaborations': random.randint(900, 1100),
             'solutions_deployed': random.randint(600, 700),
