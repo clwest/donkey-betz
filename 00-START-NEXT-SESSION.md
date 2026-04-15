@@ -1,320 +1,233 @@
 # Next Session — Start Here
 
-**Date:** April 15, 2026 (post-marathon)
-**Previous Session:** Half-Built Features Audit — **69 commits pushed to main**, including 9 LIAR/fail-open bug fixes from the Rigby + Claude Code parallel-recon pairing pattern. The pairing flow is the breakthrough of this session — every round of `repo_tool` recon by Rigby produced 1-3 real production bugs.
-**PA Conversation:** `pa-00df63bcf289` (local). Function-calling enabled via `PA_USE_FUNCTION_CALLING=true` in Makefile. Rigby has full repo_tool + parallel tool calls working locally now.
-**Status:** Local 4-worker stack stable on solo pool. MLEngine deadlock permanently fixed via class-level state cache. PA UX papercuts fixed (work_tool stats, ops_tool overview, governance_tool stats, content_tool aliases). Multiple LIAR patterns surfaced and fixed in autonomous loops + enforcement subsystem.
+---
+
+## ⚠️ READ THIS FIRST — LOCAL vs PRODUCTION RIGBY TRAP ⚠️
+
+**Session 1083 burned an hour because Claude Code sent every `pa_chat.py` call to production Rigby by mistake.** Chris caught it because he wasn't seeing any of our activity in his local ChatUI — our "smoke tests" were returning production data (826 deliverables, 10 signal clusters) while the local stack had different numbers (1041 deliverables, 21 clusters).
+
+### The trap
+`tools/pa_chat.py:38` has `DEFAULT_BASE_URL = "https://donkey-betz-platform-production.up.railway.app"`. If you don't override `PA_API_URL`, every call goes to prod. Every. Single. Call.
+
+### The `.env` file has the WRONG token for LOCAL
+`.env` has `PA_API_TOKEN=0256880456bb65533c759cc02c62160ce1a72444` — that's the **production** token. If you use it, prod Rigby will accept it.
+
+### The correct LOCAL invocation (memorize this)
+```bash
+PA_API_URL=http://localhost:8000 \
+PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557 \
+.venv/bin/python tools/pa_chat.py "message" --conversation pa-3a0db697c2fd
+```
+
+- **LOCAL URL:** `http://localhost:8000`
+- **LOCAL token:** `19f3b711b2b1995255c5cc0e4182e085423c6557` (different from .env)
+- **LOCAL conversation:** `pa-3a0db697c2fd` (exists on both instances — they're separate conversations with different histories, but Chris can see the LOCAL one in his ChatUI, NOT the prod one — he has no way to search chat IDs in the UI)
+
+### How to verify you're LOCAL before any real work
+Ask Rigby to run `platform_config_tool overview` and confirm the response includes:
+- `service_context: local`
+- `backend_url: http://localhost:8000`
+- `railway_environment: local`
+
+If you see `service_context: production` or any railway URL, you're on the wrong instance. Stop, switch, and replay any work that needs to happen locally.
+
+### Why this matters more than usual
+- Chris runs the LOCAL stack for development and watches his LOCAL ChatUI
+- He can see new conversations in his sidebar, but cannot search by conversation id
+- If our pair-mode chats are going to prod, Chris sees NOTHING in his UI and thinks we're idle
+- Also: any destructive actions via pa_chat tools (deliverable deletes, agent blocks, beat changes) go to the WRONG instance
+
+**Before your first `pa_chat.py` call each session, run the LOCAL invocation once and visually verify Rigby's response mentions `local`.** Don't trust conversation IDs to tell you which instance — both have the same IDs.
 
 ---
 
-## 🎯 SESSION HIGHLIGHTS — Rigby + Claude Code Pairing Pattern Works
-
-This session unlocked a new working flow: **Rigby uses `repo_tool` (search + read_file in parallel via OpenAI function calling) to do reconnaissance, ranks targets by blast radius, and hands me precise file:line picks. I implement, test, commit, and push.** The pairing produced ~1-3 real bug fixes per round, with diminishing returns only kicking in after round 18+.
-
-**Two prerequisites that made this work:**
-1. `PA_USE_FUNCTION_CALLING=true` in the Makefile so local Rigby actually has tool access (was silently disabled — local PA had ~80% fewer tools than prod for an unknown amount of time).
-2. System-prompt fix telling GPT-5.2 to emit separate top-level `function_call` items instead of the hallucinated Anthropic `multi_tool_use.parallel` wrapper. Without this, parallel tool calls leaked raw JSON into responses.
-
-**9 LIAR / fail-open patterns fixed via the pairing flow tonight:**
-1. `auto_spawner_service.spawn_reflex` — returned `spawned=True` while `_spawn_data_gatherers` returned empty list because **3 of its inner imports were broken** (`run_spider_with_priority`, `run_single_spider`, `queue_agent_task` — all removed from `core/tasks.py` in a refactor but never deleted from the helper). The autonomous spawn reflex has been silently doing nothing in production for an unknown amount of time.
-2. `artifact_extraction._call_extraction_llm` — `JSONDecodeError` returned `[]`, indistinguishable from a legitimate empty result. Caller logged `status='success' artifacts_found=0` on every parse failure. Fixed to return `None` so the caller can log `status='failed'`.
-3. `auto_kpi_tracking.update_all_kpis` — `results['success'] = True` initialized at function entry and **never flipped**, even when every per-experiment update threw. Probably explains why so many experiments needed the `cleanup_stale_running_experiments` task we shipped earlier in the session.
-4. `ops_autopilot/verification.ActionVerifier.pre_check` — fail-OPEN safety gate. Pre-check exception left `passed=True` (the default) so the autopilot proceeded with potentially destructive actions (block agents, sweep content, remediation) when safety checks themselves were broken. Flipped to fail-CLOSED.
-5. `ml/core/ml_engine.MLX_AVAILABLE` — the `try` block had **literally nothing in the body** (no actual import), so `MLX_AVAILABLE` was unconditionally True even on hosts without MLX. Verified live: my Mac doesn't have MLX but the flag was reading True. Every code path branching on this has been making the wrong decision forever.
-6. `ops_autopilot/budget.get_budget_status` — fail-OPEN on budget mode lookup. DB error → silently fell back to `mode='normal'` (no constraints) instead of `'freeze'`. **$$ liability bug** — could allow runaway LLM spend during config-layer incidents. Flipped to fail-CLOSED.
-7. `ops_autopilot/governance.get_tuning_recommendations` — fail-OPEN on daily change cap query. DB error → `changes_today = 0` → cap bypassed → unbounded config tuning during partial outages. Flipped to fail-CLOSED (treats query failure as AT-CAP).
-8. `ops_autopilot/experiment._get_current_params` + `get_experiment_param` — silent `pass` on SystemConfiguration reads. Autopilot proceeded with stale defaults (potentially overly-permissive budget thresholds, throttle ROIs) while experiment system appeared to be active.
-9. `ops_autopilot/impact.get_desk_iqroi` — TWO swallows in IQROI per-desk computation (`desk_impact` + `desk_cost`). Without `desk_cost`, ROI calculation divides by zero and every desk looks artificially profitable. Could mislead governance / portfolio allocation decisions.
+**Date:** April 15, 2026 (end of Session 1083 — ML isolation marathon)
+**Previous Session:** Session 1083 Marathon — **11 PRs merged**, Priority B (macOS MLEngine mutex deadlock) contained after 4 prior failed attempts, 20 dead endpoints removed, 1 live NameError bug fixed, full handoff doc at [`docs/handoffs/SESSION_1083_MARATHON.md`](docs/handoffs/SESSION_1083_MARATHON.md).
+**PA Conversation (LOCAL):** `pa-3a0db697c2fd` (title: *Session 1083 resume*). Lives in LOCAL instance only — there's a same-ID conversation on PRODUCTION Rigby which is a different conversation. **Always export `PA_API_URL=http://localhost:8000` before calling `pa_chat.py` locally** (default URL points at Railway production).
+**Status:** Local 3-worker stack stable, default worker running ML-isolated via 7-round cumulative fix. Priority B effectively done on macOS — ResearchAgent and all other agent paths no longer trigger the `[mutex.cc : 452] RAW: Lock blocking` deadlock.
 
 ---
 
-## 🚨 RESUME HERE — What Was Accomplished This Session
+## 🎯 SESSION 1083 MARATHON — What Was Accomplished
 
-### 1. MLEngine mutex deadlock (permanently fixed)
-Root cause turned out to be that every new `MLEngine()` instance re-ran the full torch/sklearn/MLX initialization stack, and on macOS under any threaded worker pool the concurrent library globals would re-trip `mutex.cc` RAW Lock deadlocks. Four attempts narrowed it:
-  - `1a597722` SKIP_NLP_MODELS env var (still deadlocked)
-  - `eaa66a7f` per-instance threading.Lock (still deadlocked — each instance had its own lock)
-  - `f501d3b7` class-level lock (still deadlocked — new instances re-ran the heavy path)
-  - `0645c748` **class-level state cache** (first instance loads once, every subsequent `MLEngine()` copies from cached class attrs and skips `_initialize_ml_stack()` entirely). ALSO split the `pa` queue onto its own dedicated `--pool=solo` worker so Rigby is never blocked by long COOAgent runs.
+This was a one-day pair-programming marathon between Claude Code and Rigby (local PA) that shipped 11 PRs and finally put down the Priority B MLEngine deadlock that had defeated 4 prior sessions.
 
-### 2. Silent-failure audit — 12 fixes across 3 batches
-- **Batch 1 `6b34f737`:** `agent_llm_router._economy_if_healthy` now fail-safes to 'premium' on tracker failure; `knowledge_first_router` spider freshness narrow-excepts and logs bad `found_at`; `track_generated_image/video` replaced with ducktyped module-level helpers in `core/epa_handlers_utility.py` that work on both EPA and PersonalAIAssistant cached objects.
-- **Batch 2 `9851adc3`:** `agent_monitoring` ImportError swallows replaced with WARNING logs; `agent_llm_router.log_llm_call` uses `get_or_create` so first-call-per-agent telemetry persists; `initiative_integration_service` missing current_stage row now marks initiative 'blocked' instead of reporting healthy; `experiment_learning_enhancer` risk-factor loop narrowed.
-- **Batch 3 `f939ab75`:** `unified_pa_entrypoint._get_user_workspace_id` logs when workspace scoping is dropped; strategic memory ImportError now loud; `tool_dispatcher.record_op` failures logged with tool name; `workflow_engine` collects + logs missing `ImageHistory` IDs; `conversation_initiative_pipeline` content_type fallback logged.
+### 11 PRs merged to main (in order)
+| PR | Round | Title | Impact |
+|----|-------|-------|--------|
+| #1873 | 34 | Half-built frontend sweep | 32 commits, wires HowItWorks stats, fixes fallback LIARs, exposes core routes |
+| #1874 | 39 | `tasks_initiatives.py:2097` agent_name NameError | Every initiative→deliverable link was silently failing via broad-except |
+| #1875 | 40 | `agent_router._create_execution_record` heartbeat thread | Daemon thread writes last_heartbeat_at every 2 min until execution leaves `in_progress`. Architecturally correct — but see "Still Broken" section below |
+| #1876 | 41 | ML singleton locks + 3 skip guards | Thread-safe `get_ml_scoring_engine` + `get_model_registry`, SKIP_NLP_MODELS guard on RandomForest/MLP/DistilBERT wrappers |
+| #1877 | 42 | MLScoringEngine class-level lock on `_load_model` | Catches XGBoostWrapper's direct-instantiation bypass path |
+| #1878 | 43 | MLPWrapper SKIP guard (third MLEngine call site) | Missed by round 41 grep — caught via log tracing |
+| #1879 | 44 | 20 dead endpoints removed | Mechanical sweep of "Other Dead Endpoints" audit bucket; `manage.py check` clean |
+| #1880 | 45 | XGBoostWrapper SKIP guard | Eliminated the duplicate `ml_scoring_engine Loaded` race |
+| #1881 | 46 | SHAP TreeExplainer skip inside `_load_model` | SHAP's OpenMP threads were the last heavy native op in the load path |
+| #1882 | 47 | **Nuclear** `ModelRegistry.get_model` skip | Returns None for every wrapper lookup on `SKIP_NLP_MODELS=1` — eliminates the entire wrapper cascade including `ml_algorithms` imports from Isolation/KMeans wrappers |
+| (in #1873) | 38 | Makefile `default` worker queue reduction | Dropped `sports,ml` from default worker queues to contain deadlock before the real fix landed |
 
-### 3. PA UX papercuts — 2 fixes
-Rigby's GPT-5.2 kept guessing natural action names that didn't exist, hitting 'Unknown action' errors and burning conversations:
-- `50e57406` **`work_tool(action='stats')`**: added real stats action that returns aggregate counts (initiatives by status, action items, workflows, agent_conversations). Smoke test returned 248 initiatives / 34 workflows / 18,079 agent conversations.
-- `0c0eb2e1` **`ops_tool(action='overview')`**: added bundled snapshot (version + slo_status + failure_signatures + noise_metrics) so Rigby can answer 'how's production' in one call.
+### Priority B (MLEngine deadlock) — Root cause + fix chain
+**Root cause (new data this session):**
+- `tasks_agents._impl_execute_agent_task` wraps `agent.route()` in `ThreadPoolExecutor(max_workers=1)` for wall-clock timeout enforcement → **2 Python threads on `--pool=solo`**
+- `AgentModelRouter.AGENT_MODEL_MAP['ResearchAgent']` declares `secondary_model='lightgbm'`
+- Router iterates `ModelRegistry.MODEL_CLASSES` (17 wrapper classes) calling `is_available()` on each candidate
+- `LightGBMWrapper → MLScoringEngine()` loads lightgbm via `joblib.load` + creates SHAP `TreeExplainer`
+- `RandomForestWrapper / MLPWrapper / DistilBERTWrapper` each instantiate `ml.core.ml_engine.MLEngine()` → sports LSTM/NN/NFL/NBA/MLB/NHL joblib loads
+- `IsolationForestWrapper / KMeansWrapper` import `core.services.ml_algorithms` (FraudDetector / CustomerSegmentation) which pulls sklearn + numpy native OpenMP
+- Multiple native thread pools (lightgbm, SHAP, sklearn, numpy, PyTorch MPS) all init concurrently and Abseil's process-wide `RAW: Lock blocking` fires — **freezes the entire Python process** including daemon threads
 
-### 4. Dead-endpoint cleanup — 47 routes deleted across 5 batches
-| Commit | Deleted | Impact |
-|---|---|---|
-| `2639bbfa` | 7 legacy `/api/unified/*` routes + 2 view files | −650 lines |
-| `1b7224f7` | 10 per-body-system `/api/*/status/` routes | superseded by `/api/body/vitals/` |
-| `0a3548ad` | 11 `/api/ab-testing/*` routes | kept goals import alive |
-| `ba3cf7ad` | 7 `/api/verify/*` + view file | −272 lines |
-| `4e3c83ac` | 12 `/monitoring/*` routes + view file | −985 lines |
+**Why 4 prior PRs failed:** they tried to fix MLEngine itself (add locks, lazy init, class-level state cache). The deadlock is not IN MLEngine — it's the CROSS-LIBRARY native mutex race between MLEngine's dependencies and ml_scoring_engine's dependencies when loaded in parallel threads.
 
-`python manage.py check` passes with 0 issues at every step.
+**The fix in round 47 (nuclear ModelRegistry skip) is load-bearing.** Rounds 41-46 are defence-in-depth — they still help production workers that don't set SKIP_NLP_MODELS but also don't run on macOS. **Local macOS workers MUST have `SKIP_NLP_MODELS=1` in env** (already set by Makefile).
 
-### 5. Local DB + config
-- Created `donkeyking` superuser on local DB (password `Crypto$donkey2026`). Previously only `admin` existed.
-- Makefile now launches 4 workers with `SKIP_NLP_MODELS=1 OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES TOKENIZERS_PARALLELISM=false` env vars.
-- Default worker is `--pool=solo` (eliminates all threading races at the cost of one-task-at-a-time execution).
-- Missing `core_failure_signature` table turned out to be a red herring — Django's `pg_tables` query was flaky, table actually exists.
+### Dead endpoint cleanup (round 44)
+Removed 20 backend routes + 4 frontend API methods from `core/urls.py` and `frontend/src/lib/api.ts`. Full list in the round 44 PR description. `manage.py check` passes clean. Audit bucket "Other Dead Endpoints (~33)" now down to ~13 remaining candidates for next sweep.
+
+---
+
+## 🚨 RESUME HERE — What Was NOT Finished (known gaps)
+
+### 1. Round 40 heartbeat thread does NOT appear to be writing
+- The daemon thread in `agent_router.py _create_execution_record` SHOULD update `last_heartbeat_at` every 2 min until the execution leaves `in_progress`
+- Rigby's polls consistently show new ResearchAgent executions with `seconds_since_heartbeat == created_at age` — no periodic writes
+- The 4 newest executions (1:01-1:04 MDT, on worker PID 55126) had heartbeat ages 390-560s
+- **Hypothesis:** daemon thread starts but `close_old_connections()` + threadlocal DB state may be preventing writes from a detached Django thread. Or: the thread exits silently on an exception.
+- **Verification needed:** add a log line at the start of `_router_heartbeat_loop` (not just on failure), restart worker, dispatch fresh ResearchAgent, check if the log appears, then check if the 2-min-tick write happens.
+
+### 2. ResearchAgent end-to-end completion not yet observed clean
+- Round 47 verified: 2+ min of zero mutex.cc, zero ml loads — worker cycling through agents normally
+- But no ResearchAgent from the 6 dispatches this session has yet COMPLETED (all 4 newest in_progress, older ones watchdog-killed as zombies)
+- Queue is deep (608/default + 40/agents + 174/content as of session end) — workload pressure, not deadlock
+- **Next session should let the queue drain naturally then re-verify** with a fresh dispatch in a clean queue state
+
+### 3. 24h SLO still shows ~30% wall-clock timeout rate
+- As of session end: 30.49% (25/82 in 24h) — unchanged because the window still covers pre-round-47 zombies
+- 1h rate is 0.0% (0/25 in last hour) — clean post-round-47
+- **Should self-heal over the next 23 hours** as the pre-round-47 failures roll out of the window
+
+### 4. CLOSE_WAIT hang (separate bug, seen mid-session)
+- Default worker PID 49924 sat at 0% CPU for 15m on a Anthropic API call stuck in TCP CLOSE_WAIT state
+- NOT the mutex.cc deadlock — a different bug class: HTTP client not handling remote EOF
+- **Root cause file TBD** — likely in `core/services/llm_provider_registry.py` Anthropic client setup or `httpx` timeout config
+- Worth a separate round when you hit it again
+
+### 5. Dead endpoint cleanup not finished
+- ~13 more candidates from the "Other Dead Endpoints" audit bucket
+- Next sweep should target: partnership API routes, journey-status, diagnostic-master endpoint, remaining LLM routing variants
+- Same mechanical pattern: grep frontend, delete route, `manage.py check`, commit
+
+### 6. Round 40 architecturally correct but blocked on item 1
+- If item 1 is fixed, round 40 will actually work end-to-end
+- If it turns out the daemon-thread-writes-to-DB approach is fundamentally flawed on Django + Celery, a cleaner fix might be to touch heartbeat from inside `BaseAgent.execute()` main loop (single-thread, no DB connection issues)
+
+---
+
+## Known gotchas carried from Session 1083 (don't re-learn these)
+
+### `pa_chat.py` defaults to PRODUCTION
+- `tools/pa_chat.py:38` `DEFAULT_BASE_URL = "https://donkey-betz-platform-production.up.railway.app"`
+- **ALWAYS** prepend `PA_API_URL=http://localhost:8000 PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557` for LOCAL calls
+- Local token is in 00-START-NEXT-SESSION.md (this file), NOT in `.env` (which has the prod token)
+- The conversation ID `pa-3a0db697c2fd` exists on BOTH local and prod instances — they are different conversations with different history. Verify with `platform_config_tool overview` to see `service_context: local` before trusting results.
+
+### Abseil `[mutex.cc : 452] RAW: Lock blocking` is process-wide
+- This is a Google Abseil diagnostic from the RAW lock path. On macOS it freezes ALL threads in the process, not just the holding thread.
+- Daemon threads, heartbeat threads, celery control threads — all frozen simultaneously when this fires.
+- That's why Round 40's daemon heartbeat thread was observed to not fire: the process was OS-locked.
+
+### `--pool=solo` Celery workers still have 2+ Python threads
+- `tasks_agents._impl_execute_agent_task` at line ~1912 does `_pool = _TPE(max_workers=1); _future = _pool.submit(_run_route)` for wall-clock timeout enforcement
+- This spawns a worker thread — the main thread runs the Celery control plane, the TPE thread runs the agent
+- Thread-safety bugs in singletons (ml_scoring_engine, model_registry) can race even on `--pool=solo`
+
+### Pre-commit hook blocks direct commits to `main`
+- Always create a feature branch and PR, even for one-line fixes
+- `gh pr create ... && gh pr merge --squash --delete-branch` is the fast path
+- Round 39 + 42 + 45 + 46 all hit this and had to reroute through a branch
+
+### `SKIP_NLP_MODELS=1` is load-bearing on macOS
+- Makefile `celery` target already sets this in the worker env
+- Do NOT remove it from the Makefile without first verifying round 47's behavior
+- Production (Linux Railway) workers do NOT set SKIP_NLP_MODELS=1 and continue to use MLEngine+SHAP normally — they don't hit the Abseil deadlock because Linux pthread_mutex semantics differ from macOS
 
 ---
 
 ## Next Session — PICK UP FROM HERE
 
-### Remaining from the audit
-- **~28 misc dead endpoints** still in `docs/audit-2026/HALF_BUILT_FEATURES_AUDIT.md` "Other Dead Endpoints" bucket (agent testing/debugging, spider diagnostics, partnership health, session status, dashboard health variants, learning status, interview status, LLM routing status, etc.). Same pattern applies — grep frontend, delete routes + view files, `manage.py check`, commit.
-- **30+ more `except: pass`** blocks in `core/services/`. Focused on the PA/tool-dispatch hot path so far; next candidates are content pipeline, workflow engine, evidence gatherer, decision extractor, claude_code_engineer.
-- **14 hidden pages** routed but not in sidebar nav — decide which should be promoted vs deleted.
-- **Frontend "Coming Soon" stubs** in `ContentPage.tsx` — remove or wire up.
-- **Neural Orchestra mock data** — audit flag, not yet touched.
+### Short list of high-value targets (choose 1-2, Rigby can rank)
 
-### Actually-real concerns Rigby flagged during session
-- **Spider / ingestion throughput**: only 135 SpiderData rows in last 24h despite 79 registered spiders (many producing 3-5/day). Not catastrophic but worth investigating why many spiders are near-silent.
-- **SignalCluster pipeline**: only **10 records total ever** — pipeline is producing but the aggregation layer has barely run. Likely a beat-schedule gap. Separate investigation.
-- **ResearchAgent**: 226 completed / 16 failed / 8 in-progress — actually healthy (92% success). Rigby's body-system vibes were alarmist.
+**A) Fix Round 40 heartbeat thread (1-2 rounds, scoped)**
+- Add entry/periodic log lines to `_router_heartbeat_loop` to verify it's starting
+- Restart worker, dispatch fresh ResearchAgent in a cleaned queue
+- If writes work: verify `seconds_since_heartbeat < 180` for in_progress agents over 10+ min
+- If not: consider the alternative of touching heartbeat from inside BaseAgent.execute() main loop
 
-### Branch state
-- Branch: `docs/session-end-ml-fix-plus-audit-pivot`
-- 11 commits on top of `8347fbb2` — none pushed. Still local only. Decide whether to PR or continue grinding first.
+**B) Finish dead endpoint cleanup (1 round, mechanical)**
+- ~13 remaining candidates from audit bucket
+- Same pattern as round 44
+
+**C) CLOSE_WAIT investigation (1-2 rounds, diagnostic)**
+- Trace the `llm_provider_registry.py` Anthropic client setup
+- Check httpx timeout config
+- Either add timeout or retry-on-close-wait logic
+
+**D) Neural Orchestra mock data audit (flagged in audit doc, not yet touched)**
+- 14 hidden pages in audit section 5 already marked RESOLVED this session
+- Section 6 mock/stale data may still need work
+
+**E) Operator Edge Issue #1 publish flow** (user-facing launch)
+- Deliverable `c73a507a` is publish-ready
+- Needs Beehiiv account + soft-launch plumbing
+
+**F) New video idea per 00-START's prior note** — not an app build, an agents+real-time-data demo
 
 ### Local stack commands
 ```bash
-make start && make celery         # 4 workers + beat (solo default + pa, threads long_running + broadcast)
-.venv/bin/celery -A core inspect ping    # verify nodes
-open http://127.0.0.1:8000/ai-studio/    # UI (donkeyking / Crypto$donkey2026)
+make start && make celery       # 3 workers + beat (default solo, pa solo, long_running threads, broadcast threads)
+.venv/bin/celery -A core inspect ping    # verify nodes (expect broadcast/long_running/pa — default busy in solo pool)
+open http://127.0.0.1:8000/     # UI (donkeyking / Crypto$donkey2026)
 
-# Talk to local Rigby
+# Talk to LOCAL Rigby (must set env vars, pa_chat defaults to prod)
 PA_API_URL=http://localhost:8000 PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557 \
-  .venv/bin/python tools/pa_chat.py "message" --conversation pa-00df63bcf289
+  .venv/bin/python tools/pa_chat.py "message" --conversation pa-3a0db697c2fd
 ```
 
----
-
-## 🚨 ORIGINAL PRIORITY 0 (for reference) — Half-Built Features Audit
-
-**Before recording any more videos, work through `docs/audit-2026/HALF_BUILT_FEATURES_AUDIT.md` with Rigby running locally.** Chris wants the platform fully healthy locally before the next video, and THEN pick a new real-time-data demo.
-
-Audit categories to knock out (from `HALF_BUILT_FEATURES_AUDIT.md`):
-
-| Category | Count | Severity | Notes |
-|---|---|---|---|
-| Silent method failures (called, undefined) | 2 critical + 10+ high | CRITICAL | `track_generated_image/video` on wrong class; `get_coleadership_opinion` pattern |
-| Broad `except: pass` in critical services | 100+ | HIGH | Worst 6 fixed prior session; `agent_llm_router.py`, `agent_monitoring.py`, etc. remain |
-| Dead API endpoints (backend wired, frontend never calls) | ~75 | MEDIUM | Verification/testing system (7), plus many more — wire them up or delete |
-| Orphaned Celery tasks | 3 dead + 4 blocked | LOW | `remediation pipeline` permanently blocked per Session 1031 |
-| Frontend stubs / "Coming Soon" | 6+ | MEDIUM | |
-| Hidden pages (routed but not in sidebar nav) | 14 | LOW | |
-| Frontend mock data / hardcoded values | 2 pages | MEDIUM | Neural Orchestra lineage |
-
-**Workflow (with Rigby local):**
-1. Start fresh PA conversation, tell Rigby to read `docs/audit-2026/HALF_BUILT_FEATURES_AUDIT.md` and pick 1 category to start with.
-2. Claude Code + Rigby pair on it: Rigby enumerates the broken items + proposes fix order, Claude Code implements, tests locally, commits per-category feature branch + PR.
-3. After each category closes, rerun the audit script (if one exists) or manually verify the fixed items. Update the audit doc with DONE markers.
-4. Keep the Focus Flow outreach list (`d35a22a3`) frozen until audit is clean — don't send the demo until the platform it demos has no silent failures.
-5. Once audit is clean, THEN pick a new video idea per the real-time-data / agent-orchestration angle Chris wants.
-
-## PRIORITY 1: Pick a new video idea (AFTER audit is clean)
-
-Per Chris's guidance: next video is NOT an app build — it's Rigby using **agents + real-time data** to produce something impressive. Candidates:
-- Live Operator Edge weekly issue generation (spiders → signal aggregation → 3-agent debate → EditorAgent → PublishGate → deliverable)
-- Market Intelligence Brief live (stocks desk: 154 alerts, 124 SEC filings, bull/bear debate zone)
-- Signal → Initiative → Deliverable pipeline run on a single hot topic
-
-Do NOT re-pick Pomodoro / task manager territory (Focus Flow owns it).
+### Branch state (end of session)
+- Main is at commit `d5b0c08f` (round 47 squash merge) — `git log --oneline main -15` shows the full session sequence
+- All feature branches deleted after squash-merge (8 of 8)
+- Working tree has untracked files only (frontend/dist/assets pycache etc) — no pending tracked changes
 
 ---
 
-## What Was Done (April 14, 2026 — late session) — Local Celery Fix
+## 🚨 REFERENCE (carried from previous sessions)
 
-### PR #1871: MLEngine lazy `__init__` to avoid worker mutex deadlock
-- **Root cause chain (3 compounding bugs):**
-  1. `MLEngine.__init__` eagerly called `_initialize_nlp_models()` which loaded DistilBERT + PyTorch + MPS device init → `[mutex.cc : 452] RAW: Lock blocking` deadlock in Celery worker parent on macOS
-  2. Celery worker ran 8 days ML-deadlocked while Beat kept scheduling tasks into Redis → **332,964 stale entries in the default queue** alone
-  3. Fresh workers that managed to boot got swamped draining the stale queue; PA tasks sat indefinitely behind 8 days of backlog
-- **Fix:** `ml/core/ml_engine.py` — cheap `__init__` + lazy init via `__getattribute__` guard on `models`, `sport_models`, `scalers`, `user_profile`, `sentiment_analyzer`. Flag flips before init runs so attribute access inside init path doesn't re-enter.
-- **Verified:** `MLEngine()` constructs in 0.67s with `_initialized=False`, fresh Celery worker boots to pingable in 1s (was never responding before), local PA chat round-trip works end-to-end.
-- **Also purged:** 332k stale default queue + all other stale queues except `pa` (via `redis-cli DEL`). Fresh worker drained the backlog cleanly after that.
-- **Merge note:** Needs Railway billing to clear before production deploy.
+### Beat Task Status
+**Enabled (77 tasks):** Body systems (10), Signal pipeline (3), Content pipeline (14), Sports pipeline (10), Infrastructure (40)
+**Deliberately Disabled (155 tasks):** All 13 agent category rotations, autonomous exercises, agent conversations/dreams/thinking cycles, remediation pipeline, HiveMind sessions.
+**Rule:** Do NOT re-enable agent exercises without real bounded tasks. Processing pipelines OK, unsolicited content = noise.
 
-## What Was Done (April 13–14, 2026) — App Jam #1
-
-### Focus Flow — one-prompt-to-public-repo demo (new public repo)
-- **Repo:** https://github.com/clwest/focus-flow (public, default branch `main`, commit `5f07778`)
-- **Stack:** FastAPI + SQLModel + SQLite (backend) / Vite + React + Tailwind (frontend) — matches `docs/topics/react-fastapi-template.md`
-- **Flow:** Chris asked Rigby for an app idea → Rigby scoped Focus Flow (Pomodoro + task manager) → Claude Code scaffolded backend + frontend + README in ~90 minutes → Rigby created deliverables, outreach list, recording script → single public repo + 60s demo video pending recording
-- **Backend:** 11 endpoints from Rigby's spec (health, me, tasks CRUD, start/stop session, sessions list, stats). `X-Demo-User` header auth. Seeds demo user + 3 tasks on startup. Smoke tested end-to-end.
-- **Frontend:** Single-page dashboard (task list + detail/timer/history), 3 presets (25m/50m/1m-demo), client-side countdown, live stats header, dark theme. Prod build 148 KB JS / 48 KB gzipped.
-- **Workspace:** Claude–Rigby App Jam - Workspace 2 (`4861b057-71b6-4eb7-aac1-72a28e91ef82`)
-- **Deliverables shipped (in workspace):**
-  - `5c06002f-ecb7-4804-9baa-9b67f773d1ba` — Focus Flow — App Jam Starter (README + acceptance checklist + pre-recording checklist + repo URL)
-  - `0a4fcd45-f153-4da9-9782-452825d4a6c9` — Focus Flow — 60s Recording Script (Chris POV: "I asked Rigby for an app idea, she and Claude Code did everything else")
-  - `d35a22a3-47ce-43c7-bdf0-1a205da49edd` — Focus Flow — Video Outreach List (8 verified prospects)
-
-### Rigby tool verification + outreach research
-- **Why:** Chris suspected Rigby's tools were hung / broken during prospect research; real issue turned out to be Rigby's placeholder-pattern behavior (from memory `feedback_rigby_deliverable_content.md`), not tooling.
-- **Verified working:** `web_search` (Serper API, ~900 ms avg), `deliverable_tool` (`list`/`detail`/`create`/`update`/`append`), `intelligence_tool`. No hangs, no broken endpoints.
-- **Root cause of earlier "detail fetch returned list":** GPT-5.2 sent `action='list'` (default) instead of `action='detail'`. Code in `core/services/td_handlers_agents.py:1358` handles `detail` correctly. Fix = tell Rigby to pass `action='detail', id=<uuid>, full=true` with nothing else set (the smart-inference on `td_handlers_agents.py:1173` flips `list → create` when `title+content` present).
-- **Unblock pattern that worked:** Claude Code seeded first 3 prospects using its own `WebSearch`, then handed them to Rigby as a table template with instructions to do the remaining 5 one row at a time, with `web_search` per row, and to mark unverifiable buckets as `NO VERIFIED CANDIDATE` rather than invent. Matches `feedback_rigby_deliverable_content.md` rule.
-- **Outreach list outcome:** 8-row table with 7 verified prospects (Peter Steinberger, Theo Browne, swyx, Ben Tossell, Pieter Levels, AgentOps, Fireship) + 1 intentional `NO VERIFIED CANDIDATE` for the Show HN / dev-rel bucket after 3 failed searches. Repo URL embedded 9+ times in deliverable. Final length 3,964 chars.
-
-### What Was Done (April 9–12, 2026) — 2 PRs Merged Prior Session
-
-### PR #1867: Operator Edge Landing Page + Subscriber API
-- `NewsletterSubscriber` model with email, name, source, UTM tracking, referral codes
-- `POST /api/newsletter/subscribe/` — public, no auth, dedup + re-subscribe handling
-- `GET /api/newsletter/count/` — public subscriber count for social proof
-- `/operator-edge` public route (no login required) with:
-  - Hero section, email signup form, 6 feature cards (Top Signal, What Broke, Autopilot Move, Cost Watch, What Changed, Deep Dive)
-  - Platform stats (79 spiders, 218 agents, 3 reviewers, 72h freshness)
-  - Audience targeting (SREs, AI Product Leads, Founders & Builders)
-  - Dark theme, indigo/emerald gradient branding, UTM capture
-- Migration 0326 applied on Railway
-
-### PR #1868: Newsletter Auth Bypass
-- Added `/api/newsletter/` to auth middleware `PUBLIC_PATHS`
-- Newsletter endpoints were returning 401 — now publicly accessible
-- Smoke tested on production: subscribe + count both working
-
-### Rigby: Issue #1 Validation + Publish Prep
-- Found Issue #1 deliverable (`c73a507a`) on production
-- Validated against Template v1 — identified 6 missing sections
-- Drafted all missing sections: Top Signal, What Broke, Autopilot Move, Cost Watch, What Changed, Forward CTA
-- Added sponsor slot placeholder with UTM tracking template
-- Created 3 subject line options
-- Updated deliverable with publish-ready markdown
-- Created Sponsor One-Pager deliverable (`f76cbd95`) for outreach
-
-### Patent Strategy Discussion
-- 12 patent disclosures already written (Disclosures A-L) + 4 executive summaries
-- Strongest candidates: Claims-based deliberation (D), Structured debate + decision enforcement (F), Signal-to-initiative provenance (G)
-- Strategic opportunities: licensing revenue, competitive moat, partnership leverage, valuation impact, PaaS possibilities
-- Jeremy (patent lawyer, superuser account) ready to move forward
-
----
-
-## PRIORITY 1: Claude–Rigby App Jam #2 (NEXT SESSION GOAL)
-
-Fresh session kicks off with: **Chris asks Rigby for a new app idea, Rigby + Claude Code build it end-to-end, ship public repo, record a second demo video, fire the Focus Flow outreach list at the same time.**
-
-Pattern to replicate from App Jam #1:
-1. Fresh PA conversation, ask Rigby for a scoped MVP (problem statement, acceptance criteria, 10–12 endpoints max, demo-able in 60s).
-2. Claude Code scaffolds a new sibling repo under `~/development/<app-name>/` using React+Vite+FastAPI template (NOT Next.js — see `feedback_stack_preference.md`).
-3. One public GitHub repo with README + acceptance checklist + run instructions.
-4. Rigby creates 3 deliverables in a fresh App Jam workspace: starter+checklist, 60s recording script (Chris POV), outreach list (8 prospects, same format as `d35a22a3`).
-5. Record + publish, then fire DMs.
-
-**Do NOT re-pick Pomodoro/task-manager territory** — Focus Flow already occupies that slot.
-
-**Guardrails for Rigby (from App Jam #1 lessons):**
-- She defaults to "report progress, wait for guidance" when research is ambiguous. Unblock by seeding 2–3 rows yourself and handing her the pattern.
-- Smart-inference on `deliverable_tool` flips `action=list → create` whenever `title+content` are both passed. For detail reads, send ONLY `action='detail', id=<uuid>, full=true`.
-- For research, tell her to call `web_search` **per row**, not once for the whole list. Require `NO VERIFIED CANDIDATE` when a bucket comes up empty instead of fabricating.
-
-## PRIORITY 2: Focus Flow Follow-through
-
-- Record the 60s demo (script is `0a4fcd45` in workspace `4861b057`).
-- Fire DMs from outreach list (`d35a22a3`, 8 prospects, 7 verified).
-- Optional polish: `/api/seed/preview` route, deploy preview (Vercel/Render), PREP.md committed to repo root.
-
-## PRIORITY 3: Operator Edge Launch (Continued)
-
-### Done
-- Pipeline built and tested end-to-end
-- First issue generated, validated, and publish-ready
-- Landing page live at `/operator-edge` on production
-- Subscriber API working (smoke tested)
-- Sponsor One-Pager drafted
-- Beat schedule set for weekly Friday 6 AM MST
-
-### Next Steps
-1. **Create Beehiiv account** — Rigby recommends Beehiiv over Substack for growth + sponsor revenue
-2. **Publish Issue #1** — Soft-launch to seed list first, monitor 24-48h, then public push
-3. **Build subscriber base** — Referral program, signup popups, social distribution
-4. **Sponsor prospecting** — Use Sponsor One-Pager, target DevOps/SRE/cloud tooling companies
-5. **Automate subscriber sync** — Connect Beehiiv API to NewsletterSubscriber model
-
-## PRIORITY 2: Agent Quality Monitoring
-
-### Remaining items
-- TrendAnalysisAgent has a `NoneType.__format__` error in its trend-search tool — needs null-guard fix
-- Content pipeline `content_list` default filter returns 0 items (defaults to `status='ready'` — confusing but not broken)
-- EditorAgent fix needs production verification (just deployed)
-
-## PRIORITY 3: Continue Silent Failure Stress Testing (Carried Forward)
-
-### From the original audit
-- **~75 dead API endpoints** — documented in `docs/audit-2026/HALF_BUILT_FEATURES_AUDIT.md`
-- **100+ `except: pass` blocks** — worst 6 fixed, many more in `core/services/`
-- **Neural Orchestra mock data** — sometimes serves fake data
-- **14 hidden pages** — routed but not in sidebar nav
-
-## PRIORITY 4: Revenue Plays (Strategy from Rigby)
-
-1. **Operator Edge Newsletter** — Landing page live, Issue #1 ready to publish
-2. **Deliverable Packages** — Bundle high-quality deliverables into sellable kits ($1.5K-$4.5K)
-3. **Betting Intelligence** — 676 predictions, needs accuracy validation (sports pipeline re-enabled)
-4. **Build-for-Hire** — Founder Toolkit proves capability ($8K-$25K per engagement)
-
-## PRIORITY 5: Patent Process
-
-- 12 disclosures ready (A-L), 4 executive summaries
-- Jeremy has superuser account — coordinate with him
-- Focus on Disclosures D, F, G first (most novel, broadest defensibility)
-- Opens up: licensing, PaaS, partnership leverage, valuation lift
-
-## PRIORITY 6: Backlog (Carried Forward)
-
-- Deploy remaining 5 apps (SellerPilot, SignalStudio, ScoutPlays, ComplianceSentinel, Ironwood)
-- Content Packets UI — packet detail page showing items grouped by role
-- Opportunity data quality (scoring logic needed)
-- Founder Toolkit testing (MentorForge → PitchDeckForge → DealFlowTracker flow)
-
----
-
-## Beat Task Status
-
-### Enabled (77 tasks)
-- Body systems (10), Signal pipeline (3), Content pipeline (14), Sports pipeline (10), Infrastructure (40)
-
-### Deliberately Disabled (155 tasks)
-- All 13 agent category rotation tasks
-- All autonomous agent exercises
-- Agent conversation/dream/thinking cycles
-- Remediation pipeline (blocked per Session 1031)
-- HiveMind sessions, multi-agent panels
-- **Rule:** Do NOT re-enable agent exercises without real bounded tasks. Processing pipelines OK, unsolicited content = noise.
-
----
-
-## Accounts
-
-- `donkeyking` (Chris) — superuser/owner, pro tier on MentorForge
+### Accounts
+- `donkeyking` (Chris) — superuser/owner, pro tier on MentorForge, local password `Crypto$donkey2026`
 - `jessica` — superuser, business side
-- `jeremy` — superuser, patent lawyer (account created Apr 2, never logged in)
+- `jeremy` — superuser, patent lawyer
 
-## How to Work with Rigby
-
-```bash
-# Use existing conversation
-python tools/pa_chat.py "message" --tools --conversation pa-223d084d4b9f
-
-# Or create fresh
-python tools/pa_chat.py "message" --tools
-
-# Local
-bash tools/pa_local.sh "message"
-```
-
-## Founder Toolkit Repos
+### Founder Toolkit Repos
 - Landing: github.com/clwest/founder-toolkit
 - MentorForge: github.com/clwest/mentorforge (Render: mentorforge-bj25.onrender.com)
 - PitchDeck: github.com/clwest/pitchdeckforge
 - DealFlow: github.com/clwest/dealflowtracker
 - Contracts: github.com/clwest/contract-concierge
+
+### Focus Flow (App Jam #1 — recording still pending)
+- Repo: https://github.com/clwest/focus-flow (public)
+- Workspace `4861b057-71b6-4eb7-aac1-72a28e91ef82`, 3 deliverables
+- 60s demo script deliverable `0a4fcd45` — NOT YET RECORDED
+- Outreach list deliverable `d35a22a3` — NOT YET SENT (frozen until platform audit clean)
+
+### Operator Edge
+- Landing page live at `/operator-edge` on production
+- Issue #1 deliverable `c73a507a` publish-ready (6 sections drafted)
+- Sponsor One-Pager `f76cbd95` created
+- Beehiiv account NOT YET CREATED
+- Beat schedule set for weekly Friday 6 AM MST
