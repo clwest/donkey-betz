@@ -1,9 +1,30 @@
 # Next Session — Start Here
 
-**Date:** April 14, 2026 (very late)
-**Previous Session:** Half-Built Features Audit — Silent failures + Dead endpoints batches 1-5 + PA UX fixes (11 commits on `docs/session-end-ml-fix-plus-audit-pivot`, nothing pushed yet)
-**PA Conversation:** Last used `pa-00df63bcf289` (local). Rigby confirmed `work_tool(action='stats')` and `ops_tool(action='overview')` both work now.
-**Status:** Local 4-worker stack stable on solo pool (default + dedicated pa + long_running + broadcast). MLEngine deadlock permanently fixed via class-level state cache. 12 silent-failure fixes + 47 dead routes deleted + ~1,900 lines of dead view code removed.
+**Date:** April 15, 2026 (post-marathon)
+**Previous Session:** Half-Built Features Audit — **69 commits pushed to main**, including 9 LIAR/fail-open bug fixes from the Rigby + Claude Code parallel-recon pairing pattern. The pairing flow is the breakthrough of this session — every round of `repo_tool` recon by Rigby produced 1-3 real production bugs.
+**PA Conversation:** `pa-00df63bcf289` (local). Function-calling enabled via `PA_USE_FUNCTION_CALLING=true` in Makefile. Rigby has full repo_tool + parallel tool calls working locally now.
+**Status:** Local 4-worker stack stable on solo pool. MLEngine deadlock permanently fixed via class-level state cache. PA UX papercuts fixed (work_tool stats, ops_tool overview, governance_tool stats, content_tool aliases). Multiple LIAR patterns surfaced and fixed in autonomous loops + enforcement subsystem.
+
+---
+
+## 🎯 SESSION HIGHLIGHTS — Rigby + Claude Code Pairing Pattern Works
+
+This session unlocked a new working flow: **Rigby uses `repo_tool` (search + read_file in parallel via OpenAI function calling) to do reconnaissance, ranks targets by blast radius, and hands me precise file:line picks. I implement, test, commit, and push.** The pairing produced ~1-3 real bug fixes per round, with diminishing returns only kicking in after round 18+.
+
+**Two prerequisites that made this work:**
+1. `PA_USE_FUNCTION_CALLING=true` in the Makefile so local Rigby actually has tool access (was silently disabled — local PA had ~80% fewer tools than prod for an unknown amount of time).
+2. System-prompt fix telling GPT-5.2 to emit separate top-level `function_call` items instead of the hallucinated Anthropic `multi_tool_use.parallel` wrapper. Without this, parallel tool calls leaked raw JSON into responses.
+
+**9 LIAR / fail-open patterns fixed via the pairing flow tonight:**
+1. `auto_spawner_service.spawn_reflex` — returned `spawned=True` while `_spawn_data_gatherers` returned empty list because **3 of its inner imports were broken** (`run_spider_with_priority`, `run_single_spider`, `queue_agent_task` — all removed from `core/tasks.py` in a refactor but never deleted from the helper). The autonomous spawn reflex has been silently doing nothing in production for an unknown amount of time.
+2. `artifact_extraction._call_extraction_llm` — `JSONDecodeError` returned `[]`, indistinguishable from a legitimate empty result. Caller logged `status='success' artifacts_found=0` on every parse failure. Fixed to return `None` so the caller can log `status='failed'`.
+3. `auto_kpi_tracking.update_all_kpis` — `results['success'] = True` initialized at function entry and **never flipped**, even when every per-experiment update threw. Probably explains why so many experiments needed the `cleanup_stale_running_experiments` task we shipped earlier in the session.
+4. `ops_autopilot/verification.ActionVerifier.pre_check` — fail-OPEN safety gate. Pre-check exception left `passed=True` (the default) so the autopilot proceeded with potentially destructive actions (block agents, sweep content, remediation) when safety checks themselves were broken. Flipped to fail-CLOSED.
+5. `ml/core/ml_engine.MLX_AVAILABLE` — the `try` block had **literally nothing in the body** (no actual import), so `MLX_AVAILABLE` was unconditionally True even on hosts without MLX. Verified live: my Mac doesn't have MLX but the flag was reading True. Every code path branching on this has been making the wrong decision forever.
+6. `ops_autopilot/budget.get_budget_status` — fail-OPEN on budget mode lookup. DB error → silently fell back to `mode='normal'` (no constraints) instead of `'freeze'`. **$$ liability bug** — could allow runaway LLM spend during config-layer incidents. Flipped to fail-CLOSED.
+7. `ops_autopilot/governance.get_tuning_recommendations` — fail-OPEN on daily change cap query. DB error → `changes_today = 0` → cap bypassed → unbounded config tuning during partial outages. Flipped to fail-CLOSED (treats query failure as AT-CAP).
+8. `ops_autopilot/experiment._get_current_params` + `get_experiment_param` — silent `pass` on SystemConfiguration reads. Autopilot proceeded with stale defaults (potentially overly-permissive budget thresholds, throttle ROIs) while experiment system appeared to be active.
+9. `ops_autopilot/impact.get_desk_iqroi` — TWO swallows in IQROI per-desk computation (`desk_impact` + `desk_cost`). Without `desk_cost`, ROI calculation divides by zero and every desk looks artificially profitable. Could mislead governance / portfolio allocation decisions.
 
 ---
 
