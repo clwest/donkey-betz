@@ -52,8 +52,11 @@ self,
         try:
             from django.contrib.auth import get_user_model
             _route_user = get_user_model().objects.filter(id=_route_user_id).first()
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "tasks_media._impl_create_talking_video_task: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
     # Create execution record
     agent_obj = Agent.objects.filter(name='TalkingCharacterAgent').first()
@@ -526,8 +529,11 @@ def _impl_transcribe_video_task(self, transcript_id):
             transcript.status = 'failed'
             transcript.error = str(exc)[:2000]
             transcript.save(update_fields=['status', 'error'])
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "tasks_media._impl_transcribe_video_task: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
         raise
 
     finally:

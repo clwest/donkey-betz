@@ -864,8 +864,11 @@ def create_initiative_from_decision_view(request, decision_id):
                 'initiative_id': str(decision.initiative.id),
                 'initiative_name': decision.initiative.name,
             }, status=400)
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_platform_command.create_initiative_from_decision_view: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     # Check if decision has a suggested feature
     if not decision.suggested_feature or len(decision.suggested_feature.strip()) < 10:

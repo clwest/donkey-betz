@@ -92,8 +92,11 @@ class Command(BaseCommand):
                     if research:
                         research_complete = True
                         research_complete_count += 1
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "fix_stuck_initiatives.handle: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
             # Check if document has actual findings content
             has_findings = len(doc.full_text or '') > 500 and has_completion

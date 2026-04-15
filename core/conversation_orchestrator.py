@@ -1392,8 +1392,11 @@ class ConversationOrchestrator:
             try:
                 deliberation_session.trace_id = conversation_id
                 deliberation_session.save(update_fields=['trace_id'])
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "conversation_orchestrator.generate_conversation: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
         # Create cross-agent memories from conversation insights
         if ENABLE_CROSS_AGENT_MEMORY and decision_summary:

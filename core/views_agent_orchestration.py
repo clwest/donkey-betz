@@ -270,8 +270,11 @@ def execute_agent(request):
                 specialization=agent_type, 
                 is_active=True
             ).first()
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_agent_orchestration.execute_agent: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
     
     if not agent_template:
         # Determine agent type from task description if not specified

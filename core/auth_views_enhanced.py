@@ -1,4 +1,7 @@
 """
+import logging
+logger = logging.getLogger(__name__)
+
 Enhanced authentication views with full registration, email verification, and remember me functionality.
 """
 
@@ -31,8 +34,11 @@ def _platform_role(user) -> str:
         profile = EnhancedUserProfile.objects.filter(user=user).first()
         if profile and getattr(profile, 'platform_role', None):
             return profile.platform_role
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "auth_views_enhanced._platform_role: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
     return 'viewer'
 
 
@@ -536,8 +542,11 @@ def logout_enhanced_view(request):
     try:
         # Delete auth token
         request.user.auth_token.delete()
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "auth_views_enhanced.logout_enhanced_view: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
     
     return Response({
         'message': 'Logged out successfully'

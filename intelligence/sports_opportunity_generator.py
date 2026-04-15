@@ -1,4 +1,7 @@
 """
+import logging
+logger = logging.getLogger(__name__)
+
 🎲 SPORTS BETTING OPPORTUNITY GENERATOR
 Converts sports betting recommendations into unified income opportunities
 """
@@ -152,8 +155,11 @@ class SportsBettingOpportunityGenerator:
                 if game.home_team.id in profile.followed_teams or game.away_team.id in profile.followed_teams:
                     score += 0.2
 
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "sports_opportunity_generator.calculate_user_match: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         return min(score, 1.0)
 

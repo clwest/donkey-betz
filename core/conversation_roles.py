@@ -289,8 +289,11 @@ def _extract_field(text: str, field_marker: str) -> Optional[str]:
                 parts = line.split(':', 1)
                 if len(parts) > 1:
                     return parts[1].strip()
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "conversation_roles._extract_field: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
     return None
 
 
@@ -320,8 +323,11 @@ def _extract_list(text: str, field_marker: str) -> List[str]:
             cleaned = re.sub(r'^[\d\-\.\)\*]+\s*', '', line).strip()
             if cleaned:
                 items.append(cleaned)
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "conversation_roles._extract_list: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
     return items
 
 

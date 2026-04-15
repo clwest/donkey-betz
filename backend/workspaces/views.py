@@ -12,6 +12,9 @@ from .models import ProjectWorkspace
 from .serializers import ProjectWorkspaceSerializer
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 def _get_clone_status(repo_dir: Path) -> dict:
     """
     Inspect sentinel files under repo_dir and return status fields.
@@ -43,8 +46,11 @@ def _get_clone_status(repo_dir: Path) -> dict:
         try:
             data = json.loads(sentinel_ok.read_text())
             head_sha = data.get("head_sha") or data.get("sha") or None
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views._get_clone_status: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
     if git_dir.exists() and not sentinel_in_progress.exists():
         status = "ready"
@@ -59,8 +65,11 @@ def _get_clone_status(repo_dir: Path) -> dict:
                 # Validate parseable ISO8601 before returning
                 datetime.fromisoformat(raw_ts.replace("Z", "+00:00"))
                 clone_started_at = raw_ts
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views._get_clone_status: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
     elif sentinel_error.exists():
         status = "error"

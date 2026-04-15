@@ -127,8 +127,11 @@ class AITrainingConsumer(AsyncWebsocketConsumer):
             for item in history:
                 try:
                     events.append(json.loads(item))
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "consumers_ai_training.op: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
             await self.send(json.dumps({
                 'type': 'history',

@@ -401,8 +401,11 @@ def podcast_script(request, episode_id):
                         'decision_reasoning': debate.decision_reasoning or '',
                         'consensus_reached': debate.consensus_reached,
                     }
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "views_podcast.podcast_script: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
             return JsonResponse({
                 'success': True,

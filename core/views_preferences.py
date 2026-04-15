@@ -550,8 +550,11 @@ def _get_image_style_suggestions(user, preferences, prompt, context, limit):
                 score += min(20, style_uses * 5)
                 if 'reason' not in style:
                     style['reason'] = f'Used {style_uses} times before'
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_preferences._get_image_style_suggestions: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         scored_styles.append({**style, 'score': score})
 

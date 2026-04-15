@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(__name__)
+
 """
 Session 636: Comprehensive System Health Check
 
@@ -225,8 +228,11 @@ class Command(BaseCommand):
                     agent_files = glob.glob('core/agents/**/*.py', recursive=True)
                     agent_files = [f for f in agent_files if not f.endswith('__init__.py')]
                     self._pass(results, 'agents', f'{len(agent_files)} agent files found')
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "system_health_check._check_agents: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
         except Exception as e:
             self._fail(results, 'agents', 'Agent system', str(e))
@@ -268,8 +274,11 @@ class Command(BaseCommand):
                 conversations = AgentConversation.objects.values('initiating_agent', 'responding_agent').distinct()
                 unique_pairs = len(list(conversations))
                 self._pass(results, 'social', f'{unique_pairs} unique agent pairs have conversed')
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "system_health_check._check_agent_social: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
             # Agents that have NEVER talked
             try:
@@ -290,8 +299,11 @@ class Command(BaseCommand):
                     self._warn(results, 'social', f'{len(silent_agents)} agents have NEVER had a conversation')
                 else:
                     self._pass(results, 'social', 'All active agents have participated in conversations')
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "system_health_check._check_agent_social: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
         except Exception as e:
             self._fail(results, 'social', 'Agent social check', str(e))
@@ -424,8 +436,11 @@ class Command(BaseCommand):
             ]
             for ws in ws_endpoints:
                 self._pass(results, 'ui', f'WebSocket endpoint: {ws}')
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "system_health_check._check_ui_connectivity: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
     def _check_spiders(self, results):
         """Check spider registration"""

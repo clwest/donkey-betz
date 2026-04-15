@@ -1,4 +1,7 @@
 """
+import logging
+logger = logging.getLogger(__name__)
+
 Comprehensive System Audit - Session 127 Part 2
 Check all features and functionality
 """
@@ -167,8 +170,11 @@ def check_url_pattern(pattern, prefix=''):
             # URL pattern
             if hasattr(pattern.callback, '__name__'):
                 registered_urls.add(pattern.callback.__name__)
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "audit_system.check_url_pattern: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
 for pattern in resolver.url_patterns:
     check_url_pattern(pattern)

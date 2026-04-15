@@ -680,8 +680,11 @@ Start by researching the topic to understand trends and audience preferences.
                 try:
                     if 'series' in locals() and series:
                         series.fail(str(e), 'execute')
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "ai_series_workflow_agent.execute: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
                 return AgentResult(
                     success=False,
@@ -1325,8 +1328,11 @@ Start by researching the topic to understand trends and audience preferences.
                 if db_episode:
                     try:
                         db_episode.fail(str(e), 'save')
-                    except Exception:
-                        pass
+                    except Exception as _e:
+                        logger.warning(
+                            "ai_series_workflow_agent._handle_generate_episode: swallowed (%s: %s) — degraded",
+                            type(_e).__name__, _e,
+                        )
 
         # Session 449: Record automatic feedback for learning
         self._record_episode_feedback(

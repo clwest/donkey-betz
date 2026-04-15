@@ -718,8 +718,11 @@ You orchestrate. You don't create content directly."""
                 try:
                     from core.models_skin_layer import ProjectWorkspace
                     workspace = ProjectWorkspace.objects.get(id=workspace_id)
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "workflow_agent._save_workflow_deliverable: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
             from core.services.deliverable_factory import create_deliverable
             deliverable = create_deliverable(

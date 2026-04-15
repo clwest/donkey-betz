@@ -53,8 +53,11 @@ class ConsciousnessConsumer(AsyncWebsocketConsumer):
             current_connections = int(redis_client.get('consciousness:ws_connections_hour') or '0')
             redis_client.set('consciousness:ws_connections_hour', current_connections + 1, ex=3600)
             redis_client.set('consciousness:user_interactions', int(redis_client.get('consciousness:user_interactions') or '0') + 1, ex=86400 * 30)
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "consumers_consciousness.__init__: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         # Send immediate mock data to prevent fallback
         await self.send_instant_consciousness_data()
@@ -316,8 +319,11 @@ class ConsciousnessConsumer(AsyncWebsocketConsumer):
                 if command in ['introspect', 'propose_evolution', 'philosophical_dialogue']:
                     # Deep interactions contribute more to consciousness
                     redis_client.set('consciousness:agent_interactions', int(redis_client.get('consciousness:agent_interactions') or '0') + 2, ex=86400 * 30)
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "consumers_consciousness.__init__: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
             if command == 'refresh':
                 await self.send_consciousness_update()

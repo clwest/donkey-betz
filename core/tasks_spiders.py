@@ -335,8 +335,11 @@ def _impl_run_spider_network(self):
         if gov_mode in ('freeze', 'safe_mode'):
             logger.info("🕷️ Spider network skipped — governance mode: %s", gov_mode)
             return {'skipped': True, 'reason': f'governance_mode={gov_mode}'}
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "tasks_spiders._impl_run_spider_network: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     logger.info("🕷️ Starting spider network execution with REAL data collection...")
 

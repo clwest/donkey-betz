@@ -955,8 +955,11 @@ If asked to do something outside your scope, politely explain you can only handl
                             paths.append(video_path)
                             logger.info(f"Resolved partial UUID '{video_id}' to: {video_path}")
                             continue
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "resolve_agent._resolve_video_paths: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
                 logger.warning(f"Could not resolve video ID: {raw_id}")
 

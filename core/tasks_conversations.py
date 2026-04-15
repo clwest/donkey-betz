@@ -287,8 +287,11 @@ def _impl_run_agent_conversation(self, max_conversations: int = 3, max_messages:
                 from django.contrib.auth import get_user_model
                 DelegationUser = get_user_model()
                 delegation_user = DelegationUser.objects.filter(username='system_autonomous').first()
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "tasks_conversations._impl_run_agent_conversation: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
             for msg_num in range(max_messages):
                 # Build the conversation context
@@ -1356,8 +1359,11 @@ def _impl_run_multi_agent_conversation(self, max_conversations: int = 2, partici
                 from django.contrib.auth import get_user_model
                 DelegationUser = get_user_model()
                 delegation_user = DelegationUser.objects.filter(username='system_autonomous').first()
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "tasks_conversations._impl_run_multi_agent_conversation: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
             for round_num in range(max_rounds):
                 for agent_idx, current_agent in enumerate(panel_agents):

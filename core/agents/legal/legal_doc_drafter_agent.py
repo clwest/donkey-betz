@@ -997,8 +997,11 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
             try:
                 from core.models_unified_system import LegalCase
                 self._current_case = LegalCase.objects.get(id=self.case_id)
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "legal_doc_drafter_agent.current_case: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
         return self._current_case
 
     @property

@@ -929,8 +929,11 @@ def test_spider(request):
                         if title:
                             all_titles.append(title)
                             total_articles += 1
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "views_spider_intelligence.test_spider: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
         elapsed_ms = int((time.time() - start_time) * 1000)
 

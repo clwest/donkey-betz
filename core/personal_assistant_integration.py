@@ -274,8 +274,11 @@ class PersonalAssistantIntegration:
             try:
                 if status.status == RealityStatus.REAL:
                     real_components.append(component_type.value)
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "personal_assistant_integration._identify_real_components: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
         return real_components
 

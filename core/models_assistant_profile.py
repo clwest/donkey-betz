@@ -1,4 +1,7 @@
 """
+import logging
+logger = logging.getLogger(__name__)
+
 AssistantProfile — per-user PA configuration with role-based tool access.
 
 Each user gets an AssistantProfile that controls:
@@ -177,6 +180,9 @@ class AssistantProfile(UnifiedBaseModel):
                 content = invite.prospect_profile.content or ''
                 # Cap at 2000 chars to keep system prompt reasonable
                 return content[:2000] if content else None
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "models_assistant_profile._load_prospect_context: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
         return None

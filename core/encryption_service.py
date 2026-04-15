@@ -164,15 +164,21 @@ class EncryptionService:
             try:
                 self.cipher.decrypt(ciphertext.encode())
                 return True
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "encryption_service.can_decrypt: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
         
         if self.backup_cipher:
             try:
                 self.backup_cipher.decrypt(ciphertext.encode())
                 return True
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "encryption_service.can_decrypt: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
         
         return False
 
