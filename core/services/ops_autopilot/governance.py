@@ -1103,8 +1103,11 @@ class PolicyOptimizer:
                     'reason': evidence.get('reason', ''),
                     'when': action.created_at.isoformat(),
                 })
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "ops_governance.get_tuning_report: swallowed (%s: %s) — report may be partial",
+                type(_e).__name__, _e,
+            )
 
         return report
 
@@ -1351,8 +1354,11 @@ class PolicyArbitrator:
                         'write_count': len(writers),
                         'resolution': resolution,
                     })
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "ops_governance.detect_conflicts: swallowed (%s: %s) — report may be partial",
+                type(_e).__name__, _e,
+            )
 
         # Detect flap knobs — keys that changed frequently
         flap_knobs = self._detect_flaps(now)
@@ -1504,8 +1510,11 @@ class PolicyArbitrator:
                                 'hold_hours': hold_hours,
                                 'changes_in_window': changes,
                             })
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "ops_governance._detect_hold_violations: swallowed (%s: %s) — report may be partial",
+                type(_e).__name__, _e,
+            )
 
         return suppressed
 
@@ -1778,8 +1787,11 @@ class ReleaseGovernor:
             if total_cycles > 0:
                 result['error_rate'] = round(error_cycles / total_cycles, 3)
 
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "ops_governance._count_recent_deploys: swallowed (%s: %s) — report may be partial",
+                type(_e).__name__, _e,
+            )
 
         return result
 
