@@ -86,6 +86,40 @@ class OpsHandlersMixin:
         """
         action = payload.get('action', 'version')
 
+        if action == 'overview':
+            # Session 1103c: one-shot ops snapshot bundling version +
+            # slo_status + top failure_signatures + noise_metrics.
+            # Added because GPT-5.2 kept emitting action='overview' as
+            # a natural guess for 'how is production doing' questions
+            # and the dispatcher was returning 'Unknown action' every
+            # time. Bundling keeps it to a single tool call so Rigby
+            # can answer ops status without burning a multi-step loop.
+            window = payload.get('window', '24h')
+            result = {'gateway': 'ops_tool', 'action': 'overview', 'window': window}
+            try:
+                result['version'] = self._ops_version(trace_id)
+            except Exception as e:
+                result['version'] = {'error': f'{type(e).__name__}: {e}'}
+            try:
+                result['slo_status'] = self._ops_slo_status(
+                    window, False, trace_id, since=None,
+                )
+            except Exception as e:
+                result['slo_status'] = {'error': f'{type(e).__name__}: {e}'}
+            try:
+                result['failure_signatures'] = self._ops_failure_signatures(
+                    window, 5, trace_id, since=None,
+                )
+            except Exception as e:
+                result['failure_signatures'] = {'error': f'{type(e).__name__}: {e}'}
+            try:
+                from core.services.noise_metrics import compute_runs_metrics
+                hours = {'1h': 1, '6h': 6, '24h': 24, '7d': 168, '30d': 720}.get(window, 24)
+                result['noise_metrics'] = compute_runs_metrics(hours=hours)
+            except Exception as e:
+                result['noise_metrics'] = {'error': f'{type(e).__name__}: {e}'}
+            return result
+
         if action == 'version':
             return self._ops_version(trace_id)
         elif action == 'slo_status':

@@ -2037,6 +2037,7 @@ PA_TOOL_SCHEMAS = [
                 "action": {
                     "type": "string",
                     "enum": [
+                        "overview",
                         "version", "slo_status", "failure_signatures",
                         "tool_migration_report", "timeout_config_read", "proof_bundle",
                         "noise_metrics", "conversation_metrics",
@@ -2044,6 +2045,10 @@ PA_TOOL_SCHEMAS = [
                         "celery_task_history", "execution_detail", "execution_search",
                     ],
                     "description": (
+                        "overview: one-shot ops snapshot — version + slo_status + top failure_signatures "
+                        "+ noise_metrics in a single call. Use this when asked for an ops/platform "
+                        "overview, system health, or a general 'how's production doing' question. "
+                        "Default window 24h. "
                         "version: build/deploy metadata (git SHA, branch, Railway deployment, uptime). "
                         "slo_status: compute 8 SLOs with breach detection (task success, agent timeouts, "
                         "deliberation failures, publish conversion, PA tool success, HTTP errors). "
