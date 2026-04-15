@@ -2051,6 +2051,58 @@ RESEARCH DATA:
             except Exception as e:
                 return {'gateway': 'work_tool', 'action': action, 'error': str(e)}
 
+        if action == 'stats':
+            # Session 1103c: aggregate counts for Rigby status snapshots.
+            # Added because GPT-5.2 kept emitting action='stats' as a
+            # natural guess for status update requests — previously the
+            # dispatcher returned 'Unknown action' every single time,
+            # leaving Rigby unable to answer status questions without
+            # listing all initiatives and burning tokens.
+            try:
+                from core.models import Initiative, InitiativeActionItem
+                from core.models_unified_system import (
+                    AgentConversation, AgentExecution,
+                )
+                from django.db.models import Count
+
+                init_counts = dict(
+                    Initiative.objects.values_list('status')
+                    .annotate(c=Count('id'))
+                    .values_list('status', 'c')
+                )
+                item_counts = dict(
+                    InitiativeActionItem.objects.values_list('status')
+                    .annotate(c=Count('id'))
+                    .values_list('status', 'c')
+                )
+                workflow_count = AgentExecution.objects.filter(
+                    agent__name__in=[
+                        'WorkflowAgent', 'WorkflowOrchestrationAgent',
+                        'CampaignOrchestratorAgent', 'AISeriesWorkflowAgent',
+                    ]
+                ).count()
+                conv_count = AgentConversation.objects.count()
+                return {
+                    'gateway': 'work_tool',
+                    'action': 'stats',
+                    'initiatives': {
+                        'total': sum(init_counts.values()),
+                        'by_status': init_counts,
+                    },
+                    'action_items': {
+                        'total': sum(item_counts.values()),
+                        'by_status': item_counts,
+                    },
+                    'workflows_total': workflow_count,
+                    'agent_conversations_total': conv_count,
+                }
+            except Exception as e:
+                return {
+                    'gateway': 'work_tool',
+                    'action': 'stats',
+                    'error': f'{type(e).__name__}: {e}',
+                }
+
         if action == 'workflows':
             try:
                 from core.models_unified_system import AgentExecution
@@ -2075,7 +2127,7 @@ RESEARCH DATA:
 
         mapping = ACTION_MAP.get(action)
         if not mapping:
-            extra_actions = ['agent_conversations', 'workflows']
+            extra_actions = ['agent_conversations', 'workflows', 'stats']
             all_acts = sorted(list(ACTION_MAP) + extra_actions)
             return {'error': f'Unknown work_tool action: {action}. Valid: {", ".join(all_acts)}'}
 

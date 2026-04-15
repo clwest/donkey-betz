@@ -1953,6 +1953,7 @@ PA_TOOL_SCHEMAS = [
                         "action_item_list", "action_item_start", "action_item_complete",
                         "action_item_cleanup",
                         "agent_conversations", "workflows",
+                        "stats",
                     ],
                     "description": (
                         "initiative_list: list initiatives (filters: status, owner, stage). "
@@ -1965,7 +1966,10 @@ PA_TOOL_SCHEMAS = [
                         "action_item_complete: mark an action item as completed. "
                         "action_item_cleanup: find/cancel junk action items (dry_run default true). "
                         "agent_conversations: browse multi-agent conversations. "
-                        "workflows: recent workflow/orchestration executions."
+                        "workflows: recent workflow/orchestration executions. "
+                        "stats: aggregate counts across initiatives, action items, "
+                        "workflows, and agent conversations — use this for a platform "
+                        "status snapshot instead of listing everything."
                     ),
                 },
                 "id": {
