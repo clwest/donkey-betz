@@ -1958,10 +1958,9 @@ export const spineApi = {
 
 // Session 700: LLM Routing API (from Backend Claude Session 699)
 // Session 894: Fixed paths - backend uses /api/llm-routing/ not /api/v1/llm-routing/
+// Session 1083 round 44: removed .status/.costAnalytics/.updateAgentConfig —
+// backend routes deleted + frontend never called them.
 export const llmRoutingApi = {
-  // System status overview
-  status: () => api.get('/llm-routing/status/'),
-
   // List all 6 LLM providers with health info
   providers: () => api.get('/llm-routing/providers/'),
 
@@ -1973,10 +1972,6 @@ export const llmRoutingApi = {
   agentConfigs: (params?: { agent?: string; model?: string }) =>
     api.get('/llm-routing/agent-configs/', { params }),
 
-  // Update agent config (requires auth)
-  updateAgentConfig: (agentName: string, data: { model_id: string; reason?: string }) =>
-    api.post(`/llm-routing/agent-configs/${agentName}/`, data),
-
   // Call logs with filtering
   logs: (params?: {
     hours?: number
@@ -1986,10 +1981,6 @@ export const llmRoutingApi = {
     limit?: number
     offset?: number
   }) => api.get('/llm-routing/logs/', { params }),
-
-  // Cost analytics dashboard
-  costAnalytics: (hours?: number) =>
-    api.get('/llm-routing/cost-analytics/', { params: { hours } }),
 }
 
 // Session 705: IMMUNE System API - Security & Threat Detection
@@ -2314,9 +2305,6 @@ export const neuralOrchestraApi = {
 
   // WebSocket configuration
   websocketConfig: () => api.get('/neural-orchestra/websocket-config/'),
-
-  // Debug info
-  debug: () => api.get('/neural-orchestra/debug/'),
 
   // Trigger reality check (force refresh)
   triggerRealityCheck: () => api.post('/neural-orchestra/reality-check/'),
