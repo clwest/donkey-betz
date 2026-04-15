@@ -422,16 +422,30 @@ class DigestiveSystemService:
         }
 
     def check_processing(self) -> dict:
-        """Check data processing queue and throughput."""
+        """Check data processing queue and throughput.
+
+        Session 1083 (Rigby audit): `is_processed=False` alone is a
+        LIAR metric. 82,210 of the 83,679 "unprocessed" rows in the
+        DB right now are actually SpiderData entries that the embedder
+        already inspected and marked `embedding_text='[NO_ITEMS]'`
+        (spiders that fetched but produced zero items). Those rows
+        never need processing — they're already done. Excluding them
+        drops the reported backlog from 83,679 to 1,469 (98.2% was
+        false-alarm) and makes DIGESTIVE health scores accurate.
+        """
         from core.models_unified_system import SpiderData
 
         cutoff_24h = timezone.now() - timedelta(hours=24)
         cutoff_1h = timezone.now() - timedelta(hours=1)
 
-        # Count unprocessed items (queue depth)
-        # Using is_processed field if available, otherwise estimate
+        # Count unprocessed items (queue depth) — excluding rows that
+        # the embedder already marked as deliberately empty.
         try:
-            queue_depth = SpiderData.objects.filter(is_processed=False).count()
+            queue_depth = SpiderData.objects.filter(
+                is_processed=False,
+            ).exclude(
+                embedding_text='[NO_ITEMS]',
+            ).count()
         except Exception:
             # If is_processed field doesn't exist, estimate from recent untagged items
             queue_depth = SpiderData.objects.filter(
