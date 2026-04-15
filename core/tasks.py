@@ -544,6 +544,185 @@ def cleanup_discussion_artifacts(batch_size: int = 5000):
 def cleanup_halted_experiments(days_old: int = 7):
     from core.tasks_ops import _impl_cleanup_halted_experiments
     return _impl_cleanup_halted_experiments(days_old)
+
+
+@shared_task
+def cleanup_stale_running_experiments(hours_old: int = 72, dry_run: bool = False):
+    """
+    Session 1103c: auto-halt Experiments stuck in status='running' with
+    outcome_classification='pending' for longer than `hours_old`.
+
+    Discovery context: the gate_progression_pipeline auto-creates an
+    Experiment with status='running' every time a decision is promoted.
+    The ONLY path that transitions running→success is
+    auto_kpi_tracking's target-met check, which requires a live KPI
+    value being fed into the experiment. Discussion-category decisions
+    (auto-generated from AgentConversation topics) don't have a
+    trackable KPI, so their experiments sat in 'running' state
+    indefinitely. On local inspection, 131 experiments were stuck,
+    with the oldest at 74 days old.
+
+    This task completes any Experiment older than `hours_old` that
+    never received a KPI update as status='inconclusive' /
+    outcome='learn' so they stop polluting the pilot-stats view
+    and the running/pending split reflects reality.
+
+    Args:
+        hours_old: Age threshold in hours (default 72h = 3 days).
+            Experiments created more recently than this are left alone.
+        dry_run: If True, log what would be completed without touching
+            the DB.
+    """
+    from django.utils import timezone as _tz
+    from datetime import timedelta
+    from core.models_pilot_readiness import Experiment
+
+    cutoff = _tz.now() - timedelta(hours=hours_old)
+    stale = Experiment.objects.filter(
+        status='running',
+        outcome_classification='pending',
+        created_at__lt=cutoff,
+    )
+    total = stale.count()
+    if total == 0:
+        logger.info(
+            "[cleanup_stale_running_experiments] nothing to do (hours_old=%d)",
+            hours_old,
+        )
+        return {'found': 0, 'completed': 0, 'dry_run': dry_run}
+
+    logger.warning(
+        "[cleanup_stale_running_experiments] found %d experiments "
+        "running+pending > %dh old (dry_run=%s)",
+        total, hours_old, dry_run,
+    )
+    if dry_run:
+        return {'found': total, 'completed': 0, 'dry_run': True}
+
+    completed = 0
+    errors = 0
+    for exp in stale.iterator(chunk_size=50):
+        age_h = (_tz.now() - exp.created_at).total_seconds() / 3600
+        try:
+            exp.complete(
+                status='inconclusive',
+                result_summary=(
+                    f'Auto-halted by cleanup_stale_running_experiments '
+                    f'after {age_h:.0f}h with no KPI updates — treated '
+                    f'as inconclusive/learn.'
+                ),
+                outcome_classification='learn',
+            )
+            completed += 1
+        except Exception as e:
+            errors += 1
+            logger.error(
+                "[cleanup_stale_running_experiments] failed to complete "
+                "experiment %s (%s: %s)",
+                exp.id, type(e).__name__, e,
+            )
+
+    logger.warning(
+        "[cleanup_stale_running_experiments] completed=%d errors=%d "
+        "(of %d stale)",
+        completed, errors, total,
+    )
+    return {
+        'found': total,
+        'completed': completed,
+        'errors': errors,
+        'dry_run': False,
+    }
+
+
+@shared_task
+def reconcile_experiment_status_outcome(dry_run: bool = False):
+    """
+    Session 1103c: reconcile Experiment.status with Experiment.outcome_classification.
+
+    On inspection we found experiments where outcome_classification had
+    been set to 'pass'/'learn'/'fail' but status was still 'running'.
+    This makes pilots_tool stats look alarming ("n running, n pending")
+    when in reality the experiment already finished and just never got
+    its status flipped. Likely a missing .save(update_fields=['status'])
+    somewhere in the auto_kpi_tracking or halt path.
+
+    Mapping (from Experiment._determine_outcome_classification):
+        - outcome='pass'  → status='success'
+        - outcome='learn' → status='inconclusive'
+        - outcome='fail'  → status='failure'
+
+    This task is idempotent; running it repeatedly is safe.
+    """
+    from core.models_pilot_readiness import Experiment
+
+    OUTCOME_TO_STATUS = {
+        'pass': 'success',
+        'learn': 'inconclusive',
+        'fail': 'failure',
+    }
+
+    fixed = 0
+    errors = 0
+    by_outcome = {}
+    mismatched = Experiment.objects.filter(
+        status='running',
+    ).exclude(outcome_classification='pending')
+
+    total = mismatched.count()
+    if total == 0:
+        logger.info(
+            "[reconcile_experiment_status_outcome] nothing to do"
+        )
+        return {'found': 0, 'fixed': 0, 'dry_run': dry_run}
+
+    logger.warning(
+        "[reconcile_experiment_status_outcome] found %d experiments "
+        "with status=running but outcome != pending (dry_run=%s)",
+        total, dry_run,
+    )
+    if dry_run:
+        for row in mismatched.values('outcome_classification').annotate(
+            c=models.Count('id') if False else None,
+        ):
+            pass  # dry_run just reports the total; skip breakdown
+        return {'found': total, 'fixed': 0, 'dry_run': True}
+
+    for exp in mismatched.iterator(chunk_size=100):
+        outcome = exp.outcome_classification
+        new_status = OUTCOME_TO_STATUS.get(outcome)
+        if not new_status:
+            continue
+        try:
+            exp.status = new_status
+            if not exp.ended_at:
+                from django.utils import timezone as _tz
+                exp.ended_at = _tz.now()
+                exp.save(update_fields=['status', 'ended_at'])
+            else:
+                exp.save(update_fields=['status'])
+            fixed += 1
+            by_outcome[outcome] = by_outcome.get(outcome, 0) + 1
+        except Exception as e:
+            errors += 1
+            logger.error(
+                "[reconcile_experiment_status_outcome] failed to fix "
+                "experiment %s (%s: %s)",
+                exp.id, type(e).__name__, e,
+            )
+
+    logger.warning(
+        "[reconcile_experiment_status_outcome] fixed=%d errors=%d "
+        "by_outcome=%s",
+        fixed, errors, by_outcome,
+    )
+    return {
+        'found': total,
+        'fixed': fixed,
+        'errors': errors,
+        'by_outcome': by_outcome,
+        'dry_run': False,
+    }
 @shared_task
 def run_autonomy_cycle(user_id: int = None):
     from core.tasks_misc import _impl_run_autonomy_cycle
