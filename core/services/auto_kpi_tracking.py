@@ -79,8 +79,16 @@ class AutoKPITrackingService:
         """
         from core.models_pilot_readiness import Experiment, KPISnapshot
 
+        # Session 1103c: previously results['success'] = True was
+        # initialized once and NEVER flipped, even when per-experiment
+        # updates threw exceptions caught at line ~165. Upstream
+        # orchestration treated success=True as "KPI job ran clean,"
+        # masking broken KPI sources and letting experiments drift
+        # with stale current_value + missing snapshots. Now success
+        # is computed at the end of the loop based on whether any
+        # errors were captured.
         results = {
-            'success': True,
+            'success': True,  # provisional; recomputed after the loop
             'updated': [],
             'skipped': [],
             'errors': [],
@@ -172,6 +180,18 @@ class AutoKPITrackingService:
             'error_count': len(results['errors']),
             'completed_count': len(results.get('completed', [])),
         }
+
+        # Session 1103c: real success calculation. Job is success if
+        # there were zero errors AND we either updated something or
+        # had nothing to update. Any error flips success=False so
+        # upstream monitoring can react.
+        results['success'] = len(results['errors']) == 0
+        if not results['success']:
+            self.logger.warning(
+                "auto_kpi_tracking: KPI update job had %d errors out "
+                "of %d running experiments — reporting success=False",
+                len(results['errors']), running_experiments.count(),
+            )
 
         return results
 
