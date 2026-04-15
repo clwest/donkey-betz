@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-04-15 00:48
+**Generated:** 2026-04-15 00:49
 **Current Session:** 1031
 **Total Documentation:** 1855 files | 631,037 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 141 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/capabilities/04_Agent_Orchestra/README.md` | 60 | 🤖 AI AGENT ORCHESTRA - 149 Specialized Intelligenc |
+| `docs/archive/old-structure/handoffs/README.md` | 60 | 🤝 Session Handoffs |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -220,8 +220,8 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
+| INDEX.md | docs | 364 | 2026-04-15 00:48 |
 | HALF_BUILT_FEATURES_AUDIT.md | audit-2026 | 224 | 2026-04-15 00:48 |
-| INDEX.md | docs | 364 | 2026-04-15 00:33 |
 | react-fastapi-template.md | topics | 454 | 2026-04-13 14:33 |
 | 03-spiders.md | audit-2026 | 197 | 2026-04-06 19:10 |
 | 12-infrastructure.md | audit-2026 | 162 | 2026-04-06 19:08 |
