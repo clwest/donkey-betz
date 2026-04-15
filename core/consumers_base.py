@@ -288,8 +288,11 @@ class LiveSportsConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
             # Still try to accept the connection
             try:
                 await self.accept()
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "consumers_base.op: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
     
     async def disconnect(self, close_code):
         user_info = getattr(self.user, 'username', 'anonymous') if hasattr(self, 'user') and not isinstance(self.user, AnonymousUser) else 'anonymous'
@@ -2234,8 +2237,11 @@ Ask me anything about our capabilities!"""
 
                     if response and not response.startswith("Error"):
                         return response
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "consumers_base.get_agent_count: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
                 return f"""I understand you're asking: "{command[:100]}"
 
@@ -2304,8 +2310,11 @@ Try asking something specific or type /help for commands!"""
                         from ai_core.spiders.spider_registry import get_spider_registry
                         spider_registry = get_spider_registry()
                         spider_count = spider_registry.get_spider_count().get('total', 77)
-                    except Exception:
-                        pass
+                    except Exception as _e:
+                        logger.warning(
+                            "consumers_base.get_agent_count: swallowed (%s: %s) — degraded",
+                            type(_e).__name__, _e,
+                        )
 
                     import redis
 
@@ -2315,8 +2324,11 @@ Try asking something specific or type /help for commands!"""
                         r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), decode_responses=True)
                         r.ping()
                         redis_status = "ONLINE"
-                    except Exception:
-                        pass
+                    except Exception as _e:
+                        logger.warning(
+                            "consumers_base.get_agent_count: swallowed (%s: %s) — degraded",
+                            type(_e).__name__, _e,
+                        )
 
                     # Check ML Engine
                     ml_status = "OPERATIONAL"
@@ -2384,8 +2396,11 @@ Example: "Hey Warren Buffett, should I invest in NVDA?"
                     from ai_core.spiders.spider_registry import get_spider_registry
                     spider_registry = get_spider_registry()
                     spider_count = spider_registry.get_spider_count().get('total', 77)
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "consumers_base.get_agent_count: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
                 return f"✅ System operational. {agent_count} agents ready. {spider_count} spiders deployed."
             elif cmd == '/agents':
@@ -2801,8 +2816,11 @@ class NeuralOrchestraConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
                             'type': 'agent',
                             'timestamp': conv.get('timestamp', datetime.now().isoformat())
                         })
-                    except Exception:
-                        pass
+                    except Exception as _e:
+                        logger.warning(
+                            "consumers_base.get_agent_count: swallowed (%s: %s) — degraded",
+                            type(_e).__name__, _e,
+                        )
 
             if recent_conversations:
                 for conv in recent_conversations:
@@ -2870,8 +2888,11 @@ class NeuralOrchestraConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
                         'tokens': content.get('tokens_used', 0),
                         'timestamp': content.get('timestamp', datetime.now().isoformat())
                     })
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "consumers_base.get_agent_count: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
             await self.safe_send({
                 'type': 'current_data',

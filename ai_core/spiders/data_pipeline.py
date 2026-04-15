@@ -42,8 +42,11 @@ def _safe_parse_timestamp(value) -> Optional[datetime]:
         if isinstance(value, str):
             try:
                 return datetime.fromisoformat(value.replace('Z', '+00:00'))
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "data_pipeline._safe_parse_timestamp: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
         return None
 
 

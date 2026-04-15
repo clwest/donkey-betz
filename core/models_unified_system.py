@@ -956,8 +956,11 @@ class Opportunity(models.Model):
                 ws, _ = resolve_workspace()
                 if ws:
                     self.workspace = ws
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "models_unified_system.save: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -2701,16 +2704,22 @@ class OpportunityTask(models.Model):
             try:
                 if self.opportunity and self.opportunity.workspace_id:
                     self.workspace_id = self.opportunity.workspace_id
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "models_unified_system.save: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
         if not self.workspace_id:
             try:
                 from core.services.deliverable_workspace_resolver import resolve_workspace
                 ws, _ = resolve_workspace()
                 if ws:
                     self.workspace = ws
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "models_unified_system.save: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -13979,8 +13988,11 @@ class TimeCapsule(models.Model):
                 'now': current_context,
                 'days_elapsed': (timezone.now() - self.created_at).days,
             }
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "models_unified_system.reveal: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         self.save()
         return True
@@ -14918,8 +14930,11 @@ class BusinessResearchResult(models.Model):
             try:
                 from core.models_partnership import PartnershipProject
                 project = PartnershipProject.objects.get(id=project_id)
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "models_unified_system.save_customer_research: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
         instance = cls.objects.create(
             research_type='customer',
@@ -14997,8 +15012,11 @@ class BusinessResearchResult(models.Model):
             try:
                 from core.models_partnership import PartnershipProject
                 project = PartnershipProject.objects.get(id=project_id)
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "models_unified_system.save_competitor_analysis: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
         instance = cls.objects.create(
             research_type='competitor',

@@ -3921,8 +3921,11 @@ def _impl_auto_enhance_blogs(limit: int = 5):
         if pf['decision'] == 'downscope' and pf.get('knobs'):
             limit = pf['knobs'].get('max_items', limit)
             logger.info(f"[AutoEnhance] Budget preflight: DOWNSCOPE — limit={limit}")
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "tasks_misc._impl_auto_enhance_blogs: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     blogs = list(
         SelfBlog.objects.filter(status='needs_enhancement')
@@ -4727,8 +4730,11 @@ def _impl_process_pa_chat_task(self, user_id, message, context=None, generate_au
             try:
                 from core.models_skin_layer import ProjectWorkspace
                 conv_workspace = ProjectWorkspace.objects.filter(id=ws_id).first()
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "tasks_misc._impl_process_pa_chat_task: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
         # Also check if this conversation already has a workspace binding
         if not conv_workspace:
             existing = ChatConversation.objects.filter(
@@ -4738,8 +4744,11 @@ def _impl_process_pa_chat_task(self, user_id, message, context=None, generate_au
                 try:
                     from core.models_skin_layer import ProjectWorkspace
                     conv_workspace = ProjectWorkspace.objects.filter(id=existing).first()
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "tasks_misc._impl_process_pa_chat_task: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
         chat_row = ChatConversation.objects.create(
             user=user,
@@ -5155,8 +5164,11 @@ def _impl_rag_retrieval_canary():
                     priority='high',
                     source='rag_canary',
                 )
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "tasks_misc._impl_rag_retrieval_canary: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
     return result
 
