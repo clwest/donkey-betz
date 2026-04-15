@@ -147,8 +147,8 @@ class SuperPlatformCoordinator:
         """Lazy load OpenAI client."""
         if self._openai_client is None:
             try:
-                from openai import OpenAI
-                self._openai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
+                from core.services.openai_client_factory import get_openai_client
+                self._openai_client = get_openai_client(api_key=settings.OPENAI_API_KEY)
             except Exception as e:
                 logger.error(f"Failed to initialize OpenAI client: {e}")
         return self._openai_client
