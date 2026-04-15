@@ -1756,6 +1756,13 @@ self,
                 _create_kwargs.pop('last_heartbeat_at', None)
                 execution_record = AgentExecution.objects.create(**_create_kwargs)
 
+            # Session 1084: Temporary writer-attribution log so PR #1887 can
+            # be verified in prod (one dispatch → exactly one Table B row).
+            logger.info(
+                f"[execution_record_created_by=tasks_agents] agent={agent_name} "
+                f"execution_id={getattr(execution_record, 'id', None)}"
+            )
+
         # Session 1031: Routing override — reroute specialist tasks away from
         # non-specialist agents.  E.g. "competitor audit" should never go to
         # WorkflowAgent, VideoAgent, etc.
@@ -1872,6 +1879,11 @@ self,
             from django.db import close_old_connections
             close_old_connections()
             try:
+                # Session 1084 / PR #1887: tasks_agents already created the
+                # AgentExecution row above. Pass it through to the router and
+                # tell it NOT to create a duplicate. Before this change every
+                # PA dispatch produced 2 rows in core_agentexecution — one
+                # from tasks_agents, one from agent_router._create_execution_record.
                 return router.route(
                     agent_name=agent_name,
                     task=task,
@@ -1879,7 +1891,9 @@ self,
                         'source': 'conversation_action_dispatch',
                         'conversation_id': conversation_id,
                         **context
-                    }
+                    },
+                    create_execution_record=False,
+                    existing_execution_record=execution_record,
                 )
             finally:
                 close_old_connections()
