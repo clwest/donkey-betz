@@ -2341,27 +2341,54 @@ class AgentRouter:
             # execution leaves 'in_progress'. Mirrors the thread in
             # tasks_agents._impl_execute_agent_task but self-terminates
             # so the caller doesn't need to manage thread lifetime.
+            # Session 1084: Hoisted imports out of thread body + replaced
+            # silent `except: return` with logger.exception so failures
+            # are diagnosable. See tasks_agents.py:1887 for rationale —
+            # C-level socket hangs can hold the Python import lock, and
+            # any thread-local import at tick time would block forever.
             try:
                 import threading as _hb_threading
                 import time as _hb_time
+                from django.db import close_old_connections as _hb_close
                 _execution_id = execution.id
+                _hb_agent_name = agent_name
 
                 def _router_heartbeat_loop():
-                    from django.db import close_old_connections as _close
-                    while True:
-                        _hb_time.sleep(120)
-                        try:
-                            _close()
-                            _cur_status = AgentExecution.objects.filter(
-                                id=_execution_id
-                            ).values_list('status', flat=True).first()
-                            if _cur_status != 'in_progress':
+                    logger.info(
+                        f"[router_heartbeat] thread start agent={_hb_agent_name} "
+                        f"execution_id={_execution_id} interval=120s"
+                    )
+                    tick_count = 0
+                    try:
+                        while True:
+                            _hb_time.sleep(120)
+                            try:
+                                _hb_close()
+                                _cur_status = AgentExecution.objects.filter(
+                                    id=_execution_id
+                                ).values_list('status', flat=True).first()
+                                if _cur_status != 'in_progress':
+                                    return
+                                AgentExecution.objects.filter(
+                                    id=_execution_id
+                                ).update(last_heartbeat_at=timezone.now())
+                                tick_count += 1
+                                if tick_count == 1 or tick_count % 5 == 0:
+                                    logger.info(
+                                        f"[router_heartbeat] tick agent={_hb_agent_name} "
+                                        f"execution_id={_execution_id} tick={tick_count}"
+                                    )
+                            except Exception as _tick_exc:
+                                logger.exception(
+                                    f"[router_heartbeat] tick failed agent={_hb_agent_name} "
+                                    f"execution_id={_execution_id}: {_tick_exc}"
+                                )
                                 return
-                            AgentExecution.objects.filter(
-                                id=_execution_id
-                            ).update(last_heartbeat_at=timezone.now())
-                        except Exception:
-                            return
+                    finally:
+                        logger.info(
+                            f"[router_heartbeat] thread exit agent={_hb_agent_name} "
+                            f"execution_id={_execution_id} total_ticks={tick_count}"
+                        )
 
                 _hb_thread = _hb_threading.Thread(
                     target=_router_heartbeat_loop,
@@ -2369,8 +2396,12 @@ class AgentRouter:
                     name=f"router_heartbeat_{agent_name}",
                 )
                 _hb_thread.start()
+                logger.info(
+                    f"[router_heartbeat] thread spawned agent={agent_name} "
+                    f"execution_id={execution.id} thread_name={_hb_thread.name}"
+                )
             except Exception as e:
-                logger.debug(f"Failed to start router heartbeat thread: {e}")
+                logger.exception(f"[router_heartbeat] Failed to start thread: {e}")
 
             return execution
         except Exception as e:
