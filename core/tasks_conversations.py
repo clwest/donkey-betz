@@ -29,6 +29,16 @@ from core.tasks import (  # noqa: F401 — private helpers from tasks.py
     _get_overused_markers,
     _handle_conversation_delegation,
     _preflight_gather_agent_data,
+    # Session 1083 (Rigby audit): these six symbols were all being
+    # referenced throughout this file but never imported, causing
+    # NameError on every multi-agent conversation path. Surfaced by
+    # the spider-network stall investigation — the first fix
+    # (validate_agent_output) caused Pyright to flag the remaining
+    # five undefined names in the same file.
+    validate_agent_output,
+    CONVERSATION_DELEGATION_TOOL,
+    broadcast_hive_mind_update,
+    broadcast_hive_mind_status,
 )
 
 
