@@ -3955,23 +3955,12 @@ urlpatterns += [
     path('api/dreams/<uuid:dream_id>/generate-review/', lambda r, dream_id: __import__('core.views_artifacts', fromlist=['generate_review_for_dream']).generate_review_for_dream(r, dream_id), name='dreams-generate-review'),
     path('api/dreams/reviews/', lambda r: __import__('core.views_artifacts', fromlist=['list_dream_reviews']).list_dream_reviews(r), name='dreams-reviews-list'),
 
-    # =========================================================================
-    # Session 476: Autonomous Monitoring Dashboard
-    # =========================================================================
-    path('monitoring/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['autonomous_monitoring_dashboard']).autonomous_monitoring_dashboard(r), name='autonomous-monitoring'),
-    path('api/monitoring/health/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_unified_health']).api_unified_health(r), name='monitoring-health'),
-    path('api/monitoring/content-studio/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_content_studio_status']).api_content_studio_status(r), name='monitoring-content-studio'),
-    path('api/monitoring/narrative-drift/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_narrative_drift_status']).api_narrative_drift_status(r), name='monitoring-narrative-drift'),
-    path('api/monitoring/market-intelligence/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_market_intelligence_status']).api_market_intelligence_status(r), name='monitoring-market-intelligence'),
-    path('api/monitoring/roi/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_roi_metrics']).api_roi_metrics(r), name='monitoring-roi'),
-    path('api/monitoring/provenance/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_provenance_chain']).api_provenance_chain(r), name='monitoring-provenance'),
-    path('api/monitoring/activity/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_activity_stream']).api_activity_stream(r), name='monitoring-activity'),
-    path('api/monitoring/schedules/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_celery_schedules']).api_celery_schedules(r), name='monitoring-schedules'),
-    # Session 497: ML Scoring API
-    path('api/monitoring/ml-scoring/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_ml_scoring_status']).api_ml_scoring_status(r), name='monitoring-ml-scoring'),
-    # Session 511: ML Scoring Training and Explanation APIs
-    path('api/monitoring/ml-scoring/train/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_ml_scoring_train']).api_ml_scoring_train(r), name='monitoring-ml-scoring-train'),
-    path('api/monitoring/ml-scoring/opportunity/<uuid:opportunity_id>/explanation/', lambda r, opportunity_id: __import__('core.views_autonomous_monitoring', fromlist=['api_ml_scoring_explanation']).api_ml_scoring_explanation(r, opportunity_id), name='monitoring-ml-scoring-explanation'),
+    # Session 1103c: Autonomous Monitoring Dashboard (Session 476) removed —
+    # 12 endpoints (1 dashboard + 11 /api/monitoring/* APIs) with zero
+    # frontend callers. Documented as dead in
+    # docs/audit-2026/HALF_BUILT_FEATURES_AUDIT.md under "Monitoring/Health
+    # System (11 endpoints)." View file core/views_autonomous_monitoring.py
+    # (985 lines) deleted alongside this URL block.
 ]
 
 # =========================================================================
