@@ -1194,7 +1194,11 @@ class AgentHandlersMixin:
         # If workspace_id is in payload, scope to workspace (skip user filter — workspace is authoritative)
         ws_scope = payload.get('workspace_id') or payload.get('workspace')
 
-        # Fallback: if no workspace in payload, check user's AssistantProfile for workspace scoping
+        # Fallback: if no workspace in payload, check user's AssistantProfile
+        # for workspace scoping. Session 1103c: was 'except Exception: pass'
+        # which silently dropped workspace scoping on any DB hiccup, so PA
+        # deliverable queries from the user ran unscoped and could return
+        # cross-workspace deliverables.
         if not ws_scope and user_id:
             try:
                 from core.models_assistant_profile import AssistantProfile
@@ -1202,8 +1206,13 @@ class AgentHandlersMixin:
                 if ap and ap.workspace_id:
                     ws_scope = str(ap.workspace_id)
                     logger.info(f"[deliverables] Workspace from AssistantProfile: {ws_scope}")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    "[deliverables] AssistantProfile workspace lookup failed "
+                    "for user_id=%s (%s: %s) — PA deliverable query will run "
+                    "unscoped and may return cross-workspace results",
+                    user_id, type(e).__name__, e,
+                )
 
         logger.info(f"[deliverables] workspace_scope={ws_scope} user_id={user_id}")
         if ws_scope:
