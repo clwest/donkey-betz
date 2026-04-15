@@ -1581,7 +1581,6 @@ urlpatterns = [
     path('api/neural-orchestra/learning/feed/', neural_learning_feed, name='neural-learning-feed'),
     path('api/neural-orchestra/health/', neural_orchestra_health, name='neural-orchestra-health'),
     path('api/neural-orchestra/websocket-config/', neural_orchestra_websocket_bridge, name='neural-websocket-config'),
-    path('api/neural-orchestra/debug/', neural_orchestra_debug_info, name='neural-orchestra-debug'),
     path('api/neural-orchestra/reality-check/', trigger_neural_orchestra_reality_check, name='neural-orchestra-reality-check'),
 
     # Session 688: Authentication redirects to React
@@ -1666,7 +1665,6 @@ urlpatterns = [
     # Session 1103c: 4 /api/diagnostics/* + websocket test routes deleted
     # (zero frontend callers). Session 1069: Cross-service config snapshot + middleware test
     path('api/internal/config-snapshot/', config_snapshot, name='config-snapshot'),
-    path('api/internal/debug-raise-500/', debug_raise_500, name='debug-raise-500'),
     # Focus Cockpit API
     path('api/cockpit/errors/', cockpit_error_summary, name='cockpit-error-summary'),
     path('api/cockpit/runs/', cockpit_runs_list, name='cockpit-runs-list'),
@@ -2086,7 +2084,6 @@ urlpatterns = [
     path('api/v1/auth/logout-enhanced/', logout_enhanced_view, name='auth-logout-enhanced'),
     path('api/v1/auth/validate-token/', validate_token_view, name='auth-validate-token'),
     path('api/v1/auth/resend-verification/', resend_verification_view, name='auth-resend-verification'),
-    path('api/v1/auth/debug/', auth_debug_view, name='auth-debug'),  # Session 830: Auth debugging
 
     # Core platform APIs
     path('api/v1/status/', platform_status, name='platform-status'),
@@ -2100,7 +2097,6 @@ urlpatterns = [
     path('api/agents/', all_agents_list, name='agents-list'),  # Session 267: Add agents list endpoint for sci-fi features
     path('api/agents/assigned/', agents_assigned, name='agents-assigned'),
     path('api/agents/<uuid:agent_id>/profile/', get_agent_profile, name='agent-profile'),  # Session 417: Agent Profile
-    path('api/agents/test/', test_agent_execution, name='agent-test'),  # Session 641: Test agent execution
 
     # Session 1009: Removed agent-analytics endpoints (orphan cleanup)
     path('api/system-health/', system_health_check, name='system-health'),
@@ -2298,9 +2294,6 @@ urlpatterns = [
     path('api/agents/stats/', lambda r: __import__('ai_core.api.agent_api', fromlist=['AgentStatsAPI']).AgentStatsAPI.as_view()(r), name='agent_stats'),
     path('api/agents/activity/', lambda r: __import__('ai_core.api.agent_api', fromlist=['AgentActivityAPI']).AgentActivityAPI.as_view()(r), name='agent_activity'),
     path('api/agents/execute/', lambda r: __import__('ai_core.api.agent_api', fromlist=['AgentExecuteAPI']).AgentExecuteAPI.as_view()(r), name='agent_execute'),
-    path('api/agents/debug-registry/', lambda r: __import__('agents.views_deployment_execute_improved', fromlist=['debug_agent_registry']).debug_agent_registry(r), name='debug_agent_registry'),
-    path('api/agents/run-tests/', lambda r: __import__('agents.agent_testing_system', fromlist=['run_agent_tests']).run_agent_tests(r), name='run_agent_tests'),
-    path('api/agents/test-status/', lambda r: __import__('agents.agent_testing_system', fromlist=['get_agent_test_status']).get_agent_test_status(r), name='get_agent_test_status'),
     path('agent-testing/', neural_orchestra_redirect, name='agent_testing_dashboard'),  # Session 688: Redirect to React /agents
     path('api/agents/connections/', lambda r: __import__('ai_core.api.agent_api', fromlist=['AgentSpiderConnectionAPI']).AgentSpiderConnectionAPI.as_view()(r), name='agent_spider_connections'),
 
@@ -2366,13 +2359,9 @@ urlpatterns = [
     path('api/v1/styles/', styles_list, name='styles-list'),
     path('api/v1/prompting/settings/', prompting_settings, name='prompting-settings'),
     path('api/v1/prompting/stats/', prompting_stats, name='prompting-stats'),
-    path('api/v1/prompting/test/', prompting_test, name='prompting-test'),
     path('api/v1/execute/', execute_agent, name='execute-agent'),
     
     # Prompt diagnostics endpoints
-    path('api/v1/prompt-diagnostics/dashboard/', prompt_diagnostics_dashboard, name='prompt-diagnostics-dashboard'),
-    path('api/v1/prompt-diagnostics/analyses/', prompt_diagnostics_analyses, name='prompt-diagnostics-analyses'),
-    path('api/v1/prompt-diagnostics/templates/', prompt_diagnostics_templates, name='prompt-diagnostics-templates'),
     
     # Feedback endpoints
     path('api/v1/feedback/submit/', feedback_submit, name='feedback-submit'),
@@ -2438,7 +2427,6 @@ urlpatterns = [
     # Session 760: Unified execution history and detail for Output Modal
     path('api/v1/agents/unified-executions/', views_agent_execution.unified_execution_history, name='unified-execution-history'),
     path('api/v1/agents/execution/<str:execution_id>/', views_agent_execution.execution_detail, name='execution-detail'),
-    path('api/v1/agents/test-execution/', views_agent_execution.test_agent_execution, name='agent-test-execution'),
     path('api/v1/agents/batch-execute/', views_agent_execution.execute_agent_batch, name='agent-batch-execute'),
 
     # Session 761: Agent Monitoring API Endpoints
@@ -2718,7 +2706,6 @@ urlpatterns = [
     path('api/v1/video/<uuid:video_id>/', get_video_detail, name='video-detail'),
     path('api/v1/video/gallery/', video_gallery, name='video-gallery'),
     path('api/v1/video/save/', save_video_to_gallery, name='save-video'),
-    path('api/v1/video/test-runway/', test_runway_connection, name='test-runway'),
     # Video Agents — resolve, transcribe, transcripts
     path('api/v1/video/resolve/', video_resolve, name='video-resolve'),
     path('api/v1/video/transcribe/', video_transcribe, name='video-transcribe'),
@@ -2758,7 +2745,6 @@ urlpatterns = [
     # Image Generation endpoints (Phase 2: Frontend Reality Fix)
     path('api/v1/gallery/generate/', gallery_generate, name='gallery-generate'),
     path('api/v1/gallery/optimize-prompt/', optimize_image_prompt, name='optimize-image-prompt'),  # Session 32: Intelligent prompting
-    path('api/v1/gallery/test/', test_image_generation, name='test-image-generation'),
 
     # Image Editing endpoints (Session 35: Image Editing UI)
     # Session 125: Updated to use image_id wrappers
@@ -3007,7 +2993,6 @@ urlpatterns = [
     path('api/v1/push/unsubscribe/', unsubscribe_push, name='push-unsubscribe'),
     path('api/v1/push/preferences/', notification_preferences, name='push-preferences'),
     path('api/v1/push/status/', get_subscription_status, name='push-status'),
-    path('api/v1/push/test/', send_test_push, name='push-test'),
 
     # ===== PHASE 2 ADVANCED FEATURES =====
     
@@ -3051,19 +3036,16 @@ urlpatterns = [
 
     # Session 699: LLM Routing APIs (real database-backed)
     # Session 871: LLM routing migrated to /api/
-    path('api/llm-routing/status/', llm_routing_status, name='llm-routing-status'),
     path('api/llm-routing/providers/', llm_providers_list, name='llm-routing-providers'),
     path('api/llm-routing/models/', llm_models_list, name='llm-routing-models'),
     path('api/llm-routing/agent-configs/', agent_llm_configs_list, name='llm-routing-agent-configs'),
     path('api/llm-routing/logs/', llm_call_logs_list, name='llm-routing-logs'),
-    path('api/llm-routing/cost-analytics/', llm_cost_analytics, name='llm-routing-cost-analytics'),
     path('api/llm-routing/agent-configs/<str:agent_name>/', update_agent_llm_config, name='llm-routing-update-agent-config'),
 
     # WorkflowRun API (must be before workflows.urls include to avoid 404)
     path('api/v1/workflows/runs/', views_workflow_run.workflow_run_list, name='workflow-run-list'),
     path('api/v1/workflows/runs/<uuid:run_id>/', views_workflow_run.workflow_run_detail, name='workflow-run-detail'),
     path('api/v1/workflows/runs/<uuid:run_id>/dispatch/', views_workflow_run.workflow_run_dispatch, name='workflow-run-dispatch'),
-    path('api/v1/workflows/queue-diagnostic/', views_workflow_run.workflow_queue_diagnostic, name='workflow-queue-diagnostic'),
     path('api/v1/workflows/add-consumer/', views_workflow_run.workflow_add_consumer, name='workflow-add-consumer'),
 
     # App-specific APIs - See docs/API_PATH_POLICY.md for conventions
@@ -3206,7 +3188,6 @@ urlpatterns = [
     path('api/agent-dashboard/learning/', agent_learning_data, name='agent-dashboard-learning'),
     path('api/agent-dashboard/collaboration/', agent_collaboration_data, name='agent-dashboard-collaboration'),
     path('api/agent-dashboard/costs/', agent_costs_data, name='agent-dashboard-costs'),
-    path('api/agent-dashboard/health/', system_health_data, name='agent-dashboard-health'),
     path('api/agent-dashboard/feed/', learning_feed_data, name='agent-dashboard-feed'),
     path('api/agent-dashboard/agents/', all_agents_list, name='agent-dashboard-agents'),
 
@@ -3243,7 +3224,6 @@ urlpatterns = [
 
     # Session 343: Spider registry and testing endpoints
     path('api/spider-intelligence/registry/', spider_registry, name='spider-intelligence-registry'),
-    path('api/spider-intelligence/test/', test_spider, name='spider-intelligence-test'),
     path('api/spider-intelligence/run-all/', run_all_spiders, name='spider-intelligence-run-all'),
 
     # Session 344: Enhanced market research dashboard
