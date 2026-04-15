@@ -3,6 +3,7 @@ Temporary Intelligence API endpoints
 This provides the skynet status endpoint for the frontend
 """
 
+import logging
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
@@ -10,6 +11,8 @@ from datetime import datetime
 import asyncio
 import sys
 import os
+
+logger = logging.getLogger(__name__)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ai_core.intelligence.income_builder import income_builder, UserProfile, SkillLevel
 from ai_core.intelligence.monetization_engine import monetization_engine
@@ -52,11 +55,23 @@ def skynet_status(request):
         if prediction_count == 0:
             prediction_count = AgentPrediction.objects.count()
 
-        # Real spider count
+        # Real spider count.
+        # Session 1103c: was a BARE 'except:' which catches
+        # KeyboardInterrupt + SystemExit and silently fell back to
+        # the hardcoded magic number 77. The /api/intelligence/
+        # endpoint then reported a clean "77 spiders" even when the
+        # registry was actually broken or empty. Now narrow to
+        # Exception and log loudly.
         try:
             registry = SpiderRegistry()
             spider_count = len(registry.get_all_spiders())
-        except:
+        except Exception as e:
+            logger.warning(
+                "intelligence_api: SpiderRegistry lookup failed "
+                "(%s: %s) — reporting hardcoded spider_count=77 as "
+                "fallback. Real count unknown.",
+                type(e).__name__, e,
+            )
             spider_count = 77
 
         # Real pilot counts
