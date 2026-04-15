@@ -402,9 +402,24 @@ class ActionVerifier:
                     )
 
         except Exception as e:
-            logger.error(f"[ActionVerifier] Pre-check error: {e}")
+            # Session 1103c: was fail-OPEN — pre-check crash left
+            # result['passed']=True (the default at function entry)
+            # so the autopilot would proceed with potentially
+            # destructive actions (block agents, sweep content,
+            # remediation) WHEN THE SAFETY CHECKS WERE BROKEN.
+            # Fail-open is the wrong default for a safety gate:
+            # if you can't verify safety, don't act. Now flips
+            # passed=False so the autopilot defers the action and
+            # surfaces the pre-check failure for human review.
+            logger.error(
+                f"[ActionVerifier] Pre-check error (failing CLOSED): {e}"
+            )
+            result['passed'] = False
             result['error'] = str(e)
-            # Fail-open: if pre-checks crash, still allow action (logged)
+            result['reason'] = (
+                f"Pre-check raised {type(e).__name__}: {e} — failing "
+                f"closed for safety. Manual review required."
+            )
 
         return result
 
