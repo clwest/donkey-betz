@@ -70,7 +70,30 @@ class MLEngine:
     Optimized for Apple M3 with local-first architecture
     """
 
+    # Session 1102: attributes that require lazy init on first read. __init__
+    # sets these to placeholder values so attribute lookup succeeds, then
+    # __getattribute__ transparently runs _ensure_initialized() the first time
+    # any of them is accessed.
+    _LAZY_STATE_ATTRS = frozenset([
+        'models', 'sport_models', 'scalers',
+        'user_profile', 'sentiment_analyzer',
+    ])
+
+    def __getattribute__(self, name):
+        if name in MLEngine._LAZY_STATE_ATTRS:
+            init_done = object.__getattribute__(self, '_initialized')
+            if not init_done:
+                object.__getattribute__(self, '_ensure_initialized')()
+        return object.__getattribute__(self, name)
+
     def __init__(self, config: MLConfig = None):
+        # Session 1102: Cheap __init__ only — heavy ML/NLP init is deferred to
+        # first public method call via _ensure_initialized(). Loading DistilBERT
+        # + MPS device init in __init__ caused Celery worker mutex deadlocks on
+        # macOS when MLEngine was instantiated from a scheduled task early in
+        # worker startup (see docs/topics/celery-workers.md). The same rule
+        # Session 985 already applied to module-level imports now extends to
+        # instantiation-time side effects.
         self.config = config or MLConfig()
         self.models = {}  # Keep for backward compatibility with non-sport models
         self.sport_models = {  # New: Sport-specific models
@@ -81,12 +104,23 @@ class MLEngine:
         }
         self.scalers = {}
         self.user_profile = None
+        self.sentiment_analyzer = None
+        self._initialized = False
 
-        # Initialize logging
+        # Initialize logging only — no heavy work here.
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
 
-        # Initialize local ML stack
+    def _ensure_initialized(self):
+        """Lazily load models + NLP pipelines on first use.
+
+        Idempotent — safe to call from every public method entrypoint.
+        Flag is flipped FIRST so that any self.models / self.user_profile
+        access inside the init path doesn't re-enter via __getattribute__.
+        """
+        if self._initialized:
+            return
+        self._initialized = True
         self._initialize_ml_stack()
         self._initialize_user_tracking()
 
