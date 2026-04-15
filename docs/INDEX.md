@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,231 |
+| Total cross-references | 2,230 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 141 | CLAUDE - AI Session Entry Point |
-| `docs/archive/SYSTEM_CAPABILITIES-original/05_Spider_Networks/README.md` | 60 | 🕷️ SPIDER NETWORKS - Intelligent Data Gathering Ar |
+| `docs/archive/sessions/README.md` | 60 | Session Documentation |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 43 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -220,7 +220,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 364 | 2026-04-14 20:19 |
+| INDEX.md | docs | 364 | 2026-04-14 21:16 |
 | react-fastapi-template.md | topics | 454 | 2026-04-13 14:33 |
 | HALF_BUILT_FEATURES_AUDIT.md | audit-2026 | 186 | 2026-04-09 07:43 |
 | 03-spiders.md | audit-2026 | 197 | 2026-04-06 19:10 |
