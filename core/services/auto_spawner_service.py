@@ -197,9 +197,31 @@ class AutoSpawnerService:
         }
         self.spawn_history.append(spawn_record)
 
+        # Session 1103c: was always returning spawned=True even when
+        # task_ids was empty (because _spawn_data_gatherers caught
+        # its own exceptions internally and returned []). The
+        # autonomous reflex orchestrator believed the spawn
+        # succeeded and never retried/escalated, so the system
+        # could silently stay data-starved while reporting
+        # "remediation fired." Now spawned reflects reality.
+        spawned_ok = len(task_ids) > 0
+        if not spawned_ok:
+            logger.error(
+                "auto_spawner_service: spawn reflex for %s deficit=%d "
+                "produced 0 task_ids — _spawn_data_gatherers swallowed "
+                "all spawn attempts. Returning spawned=False so the "
+                "orchestrator can retry/escalate.",
+                data_type, deficit,
+            )
         return {
-            'spawned': True,
-            'reason': f'Insufficient data: {current_count}/{min_required}, spawning {len(task_ids)} tasks',
+            'spawned': spawned_ok,
+            'reason': (
+                f'Insufficient data: {current_count}/{min_required}, '
+                f'spawned {len(task_ids)} tasks'
+                if spawned_ok
+                else f'Spawn reflex FAILED: {current_count}/{min_required}, '
+                     f'_spawn_data_gatherers returned 0 task_ids'
+            ),
             'task_ids': task_ids,
             'deficit': deficit,
         }
