@@ -699,14 +699,28 @@ class AgentExecution(models.Model):
     def __str__(self):
         return f"{self.agent.name} - {self.task[:50]}"
 
-    def save(self, *args, **kwargs):
-        warnings.warn(
-            "core.AgentExecution is deprecated. Use agents.models.AgentExecution instead.",
-            DeprecationWarning,
-            stacklevel=2
-        )
-        logger.warning("DEPRECATED: core.AgentExecution used - migrate to agents.models.AgentExecution")
-        super().save(*args, **kwargs)
+    # Session 1084: Retired misleading deprecation warning.
+    #
+    # Prior to this session, `.save()` emitted a DeprecationWarning pointing
+    # callers to `agents.models.AgentExecution`. That direction was
+    # BACKWARDS: investigation of production DB state showed
+    # `core_agentexecution` (this model) is the canonical, actively-written
+    # live table (58 rows in last 2h in local, all reads by `ops_tool` come
+    # from here), while `agents_agentexecution` (the "new" model the
+    # warning pointed to) was EMPTY — nobody successfully writes to it
+    # because tasks_agents shadow-imports THIS model at function scope.
+    #
+    # The warning was causing real confusion ("which model do I use?")
+    # and the suggested migration target would break production. Both
+    # `tasks_agents._impl_execute_agent_task` and
+    # `agent_router._create_execution_record` write here; `ops_tool`,
+    # cleanup watchdog, and dedup all read here. This is the live model.
+    #
+    # Consolidation of the two parallel models is a separate, larger
+    # refactor tracked for a later session — it requires a data
+    # migration or a conscious decision to retire one of the tables.
+    # Until then, leave this model alone and don't re-add a deprecation
+    # warning pointing to the empty alternative.
 
 
 class Collaboration(models.Model):
