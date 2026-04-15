@@ -76,10 +76,13 @@ class LLMEnforcer:
 
         # Anthropic (Claude)
         try:
-            from anthropic import Anthropic
+            # Session 1084 round 49: use shared factory so timeout/retry
+            # config is applied (prior: bare Anthropic(api_key=...) with
+            # SDK default 600s timeout — see session handoff).
+            from core.services.anthropic_client_factory import get_anthropic_client
             api_key = os.getenv('ANTHROPIC_API_KEY')
             if api_key and api_key != 'your-key-here':
-                self.anthropic_client = Anthropic(api_key=api_key)
+                self.anthropic_client = get_anthropic_client(api_key=api_key)
                 logger.info("✅ Anthropic client initialized - CLAUDE AVAILABLE")
             else:
                 logger.warning("⚠️ Anthropic API key not configured")

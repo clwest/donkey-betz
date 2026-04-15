@@ -359,14 +359,14 @@ class AnthropicProvider(BaseLLMProvider):
 
     def _initialize(self):
         try:
-            from anthropic import Anthropic
-            import httpx
+            from core.services.anthropic_client_factory import get_anthropic_client
             api_key = self.api_key or os.getenv('ANTHROPIC_API_KEY')
             if api_key and api_key not in ['', 'your-key-here']:
-                # Session 831: Add timeout configuration for reliability
-                timeout = httpx.Timeout(60.0, connect=20.0, read=90.0)
-                self.client = Anthropic(api_key=api_key, timeout=timeout, max_retries=2)
-                logger.info("✅ Anthropic provider initialized (timeout: 60s)")
+                # Session 1084 round 49: migrated to shared factory so
+                # timeout/retry config stays consistent across every
+                # Anthropic call site in the codebase.
+                self.client = get_anthropic_client(api_key=api_key)
+                logger.info("✅ Anthropic provider initialized (factory)")
             else:
                 logger.warning("⚠️ Anthropic API key not configured")
         except ImportError:
