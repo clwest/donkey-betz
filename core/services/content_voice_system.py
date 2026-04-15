@@ -397,40 +397,73 @@ class NarrativeInjectionService:
         return incidents[:limit]
 
     def _get_dream_stories(self, limit: int = 2) -> List[Dict[str, Any]]:
-        """Get stories of dreams that led to real improvements."""
+        """Get stories of dreams that led to real improvements.
+
+        Session 1083 (Rigby audit): AgentDream schema had drifted —
+        old fields `status`, `executed_at`, `execution_time_ms`,
+        `priority`, `impact_score` don't exist anymore. Current
+        equivalents:
+          status='executed'   → promoted_to_decision=True
+          executed_at         → promoted_at
+          priority            → vividness_score
+          impact_score        → composite_score
+          execution_time_ms   → (removed, no replacement)
+        Same pattern as DeliberationSession.topic and LLMCallLog.cost_usd
+        bugs earlier this session.
+        """
         incidents = []
 
         try:
             from core.models_unified_system import AgentDream
 
             executed_dreams = AgentDream.objects.filter(
-                status='executed',
-                executed_at__gte=timezone.now() - timedelta(days=14)
-            ).select_related('agent').order_by('-executed_at')[:limit * 2]
+                promoted_to_decision=True,
+                promoted_at__gte=timezone.now() - timedelta(days=14)
+            ).select_related('agent').order_by('-promoted_at')[:limit * 2]
 
             for dream in executed_dreams:
+                when = dream.promoted_at or dream.dreamed_at
                 incidents.append({
                     'type': 'dream',
-                    'title': f'Dream → Reality: {dream.title[:40]}',
-                    'narrative': f"On {dream.executed_at.strftime('%B %d')}, the system dreamed about "
-                                f"'{dream.title}'. {dream.execution_time_ms or 0}ms later, it became real. "
-                                f"Priority: {dream.priority}. Impact: {dream.impact_score or 'TBD'}.",
-                    'timestamp': dream.executed_at,
+                    'title': f'Dream → Reality: {str(dream.title)[:40]}',
+                    'narrative': (
+                        f"On {when.strftime('%B %d') if when else 'an unknown date'}, "
+                        f"the system dreamed about '{dream.title}'. "
+                        f"Vividness: {dream.vividness_score:.2f}. "
+                        f"Impact (composite): {dream.composite_score:.2f}."
+                    ),
+                    'timestamp': when,
                     'agent': dream.agent.name if dream.agent else 'System',
                     'metrics': {
-                        'priority': dream.priority,
-                        'execution_ms': dream.execution_time_ms,
-                        'impact': dream.impact_score,
+                        'vividness': dream.vividness_score,
+                        'composite': dream.composite_score,
+                        'creativity': dream.creativity_score,
                     }
                 })
 
         except Exception as e:
-            logger.debug(f"Could not fetch dream stories: {e}")
+            logger.warning(
+                "content_voice_system._get_dream_stories failed "
+                "(%s: %s) — no dream narrative this cycle",
+                type(e).__name__, e,
+            )
 
         return incidents[:limit]
 
     def _get_learning_moments(self, limit: int = 2) -> List[Dict[str, Any]]:
-        """Get stories of the system learning something significant."""
+        """Get stories of the system learning something significant.
+
+        Session 1083 (Rigby audit): this method had 5 schema-drift bugs
+        that were all silently swallowed via the broad except at the end:
+          confidence → confidence_score
+          pattern_type → decision_type
+          insight → key_insight
+          created_at → extracted_at
+          source_agent → extracted_by
+        The debug-level log hid them even from the noisy logs Chris
+        sees. Third schema-drift bug surfaced tonight via the
+        "tighten the swallow" pattern.
+        """
         incidents = []
 
         try:
@@ -438,27 +471,33 @@ class NarrativeInjectionService:
 
             # Get recent high-impact learnings
             learnings = ExperimentLearning.objects.filter(
-                created_at__gte=timezone.now() - timedelta(days=7),
-                confidence__gte=0.7
-            ).order_by('-confidence', '-created_at')[:limit * 2]
+                extracted_at__gte=timezone.now() - timedelta(days=7),
+                confidence_score__gte=0.7
+            ).order_by('-confidence_score', '-extracted_at')[:limit * 2]
 
             for learning in learnings:
                 incidents.append({
                     'type': 'learning',
-                    'title': f'Learning: {learning.pattern_type}',
-                    'narrative': f"The system discovered: {learning.insight[:150]}... "
-                                f"Confidence: {learning.confidence:.0%}. "
-                                f"This learning now influences future decisions.",
-                    'timestamp': learning.created_at,
-                    'agent': learning.source_agent or 'System',
+                    'title': f'Learning: {learning.decision_type}',
+                    'narrative': (
+                        f"The system discovered: {str(learning.key_insight)[:150]}... "
+                        f"Confidence: {learning.confidence_score:.0%}. "
+                        f"This learning now influences future decisions."
+                    ),
+                    'timestamp': learning.extracted_at,
+                    'agent': learning.extracted_by or 'System',
                     'metrics': {
-                        'confidence': learning.confidence,
-                        'pattern_type': learning.pattern_type,
+                        'confidence': learning.confidence_score,
+                        'decision_type': learning.decision_type,
                     }
                 })
 
         except Exception as e:
-            logger.debug(f"Could not fetch learning moments: {e}")
+            logger.warning(
+                "content_voice_system._get_learning_moments failed "
+                "(%s: %s) — no learning narrative this cycle",
+                type(e).__name__, e,
+            )
 
         return incidents[:limit]
 
