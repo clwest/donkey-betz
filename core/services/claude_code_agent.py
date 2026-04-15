@@ -136,8 +136,9 @@ def generate_response(conversation_id: str, trigger_message: str, trigger_source
         messages.append(msg)
 
     try:
-        import anthropic
-        client = anthropic.Anthropic(api_key=api_key)
+        # Session 1084 round 49: shared factory for timeout/retry config.
+        from core.services.anthropic_client_factory import get_anthropic_client
+        client = get_anthropic_client(api_key=api_key)
 
         response = client.messages.create(
             model="claude-sonnet-4-20250514",

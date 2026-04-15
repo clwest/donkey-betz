@@ -518,9 +518,14 @@ def _implement_with_claude(workdir, run, plan, log_fn, shell):
     # 4. Call Claude (with one retry on schema validation failure)
     # Session 1077: Added timeout + heartbeat to prevent indefinite hangs
     log_fn('implement', 'Calling Claude (claude-sonnet-4-6) for code generation...')
-    from anthropic import Anthropic
+    # Session 1084 round 49: migrated to shared factory. Note that this
+    # site already wraps the call in a concurrent.futures wall-clock
+    # timeout (Session 1077 _CODEGEN_TIMEOUT = 120s), so it was not a
+    # hang risk. Using the factory keeps config consistent and prevents
+    # drift if the wall-clock wrapper is ever removed.
+    from core.services.anthropic_client_factory import get_anthropic_client
     import concurrent.futures
-    client = Anthropic()  # reads ANTHROPIC_API_KEY from env
+    client = get_anthropic_client()
 
     _CODEGEN_TIMEOUT = 120  # seconds — hard cap on LLM call
 
