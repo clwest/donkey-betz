@@ -11,7 +11,13 @@ from dataclasses import dataclass
 import numpy as np
 
 # Apple ML Stack
+# Session 1103c: was a try/except ImportError block with NOTHING in
+# the try body — so it could never raise ImportError, and
+# MLX_AVAILABLE was unconditionally True even on hosts without MLX
+# installed. Fake capability flag at the base of the ML runtime.
+# Now actually attempt the import so the flag reflects reality.
 try:
+    import mlx.core  # noqa: F401
     MLX_AVAILABLE = True
 except ImportError:
     MLX_AVAILABLE = False
