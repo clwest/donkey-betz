@@ -1407,8 +1407,21 @@ def unified_gallery(request):
 
 
 
-# Session 1083 (Rigby audit): 4 undefined names resolved at EOF to
-# sidestep the circular-init cycle between views_image_* siblings.
-from core.views_image_generate import generate_with_replicate  # noqa: E402
-from core.image_views.session import save_to_history  # noqa: E402
-from content.models import ImageHistory  # noqa: E402
+# Session 1083 (Rigby audit): 4 undefined names — module-level imports
+# triggered circular init cycles. Resolved via lazy proxies so the
+# existing call sites stay unchanged but the actual symbols don't
+# bind until first call.
+def generate_with_replicate(*args, **kwargs):
+    from core.views_image_generate import generate_with_replicate as _f
+    return _f(*args, **kwargs)
+
+def save_to_history(*args, **kwargs):
+    from core.image_views.session import save_to_history as _f
+    return _f(*args, **kwargs)
+
+class _ImageHistoryProxy:
+    def __getattr__(self, name):
+        from content.models import ImageHistory as _ih
+        return getattr(_ih, name)
+
+ImageHistory = _ImageHistoryProxy()

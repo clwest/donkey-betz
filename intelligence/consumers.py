@@ -10,6 +10,8 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from .profile_context_service import profile_context_service, AgentContextMixin
 
+import asyncio  # Session 1083
+
 logger = logging.getLogger(__name__)
 
 # Redis URL for production compatibility

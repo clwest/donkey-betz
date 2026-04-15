@@ -14,6 +14,8 @@ from channels.db import database_sync_to_async
 from django.utils import timezone
 from django.conf import settings
 
+from django.db import models  # Session 1083
+
 logger = logging.getLogger(__name__)
 
 
