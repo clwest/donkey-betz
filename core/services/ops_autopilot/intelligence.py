@@ -1528,8 +1528,13 @@ class SecurityEngine:
                     'severity': 'warning',
                     'detail': f'{expired_active} expired kill switches still active',
                 })
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                "ops_autopilot.intelligence: stale_kill_switch audit "
+                "check failed (%s: %s) — drift_issues report will not "
+                "include expired kill switches",
+                type(e).__name__, e,
+            )
 
         return {
             'period_hours': hours,
@@ -1588,8 +1593,13 @@ class SecurityEngine:
                         'ip': ip['ip_address'],
                         'detail': f'{ip["count"]} actions from single IP',
                     })
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                "ops_autopilot.intelligence: abuse_risk_queue user/IP "
+                "audit failed (%s: %s) — security flags for high-activity "
+                "users and IPs will be missing",
+                type(e).__name__, e,
+            )
 
         try:
             from core.models_diagnostic_pipeline import AutopilotAction
@@ -1603,8 +1613,13 @@ class SecurityEngine:
                     'severity': 'warning',
                     'detail': f'{failed_actions} failed autopilot actions in {hours}h',
                 })
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                "ops_autopilot.intelligence: AutopilotAction failure "
+                "count audit failed (%s: %s) — failed_operations flag "
+                "will be missing from abuse_risk_queue",
+                type(e).__name__, e,
+            )
 
         return {
             'period_hours': hours,
@@ -2009,8 +2024,13 @@ class ComplianceEngine:
                             'severity': 'warning' if ac['exec_count'] < avg_count * 5 else 'critical',
                             'detail': f"{ac['agent__name']} ran {ac['exec_count']}x (avg {avg_count:.0f})",
                         })
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                "ops_autopilot.intelligence: high-frequency agent "
+                "audit failed (%s: %s) — anomaly report will be missing "
+                "high-frequency agent flags",
+                type(e).__name__, e,
+            )
 
         # Check audit log for bulk data operations
         try:
@@ -2031,8 +2051,12 @@ class ComplianceEngine:
                     'severity': 'warning',
                     'detail': f"Bulk {op['action']} by {op.get('user__username', 'system')}",
                 })
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                "ops_autopilot.intelligence: bulk_data_operation audit "
+                "failed (%s: %s) — anomaly report missing bulk-op flags",
+                type(e).__name__, e,
+            )
 
         return {
             'period_hours': hours,
@@ -2256,8 +2280,13 @@ class DataIntegrityEngine:
                             'null_rate': round(null_rate, 3),
                             'severity': 'critical' if null_rate > 0.5 else 'warning',
                         })
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                "ops_autopilot.intelligence: spider null-rate audit "
+                "failed (%s: %s) — data-quality spikes report will be "
+                "incomplete",
+                type(e).__name__, e,
+            )
 
         return {
             'period_hours': hours,
