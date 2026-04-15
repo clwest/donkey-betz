@@ -1065,15 +1065,26 @@ class OpsAutopilot:
                     verification_state='pending' if not self.dry_run else 'skipped',
                 )
 
-                # Schedule deferred verification for non-dry-run governance actions
+                # Schedule deferred verification for non-dry-run governance actions.
+                # Session 1103c: loud on failure — silent swallow here
+                # meant a governance auto-decision could land in
+                # production with NO scheduled verification, and the
+                # autopilot would assume verification was queued.
+                # Action would never be verified or rolled back.
                 if not self.dry_run:
                     try:
                         from core.tasks import verify_autopilot_action
                         verify_autopilot_action.apply_async(
                             args=[db_action.id], countdown=300,  # 5 min
                         )
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.error(
+                            "ops_autopilot.core: verify_autopilot_action "
+                            "scheduling failed for db_action=%s "
+                            "(%s: %s) — governance action landed WITHOUT "
+                            "deferred verification, manual review required",
+                            db_action.id, type(e).__name__, e,
+                        )
                 self.actions_taken.append(action_record)
                 processed += 1
 
