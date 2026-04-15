@@ -106,7 +106,12 @@ class OpenAIProvider(BaseAIProvider):
     
     def _initialize_client(self):
         """Initialize OpenAI client"""
-        self.client = openai.OpenAI(api_key=self.api_key)
+        # Session 1084: Mirror timeout config from core/services/llm_provider_registry.py
+        # (Session 831). Without this, a hung upstream can wedge the entire
+        # Celery worker process and starve background heartbeat threads.
+        import httpx
+        timeout = httpx.Timeout(60.0, connect=20.0, read=90.0)
+        self.client = openai.OpenAI(api_key=self.api_key, timeout=timeout, max_retries=2)
     
     def generate_content(self, model: str, system_prompt: str, user_prompt: str, 
                         config: Dict[str, Any] = None) -> GenerationResult:
@@ -329,7 +334,10 @@ class AnthropicProvider(BaseAIProvider):
     
     def _initialize_client(self):
         """Initialize Anthropic client"""
-        self.client = anthropic.Anthropic(api_key=self.api_key)
+        # Session 1084: Mirror timeout config from core/services/llm_provider_registry.py
+        import httpx
+        timeout = httpx.Timeout(60.0, connect=20.0, read=90.0)
+        self.client = anthropic.Anthropic(api_key=self.api_key, timeout=timeout, max_retries=2)
     
     def generate_content(self, model: str, system_prompt: str, user_prompt: str, 
                         config: Dict[str, Any] = None) -> GenerationResult:
@@ -451,9 +459,14 @@ class GoogleProvider(BaseAIProvider):
                 top_k=config.get('top_k', 40),
             )
             
+            # Session 1084: Enforce request timeout — google.generativeai
+            # sets timeout via request_options per-call (there's no
+            # client-level config on this SDK). 90s matches the 90s read
+            # timeout used by the other providers.
             response = model_instance.generate_content(
                 full_prompt,
-                generation_config=generation_config
+                generation_config=generation_config,
+                request_options={'timeout': 90},
             )
             
             generation_time = int((time.time() - start_time) * 1000)

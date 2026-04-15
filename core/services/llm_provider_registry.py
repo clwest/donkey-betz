@@ -778,6 +778,7 @@ class GeminiProvider(BaseLLMProvider):
     def _initialize(self):
         try:
             from google import genai
+            from google.genai.types import HttpOptions
 
             # Check for API key (support both env var names)
             api_key = (
@@ -787,8 +788,16 @@ class GeminiProvider(BaseLLMProvider):
             )
 
             if api_key and api_key not in ['', 'your-key-here']:
-                self.client = genai.Client(api_key=api_key)
-                logger.info("✅ Gemini provider initialized (google-genai SDK)")
+                # Session 1084: Enforce request timeout so a hung Gemini
+                # call can't wedge the worker. HttpOptions.timeout is in
+                # milliseconds. 90s matches the 90s read timeout used by
+                # OpenAI/Anthropic/DeepSeek providers above.
+                http_options = HttpOptions(timeout=90_000)
+                self.client = genai.Client(
+                    api_key=api_key,
+                    http_options=http_options,
+                )
+                logger.info("✅ Gemini provider initialized (google-genai SDK, timeout: 90s)")
             else:
                 logger.warning("⚠️ Gemini API key not configured (set GOOGLE_AI_STUDIO_API_KEY or GEMINI_API_KEY)")
         except ImportError:
