@@ -155,15 +155,15 @@ def analyze_opportunity(request, job_id):
 
         opportunity_data = json.loads(opportunity_json)
 
-        # Real AI Analysis with GPT-5-mini
-        import openai
+        # Real AI Analysis with GPT-5-mini (Session 1086 Tier 4 PR 2 — factory)
         from django.conf import settings
+        from core.services.openai_client_factory import get_openai_client
 
         api_key = settings.AI_PROVIDERS.get('OPENAI_API_KEY', '')
         if not api_key:
             raise Exception("OpenAI API key not configured")
 
-        client = openai.OpenAI(api_key=api_key)
+        client = get_openai_client(api_key=api_key)
 
         # Prepare analysis prompt
         analysis_prompt = f"""
