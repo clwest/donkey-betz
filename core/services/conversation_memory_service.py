@@ -369,40 +369,25 @@ class ConversationMemoryService:
         Share conversation insights to the collective memory/learning system.
 
         This allows future agents to benefit from the conversation's conclusions.
+
+        Session 1083 (Rigby audit): CollectiveMemory was referenced here
+        but the model has never actually existed in ai_core.intelligence.models.
+        Every conversation that tried to share insights threw ImportError
+        and the debug-level log hid the failure. Short-circuit the whole
+        method: feature is dead-coded. If CollectiveMemory ever gets
+        built, flip the guard back off.
         """
-        try:
-            from ai_core.intelligence.models import CollectiveMemory
-
-            if not decision_summary or not decision_summary.get('insights'):
-                return False
-
-            # Create collective memory entry
-            insights_text = "\n".join(decision_summary.get('insights', [])[:5])
-            feature = decision_summary.get('proposed_feature', {})
-
-            content = (
-                f"Topic: {topic}\n"
-                f"Participants: {', '.join(participants)}\n"
-                f"\nInsights:\n{insights_text}"
-            )
-
-            if feature:
-                content += f"\n\nProposed Feature: {feature.get('name', 'TBD')}"
-
-            CollectiveMemory.objects.create(
-                source_type='agent_conversation',
-                source_id=conversation_id,
-                content=content,
-                importance=0.7,
-                tags=['conversation', 'cross_agent', topic[:30]],
-            )
-
-            return True
-
-        except Exception as e:
-            # CollectiveMemory might not exist in all setups
-            logger.debug(f"Could not share to collective memory: {e}")
+        if not decision_summary or not decision_summary.get('insights'):
             return False
+
+        # CollectiveMemory model was never created — see Session 1083 audit note.
+        # The graceful-fallback try/except was masking the missing model
+        # for who-knows-how-long.
+        logger.debug(
+            "share_to_collective_memory: skipping — CollectiveMemory "
+            "model is not implemented. conversation_id=%s", conversation_id,
+        )
+        return False
 
 
 # Singleton instance
