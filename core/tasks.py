@@ -3879,10 +3879,11 @@ def spider_data_retention(self, trim_days=7, delete_days=30, batch_size=200):
     from core.models_unified_system import SpiderData
     from django.utils import timezone
     from django.db import connection
+    from datetime import timedelta  # Session 1083: was `timezone.timedelta` — doesn't exist
 
     now = timezone.now()
-    trim_cutoff = now - timezone.timedelta(days=trim_days)
-    delete_cutoff = now - timezone.timedelta(days=delete_days)
+    trim_cutoff = now - timedelta(days=trim_days)
+    delete_cutoff = now - timedelta(days=delete_days)
 
     stats = {'trimmed': 0, 'deleted': 0, 'bytes_before': 0, 'bytes_after': 0}
 

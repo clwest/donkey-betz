@@ -502,42 +502,65 @@ class NarrativeInjectionService:
         return incidents[:limit]
 
     def _get_decision_outcomes(self, limit: int = 2) -> List[Dict[str, Any]]:
-        """Get stories of decisions and their outcomes."""
+        """Get stories of decisions and their outcomes.
+
+        Session 1083 (Rigby audit): DecisionPoint schema drifted out from
+        under this method. Old fields `status`, `executed_at`, `title`,
+        `assigned_agent`, and `confidence` don't exist anymore. Real fields:
+          status='executed'   → was_successful=True
+          executed_at         → timestamp
+          created_at          → timestamp (single timestamp, no duration)
+          title               → decision_type (or derived label)
+          assigned_agent      → removed (no equivalent)
+          confidence          → confidence_score
+          time_to_decide      → duration_ms
+        Same pattern as _get_learning_moments and _get_dream_stories
+        in this same file — all three were silently debug-logging their
+        FieldErrors.
+        """
         incidents = []
 
         try:
             from core.models_unified_system import DecisionPoint
 
             decisions = DecisionPoint.objects.filter(
-                status='executed',
-                executed_at__gte=timezone.now() - timedelta(days=7)
-            ).order_by('-executed_at')[:limit * 2]
+                was_successful=True,
+                timestamp__gte=timezone.now() - timedelta(days=7)
+            ).order_by('-timestamp')[:limit * 2]
 
             for decision in decisions:
-                time_to_decide = None
-                if decision.executed_at and decision.created_at:
-                    time_to_decide = round((decision.executed_at - decision.created_at).total_seconds() / 60, 1)
-
-                decision_confidence = getattr(decision, 'confidence', None)
-                decision_agent = getattr(decision, 'assigned_agent', None) or 'System'
+                # duration_ms is the only timing signal — convert to minutes
+                time_to_decide = (
+                    round(decision.duration_ms / 60000, 1)
+                    if decision.duration_ms else None
+                )
+                label = f'{decision.decision_type}' if decision.decision_type else 'Decision'
+                confidence = decision.confidence_score
 
                 incidents.append({
                     'type': 'decision',
-                    'title': f'Decision: {decision.title[:40]}',
-                    'narrative': f"Faced with '{decision.title}', the system analyzed options and "
-                                f"executed in {time_to_decide or '?'} minutes. "
-                                f"Confidence: {decision_confidence:.0%}." if decision_confidence else
-                                f"Faced with '{decision.title}', the system made a call.",
-                    'timestamp': decision.executed_at,
-                    'agent': decision_agent,
+                    'title': f'Decision: {label[:40]}',
+                    'narrative': (
+                        f"Faced with a {label.lower()} call, the system "
+                        f"executed in {time_to_decide or '?'} minutes. "
+                        f"Confidence: {confidence:.0%}."
+                        if confidence else
+                        f"Faced with a {label.lower()} call, the system made a decision."
+                    ),
+                    'timestamp': decision.timestamp,
+                    'agent': 'System',
                     'metrics': {
                         'time_to_decide_minutes': time_to_decide,
-                        'confidence': decision_confidence,
+                        'confidence': confidence,
                     }
                 })
 
         except Exception as e:
-            logger.debug(f"Could not fetch decision outcomes: {e}")
+            logger.warning(
+                "content_voice_system._get_decision_outcomes failed "
+                "(%s: %s) — no decision narrative this cycle",
+                type(e).__name__, e,
+            )
 
         return incidents[:limit]
 
