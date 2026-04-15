@@ -737,14 +737,25 @@ def handle_stage_task_completion(
             if not stage.document and task_output:
                 try:
                     from core.models_unified_system import SelfBlog
-                    # Determine content type for stage name lookup
+                    # Determine content type for stage name lookup.
+                    # Was 'except Exception: pass' which silently defaulted
+                    # every stage to the generic 'document' content type on
+                    # any DB hiccup — initiatives with a custom content
+                    # type (e.g. 'blog', 'pitch_deck') silently fell back to
+                    # the wrong stage labels and the wrong number of stages.
                     content_type = 'document'
                     try:
                         deliv = Deliverable.objects.filter(initiative=initiative).first()
                         if deliv and deliv.metadata and deliv.metadata.get('content_type'):
                             content_type = deliv.metadata['content_type']
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning(
+                            "conversation_initiative_pipeline: failed to read "
+                            "deliverable content_type for initiative %s "
+                            "(%s: %s) — stage labels will use the generic "
+                            "'document' template",
+                            initiative.id, type(e).__name__, e,
+                        )
                     stage_config = CONTENT_TYPE_STAGES.get(content_type, CONTENT_TYPE_STAGES['document'])
                     stage_info = stage_config.get(stage_num, {})
                     stage_label = stage_info.get('name', f'Stage {stage_num}')

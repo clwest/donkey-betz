@@ -955,8 +955,18 @@ class UnifiedPAEntrypoint:
             profile = AssistantProfile.objects.filter(user=self.user).first()
             if profile and profile.workspace_id:
                 return str(profile.workspace_id)
-        except Exception:
-            pass
+        except Exception as e:
+            # Was a bare 'except Exception: pass' which silently dropped
+            # workspace scoping for every PA tool call when anything
+            # went wrong here (import error, DB hiccup). The PA would
+            # still answer but all tool calls would run unscoped,
+            # touching deliverables across workspaces.
+            logger.warning(
+                "unified_pa: failed to resolve workspace_id for user %s "
+                "(%s: %s) — PA tool calls will run without workspace scoping",
+                getattr(self.user, 'username', self.user),
+                type(e).__name__, e,
+            )
         return None
 
     # =========================================================================
@@ -3571,8 +3581,13 @@ class UnifiedPAEntrypoint:
                         )
                         if mem_result:
                             sections['strategic_memory'] = mem_result
-                    except ImportError:
-                        pass
+                    except ImportError as e:
+                        logger.warning(
+                            "unified_pa: strategic_memory_service unavailable "
+                            "(%s: %s) — PA response will not include strategic "
+                            "memory context this turn",
+                            type(e).__name__, e,
+                        )
 
                 elif service_key == 'proactive_intelligence' and self.proactive_intelligence_service:
                     pi_result = await asyncio.to_thread(
