@@ -692,7 +692,14 @@ def audit_contract_by_address(address: str) -> Dict[str, Any]:
         # Prepare source code (handle Solidity Standard JSON)
         source_code = contract_info.get('source_code', '')
         if source_code.startswith('{{'):
-            # Multiple files in JSON format
+            # Multiple files in JSON format.
+            # Session 1103c: was 'except Exception: pass  # Use as-is
+            # if parsing fails' which silently fed the raw double-
+            # brace-wrapped JSON into the smart-contract auditor on
+            # any json.loads failure. The auditor would then either
+            # fail later or audit garbage, with no trail explaining
+            # the parse failure. Now logs at warning so we know when
+            # an Etherscan response shape needs investigation.
             import json
             try:
                 sources = json.loads(source_code[1:-1])  # Remove extra braces
@@ -700,8 +707,14 @@ def audit_contract_by_address(address: str) -> Dict[str, Any]:
                     f"// File: {name}\n{src.get('content', '')}"
                     for name, src in sources.get('sources', {}).items()
                 )
-            except Exception:
-                pass  # Use as-is if parsing fails
+            except Exception as e:
+                logger.warning(
+                    "blockchain_event_listener: multi-file source JSON "
+                    "parse failed for contract %s (%s: %s) — feeding "
+                    "raw wrapped source to auditor, audit may be "
+                    "garbled",
+                    address, type(e).__name__, e,
+                )
 
         audit_result = auditor.execute(
             task=f"Audit this smart contract at address {address}:\n\n{source_code}",
