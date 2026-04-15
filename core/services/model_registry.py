@@ -183,6 +183,24 @@ class XGBoostWrapper(BaseModelWrapper):
     def _load_model(self):
         """Load XGBoost model."""
         if self._model is None:
+            # Session 1083 round 45: this path instantiates a fresh
+            # MLScoringEngine (bypassing get_ml_scoring_engine singleton)
+            # which triggers joblib.load + SHAP TreeExplainer init.
+            # SHAP's TreeExplainer uses OpenMP native threads that race
+            # with the singleton-path lightgbm load and hit the Abseil
+            # mutex deadlock. Even with round 42 class lock on
+            # _load_model the SHAP init still contends.
+            # Skip entirely on macOS workers — XGBoost is only used
+            # for sports predictions which we already skip via
+            # SKIP_NLP_MODELS, and LightGBMWrapper still works via
+            # the singleton path for opportunity scoring.
+            import os
+            if os.environ.get('SKIP_NLP_MODELS') == '1':
+                logger.debug(
+                    "[model_registry] SKIP_NLP_MODELS=1 — XGBoostWrapper "
+                    "skips direct MLScoringEngine instantiation"
+                )
+                return
             try:
                 from core.services.ml_scoring_engine import MLScoringEngine, MODEL_TYPE_XGBOOST
                 engine = MLScoringEngine(model_type=MODEL_TYPE_XGBOOST)
