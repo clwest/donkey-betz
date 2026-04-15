@@ -264,10 +264,10 @@ def rag_generate(request):
         )
 
         # Generate response using OpenAI with retrieved context
-        import openai
+        from core.services.openai_client_factory import get_openai_client
         from django.conf import settings
 
-        client = openai.OpenAI(api_key=settings.AI_PROVIDERS.get('OPENAI_API_KEY'))
+        client = get_openai_client(api_key=settings.AI_PROVIDERS.get('OPENAI_API_KEY'))
 
         system_prompt = """You are a knowledgeable assistant that provides accurate, helpful responses.
 When provided with context from documents, use that information to ground your responses.
@@ -601,10 +601,10 @@ def advanced_rag_query(request):
         context = rag_system.get_context_for_generation(top_results, max_context_length=4000)
 
         # Generate response using OpenAI
-        import openai
+        from core.services.openai_client_factory import get_openai_client
         from django.conf import settings
 
-        client = openai.OpenAI(api_key=settings.AI_PROVIDERS.get('OPENAI_API_KEY'))
+        client = get_openai_client(api_key=settings.AI_PROVIDERS.get('OPENAI_API_KEY'))
 
         format_instruction = "Provide a comprehensive, well-structured response with sections." if response_format == 'comprehensive' else "Provide a concise summary."
 

@@ -20,7 +20,7 @@ import uuid
 import json
 import zipfile
 import base64
-from openai import OpenAI
+from core.services.openai_client_factory import get_openai_client
 from io import BytesIO
 from datetime import datetime
 
@@ -3994,7 +3994,7 @@ def transcribe_audio(request):
         logger.info(f"🎤 Transcribing audio for {request.user.username} ({audio_file.size} bytes)")
 
         # Call OpenAI Whisper API
-        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        client = get_openai_client(api_key=os.environ.get("OPENAI_API_KEY"))
 
         # Session 81: Convert Django InMemoryUploadedFile to BytesIO for OpenAI SDK
         # OpenAI SDK doesn't accept Django's file object directly

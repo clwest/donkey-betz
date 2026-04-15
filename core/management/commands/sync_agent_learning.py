@@ -35,10 +35,10 @@ def synthesize_knowledge_with_llm(spider_name: str, data_type: str, data_list: l
     - key_insights: List of actionable insights
     - key_points: List of important points
     """
-    from openai import OpenAI
+    from core.services.openai_client_factory import get_openai_client
 
     try:
-        client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+        client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
 
         # Extract content from spider data for the LLM
         # SpiderData has raw_data (JSONField) with items containing title, summary, insights

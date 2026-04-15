@@ -294,7 +294,7 @@ def agent_chat(request):
         conversation_history: Optional list of previous messages
     """
     import time
-    from openai import OpenAI
+    from core.services.openai_client_factory import get_openai_client
     import os
 
     agent_name = request.data.get('agent_name')
@@ -347,7 +347,7 @@ Current conversation context: You are chatting directly with a user through the 
 
     try:
         start_time = time.time()
-        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))
 
         response = client.chat.completions.create(
             model="gpt-5-mini",
@@ -391,7 +391,7 @@ def agent_invoke(request):
         task: Task description for the agent
     """
     import time
-    from openai import OpenAI
+    from core.services.openai_client_factory import get_openai_client
     import os
 
     agent_name = request.data.get('agent_name')
@@ -434,7 +434,7 @@ Execute the following task with precision and detail:
 
     try:
         start_time = time.time()
-        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))
 
         response = client.chat.completions.create(
             model="gpt-5-mini",

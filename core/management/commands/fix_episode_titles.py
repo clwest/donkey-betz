@@ -8,7 +8,7 @@ by analyzing their script content with GPT.
 import os
 import time
 from django.core.management.base import BaseCommand
-import openai
+from core.services.openai_client_factory import get_openai_client
 
 
 class Command(BaseCommand):
@@ -75,7 +75,7 @@ class Command(BaseCommand):
         self.stdout.write(f"Processing {len(episodes_to_fix)} episodes...")
 
         # Initialize OpenAI client
-        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+        client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
 
         fixed_count = 0
         error_count = 0

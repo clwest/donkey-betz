@@ -948,7 +948,7 @@ def await_agent_response(agent, trigger_content: str, project_name: str) -> str:
     Uses agent's knowledge and project context.
     """
     from core.models import AgentKnowledgeSource, AgentMemory
-    from openai import OpenAI
+    from core.services.openai_client_factory import get_openai_client
     import os
 
     # Get agent's knowledge
@@ -990,7 +990,7 @@ Use your knowledge when relevant. Be collaborative."""
 Respond helpfully about this project."""
 
     try:
-        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))
 
         response = client.responses.create(
             model="gpt-5-mini",
