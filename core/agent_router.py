@@ -2334,6 +2334,44 @@ class AgentRouter:
                 _create_kwargs.pop('last_heartbeat_at', None)
                 execution = AgentExecution.objects.create(**_create_kwargs)
 
+            # Session 1083 round 40: round-36 set last_heartbeat_at at
+            # create but never updated it — after 60 min the cleanup
+            # watchdog still killed long-running agents. Spawn a daemon
+            # thread that touches the heartbeat every 2 min until the
+            # execution leaves 'in_progress'. Mirrors the thread in
+            # tasks_agents._impl_execute_agent_task but self-terminates
+            # so the caller doesn't need to manage thread lifetime.
+            try:
+                import threading as _hb_threading
+                import time as _hb_time
+                _execution_id = execution.id
+
+                def _router_heartbeat_loop():
+                    from django.db import close_old_connections as _close
+                    while True:
+                        _hb_time.sleep(120)
+                        try:
+                            _close()
+                            _cur_status = AgentExecution.objects.filter(
+                                id=_execution_id
+                            ).values_list('status', flat=True).first()
+                            if _cur_status != 'in_progress':
+                                return
+                            AgentExecution.objects.filter(
+                                id=_execution_id
+                            ).update(last_heartbeat_at=timezone.now())
+                        except Exception:
+                            return
+
+                _hb_thread = _hb_threading.Thread(
+                    target=_router_heartbeat_loop,
+                    daemon=True,
+                    name=f"router_heartbeat_{agent_name}",
+                )
+                _hb_thread.start()
+            except Exception as e:
+                logger.debug(f"Failed to start router heartbeat thread: {e}")
+
             return execution
         except Exception as e:
             logger.warning(f"Failed to create execution record: {e}")
