@@ -1405,3 +1405,10 @@ def unified_gallery(request):
             'error': str(e)
         }, status=500)
 
+
+
+# Session 1083 (Rigby audit): 4 undefined names resolved at EOF to
+# sidestep the circular-init cycle between views_image_* siblings.
+from core.views_image_generate import generate_with_replicate  # noqa: E402
+from core.image_views.session import save_to_history  # noqa: E402
+from content.models import ImageHistory  # noqa: E402

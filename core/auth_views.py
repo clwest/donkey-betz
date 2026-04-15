@@ -2,6 +2,8 @@
 Authentication views for the Unified Donkey Betz Platform.
 """
 
+import logging
+
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -13,6 +15,10 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import UserProfile, UserStatistics
 
 User = get_user_model()
+# Session 1083 (Rigby audit): was missing a module-level `logger` —
+# one call site at line 87 was referencing it outside any function
+# that defined it locally, NameError'ing on that code path.
+logger = logging.getLogger(__name__)
 
 
 @api_view(['POST', 'OPTIONS'])

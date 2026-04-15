@@ -197,6 +197,13 @@ class ConsciousnessConsumer(AsyncWebsocketConsumer):
         # Use cached values or fast defaults to prevent WebSocket 500 errors
         cached_level = cache.get('consciousness:current_level', 72.75)
         active_spiders = cache.get('consciousness:active_spiders', 40)
+        # Session 1083 (Rigby audit): `understanding` was referenced on
+        # lines 241+ without ever being initialized in this method. Every
+        # WebSocket "instant consciousness" push would NameError out of
+        # the indicator-calculation try block and fall through to the
+        # fallback indicators. Cheap default — we don't fetch here
+        # because the docstring says "without any heavy operations".
+        understanding = cache.get('consciousness_understanding')
 
         # Try to get cached proposals from Redis
         try:
