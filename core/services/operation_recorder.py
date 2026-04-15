@@ -56,26 +56,27 @@ def record_op(
     """
     # Route sync/async appropriately so async callers (PA task loop)
     # don't trip SynchronousOnlyOperation.
+    import asyncio
     try:
-        import asyncio
-        asyncio.get_running_loop()
-        in_async = True
+        loop = asyncio.get_running_loop()
     except RuntimeError:
-        in_async = False
+        loop = None
 
-    if in_async:
-        # Kick the sync body onto a worker thread without blocking.
-        # We can't await from a sync-signature function, so we use
-        # asgiref.sync_to_async and execute via async_to_sync — which
-        # schedules the coroutine on a helper thread and returns.
+    args = (
+        workspace_id, op_type, title, description, actor_type, actor_id,
+        file_path, success, error_message, execution_time_ms, metadata,
+        entity_type, entity_id, correlation_id, content,
+    )
+
+    if loop is not None:
+        # We're inside an active event loop. Can't use async_to_sync
+        # here (it raises 'cannot use AsyncToSync in the same thread as
+        # an async event loop') and we can't await from a sync-signature
+        # function. Use loop.run_in_executor which schedules the sync
+        # body on the default thread-pool executor and returns a Future
+        # we can safely discard — true fire-and-forget.
         try:
-            from asgiref.sync import sync_to_async, async_to_sync
-            async_to_sync(sync_to_async(_record_op_sync, thread_sensitive=False))(
-                workspace_id, op_type, title, description, actor_type,
-                actor_id, file_path, success, error_message,
-                execution_time_ms, metadata, entity_type, entity_id,
-                correlation_id, content,
-            )
+            loop.run_in_executor(None, _record_op_sync, *args)
         except Exception as e:
             logger.warning(
                 "[record_op] async dispatch failed for %s %s: %s",
@@ -83,11 +84,7 @@ def record_op(
             )
         return
 
-    _record_op_sync(
-        workspace_id, op_type, title, description, actor_type, actor_id,
-        file_path, success, error_message, execution_time_ms, metadata,
-        entity_type, entity_id, correlation_id, content,
-    )
+    _record_op_sync(*args)
 
 
 def _record_op_sync(
