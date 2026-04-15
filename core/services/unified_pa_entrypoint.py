@@ -2078,9 +2078,17 @@ class UnifiedPAEntrypoint:
                 timeout=5.0,
             )
             if profile:
+                # Session 1103c: was accessing profile.experience which
+                # does not exist on ExtendedUserProfile — the field is
+                # named years_experience. AttributeError was being
+                # caught by the broad except below and logged as
+                # "Failed to load profile: 'ExtendedUserProfile' object
+                # has no attribute 'experience'" on *every* PA turn,
+                # meaning PA never actually loaded the user's profile
+                # into context. Fixed to use the real field name.
                 context['profile'] = {
                     'skills': profile.skills or [],  # type: ignore[attr-defined]
-                    'experience': profile.experience,  # type: ignore[attr-defined]
+                    'years_experience': profile.years_experience,  # type: ignore[attr-defined]
                     'goals': profile.goals,  # type: ignore[attr-defined]
                     'work_preference': profile.work_preference,  # type: ignore[attr-defined]
                     'desired_income': profile.desired_income,  # type: ignore[attr-defined]
