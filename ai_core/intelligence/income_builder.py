@@ -21,15 +21,23 @@ from datetime import datetime
 from enum import Enum
 import logging
 
-# OpenAI Integration
+# OpenAI Integration (lazy — Session 1086 Tier 4 PR 1, factory-managed timeouts)
 try:
-    from openai import OpenAI
-    _openai_key = os.environ.get('OPENAI_API_KEY', '')
-    openai_client = OpenAI(api_key=_openai_key) if _openai_key else None
-    OPENAI_AVAILABLE = bool(_openai_key)
+    from core.services.openai_client_factory import get_openai_client
+    OPENAI_AVAILABLE = bool(os.environ.get('OPENAI_API_KEY'))
 except ImportError:
-    openai_client = None
+    get_openai_client = None
     OPENAI_AVAILABLE = False
+
+
+def _get_openai_client():
+    """Lazy OpenAI client getter — avoids import-time client construction."""
+    if get_openai_client and os.environ.get('OPENAI_API_KEY'):
+        try:
+            return get_openai_client()
+        except Exception:
+            return None
+    return None
 
 # Import real dependencies - INTEGRATION RESTORED (Session 727 consolidated)
 try:
@@ -1717,7 +1725,8 @@ Looking forward to discussing your project in detail.
 
     async def generate_ai_content(self, prompt: str, context: Dict[str, Any]) -> str:
         """Generate AI content using OpenAI or fallback to template"""
-        if OPENAI_AVAILABLE and openai_client:
+        openai_client = _get_openai_client() if OPENAI_AVAILABLE else None
+        if openai_client:
             try:
                 system_prompt = """You are an expert business strategist and income generation specialist.
                 Create detailed, actionable, and personalized content for income opportunities.
