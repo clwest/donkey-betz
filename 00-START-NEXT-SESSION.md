@@ -1,13 +1,34 @@
 # Next Session — Start Here
 
-**Date:** April 12, 2026
-**Previous Session:** Operator Edge Landing Page + Newsletter Validation + Patent Strategy
-**PA Conversation:** `pa-223d084d4b9f` (or create fresh via `session_tool action=create_fresh`)
-**Status:** 218 Agents (83 in AGENT_MAP) | 79 Spiders (RUNNING) | 25 Advisors | 7 PRs merged recent (#1861-#1868)
+**Date:** April 14, 2026
+**Previous Session:** Claude–Rigby App Jam #1 — Focus Flow (Pomodoro + task manager) shipped end-to-end from a single prompt; Rigby tool verification + outreach research list
+**PA Conversation:** Create a fresh one for the next app jam via `session_tool action=create_fresh`
+**Status:** 218 Agents (83 in AGENT_MAP) | 79 Spiders (RUNNING) | 25 Advisors | 1 new public repo shipped (focus-flow)
 
 ---
 
-## What Was Done (April 9-12, 2026) — 2 PRs Merged This Session
+## What Was Done (April 13–14, 2026) — App Jam #1
+
+### Focus Flow — one-prompt-to-public-repo demo (new public repo)
+- **Repo:** https://github.com/clwest/focus-flow (public, default branch `main`, commit `5f07778`)
+- **Stack:** FastAPI + SQLModel + SQLite (backend) / Vite + React + Tailwind (frontend) — matches `docs/topics/react-fastapi-template.md`
+- **Flow:** Chris asked Rigby for an app idea → Rigby scoped Focus Flow (Pomodoro + task manager) → Claude Code scaffolded backend + frontend + README in ~90 minutes → Rigby created deliverables, outreach list, recording script → single public repo + 60s demo video pending recording
+- **Backend:** 11 endpoints from Rigby's spec (health, me, tasks CRUD, start/stop session, sessions list, stats). `X-Demo-User` header auth. Seeds demo user + 3 tasks on startup. Smoke tested end-to-end.
+- **Frontend:** Single-page dashboard (task list + detail/timer/history), 3 presets (25m/50m/1m-demo), client-side countdown, live stats header, dark theme. Prod build 148 KB JS / 48 KB gzipped.
+- **Workspace:** Claude–Rigby App Jam - Workspace 2 (`4861b057-71b6-4eb7-aac1-72a28e91ef82`)
+- **Deliverables shipped (in workspace):**
+  - `5c06002f-ecb7-4804-9baa-9b67f773d1ba` — Focus Flow — App Jam Starter (README + acceptance checklist + pre-recording checklist + repo URL)
+  - `0a4fcd45-f153-4da9-9782-452825d4a6c9` — Focus Flow — 60s Recording Script (Chris POV: "I asked Rigby for an app idea, she and Claude Code did everything else")
+  - `d35a22a3-47ce-43c7-bdf0-1a205da49edd` — Focus Flow — Video Outreach List (8 verified prospects)
+
+### Rigby tool verification + outreach research
+- **Why:** Chris suspected Rigby's tools were hung / broken during prospect research; real issue turned out to be Rigby's placeholder-pattern behavior (from memory `feedback_rigby_deliverable_content.md`), not tooling.
+- **Verified working:** `web_search` (Serper API, ~900 ms avg), `deliverable_tool` (`list`/`detail`/`create`/`update`/`append`), `intelligence_tool`. No hangs, no broken endpoints.
+- **Root cause of earlier "detail fetch returned list":** GPT-5.2 sent `action='list'` (default) instead of `action='detail'`. Code in `core/services/td_handlers_agents.py:1358` handles `detail` correctly. Fix = tell Rigby to pass `action='detail', id=<uuid>, full=true` with nothing else set (the smart-inference on `td_handlers_agents.py:1173` flips `list → create` when `title+content` present).
+- **Unblock pattern that worked:** Claude Code seeded first 3 prospects using its own `WebSearch`, then handed them to Rigby as a table template with instructions to do the remaining 5 one row at a time, with `web_search` per row, and to mark unverifiable buckets as `NO VERIFIED CANDIDATE` rather than invent. Matches `feedback_rigby_deliverable_content.md` rule.
+- **Outreach list outcome:** 8-row table with 7 verified prospects (Peter Steinberger, Theo Browne, swyx, Ben Tossell, Pieter Levels, AgentOps, Fireship) + 1 intentional `NO VERIFIED CANDIDATE` for the Show HN / dev-rel bucket after 3 failed searches. Repo URL embedded 9+ times in deliverable. Final length 3,964 chars.
+
+### What Was Done (April 9–12, 2026) — 2 PRs Merged Prior Session
 
 ### PR #1867: Operator Edge Landing Page + Subscriber API
 - `NewsletterSubscriber` model with email, name, source, UTM tracking, referral codes
@@ -42,7 +63,31 @@
 
 ---
 
-## PRIORITY 1: Operator Edge Launch (Continued)
+## PRIORITY 1: Claude–Rigby App Jam #2 (NEXT SESSION GOAL)
+
+Fresh session kicks off with: **Chris asks Rigby for a new app idea, Rigby + Claude Code build it end-to-end, ship public repo, record a second demo video, fire the Focus Flow outreach list at the same time.**
+
+Pattern to replicate from App Jam #1:
+1. Fresh PA conversation, ask Rigby for a scoped MVP (problem statement, acceptance criteria, 10–12 endpoints max, demo-able in 60s).
+2. Claude Code scaffolds a new sibling repo under `~/development/<app-name>/` using React+Vite+FastAPI template (NOT Next.js — see `feedback_stack_preference.md`).
+3. One public GitHub repo with README + acceptance checklist + run instructions.
+4. Rigby creates 3 deliverables in a fresh App Jam workspace: starter+checklist, 60s recording script (Chris POV), outreach list (8 prospects, same format as `d35a22a3`).
+5. Record + publish, then fire DMs.
+
+**Do NOT re-pick Pomodoro/task-manager territory** — Focus Flow already occupies that slot.
+
+**Guardrails for Rigby (from App Jam #1 lessons):**
+- She defaults to "report progress, wait for guidance" when research is ambiguous. Unblock by seeding 2–3 rows yourself and handing her the pattern.
+- Smart-inference on `deliverable_tool` flips `action=list → create` whenever `title+content` are both passed. For detail reads, send ONLY `action='detail', id=<uuid>, full=true`.
+- For research, tell her to call `web_search` **per row**, not once for the whole list. Require `NO VERIFIED CANDIDATE` when a bucket comes up empty instead of fabricating.
+
+## PRIORITY 2: Focus Flow Follow-through
+
+- Record the 60s demo (script is `0a4fcd45` in workspace `4861b057`).
+- Fire DMs from outreach list (`d35a22a3`, 8 prospects, 7 verified).
+- Optional polish: `/api/seed/preview` route, deploy preview (Vercel/Render), PREP.md committed to repo root.
+
+## PRIORITY 3: Operator Edge Launch (Continued)
 
 ### Done
 - Pipeline built and tested end-to-end
