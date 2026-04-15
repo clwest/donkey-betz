@@ -295,13 +295,24 @@ class MissionControlExecutor:
                 message="Content queued for publishing",
                 data={'content_id': content_id, 'queued_by': user.username}
             )
-        except ImportError:
-            # Task doesn't exist yet - mark as success anyway
+        except ImportError as e:
+            # Was returning fake SUCCESS with a 'task pending
+            # implementation' message so callers thought publish had
+            # been queued when nothing was actually dispatched. Fail
+            # loud so the UI can show the real state.
+            logger.error(
+                "mission_control: publish_content_task import failed for "
+                "content_id=%s (%s: %s)",
+                content_id, type(e).__name__, e,
+            )
             return ExecutionResult(
                 action_id='publish',
-                status=ActionResult.SUCCESS,
-                message="Content marked for publishing (task pending implementation)",
-                data={'content_id': content_id}
+                status=ActionResult.FAILED,
+                message=(
+                    f"Could not queue content {content_id} for publishing: "
+                    f"publish_content_task unavailable ({type(e).__name__})"
+                ),
+                data={'content_id': content_id, 'error_type': type(e).__name__},
             )
 
     def _execute_schedule(self, attention_item, user, feedback, extra_data) -> ExecutionResult:
@@ -462,13 +473,27 @@ class MissionControlExecutor:
                 message=f"Deep dive research queued for: {topic[:50]}",
                 data={'task_id': str(task.id), 'topic': topic}
             )
-        except ImportError:
-            # Queue the request via a different mechanism
+        except ImportError as e:
+            # Was returning fake SUCCESS with "Research request noted"
+            # after silently dropping the task dispatch. Now fail loud
+            # so Decision Command can retry via a different path.
+            logger.error(
+                "mission_control: queue_research_task import failed for "
+                "topic=%r (%s: %s)",
+                topic[:80], type(e).__name__, e,
+            )
             return ExecutionResult(
                 action_id='deep_dive',
-                status=ActionResult.SUCCESS,
-                message=f"Research request noted: {topic[:50]}",
-                data={'topic': topic, 'depth': 'deep'}
+                status=ActionResult.FAILED,
+                message=(
+                    f"Could not queue deep-dive research for {topic[:50]}: "
+                    f"queue_research_task unavailable ({type(e).__name__})"
+                ),
+                data={
+                    'topic': topic,
+                    'depth': 'deep',
+                    'error_type': type(e).__name__,
+                },
             )
 
     def _execute_research_more(self, attention_item, user, feedback, extra_data) -> ExecutionResult:
@@ -525,11 +550,22 @@ class MissionControlExecutor:
                 message="Added to watch list",
                 data={'watching': True}
             )
-        except Exception:
+        except Exception as e:
+            # Was bare 'except Exception' returning fake SUCCESS so
+            # the UI claimed the user was "watching" an opportunity
+            # when nothing had been persisted. Surface the real error.
+            logger.error(
+                "mission_control: _execute_watch failed (%s: %s)",
+                type(e).__name__, e,
+            )
             return ExecutionResult(
                 action_id='watch',
-                status=ActionResult.SUCCESS,
-                message="Watching this opportunity"
+                status=ActionResult.FAILED,
+                message=(
+                    f"Could not add opportunity to watch list "
+                    f"({type(e).__name__}: {e})"
+                ),
+                data={'error_type': type(e).__name__},
             )
 
     def _execute_paper_trade(self, attention_item, user, feedback, extra_data) -> ExecutionResult:
