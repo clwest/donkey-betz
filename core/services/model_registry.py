@@ -1110,9 +1110,32 @@ class ModelRegistry:
 
         Uses lazy loading - models are instantiated on first request.
         Thread-safe per round 41.
+
+        Session 1083 round 47: nuclear option — skip the entire
+        wrapper cascade on SKIP_NLP_MODELS=1. Rounds 41/43/45/46
+        individually guarded 4 MLEngine callers, the XGBoost direct
+        path, and SHAP TreeExplainer — but the router iterates ~17
+        wrappers per lookup, and IsolationForestWrapper + KMeansWrapper
+        both import core.services.ml_algorithms (FraudDetector +
+        CustomerSegmentation) which pulls sklearn + numpy native libs
+        whose OpenMP thread pools race with the lightgbm load and
+        hit [mutex.cc : 452] RAW: Lock blocking. Rather than guard
+        every wrapper individually, just short-circuit here so the
+        router's _get_models_for_agent() gets None for every candidate
+        and falls through to rule-based scoring. LightGBM opportunity
+        scoring is still reachable via get_ml_scoring_engine() directly
+        (which bypasses ModelRegistry.get_model).
         """
         if model_name not in self.MODEL_CLASSES:
             logger.warning(f"Unknown model: {model_name}")
+            return None
+
+        import os
+        if os.environ.get('SKIP_NLP_MODELS') == '1':
+            logger.debug(
+                f"[model_registry] SKIP_NLP_MODELS=1 — ModelRegistry.get_model({model_name!r}) "
+                f"returns None to avoid macOS Abseil mutex deadlock from wrapper cascade"
+            )
             return None
 
         if model_name not in self._instances:
