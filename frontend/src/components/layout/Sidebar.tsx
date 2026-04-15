@@ -1,18 +1,17 @@
 // Session 834: Cleaned up sidebar - consolidated items moved to Workspace tabs
-import { useEffect, useState } from 'react'
+// Session 1083: Option C layout — user menu popover + Reference submenu
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/cn'
 import {
   LayoutDashboard,
   MessageSquare,
-  Gavel,
   Bot,
   Palette,
   Settings,
   LogOut,
   User,
   TrendingUp,
-  Scale,
   DollarSign,
   Shield,
   ShieldCheck,
@@ -23,7 +22,6 @@ import {
   Book,
   PanelLeftClose,
   PanelLeft,
-  Home,
   Command,
   Film,
   Landmark,
@@ -31,6 +29,9 @@ import {
   HelpCircle,
   Play,
   Package,
+  ChevronDown,
+  ChevronRight,
+  BookOpen,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { usePAStore } from '@/stores/paStore'
@@ -41,25 +42,19 @@ import {
   useCriticalGatesCount,
 } from '@/stores/unifiedStore'
 
-// Session 834: Streamlined navigation
-// Consolidated items are now in Workspace tabs:
-// - Infrastructure tab: Body Health, Integration, LLM Routing, Analytics, Billing
-// - Orchestration tab: Agent Monitor, Hive Mind, Autonomous
-// - Consciousness tab: Memory Palace, Orchestra, Mood, Evolution, Relationships, Capsules, Time Travel
-// - Intelligence tab: Reasoning, Collective
-// - DataSources tab: Spiders, Spider Feed, Learning
-// - Content Studio tab: Podcast, Channels, Blogs, Distribution
-// - Command tab: Conversations, Dreams, Advisors
-// Session 931: Unified Command Center replaces Home, AI Assistant, Human
-// Session 857: Workspace is the modular content hub
+// Session 1083: Sidebar redesign (Option C, Rigby verdict)
+// - Profile / Settings / Admin moved into the avatar popover at the bottom
+// - Reference items (Documents, Docs Index, How it Works, Mythology Lab)
+//   collapsed into a single expandable "Reference" section
+// - Target: ~14 primary rail items
+//
+// Historical: consolidated workspace items live in Workspace tabs:
+//   Infrastructure, Orchestration, Consciousness, Intelligence,
+//   DataSources, Content Studio, Command. See Session 834 notes.
 const navItems = [
-  // Session 931: Command Center - Unified AI interface + controls
+  // Hub
   { path: '/', label: 'Command Center', icon: Command },
-
-  // In-app messaging
   { path: '/inbox', label: 'Messages', icon: MessageSquare },
-
-  // Unified Workspace (merged Platform + Workspace)
   { path: '/workspace', label: 'Workspace', icon: FolderCog },
 
   // Studios
@@ -68,32 +63,25 @@ const navItems = [
   { path: '/content', label: 'Content', icon: LayoutGrid },
   { path: '/media', label: 'Media', icon: Package },
 
-  // Session 1076: Executor runs
+  // Agents & intelligence
   { path: '/executor', label: 'Executor', icon: Play },
-
-  // Core Navigation
   { path: '/agents', label: 'Agents', icon: Bot },
   { path: '/advisors', label: 'Advisors', icon: ShieldCheck },
   { path: '/stocks', label: 'Stock Intelligence', icon: TrendingUp },
   { path: '/government', label: 'Government', icon: Landmark },
 
-  // Work surfaces (Session 1083: exposed from hidden per Rigby audit)
+  // Work surfaces
   { path: '/deliverables', label: 'Deliverables', icon: FileText },
   { path: '/analytics', label: 'Analytics', icon: LayoutDashboard },
-
-  // Domain Features
   { path: '/betting', label: 'Betting', icon: DollarSign },
+]
 
-  // Documents & Reference
+// Reference submenu — expandable group in the sidebar
+const referenceItems = [
   { path: '/documents', label: 'Documents', icon: FileUp },
   { path: '/docs-index', label: 'Docs Index', icon: Book },
   { path: '/how-it-works', label: 'How it Works', icon: HelpCircle },
   { path: '/mythology-lab', label: 'Mythology Lab', icon: Beaker },
-
-  // Admin & Settings
-  { path: '/profile', label: 'Profile', icon: User },
-  { path: '/admin', label: 'Admin', icon: Shield },
-  { path: '/settings', label: 'Settings', icon: Settings },
 ]
 
 export default function Sidebar() {
@@ -106,6 +94,30 @@ export default function Sidebar() {
     const saved = localStorage.getItem('sidebar-collapsed')
     return saved === 'true'
   })
+
+  // Reference submenu expand/collapse (persisted)
+  const [referenceOpen, setReferenceOpen] = useState(() => {
+    return localStorage.getItem('sidebar-reference-open') === 'true'
+  })
+  const toggleReference = () => {
+    const newState = !referenceOpen
+    setReferenceOpen(newState)
+    localStorage.setItem('sidebar-reference-open', String(newState))
+  }
+
+  // User menu popover
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const userMenuRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (!userMenuOpen) return
+    const onClick = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [userMenuOpen])
 
   // Toggle collapse and persist
   const toggleCollapse = () => {
@@ -191,9 +203,7 @@ export default function Sidebar() {
 
       {/* Navigation - scrollable area */}
       <nav className={cn('flex-1 overflow-y-auto space-y-1', isCollapsed ? 'p-2' : 'p-4')}>
-        {navItems
-          .filter(({ path }) => !(path === '/admin' && user?.platform_role === 'reviewer'))
-          .map(({ path, label, icon: Icon }) => {
+        {navItems.map(({ path, label, icon: Icon }) => {
           const badge = getBadgeCount(path)
           return (
             <NavLink
@@ -223,33 +233,133 @@ export default function Sidebar() {
             </NavLink>
           )
         })}
+
+        {/* Reference group — expandable */}
+        {isCollapsed ? (
+          referenceItems.map(({ path, label, icon: Icon }) => (
+            <NavLink
+              key={path}
+              to={path}
+              className={({ isActive }) =>
+                cn('nav-link justify-center px-2', isActive && 'active')
+              }
+              title={label}
+            >
+              <Icon size={20} />
+            </NavLink>
+          ))
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={toggleReference}
+              className="nav-link w-full"
+              aria-expanded={referenceOpen}
+            >
+              <BookOpen size={20} />
+              <span className="flex-1 text-left">Reference</span>
+              {referenceOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            </button>
+            {referenceOpen && (
+              <div className="ml-4 space-y-1 border-l border-dark-border pl-2">
+                {referenceItems.map(({ path, label, icon: Icon }) => (
+                  <NavLink
+                    key={path}
+                    to={path}
+                    className={({ isActive }) => cn('nav-link text-sm', isActive && 'active')}
+                  >
+                    <Icon size={16} />
+                    <span className="flex-1">{label}</span>
+                  </NavLink>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </nav>
 
-      {/* User Section */}
-      <div className={cn('border-t border-dark-border', isCollapsed ? 'p-2' : 'p-4')}>
-        <div className={cn('flex items-center', isCollapsed ? 'justify-center' : 'justify-between')}>
-          <button
-            onClick={() => navigate('/profile')}
-            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-            title={isCollapsed ? user?.username || 'Profile' : 'View Profile'}
-          >
-            <div className="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center text-sm font-medium flex-shrink-0">
-              {user?.username?.charAt(0).toUpperCase() || 'U'}
-            </div>
-            {!isCollapsed && (
-              <span className="text-sm text-gray-300 truncate">{user?.username}</span>
-            )}
-          </button>
-          {!isCollapsed && (
-            <button
-              onClick={() => { syncUser(null); logout() }}
-              className="text-gray-400 hover:text-white transition-colors"
-              title="Logout"
-            >
-              <LogOut size={18} />
-            </button>
+      {/* User Section — popover menu (Session 1083) */}
+      <div
+        ref={userMenuRef}
+        className={cn('relative border-t border-dark-border', isCollapsed ? 'p-2' : 'p-4')}
+      >
+        <button
+          type="button"
+          onClick={() => setUserMenuOpen((v) => !v)}
+          className={cn(
+            'flex items-center gap-3 w-full hover:opacity-80 transition-opacity',
+            isCollapsed && 'justify-center'
           )}
-        </div>
+          title={user?.username || 'Account'}
+          aria-haspopup="menu"
+          aria-expanded={userMenuOpen}
+        >
+          <div className="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center text-sm font-medium flex-shrink-0">
+            {user?.username?.charAt(0).toUpperCase() || 'U'}
+          </div>
+          {!isCollapsed && (
+            <>
+              <span className="text-sm text-gray-300 truncate flex-1 text-left">
+                {user?.username}
+              </span>
+              <ChevronRight
+                size={16}
+                className={cn(
+                  'text-gray-500 transition-transform',
+                  userMenuOpen && 'rotate-90'
+                )}
+              />
+            </>
+          )}
+        </button>
+
+        {userMenuOpen && (
+          <div
+            role="menu"
+            className={cn(
+              'absolute z-50 rounded-lg border border-dark-border bg-dark-card shadow-xl py-1 min-w-[180px]',
+              isCollapsed
+                ? 'bottom-2 left-[calc(100%+8px)]'
+                : 'bottom-[calc(100%-4px)] left-4 right-4'
+            )}
+          >
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => { setUserMenuOpen(false); navigate('/profile') }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-dark-hover"
+            >
+              <User size={16} /> Profile
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => { setUserMenuOpen(false); navigate('/settings') }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-dark-hover"
+            >
+              <Settings size={16} /> Settings
+            </button>
+            {user?.platform_role !== 'reviewer' && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => { setUserMenuOpen(false); navigate('/admin') }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-dark-hover"
+              >
+                <Shield size={16} /> Admin
+              </button>
+            )}
+            <div className="my-1 border-t border-dark-border" />
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => { setUserMenuOpen(false); syncUser(null); logout() }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-dark-hover"
+            >
+              <LogOut size={16} /> Logout
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   )
