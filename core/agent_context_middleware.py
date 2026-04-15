@@ -10,6 +10,8 @@ from typing import Dict, Any, Optional
 from functools import wraps
 from django.contrib.auth import get_user_model
 
+from django.db import models  # Session 1083
+
 logger = logging.getLogger(__name__)
 
 User = get_user_model()

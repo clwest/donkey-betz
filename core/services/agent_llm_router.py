@@ -18,6 +18,8 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
+from django.db import models  # Session 1083
+
 from core.services.llm_provider_registry import (
     get_llm_provider_registry,
     LLMRequest,

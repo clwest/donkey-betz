@@ -1,7 +1,4 @@
 """
-import logging
-logger = logging.getLogger(__name__)
-
 Management command: run UI smoke tests with Playwright (dev/CI only).
 
 Requires ``playwright`` to be installed (``pip install playwright && playwright install chromium``).
@@ -13,9 +10,14 @@ Usage:
 """
 
 import json
+import logging
 import os
 
 from django.core.management.base import BaseCommand
+
+# Session 1083 (Rigby audit): module-level logger; earlier injection
+# accidentally placed it inside the docstring.
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):

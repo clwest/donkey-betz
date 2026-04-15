@@ -1,9 +1,8 @@
 """
-import logging
-logger = logging.getLogger(__name__)
-
 Enhanced authentication views with full registration, email verification, and remember me functionality.
 """
+
+import logging
 
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
@@ -18,6 +17,10 @@ from django.utils import timezone
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.db import transaction
+
+# Session 1083 (Rigby audit): module-level logger — earlier rounds
+# accidentally injected this inside the docstring, so it was a no-op.
+logger = logging.getLogger(__name__)
 import secrets
 from datetime import timedelta
 import re

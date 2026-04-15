@@ -21,6 +21,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.db.models import Count
 
+import json  # Session 1083
+
 from core.models_autonomous_situations import (
     AutonomousSituationSession,
     ViralContentPrediction,

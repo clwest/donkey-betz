@@ -19,6 +19,8 @@ from django.core.paginator import Paginator
 
 import json
 
+from django.db.models import Count  # Session 1083
+
 logger = logging.getLogger(__name__)
 
 

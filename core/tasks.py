@@ -20,6 +20,8 @@ import os
 # Session 850: Smart truncation for cleaner synthesis display
 from core.api_helpers import smart_truncate
 
+from django.db import models  # Session 1083
+
 logger = logging.getLogger(__name__)
 
 

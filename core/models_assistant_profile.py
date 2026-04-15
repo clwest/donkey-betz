@@ -1,7 +1,4 @@
 """
-import logging
-logger = logging.getLogger(__name__)
-
 AssistantProfile — per-user PA configuration with role-based tool access.
 
 Each user gets an AssistantProfile that controls:
@@ -16,8 +13,14 @@ Roles:
 - customer: TBD (future)
 """
 
+import logging
+
 from django.conf import settings
 from django.db import models
+
+# Session 1083 (Rigby audit): module-level logger — earlier rounds
+# accidentally injected this inside the docstring.
+logger = logging.getLogger(__name__)
 from django.contrib.postgres.fields import ArrayField
 
 from core.models.base import UnifiedBaseModel

@@ -22,6 +22,8 @@ from django.utils import timezone
 from django.core.paginator import Paginator
 import json
 
+from django.db.models import Sum  # Session 1083
+
 logger = logging.getLogger(__name__)
 
 
