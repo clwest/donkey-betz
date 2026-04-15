@@ -39,6 +39,8 @@ from core.tasks import (  # noqa: F401 — private helpers from tasks.py
     CONVERSATION_DELEGATION_TOOL,
     broadcast_hive_mind_update,
     broadcast_hive_mind_status,
+    extract_action_items_from_session,  # Session 1083 — 7th missing import
+    run_triggered_conversation,          # Session 1083 — 8th missing import
 )
 
 

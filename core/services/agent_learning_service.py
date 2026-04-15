@@ -235,18 +235,28 @@ class AgentLearningService:
         memory.last_interaction = interaction.created_at
 
     def _persist_interaction(self, interaction: AgentInteraction):
-        """Persist interaction to Redis"""
+        """Persist interaction to Redis.
+
+        Session 1083 (Rigby audit): was logging `Error persisting
+        interaction: Object of type UUID is not JSON serializable`
+        every time a caller passed a UUID inside `input_data` or
+        `output_data` (both typed `Dict[str, Any]`, so UUIDs are
+        legal inputs but the default JSON encoder can't handle them).
+        Added `default=str` to the json.dumps call so UUIDs, Decimals,
+        and datetime-like objects get coerced via str() instead of
+        exploding. Surfaced during the spider-network stall
+        investigation while monitoring celery-long-running.log.
+        """
         if not self.redis_client:
             return
 
         try:
             key = f"{self.REDIS_PREFIX}:interactions:{interaction.user_id}:{interaction.agent_name}"
-            # Store in sorted set with timestamp as score
+            payload = json.dumps(interaction.to_dict(), default=str)
             self.redis_client.zadd(
                 key,
-                {json.dumps(interaction.to_dict()): interaction.created_at.timestamp()}
+                {payload: interaction.created_at.timestamp()}
             )
-            # Trim to last 100 interactions
             self.redis_client.zremrangebyrank(key, 0, -101)
         except Exception as e:
             logger.error(f"Error persisting interaction: {e}")
@@ -461,7 +471,12 @@ class AgentLearningService:
             prefs_key = f"{self.REDIS_PREFIX}:preferences:{user_id}:{agent_name}"
 
             for pref_key, pref in memory.long_term.items():
-                self.redis_client.hset(prefs_key, pref_key, json.dumps(pref.to_dict()))
+                # Session 1083: same UUID-serialization defense as
+                # _persist_interaction above.
+                self.redis_client.hset(
+                    prefs_key, pref_key,
+                    json.dumps(pref.to_dict(), default=str),
+                )
 
         except Exception as e:
             logger.error(f"Error saving memory: {e}")
