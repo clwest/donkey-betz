@@ -4108,7 +4108,10 @@ from core.views_heart import (
 
 urlpatterns += [
     path('api/heart/pulse/', heart_pulse, name='heart-pulse'),
-    path('api/heart/status/', heart_status, name='heart-status'),
+    # Session 1103c: per-system /status/ routes deleted — all 10 body
+    # systems are now served by the unified /api/body/vitals/ endpoint
+    # which reads directly from each system's internal service. The
+    # individual /api/*/status/ endpoints had zero frontend callers.
     path('api/heart/history/', heart_history, name='heart-history'),
     path('api/heart/component/<str:component_name>/', heart_component, name='heart-component'),
     path('api/heart/alive/', heart_is_alive, name='heart-alive'),
@@ -4131,7 +4134,6 @@ from core.views_lungs import (
 
 urlpatterns += [
     path('api/lungs/breathe/', lungs_breathe, name='lungs-breathe'),
-    path('api/lungs/status/', lungs_status, name='lungs-status'),
     path('api/lungs/oxygen/', lungs_oxygen, name='lungs-oxygen'),
     path('api/lungs/budgets/', lungs_budgets, name='lungs-budgets'),
     path('api/lungs/budgets/<uuid:budget_id>/', lungs_budget_detail, name='lungs-budget-detail'),
@@ -4157,7 +4159,6 @@ from core.views_circulatory import (
 
 urlpatterns += [
     path('api/circulatory/circulate/', circulate_view, name='circulatory-circulate'),
-    path('api/circulatory/status/', circulatory_status_view, name='circulatory-status'),
     path('api/circulatory/routes/', routes_list_view, name='circulatory-routes'),
     path('api/circulatory/routes/<uuid:route_id>/', route_detail_view, name='circulatory-route-detail'),
     path('api/circulatory/bottlenecks/', bottlenecks_view, name='circulatory-bottlenecks'),
@@ -4183,7 +4184,6 @@ from core.views_spine import (
 
 urlpatterns += [
     path('api/spine/align/', align_view, name='spine-align'),
-    path('api/spine/status/', spine_status_view, name='spine-status'),
     path('api/spine/patterns/', patterns_list_view, name='spine-patterns'),
     path('api/spine/patterns/<uuid:pattern_id>/', pattern_detail_view, name='spine-pattern-detail'),
     path('api/spine/metrics/', route_metrics_view, name='spine-metrics'),
@@ -4211,7 +4211,6 @@ from core.views_immune import (
 
 urlpatterns += [
     path('api/immune/scan/', immune_scan_view, name='immune-scan'),
-    path('api/immune/status/', immune_status_view, name='immune-status'),
     path('api/immune/patterns/', immune_patterns_list_view, name='immune-patterns'),
     path('api/immune/patterns/<uuid:pattern_id>/', immune_pattern_detail_view, name='immune-pattern-detail'),
     path('api/immune/threats/', threats_list_view, name='immune-threats'),
@@ -4238,7 +4237,6 @@ from core.views_digestive import (
 
 urlpatterns += [
     path('api/digestive/digest/', digestive_digest_view, name='digestive-digest'),
-    path('api/digestive/status/', digestive_status_view, name='digestive-status'),
     path('api/digestive/routes/', digestive_routes_list_view, name='digestive-routes'),
     path('api/digestive/routes/<uuid:route_id>/', digestive_route_detail_view, name='digestive-route-detail'),
     path('api/digestive/bottlenecks/', digestive_bottlenecks_view, name='digestive-bottlenecks'),
@@ -4264,7 +4262,6 @@ from core.views_muscular import (
 
 urlpatterns += [
     path('api/muscular/flex/', muscular_flex_view, name='muscular-flex'),
-    path('api/muscular/status/', muscular_status_view, name='muscular-status'),
     path('api/muscular/groups/', muscular_groups_list_view, name='muscular-groups'),
     path('api/muscular/groups/<uuid:group_id>/', muscular_group_detail_view, name='muscular-group-detail'),
     path('api/muscular/weak/', muscular_weak_view, name='muscular-weak'),
@@ -4286,7 +4283,6 @@ from core.views_brain import (
 )
 
 urlpatterns += [
-    path('api/brain/status/', BrainStatusView.as_view(), name='brain-status'),
     path('api/brain/think/', BrainThinkView.as_view(), name='brain-think'),
     path('api/brain/vitals/', BrainVitalsView.as_view(), name='brain-vitals'),
     path('api/brain/history/', BrainHistoryView.as_view(), name='brain-history'),
@@ -4307,7 +4303,6 @@ from core.views_skin import (
 )
 
 urlpatterns += [
-    path('api/skin/status/', SkinStatusView.as_view(), name='skin-status'),
     path('api/skin/feel/', SkinFeelView.as_view(), name='skin-feel'),
     path('api/skin/vitals/', SkinVitalsView.as_view(), name='skin-vitals'),
     path('api/skin/history/', SkinHistoryView.as_view(), name='skin-history'),
@@ -4328,7 +4323,6 @@ from core.views_nervous import (
 )
 
 urlpatterns += [
-    path('api/nervous/status/', NervousStatusView.as_view(), name='nervous-status'),
     path('api/nervous/feel/', NervousFeelView.as_view(), name='nervous-feel'),
     path('api/nervous/vitals/', NervousVitalsView.as_view(), name='nervous-vitals'),
     path('api/nervous/history/', NervousHistoryView.as_view(), name='nervous-history'),
