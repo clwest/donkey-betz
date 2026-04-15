@@ -1473,14 +1473,24 @@ class ContentHandlersMixin:
             if owner_filter and owner_filter.lower() != 'all':
                 if owner_filter == 'me' and user_id:
                     # Session 1077: Use User object lookup to avoid integer=UUID SQL error
+                    # Session 1103c: was 'except Exception: pass' which
+                    # silently dropped the owner filter on any failure,
+                    # returning results for all owners when the user
+                    # asked for 'me'. Privacy-adjacent; log loudly now.
                     try:
                         from django.contrib.auth import get_user_model
                         _User = get_user_model()
                         user_obj = _User.objects.filter(id=user_id).first()
                         if user_obj:
                             qs = qs.filter(owner=user_obj)
-                    except Exception:
-                        pass  # Skip owner filter on error
+                    except Exception as e:
+                        logger.warning(
+                            "td_handlers_content: owner='me' filter lookup "
+                            "failed for user_id=%s (%s: %s) — returning "
+                            "unfiltered results which may include other "
+                            "users' items",
+                            user_id, type(e).__name__, e,
+                        )
                 elif owner_filter == 'unowned':
                     qs = qs.filter(owner__isnull=True, owner_agent='')
                 else:
@@ -1744,7 +1754,9 @@ class ContentHandlersMixin:
                 s['stage_name'] = stage_labels.get(s['stage'], f"Stage {s['stage']}")
                 if s.get('approved_at'):
                     s['approved_at'] = s['approved_at'].isoformat()
-                # Session 1021: Include stage document preview
+                # Session 1021: Include stage document preview.
+                # Session 1103c: loud on failure so missing stage
+                # documents are visible in the initiative detail response.
                 if s.get('document_id'):
                     try:
                         from core.models_unified_system import SelfBlog
@@ -1753,8 +1765,12 @@ class ContentHandlersMixin:
                             s['document_title'] = doc.title
                             s['document_preview'] = (doc.full_text or '')[:300]
                             s['document_length'] = len(doc.full_text or '')
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning(
+                            "td_handlers_content: stage document preview "
+                            "lookup failed for document_id=%s (%s: %s)",
+                            s.get('document_id'), type(e).__name__, e,
+                        )
                 s['document_id'] = str(s['document_id']) if s.get('document_id') else None
 
             # Session 996: Resolve owner
@@ -4265,6 +4281,10 @@ class ContentHandlersMixin:
         from django.utils.dateparse import parse_datetime
 
         # ── Permission gate ──
+        # Session 1103c: the previous silent swallow was fail-closed
+        # (which is the right security stance) but logged nothing, so
+        # if a DB hiccup denied a legit admin there was zero trail.
+        # Keep fail-closed; log loudly.
         is_admin = False
         if user_id:
             try:
@@ -4273,8 +4293,13 @@ class ContentHandlersMixin:
                 user = User.objects.filter(id=user_id).first()
                 if user and (user.is_superuser or user.is_staff):
                     is_admin = True
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    "td_handlers_content.bulk_archive_published: admin "
+                    "check failed for user_id=%s (%s: %s) — denying "
+                    "access",
+                    user_id, type(e).__name__, e,
+                )
         if not is_admin:
             return {'error': 'Permission denied. bulk_archive_published requires admin/staff.', 'status': 403}
 
