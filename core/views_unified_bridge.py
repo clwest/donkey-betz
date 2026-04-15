@@ -7,12 +7,21 @@ enabling real money-making functionality across all components.
 """
 
 import logging
+
+from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .unified_platform_bridge import platform_bridge
 from .models import UserProfile, ExtendedUserProfile, JobApplication
+
+# Session 1083 (Rigby audit): `User` and `timezone` were referenced
+# 11 times across this file but never imported. Every call to
+# User.objects.filter(...) or timezone.now() would NameError at
+# runtime. Fixed by importing django auth get_user_model + timezone.
+User = get_user_model()
 
 logger = logging.getLogger(__name__)
 

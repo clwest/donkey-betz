@@ -16,9 +16,12 @@ import json
 from datetime import datetime, timedelta
 import uuid
 import logging
+logger = logging.getLogger(__name__)  # Session 1083: module-level logger for undefined-name sites
 
 # Session 266: Central prompt registry
 from core.prompts import get_self_awareness_prompt
+
+import os
 
 User = get_user_model()
 
