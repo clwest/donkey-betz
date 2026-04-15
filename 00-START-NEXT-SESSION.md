@@ -17,10 +17,30 @@ PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557 \
 
 ---
 
-**Date:** April 15, 2026 (end of Session 1085)
+**Date:** April 15, 2026 (end of Session 1086 in-progress — Tier 4 closure)
 **Previous session handoff:** [`docs/handoffs/SESSION_1084_HEARTBEAT_AND_FACTORIES.md`](docs/handoffs/SESSION_1084_HEARTBEAT_AND_FACTORIES.md) — Session 1085 handoff not yet written
 **Previous session PA conversation (LOCAL):** `pa-272275b6e125` — Chris creates a new one each session, so ask him for the new ID before your first Rigby message.
-**Status:** Stack is spotless. Session 1085 shipped 6 PRs and merged all of them clean. `core/` is now 100% OpenAI-factory-migrated. 1,306 lines of dead code removed. Tier 4 (`ai_core/`) is the only remaining factory drift and is queued as the primary target for Session 1086.
+**Status:** Stack is spotless. Session 1085 shipped 6 PRs and merged all of them clean. Session 1086 shipped Tier 4 (`ai_core/`) closure — PRs #1906 (intelligence/*) + #1907 (agents/* + freelance_api + orphan delete) open pending CI/merge. After those land, the entire platform is 100% OpenAI-factory-migrated — zero `OpenAI(` drift anywhere in `core/` or `ai_core/`.
+
+---
+
+## 🎯 SESSION 1086 — In Progress (Tier 4 closure)
+
+| PR | Title | Impact |
+|----|-------|--------|
+| **#1906** | Tier 4a — `ai_core/intelligence/*` factory migration | 4 files, +41/-24; income_builder startup trap killed, embedding_generator lazy-inline factory import, proposal_manager swapped, deprecated shim cleaned |
+| **#1907** | Tier 4b — `ai_core/agents/*` + `freelance_api` + orphan delete | 5 files, +15/-575; `job_application_orchestrator.py` deleted (confirmed orphan), dead `self.client` deleted from `real_job_executor` + `real_content_creator` (Option B cleanup), `freelance_api.py` factory swap, dead test function gutted |
+
+**Daphne restart:** PR #1903 (`agent_slack_consumer` factory migration) now live locally (daphne PID rolled, `:8000` against `core.asgi:application`).
+
+**Final `ai_core/` drift audit:** zero hits from `grep -RnE '\bOpenAI\(|\bopenai\.OpenAI\(' ai_core --include='*.py' | grep -v openai_client_factory`. Tier 4 complete the moment both PRs merge.
+
+**Session 1086 phantom-task discoveries (warm-up doc was stale):**
+- Item 2 (`learning_journeys.status()`) was already closed by PR #1899 — initiative `85f279b9` marked COMPLETED in DB.
+- Item 3 (dead file cleanup: `llm_enforcer_backup`, `llm_enforcer_original`, `views_partnership`) was already done by PR #1900 in Session 1085.
+- Sections rewritten to reflect CLOSED status so future sessions don't repeat the false starts.
+
+**Together AI timeout check (item 4):** ran across all 9 celery log files — zero real `APITimeoutError` hits. Together AI is healthy on its own **60s/120s** provider config (not inherited from the factory's 90s default — `llm_provider_registry.py:831` owns Together's timeouts independently). No action needed.
 
 ---
 
@@ -115,39 +135,28 @@ grep -RnE '\bOpenAI\(|\bopenai\.OpenAI\(' ai_core --include='*.py' | grep -v ope
 2. Ask Rigby to finish the entrypoint map for `real_job_executor`, `job_application_orchestrator`, and `freelance_api` (her 1085 response was truncated mid-file-D) AND give the orchestrator orphan verdict
 3. Then cut the PR 1 branch
 
-### 2. Missing `learning_journeys.status()` backend route — quick follow-up
+### 2. ~~Missing `learning_journeys.status()` backend route~~ — RESOLVED Session 1085
 
-**Scope:** `frontend/src/lib/api.ts:2550` calls `/api/learning/journeys/<id>/status/` but there's no matching backend route. Gap surfaced during Session 1084 dead-endpoint cleanup (PR #1894) and filed as Rigby initiative `85f279b9-4c57-4cb1-ba2c-a6ac7884d488`.
+**Status: CLOSED.** PR #1899 (commit `592ada12`, merged Session 1085) deleted the dead `journeyApi.status` frontend stub rather than building an unused backend route. Initiative `85f279b9` is marked **COMPLETED** in the DB (confirmed Session 1086). Do not re-open — no frontend caller exists and `journeyApi.detail(id)` already returns the full journey dict for any status-like use case.
 
-**Expected work:**
-- Add `learning_journey_status` view function to `core/views_learning_journey_api.py` (mirrors the pattern of the existing `learning_journey_detail` / `learning_journey_pause` / etc.)
-- Wire route in `core/urls.py` near line 3640+ where the other `learning_journeys_*` routes live
-- Grep frontend to confirm what fields it expects in the response shape
-- Expected ~20 minutes
+### 3. ~~Dead file cleanup (`llm_enforcer_backup`, `llm_enforcer_original`, `views_partnership`)~~ — RESOLVED Session 1085
 
-### 3. Dead file cleanup — low risk
-
-**Candidates (grep-verify unreferenced before deletion):**
-- `core/llm_enforcer_backup_20251002_150019.py` — backup file from Oct 2025
-- `core/llm_enforcer_original.py` — original file superseded by `llm_enforcer.py`
-- `core/views_partnership.py` — now that PR #1894 removed all `urls.py` references to the module
-
-**Verification pattern (per file):**
-```bash
-grep -rn "from core.views_partnership\|import views_partnership\|from core import views_partnership" core/ ai_core/ --include='*.py' | grep -v "Session 1084"
-# Should return zero results (ignoring my own session comments)
-```
+**Status: CLOSED.** All three files were deleted in PR #1900 (commit `bd4ccfac`, "chore: delete 3 dead files + clean up round-50 breadcrumb comments"). Only stale `.pyc` files remain in `__pycache__/` — those are ephemeral and will regenerate on next import. No PR needed.
 
 ### 4. Together AI timeout observability — monitoring only, no code
 
-PR #1895 migrated Together AI from a 120s read timeout to the factory's 90s. If large-model calls now time out where they previously succeeded, the correct fix is to bump `OPENAI_READ_TIMEOUT_S` in the factory globally rather than re-drift this one site.
+PR #1895 migrated most OpenAI-SDK call sites to the factory's 90s read timeout. If large-model calls now time out where they previously succeeded, the correct fix is to bump `OPENAI_READ_TIMEOUT_S` in the factory globally rather than re-drift individual sites.
 
-**Watch command:**
+**Session 1086 check (April 15):** ran `grep -iE "APITimeoutError|together.*timeout" celery*.log logs/celery*.log` — **zero actual timeout errors** across all 9 worker logs. The only matches were:
+- `llm_provider_registry` init log lines confirming Together is healthy with its own **60s connect / 120s read** timeouts (Together AI does NOT inherit from `openai_client_factory` — it has its own provider config in `llm_provider_registry.py:831`, immune to the factory default)
+- A PA chat response string from Rigby discussing a Tier 2 audit (false positive — the words "APITimeoutError" appeared in prose, not an error)
+
+**Watch command (for future sessions):**
 ```bash
-grep -i "APITimeoutError\|TogetherAI.*timeout\|together.*timeout" celery.log | tail -20
+grep -iE "APITimeoutError|together.*timeout" celery*.log logs/celery*.log | grep -v "provider initialized"
 ```
 
-If APITimeoutError hits appear, report to Rigby and consider bumping the factory constant to 120s or 150s.
+If real `APITimeoutError` hits appear, report to Rigby and consider bumping `OPENAI_READ_TIMEOUT_S` in the factory to 120s or 150s.
 
 ---
 
