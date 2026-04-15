@@ -501,7 +501,12 @@ def _post_to_conversation(conversation_id: str, summary: str, files_changed: lis
         metadata={'autonomous': True, 'agent': 'claude_code_engineer', 'files_changed': files_changed, 'pr_url': pr_url},
     )
 
-    # Broadcast via WebSocket
+    # Broadcast via WebSocket.
+    # Session 1103c: loud on failure so Claude Code→ChatUI live-message
+    # broadcast drops are visible. Previously if the channel layer
+    # errored, the message was still saved to DB but the ChatUI never
+    # got the WebSocket push, leaving users wondering why a message
+    # "appeared later" instead of live.
     try:
         from channels.layers import get_channel_layer
         from asgiref.sync import async_to_sync
@@ -520,5 +525,10 @@ def _post_to_conversation(conversation_id: str, summary: str, files_changed: lis
                     }
                 }
             )
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(
+            "claude_code_engineer: WebSocket broadcast failed for "
+            "conversation %s (%s: %s) — message saved but ChatUI won't "
+            "see it until next poll",
+            conversation_id, type(e).__name__, e,
+        )

@@ -296,7 +296,12 @@ def deploy_preview_environment(preview_env: PreviewEnvironment, deployment: Prev
         deployment.id, deployment.status, repos.count(),
     )
 
-    # Record deploy operation
+    # Record deploy operation.
+    # Session 1103c: loud on failure so preview deploy activity can be
+    # traced through the Ops Run timeline. Previously every failure to
+    # record the deploy op was swallowed — meaning the Ops Run view
+    # could show successful deploys without any trail in Django logs
+    # explaining why.
     try:
         from core.services.operation_recorder import record_op
         ws_id = str(preview_env.project.workspace_id)
@@ -313,8 +318,12 @@ def deploy_preview_environment(preview_env: PreviewEnvironment, deployment: Prev
             entity_id=str(deployment.id),
             correlation_id=str(deployment.id),
         )
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(
+            "preview_deploy_service: record_op failed for deployment %s "
+            "(%s: %s) — Ops Run timeline will be missing this entry",
+            deployment.id, type(e).__name__, e,
+        )
 
     return deployment
 
