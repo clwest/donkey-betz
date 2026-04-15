@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-04-15 14:46
+**Generated:** 2026-04-15 16:12
 **Current Session:** 1083
 **Total Documentation:** 1857 files | 631,434 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,234 |
+| Total cross-references | 2,231 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 142 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md` | 60 | 🏆 SPORTS ANALYTICS PLATFORM - AI-Powered Betting I |
+| `docs/features/README.md` | 60 | Feature Documentation |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 44 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -220,8 +220,8 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| SESSION_1084_HANG_CONTAINMENT.md | handoffs | 326 | 2026-04-15 14:45 |
-| INDEX.md | docs | 364 | 2026-04-15 14:28 |
+| SESSION_1084_HANG_CONTAINMENT.md | handoffs | 326 | 2026-04-15 14:47 |
+| INDEX.md | docs | 364 | 2026-04-15 14:47 |
 | SESSION_1083_MARATHON.md | handoffs | 145 | 2026-04-15 13:20 |
 | HALF_BUILT_FEATURES_AUDIT.md | audit-2026 | 237 | 2026-04-15 13:20 |
 | react-fastapi-template.md | topics | 454 | 2026-04-13 14:33 |
