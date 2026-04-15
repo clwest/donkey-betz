@@ -236,8 +236,19 @@ celery: ## Start Celery workers + beat (background) with multi-queue architectur
 		echo "-> Starting Celery default worker (solo, default queue)..."; \
 		SKIP_NLP_MODELS=1 OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES TOKENIZERS_PARALLELISM=false \
 		nohup .venv/bin/celery -A core worker --loglevel=info --pool=solo \
-			--queues=default,agents,sports,content,ml,pa \
+			--queues=default,agents,sports,content,ml \
 			--hostname=default@%h > $(CELERY_LOG) 2>&1 & echo $$! > $(CELERY_PIDFILE); \
+		sleep 1; \
+	fi
+	@# Start dedicated PA queue worker (solo pool — never blocked by long agent runs)
+	@if pgrep -f "hostname=pa@" >/dev/null 2>&1; then \
+		echo "-> Celery pa worker already running"; \
+	else \
+		echo "-> Starting Celery pa worker (solo, pa queue only)..."; \
+		SKIP_NLP_MODELS=1 OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES TOKENIZERS_PARALLELISM=false \
+		nohup .venv/bin/celery -A core worker --loglevel=info --pool=solo \
+			--queues=pa \
+			--hostname=pa@%h > celery-pa.log 2>&1 & echo $$! > .celery-pa.pid; \
 		sleep 1; \
 	fi
 	@# Start long_running queue worker (slow tasks)

@@ -86,6 +86,20 @@ class MLEngine:
     # macOS mutex.cc deadlock under --pool=threads workers.
     _global_init_lock = threading.Lock()
 
+    # Session 1103b: CLASS-level cache of the loaded heavy state. The old
+    # design re-ran _initialize_ml_stack() on *every* new MLEngine() which
+    # triggered a second MLX/Metal device init → macOS mutex.cc deadlock
+    # on the second call even under --pool=solo. The cache is populated
+    # once by the first instance that reaches _ensure_initialized(), and
+    # every subsequent instance copies from it instead of re-running the
+    # heavy load.
+    _class_initialized = False
+    _cached_models = None
+    _cached_sport_models = None
+    _cached_scalers = None
+    _cached_user_profile = None
+    _cached_sentiment_analyzer = None
+
     def __getattribute__(self, name):
         if name in MLEngine._LAZY_STATE_ATTRS:
             init_done = object.__getattribute__(self, '_initialized')
@@ -121,18 +135,39 @@ class MLEngine:
     def _ensure_initialized(self):
         """Lazily load models + NLP pipelines on first use.
 
-        Thread-safe via double-checked locking. Multiple Celery worker
-        threads can hit a fresh MLEngine simultaneously; without the lock
-        they race through torch/sklearn/MLX init and deadlock on macOS.
+        Thread-safe via double-checked locking + class-level state cache.
+        Only the FIRST MLEngine instance in the process actually runs the
+        heavy load; every subsequent instance copies from the class-level
+        cache. Without this, each new MLEngine() re-ran the MLX/Metal
+        device init and deadlocked on macOS mutex.cc.
         """
         if self._initialized:
             return
         with MLEngine._global_init_lock:
             if self._initialized:
                 return
+            if MLEngine._class_initialized:
+                # First instance in the process already did the heavy
+                # load — just copy the cached state onto this instance.
+                self.models = MLEngine._cached_models
+                self.sport_models = MLEngine._cached_sport_models
+                self.scalers = MLEngine._cached_scalers
+                self.user_profile = MLEngine._cached_user_profile
+                self.sentiment_analyzer = MLEngine._cached_sentiment_analyzer
+                self._initialized = True
+                return
             self._initialized = True
             self._initialize_ml_stack()
             self._initialize_user_tracking()
+            # Snapshot the freshly-loaded state into the class cache so
+            # the next MLEngine() instance can skip _initialize_ml_stack
+            # entirely and avoid re-running torch/MLX init.
+            MLEngine._cached_models = self.models
+            MLEngine._cached_sport_models = self.sport_models
+            MLEngine._cached_scalers = self.scalers
+            MLEngine._cached_user_profile = self.user_profile
+            MLEngine._cached_sentiment_analyzer = self.sentiment_analyzer
+            MLEngine._class_initialized = True
 
     def _initialize_ml_stack(self):
         """Initialize the local ML stack"""
