@@ -808,7 +808,15 @@ class PolicyOptimizer:
         # Gather per-policy metrics
         policy_metrics = self._compute_policy_metrics(lookback, now)
 
-        # Check daily change cap
+        # Check daily change cap.
+        # Session 1103c: was 'except Exception: changes_today = 0'
+        # which is fail-OPEN — DB query failure silently bypassed the
+        # daily cap and let self-tuning proceed as if no changes had
+        # been made today, allowing unbounded config tuning during a
+        # partial DB outage exactly when governance should be
+        # conservative. Now fails CLOSED to the cap so tuning is
+        # blocked when we can't verify how many changes have already
+        # happened.
         try:
             day_start = now - timedelta(hours=24)
             changes_today = AutopilotAction.objects.filter(
@@ -816,8 +824,15 @@ class PolicyOptimizer:
                 dry_run=False,
                 created_at__gte=day_start,
             ).count()
-        except Exception:
-            changes_today = 0
+        except Exception as _e:
+            logger.error(
+                "ops_autopilot.governance: daily change cap query "
+                "failed (%s: %s) — failing CLOSED (treating as "
+                "AT-CAP) to prevent unbounded tuning during a "
+                "partial DB outage",
+                type(_e).__name__, _e,
+            )
+            changes_today = AutopilotConfig.TUNING_MAX_CHANGES_PER_DAY
 
         if changes_today >= AutopilotConfig.TUNING_MAX_CHANGES_PER_DAY:
             return {
