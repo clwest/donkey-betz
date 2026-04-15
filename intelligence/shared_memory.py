@@ -29,7 +29,17 @@ logger = logging.getLogger(__name__)
 _redis_url = getattr(settings, 'REDIS_URL', os.environ.get('REDIS_URL', 'redis://localhost:6379/2'))
 try:
     redis_client = redis.from_url(_redis_url, db=2, decode_responses=True)
-except Exception:
+except Exception as _e:
+    # Session 1103c: was a silent fallback to localhost. In production
+    # if REDIS_URL parsing failed, the SharedMemorySystem would
+    # silently connect to localhost (which doesn't exist on Railway)
+    # and ALL shared memory ops would fail forever with no clue why.
+    logger.error(
+        "intelligence.shared_memory: redis.from_url(%r) failed "
+        "(%s: %s) — falling back to localhost:6379. On Railway "
+        "this will silently break SharedMemorySystem.",
+        _redis_url, type(_e).__name__, _e,
+    )
     redis_client = redis.Redis(host='localhost', port=6379, db=2, decode_responses=True)
 
 
