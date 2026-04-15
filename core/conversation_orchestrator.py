@@ -301,8 +301,8 @@ class ConversationOrchestrator:
     def client(self):
         """Lazy load OpenAI client."""
         if self._client is None:
-            import openai
-            self._client = openai.OpenAI(api_key=self.api_key)
+            from core.services.openai_client_factory import get_openai_client
+            self._client = get_openai_client(api_key=self.api_key)
         return self._client
 
     # Session 826: Lazy-loaded context builders for rich context injection
