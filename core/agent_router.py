@@ -888,6 +888,11 @@ class AgentRouter:
 
         # Inject workspace_id into agent so deliverables get assigned correctly.
         # Priority: explicit context > initiative workspace > active workspace fallback.
+        # Session 1103c: both fallbacks used to swallow exceptions silently,
+        # which is one of the paths that let orphan deliverables slip through
+        # — if the Initiative lookup or the active workspace query raised,
+        # the agent ran unscoped and whatever it produced got saved as an
+        # orphan. Now loud on every swallow.
         workspace_id = context.get('workspace_id') if context else None
         if not workspace_id and context and context.get('initiative_id'):
             try:
@@ -895,16 +900,33 @@ class AgentRouter:
                 init = Initiative.objects.filter(id=context['initiative_id']).first()
                 if init and init.target_workspace_id:
                     workspace_id = str(init.target_workspace_id)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    "agent_router: initiative→workspace lookup failed for "
+                    "initiative_id=%s (%s: %s) — falling back to global "
+                    "active workspace",
+                    context.get('initiative_id'), type(e).__name__, e,
+                )
         if not workspace_id:
             try:
                 from core.models_skin_layer import ProjectWorkspace
                 active_ws = ProjectWorkspace.objects.filter(is_active=True).first()
                 if active_ws:
                     workspace_id = str(active_ws.id)
-            except Exception:
-                pass
+                else:
+                    logger.error(
+                        "agent_router: no is_active ProjectWorkspace exists "
+                        "— agent %s will run UNSCOPED and any deliverables "
+                        "it produces will be orphaned",
+                        agent_name,
+                    )
+            except Exception as e:
+                logger.error(
+                    "agent_router: active workspace lookup failed "
+                    "(%s: %s) — agent %s will run UNSCOPED and any "
+                    "deliverables it produces will be orphaned",
+                    type(e).__name__, e, agent_name,
+                )
         if workspace_id:
             agent._workspace_id = workspace_id
             if context is None:
@@ -1967,14 +1989,25 @@ class AgentRouter:
             if adaptive_text:
                 user_context['agent_learned_preferences'] = adaptive_text
 
-            # Phase 3: Inject UserAgentLearning preferences into prompt
+            # Phase 3: Inject UserAgentLearning preferences into prompt.
+            # Session 1103c: was 'except Exception: pass' which silently
+            # dropped the user's learned preferences for this agent on
+            # any failure. The agent would then run without the user's
+            # personalization, producing generic responses with no
+            # visible cause.
             try:
                 from core.services.learning_read_service import get_learned_preferences_for_prompt
                 learned_prefs = get_learned_preferences_for_prompt(self.user.id, agent_name)
                 if learned_prefs:
                     user_context['learned_user_preferences'] = learned_prefs
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    "agent_router: learned_preferences lookup failed for "
+                    "user=%s agent=%s (%s: %s) — agent will run without "
+                    "user personalization this cycle",
+                    getattr(self.user, 'id', '<unknown>'), agent_name,
+                    type(e).__name__, e,
+                )
 
             user_context['has_user_context'] = True
 
