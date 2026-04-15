@@ -65,14 +65,21 @@ const navItems = [
   // Studios
   { path: '/image-studio', label: 'Image Studio', icon: Palette },
   { path: '/video-studio', label: 'Video Studio', icon: Film },
+  { path: '/content', label: 'Content', icon: LayoutGrid },
+  { path: '/media', label: 'Media', icon: Package },
 
   // Session 1076: Executor runs
   { path: '/executor', label: 'Executor', icon: Play },
 
   // Core Navigation
   { path: '/agents', label: 'Agents', icon: Bot },
+  { path: '/advisors', label: 'Advisors', icon: ShieldCheck },
   { path: '/stocks', label: 'Stock Intelligence', icon: TrendingUp },
   { path: '/government', label: 'Government', icon: Landmark },
+
+  // Work surfaces (Session 1083: exposed from hidden per Rigby audit)
+  { path: '/deliverables', label: 'Deliverables', icon: FileText },
+  { path: '/analytics', label: 'Analytics', icon: LayoutDashboard },
 
   // Domain Features
   { path: '/betting', label: 'Betting', icon: DollarSign },
@@ -84,6 +91,7 @@ const navItems = [
   { path: '/mythology-lab', label: 'Mythology Lab', icon: Beaker },
 
   // Admin & Settings
+  { path: '/profile', label: 'Profile', icon: User },
   { path: '/admin', label: 'Admin', icon: Shield },
   { path: '/settings', label: 'Settings', icon: Settings },
 ]

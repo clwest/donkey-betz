@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { contentApi } from '@/lib/api'
 import {
   Image, Video, Music, Box, Plus, Calendar, Wand2, Heart,
-  Loader2, CheckCircle, XCircle, Sparkles, FileText, Send,
+  Loader2, CheckCircle, XCircle, Sparkles, FileText,
   Play, X, Grid, FolderKanban, Layout, Clock
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
@@ -276,9 +276,6 @@ export default function ContentPage() {
       generateImageMutation.mutate(prompt)
     } else if (generateType === 'video') {
       generateVideoMutation.mutate(prompt)
-    } else {
-      setActionResult({ type: 'success', message: `${generateType} generation coming soon!` })
-      setShowGenerateModal(false)
     }
   }
 
@@ -494,14 +491,7 @@ export default function ContentPage() {
           </button>
           <button
             className="btn btn-secondary flex items-center gap-2"
-            onClick={() => setActionResult({ type: 'success', message: 'Voice cloning coming soon!' })}
-          >
-            <Music size={16} />
-            Voice Clone
-          </button>
-          <button
-            className="btn btn-secondary flex items-center gap-2"
-            onClick={() => setActionResult({ type: 'success', message: 'Opening content calendar...' })}
+            onClick={() => setActiveTab('calendar')}
           >
             <Calendar size={16} />
             Content Calendar
@@ -513,13 +503,6 @@ export default function ContentPage() {
           >
             {generateBlogMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
             Generate Blog
-          </button>
-          <button
-            className="btn btn-secondary flex items-center gap-2"
-            onClick={() => setActionResult({ type: 'success', message: 'Social post generator coming soon!' })}
-          >
-            <Send size={16} />
-            Social Post
           </button>
         </div>
       </div>
@@ -637,13 +620,6 @@ export default function ContentPage() {
           <div className="card">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Creative Projects</h3>
-              <button
-                className="btn btn-primary text-sm flex items-center gap-2"
-                onClick={() => setActionResult({ type: 'success', message: 'Create project coming soon!' })}
-              >
-                <Plus size={14} />
-                New Project
-              </button>
             </div>
             {loadingProjects ? (
               <div className="flex items-center justify-center py-12">
