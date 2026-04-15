@@ -791,11 +791,22 @@ def handle_stage_task_completion(
 
         stage.save()
 
-        # Session 994: Record activity whenever stage work completes
+        # Session 994: Record activity whenever stage work completes.
+        # Session 1103c: was 'except Exception: pass' which meant if
+        # update_activity broke, initiative staleness would silently
+        # stop refreshing and the 'no updates for N days' health check
+        # would eventually flip it to 'stale' even though work was
+        # happening. Still non-fatal but now loud.
         try:
             initiative.update_activity()
-        except Exception:
-            pass  # Don't let tracking block stage processing
+        except Exception as e:
+            logger.warning(
+                "conversation_initiative_pipeline: initiative.update_activity() "
+                "failed for initiative %s (%s: %s) — staleness clock will "
+                "not reset this cycle",
+                getattr(initiative, 'id', '<unknown>'),
+                type(e).__name__, e,
+            )
 
         # Check if we should auto-advance (simplified: advance after first successful task)
         # In production, you'd want more sophisticated logic (all tasks complete, human approval, etc.)
