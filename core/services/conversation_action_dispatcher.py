@@ -353,7 +353,11 @@ class ConversationActionDispatcher:
                 continue
 
             # Session 1035: Per-agent daily cap — no agent should run more than 8 times/day
-            # from conversation dispatch alone
+            # from conversation dispatch alone. Session 1103c: surface
+            # cap-check failures instead of silently failing open. A
+            # silent fail-open here could cause runaway dispatching if
+            # the AgentExecution schema drifts or the query breaks, and
+            # we'd never see it in logs.
             _DAILY_AGENT_DISPATCH_CAP = 8
             try:
                 from django.utils import timezone as _tz2
@@ -371,8 +375,13 @@ class ConversationActionDispatcher:
                         f"{daily_count} times today"
                     )
                     continue
-            except Exception:
-                pass  # fail-open
+            except Exception as e:
+                logger.warning(
+                    "[dispatch] Daily cap check failed for agent %s (%s: %s) "
+                    "— failing open (dispatching anyway). Check AgentExecution "
+                    "schema if this repeats.",
+                    agent_name, type(e).__name__, e,
+                )
 
             # Dispatch the action
             dispatch_result = self._dispatch_to_agent(
@@ -452,22 +461,50 @@ class ConversationActionDispatcher:
             )
 
             # Link dispatched task back to conversation for traceability
-            try:
-                if conversation_id:
-                    from core.models_unified_system import AgentConversation
-                    conv = AgentConversation.objects.filter(id=conversation_id).first()
-                    if conv and hasattr(conv, 'metadata') and isinstance(conv.metadata, dict):
-                        dispatched = conv.metadata.get('dispatched_tasks', [])
-                        dispatched.append({
-                            'agent': agent_name,
-                            'task_id': str(async_result.id),
-                            'task_preview': task[:100] if task else '',
-                            'dispatched_at': timezone.now().isoformat(),
-                        })
-                        conv.metadata['dispatched_tasks'] = dispatched[-20:]  # Keep last 20
-                        conv.save(update_fields=['metadata'])
-            except Exception:
-                pass  # Fire-and-forget — don't break dispatch
+            # Record the dispatched task in Redis so future dispatch
+            # passes can see what's already been queued for this
+            # conversation. Session 1103c discovery: the previous
+            # implementation wrote to AgentConversation.metadata which
+            # *does not exist as a field* — that model is deprecated
+            # and was never extended with a metadata JSONField. Every
+            # dispatch had been silently failing its bookkeeping save
+            # for an unknown number of sessions, which meant
+            # conversations could never tell they had already queued
+            # a task and re-dispatched the same work on every cycle
+            # (likely contributor to the 'stuck running/pending'
+            # pilot pattern Rigby flagged).
+            #
+            # Replaced with a Redis set per conversation, 24h TTL. The
+            # set holds celery task IDs so callers can check
+            # membership before dispatching. Failures here are still
+            # logged but non-fatal.
+            if conversation_id:
+                try:
+                    from django.core.cache import cache
+                    cache_key = f'conv_dispatched:{conversation_id}'
+                    dispatched = cache.get(cache_key) or []
+                    dispatched.append({
+                        'agent': agent_name,
+                        'task_id': str(async_result.id),
+                        'task_preview': (task[:100] if task else ''),
+                        'dispatched_at': timezone.now().isoformat(),
+                    })
+                    dispatched = dispatched[-20:]  # Keep last 20
+                    cache.set(cache_key, dispatched, timeout=86400)  # 24h TTL
+                    logger.debug(
+                        "[dispatch] Recorded task %s on conversation %s "
+                        "(%d tracked)",
+                        async_result.id, conversation_id, len(dispatched),
+                    )
+                except Exception as e:
+                    logger.warning(
+                        "[dispatch] Failed to record dispatched task on "
+                        "conversation %s for agent %s task %s (%s: %s) — "
+                        "dedupe may miss this entry",
+                        conversation_id, agent_name,
+                        getattr(async_result, 'id', '<unknown>'),
+                        type(e).__name__, e,
+                    )
 
             return {
                 'success': True,
