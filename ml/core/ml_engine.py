@@ -80,6 +80,12 @@ class MLEngine:
         'user_profile', 'sentiment_analyzer',
     ])
 
+    # Session 1103: CLASS-level lock so concurrent MLEngine() instances
+    # serialize torch/sklearn/MLX init globally. Per-instance locks don't
+    # help because each instance races on shared library init state →
+    # macOS mutex.cc deadlock under --pool=threads workers.
+    _global_init_lock = threading.Lock()
+
     def __getattribute__(self, name):
         if name in MLEngine._LAZY_STATE_ATTRS:
             init_done = object.__getattribute__(self, '_initialized')
@@ -107,11 +113,6 @@ class MLEngine:
         self.user_profile = None
         self.sentiment_analyzer = None
         self._initialized = False
-        # Session 1103: instance lock prevents threads-pool workers from
-        # racing through _ensure_initialized concurrently, which caused
-        # mutex.cc deadlocks when multiple threads imported torch/sklearn/MLX
-        # at the same time on macOS.
-        self._init_lock = threading.Lock()
 
         # Initialize logging only — no heavy work here.
         logging.basicConfig(level=logging.INFO)
@@ -126,7 +127,7 @@ class MLEngine:
         """
         if self._initialized:
             return
-        with object.__getattribute__(self, '_init_lock'):
+        with MLEngine._global_init_lock:
             if self._initialized:
                 return
             self._initialized = True
