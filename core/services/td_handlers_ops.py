@@ -576,7 +576,10 @@ class OpsHandlersMixin:
         except Exception as e:
             return {'action': 'failure_signatures', 'error': str(e)}
 
-        # Also get top Celery task failures (in case not captured by diagnostic pipeline)
+        # Also get top Celery task failures (in case not captured by diagnostic pipeline).
+        # Session 1103c: loud on failure so the failure_signatures
+        # response reports when the Celery-failures sidecar query
+        # errored instead of silently returning an empty list.
         celery_failures = []
         try:
             from core.models_celery_telemetry import CeleryTaskEvent
@@ -589,8 +592,13 @@ class OpsHandlersMixin:
             for cf in top_celery:
                 cf['last_seen'] = cf['last_seen'].isoformat() if cf['last_seen'] else ''
             celery_failures = top_celery
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                "ops_tool.failure_signatures: celery_failures sidecar "
+                "query failed (%s: %s) — response will omit the "
+                "top-celery-failures section",
+                type(e).__name__, e,
+            )
 
         return {
             'action': 'failure_signatures',
