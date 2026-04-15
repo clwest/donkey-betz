@@ -724,7 +724,14 @@ class PortfolioAllocator:
         return results
 
     def _get_prior_allocation(self, desk: str) -> float | None:
-        """Read prior allocation from SystemConfiguration for EWMA."""
+        """Read prior allocation from SystemConfiguration for EWMA.
+
+        Session 1083 (Rigby audit): was `except Exception: pass` which
+        silently returned None on DB error, which the EWMA path treats
+        as "first run — use current score". A transient DB hiccup
+        during normal operation would therefore erase the smoothing
+        history and let allocation decisions bounce around.
+        """
         from core.models.system import SystemConfiguration
 
         try:
@@ -734,8 +741,12 @@ class PortfolioAllocator:
 
             if entry and isinstance(entry, dict):
                 return entry.get('allocation')
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                "PortfolioAllocator._get_prior_allocation: lookup for "
+                "desk=%s failed (%s: %s) — EWMA smoothing will reset",
+                desk, type(e).__name__, e,
+            )
         return None
 
     def apply_allocations(self, now) -> list[dict]:
@@ -800,8 +811,12 @@ class PortfolioAllocator:
             for e in entries:
                 desk = e['key'].replace('desk_allocation:', '')
                 active_allocs[desk] = e['value']
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning(
+                "get_portfolio_report: active allocations query failed "
+                "(%s: %s) — report will show empty allocations map",
+                type(exc).__name__, exc,
+            )
 
         return {
             'desks': dict(sorted_desks),
@@ -880,7 +895,13 @@ class GoalAwareAllocator:
     KEY_WEIGHTS = 'goal_weights'
 
     def get_weights(self) -> dict:
-        """Get current objective weights from config or defaults."""
+        """Get current objective weights from config or defaults.
+
+        Session 1083: was bare-pass — if the config table had a real DB
+        error, the allocator silently reverted to DEFAULT_WEIGHTS and
+        Chris's operator-configured weights were ignored until process
+        restart with no visible signal. Log loud.
+        """
         from core.models.system import SystemConfiguration
         try:
             entry = SystemConfiguration.objects.filter(
@@ -888,8 +909,13 @@ class GoalAwareAllocator:
             ).first()
             if entry and isinstance(entry.value, dict):
                 return entry.value
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                "GoalAwareAllocator.get_weights: config read failed "
+                "(%s: %s) — falling back to DEFAULT_WEIGHTS, any "
+                "operator-configured weights will be ignored",
+                type(e).__name__, e,
+            )
         return dict(self.DEFAULT_WEIGHTS)
 
     def set_weights(self, weights: dict) -> dict:
@@ -1076,7 +1102,11 @@ class GoalAwareAllocator:
         return adjustments
 
     def _get_prior(self, desk: str):
-        """Read prior goal allocation for EWMA."""
+        """Read prior goal allocation for EWMA.
+
+        Session 1083: was bare-pass — same EWMA-smoothing erase risk as
+        PortfolioAllocator._get_prior_allocation above.
+        """
         from core.models.system import SystemConfiguration
         try:
             entry = SystemConfiguration.objects.filter(
@@ -1084,8 +1114,12 @@ class GoalAwareAllocator:
             ).values_list('value', flat=True).first()
             if entry and isinstance(entry, dict):
                 return entry.get('multiplier')
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                "GoalAwareAllocator._get_prior: lookup for desk=%s "
+                "failed (%s: %s) — EWMA smoothing will reset",
+                desk, type(e).__name__, e,
+            )
         return None
 
     def get_goal_report(self, now) -> dict:
@@ -1104,8 +1138,12 @@ class GoalAwareAllocator:
             for e in entries:
                 desk = e['key'].replace('goal_allocation:', '')
                 active[desk] = e['value']
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning(
+                "get_goal_report: active allocations query failed "
+                "(%s: %s) — report will show empty map",
+                type(exc).__name__, exc,
+            )
 
         return {
             'weights': weights,
@@ -1305,8 +1343,15 @@ class MultiTouchAttributor:
                     'hop': 1,
                     'link_type': 'trace_id',
                 })
-        except Exception:
-            pass
+        except Exception as e:
+            # Session 1083: was bare pass — trace_id attribution would
+            # silently drop every upstream link, dragging every cost
+            # into unattributed spend when the query degraded.
+            logger.warning(
+                "MultiTouchAttributor._find_by_trace: query failed "
+                "(%s: %s) — trace-based attribution dropped for this event",
+                type(e).__name__, e,
+            )
         return links
 
     def _find_by_deliverable(self, event) -> list:
@@ -1358,8 +1403,15 @@ class MultiTouchAttributor:
                     'link_type': 'self_blog',
                 })
 
-        except Exception:
-            pass
+        except Exception as e:
+            # Session 1083: was bare pass — same attribution LIAR as
+            # _find_by_trace above. Deliverable-chain linkage would
+            # silently drop every upstream agent credit.
+            logger.warning(
+                "MultiTouchAttributor._find_by_deliverable: query "
+                "failed (%s: %s) — deliverable-chain attribution dropped",
+                type(e).__name__, e,
+            )
         return links
 
     def _agent_to_desk(self, agent_name: str) -> str:
@@ -1547,8 +1599,16 @@ class AttributionDebtController:
             ).values_list('desk', flat=True).first()
             if ie_desk:
                 return ie_desk
-        except Exception:
-            pass
+        except Exception as e:
+            # Session 1083: was bare pass — ImpactEvent-based desk
+            # lookup silently returned None, which pushes the agent's
+            # cost into unattributed spend (raising debt_pct).
+            logger.warning(
+                "get_agent_desk: ImpactEvent lookup for agent=%s "
+                "failed (%s: %s) — desk will be reported as None and "
+                "cost counted as unattributed",
+                agent_name, type(e).__name__, e,
+            )
 
         return None
 
