@@ -148,10 +148,27 @@ class AgentModelRouter:
                 return result
 
         except Exception as e:
-            logger.debug(f"Could not load config for {agent_name}: {e}")
+            # Session 1103c: was logger.debug which is OFF in
+            # production by default. Silent fallback to DEFAULT_CONFIG
+            # meant agents quietly ran with the wrong models / wrong
+            # weights / wrong behavior whenever the DB lookup failed,
+            # with no visible signal. Now logs WARNING with the
+            # exception type so the central model router can't lie
+            # about successful config loads.
+            logger.warning(
+                "agent_model_router: config load failed for %s "
+                "(%s: %s) — falling back to DEFAULT_CONFIG. Repeated "
+                "failures indicate AgentModelConfig schema drift or "
+                "DB issues.",
+                agent_name, type(e).__name__, e,
+            )
 
-        # Return default config
-        return self.DEFAULT_CONFIG.copy()
+        # Return default config (with fallback marker so callers can
+        # tell the difference from a real config that happens to match
+        # the defaults)
+        fallback = self.DEFAULT_CONFIG.copy()
+        fallback['_fallback_used'] = True
+        return fallback
 
     def _get_models_for_agent(self, agent_name: str) -> List[tuple]:
         """
