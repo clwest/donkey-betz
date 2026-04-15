@@ -490,17 +490,37 @@ def _parse_json_array(text: str) -> List[Dict[str, Any]]:
             lines = lines[1:]
         text = '\n'.join(lines).strip()
 
+    # Session 1103c: LLM claim-extraction used to silently return [] on
+    # JSON parse failure, which meant a malformed model response dropped
+    # every claim with zero debuggability. Now we log both the first
+    # parse failure and the recovery fallback so we can tell whether the
+    # LLM output was genuinely claim-free or just badly formatted.
     try:
         result = json.loads(text)
         if isinstance(result, list):
             return result
+        logger.warning(
+            "evidence_cardifier: LLM claim-extraction returned non-list "
+            "JSON type=%s — returning empty claims list",
+            type(result).__name__,
+        )
         return []
-    except json.JSONDecodeError:
-        # Try to find JSON array in text
+    except json.JSONDecodeError as primary_err:
         match = re.search(r'\[[\s\S]*\]', text)
         if match:
             try:
                 return json.loads(match.group())
-            except json.JSONDecodeError:
-                pass
+            except json.JSONDecodeError as bracket_err:
+                logger.warning(
+                    "evidence_cardifier: both direct parse and bracket-"
+                    "recovery failed (primary=%s, bracket=%s) — first 200 "
+                    "chars of response: %r",
+                    primary_err, bracket_err, text[:200],
+                )
+        else:
+            logger.warning(
+                "evidence_cardifier: LLM response had no parseable JSON "
+                "array (%s) — first 200 chars: %r",
+                primary_err, text[:200],
+            )
         return []

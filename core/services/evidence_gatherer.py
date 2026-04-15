@@ -284,7 +284,11 @@ class EvidenceGatherer:
         # Look for correlated events
         events = []
 
-        # Check experiment halts in this time range
+        # Check experiment halts in this time range.
+        # Was 'except Exception: pass' which silently dropped correlated
+        # experiment-halt evidence from the failure signature context —
+        # the failure diagnosis could look clean while experiments were
+        # actively halting in the same window.
         try:
             from core.models_pilot_readiness import Experiment
             experiment_halts = Experiment.objects.filter(
@@ -294,10 +298,16 @@ class EvidenceGatherer:
             ).count()
             if experiment_halts > 0:
                 events.append(f"{experiment_halts} experiments halted")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                "evidence_gatherer: experiment_halts correlation failed "
+                "(%s: %s) — failure context may be incomplete",
+                type(e).__name__, e,
+            )
 
-        # Check agent execution failures
+        # Check agent execution failures in the same window. Same rule:
+        # silent failure here meant the diagnostic bundle could omit
+        # related agent crashes without explanation.
         try:
             from core.models_unified_system import AgentExecution
             exec_failures = AgentExecution.objects.filter(
@@ -307,8 +317,12 @@ class EvidenceGatherer:
             ).count()
             if exec_failures > 0:
                 events.append(f"{exec_failures} agent executions failed")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                "evidence_gatherer: agent_execution correlation failed "
+                "(%s: %s) — failure context may be incomplete",
+                type(e).__name__, e,
+            )
 
         if not events:
             return None
