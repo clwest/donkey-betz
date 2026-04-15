@@ -17,6 +17,7 @@ from django.db.models import F, Count, Q  # noqa: F401
 from django.utils import timezone  # noqa: F401
 
 from core.api_helpers import smart_truncate  # noqa: F401
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 from core.tasks import (  # noqa: F401 — private helpers from tasks.py
@@ -145,7 +146,7 @@ def _impl_run_agent_conversation(self, max_conversations: int = 3, max_messages:
         ]
 
         # Initialize OpenAI client
-        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+        client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
 
         for _ in range(max_conversations):
             # Pick two random agents
@@ -1192,7 +1193,7 @@ def _impl_run_multi_agent_conversation(self, max_conversations: int = 2, partici
         ]
 
         # Initialize OpenAI client
-        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+        client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
 
         total_participants = 0
 
@@ -2024,7 +2025,7 @@ def _impl_trigger_spider_conversations(self, min_relevance: int = 70, max_conver
         }
 
         # Initialize OpenAI
-        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+        client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
 
         conversations_created = 0
         for spider_data in interesting_data:
@@ -2303,7 +2304,7 @@ def _impl_run_project_conversation(self, project_id: str, topic: str, max_messag
             logger.warning(f"🗣️ [PROJECT-CONVERSATION] WebSocket broadcast failed: {ws_err}")
 
         # Initialize OpenAI client
-        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+        client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
 
         messages = []
         current_speaker = initiator
@@ -2677,7 +2678,7 @@ def _impl_explore_dream_topic(self, exploration_id: str):
             return {'status': 'failed', 'error': 'No agent associated with dream'}
 
         # Initialize OpenAI client
-        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+        client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
 
         # Generate deep exploration content
         system_prompt = f"""You are {agent.name}, an AI agent specialized in {agent.specialization or 'creative analysis'}.
@@ -2875,7 +2876,7 @@ def _impl_run_hive_mind_session(self, session_id: str):
         except Exception as e:
             logger.warning(f"🧠 [HIVE MIND] Session context serialization failed: {e}")
 
-        client = OpenAI()
+        client = get_openai_client()
         total_thinking_time = 0
         completed_count = 0
 

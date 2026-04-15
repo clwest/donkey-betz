@@ -22,6 +22,7 @@ from typing import Any, Dict, List, Optional
 from .base_agent import BaseAgent, AgentResult, ActionableOutputConfig
 from .report_schemas import build_provenance, format_disclaimer
 from ml.auto_selection import TaskType
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -546,7 +547,7 @@ Provide complete, working code that can be directly used."""
         """Build a complete full-stack feature."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         auth_section = """
 Include authentication:
@@ -628,7 +629,7 @@ content
         """Create a REST API endpoint."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         auth_note = "Include authentication decorator/middleware." if requires_auth else ""
 
@@ -677,7 +678,7 @@ Generate:
         """Create a frontend component."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         api_integration = f"Integrate with API endpoints: {', '.join(api_endpoints)}" if api_endpoints else ""
         loading_note = "Include loading, error, and empty states." if include_loading_states else ""
@@ -727,7 +728,7 @@ Generate:
         """Design database schema."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         rel_text = '\n'.join(f"- {r}" for r in relationships) if relationships else "No explicit relationships specified"
         timestamp_note = "Include created_at and updated_at fields." if include_timestamps else ""
@@ -778,7 +779,7 @@ Generate:
         """Create frontend-backend integration layer."""
         from openai import OpenAI
 
-        client = OpenAI()
+        client = get_openai_client()
 
         query_note = "Use React Query for data fetching and caching." if use_react_query and frontend_framework == "react" else ""
 

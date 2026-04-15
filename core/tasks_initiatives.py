@@ -18,6 +18,7 @@ from django.utils import timezone  # noqa: F401
 
 from core.api_helpers import smart_truncate  # noqa: F401
 from core.tasks import _record_timeout_signature  # noqa: F401
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 from core.tasks import (  # noqa: F401 — private helpers from tasks.py
@@ -587,7 +588,7 @@ def _impl_generate_agent_dreams(self, max_dreamers: int = 5, dreams_per_agent: i
             logger.info(f"💭 [DREAMS] Preferred topics from feedback: {preferred_topics[:5]}")
 
         # Initialize OpenAI client
-        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+        client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
 
         for agent in idle_agents:
             # Get agent's recent knowledge for inspiration (if any)
@@ -1004,7 +1005,7 @@ def _impl_score_and_promote_dreams(self, max_dreams: int = 50, promote_threshold
         logger.info(f"🎯 [DREAM-PRODUCTIZATION] Scoring {unscored_dreams.count()} dreams against {len(project_contexts)} active projects")
 
         # Initialize OpenAI client
-        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+        client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
 
         stats = {
             'dreams_scored': 0,
@@ -1217,7 +1218,7 @@ def _impl_process_approved_dreams(self, max_dreams: int = 10):
             return {'status': 'skipped', 'reason': 'no_approved_dreams'}
 
         # Initialize OpenAI client
-        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+        client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
 
         stats = {
             'dreams_processed': 0,
@@ -1509,7 +1510,7 @@ def _impl_execute_dream_implementations(self, max_implementations: int = 5):
             return {'status': 'skipped', 'reason': 'no_implementations_ready'}
 
         # Initialize OpenAI client
-        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+        client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
 
         stats = {
             'executed': 0,

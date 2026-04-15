@@ -18,6 +18,12 @@ import uuid
 import logging
 import warnings
 
+# Session 1084 round 51: get_openai_client is imported lazily INSIDE each
+# method that needs it (5 call sites) to avoid a circular import chain:
+# models_unified_system → openai_client_factory → ... → back here.
+# The factory's own imports are fine; the cycle comes from Django's
+# services package loading order during startup.
+
 logger = logging.getLogger(__name__)
 
 # Session 730: Import pgvector for native vector operations
@@ -11410,7 +11416,8 @@ Respond in JSON format:
 {{"name": "...", "description": "...", "keywords": ["...", "..."]}}"""
 
         try:
-            client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+            from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51 lazy
+            client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
             response = client.chat.completions.create(
                 model="gpt-5-mini",
                 messages=[{"role": "user", "content": prompt}],
@@ -14907,7 +14914,8 @@ class BusinessResearchResult(models.Model):
             from openai import OpenAI
             import os
 
-            client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+            from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51 lazy
+            client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))
 
             # Create searchable text from query + analysis
             text_to_embed = f"{self.research_type}: {self.query}\n\n{self.analysis[:4000]}"
@@ -15106,7 +15114,8 @@ class BusinessResearchResult(models.Model):
             import os
             import numpy as np
 
-            client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+            from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51 lazy
+            client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))
 
             # Generate embedding for query
             response = client.embeddings.create(
@@ -17120,7 +17129,8 @@ class LegalResearchResult(models.Model):
             from openai import OpenAI
             import os
 
-            client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+            from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51 lazy
+            client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))
 
             # Create searchable text
             text_to_embed = f"Legal {self.research_type}: {self.query}\n\n{self.analysis[:4000]}"
@@ -17324,7 +17334,8 @@ class LegalMemory(models.Model):
             from openai import OpenAI
             import os
 
-            client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+            from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51 lazy
+            client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))
 
             text_to_embed = f"{self.memory_type} | {self.case_type} | {self.title}\n{self.content[:2000]}"
 

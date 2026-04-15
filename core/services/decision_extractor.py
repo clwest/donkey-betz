@@ -26,6 +26,7 @@ from datetime import timedelta
 from typing import Optional, Dict, Any, Union
 from django.utils import timezone
 from openai import OpenAI
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -154,7 +155,7 @@ class DecisionExtractor:
     DEDUP_HOURS = 24
 
     def __init__(self):
-        self.client = OpenAI()
+        self.client = get_openai_client()
 
     def _has_recent_decision_for_topic(self, topic: str) -> bool:
         """

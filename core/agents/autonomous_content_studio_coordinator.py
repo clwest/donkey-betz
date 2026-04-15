@@ -20,6 +20,7 @@ Follows MarketIntelligenceCoordinator pattern (Session 465) with all 5 autonomou
 
 Usage:
     from core.agent_router import AgentRouter
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
     router = AgentRouter(user=request.user)
     result = router.route(
@@ -735,8 +736,9 @@ User Preferences Applied: {json.dumps(user_prefs) if user_prefs else 'None'}"""
         script_content = series_prompt  # Fallback to prompt if generation fails
 
         try:
-            # Session 1003: 60s timeout prevents indefinite OpenAI hangs
-            client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'), timeout=60)
+            # Session 1003: timeout prevents indefinite OpenAI hangs.
+            # Session 1084 round 51: custom 60s timeout dropped — factory enforces 90s read centrally.
+            client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
 
             # Get debate positions for richer content
             debate_context = ""

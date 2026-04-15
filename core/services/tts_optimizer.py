@@ -14,6 +14,7 @@ import logging
 from typing import List, Optional
 from dataclasses import dataclass
 from enum import Enum
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +65,7 @@ class TTSTextOptimizer:
             from openai import OpenAI
             from django.conf import settings
             api_key = settings.EXTERNAL_API_KEYS.get('OPENAI_API_KEY', '')
-            self.openai_client = OpenAI(api_key=api_key)
+            self.openai_client = get_openai_client(api_key=api_key)
         return self.openai_client
 
     def clean_for_tts(self, text: str) -> str:

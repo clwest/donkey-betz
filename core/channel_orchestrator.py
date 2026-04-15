@@ -17,6 +17,7 @@ import os
 from typing import List, Dict
 from openai import OpenAI
 from django.utils import timezone
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ class ChannelOrchestrator:
     """
 
     def __init__(self):
-        self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        self.client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))
         self.model = "gpt-5-mini"
 
     def select_responding_agents(

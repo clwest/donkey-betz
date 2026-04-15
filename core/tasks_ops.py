@@ -17,6 +17,7 @@ from django.db.models import F, Count, Q  # noqa: F401
 from django.utils import timezone  # noqa: F401
 
 from core.api_helpers import smart_truncate  # noqa: F401
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 from core.tasks import (  # noqa: F401 — private helpers from tasks.py
@@ -2815,7 +2816,7 @@ def _impl_evaluate_pilots_with_thinking_agent():
         from openai import OpenAI
         import os
         
-        client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+        client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
         
         # Configuration
         MIN_HOURS_BEFORE_EVAL = 4  # Wait at least 4 hours before evaluating

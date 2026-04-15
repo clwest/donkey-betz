@@ -23,6 +23,7 @@ DECIDE. ASSIGN. EXECUTE.
 
 Usage:
     from core.agents.decision_enforcer_agent import DecisionEnforcerAgent
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
     agent = DecisionEnforcerAgent()
     result = agent.execute(
@@ -361,7 +362,7 @@ Respond with ONLY valid JSON. No markdown, no explanation outside JSON.
         from openai import OpenAI
         import os
 
-        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))
 
         messages = [
             {"role": "system", "content": self.system_prompt},

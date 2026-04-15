@@ -22,6 +22,7 @@ from typing import Dict, List, Optional
 
 import requests
 from django.utils import timezone
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -704,7 +705,7 @@ class CongressSyncService:
 
         try:
             from openai import OpenAI
-            client = OpenAI()
+            client = get_openai_client()
             response = client.embeddings.create(
                 input=texts,
                 model="text-embedding-3-small",

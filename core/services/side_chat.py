@@ -17,6 +17,7 @@ import logging
 from typing import Dict, Any, List
 
 from openai import OpenAI
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ class SideChatService:
     """
 
     def __init__(self):
-        self.client = OpenAI()
+        self.client = get_openai_client()
 
     # System prompts for each side
     PRO_SYSTEM_PROMPT = """You are the Pro Advocate for this proposal/artifact.

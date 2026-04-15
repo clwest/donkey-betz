@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from core.agents.base_agent import BaseAgent, AgentResult, WEB_SEARCH_TOOL
 from core.agents.report_schemas import build_provenance, format_disclaimer
 from ml.auto_selection import TaskType
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -478,7 +479,7 @@ Always acknowledge bull arguments but emphasize potential risks."""
             import os
             import json
 
-            client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+            client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
 
             # Build context prompt with market data
             prompt = f"""Analyze {ticker} from a BEARISH perspective. You are looking for reasons why this stock will DEPRECIATE.

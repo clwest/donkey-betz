@@ -26,6 +26,7 @@ from core.models_content_pipeline import (
     ContentPackage, ContentAsset, ContentGenerationJob,
     ContentTier, PackageStatus, AssetType
 )
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -182,7 +183,7 @@ class UnifiedContentPipeline:
         """Initialize API clients"""
         try:
             from openai import OpenAI
-            self.openai_client = OpenAI()
+            self.openai_client = get_openai_client()
             logger.info("OpenAI client initialized")
         except Exception as e:
             logger.warning(f"OpenAI client not available: {e}")

@@ -15,6 +15,7 @@ This service:
 
 Usage:
     from core.services.persona_advisor_service import PersonaAdvisorService
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
     advisor = PersonaAdvisorService()
     result = advisor.get_advice(
@@ -330,10 +331,8 @@ class PersonaAdvisorService:
             from openai import OpenAI
             import os
 
-            client = OpenAI(
-                api_key=os.getenv('OPENAI_API_KEY'),
-                timeout=60.0
-            )
+            # Session 1084 round 51: custom 60s timeout dropped — factory enforces 90s read centrally
+            client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))
 
             system_prompt = f"""You are {agent.name}, a specialized AI advisor.
 

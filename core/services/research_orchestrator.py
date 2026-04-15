@@ -32,6 +32,7 @@ Flow:
 
 Usage:
     from core.services.research_orchestrator import ResearchOrchestrator
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
     orchestrator = ResearchOrchestrator(user=request.user)
     result = orchestrator.execute_full_research(
@@ -207,7 +208,7 @@ class ResearchOrchestrator:
         if self._openai_client is None:
             from django.conf import settings
             from openai import OpenAI
-            self._openai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
+            self._openai_client = get_openai_client(api_key=settings.OPENAI_API_KEY)
         return self._openai_client
 
     @property

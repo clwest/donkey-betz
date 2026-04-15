@@ -24,6 +24,7 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeou
 
 from core.agents.base_agent import BaseAgent, AgentResult, strip_simulated_tool_json
 from ml.auto_selection import TaskType
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 # Session 895: Timeout for sub-agent executions to prevent coordinator hangs
 # Extended to 5 min to accommodate thinking models (GPT-5.1, o1, o3)
@@ -1362,7 +1363,7 @@ Your job is to keep this system running smoothly and surfacing valuable narrativ
         full_prompt = self.system_prompt + "\n\nAnalyze the task and decide which tool(s) to call. If no tools are needed, just respond with your analysis."
 
         try:
-            client = OpenAI(api_key=settings.OPENAI_API_KEY)
+            client = get_openai_client(api_key=settings.OPENAI_API_KEY)
 
             messages = [
                 {"role": "system", "content": full_prompt},

@@ -20,6 +20,7 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 from functools import wraps
 from dotenv import load_dotenv
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 # Load environment variables from .env file
 load_dotenv()
@@ -67,7 +68,7 @@ class LLMEnforcer:
             api_key = os.getenv('OPENAI_API_KEY')
             if api_key and api_key != 'your-key-here':
                 # Session 802: Add 60-second timeout to prevent browser timeout (default is 10 min)
-                self.openai_client = OpenAI(api_key=api_key, timeout=60.0)
+                self.openai_client = get_openai_client(api_key=api_key)
                 logger.info("✅ OpenAI client initialized - REAL AI AVAILABLE (60s timeout)")
             else:
                 logger.warning("⚠️ OpenAI API key not configured")

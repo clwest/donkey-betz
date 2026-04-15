@@ -15,6 +15,7 @@ from typing import Dict, Any
 from django.db.models import Avg, Count
 from django.utils import timezone
 from openai import OpenAI
+from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ class WeeklySynthesisService:
     """
 
     def __init__(self):
-        self.client = OpenAI()
+        self.client = get_openai_client()
 
     def generate_weekly_synthesis(self, days_back: int = 7) -> 'WeeklySynthesis':
         """
