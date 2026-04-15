@@ -340,8 +340,24 @@ class MLScoringEngine:
                 self._is_trained = True
 
                 # Create SHAP explainer (works for both XGBoost and LightGBM)
-                shap = _get_shap()
-                self.explainer = shap.TreeExplainer(self.model)
+                # Session 1083 round 46: SHAP TreeExplainer uses native
+                # OpenMP threads that race with joblib.load's lightgbm
+                # init and trigger Abseil RAW: Lock blocking deadlocks
+                # on macOS workers. SHAP is only used for explanation
+                # metadata, not for actual scoring — score_opportunity
+                # still works without self.explainer (we just skip the
+                # shap_explanation field in the result).
+                import os as _os_round_46
+                if _os_round_46.environ.get('SKIP_NLP_MODELS') == '1':
+                    logger.debug(
+                        "[ml_scoring_engine] SKIP_NLP_MODELS=1 — "
+                        "skipping SHAP TreeExplainer init to avoid "
+                        "macOS Abseil mutex deadlock"
+                    )
+                    self.explainer = None
+                else:
+                    shap = _get_shap()
+                    self.explainer = shap.TreeExplainer(self.model)
 
                 logger.info(f"Loaded ML model {self.model_version} ({self.model_type}) from {model_path}")
                 return True
